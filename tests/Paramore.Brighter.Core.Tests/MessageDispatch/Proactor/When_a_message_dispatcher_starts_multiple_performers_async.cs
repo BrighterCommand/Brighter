@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Testing;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
@@ -21,7 +22,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         {
             var routingKey = new RoutingKey(Topic);
             _bus = new InternalBus();
-            var consumer = new InMemoryMessageConsumer(routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000));
+            var consumer = new InMemoryMessageConsumer(routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000));
             
             IAmAChannelSync channel = new Channel(new (ChannelName), new(Topic), consumer, 6);
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();

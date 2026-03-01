@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// <summary>
 /// Implementation of <see cref="IAmAMessageConsumerSync"/> using Azure Service Bus for Transport.
 /// </summary>
-public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
     protected abstract string SubscriptionName { get; }
     protected abstract ILogger Logger { get; }
@@ -108,8 +108,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
 
             if (string.IsNullOrEmpty(lockToken))
                 throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-            Logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id,
-                lockToken);
+            Log.AcknowledgingMessage(Logger, message.Id, lockToken);
                 
             if(ServiceBusReceiver == null)
                 await GetMessageReceiverProviderAsync();
@@ -125,7 +124,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
                 HandleAsbException(asbException, message.Id);
             else
             {
-                Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
+                Log.ErrorCompletingPeekLock(Logger, ex, message.Id);
                 throw;
             }
         }
@@ -135,7 +134,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
+            Log.ErrorCompletingPeekLock(Logger, ex, message.Id);
             throw;
         }
     }
@@ -143,7 +142,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
-    public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
+    public void Purge() => BrighterAsyncContext.Run(() => PurgeAsync());
         
     /// <summary>
     /// Purges the specified queue name.
@@ -159,7 +158,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// </summary>
     /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
     /// <returns>Message.</returns>
-    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
         
     /// <summary>
     /// Receives the specified queue name.
@@ -172,9 +171,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <returns>Message.</returns>
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
     {
-        Logger.LogDebug(
-            "Preparing to retrieve next message(s) from topic {Topic} via subscription {ChannelName} with timeout {Timeout} and batch size {BatchSize}",
-            Topic, SubscriptionName, timeOut, _batchSize);
+        Log.PreparingToRetrieveNextMessages(Logger, Topic, SubscriptionName, timeOut, _batchSize);
 
         IEnumerable<IBrokeredMessageWrapper> messages;
         await EnsureChannelAsync();
@@ -188,7 +185,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
                 await GetMessageReceiverProviderAsync();
                 if (ServiceBusReceiver == null)
                 {
-                    Logger.LogInformation("Message Gateway: Could not get a lock on a session for {TopicName}", Topic);
+                    Log.CouldNotGetSessionLock(Logger, Topic);
                     return messagesToReturn.ToArray();   
                 }
             }
@@ -201,7 +198,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
         {
             if (ServiceBusReceiver is {IsClosedOrClosing: true} && !SubscriptionConfiguration.RequireSession)
             {
-                Logger.LogDebug("Message Receiver is closing...");
+                Log.MessageReceiverClosing(Logger);
                 var message = new Message(
                     new MessageHeader(string.Empty, new RoutingKey(Topic), MessageType.MT_QUIT), 
                     new MessageBody(string.Empty));
@@ -209,7 +206,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
                 return messagesToReturn.ToArray();
             }
 
-            Logger.LogError(e, "Failing to receive messages");
+            Log.FailingToReceiveMessages(Logger, e);
 
             //The connection to Azure Service bus may have failed so we re-establish the connection.
             if(!SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
@@ -228,20 +225,18 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     }
                
     /// <summary>
-    /// Rejects the specified message.
+    /// Nacks the specified message, abandoning the lock so it is available for redelivery.
     /// Sync over Async
     /// </summary>
     /// <param name="message">The message.</param>
-    /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-    public bool Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
+    public void Nack(Message message) => BrighterAsyncContext.Run(async () => await NackAsync(message));
 
     /// <summary>
-    /// Rejects the specified message.
+    /// Nacks the specified message, abandoning the lock so it is available for redelivery.
     /// </summary>
     /// <param name="message">The message.</param>
-    /// <param name="cancellationToken">Cancel the rejection</param>
-    /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-    public async Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    /// <param name="cancellationToken">Cancel the nack operation</param>
+    public async Task NackAsync(Message message, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -250,7 +245,68 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
 
             if (string.IsNullOrEmpty(lockToken))
                 throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-            Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
+
+            Logger.LogDebug("Nacking (abandoning) Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
+
+            if (ServiceBusReceiver == null)
+                await GetMessageReceiverProviderAsync();
+
+            await ServiceBusReceiver!.AbandonAsync(lockToken);
+
+            if (SubscriptionConfiguration.RequireSession)
+                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+        }
+        catch (AggregateException ex)
+        {
+            if (ex.InnerException is ServiceBusException asbException)
+                HandleAsbException(asbException, message.Id);
+            else
+            {
+                Logger.LogError(ex, "Error abandoning message with id {Id}", message.Id);
+                throw;
+            }
+        }
+        catch (ServiceBusException ex)
+        {
+            HandleAsbException(ex, message.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error abandoning message with id {Id}", message.Id);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Rejects the specified message.
+    /// Sync over Async
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+    /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+    public bool Reject(Message message, MessageRejectionReason? reason = null) => BrighterAsyncContext.Run(() => RejectAsync(message, reason));
+
+    /// <summary>
+    /// Rejects the specified message.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
+    /// <param name="cancellationToken">Cancel the rejection</param>
+    /// <returns>True if the message has been removed from the channel, false otherwise</returns>
+    public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken))
+    {
+        try
+        {
+            await EnsureChannelAsync();
+            var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
+
+            if (string.IsNullOrEmpty(lockToken))
+                throw new Exception($"LockToken for message with id {message.Id} is null or empty");
+           
+            var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
+            var description = reason is null ? "unknown" : reason.Description ?? "unknown";
+            
+            Log.DeadLetteringMessage(Logger, message.Id, lockToken, reasonString, description);
 
             if(ServiceBusReceiver == null)
                 await GetMessageReceiverProviderAsync();
@@ -261,7 +317,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
+            Log.ErrorDeadLetteringMessage(Logger, ex, message.Id);
             throw;
         }
 
@@ -274,7 +330,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <param name="message"></param>
     /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
-    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, delay));
+    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(() => RequeueAsync(message, delay));
 
     /// <summary>
     /// Requeues the specified message.
@@ -288,7 +344,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
         var topic = message.Header.Topic;
         delay ??= TimeSpan.Zero;
 
-        Logger.LogInformation("Requeuing message with topic {Topic} and id {Id}", topic, message.Id);
+        Log.RequeuingMessage(Logger, topic, message.Id);
 
         var messageProducerAsync = _messageProducer as IAmAMessageProducerAsync;
             
@@ -318,12 +374,43 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     private void HandleAsbException(ServiceBusException ex, string messageId)
     {
         if (ex.Reason == ServiceBusFailureReason.MessageLockLost)
-            Logger.LogError(ex, "Error completing peak lock on message with id {Id}", messageId);
+            Log.ErrorCompletingPeekLock(Logger, ex, messageId);
         else
         {
-            Logger.LogError(ex,
-                "Error completing peak lock on message with id {Id} Reason {ErrorReason}",
-                messageId, ex.Reason);
+            Log.ErrorCompletingPeekLockWithReason(Logger, ex, messageId, ex.Reason);
         }
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Debug, "Acknowledging Message with Id {Id} Lock Token : {LockToken}")]
+        public static partial void AcknowledgingMessage(ILogger logger, string id, string lockToken);
+
+        [LoggerMessage(LogLevel.Error, "Error completing peek lock on message with id {Id}")]
+        public static partial void ErrorCompletingPeekLock(ILogger logger, Exception e, string id);
+
+        [LoggerMessage(LogLevel.Debug, "Preparing to retrieve next message(s) from topic {Topic} via subscription {ChannelName} with timeout {Timeout} and batch size {BatchSize}")]
+        public static partial void PreparingToRetrieveNextMessages(ILogger logger, string topic, string channelName, TimeSpan? timeout, int batchSize);
+
+        [LoggerMessage(LogLevel.Information, "Message Gateway: Could not get a lock on a session for {TopicName}")]
+        public static partial void CouldNotGetSessionLock(ILogger logger, string topicName);
+
+        [LoggerMessage(LogLevel.Debug, "Message Receiver is closing...")]
+        public static partial void MessageReceiverClosing(ILogger logger);
+
+        [LoggerMessage(LogLevel.Error, "Failing to receive messages")]
+        public static partial void FailingToReceiveMessages(ILogger logger, Exception e);
+
+        [LoggerMessage(LogLevel.Debug, "Dead Lettering Message with Id {Id} Lock Token : {LockToken} Due to {Reason} because of {Description}")]
+        public static partial void DeadLetteringMessage(ILogger logger, string id, string lockToken, string reason, string description);
+
+        [LoggerMessage(LogLevel.Error, "Error Dead Lettering message with id {Id}")]
+        public static partial void ErrorDeadLetteringMessage(ILogger logger, Exception e, string id);
+
+        [LoggerMessage(LogLevel.Information, "Requeuing message with topic {Topic} and id {Id}")]
+        public static partial void RequeuingMessage(ILogger logger, RoutingKey topic, string id);
+
+        [LoggerMessage(LogLevel.Error, "Error completing peek lock on message with id {Id} Reason {ErrorReason}")]
+        public static partial void ErrorCompletingPeekLockWithReason(ILogger logger, Exception e, string id, ServiceBusFailureReason errorReason);
     }
 }

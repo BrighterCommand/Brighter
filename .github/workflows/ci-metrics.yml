@@ -1,0 +1,249 @@
+name: CI Metrics and Monitoring
+
+# This workflow tracks CI pass rates, job durations, and failure rates
+# to help maintain and improve CI reliability over time.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+  schedule:
+    # Run daily at 00:00 UTC to generate summary reports
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  collect-metrics:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion != 'skipped'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          
+      - name: Collect CI workflow metrics
+        id: metrics
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Get the last 30 CI workflow runs
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner,
+              repo,
+              workflow_id: 'ci.yml',
+              per_page: 30,
+              status: 'completed'
+            });
+            
+            // Calculate metrics
+            const totalRuns = runs.workflow_runs.length;
+            const successfulRuns = runs.workflow_runs.filter(r => r.conclusion === 'success').length;
+            const failedRuns = runs.workflow_runs.filter(r => r.conclusion === 'failure').length;
+            const cancelledRuns = runs.workflow_runs.filter(r => r.conclusion === 'cancelled').length;
+            const passRate = totalRuns > 0 ? ((successfulRuns / totalRuns) * 100).toFixed(2) : 0;
+            
+            // Calculate average duration (in minutes)
+            const durations = runs.workflow_runs
+              .filter(r => r.run_started_at && r.updated_at)
+              .map(r => {
+                const start = new Date(r.run_started_at);
+                const end = new Date(r.updated_at);
+                return (end - start) / 1000 / 60; // Convert to minutes
+              });
+            
+            const avgDuration = durations.length > 0 
+              ? (durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(2)
+              : 0;
+            
+            const maxDuration = durations.length > 0 
+              ? Math.max(...durations).toFixed(2)
+              : 0;
+            
+            // Count runs over 7 minutes
+            const slowRuns = durations.filter(d => d > 7).length;
+            
+            // Store metrics
+            core.setOutput('total_runs', totalRuns);
+            core.setOutput('pass_rate', passRate);
+            core.setOutput('successful_runs', successfulRuns);
+            core.setOutput('failed_runs', failedRuns);
+            core.setOutput('cancelled_runs', cancelledRuns);
+            core.setOutput('avg_duration', avgDuration);
+            core.setOutput('max_duration', maxDuration);
+            core.setOutput('slow_runs', slowRuns);
+            
+            // Generate summary
+            const summary = `
+            ## CI Metrics (Last 30 Runs)
+            
+            | Metric | Value |
+            |--------|-------|
+            | Total Runs | ${totalRuns} |
+            | Pass Rate | ${passRate}% |
+            | Successful | ${successfulRuns} |
+            | Failed | ${failedRuns} |
+            | Cancelled | ${cancelledRuns} |
+            | Avg Duration | ${avgDuration} min |
+            | Max Duration | ${maxDuration} min |
+            | Runs >7 min | ${slowRuns} |
+            `;
+            
+            await core.summary
+              .addRaw(summary)
+              .write();
+            
+            console.log(summary);
+            
+            return {
+              total_runs: totalRuns,
+              pass_rate: passRate,
+              successful_runs: successfulRuns,
+              failed_runs: failedRuns,
+              cancelled_runs: cancelledRuns,
+              avg_duration: avgDuration,
+              max_duration: maxDuration,
+              slow_runs: slowRuns
+            };
+            
+      - name: Check for performance degradation
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const passRate = parseFloat('${{ steps.metrics.outputs.pass_rate }}');
+            const slowRuns = parseInt('${{ steps.metrics.outputs.slow_runs }}');
+            const avgDuration = parseFloat('${{ steps.metrics.outputs.avg_duration }}');
+            
+            let alerts = [];
+            
+            // Alert if pass rate is below 80%
+            if (passRate < 80) {
+              alerts.push(`⚠️ **Low pass rate**: ${passRate}% (threshold: 80%)`);
+            }
+            
+            // Alert if more than 30% of runs take >7 minutes
+            const totalRuns = parseInt('${{ steps.metrics.outputs.total_runs }}');
+            const slowRunPercentage = totalRuns > 0 ? (slowRuns / totalRuns) * 100 : 0;
+            if (slowRunPercentage > 30) {
+              alerts.push(`⚠️ **High slow run rate**: ${slowRuns}/${totalRuns} runs (${slowRunPercentage.toFixed(1)}%) took >7 minutes`);
+            }
+            
+            // Alert if average duration is >10 minutes
+            if (avgDuration > 10) {
+              alerts.push(`⚠️ **High average duration**: ${avgDuration} minutes (threshold: 10 min)`);
+            }
+            
+            if (alerts.length > 0) {
+              const alertSummary = `
+              ## ⚠️ CI Performance Alerts
+              
+              ${alerts.map(a => `- ${a}`).join('\n')}
+              
+              **Action Required**: Review recent CI runs and consider:
+              - Investigating slow jobs
+              - Checking for resource contention
+              - Reviewing timeout settings
+              - Looking for flaky tests
+              `;
+              
+              await core.summary
+                .addRaw(alertSummary)
+                .write();
+              
+              console.log(alertSummary);
+              
+              // Set output for potential notifications
+              core.setOutput('has_alerts', 'true');
+              core.setOutput('alert_message', alertSummary);
+            } else {
+              console.log('✅ No performance alerts - CI is running healthy');
+              core.setOutput('has_alerts', 'false');
+            }
+            
+  collect-job-metrics:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion != 'skipped' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        
+      - name: Collect individual job metrics
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Get the most recent CI run
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner,
+              repo,
+              workflow_id: 'ci.yml',
+              per_page: 1,
+              status: 'completed'
+            });
+            
+            if (runs.workflow_runs.length === 0) {
+              console.log('No completed runs found');
+              return;
+            }
+            
+            const latestRun = runs.workflow_runs[0];
+            
+            // Get jobs for this run
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner,
+              repo,
+              run_id: latestRun.id
+            });
+            
+            // Calculate job durations
+            const jobMetrics = jobs.jobs.map(job => {
+              const start = new Date(job.started_at);
+              const end = new Date(job.completed_at);
+              const duration = (end - start) / 1000 / 60; // minutes
+              
+              return {
+                name: job.name,
+                conclusion: job.conclusion,
+                duration: duration.toFixed(2),
+                is_slow: duration > 7
+              };
+            });
+            
+            // Generate job summary
+            const jobSummary = `
+            ## Job Metrics (Run #${latestRun.run_number})
+            
+            | Job Name | Status | Duration (min) | Alert |
+            |----------|--------|----------------|-------|
+            ${jobMetrics.map(j => 
+              `| ${j.name} | ${j.conclusion} | ${j.duration} | ${j.is_slow ? '⚠️ Slow' : '✅'} |`
+            ).join('\n')}
+            
+            **Slow jobs** (>7 min): ${jobMetrics.filter(j => j.is_slow).length}
+            `;
+            
+            await core.summary
+              .addRaw(jobSummary)
+              .write();
+            
+            console.log(jobSummary);
+            
+            // Alert on specific slow jobs
+            const slowJobs = jobMetrics.filter(j => j.is_slow);
+            if (slowJobs.length > 0) {
+              console.log('\n⚠️ Slow jobs detected:');
+              slowJobs.forEach(j => {
+                console.log(`  - ${j.name}: ${j.duration} minutes`);
+              });
+            }

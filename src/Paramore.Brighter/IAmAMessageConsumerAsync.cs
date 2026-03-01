@@ -43,10 +43,13 @@ namespace Paramore.Brighter
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="cancellationToken">Cancel the rejection</param>
+        /// When a message is rejected, another consumer should not process it. If there is a dead letter, or invalid
+        /// message channel, the message should be forwardedn to it
+        /// <param name="message">The <see cref="Message"/> to reject</param>
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explaines why we rejected the message</param>
+        /// <param name="cancellationToken">Cancels the rejection</param>
         /// <returns>True if the message has been removed from the channel, false otherwise</returns>
-        Task<bool> RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken));
+        Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Purges the specified queue name.
@@ -62,6 +65,18 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Cancel the recieve</param>
         /// <returns>An array of Messages from middleware</returns>
         Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken));
+
+        /// <summary>
+        /// Nacks the specified message, releasing it back to the transport for redelivery.
+        /// </summary>
+        /// <remarks>
+        /// For queue-based transports, this explicitly releases the transport's lock so the message
+        /// is immediately available to any consumer. For stream-based transports, this is a no-op
+        /// because not committing the offset is sufficient.
+        /// </remarks>
+        /// <param name="message">The <see cref="Message"/> to nack</param>
+        /// <param name="cancellationToken">Cancel the nack operation</param>
+        Task NackAsync(Message message, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Requeues the specified message.

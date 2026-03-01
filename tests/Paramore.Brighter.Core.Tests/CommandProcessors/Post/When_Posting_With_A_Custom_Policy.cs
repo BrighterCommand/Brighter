@@ -6,6 +6,7 @@ using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
@@ -15,8 +16,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 
-[Collection("CommandProcessor")]
-public class PostCommandWithCustomPolicyTests : IDisposable
+public class PostCommandWithCustomPolicyTests
 {
     private readonly ResiliencePipelineRegistry<string> _resiliencePipeline;
     private readonly RoutingKey _routingKey = new("MyCommand");
@@ -33,7 +33,7 @@ public class PostCommandWithCustomPolicyTests : IDisposable
         var timeProvider = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
+        InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -92,12 +92,6 @@ public class PostCommandWithCustomPolicyTests : IDisposable
         Assert.Equal(_message, message);
         Assert.Equal(_resiliencePipeline, requestContext.ResiliencePipeline);
     }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
-    }
-
     internal sealed class EmptyHandlerFactorySync : IAmAHandlerFactorySync
     {
         public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)

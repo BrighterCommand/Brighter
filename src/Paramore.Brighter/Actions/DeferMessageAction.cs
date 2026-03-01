@@ -24,13 +24,51 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.Actions
+namespace Paramore.Brighter.Actions;
+
+/// <summary>
+/// Thrown to indicate that a message should be deferred.  Its purpose is to allow messages that cannot be processed
+/// immediately to be delayed. Call `throw new DeferMessageAction()` from within a <see cref="RequestHandler{TRequest}"/>
+/// or a <see cref="RequestHandlerAsync{TRequest}"/> to requeue the message with a delay.
+/// </summary>
+/// <remarks>How the delay works depends on whether the transport natively implements delay. If not, we rely on the
+/// configuration of an <see cref="IAmARequestScheduler"/> or <see cref="IAmARequestSchedulerAsync"/>.
+/// </remarks>
+public class DeferMessageAction : Exception
 {
     /// <summary>
-    /// Class DeferMessageAction.
-    /// Used to indicate that a message should be deferred.
-    /// It's purpose is to allow messages received out of order to be delayed until
-    /// missing messages have been processed
+    /// The delay before the message should be requeued. If <c>null</c>, the subscription's default
+    /// <see cref="Subscription.RequeueDelay"/> is used.
     /// </summary>
-    public class DeferMessageAction : Exception;
+    public TimeSpan? Delay { get; }
+
+    /// <summary>
+    /// Throw to indicate that a <see cref="Message"/> should be deferred.
+    /// </summary>
+    public DeferMessageAction() {}
+
+    /// <summary>
+    /// Throw to indicate that a <see cref="Message"/> should be deferred.
+    /// </summary>
+    /// <param name="reason">The reason that a <see cref="Message"/> should be deferred</param>
+    public DeferMessageAction(string? reason) : base(reason) {}
+
+    /// <summary>
+    /// Throw to indicate that a <see cref="Message"/> should be deferred.
+    /// </summary>
+    /// <param name="reason">The reason that a <see cref="Message"/> should be deferred</param>
+    /// <param name="innerException">The exception that led to deferral of the <see cref="Message"/></param>
+    public DeferMessageAction(string? reason, Exception? innerException) : base(reason, innerException) {}
+
+    /// <summary>
+    /// Throw to indicate that a <see cref="Message"/> should be deferred with a specific delay.
+    /// </summary>
+    /// <param name="reason">The reason that a <see cref="Message"/> should be deferred</param>
+    /// <param name="innerException">The exception that led to deferral of the <see cref="Message"/></param>
+    /// <param name="delayMilliseconds">The delay in milliseconds before requeuing. Zero means use subscription default.</param>
+    public DeferMessageAction(string? reason, Exception? innerException, int delayMilliseconds)
+        : base(reason, innerException)
+    {
+        Delay = delayMilliseconds > 0 ? TimeSpan.FromMilliseconds(delayMilliseconds) : null;
+    }
 }

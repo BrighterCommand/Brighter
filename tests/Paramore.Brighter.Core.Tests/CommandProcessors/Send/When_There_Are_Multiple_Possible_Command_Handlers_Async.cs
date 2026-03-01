@@ -10,8 +10,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorSendWithMultipleMatchesAsyncTests : IDisposable
+    public class CommandProcessorSendWithMultipleMatchesAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
@@ -41,18 +40,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
         [Fact]
         public async Task When_There_Are_Multiple_Possible_Command_Handlers_Async()
         {
-            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
 
             //Should fail because multiple receivers found
             Assert.IsType<ArgumentException>(_exception);
             //Should have an error message that tells you why
             Assert.NotNull(_exception);
             Assert.Contains("More than one handler was found for the typeof command Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.", _exception.Message);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

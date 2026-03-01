@@ -11,7 +11,6 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
 {
@@ -31,17 +30,19 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
                 Name = "Kafka Producer Send Test",
                 BootStrapServers = new[] {"localhost:9092"}
             },
-            new[] {new KafkaPublication
-            {
-                Topic = new RoutingKey(_topic),
-                NumPartitions = 1,
-                ReplicationFactor = 1,
-                //These timeouts support running on a container using the same host as the tests,
-                //your production values ought to be lower
-                MessageTimeoutMs = 2000,
-                RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Create
-            }}).Create();
+            [
+                new KafkaPublication
+                {
+                    Topic = new RoutingKey(_topic),
+                    NumPartitions = 1,
+                    ReplicationFactor = 1,
+                    //These timeouts support running on a container using the same host as the tests,
+                    //your production values ought to be lower
+                    MessageTimeoutMs = 2000,
+                    RequestTimeoutMs = 2000,
+                    MakeChannels = OnMissingChannel.Create
+                }
+            ]).Create();
     }
 
     //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
@@ -142,8 +143,9 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
 
         return messages;
     }

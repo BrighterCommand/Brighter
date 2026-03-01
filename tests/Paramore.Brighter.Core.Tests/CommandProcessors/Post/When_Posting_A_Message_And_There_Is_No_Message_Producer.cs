@@ -3,14 +3,14 @@ using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPostMissingMessageProducerTests : IDisposable
+    public class CommandProcessorPostMissingMessageProducerTests
     {
         private readonly MyCommand _myCommand = new();
         private readonly InMemoryOutbox _outbox;
@@ -48,11 +48,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             );               
 
             Assert.IsType<ConfigurationException>(exception);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

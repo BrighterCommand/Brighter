@@ -1,0 +1,91 @@
+﻿using System;
+using System.Net.Mime;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Paramore.Brighter.AWS.Tests.Helpers;
+using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Xunit;
+
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
+
+[Trait("Category", "AWS")]
+public class SqsMessageConsumerRejectTestsAsync : IDisposable, IAsyncDisposable
+{
+    private readonly Message _message;
+    private readonly IAmAChannelAsync _channel;
+    private readonly SnsMessageProducer _messageProducer;
+    private readonly ChannelFactory _channelFactory;
+    private readonly MyCommand _myCommand;
+
+    public SqsMessageConsumerRejectTestsAsync()
+    {
+        _myCommand = new MyCommand { Value = "Test" };
+        var replyTo = new RoutingKey("http:\\queueUrl");
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
+        var correlationId =Id.Random();
+        var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
+        var topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var routingKey = new RoutingKey(topicName);
+        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
+
+        var subscription = new SqsSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(channelName),
+            channelName: new ChannelName(channelName),
+            channelType: ChannelType.PubSub,
+            routingKey: routingKey,
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo),
+            topicAttributes: topicAttributes,
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Create);
+
+        _message = new Message(
+            new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
+                replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: messageGroupId),
+            new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
+        );
+
+        var awsConnection = GatewayFactory.CreateFactory();
+
+        _channelFactory = new ChannelFactory(awsConnection);
+        _channel = _channelFactory.CreateAsyncChannel(subscription);
+
+        _messageProducer = new SnsMessageProducer(awsConnection,
+            new SnsPublication
+            {
+                MakeChannels = OnMissingChannel.Create,
+                Topic = routingKey,
+                TopicAttributes = topicAttributes
+            });
+    }
+
+    [Fact]
+    public async Task When_rejecting_a_message_should_delete_from_queue_async()
+    {
+        //Arrange
+        await _messageProducer.SendAsync(_message);
+        var message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+
+        //Act
+        await _channel.RejectAsync(message);
+
+        //Assert - message should be deleted, not requeued
+        message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+
+        Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);
+    }
+
+    public void Dispose()
+    {
+        _channelFactory.DeleteTopicAsync().Wait();
+        _channelFactory.DeleteQueueAsync().Wait();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
+    }
+}

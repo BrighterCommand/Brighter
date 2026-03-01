@@ -41,6 +41,11 @@ public class FakeServiceBusReceiverWrapper : IServiceBusReceiverWrapper
         return Task.CompletedTask;
     }
 
+    public Task AbandonAsync(string lockToken)
+    {
+        return Task.CompletedTask;
+    }
+
     public Task DeadLetterAsync(string lockToken)
     {
         if (DeadLetterException != null)

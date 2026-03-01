@@ -6,6 +6,7 @@ using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
@@ -13,8 +14,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-    [Collection("CommandProcessor")]
-    public class PostCommandTests : IDisposable
+    public class PostCommandTests
     {
         private readonly RoutingKey _routingKey = new("MyCommand");
         private readonly CommandProcessor _commandProcessor;
@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
+            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -79,12 +79,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             Assert.NotNull(message);
             Assert.Equal(_message, message);
         }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
-        }
-
         internal sealed class EmptyHandlerFactorySync : IAmAHandlerFactorySync
         {
             public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)

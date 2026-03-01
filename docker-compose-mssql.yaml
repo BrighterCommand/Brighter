@@ -1,17 +1,13 @@
-version: '3'
-
 services:
-   
-  # Need to give 2GB of memory to Docker for SQL
   sqlserver:
-    image: mcr.microsoft.com/mssql/server
+    image: mcr.microsoft.com/azure-sql-edge
     ports:
       - "11433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
     environment:
       - 'ACCEPT_EULA=Y'
-      - 'SA_PASSWORD=Password123!'
+      - 'MSSQL_SA_PASSWORD=Password123!'
 
 volumes:
   sqlserver-data:

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
@@ -33,7 +34,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -55,7 +56,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 outbox
             );
 
-            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -127,7 +127,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 outbox
             );
 
-            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -176,7 +175,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -198,7 +197,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 outbox
             );
 
-            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -256,7 +254,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, timeProvider, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -278,7 +276,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 outbox
             );
 
-            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),

@@ -34,8 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 {
-    [Collection("CommandProcessor")]
-    public class PublishingToMultipleSubscribersAsyncTests : IDisposable
+    public class PublishingToMultipleSubscribersAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyEvent _myEvent = new();
@@ -66,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         [Fact]
         public async Task When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async()
         {
-            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PublishAsync(_myEvent));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(_myEvent));
 
             //Should throw an aggregate exception
             Assert.IsType<AggregateException>(_exception);
@@ -76,11 +75,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandlerAsync), _myEvent.Id), _receivedMessages);
             //Should publish the command to the second event handler
             Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandlerAsync), _myEvent.Id), _receivedMessages);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

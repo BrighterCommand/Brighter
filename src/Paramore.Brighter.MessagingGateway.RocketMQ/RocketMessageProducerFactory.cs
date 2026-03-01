@@ -18,7 +18,7 @@ public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnecti
     
     /// <inheritdoc />
     public Dictionary<ProducerKey, IAmAMessageProducer> Create() 
-        => BrighterAsyncContext.Run(async () => await CreateAsync());
+        => BrighterAsyncContext.Run(() => CreateAsync());
 
     /// <inheritdoc />
     public async Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()

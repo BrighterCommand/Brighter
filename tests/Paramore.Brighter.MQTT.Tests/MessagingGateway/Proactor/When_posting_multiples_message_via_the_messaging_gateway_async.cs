@@ -46,14 +46,28 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
                 sentMessages.Add(message);
             }
 
-            Message[] receivedMessages = await MessageConsumerAsync.ReceiveAsync(TimeSpan.FromMilliseconds(200));
+            //Collect messages, retrying if not all have arrived yet
+            List<Message> receivedMessages = [];
+            int retries = 0;
+            while (receivedMessages.Count < messageCount && retries < 50)
+            {
+                int countBefore = receivedMessages.Count;
+                Message[] batch = await MessageConsumerAsync.ReceiveAsync(TimeSpan.FromMilliseconds(100), CancellationToken.None);
+                foreach (var msg in batch)
+                {
+                    if (msg.Header.MessageType != MessageType.MT_NONE)
+                        receivedMessages.Add(msg);
+                }
 
-            // Spin until we receive all messages or timeout after 2 seconds.
-            Assert.True(SpinWait.SpinUntil(() => receivedMessages.Length == messageCount, 5000), $"Received {receivedMessages.Length} of {messageCount} messages.");
+                if (receivedMessages.Count == countBefore)
+                    await Task.Delay(100);
+
+                retries++;
+            }
 
             Assert.NotEmpty(receivedMessages);
-            Assert.Equal(messageCount, receivedMessages.Length);
-            Assert.Equal(receivedMessages, sentMessages);
+            Assert.Equal(messageCount, receivedMessages.Count);
+            Assert.Equal(sentMessages, receivedMessages);
         }
     }
 }

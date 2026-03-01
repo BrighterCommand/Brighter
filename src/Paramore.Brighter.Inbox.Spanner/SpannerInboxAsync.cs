@@ -74,6 +74,16 @@ public class SpannerInboxAsync(
         return new SpannerParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
     }
 
+    protected override IDbDataParameter CreateJsonSqlParameter(string parameterName, object? value)
+    {
+        return new SpannerParameter 
+        {
+            ParameterName = parameterName, 
+            SpannerDbType = SpannerDbType.Json,
+            Value = value ?? DBNull.Value 
+        };
+    }
+
     protected override IDbDataParameter[] CreateGetParameters(string commandId, string contextKey)
     {
         return

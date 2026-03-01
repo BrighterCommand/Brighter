@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,11 +11,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPublishMultipleMatchesAsyncTests : IDisposable
+    public class CommandProcessorPublishMultipleMatchesAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
+        private readonly IDictionary<string, string> _receivedMessages = new ConcurrentDictionary<string, string>();
         private readonly MyEvent _myEvent = new();
         private Exception? _exception;
 
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         [Fact]
         public async Task When_There_Are_Multiple_Subscribers_Async()
         {
-            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PublishAsync(_myEvent));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(_myEvent));
 
             //Should not throw an exception
             Assert.Null(_exception);
@@ -49,11 +49,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandlerAsync), _myEvent.Id), _receivedMessages);
             //Should publish the command to the second event handler
             Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandlerAsync), _myEvent.Id), _receivedMessages);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

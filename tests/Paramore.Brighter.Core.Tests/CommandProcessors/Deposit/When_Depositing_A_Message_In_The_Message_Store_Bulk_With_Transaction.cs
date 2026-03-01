@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
@@ -11,8 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorBulkDepositPostWithTransactionTests : IDisposable
+    public class CommandProcessorBulkDepositPostWithTransactionTests
     {
         private readonly RoutingKey _commandTopic = new("MyCommand");
         private readonly RoutingKey _eventTopic = new("MyEvent");
@@ -31,13 +31,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer commandMessageProducer = new(_bus, timeProvider, new Publication 
+            InMemoryMessageProducer commandMessageProducer = new(_bus, new Publication 
             { 
                 Topic = new RoutingKey(_commandTopic), 
                 RequestType = typeof(MyCommand) 
             });
 
-            InMemoryMessageProducer eventMessageProducer = new(_bus, timeProvider,  new Publication 
+            InMemoryMessageProducer eventMessageProducer = new(_bus, new Publication 
             { 
                 Topic = new RoutingKey(_eventTopic), 
                 RequestType = typeof(MyEvent) 
@@ -92,7 +92,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 _spyOutbox
             );
 
-            CommandProcessor.ClearServiceBus();
             var scheduler = new InMemorySchedulerFactory();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -136,11 +135,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 Assert.Equal(_messages[i].Header.Topic, messages[i]?.Header.Topic);
                 Assert.Equal(_messages[i].Header.MessageType, messages[i]?.Header.MessageType);
             }
-        }
-        
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

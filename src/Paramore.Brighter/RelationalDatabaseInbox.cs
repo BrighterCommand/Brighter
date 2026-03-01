@@ -421,12 +421,17 @@ namespace Paramore.Brighter
 
         protected abstract IDbDataParameter CreateSqlParameter(string parameterName, object? value);
 
+        protected abstract IDbDataParameter CreateJsonSqlParameter(string parameterName, object? value);
+
         protected virtual IDbDataParameter[] CreateAddParameters<T>(T command, string contextKey)
             where T : class, IRequest
         {
-            var body = DatabaseConfiguration.BinaryMessagePayload
-                ? CreateSqlParameter("@CommandBody", JsonSerializer.SerializeToUtf8Bytes(command, JsonSerialisationOptions.Options))
-                : CreateSqlParameter("@CommandBody", JsonSerializer.Serialize(command, JsonSerialisationOptions.Options));
+            var body = 
+                DatabaseConfiguration.JsonMessagePayload 
+                    ? CreateJsonSqlParameter("@CommandBody", JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)) :
+                        DatabaseConfiguration.BinaryMessagePayload
+                        ? CreateSqlParameter("@CommandBody", JsonSerializer.SerializeToUtf8Bytes(command, JsonSerialisationOptions.Options))
+                        : CreateSqlParameter("@CommandBody", JsonSerializer.Serialize(command, JsonSerialisationOptions.Options));
 
             return
             [

@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env*)",
+      "Read(./secrets/**)",
+      "Read(./config/**)",
+      "Read(./**/credentials*)",
+      "Read(./**/*.key)",
+      "Read(./**/*.pem)",
+      "WebFetch",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(ssh:*)"
+    ],
+    "ask": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "slopwatch analyze -d . --hook",
+            "timeout": 60000
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "commit-commands@claude-plugins-official": true
+  }
+}

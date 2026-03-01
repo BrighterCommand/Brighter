@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
@@ -14,8 +15,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorBulkDepositPostTestsAsync: IDisposable
+    public class CommandProcessorBulkDepositPostTestsAsync
     {
         private readonly RoutingKey _commandTopic = new("MyCommand");
         private readonly RoutingKey _eventTopic = new("MyEvent");
@@ -37,13 +37,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 
             var timeProvider = new FakeTimeProvider();
 
-            InMemoryMessageProducer commandMessageProducer = new(_internalBus, timeProvider, new Publication 
+            InMemoryMessageProducer commandMessageProducer = new(_internalBus, new Publication 
             {
                 Topic =  new RoutingKey(_commandTopic),
                 RequestType = typeof(MyCommand)
             } );
 
-            InMemoryMessageProducer eventMessageProducer = new(_internalBus, timeProvider, new Publication
+            InMemoryMessageProducer eventMessageProducer = new(_internalBus, new Publication
             {
                 Topic =  new RoutingKey(_eventTopic),
                 RequestType = typeof(MyEvent)
@@ -100,7 +100,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 _outbox
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
@@ -160,11 +159,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             Assert.Equal(_message3.Body.Value, depositedPost3.Body.Value);
             Assert.Equal(_message3.Header.Topic, depositedPost3.Header.Topic);
             Assert.Equal(_message3.Header.MessageType, depositedPost3.Header.MessageType);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
      }
 }

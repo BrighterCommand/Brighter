@@ -5,14 +5,14 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-    [Collection("CommandProcessor")]
-    public class PostFailureLimitCommandTests : IDisposable
+    public class PostFailureLimitCommandTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly InMemoryOutbox _outbox;
@@ -94,12 +94,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                Assert.NotNull( await _outbox.GetAsync(id, new RequestContext()));
             }
         }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
-        }
-
         internal sealed class EmptyHandlerFactorySync : IAmAHandlerFactorySync
         {
             public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)

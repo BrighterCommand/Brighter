@@ -31,17 +31,19 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
                 Name = "Kafka Producer Send Test", 
                 BootStrapServers = new[] {"localhost:9092"}
             },
-            new[] {new KafkaPublication
-            {
-                Topic = new RoutingKey(_topic),
-                NumPartitions = 1,
-                ReplicationFactor = 1,
-                //These timeouts support running on a container using the same host as the tests, 
-                //your production values ought to be lower
-                MessageTimeoutMs = 2000,
-                RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Create
-            }}).Create();
+            [
+                new KafkaPublication
+                {
+                    Topic = new RoutingKey(_topic),
+                    NumPartitions = 1,
+                    ReplicationFactor = 1,
+                    //These timeouts support running on a container using the same host as the tests,
+                    //your production values ought to be lower
+                    MessageTimeoutMs = 2000,
+                    RequestTimeoutMs = 2000,
+                    MakeChannels = OnMissingChannel.Create
+                }
+            ]).Create();
     }
 
     [Fact]
@@ -129,8 +131,9 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Task.Delay(1000).GetAwaiter().GetResult();
             }
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
 
         return messages;
     }

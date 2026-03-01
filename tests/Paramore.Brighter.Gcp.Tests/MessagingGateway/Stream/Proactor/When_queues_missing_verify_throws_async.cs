@@ -34,7 +34,7 @@ public class ValidateQueuesTestsAsync : IDisposable
         // We have no topic so we should throw
         // We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = GatewayFactory.CreateChannelFactory();
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await _channelFactory.CreateAsyncChannelAsync(_pubSubSubscription));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _channelFactory.CreateAsyncChannelAsync(_pubSubSubscription));
     }
     
     [Fact]
@@ -49,7 +49,7 @@ public class ValidateQueuesTestsAsync : IDisposable
             Name = _pubSubSubscription.RoutingKey, 
             ProjectId = GatewayFactory.GetProjectId()
         }, OnMissingChannel.Create);
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await _channelFactory.CreateAsyncChannelAsync(_pubSubSubscription));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _channelFactory.CreateAsyncChannelAsync(_pubSubSubscription));
     }
 
     public void Dispose()

@@ -14,15 +14,25 @@ public static class Configuration
     {
         using var connection = new SqliteConnection(connectionString);
         connection.Open();
+        using (var walCommand = connection.CreateCommand())
+        {
+            walCommand.CommandText = "PRAGMA journal_mode=WAL;";
+            walCommand.ExecuteNonQuery();
+        }
         using var command = connection.CreateCommand();
         command.CommandText = ddl;
         command.ExecuteNonQuery();
     }
-    
+
     public static async Task CreateTableAsync(string connectionString, string ddl)
     {
         await using var connection = new SqliteConnection(connectionString);
         await connection.OpenAsync();
+        await using (var walCommand = connection.CreateCommand())
+        {
+            walCommand.CommandText = "PRAGMA journal_mode=WAL;";
+            await walCommand.ExecuteNonQueryAsync();
+        }
         await using var command = connection.CreateCommand();
         command.CommandText = ddl;
         await command.ExecuteNonQueryAsync();

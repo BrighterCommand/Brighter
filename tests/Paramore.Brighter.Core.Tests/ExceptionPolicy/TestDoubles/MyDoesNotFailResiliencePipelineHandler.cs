@@ -37,10 +37,10 @@ internal sealed class MyDoesNotFailResiliencePipelineHandler : RequestHandler<My
     }
 
     [UseResiliencePipeline("MyDivideByZeroPolicy", 1)]
-    public override MyCommand Handle(MyCommand command)
+    public override MyCommand Handle(MyCommand myCommand)
     {
         ReceivedCommand = true;
-        return base.Handle(command);
+        return base.Handle(myCommand);
     }
 
     public static bool Shouldreceive(MyCommand myCommand)

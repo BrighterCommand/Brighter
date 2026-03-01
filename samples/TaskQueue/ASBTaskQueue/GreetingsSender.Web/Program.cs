@@ -42,12 +42,11 @@ var outboxConfig = new RelationalDatabaseConfiguration(dbConnString,
 
 var producerRegistry = new AzureServiceBusProducerRegistryFactory(
         asbConnection,
-        new AzureServiceBusPublication[]
-        {
+        [
             new() { Topic = new RoutingKey("greeting.event"), MakeChannels = OnMissingChannel.Assume},
             new() { Topic = new RoutingKey("greeting.addGreetingCommand"), MakeChannels = OnMissingChannel.Assume },
             new() { Topic = new RoutingKey("greeting.Asyncevent"), MakeChannels = OnMissingChannel.Assume }
-        }
+        ]
     )
     .Create();
 

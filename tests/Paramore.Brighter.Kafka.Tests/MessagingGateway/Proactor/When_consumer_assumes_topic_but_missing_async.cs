@@ -7,7 +7,6 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaProducerAssumeTestsAsync : IDisposable
 {
@@ -26,21 +25,23 @@ public class KafkaProducerAssumeTestsAsync : IDisposable
             },
             [
                 new KafkaPublication
-            {
-                Topic = new RoutingKey(_topic),
-                NumPartitions = 1,
-                ReplicationFactor = 1,
-                //These timeouts support running on a container using the same host as the tests,
-                //your production values ought to be lower
-                MessageTimeoutMs = 2000,
-                RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Assume
-            }
+                {
+                    Topic = new RoutingKey(_topic),
+                    NumPartitions = 1,
+                    ReplicationFactor = 1,
+                    //These timeouts support running on a container using the same host as the tests,
+                    //your production values ought to be lower
+                    MessageTimeoutMs = 2000,
+                    RequestTimeoutMs = 2000,
+                    MakeChannels = OnMissingChannel.Assume
+                }
             ]).Create();
     }
 
-    //[Fact(Skip = "Does not fail on docker container as has topic creation set to true")]
+    //Watch your local Docker container when checking failures for this test, should be
+    //KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
     [Fact]
+    [Trait("Fragile", "CI")]
     public async Task When_a_consumer_declares_topics()
     {
         //Let topic propagate in the broker

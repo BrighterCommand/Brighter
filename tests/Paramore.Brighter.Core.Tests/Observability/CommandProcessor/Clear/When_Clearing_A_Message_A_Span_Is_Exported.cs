@@ -9,6 +9,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -41,7 +42,6 @@ public class CommandProcessorClearObservabilityTests
             .AddInMemoryExporter(_exportedActivities)
             .Build();
 
-        Brighter.CommandProcessor.ClearServiceBus();
 
         _timeProvider = new FakeTimeProvider();
     }
@@ -233,7 +233,6 @@ public class CommandProcessorClearObservabilityTests
         
         var messageProducer = new InMemoryMessageProducer(
             _internalBus,
-            _timeProvider,
             new Publication
             {
                 Source = publicationSource, RequestType = typeof(MyEvent), Topic = _routingKey, Type = _publicationType,
@@ -241,7 +240,6 @@ public class CommandProcessorClearObservabilityTests
             instrumentationOptions
         );
 
-        Brighter.CommandProcessor.ClearServiceBus();
 
         var registry = new SubscriberRegistry();
 

@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 new ChannelName(_topic), new RoutingKey(_topic));
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration,
-                new Publication[] {new Publication {Topic = new RoutingKey(_topic)}}
+                [new Publication {Topic = new RoutingKey(_topic)}]
             ).CreateAsync().Result;
             _channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration));
         }
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             await ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(_topic)).SendAsync(_message);
             var channel = await _channelFactory.CreateAsyncChannelAsync(_subscription);
             var message = await channel.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
-            await channel.RequeueAsync(message, TimeSpan.FromMilliseconds(100));
+            await channel.RequeueAsync(message);
 
             var requeuedMessage = await channel.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 

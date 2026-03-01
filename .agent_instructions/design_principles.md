@@ -1,0 +1,46 @@
+# Design Principles
+
+- Use Responsibility-Driven Design
+    - Focus on the responsibilities that a class has.
+    - "Responsibility-driven design specifies object behavior before object structure and other implementation considerations are determined. We have found that it minimizes the rework required for major design changes."
+    - Maximize Abstraction
+        - Elide the distinction between data and behavior.
+        - Think of responsibilities for "knowing", "doing", and "deciding"
+    - Distribute Behavior
+        - Promote a delegated control architecture
+        - Make objects smart— give them behaviors, not just data
+    - Preserve Flexibility
+        - Design objects so interior details can be readily changed
+    - Objects have roles.
+        - Common roles are stereotypes: information holder, structurer, service provider, coordinator, controller, interfacer
+- Support optionality through interfaces.
+    - If an interface describes a role that an implementor provides, use the naming convention IAmA* e.g. `public interface IAmAProducerRegistry { }`
+    - Consider if a user might wish to override our implementation of a public class with theirs, for TDD, or extension.
+    - If so, provide an interface for them to override.
+    - It is acceptable in that case to use an interface, even if we have one implementation.
+    - For internal classes, only provide an interface if there is optionality.
+- Avoid primitive obsession.
+    - Where a primitive (string, int, bool, double, float etc.) could be replaced with a more expressive type, use a class, struct or record.
+    - Only use int for numeric values that have no domain meaning; only use string for string values that have no domain meaning.
+    - Where we need to serialize, or for interoperability, you may use primitive types as part of that serialization, instead of writing convertors, for simplicity.
+- Principles
+    - Tidy is better than cluttered.
+    - Reveal intention; be explicit to support future readers.
+    - Prefer simplicity.
+    - Do not duplicate knowledge.
+    - Avoid having more than one level of indentation in a method.
+    - Do not add new types without necessity.
+    - There should be one-- and preferably only one --obvious way to do it.
+    - If the implementation is hard to explain, it's a bad idea.
+    - Keep methods small and focused on a single responsibility
+- Follow Beck's "Tidy First" approach by separating structural changes from behavioral changes
+    - **Recommended Tool**: Use the `/tidy-first <description>` command (see [.claude/commands/refactor/tidy-first.md](../../.claude/commands/refactor/tidy-first.md)) to enforce this workflow automatically
+    - Separate all changes into two distinct types:
+        - STRUCTURAL CHANGES: Rearranging code without changing behavior (renaming, extracting methods, moving code)
+        - BEHAVIORAL CHANGES: Adding or modifying actual functionality
+    - Never mix structural and behavioral changes in the same commit
+    - Always make structural changes first when both are needed
+    - Validate structural changes do not alter behavior by running tests before and after
+    - Not all of our code follows these conventions.
+        - Some of our older code uses older conventions.
+        - Follow the boy scout rule, and fix these, as part of your work.

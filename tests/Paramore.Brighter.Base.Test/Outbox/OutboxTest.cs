@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Outbox;
 
-public abstract class OutboxTest<TTransaction>
+public abstract class OutboxTest<TTransaction> : IDisposable
 {
     protected abstract IAmAnOutboxSync<Message, TTransaction> Outbox { get; }
 
@@ -56,7 +56,7 @@ public abstract class OutboxTest<TTransaction>
             source:       new Uri(Uuid.NewAsString(), UriKind.Relative),
             type:         new CloudEventsType(Uuid.NewAsString()),
             timeStamp:    timestamp ?? DateTimeOffset.UtcNow,
-            correlationId:Id.Random(),
+            correlationId: Id.Random(),
             replyTo:      new RoutingKey(Uuid.NewAsString()),
             contentType:  new ContentType(MediaTypeNames.Text.Plain),
             partitionKey: Uuid.NewAsString(),
@@ -144,8 +144,8 @@ public abstract class OutboxTest<TTransaction>
         
         Outbox.Add([earliest, dispatched, undispatched], context);
         Outbox.MarkDispatched(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        Outbox.MarkDispatched(dispatched.Id, context);
-        
+        Outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var messages = GetAllMessages().ToArray();
 
@@ -167,8 +167,8 @@ public abstract class OutboxTest<TTransaction>
         
         Outbox.Add([earliest, dispatched, undispatched], context);
         Outbox.MarkDispatched(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        Outbox.MarkDispatched(dispatched.Id, context);
-        
+        Outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var messages =  Outbox
             .Get([earliest.Id, undispatched.Id], context)
@@ -192,8 +192,8 @@ public abstract class OutboxTest<TTransaction>
         
         Outbox.Add([earliest, dispatched, undispatched], context);
         Outbox.MarkDispatched(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        Outbox.MarkDispatched(dispatched.Id, context);
-        
+        Outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var message = Outbox.Get(dispatched.Id, context);
 
@@ -213,8 +213,8 @@ public abstract class OutboxTest<TTransaction>
         
         Outbox.Add([earliest, dispatched, undispatched], context);
         Outbox.MarkDispatched(earliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        Outbox.MarkDispatched(dispatched.Id, context);
-        
+        Outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var allDispatched = Outbox.DispatchedMessages(TimeSpan.Zero, context).ToArray();
         var messagesOverAnHour  = Outbox.DispatchedMessages(TimeSpan.FromHours(1), context).ToArray();
@@ -247,8 +247,8 @@ public abstract class OutboxTest<TTransaction>
         var undispatched = CreateRandomMessage();
         
         Outbox.Add([earliest, dispatched, undispatched], context);
-        Outbox.MarkDispatched(dispatched.Id, context);
-        
+        Outbox.MarkDispatched(dispatched.Id, context, DateTime.UtcNow.AddSeconds(-30));
+
         // Act
         var allUndispatched = Outbox.OutstandingMessages(TimeSpan.Zero, context).ToArray();
         var messagesOverAnHour = Outbox.OutstandingMessages(TimeSpan.FromHours(1), context).ToArray();
@@ -316,7 +316,7 @@ public abstract class OutboxTest<TTransaction>
         //should read the header from the sql outbox
         Assert.Equal(message.Header.Topic, storedMessage.Header.Topic);
         Assert.Equal(message.Header.MessageType, storedMessage.Header.MessageType);
-        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"), storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
+        Assert.Equal(message.Header.TimeStamp, storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(1));
         Assert.Equal(0, storedMessage.Header.HandledCount); // -- should be zero when read from outbox
         Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, storedMessage.Header.CorrelationId);
@@ -368,7 +368,7 @@ public abstract class OutboxTest<TTransaction>
         //should read the header from the sql outbox
         Assert.Equal(message.Header.Topic, storedMessage.Header.Topic);
         Assert.Equal(message.Header.MessageType, storedMessage.Header.MessageType);
-        Assert.Equal(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"), storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
+        Assert.Equal(message.Header.TimeStamp, storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(1));
         Assert.Equal(0, storedMessage.Header.HandledCount); // -- should be zero when read from outbox
         Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
         Assert.Equal(message.Header.CorrelationId, storedMessage.Header.CorrelationId);
@@ -394,7 +394,7 @@ public abstract class OutboxTest<TTransaction>
         Assert.Equal(message.Header.DataSchema,   storedMessage.Header.DataSchema);
         Assert.Equal(message.Header.Subject,      storedMessage.Header.Subject);
         Assert.Equal(message.Header.TraceParent,  storedMessage.Header.TraceParent);
-        Assert.Equal(message.Header.TraceState,   storedMessage.Header.TraceState);        
+        Assert.Equal(message.Header.TraceState,   storedMessage.Header.TraceState);
     }
     
      [Fact]

@@ -11,10 +11,10 @@ namespace SalutationApp.Policies
         public const string EXPONENTIAL_RETRYPOLICY_ASYNC = "SalutationPorts.Policies.ExponenttialRetryPolicy";
         public static AsyncRetryPolicy GetSimpleHandlerRetryPolicyAsync()
         {
-            return Policy.Handle<Exception>().WaitAndRetryAsync(new[]
-            {
+            return Policy.Handle<Exception>().WaitAndRetryAsync(
+            [
                 TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
-            });
+            ]);
         }
 
         public static AsyncRetryPolicy GetExponentialHandlerRetryPolicyAsync()

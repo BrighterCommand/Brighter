@@ -31,10 +31,10 @@ namespace HelloWorld
     internal sealed class GreetingCommandHandler : RequestHandler<GreetingCommand>
     {
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-        public override GreetingCommand Handle(GreetingCommand command)
+        public override GreetingCommand Handle(GreetingCommand greetingCommand)
         {
-            Console.WriteLine("Hello {0}", command.Name);
-            return base.Handle(command);
+            Console.WriteLine("Hello {0}", greetingCommand.Name);
+            return base.Handle(greetingCommand);
         }
     }
 }

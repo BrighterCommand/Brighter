@@ -1,5 +1,6 @@
 ﻿using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessageScheduler.TickerQ;
 using Paramore.Brighter.Observability;
 using Polly;
@@ -45,7 +46,7 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
 
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                [RoutingKey] = new InMemoryMessageProducer(InternalBus, TimeProvider, new Publication { Topic = RoutingKey, RequestType = typeof(MyEvent) })
+                [RoutingKey] = new InMemoryMessageProducer(InternalBus, new Publication { Topic = RoutingKey, RequestType = typeof(MyEvent) })
             });
 
             var messageMapperRegistry = GetMapperRegistery();
@@ -92,7 +93,6 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
                scheduler);
             });
 
-            CommandProcessor.ClearServiceBus();
 
             ServiceProvider = _serviceCollection.BuildServiceProvider();
             Processor = ServiceProvider.GetRequiredService<IAmACommandProcessor>();

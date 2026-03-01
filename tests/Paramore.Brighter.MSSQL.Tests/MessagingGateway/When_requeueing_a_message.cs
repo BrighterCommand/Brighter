@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(_message);
             var channel = _channelFactory.CreateSyncChannel(_subscription);
             var message = channel.Receive(TimeSpan.FromMilliseconds(2000));
-            channel.Requeue(message, TimeSpan.FromMilliseconds(100));
+            channel.Requeue(message);
 
             var requeuedMessage = channel.Receive(TimeSpan.FromMilliseconds(1000));
 

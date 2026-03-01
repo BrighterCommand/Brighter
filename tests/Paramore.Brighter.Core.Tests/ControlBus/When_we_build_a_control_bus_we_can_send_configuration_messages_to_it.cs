@@ -10,8 +10,7 @@ using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.Core.Tests.ControlBus
 {
-    [Collection("CommandProcessor")]
-    public class ControlBusTests : IDisposable
+    public class ControlBusTests
     {
         private readonly IDispatcher _dispatcher;
         private readonly Dispatcher _controlBus;
@@ -28,11 +27,10 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
                 .With()
                 .Dispatcher(_dispatcher)
                 .ProducerRegistryFactory(new InMemoryProducerRegistryFactory(
-                    bus, 
-                    new []
-                    {
+                    bus,
+                    [
                         new Publication{Topic = topic, RequestType = typeof(ConfigurationCommand)}
-                    }, InstrumentationOptions.All))
+                    ], InstrumentationOptions.All))
                 .ChannelFactory(new InMemoryChannelFactory(bus, TimeProvider.System));
 
             _controlBus = busReceiverBuilder.Build("tests");
@@ -50,11 +48,6 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             Assert.Null(_exception);
             //Should call the dispatcher to start it
             A.CallTo(() => _dispatcher.Receive()).MustHaveHappened();
-        }
-        
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

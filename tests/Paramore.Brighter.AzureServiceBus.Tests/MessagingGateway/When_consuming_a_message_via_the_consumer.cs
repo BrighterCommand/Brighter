@@ -14,7 +14,6 @@ using Paramore.Brighter.Observability;
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {
     [Trait("Category", "ASB")]
-    [Trait("Fragile", "CI")]
     public class ASBConsumerTests : IDisposable
     {
         private readonly Message _message;
@@ -104,10 +103,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             _producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 clientProvider,
-                new[]
-                    {
-                        new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) }
-                    }
+                [
+                    new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) }
+                ]
                 )
                 .Create();
         }

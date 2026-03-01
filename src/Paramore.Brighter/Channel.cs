@@ -84,12 +84,24 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        ///  Acknowledges the specified message.
+        /// Acknowledges the specified message.
         /// </summary>
-        /// <param name="message">The message.</param>
+        /// <remarks>
+        /// When a message is acknowledged, another consumer should not process it
+        /// </remarks>
+        /// <param name="message">The<see cref="Message"/> to reject</param>
         public virtual void Acknowledge(Message message)
         {
             _messageConsumer.Acknowledge(message);
+        }
+
+        /// <summary>
+        /// Nacks the specified message, releasing it back to the transport for redelivery.
+        /// </summary>
+        /// <param name="message">The <see cref="Message"/> to nack</param>
+        public virtual void Nack(Message message)
+        {
+            _messageConsumer.Nack(message);
         }
 
         /// <summary>
@@ -144,11 +156,14 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        ///  Rejects the specified message.
+        /// Rejects the specified message.
         /// </summary>
-        /// <param name="message">The message.</param>
-        public virtual bool Reject(Message message)
-            => _messageConsumer.Reject(message);
+        /// When a message is rejected, another consumer should not process it. If there is a dead letter, or invalid
+        /// message channel, the message should be forwardedn to it
+        /// <param name="message">The <see cref="Message"/> to reject</param>
+        /// <param name="reason">The <see cref="MessageRejectionReason"/> that explaines why we rejected the mes
+        public virtual bool Reject(Message message, MessageRejectionReason? reason)
+            => _messageConsumer.Reject(message, reason);
 
         /// <summary>
         /// Requeues the specified message.

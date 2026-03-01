@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
@@ -59,7 +60,7 @@ public class InMemorySchedulerMessageAsyncTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, _timeProvider,new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -87,7 +88,6 @@ public class InMemorySchedulerMessageAsyncTests
             _outbox
         );
 
-        CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,

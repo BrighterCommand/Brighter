@@ -5,6 +5,7 @@ using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
@@ -14,7 +15,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Scheduler;
 
-[Collection("CommandProcessor")]
 public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
 {
     private const string Topic = "MyCommand";
@@ -45,7 +45,7 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
 
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-        var producer = new InMemoryMessageProducer(_internalBus, _timeProvider, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+        var producer = new InMemoryMessageProducer(_internalBus, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
@@ -65,7 +65,6 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
             _outbox
         );
 
-        CommandProcessor.ClearServiceBus();
         _commandProcessor = new CommandProcessor(registry,
             handlerFactory,
             new InMemoryRequestContextFactory(),

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
@@ -13,8 +14,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorDepositPostTestsAsync: IDisposable
+    public class CommandProcessorDepositPostTestsAsync
     {
         private readonly RoutingKey _routingKey = new("MyCommand");
 
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, new Publication{ Topic = _routingKey, RequestType = typeof(MyCommand) });
+            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication{ Topic = _routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -64,7 +64,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 _outbox
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
@@ -102,11 +101,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var outstandingMessages = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
             var outstandingMessage = outstandingMessages.Single();
             Assert.Equal(_message.Id, outstandingMessage.Id);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
      }
 }

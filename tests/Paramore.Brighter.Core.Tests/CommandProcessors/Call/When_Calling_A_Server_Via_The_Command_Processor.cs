@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
@@ -12,8 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorCallTests : IDisposable
+    public class CommandProcessorCallTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new();
@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var timeProvider = new FakeTimeProvider();
             _routingKey = new RoutingKey("MyRequest");
-            var messageProducer = new  InMemoryMessageProducer(_bus, timeProvider, new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)});
+            var messageProducer = new  InMemoryMessageProducer(_bus, new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)});
             
             _messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
@@ -72,7 +72,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new FindPublicationByPublicationTopicOrRequestType(),
                 new InMemoryOutbox(timeProvider){Tracer = tracer});
         
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
@@ -96,7 +95,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             //start a message pump on a new thread, to recieve the Call message
             Channel channel = new(
                 new("MyChannel"), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000))
+                new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000))
             );
             
             var messagePump = new Reactor(_commandProcessor, (message) => typeof(MyRequest),_messageMapperRegistry, 
@@ -113,11 +112,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             channel.Stop(_routingKey);
 
         }
-        
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
-        }
-
    }
 }

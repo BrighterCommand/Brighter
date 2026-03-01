@@ -1,0 +1,8 @@
+{
+  "Namespace": "Paramore.Brighter.MongoDB.Tests",
+  "Outbox": {
+    "Transaction": "global::MongoDB.Driver.IClientSessionHandle",
+    "OutboxProvider": "Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider",
+    "SupportsTransactions": false
+  }
+}

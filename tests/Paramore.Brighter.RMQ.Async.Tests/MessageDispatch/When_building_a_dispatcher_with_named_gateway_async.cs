@@ -11,8 +11,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessageDispatch;
 
-[Collection("CommandProcessor")]
-public class DispatchBuilderWithNamedGatewayAsync : IDisposable
+public class DispatchBuilderWithNamedGatewayAsync
 {
     private readonly IAmADispatchBuilder _builder;
     private Dispatcher _dispatcher;
@@ -30,7 +29,7 @@ public class DispatchBuilderWithNamedGatewayAsync : IDisposable
             {
                 CommandProcessor.RETRYPOLICY, Policy
                     .Handle<Exception>()
-                    .WaitAndRetry(new[] {TimeSpan.FromMilliseconds(50)})
+                    .WaitAndRetry([TimeSpan.FromMilliseconds(50)])
             },
             {
                 CommandProcessor.CIRCUITBREAKER, Policy
@@ -66,8 +65,8 @@ public class DispatchBuilderWithNamedGatewayAsync : IDisposable
             )
             .MessageMappers(messageMapperRegistry, null, null, null)
             .ChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
-            .Subscriptions(new []
-            {
+            .Subscriptions(
+            [
                 new RmqSubscription<MyEvent>(
                     new SubscriptionName("foo"),
                     new ChannelName("mary"),
@@ -80,7 +79,7 @@ public class DispatchBuilderWithNamedGatewayAsync : IDisposable
                     new RoutingKey("simon"),
                     messagePumpType: MessagePumpType.Proactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
-            })
+            ])
             .ConfigureInstrumentation(tracer, instrumentationOptions);
     }
 
@@ -90,10 +89,5 @@ public class DispatchBuilderWithNamedGatewayAsync : IDisposable
         _dispatcher = _builder.Build();
 
         Assert.NotNull(_dispatcher);
-    }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
     }
 }

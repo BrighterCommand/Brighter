@@ -4,14 +4,14 @@ using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorCallTestsNoTimeout : IDisposable
+    public class CommandProcessorCallTestsNoTimeout
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new();
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), fakeTimeProvider,new Publication {Topic = routingKey, RequestType = typeof(MyRequest)})
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication {Topic = routingKey, RequestType = typeof(MyRequest)})
                 }
             });
 
@@ -68,7 +68,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new InMemoryOutbox( fakeTimeProvider) {Tracer = tracer}
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
@@ -94,12 +93,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             
             //should throw an exception as we require a timeout to be set
             Assert.IsType<InvalidOperationException>(exception);
-        }
-
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

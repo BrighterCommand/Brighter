@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Testing;
 using Paramore.Brighter.ServiceActivator;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
@@ -29,7 +30,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             
             _channel = new Channel(
                 new (Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
             );
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),

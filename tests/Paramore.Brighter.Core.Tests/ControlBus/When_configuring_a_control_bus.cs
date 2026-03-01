@@ -8,8 +8,7 @@ using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.Core.Tests.ControlBus
 {
-    [Collection("CommandProcessor")]
-    public class ControlBusBuilderTests : IDisposable
+    public class ControlBusBuilderTests
     {
         private Dispatcher _controlBus;
         private readonly ControlBusReceiverBuilder _busReceiverBuilder;
@@ -23,10 +22,10 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _busReceiverBuilder = (ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(dispatcher)
-                .ProducerRegistryFactory(new InMemoryProducerRegistryFactory(bus, new []
-                {
+                .ProducerRegistryFactory(new InMemoryProducerRegistryFactory(bus,
+                [
                     new Publication{Topic = new RoutingKey("MyTopic"), RequestType = typeof(ConfigurationCommand)}
-                }, InstrumentationOptions.All))
+                ], InstrumentationOptions.All))
                 .ChannelFactory(new InMemoryChannelFactory(bus, TimeProvider.System)) as ControlBusReceiverBuilder)!;
         }
 
@@ -38,11 +37,6 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             Assert.Contains(_controlBus.Subscriptions, cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.CONFIGURATION}");
             Assert.Contains(_controlBus.Subscriptions, cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.HEARTBEAT}");
             Assert.NotNull(_controlBus.CommandProcessor);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

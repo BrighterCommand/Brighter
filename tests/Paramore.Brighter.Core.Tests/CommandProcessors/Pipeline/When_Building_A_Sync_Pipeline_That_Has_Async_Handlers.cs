@@ -32,8 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
-    [Collection("CommandProcessor")]
-    public class PipelineMixedHandlersTests : IDisposable
+    public class PipelineMixedHandlersTests
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
@@ -64,11 +63,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             Assert.NotNull(_exception);
             Assert.IsType<ConfigurationException>(_exception);
             Assert.Contains(typeof(MyLoggingHandlerAsync<>).Name, _exception.Message);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

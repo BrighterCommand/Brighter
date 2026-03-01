@@ -38,10 +38,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server
 
         public static MqttTestServer? CreateTestMqttServer(MqttFactory mqttFactory, bool startService = true, ILogger? logger = null, IPAddress? serverIPAddress = null, int? serverPort = null, MqttServerOptions? mqttServerOptions = null, [CallerMemberName] string? testMethodName = null)
         {
-            if (mqttFactory is null)
-            {
-                throw new ArgumentNullException(nameof(mqttFactory));
-            }
+            ArgumentNullException.ThrowIfNull(mqttFactory);
 
             serverPort ??= GetRandomServerPort();
 
@@ -94,7 +91,14 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server
         }
 
 
-        public static int GetRandomServerPort() => new Random().Next(20000, 30000);
+        public static int GetRandomServerPort()
+        {
+            var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
+        }
 
         public static ILogger CreateLogger(string categoryName)
         {

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
@@ -20,8 +21,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorPostBoxImplicitClearAsyncTests : IDisposable
+    public class CommandProcessorPostBoxImplicitClearAsyncTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var timeProvider = new FakeTimeProvider();
 
-            InMemoryMessageProducer messageProducer = new(_bus, timeProvider, new Publication{Topic = _routingKey, RequestType = typeof(MyCommand)});
+            InMemoryMessageProducer messageProducer = new(_bus, new Publication{Topic = _routingKey, RequestType = typeof(MyCommand)});
 
             _message = new Message(
                 new MessageHeader(myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -75,7 +75,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 _outbox
             );
 
-            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
@@ -126,11 +125,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             Assert.Equal(_message2.Id, sentMessage2.Id);
             Assert.Equal(_message2.Header.Topic, sentMessage2.Header.Topic);
             Assert.Equal(_message2.Body.Value, sentMessage2.Body.Value);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

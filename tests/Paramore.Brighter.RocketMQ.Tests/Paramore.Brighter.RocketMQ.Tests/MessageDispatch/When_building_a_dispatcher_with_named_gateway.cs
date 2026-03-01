@@ -12,8 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessageDispatch;
 
-[Collection("CommandProcessor")]
-public class DispatchBuilderWithNamedGateway : IDisposable
+public class DispatchBuilderWithNamedGateway
 {
     private readonly IAmADispatchBuilder _builder;
     private Dispatcher? _dispatcher;
@@ -30,7 +29,7 @@ public class DispatchBuilderWithNamedGateway : IDisposable
             {
                 CommandProcessor.RETRYPOLICY, Policy
                     .Handle<Exception>()
-                    .WaitAndRetry(new[] {TimeSpan.FromMilliseconds(50)})
+                    .WaitAndRetry([TimeSpan.FromMilliseconds(50)])
             },
             {
                 CommandProcessor.CIRCUITBREAKER, Policy
@@ -85,10 +84,5 @@ public class DispatchBuilderWithNamedGateway : IDisposable
     {
         _dispatcher = _builder.Build();
         Assert.NotNull(_dispatcher);
-    }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
     }
 }

@@ -1,0 +1,19 @@
+{
+  "Namespace": "Paramore.Brighter.Gcp.Tests",
+  "Outboxes": {
+    "Firestore": {
+      "Transaction": "Paramore.Brighter.Firestore.FirestoreTransaction",
+      "OutboxProvider": "FirestoreOutboxProvider"
+    },
+    "SpannerBinary": {
+      "Transaction": "System.Data.Common.DbTransaction",
+      "OutboxProvider": "SpannerBinaryOutboxProvider",
+      "Category": "Spanner"
+    },
+    "SpannerText": {
+      "Transaction": "System.Data.Common.DbTransaction",
+      "OutboxProvider": "SpannerTextOutboxProvider",
+      "Category": "Spanner"
+    }
+  }
+}

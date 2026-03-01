@@ -8,6 +8,7 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.Mediator\Paramore.Brighter.Mediator.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Testing\Paramore.Brighter.Testing.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.collector">

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
+        <TargetFrameworks>$(BrighterTestNineOnlyTargetFrameworks)</TargetFrameworks>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
     </PropertyGroup>

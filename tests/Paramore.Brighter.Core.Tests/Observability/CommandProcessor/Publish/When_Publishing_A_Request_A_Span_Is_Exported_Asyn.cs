@@ -16,7 +16,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Publish;
 
-[Collection("CommandProcessor")]
 public class AsyncCommandProcessorPublishObservabilityTests 
 {
     private readonly List<Activity> _exportedActivities;
@@ -36,7 +35,6 @@ public class AsyncCommandProcessorPublishObservabilityTests
         
         BrighterTracer tracer = new();
        
-        Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
@@ -61,7 +59,6 @@ public class AsyncCommandProcessorPublishObservabilityTests
         
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy}};
         
-        Brighter.CommandProcessor.ClearServiceBus();
 
         _commandProcessor = new Brighter.CommandProcessor(
             registry,

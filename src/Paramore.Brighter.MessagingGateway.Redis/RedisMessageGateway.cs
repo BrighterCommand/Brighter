@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using ServiceStack.Redis;
 
@@ -34,18 +35,20 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         protected static Lazy<RedisManagerPool>? s_pool;
         protected RoutingKey Topic;
         private readonly RedisMessagingGatewayConfiguration _gatewayConfiguration;
-        
+        private readonly Lazy<RedisManagerPool> _myPool;
+
         protected RedisMessageGateway(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, RoutingKey topic)
         {
             _gatewayConfiguration = redisMessagingGatewayConfiguration;
             Topic = topic;
-            
-            s_pool = new Lazy<RedisManagerPool>(() =>
+
+            _myPool = new Lazy<RedisManagerPool>(() =>
             {
                 OverrideRedisClientDefaults();
 
                 return new RedisManagerPool(_gatewayConfiguration.RedisConnectionString, new RedisPoolConfig());
             });
+            s_pool = _myPool;
         }
 
         // <summary>
@@ -62,21 +65,27 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         }
         
         /// <summary>
-        /// Dispose of the pool of connections to Redis
+        /// Dispose of the pool of connections to Redis.
+        /// Only nulls the shared static pool if it still references this instance's pool,
+        /// preventing a disposing instance from wiping out a newer instance's pool.
         /// </summary>
         protected virtual void DisposePool()
         {
-            if (s_pool is { IsValueCreated: true })
-                s_pool.Value.Dispose();
+            Interlocked.CompareExchange(ref s_pool, null, _myPool);
+            if (_myPool is { IsValueCreated: true })
+                _myPool.Value.Dispose();
         }
-        
+
         /// <summary>
-        /// Dispose of the pool of connections to Redis
+        /// Dispose of the pool of connections to Redis.
+        /// Only nulls the shared static pool if it still references this instance's pool,
+        /// preventing a disposing instance from wiping out a newer instance's pool.
         /// </summary>
         protected virtual async ValueTask DisposePoolAsync()
         {
-            if (s_pool is { IsValueCreated: true })
-                await ((IAsyncDisposable)s_pool.Value).DisposeAsync();
+            Interlocked.CompareExchange(ref s_pool, null, _myPool);
+            if (_myPool is { IsValueCreated: true })
+                await ((IAsyncDisposable)_myPool.Value).DisposeAsync();
         }
         
         /// <summary>

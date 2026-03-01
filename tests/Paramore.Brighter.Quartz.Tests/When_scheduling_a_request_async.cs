@@ -1,6 +1,7 @@
 ﻿using System.Collections.Specialized;
 using System.Transactions;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessageScheduler.Quartz;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
@@ -56,7 +57,7 @@ public class QuartzSchedulerRequestAsyncTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, _timeProvider, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -89,7 +90,6 @@ public class QuartzSchedulerRequestAsyncTests
 
         _scheduler = new QuartzSchedulerFactory(scheduler);
 
-        CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
             handlerFactory,

@@ -17,7 +17,7 @@ public static class HealthCheckExtensions
                 return new BrighterOutboxConnectionHealthCheck(connProvider);
             },
             HealthStatus.Unhealthy,
-            new[] { "brighter", "outbox" },
+            ["brighter", "outbox"],
             TimeSpan.FromSeconds(15)));
     }
 }

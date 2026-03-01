@@ -4,13 +4,13 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors;
 
-[Collection("CommandProcessor")]
 public class RequestContextPresentTests : IDisposable
 {
     private readonly SpyContextFactory _requestContextFactory;
@@ -169,7 +169,7 @@ public class RequestContextPresentTests : IDisposable
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), fakeTimeProvider,  new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
                 },
             });
 
@@ -222,7 +222,7 @@ public class RequestContextPresentTests : IDisposable
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
                  },
             });
 
@@ -273,7 +273,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider, new Publication{RequestType = typeof(MyCommand), Topic = routingKey})} 
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{RequestType = typeof(MyCommand), Topic = routingKey})} 
             });
 
         var tracer = new BrighterTracer(timeProvider);
@@ -328,7 +328,7 @@ public class RequestContextPresentTests : IDisposable
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), timeProvider,  new Publication{RequestType = typeof(MyCommand), Topic = routingKey} )
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{RequestType = typeof(MyCommand), Topic = routingKey} )
                  },
             });
 
@@ -375,6 +375,5 @@ public class RequestContextPresentTests : IDisposable
         MyContextAwareCommandHandlerAsync.TestString = null;
         MyContextAwareEventHandler.TestString = null;
         MyContextAwareEventHandlerAsync.TestString = null;
-        CommandProcessor.ClearServiceBus();
     }
 }

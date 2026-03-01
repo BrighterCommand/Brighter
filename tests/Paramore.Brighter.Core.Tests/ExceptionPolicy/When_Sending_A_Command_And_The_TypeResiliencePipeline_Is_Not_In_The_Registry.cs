@@ -11,7 +11,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy;
 
-public class CommandProcessorMissingTypeResiliencePipelineFromRegistryTests : IDisposable
+public class CommandProcessorMissingTypeResiliencePipelineFromRegistryTests
 {
     private readonly CommandProcessor _commandProcessor;
     private readonly MyCommand _myCommand = new MyCommand();
@@ -48,10 +48,5 @@ public class CommandProcessorMissingTypeResiliencePipelineFromRegistryTests : ID
         Assert.IsType<KeyNotFoundException>(innerException);
         //Should give the name of the missing policy
         Assert.Contains("Unable to find a generic resilience pipeline of 'MyCommand' associated with the key 'MyDivideByZeroPolicy'. Please ensure that either the generic resilience pipeline or the generic builder is registered.", innerException.Message);
-    }
-
-    public void Dispose()
-    {
-        CommandProcessor.ClearServiceBus();
     }
 }

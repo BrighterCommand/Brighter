@@ -30,14 +30,14 @@ namespace Events.Ports.CommandHandlers
 {
     public class GreetingEventHandler : RequestHandler<GreetingEvent>
     {
-        public override GreetingEvent Handle(GreetingEvent @event)
+        public override GreetingEvent Handle(GreetingEvent greetingEvent)
         {
             Console.WriteLine("Received Greeting. Message Follows");
             Console.WriteLine("----------------------------------");
-            Console.WriteLine(@event.Greeting);
+            Console.WriteLine(greetingEvent.Greeting);
             Console.WriteLine("----------------------------------");
             Console.WriteLine("Message Ends");
-            return base.Handle(@event);
+            return base.Handle(greetingEvent);
         }
     }
 }

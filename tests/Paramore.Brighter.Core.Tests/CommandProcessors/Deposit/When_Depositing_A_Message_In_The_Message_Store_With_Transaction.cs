@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Polly;
@@ -12,8 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorDepositPostWithTransactionTests : IDisposable
+    public class CommandProcessorDepositPostWithTransactionTests
     {
         private readonly RoutingKey _routingKey = new("MyCommand");
 
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
+            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -64,7 +64,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 _spyOutbox
             );
         
-            CommandProcessor.ClearServiceBus();
             var scheduler = new InMemorySchedulerFactory();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
@@ -101,11 +100,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             Assert.Equal(_message.Body.Value, message.Body.Value);
             Assert.Equal(_message.Header.Topic, message.Header.Topic);
             Assert.Equal(_message.Header.MessageType, message.Header.MessageType);
-        }
-        
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

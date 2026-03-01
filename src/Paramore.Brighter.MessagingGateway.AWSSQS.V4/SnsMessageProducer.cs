@@ -91,7 +91,7 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     public ValueTask DisposeAsync() => new();
 
     public bool ConfirmTopicExists(string? topic = null) =>
-        BrighterAsyncContext.Run(async () => await ConfirmTopicExistsAsync(topic));
+        BrighterAsyncContext.Run(() => ConfirmTopicExistsAsync(topic));
 
     public async Task<bool> ConfirmTopicExistsAsync(string? topic = null,
         CancellationToken cancellationToken = default)
@@ -149,7 +149,7 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     /// <param name="delay">The sending delay</param>
     /// <returns>Task.</returns>
     public void SendWithDelay(Message message, TimeSpan? delay = null)
-        => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, TimeSpan.Zero, false, CancellationToken.None));
+        => BrighterAsyncContext.Run(() => SendWithDelayAsync(message, TimeSpan.Zero, false, CancellationToken.None));
 
     /// <summary>
     /// Sends the specified message, with a delay

@@ -106,7 +106,8 @@ namespace Paramore.Brighter.ServiceActivator
                 RequeueCount = _subscription.RequeueCount,
                 EmptyChannelDelay = _subscription.EmptyChannelDelay,
                 RequeueDelay = _subscription.RequeueDelay,
-                UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
+                UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit,
+                UnacceptableMessageLimitWindow = _subscription.UnacceptableMessageLimitWindow
             };
 
             return new Consumer(_consumerName, _subscription, channel, messagePump);
@@ -129,6 +130,7 @@ namespace Paramore.Brighter.ServiceActivator
                 RequeueCount = _subscription.RequeueCount,
                 RequeueDelay = _subscription.RequeueDelay,
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit,
+                UnacceptableMessageLimitWindow = _subscription.UnacceptableMessageLimitWindow,
                 EmptyChannelDelay = _subscription.EmptyChannelDelay,
                 ChannelFailureDelay = _subscription.ChannelFailureDelay
             };

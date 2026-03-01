@@ -65,7 +65,6 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 .AddInMemoryExporter(_exportedActivities)
                 .Build();
         
-            Brighter.CommandProcessor.ClearServiceBus();
             
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyEvent, MyEventHandler>();
@@ -90,7 +89,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
 
             var channel = new Channel(
                 new(ChannelName),_routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
                 );
             
             var messageMapperRegistry = new MessageMapperRegistry(

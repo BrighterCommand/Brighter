@@ -109,6 +109,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
+            TimeSpan? unacceptableMessageLimitWindow = null,
             bool isDurable = false,
             MessagePumpType messagePumpType = MessagePumpType.Unknown,
             IAmAChannelFactory? channelFactory = null,
@@ -120,8 +121,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null,
             int? maxQueueLength = null,
-            QueueType queueType = QueueType.Classic) 
-            : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            QueueType queueType = QueueType.Classic)
+            : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
         {
             DeadLetterRoutingKey = deadLetterRoutingKey;
             DeadLetterChannelName = deadLetterChannelName;
@@ -171,6 +172,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
+            TimeSpan? unacceptableMessageLimitWindow = null,
             bool isDurable = false,
             MessagePumpType messagePumpType = MessagePumpType.Proactor,
             IAmAChannelFactory? channelFactory = null,
@@ -184,28 +186,29 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             QueueType queueType = QueueType.Classic,
             int? maxQueueLength = null)
             : base(
-                subscriptionName ?? new SubscriptionName(typeof(T).FullName!), 
-                channelName ?? new ChannelName(typeof(T).FullName!), 
+                subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
+                channelName ?? new ChannelName(typeof(T).FullName!),
                 routingKey ?? new RoutingKey(typeof(T).FullName!),
-                typeof(T), 
-                getRequestType, 
-                bufferSize, 
-                noOfPerformers, 
+                typeof(T),
+                getRequestType,
+                bufferSize,
+                noOfPerformers,
                 timeOut,
-                requeueCount, 
-                requeueDelay, 
-                unacceptableMessageLimit, 
-                isDurable, 
-                messagePumpType, 
-                channelFactory, 
-                highAvailability, 
-                deadLetterChannelName, 
+                requeueCount,
+                requeueDelay,
+                unacceptableMessageLimit,
+                unacceptableMessageLimitWindow,
+                isDurable,
+                messagePumpType,
+                channelFactory,
+                highAvailability,
+                deadLetterChannelName,
                 deadLetterRoutingKey,
-                ttl, 
-                makeChannels, 
-                emptyChannelDelay, 
-                channelFailureDelay, 
-                maxQueueLength, 
+                ttl,
+                makeChannels,
+                emptyChannelDelay,
+                channelFailureDelay,
+                maxQueueLength,
                 queueType)
         { }
 

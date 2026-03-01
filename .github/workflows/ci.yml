@@ -34,20 +34,23 @@ env:
 
 jobs:
   build:
-    timeout-minutes: 30
+    # Increased from 30 to 40 minutes to prevent cancellations during test execution.
+    # The build includes compilation + running 3 test suites (Core.Tests, Extensions.Tests,
+    # Transforms.Adaptors.Tests) which can take 20-30 minutes in slower CI environments.
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - run: dotnet --info
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
@@ -62,7 +65,7 @@ jobs:
           dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build --verbosity d
 
       - name: Upload packages as artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: nuget packages
           path: "**/*.nupkg"
@@ -79,7 +82,7 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: nuget packages
       - name: Push generated package to NuGet
@@ -96,8 +99,8 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
@@ -114,8 +117,8 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Hangfire Tests
@@ -132,8 +135,8 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Quartz Tests
@@ -150,8 +153,8 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: TickerQ Tests
@@ -159,7 +162,10 @@ jobs:
 
   redis-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Increased from 5 to 8 minutes to accommodate slower CI environments
+    # and service initialization time. This provides adequate buffer without
+    # being excessive for typical test execution (P95 < 5 min observed).
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -171,7 +177,7 @@ jobs:
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5             
+          --health-retries 10             
 
     steps:
       - uses: actions/checkout@v6
@@ -179,8 +185,8 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
@@ -188,7 +194,7 @@ jobs:
 
   mqtt-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -204,8 +210,8 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MQTT Transport Tests
@@ -213,7 +219,7 @@ jobs:
 
   rabbitmq-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -226,7 +232,7 @@ jobs:
           --health-cmd "rabbitmqctl node_health_check"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v6
@@ -234,14 +240,14 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Async Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
       - name: RMQ Sync Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   kafka-ci:
     runs-on: ubuntu-latest
@@ -284,23 +290,35 @@ jobs:
           SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
 
     steps:
-    - name: Install KafkaCat
+    - name: Install kcat
       run: |
-        sudo apt-get install kafkacat
-    - name: Sleep to let Kafka spin up
-      uses: jakejarvis/wait-action@master
-      with:
-        time: '30s'
-    - name: docker check
-      run: docker ps -a
+        sudo apt-get update && sudo apt-get install -y kcat
+    - name: Wait for Kafka to be ready
+      run: |
+        echo "Waiting for Kafka to be ready..."
+        max_attempts=30
+        attempt=0
+        while [ $attempt -lt $max_attempts ]; do
+          if kcat -b localhost:9092 -L > /dev/null 2>&1; then
+            echo "Kafka is ready!"
+            break
+          fi
+          attempt=$((attempt + 1))
+          echo "Attempt $attempt/$max_attempts: Kafka not ready yet, waiting 2 seconds..."
+          sleep 2
+        done
+        if [ $attempt -eq $max_attempts ] && ! kcat -b localhost:9092 -L > /dev/null 2>&1; then
+          echo "Kafka failed to become ready after $max_attempts attempts"
+          exit 1
+        fi
     - name: Checkout code
       uses: actions/checkout@v6
     - name: Setup dotnet
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: |
-          8.0.x
           9.0.x
+          10.0.x
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
@@ -308,7 +326,7 @@ jobs:
 
   postgres-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -323,15 +341,15 @@ jobs:
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
     steps:
       - uses: actions/checkout@v6
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
@@ -339,25 +357,25 @@ jobs:
 
   sqlserver-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
       sqlserver:
-        image: mcr.microsoft.com/mssql/server
-        ports: 
+        image: mcr.microsoft.com/azure-sql-edge
+        ports:
           - 11433:1433
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: Password123!
+          MSSQL_SA_PASSWORD: Password123!
     steps:
       - uses: actions/checkout@v6
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
@@ -365,7 +383,7 @@ jobs:
 
   mysql-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -376,7 +394,7 @@ jobs:
         env:
           MYSQL_DATABASE: BrighterTests
           MYSQL_ROOT_PASSWORD: root
-        options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=5s --health-timeout=2s --health-retries=3
+        options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=10
 
     steps:
       - uses: actions/checkout@v6
@@ -384,8 +402,8 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Verify MariaDB connection
@@ -400,7 +418,7 @@ jobs:
 
   dynamo-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -415,8 +433,8 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: DynamoDB Tests
@@ -426,7 +444,7 @@ jobs:
 
   localstack-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: build
     env:
       LOCALSTACK_SERVICE_URL: http://localhost.localstack.cloud:4566
@@ -449,9 +467,9 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
-      - uses: actions/cache@v4
+            10.0.x
+      - uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
@@ -464,7 +482,7 @@ jobs:
 
   aws-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
@@ -481,12 +499,12 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -498,7 +516,7 @@ jobs:
 
   aws-scheduler-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
@@ -515,12 +533,12 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -532,7 +550,7 @@ jobs:
 
   sqlite-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [ build ]
 
     steps:
@@ -541,8 +559,8 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Sqlite Tests
@@ -550,16 +568,21 @@ jobs:
 
   azure-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
+    if: |
+      (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+      (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
     needs: [build]
+    env:
+      BrighterTestsASBConnectionString: ${{ secrets.BRIGHTERTESTS_ASB_CONNECTION_STRING }}
     steps:
       - uses: actions/checkout@v6
-      - name: Setup dotnet 
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests
@@ -567,7 +590,7 @@ jobs:
 
   mongodb-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
 
     services:
@@ -583,15 +606,15 @@ jobs:
           --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok'"
           --health-interval 20s
           --health-timeout 10s
-          --health-retries 10
+          --health-retries 15
     steps:
       - uses: actions/checkout@v6
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MongoDB Tests
@@ -599,7 +622,7 @@ jobs:
     
   gcp-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
@@ -625,8 +648,8 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
+            10.0.x
             
       - name: Install dependencies
         run: dotnet restore

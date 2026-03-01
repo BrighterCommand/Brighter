@@ -7,7 +7,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
-[Collection("CommandProcessor")]
 public class AsyncMessageUnwrapRequestMissingMapperTests
 {
     private UnwrapPipelineAsync<MyTransformableCommand> _transformPipeline;

@@ -11,6 +11,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -41,7 +42,6 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
             .AddInMemoryExporter(_exportedActivities)
             .Build();
         
-        Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
 
@@ -63,7 +63,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var routingKey = new RoutingKey(_topic);
-        InMemoryMessageProducer messageProducer = new(_internalBus, timeProvider,
+        InMemoryMessageProducer messageProducer = new(_internalBus, 
             new Publication
             {
                 Source = new Uri("http://localhost"),
@@ -117,7 +117,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        await _commandProcessor.DepositPostAsync(new[]{eventOne, eventTwo, eventThree}, context);
+        await _commandProcessor.DepositPostAsync([eventOne, eventTwo, eventThree], context);
         
         //reset the parent span as deposit and clear are siblings
         

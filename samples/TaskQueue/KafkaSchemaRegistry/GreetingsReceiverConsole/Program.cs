@@ -34,6 +34,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
@@ -80,7 +81,11 @@ var host = Host.CreateDefaultBuilder(args)
                         Name = "paramore.brighter", BootStrapServers = ["localhost:9092"]
                     }
                 ));
-        }).AutoFromAssemblies();
+        })
+        // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+        // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+        .UseScheduler(new InMemorySchedulerFactory())
+        .AutoFromAssemblies();
 
 
         services.AddHostedService<ServiceActivatorHostedService>();

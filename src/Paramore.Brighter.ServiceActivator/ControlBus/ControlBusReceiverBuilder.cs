@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Transactions;
 using Paramore.Brighter.CircuitBreaker;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
@@ -129,12 +130,12 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             
             var retryPolicy = Policy
                 .Handle<Exception>()
-                .WaitAndRetry(new[]
-                {
+                .WaitAndRetry(
+                [
                     TimeSpan.FromMilliseconds(50),
                     TimeSpan.FromMilliseconds(100),
                     TimeSpan.FromMilliseconds(150)
-                });
+                ]);
 
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()

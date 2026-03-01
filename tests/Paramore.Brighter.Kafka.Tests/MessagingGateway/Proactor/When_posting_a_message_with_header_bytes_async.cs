@@ -14,7 +14,6 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, IDisposable
 {
@@ -30,7 +29,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
 
     public KafkaMessageProducerHeaderBytesSendTestsAsync(ITestOutputHelper output)
     {
-        const string groupId = "Kafka Message Producer Header Bytes Send Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
@@ -38,17 +37,19 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
                 Name = "Kafka Producer Send Test",
                 BootStrapServers = new[] {"localhost:9092"}
             },
-            new[] {new KafkaPublication
-            {
-                Topic = new RoutingKey(_topic),
-                NumPartitions = 1,
-                ReplicationFactor = 1,
-                //These timeouts support running on a container using the same host as the tests,
-                //your production values ought to be lower
-                MessageTimeoutMs = 2000,
-                RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Create
-            }}).CreateAsync().Result;
+            [
+                new KafkaPublication
+                {
+                    Topic = new RoutingKey(_topic),
+                    NumPartitions = 1,
+                    ReplicationFactor = 1,
+                    //These timeouts support running on a container using the same host as the tests,
+                    //your production values ought to be lower
+                    MessageTimeoutMs = 2000,
+                    RequestTimeoutMs = 2000,
+                    MakeChannels = OnMissingChannel.Create
+                }
+            ]).CreateAsync().Result;
 
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -151,9 +152,10 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
 
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
 
         if (messages[0].Header.MessageType == MessageType.MT_NONE)
             throw new Exception($"Failed to read from topic:{_topic} after {maxTries} attempts");

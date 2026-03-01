@@ -35,10 +35,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             s_command = null;
         }
 
-        public override MyCommand Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand myCommand)
         {
-            LogCommand(command);
-            return base.Handle(command);
+            LogCommand(myCommand);
+            return base.Handle(myCommand);
         }
 
         public static bool Shouldreceive(MyCommand expectedCommand)

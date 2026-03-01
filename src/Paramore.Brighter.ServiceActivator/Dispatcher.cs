@@ -172,7 +172,7 @@ namespace Paramore.Brighter.ServiceActivator
             Log.OpeningSubscription(s_logger, subscription.Name);
 
             AddSubscriptionToSubscriptions(subscription);
-            var addedConsumers = CreateConsumers(new[] { subscription });
+            var addedConsumers = CreateConsumers([subscription]);
 
             switch (State)
             {

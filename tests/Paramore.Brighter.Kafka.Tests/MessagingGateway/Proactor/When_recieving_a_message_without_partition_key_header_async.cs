@@ -13,7 +13,6 @@ using Acks = Confluent.Kafka.Acks;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
 {
@@ -25,7 +24,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
 
     public KafkaMessageProducerMissingHeaderTestsAsync(ITestOutputHelper output)
     {
-        const string groupId = "Kafka Message Producer Missing Header Test";
+        string groupId = Guid.NewGuid().ToString();
         _output = output;
 
         var clientConfig = new ClientConfig
@@ -127,8 +126,9 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
-        } while (maxTries <= 3);
+        } while (maxTries <= 10);
 
         if (messages[0].Header.MessageType == MessageType.MT_NONE)
             throw new Exception($"Failed to read from topic:{_topic} after {maxTries} attempts");

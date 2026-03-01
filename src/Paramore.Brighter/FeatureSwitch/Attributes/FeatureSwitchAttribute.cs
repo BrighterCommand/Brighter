@@ -36,6 +36,7 @@ namespace Paramore.Brighter.FeatureSwitch.Attributes
     {
         private readonly Type _handler;
         private readonly FeatureSwitchStatus _status;
+        private readonly bool _dontAck;
 
         /// <summary>
         /// Initialises a new instance of the <see cref="FeatureSwitchAttribute"/> class.
@@ -44,10 +45,13 @@ namespace Paramore.Brighter.FeatureSwitch.Attributes
         /// <param name="status">The status of the feature switch</param>
         /// <param name="step">The step.</param>
         /// <param name="timing">The timing.</param>
-        public FeatureSwitchAttribute(Type handler, FeatureSwitchStatus status, int step, HandlerTiming timing = HandlerTiming.Before) : base(step, timing)
+        /// <param name="dontAck">When <c>true</c> and the feature is switched off, throw <see cref="Actions.DontAckAction"/>
+        /// instead of silently consuming the message. Defaults to <c>false</c>.</param>
+        public FeatureSwitchAttribute(Type handler, FeatureSwitchStatus status, int step, HandlerTiming timing = HandlerTiming.Before, bool dontAck = false) : base(step, timing)
         {
             _handler = handler;
             _status = status;
+            _dontAck = dontAck;
         }
 
         /// <summary>
@@ -55,8 +59,8 @@ namespace Paramore.Brighter.FeatureSwitch.Attributes
         /// </summary>
         /// <returns>System.Object[]</returns>
         public override object[] InitializerParams()
-        {           
-            return new object[] { _handler, _status };
+        {
+            return new object[] { _handler, _status, _dontAck };
         }
 
         /// <summary>

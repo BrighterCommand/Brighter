@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests
 {
-    public class CommandProcessorWithMultipleExceptionPoliciesNothingThrowTests : IDisposable
+    public class CommandProcessorWithMultipleExceptionPoliciesNothingThrowTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -63,11 +63,6 @@ namespace Paramore.Brighter.Core.Tests
             Assert.True(MyDoesNotFailMultiplePoliciesHandler.ShouldReceive(_myCommand));
             // Should not retry
             Assert.Equal(0, _retryCount);
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
         }
     }
 }

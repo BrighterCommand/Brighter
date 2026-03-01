@@ -6,13 +6,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
-    [Collection("CommandProcessor")]
     public class MessageDispatcherMultipleConnectionTestsAsync : IDisposable
     {
         private readonly Dispatcher _dispatcher;

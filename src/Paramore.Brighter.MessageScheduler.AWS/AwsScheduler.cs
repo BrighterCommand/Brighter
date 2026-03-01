@@ -500,7 +500,7 @@ public class AwsScheduler(
             }))
         };
 
-        return BrighterAsyncContext.Run(async () => await ScheduleAsync(message, id, at, false));
+        return BrighterAsyncContext.Run(() => ScheduleAsync(message, id, at, false));
     }
 
     /// <inheritdoc />
@@ -510,7 +510,7 @@ public class AwsScheduler(
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
     public bool ReScheduler(string schedulerId, DateTimeOffset at)
-        => BrighterAsyncContext.Run(async () => await ReSchedulerAsync(schedulerId, at));
+        => BrighterAsyncContext.Run(() => ReSchedulerAsync(schedulerId, at));
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.TimeSpan)"/>
     public bool ReScheduler(string schedulerId, TimeSpan delay)
@@ -518,5 +518,5 @@ public class AwsScheduler(
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.Cancel" />
     public void Cancel(string id)
-        => BrighterAsyncContext.Run(async () => await CancelAsync(id));
+        => BrighterAsyncContext.Run(() => CancelAsync(id));
 }

@@ -89,6 +89,11 @@ public class MongoDbUnitOfWork(IAmAMongoDbConfiguration configuration) : IAmAMon
     /// <inheritdoc />
     public IClientSessionHandle GetTransaction()
     {
+        if (_session is { IsInTransaction: true })
+        {
+            return _session;
+        }
+        
         _session = Client.StartSession();
 
         try
@@ -107,6 +112,11 @@ public class MongoDbUnitOfWork(IAmAMongoDbConfiguration configuration) : IAmAMon
     /// <inheritdoc />
     public async Task<IClientSessionHandle> GetTransactionAsync(CancellationToken cancellationToken = default)
     {
+        if (_session is { IsInTransaction: true })
+        {
+            return _session;
+        }
+        
         _session = await Client.StartSessionAsync(cancellationToken: cancellationToken);
         
         try

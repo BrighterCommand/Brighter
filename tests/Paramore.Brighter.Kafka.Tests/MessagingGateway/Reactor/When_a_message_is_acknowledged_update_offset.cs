@@ -10,7 +10,6 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
 [Collection("Kafka")] //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageConsumerUpdateOffset : IDisposable
 {
@@ -28,8 +27,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
             {
                 Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" }
             },
-            new[]
-            {
+            [
                 new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
@@ -41,7 +39,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            }).Create();
+            ]).Create();
     }
 
     //[Fact(Skip = "Fragile as commit thread needs to be scheduled to run")]
@@ -131,8 +129,9 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
                 {
                     //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                     _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                    Task.Delay(1000).GetAwaiter().GetResult();
                 }
-            } while (maxTries <= 3);
+            } while (maxTries <= 10);
 
             return messages[0];
         }

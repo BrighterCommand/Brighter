@@ -8,6 +8,7 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -41,7 +42,6 @@ public class ExternalServiceBusArchiveObservabilityTests
             .AddInMemoryExporter(_exportedActivities)
             .Build();
 
-        Brighter.CommandProcessor.ClearServiceBus();
 
         var type = new CloudEventsType("io.goparamore.brighter.myevent");
         
@@ -53,7 +53,7 @@ public class ExternalServiceBusArchiveObservabilityTests
             Type = type,
         };
 
-        var producer = new InMemoryMessageProducer(internalBus, _timeProvider, _publication);
+        var producer = new InMemoryMessageProducer(internalBus, _publication);
 
         var producerRegistry =
             new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> { { new ProducerKey(_routingKey, type), producer } });

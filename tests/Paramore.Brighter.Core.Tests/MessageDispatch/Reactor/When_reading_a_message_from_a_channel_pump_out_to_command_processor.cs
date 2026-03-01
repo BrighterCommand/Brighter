@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Testing;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
@@ -24,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             _commandProcessor = new SpyCommandProcessor();
             Channel channel = new(
                 new(Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
             );
             
             var messagerMapperRegistry = new MessageMapperRegistry(

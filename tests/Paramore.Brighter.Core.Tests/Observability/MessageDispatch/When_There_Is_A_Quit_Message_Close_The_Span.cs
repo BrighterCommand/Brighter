@@ -37,7 +37,6 @@ public class MessagePumpQuitOberservabilityTests
                 .AddInMemoryExporter(_exportedActivities)
                 .Build();
         
-            Brighter.CommandProcessor.ClearServiceBus();
             
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyEvent, MyEventHandler>();
@@ -62,7 +61,7 @@ public class MessagePumpQuitOberservabilityTests
 
             Channel channel = new(
                 new (Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
             );
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(

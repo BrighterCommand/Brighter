@@ -7,7 +7,6 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Proactor;
 
 [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
 [Trait("Category", "Redis")]
-[Trait("Fragile", "CI")]
 public class RedisRequeueMessageTestsAsync : IClassFixture<RedisFixture>, IAsyncDisposable
 {
     private readonly RedisFixture _redisFixture;
@@ -16,9 +15,8 @@ public class RedisRequeueMessageTestsAsync : IClassFixture<RedisFixture>, IAsync
 
     public RedisRequeueMessageTestsAsync(RedisFixture redisFixture)
     {
-        const string topic = "test";
         _redisFixture = redisFixture;
-        var routingKey = new RoutingKey(topic);
+        var routingKey = redisFixture.Topic;
 
         _messageOne = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND),
@@ -45,7 +43,7 @@ public class RedisRequeueMessageTestsAsync : IClassFixture<RedisFixture>, IAsync
         var sentMessageOne = (await _redisFixture.MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();
 
         // Now requeue the first message
-        await _redisFixture.MessageConsumer.RequeueAsync(_messageOne, TimeSpan.FromMilliseconds(300));
+        await _redisFixture.MessageConsumer.RequeueAsync(_messageOne);
 
         // Try receiving again; messageTwo should come first
         var sentMessageTwo = (await _redisFixture.MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();

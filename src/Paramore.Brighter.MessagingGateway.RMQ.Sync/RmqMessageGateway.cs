@@ -85,6 +85,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 ContinuationTimeout = TimeSpan.FromSeconds(connection.ContinuationTimeout)
             };
 
+            // Configure SSL/TLS for mutual authentication if certificate is provided
+            RmqTlsConfigurator.ConfigureIfEnabled(_connectionFactory, connection);
+
             DelaySupported = Connection.Exchange.SupportDelay;
         }
 
@@ -166,7 +169,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             if (Connection.Name is null)
                 throw new InvalidOperationException("RMQMessagingGateway: Connection must have a name");
-            
+
             new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnection(_connectionFactory);
         }
 

@@ -61,16 +61,33 @@ public class SqsMessageConsumerFactory : IAmAMessageConsumerFactory
 
         //if it is a url, don't alter; if it is just a name, ensure it is valid
         ChannelName queueName = subscription.ChannelName;
-        if (sqsSubscription.FindQueueBy == QueueFindBy.Name)    
+        if (sqsSubscription.FindQueueBy == QueueFindBy.Name)
             queueName =queueName.ToValidSQSQueueName(sqsSubscription.QueueAttributes.Type == SqsType.Fifo);
-            
+
+        // Extract DLQ and invalid message routing keys if subscription supports them
+        RoutingKey? deadLetterRoutingKey = null;
+        RoutingKey? invalidMessageRoutingKey = null;
+
+        if (sqsSubscription is IUseBrighterDeadLetterSupport dlqSupport)
+        {
+            deadLetterRoutingKey = dlqSupport.DeadLetterRoutingKey;
+        }
+
+        if (sqsSubscription is IUseBrighterInvalidMessageSupport invalidSupport)
+        {
+            invalidMessageRoutingKey = invalidSupport.InvalidMessageRoutingKey;
+        }
+
         return new SqsMessageConsumer(
-            awsConnection: _awsConnection, 
-            queueName: queueName, 
-            isQueueUrl: (sqsSubscription.FindQueueBy == QueueFindBy.Url),   
+            awsConnection: _awsConnection,
+            queueName: queueName,
             batchSize: subscription.BufferSize,
-            hasDlq: sqsSubscription.QueueAttributes.RedrivePolicy == null,
-            rawMessageDelivery: sqsSubscription.QueueAttributes.RawMessageDelivery
+            deadLetterRoutingKey: deadLetterRoutingKey,
+            invalidMessageRoutingKey: invalidMessageRoutingKey,
+            makeChannels: sqsSubscription.MakeChannels,
+            isQueueUrl: (sqsSubscription.FindQueueBy == QueueFindBy.Url),
+            rawMessageDelivery: sqsSubscription.QueueAttributes.RawMessageDelivery,
+            queueAttributes: sqsSubscription.QueueAttributes
         );
     }
 }

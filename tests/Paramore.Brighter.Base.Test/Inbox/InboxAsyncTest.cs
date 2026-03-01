@@ -107,7 +107,7 @@ public abstract class InboxAsyncTest : IAsyncLifetime
         var commandId = Uuid.NewAsString();
         
         // Act & Assert
-        await Assert.ThrowsAsync<RequestNotFoundException<MyCommand>>(async () => await Inbox.GetAsync<MyCommand>(commandId, contextKey, null));
+        await Assert.ThrowsAsync<RequestNotFoundException<MyCommand>>(() => Inbox.GetAsync<MyCommand>(commandId, contextKey, null));
     }
     
     [Fact]
@@ -118,7 +118,7 @@ public abstract class InboxAsyncTest : IAsyncLifetime
         await Inbox.AddAsync(command, Uuid.NewAsString(), null);
         
         // Act & Assert
-        await Assert.ThrowsAsync<RequestNotFoundException<MyCommand>>(async () => await Inbox.GetAsync<MyCommand>(command.Id, Uuid.NewAsString(), null));
+        await Assert.ThrowsAsync<RequestNotFoundException<MyCommand>>(() => Inbox.GetAsync<MyCommand>(command.Id, Uuid.NewAsString(), null));
     }
 
     [Fact]
