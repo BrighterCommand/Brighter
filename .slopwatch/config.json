@@ -23,7 +23,7 @@
     {
       "ruleId": "SW003",
       "pattern": "**/SqsMessageConsumer.cs",
-      "justification": "ReceiptHandleIsInvalidException catch blocks intentionally swallow expired receipt handle errors to prevent dispatcher crash (GitHub issue #4031)"
+      "justification": "ReceiptHandleIsInvalidException catch blocks intentionally catch and log invalid receipt handle errors to prevent dispatcher crash (GitHub issue #4031)"
     }
   ],
   "globalSuppressions": []
