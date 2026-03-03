@@ -22,7 +22,7 @@ Brighter has an existing Roslyn analyzer package (`Paramore.Brighter.Analyzer`) 
 
 2. **Sync attributes on async handlers (or vice versa)** — Decorating a `RequestHandlerAsync<T>` with `[RejectMessageOnError]` (the sync variant) instead of `[RejectMessageOnErrorAsync]` means the attribute is silently ignored at runtime. The pipeline builds without the intended decorator.
 
-3. **Subscription pump type doesn't match handler** — A `Subscription` configured with `MessagePumpType.Reactor` but whose `RequestType` has only an async handler (`RequestHandlerAsync<T>`) will fail at runtime with "no handlers found". When both the pump type and handler are statically visible, the IDE should flag this.
+3. **Subscription pump type doesn't match handler** — A `Subscription` configured with `MessagePumpType.Reactor` but whose `RequestType` has an async handler (`RequestHandlerAsync<T>`) will fail at runtime with "no handlers found". When both the pump type and handler are statically visible, the IDE should flag this.
 
 ADR 0053 catches all three at startup via runtime validation. This ADR adds compile-time detection for the cases that are statically determinable, giving developers immediate IDE feedback as they type.
 
@@ -152,7 +152,7 @@ Analyzer detects:
 2. `HandlerAttributeVisitor` checks if the method's containing type inherits from `RequestHandler<T>` or `RequestHandlerAsync<T>` (using `ChildOfVisitor`)
 3. Collects all attributes deriving from `RequestHandlerAttribute` on the method
 4. For each attribute, resolves the handler type via `GetHandlerType()` return type analysis (see "Handler Type Classification" below)
-5. **BRT006 check**: For every backstop attribute, verify no resilience attribute has a lower step number
+5. **BRT006 check**: For every backstop attribute, extract the `step` value and verify no resilience attribute has a lower step number. **Step value extraction**: The `step` parameter is at different constructor positions depending on the attribute (e.g. 1st arg for `RejectMessageOnError(int step)`, 2nd arg for `UseResiliencePipeline(string policy, int step)`). Rather than hardcoding positions, the analyzer uses parameter-name-based lookup: match `AttributeData.ConstructorArguments` against the attribute constructor's `IMethodSymbol.Parameters` to find the parameter named `step`, then read the corresponding `TypedConstant.Value`. If the value is not a compile-time constant (e.g. a variable expression), `TypedConstant.Value` is null and the analyzer skips the ordering check for that attribute — no false positives on dynamic step values.
 6. **BRT007 check**: For every attribute, verify its handler type's async nature matches the containing class's async nature
 
 #### 2. `PumpHandlerMismatchAnalyzer` — Service Provider (BRT008)
@@ -180,12 +180,18 @@ Analyzer detects:
 
 1. Register `OperationAction` for `OperationKind.ObjectCreation`
 2. `PumpHandlerMismatchVisitor` checks if the created type inherits from `Subscription` (using existing `ChildOfVisitor`)
-3. Extracts the generic type argument (`TRequest`) from the constructed type — this is the request type
-4. Extracts the `MessagePumpType` value from constructor arguments (extends the pattern from `SubscriptionConstructorVisitor`)
-5. Searches the compilation's types for classes inheriting from `RequestHandler<TRequest>` or `RequestHandlerAsync<TRequest>`
-6. If found and the pump type doesn't match, reports BRT008
+3. **Suppression check**: If the constructor call includes a `getRequestType` argument that is not null/default, the developer has opted into dynamic dispatch — the actual handler type is determined at runtime from message content via `MapRequestType`. The analyzer **must not fire BRT008** in this case, as it cannot know the runtime type. Skip analysis for this subscription.
+4. **Request type extraction** — three cases:
+   - **Generic `Subscription<T>`**: Extract `TRequest` from the constructed generic type argument
+   - **Non-generic with `requestType: typeof(X)`**: Extract the type symbol from the `TypeOfExpressionSyntax` in the `requestType` argument
+   - **Non-generic without statically determinable type**: Skip analysis (defer to runtime validation)
+5. Extracts the `MessagePumpType` value from constructor arguments (extends the pattern from `SubscriptionConstructorVisitor`)
+6. Searches the compilation's types for classes inheriting from `RequestHandler<TRequest>` or `RequestHandlerAsync<TRequest>`
+7. If found and the pump type doesn't match, reports BRT008
 
 **Compilation-wide type search**: The visitor iterates the compilation's `GlobalNamespace` recursively to find handler types matching the request type. This is bounded — it only runs when a subscription creation is found and the pump type is statically determinable.
+
+**`MapRequestType` and dynamic dispatch**: The `Subscription` class accepts an optional `getRequestType: Func<Message, Type>` parameter (exposed as `MapRequestType`). When provided — even on a generic `Subscription<T>` — it overrides the static request type at runtime, selecting handlers based on message content rather than the generic parameter. Since the analyzer cannot evaluate a `Func<Message, Type>` at compile time, it must treat a non-default `getRequestType` argument as a signal that the developer controls dispatch and the static generic parameter may not reflect the actual runtime handler. Firing BRT008 in this case would produce **false positives**.
 
 #### 3. Handler Type Classification — Deciding Backstop vs Resilience
 
@@ -203,7 +209,7 @@ This works because all Brighter pipeline attributes have single-expression `GetH
 
 **Sync/async determination**: Once the handler type is resolved, check whether it implements `IHandleRequests` (sync) or `IHandleRequestsAsync` (async). Both are already well-known types in the `Paramore.Brighter` assembly.
 
-**Dependency on ADR 0053**: The marker interfaces (`IAmABackstopHandler`, `IAmAResilienceHandler`) must be present in `Paramore.Brighter` before the analyzer can use them. Since the analyzer references `Paramore.Brighter` as a metadata reference (for type resolution), these interfaces will be available once ADR 0053's infrastructure is implemented. If the interfaces are not found (e.g. older Brighter version), the analyzer falls back to skipping classification — degrading gracefully rather than failing.
+**Dependency on ADR 0053**: The marker interfaces (`IAmABackstopHandler`, `IAmAResilienceHandler`) must be present in `Paramore.Brighter` before the analyzer can use them. Since the analyzer references `Paramore.Brighter` as a metadata reference (for type resolution), these interfaces will be available once ADR 0053's infrastructure is implemented. **Implementation ordering**: ADR 0053's marker interfaces and handler classification infrastructure must be implemented before the analyzer diagnostics in this ADR. Tasks for this ADR should depend on the ADR 0053 infrastructure tasks being complete. If the interfaces are not found (e.g. older Brighter version), the analyzer falls back to skipping classification — degrading gracefully rather than failing.
 
 ### Extended Constants
 
@@ -225,9 +231,9 @@ These limitations are inherent to static analysis and are covered by ADR 0053's 
 
 - **Dynamic step values**: When `step` is a variable or computed expression, not a literal
 - **Dynamic pump types**: When `MessagePumpType` comes from configuration or a variable
+- **Dynamic request type dispatch**: When `getRequestType` / `MapRequestType` is provided, the actual handler type is determined at runtime from message content — the analyzer cannot evaluate `Func<Message, Type>` and must suppress BRT008
 - **Programmatic handler registration**: When handlers are registered via `SubscriberRegistry.Register()` rather than generic subscription types
 - **Cross-assembly handlers**: When the handler is in a different assembly that isn't referenced (though this is unusual)
-- **Non-generic subscriptions**: When using `new Subscription(requestType: typeof(Order), ...)` — the type argument is available but requires `typeof` expression analysis
 
 ### Test Strategy
 
@@ -253,6 +259,10 @@ Following the existing test infrastructure:
 - Subscription with dynamic pump type → no diagnostic (skipped)
 - Handler implementing both sync and async interfaces → no diagnostic (both match)
 - No handler found for request type → no diagnostic (covered by runtime validation FR-7)
+- Non-generic subscription with `requestType: typeof(X)` and mismatched handler → BRT008
+- Non-generic subscription with `requestType: typeof(X)` and matching handler → no diagnostic
+- Generic subscription with `getRequestType` lambda provided → no diagnostic (dynamic dispatch suppression)
+- Non-generic subscription with `getRequestType` lambda and no `requestType` → no diagnostic (dynamic dispatch suppression)
 
 ### Documentation
 
@@ -285,6 +295,7 @@ Each new diagnostic gets a `docs/BRTnnn.md` file following the existing pattern:
 - **Risk**: `GetHandlerType()` body inspection is fragile if attribute implementations become more complex. **Mitigation**: The analyzer only handles `typeof(...)` returns — the universal pattern in Brighter. Non-matching patterns are silently skipped.
 - **Risk**: BRT008's compilation-wide search could be slow on very large projects. **Mitigation**: The search only runs when a subscription creation is detected (rare per compilation), and is bounded by the compilation's type count.
 - **Risk**: False positives if a handler intentionally implements both sync and async interfaces. **Mitigation**: BRT008 only reports when pump type doesn't match *any* handler interface — if both are implemented, no diagnostic fires.
+- **Risk**: False positives when `getRequestType` / `MapRequestType` overrides the static request type — the generic parameter `T` may not reflect the handler actually dispatched at runtime. **Mitigation**: BRT008 suppresses analysis entirely when a non-default `getRequestType` argument is present in the subscription constructor call.
 
 ## Alternatives Considered
 
