@@ -1,6 +1,6 @@
 # Channel Factory
 
-A channel factory is used to create instances of Brighter's `Channel` and `ChanngeAsync` classes which are [Channel Adapter](https://www.enterpriseintegrationpatterns.com/patterns/messaging/ChannelAdapter.html)s that abstract away details of how we consume from a transport (a queue or stream).
+A channel factory is used to create instances of Brighter's `Channel` and `ChannelAsync` classes which are [Channel Adapter](https://www.enterpriseintegrationpatterns.com/patterns/messaging/ChannelAdapter.html)s that abstract away details of how we consume from a transport (a queue or stream).
 
 The channel factory creates the `IAmAMessageConsumer' for the transport and passes it into the channel to allow it to read messages from the consumer.
 
