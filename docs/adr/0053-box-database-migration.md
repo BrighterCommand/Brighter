@@ -147,7 +147,13 @@ public interface IAmABoxProvisioner
     /// Detects the current schema version by introspecting the database.
     /// Used during bootstrap when the table exists but has no migration history.
     /// Returns the highest migration version that matches the current schema.
-    /// Default implementation returns 1 (assumes table was created by the original builder).
+    /// Default implementation returns 1, which assumes the table was created by the
+    /// original static builder (e.g. SqlOutboxBuilder) and matches the version-1 migration DDL.
+    ///
+    /// Backend-specific provisioners should override this to introspect actual column existence
+    /// (e.g. querying INFORMATION_SCHEMA.COLUMNS on MSSQL/PostgreSQL) to determine whether
+    /// the schema matches version 2 or later. This handles cases where someone manually
+    /// altered the schema or where the table was created by a newer builder version.
     /// </summary>
     Task<int> DetectCurrentVersionAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(1);
@@ -230,9 +236,9 @@ public class BoxProvisioningHostedService : IHostedService
             {
                 _logger.LogError(ex,
                     "Failed to provision {BoxType}. The application cannot start " +
-                    "without a valid {BoxType} table. Check the database connection " +
+                    "without a valid box table. Check the database connection " +
                     "string and ensure the database is reachable.",
-                    provisioner.BoxType, provisioner.BoxType);
+                    provisioner.BoxType);
                 throw new ConfigurationException(
                     $"Box provisioning failed for {provisioner.BoxType}. " +
                     $"See inner exception for details.", ex);
@@ -264,7 +270,11 @@ public static class BrighterBuilderBoxProvisioningExtensions
             registration(builder.Services);
         }
 
-        builder.Services.AddHostedService<BoxProvisioningHostedService>();
+        // Guard against multiple calls — TryAddEnumerable ensures the hosted
+        // service is registered at most once, even if UseBoxProvisioning is
+        // called multiple times (e.g. from different configuration paths).
+        builder.Services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHostedService, BoxProvisioningHostedService>());
         return builder;
     }
 }
@@ -438,10 +448,20 @@ Each backend's migration runner acquires a database-level lock before running mi
 | Backend | Locking Mechanism |
 |---------|------------------|
 | MSSQL | `sp_getapplock @Resource='BrighterMigration_{tableName}', @LockMode='Exclusive'` within a transaction |
-| PostgreSQL | `pg_advisory_lock(hashtext('BrighterMigration_' \|\| tableName)::bigint)` |
+| PostgreSQL | `pg_advisory_lock(hashtext('BrighterMigration_' \|\| tableName)::bigint)`. Note: `hashtext` returns a 32-bit integer, so hash collisions between different table names are theoretically possible but unlikely in practice. Two tables locked by the same hash would serialize rather than deadlock, causing spurious contention but no correctness issue. An alternative is the two-argument form `pg_advisory_lock(constant, hash)` with a Brighter-specific namespace constant, but the single-argument form is simpler and sufficient given the small number of box tables per database. |
 | MySQL | `GET_LOCK('BrighterMigration_{tableName}', lockTimeout)` where `lockTimeout` defaults to 30 seconds, configurable via `BoxProvisioningOptions.MigrationLockTimeout` |
 | SQLite | SQLite's file-level locking provides implicit serialization |
 | Spanner | Spanner transactions provide serializable isolation by default |
+
+**TimeSpan-to-backend unit conversions**: `BoxProvisioningOptions.MigrationLockTimeout` is a `TimeSpan`. Each backend converts it to the units expected by its locking API:
+
+| Backend | API | Expected Unit | Conversion |
+|---------|-----|--------------|------------|
+| MSSQL | `sp_getapplock @LockTimeout` | Milliseconds (int) | `(int)timeout.TotalMilliseconds` |
+| MySQL | `GET_LOCK(name, timeout)` | Whole seconds (int) | `(int)timeout.TotalSeconds` |
+| PostgreSQL | `pg_advisory_lock` | N/A (blocks indefinitely) | Not used; the advisory lock has no timeout parameter |
+| SQLite | File-level locking | N/A | Implicit serialization |
+| Spanner | Transaction isolation | N/A | Serializable by default |
 
 The lock is held for the duration of the migration run (typically milliseconds for a single ALTER TABLE). Other instances that attempt to migrate concurrently will block until the lock is released, then check the history table and find no outstanding migrations to apply. This makes the migration runner safe for multi-instance deployments.
 
@@ -478,6 +498,8 @@ new BoxMigration(
     upScript: $"ALTER TABLE [{config.OutBoxTableName}] ADD [SpecVersion] NVARCHAR(10) NULL")
 ```
 
+**Binary vs text payload mode**: The `binaryMessagePayload` flag on `IAmARelationalDatabaseConfiguration` produces a structurally different table schema (e.g. `VARBINARY(MAX)` vs `NVARCHAR(MAX)` for the message body column). Changing this flag after the table has been created is **not supported** — the version-1 migration is already recorded in the history table, and the runner will not re-run it with different DDL. If a user needs to switch payload modes, they must drop and recreate the table (or manually alter the column), which is a destructive operation outside the scope of this library. The provisioner does not validate that the existing table schema matches the configured payload mode; this is documented as a known limitation.
+
 The version-1 migration for new installations runs the full `CREATE TABLE` DDL. For existing installations that pre-date the migration system, the runner detects the table exists (via the existing `GetExistsQuery` pattern), creates the history table, records version 1 as already applied (since the table was created by the old builder), and then applies any subsequent migrations.
 
 ### 7. Handling Pre-Migration Installations (Bootstrap)
@@ -510,7 +532,12 @@ builder.AddProject<Projects.MyService>("my-service")
     .WithBrighterOutbox(sqlServer, tableName: "Outbox");
 ```
 
-The `WithBrighterOutbox` extension writes connection metadata into the resource's environment/configuration so the service project can resolve it.
+The `WithBrighterOutbox` extension:
+1. **Annotates the project resource** with metadata indicating it uses a Brighter outbox backed by the given database resource
+2. **Writes environment variables** into the project resource's configuration (e.g. `Brighter__Outbox__ConnectionName`, `Brighter__Outbox__TableName`) so the service project can resolve them at runtime
+3. **Ensures the database resource is referenced** by the project (calls `WithReference` if not already present), so Aspire's orchestrator starts the database before the service
+
+The extension does **not** execute any DDL or provision the database — that remains the responsibility of `BoxProvisioningHostedService` running inside the service. The AppHost extension purely wires configuration so the service-side `AddMsSqlOutbox(connectionName)` overload can resolve the correct connection string.
 
 **Package: `Paramore.Brighter.BoxProvisioning.Aspire.MsSql`** (and per-backend equivalents) — Service-side
 
