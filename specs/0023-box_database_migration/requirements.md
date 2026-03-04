@@ -60,7 +60,7 @@ Provide a set of NuGet libraries that allow developers to create and migrate Inb
 
 #### NFR-2: Startup Performance
 - Box provisioning and migration should complete quickly at application startup.
-- Migration version checks should be lightweight (single query to check current version).
+- Migration version checks should be lightweight (a small number of queries to create the history table if needed, check applied versions, and conditionally run migrations).
 
 #### NFR-3: Safety
 - Migrations must never drop data or columns without explicit opt-in.

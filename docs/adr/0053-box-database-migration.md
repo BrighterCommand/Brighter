@@ -150,10 +150,17 @@ public interface IAmABoxProvisioner
     /// Default implementation returns 1, which assumes the table was created by the
     /// original static builder (e.g. SqlOutboxBuilder) and matches the version-1 migration DDL.
     ///
-    /// Backend-specific provisioners should override this to introspect actual column existence
-    /// (e.g. querying INFORMATION_SCHEMA.COLUMNS on MSSQL/PostgreSQL) to determine whether
-    /// the schema matches version 2 or later. This handles cases where someone manually
-    /// altered the schema or where the table was created by a newer builder version.
+    /// Backend-specific provisioners MUST override this method to introspect actual column
+    /// existence (e.g. querying INFORMATION_SCHEMA.COLUMNS on MSSQL/PostgreSQL, or
+    /// pragma_table_info on SQLite) to determine whether the schema matches version 2
+    /// or later. This is required — not optional — for any backend that ships migrations
+    /// beyond version 1. A fresh install created with newer DDL (that already includes
+    /// v2+ columns) would otherwise be bootstrapped at version 1 and then fail when the
+    /// runner attempts ALTER TABLE ADD COLUMN for columns that already exist.
+    ///
+    /// The default returns 1, which is a safe fallback only when the table was created by
+    /// the original static builder. Backend implementations should inspect the actual schema
+    /// and return the highest version whose columns are all present.
     /// </summary>
     Task<int> DetectCurrentVersionAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(1);
@@ -172,8 +179,15 @@ public interface IAmABoxMigrationRunner
     /// <summary>
     /// Apply all outstanding migrations for the specified box table.
     /// </summary>
+    /// <param name="tableName">The box table name.</param>
+    /// <param name="schemaName">The database schema name (e.g. "dbo" for MSSQL). Used to
+    /// distinguish identically-named tables in different schemas within the migration
+    /// history. Defaults to the backend's default schema when null.</param>
+    /// <param name="migrations">The ordered list of migrations to apply.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     Task MigrateAsync(
         string tableName,
+        string? schemaName,
         IReadOnlyList<IAmABoxMigration> migrations,
         CancellationToken cancellationToken = default);
 }
@@ -316,8 +330,9 @@ public static class MsSqlBoxProvisioningExtensions
         var lockTimeout = options.MigrationLockTimeout;
         options.Add(services =>
         {
+            var runner = new MsSqlBoxMigrationRunner(configuration, lockTimeout);
             services.AddSingleton<IAmABoxProvisioner>(
-                new MsSqlOutboxProvisioner(configuration, lockTimeout));
+                new MsSqlOutboxProvisioner(configuration, runner));
         });
         return options;
     }
@@ -349,7 +364,8 @@ public static class MsSqlBoxProvisioningExtensions
                     outBoxTableName: outboxTableName ?? "Outbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                return new MsSqlOutboxProvisioner(dbConfig, lockTimeout);
+                var runner = new MsSqlBoxMigrationRunner(dbConfig, lockTimeout);
+                return new MsSqlOutboxProvisioner(dbConfig, runner);
             });
         });
         return options;
@@ -362,8 +378,9 @@ public static class MsSqlBoxProvisioningExtensions
         var lockTimeout = options.MigrationLockTimeout;
         options.Add(services =>
         {
+            var runner = new MsSqlBoxMigrationRunner(configuration, lockTimeout);
             services.AddSingleton<IAmABoxProvisioner>(
-                new MsSqlInboxProvisioner(configuration, lockTimeout));
+                new MsSqlInboxProvisioner(configuration, runner));
         });
         return options;
     }
@@ -382,24 +399,24 @@ Each backend provisioner encapsulates the connection, DDL, and migration knowled
 public class MsSqlOutboxProvisioner : IAmABoxProvisioner
 {
     private readonly IAmARelationalDatabaseConfiguration _configuration;
-    private readonly TimeSpan _migrationLockTimeout;
+    private readonly IAmABoxMigrationRunner _migrationRunner;
 
     public MsSqlOutboxProvisioner(
         IAmARelationalDatabaseConfiguration configuration,
-        TimeSpan migrationLockTimeout)
+        IAmABoxMigrationRunner migrationRunner)
     {
         _configuration = configuration;
-        _migrationLockTimeout = migrationLockTimeout;
+        _migrationRunner = migrationRunner;
     }
 
     public BoxType BoxType => BoxType.Outbox;
 
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
-        var runner = new MsSqlBoxMigrationRunner(_configuration, _migrationLockTimeout);
         var migrations = MsSqlOutboxMigrations.All(_configuration);
-        await runner.MigrateAsync(
+        await _migrationRunner.MigrateAsync(
             _configuration.OutBoxTableName,
+            _configuration.SchemaName,
             migrations,
             cancellationToken);
     }
@@ -418,11 +435,12 @@ IF NOT EXISTS (SELECT 1 FROM sys.tables
 BEGIN
     CREATE TABLE [__BrighterMigrationHistory] (
         [MigrationVersion] INT NOT NULL,
+        [SchemaName] VARCHAR(256) NOT NULL DEFAULT 'dbo',
         [BoxTableName] VARCHAR(256) NOT NULL,
         [Description] NVARCHAR(512) NOT NULL,
         [AppliedAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
         CONSTRAINT PK_BrighterMigrationHistory
-            PRIMARY KEY ([BoxTableName], [MigrationVersion])
+            PRIMARY KEY ([SchemaName], [BoxTableName], [MigrationVersion])
     );
 END
 ```
@@ -430,7 +448,7 @@ END
 The migration runner:
 1. Acquires a database-level advisory lock to prevent concurrent migration attempts (see below)
 2. Creates the history table if it doesn't exist
-3. Queries which versions have already been applied for the target table name
+3. Queries which versions have already been applied for the target schema and table name
 4. For each unapplied migration (in version order):
    a. Begins a transaction (where supported)
    b. Executes the `UpScript`
@@ -448,7 +466,7 @@ Each backend's migration runner acquires a database-level lock before running mi
 | Backend | Locking Mechanism |
 |---------|------------------|
 | MSSQL | `sp_getapplock @Resource='BrighterMigration_{tableName}', @LockMode='Exclusive'` within a transaction |
-| PostgreSQL | `pg_advisory_lock(hashtext('BrighterMigration_' \|\| tableName)::bigint)`. Note: `hashtext` returns a 32-bit integer, so hash collisions between different table names are theoretically possible but unlikely in practice. Two tables locked by the same hash would serialize rather than deadlock, causing spurious contention but no correctness issue. An alternative is the two-argument form `pg_advisory_lock(constant, hash)` with a Brighter-specific namespace constant, but the single-argument form is simpler and sufficient given the small number of box tables per database. |
+| PostgreSQL | `pg_try_advisory_lock(hashtext('BrighterMigration_' \|\| tableName)::bigint)` with a retry loop. The runner calls `pg_try_advisory_lock` in a loop with a short delay between attempts, logging "Waiting for migration lock on {tableName}..." on each retry so operators can diagnose slow startups. The total retry budget is bounded by `MigrationLockTimeout` (default 30s). If the lock is not acquired within the timeout, the runner throws `TimeoutException`. Note: `hashtext` returns a 32-bit integer, so hash collisions between different table names are theoretically possible but unlikely in practice. Two tables locked by the same hash would serialize rather than deadlock, causing spurious contention but no correctness issue. An alternative is the two-argument form `pg_advisory_lock(constant, hash)` with a Brighter-specific namespace constant, but the single-argument form is simpler and sufficient given the small number of box tables per database. |
 | MySQL | `GET_LOCK('BrighterMigration_{tableName}', lockTimeout)` where `lockTimeout` defaults to 30 seconds, configurable via `BoxProvisioningOptions.MigrationLockTimeout` |
 | SQLite | SQLite's file-level locking provides implicit serialization |
 | Spanner | Spanner transactions provide serializable isolation by default |
@@ -459,11 +477,20 @@ Each backend's migration runner acquires a database-level lock before running mi
 |---------|-----|--------------|------------|
 | MSSQL | `sp_getapplock @LockTimeout` | Milliseconds (int) | `(int)timeout.TotalMilliseconds` |
 | MySQL | `GET_LOCK(name, timeout)` | Whole seconds (int) | `(int)timeout.TotalSeconds` |
-| PostgreSQL | `pg_advisory_lock` | N/A (blocks indefinitely) | Not used; the advisory lock has no timeout parameter |
+| PostgreSQL | `pg_try_advisory_lock` with retry | Milliseconds (int) | `(int)timeout.TotalMilliseconds` used as total retry budget |
 | SQLite | File-level locking | N/A | Implicit serialization |
 | Spanner | Transaction isolation | N/A | Serializable by default |
 
 The lock is held for the duration of the migration run (typically milliseconds for a single ALTER TABLE). Other instances that attempt to migrate concurrently will block until the lock is released, then check the history table and find no outstanding migrations to apply. This makes the migration runner safe for multi-instance deployments.
+
+#### Connection Lifecycle
+
+The migration runner opens a **single `DbConnection`** (e.g. `SqlConnection`, `NpgsqlConnection`, `MySqlConnection`) from `IAmARelationalDatabaseConfiguration.ConnectionString` at the start of `MigrateAsync` and disposes it when the method completes. The runner does **not** use `IAmARelationalDbConnectionProvider` — it manages its own connection because:
+
+1. **The advisory lock must be held on the same connection** for the duration of all migrations. Session-level locks (PostgreSQL `pg_try_advisory_lock`, MySQL `GET_LOCK`) are released when the connection closes. Opening a new connection per migration would lose the lock.
+2. **Provisioning runs at startup before DI is fully built**, so connection providers may not yet be available when the hosted service runs.
+
+The connection is opened once, the advisory lock is acquired, all migrations run on that connection (each in its own transaction), and the lock is released before the connection is disposed. For MSSQL, which uses `sp_getapplock` within a transaction, the runner opens a dedicated "lock transaction" that spans the entire migration run and commits after all migrations complete.
 
 ### 6. Migration Definitions — Reusing Existing Builders
 
@@ -498,7 +525,9 @@ new BoxMigration(
     upScript: $"ALTER TABLE [{config.OutBoxTableName}] ADD [SpecVersion] NVARCHAR(10) NULL")
 ```
 
-**Binary vs text payload mode**: The `binaryMessagePayload` flag on `IAmARelationalDatabaseConfiguration` produces a structurally different table schema (e.g. `VARBINARY(MAX)` vs `NVARCHAR(MAX)` for the message body column). Changing this flag after the table has been created is **not supported** — the version-1 migration is already recorded in the history table, and the runner will not re-run it with different DDL. If a user needs to switch payload modes, they must drop and recreate the table (or manually alter the column), which is a destructive operation outside the scope of this library. The provisioner does not validate that the existing table schema matches the configured payload mode; this is documented as a known limitation.
+**Binary vs text payload mode**: The `binaryMessagePayload` flag on `IAmARelationalDatabaseConfiguration` produces a structurally different table schema (e.g. `VARBINARY(MAX)` vs `NVARCHAR(MAX)` for the message body column). Changing this flag after the table has been created is **not supported** — the version-1 migration is already recorded in the history table, and the runner will not re-run it with different DDL. If a user needs to switch payload modes, they must drop and recreate the table (or manually alter the column), which is a destructive operation outside the scope of this library.
+
+**Payload mode validation**: When the table already exists and has migration history, the provisioner performs a schema introspection step to check that the actual column type of the message body column matches the configured `binaryMessagePayload` mode. If there is a mismatch (e.g. the table has `NVARCHAR(MAX)` but the configuration specifies `binaryMessagePayload = true`), the provisioner throws a `ConfigurationException` at startup with a descriptive message. This fail-fast check prevents silent data corruption where binary data would be stored as text or vice versa. The introspection uses `INFORMATION_SCHEMA.COLUMNS` (MSSQL/PostgreSQL/MySQL) or `pragma_table_info` (SQLite) to determine the actual column data type.
 
 The version-1 migration for new installations runs the full `CREATE TABLE` DDL. For existing installations that pre-date the migration system, the runner detects the table exists (via the existing `GetExistsQuery` pattern), creates the history table, records version 1 as already applied (since the table was created by the old builder), and then applies any subsequent migrations.
 
@@ -511,7 +540,7 @@ When the migration runner encounters a table that exists but has no entry in `__
 3. Insert synthetic history rows for all versions up to and including the detected version
 4. Apply any remaining migrations from the detected version onwards
 
-The migration runner calls `DetectCurrentVersionAsync()` on the provisioner (see `IAmABoxProvisioner` in section 2) to determine the schema's actual state. The default implementation returns version 1, which is correct for the common case (table created by the existing static builder). Backend-specific provisioners can override this to introspect actual column existence — for example, checking whether `SpecVersion` or `DataRef` columns exist to determine if the schema matches version 2 or later. This handles edge cases where someone manually altered the schema or where the table was created by a newer builder version.
+The migration runner calls `DetectCurrentVersionAsync()` on the provisioner (see `IAmABoxProvisioner` in section 2) to determine the schema's actual state. The default implementation returns version 1, which is a safe fallback only for the common case where the table was created by the original static builder. **Backend-specific provisioners must override this** to introspect actual column existence — for example, checking whether `SpecVersion` or `DataRef` columns exist via `INFORMATION_SCHEMA.COLUMNS` (MSSQL/PostgreSQL/MySQL) or `pragma_table_info` (SQLite) to determine if the schema matches version 2 or later. This is required because a fresh install created with newer DDL that already includes v2+ columns would otherwise be bootstrapped at version 1 and then fail when the runner attempts `ALTER TABLE ADD COLUMN` for columns that already exist (MySQL does not support `IF NOT EXISTS` for columns).
 
 This ensures smooth upgrades for existing applications. The detection uses the same exists-query logic as the current builders, unified behind the provisioner.
 
@@ -629,7 +658,7 @@ Ordered to enable incremental delivery and testing:
   - **Mitigation**: Each migration runs in a transaction (where supported). For backends without DDL transaction support (e.g. some MySQL DDL), migrations are designed to be individually idempotent (using `IF NOT EXISTS`, `IF NOT EXISTS COLUMN` patterns)
 
 - **Risk**: Bootstrap detection incorrectly identifies a pre-migration installation's schema version
-  - **Mitigation**: Version 1 migration matches the exact DDL of the current builders. If the table exists and has no migration history, we assume it was created by the builder and mark version 1 as applied. Future migrations use `ALTER TABLE IF NOT EXISTS COLUMN` patterns as a safety net
+  - **Mitigation**: Version 1 migration matches the exact DDL of the current builders. Backend provisioners must override `DetectCurrentVersionAsync` to introspect the actual schema (e.g. via `INFORMATION_SCHEMA.COLUMNS`) and return the highest version whose columns are all present. This ensures that tables created with newer DDL are correctly bootstrapped at the right version. Additionally, future migrations use `ALTER TABLE IF NOT EXISTS COLUMN` patterns as a safety net where supported
 
 - **Risk**: Concurrent migration attempts from multiple service instances corrupt the schema or history table
   - **Mitigation**: Each backend's migration runner acquires a database-level advisory lock before running migrations. Concurrent instances block until the lock is released, then find no outstanding migrations to apply. See "Concurrency Control" in section 5.
