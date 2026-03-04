@@ -117,7 +117,7 @@ The design follows Responsibility-Driven Design with clear roles:
 | `IAmABoxMigrationRunner` | Service Provider (interface) | Knows how to execute migration steps against a database, track which versions have been applied |
 | `RelationalBoxMigrationRunner` | Service Provider | Implements migration tracking using a `__BrighterMigrationHistory` table; executes DDL steps in transactions |
 | `BoxProvisioningOptions` | Information Holder | Holds the list of provisioners to run and their configuration |
-| `IAmABoxMigration` | Information Holder (interface) | Describes a single migration step: version number, description, up/down DDL |
+| `IAmABoxMigration` | Information Holder (interface) | Describes a single forward migration step: version number, description, up DDL |
 
 ### 2. Core Abstractions (Package: `Paramore.Brighter.BoxProvisioning`)
 
@@ -303,10 +303,11 @@ public static class MsSqlBoxProvisioningExtensions
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
     {
+        var lockTimeout = options.MigrationLockTimeout;
         options.Add(services =>
         {
             services.AddSingleton<IAmABoxProvisioner>(
-                new MsSqlOutboxProvisioner(configuration));
+                new MsSqlOutboxProvisioner(configuration, lockTimeout));
         });
         return options;
     }
@@ -324,6 +325,7 @@ public static class MsSqlBoxProvisioningExtensions
         string? schemaName = null,
         bool binaryMessagePayload = false)
     {
+        var lockTimeout = options.MigrationLockTimeout;
         options.Add(services =>
         {
             services.AddSingleton<IAmABoxProvisioner>(sp =>
@@ -337,7 +339,7 @@ public static class MsSqlBoxProvisioningExtensions
                     outBoxTableName: outboxTableName ?? "Outbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                return new MsSqlOutboxProvisioner(dbConfig);
+                return new MsSqlOutboxProvisioner(dbConfig, lockTimeout);
             });
         });
         return options;
@@ -347,10 +349,11 @@ public static class MsSqlBoxProvisioningExtensions
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
     {
+        var lockTimeout = options.MigrationLockTimeout;
         options.Add(services =>
         {
             services.AddSingleton<IAmABoxProvisioner>(
-                new MsSqlInboxProvisioner(configuration));
+                new MsSqlInboxProvisioner(configuration, lockTimeout));
         });
         return options;
     }
@@ -358,6 +361,8 @@ public static class MsSqlBoxProvisioningExtensions
 ```
 
 The factory-based overload (`connectionName`) is critical for Aspire integration: Aspire populates `IConfiguration` with connection strings via service discovery *after* the DI container is configured but *before* hosted services run. By using an `IServiceProvider` factory, the provisioner's configuration is resolved at the right time.
+
+Note that `MigrationLockTimeout` is captured from `BoxProvisioningOptions` at registration time and passed through to the provisioner constructor. This ensures the timeout configured centrally on the options flows through to each backend's migration runner, which uses it when acquiring database-level advisory locks (e.g. MySQL's `GET_LOCK`, MSSQL's `sp_getapplock`).
 
 ### 4. Backend Provisioner Implementation Pattern
 
@@ -367,17 +372,21 @@ Each backend provisioner encapsulates the connection, DDL, and migration knowled
 public class MsSqlOutboxProvisioner : IAmABoxProvisioner
 {
     private readonly IAmARelationalDatabaseConfiguration _configuration;
+    private readonly TimeSpan _migrationLockTimeout;
 
-    public MsSqlOutboxProvisioner(IAmARelationalDatabaseConfiguration configuration)
+    public MsSqlOutboxProvisioner(
+        IAmARelationalDatabaseConfiguration configuration,
+        TimeSpan migrationLockTimeout)
     {
         _configuration = configuration;
+        _migrationLockTimeout = migrationLockTimeout;
     }
 
     public BoxType BoxType => BoxType.Outbox;
 
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
-        var runner = new MsSqlBoxMigrationRunner(_configuration);
+        var runner = new MsSqlBoxMigrationRunner(_configuration, _migrationLockTimeout);
         var migrations = MsSqlOutboxMigrations.All(_configuration);
         await runner.MigrateAsync(
             _configuration.OutBoxTableName,
@@ -428,8 +437,8 @@ Each backend's migration runner acquires a database-level lock before running mi
 
 | Backend | Locking Mechanism |
 |---------|------------------|
-| MSSQL | `sp_getapplock @Resource='BrighterMigration', @LockMode='Exclusive'` within a transaction |
-| PostgreSQL | `pg_advisory_lock(hash)` where hash is derived from the table name |
+| MSSQL | `sp_getapplock @Resource='BrighterMigration_{tableName}', @LockMode='Exclusive'` within a transaction |
+| PostgreSQL | `pg_advisory_lock(hashtext('BrighterMigration_' \|\| tableName)::bigint)` |
 | MySQL | `GET_LOCK('BrighterMigration_{tableName}', lockTimeout)` where `lockTimeout` defaults to 30 seconds, configurable via `BoxProvisioningOptions.MigrationLockTimeout` |
 | SQLite | SQLite's file-level locking provides implicit serialization |
 | Spanner | Spanner transactions provide serializable isolation by default |

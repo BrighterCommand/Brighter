@@ -1,12 +1,12 @@
 # Spec 0023: Box Database Migration
 
 **Created:** 2026-03-01
-**Status:** Requirements
+**Status:** Design (Approved)
 
 ## Status Checklist
 
-- [x] Requirements (`requirements.md`) — draft, awaiting approval
-- [x] Design (`docs/adr/0053-box-database-migration.md`) — proposed, awaiting approval
+- [x] Requirements (`requirements.md`) — approved
+- [x] Design (`docs/adr/0053-box-database-migration.md`) — approved
 - [ ] Tasks (`tasks.md`)
 - [ ] Implementation
 - [ ] Review
