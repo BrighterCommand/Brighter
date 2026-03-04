@@ -212,7 +212,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         Dictionary<string, string?> attributes = CreateTopicAttributes(snsAttributes);
 
-        var createTopicRequest = new CreateTopicRequest(topicName) { Attributes = attributes, Tags = [new Tag { Key = "Source", Value = "Brighter" }] };
+        var createTopicRequest = new CreateTopicRequest(topicName) { Attributes = attributes, Tags = CreateTopicTags(snsAttributes) };
 
         //create topic is idempotent, so safe to call even if topic already exists
         var createTopic = await snsClient.CreateTopicAsync(createTopicRequest);
@@ -384,7 +384,16 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         return tags;
     }
-    
+
+    private static List<Tag> CreateTopicTags(SnsAttributes? snsAttributes)
+    {
+        var tags = new List<Tag> { new() { Key = "Source", Value = "Brighter" } };
+        if (snsAttributes?.Tags == null) return tags;
+
+        tags.AddRange(snsAttributes.Tags);
+        return tags;
+    }
+
     private static Dictionary<string, string?> CreateTopicAttributes(SnsAttributes snsAttributes)
     {
         var attributes = new Dictionary<string, string?>();

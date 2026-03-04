@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
@@ -27,8 +28,8 @@ public class AWSAssumeQueuesTests : IDisposable, IAsyncDisposable
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             queueAttributes: new SqsAttributes(
-                type: SqsType.Fifo
-            ), makeChannels: OnMissingChannel.Assume);
+                type: SqsType.Fifo,
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }), makeChannels: OnMissingChannel.Assume);
 
         var awsConnection = GatewayFactory.CreateFactory();
 

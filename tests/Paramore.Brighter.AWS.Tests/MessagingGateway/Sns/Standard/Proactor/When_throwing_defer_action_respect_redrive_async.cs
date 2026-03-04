@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
@@ -51,8 +52,9 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
             messagePumpType: MessagePumpType.Proactor,
             //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
             queueAttributes: new SqsAttributes(
-                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
-            )
+                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2),
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }),
+            topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }])
         );
 
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };

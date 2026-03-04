@@ -38,12 +38,14 @@ public class SnsAttributes
     /// <param name="policy">The JSON serialization of the topic's access control policy. Default is null.</param>
     /// <param name="type">The <see cref="SqsType"/>The <see cref="SqsType"/> which lets you set FIFO or Standard. Default is <see cref="SqsType.Standard"/></param>
     /// <param name="contentBasedDeduplication">For a FIFO queue, do we deduplicate messages based on content. Default is true</param>
-    public SnsAttributes(string? deliveryPolicy = null, string? policy = null, SqsType type = SqsType.Standard, bool contentBasedDeduplication = true)
+    /// <param name="tags">A list of resource tags to apply to the topic at creation time. Default is null.</param>
+    public SnsAttributes(string? deliveryPolicy = null, string? policy = null, SqsType type = SqsType.Standard, bool contentBasedDeduplication = true, List<Tag>? tags = null)
     {
         DeliveryPolicy = deliveryPolicy;
         Policy = policy;
         Type = type;
         ContentBasedDeduplication = contentBasedDeduplication;
+        Tags = tags;
     }
 
     /// <summary>
@@ -67,7 +69,7 @@ public class SnsAttributes
     /// <summary>
     /// A list of resource tags to use when creating the publication  Ignored if TopicARN is set
     /// </summary>
-    public List<Tag> Tags => [];
+    public List<Tag>? Tags { get; }
 
     /// <summary>
     /// The <see cref="SqsType"/>.
