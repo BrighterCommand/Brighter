@@ -80,6 +80,27 @@ Each test project has a `test-configuration.json`. Two forms are supported:
 }
 ```
 
+## When to Create or Update Generated Tests
+
+Templates should be **created or updated** when a change affects behavior shared across all providers. Common scenarios include:
+
+- **Adding a new test scenario** that all providers must satisfy (e.g. a new outbox operation, a new messaging gateway pattern)
+- **Fixing a bug** in shared test logic that applies to every provider
+- **Changing a shared interface or base class** that generated tests depend on
+- **Adding a new provider** that needs the standard test suite — create a `test-configuration.json` and run the generator
+
+After creating or updating templates, you **must regenerate** the tests. Use the convenience scripts at the repo root to regenerate all test projects at once:
+
+```bash
+# macOS/Linux
+./generate-test.sh
+
+# Windows
+.\generate-test.ps1
+```
+
+Or follow the manual steps below to regenerate specific projects.
+
 ## How to Modify Generated Tests
 
 ### Step 1: Edit the Liquid templates
