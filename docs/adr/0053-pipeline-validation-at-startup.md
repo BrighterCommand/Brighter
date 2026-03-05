@@ -503,7 +503,7 @@ public class TransformStepDescription
 
 #### Dry Run on PipelineBuilder
 
-`PipelineBuilder` gains a `Describe()` method alongside the existing `Build()`:
+`PipelineBuilder` gains `Describe()` methods alongside the existing `Build()`:
 
 ```csharp
 public class PipelineBuilder<TRequest> where TRequest : class, IRequest
@@ -512,24 +512,43 @@ public class PipelineBuilder<TRequest> where TRequest : class, IRequest
     public Pipelines<TRequest> Build(TRequest request, IRequestContext requestContext);
     public AsyncPipelines<TRequest> BuildAsync(TRequest request, IRequestContext ctx, bool continueOnCaptured);
 
-    // New — describes the pipeline without instantiation
+    // New — describes a single request type's pipeline without instantiation
     public IEnumerable<HandlerPipelineDescription> Describe(Type requestType);
 
+    // New — describes all registered pipelines without instantiation
+    public IEnumerable<HandlerPipelineDescription> Describe();
+
     // New — describe-only constructor (no handler factory needed)
-    internal PipelineBuilder(
+    public PipelineBuilder(
         IAmASubscriberRegistry subscriberRegistry,
         InboxConfiguration? inboxConfiguration = null);
 }
 ```
 
-**Describe-only construction**: `Describe()` only does Phase 1 (pure reflection) — it never calls the handler factory. A new `internal` constructor accepts just the subscriber registry and inbox configuration, omitting the factory. The validator constructs a single describe-only instance and calls `Describe(type)` for each registered request type. The same approach applies to `TransformPipelineBuilder` and `TransformPipelineBuilderAsync`.
+**Two `Describe` overloads**: `Describe(Type requestType)` produces descriptions for a single request type. The parameterless `Describe()` enumerates **all** registered request types from the subscriber registry and yields descriptions for each. This is the method the validator and writer call — they do not need to know how to iterate the registry themselves:
+
+```csharp
+// Parameterless Describe() — iterates all registered request types
+public IEnumerable<HandlerPipelineDescription> Describe()
+{
+    foreach (var requestType in _subscriberRegistry.GetRegisteredRequestTypes())
+    {
+        foreach (var description in Describe(requestType))
+            yield return description;
+    }
+}
+```
+
+The subscriber registry exposes `GetRegisteredRequestTypes()` for this purpose (see the Subscriber Registry Inspection section below for details).
+
+**Describe-only construction**: `Describe()` only does Phase 1 (pure reflection) — it never calls the handler factory. A new **public** constructor accepts just the subscriber registry and inbox configuration, omitting the factory. This follows the existing pattern — `PipelineBuilder` already has two public constructors (one taking `IAmAHandlerFactorySync`, the other `IAmAHandlerFactoryAsync`), and the factory fields (`_syncHandlerFactory`, `_asyncHandlerFactory`) are already nullable. The describe-only constructor is a natural third overload that leaves both factories null. Making it public also ensures it is testable without `[InternalsVisibleTo]`. The validator constructs a single describe-only instance and calls the parameterless `Describe()`. The same approach applies to `TransformPipelineBuilder` and `TransformPipelineBuilderAsync`.
 
 **Why `Describe(Type)` stays on `PipelineBuilder<TRequest>`**: `Describe(Type requestType)` is a non-generic method that accepts `Type` and ignores the class's `TRequest` parameter. This is a deliberate trade-off — the two reasons for keeping it co-located rather than extracting to a separate class:
 
 1. **Drift prevention** — the describe path and the build path share the same code (`HandlerMethodDiscovery`, `GetOtherHandlersInPipeline()`, static attribute caches), guaranteeing they stay in sync as the pipeline evolves. Co-location on the same class makes this relationship explicit to future maintainers.
 2. **No runtime instance** — the validator operates on `Type` objects at registration time, not on request instances, so a generic constraint buys nothing here. The `Type requestType` parameter is the natural API for startup-time inspection.
 
-`Describe()` executes phase 1 only:
+`Describe(Type requestType)` executes phase 1 only:
 
 1. Queries `IAmASubscriberRegistry` for handler types (via the new `GetHandlerTypes(Type)` method — see below).
 2. For each handler type, finds the handler method **statically** — the same `GetMethods().Where(m => m.Name == "Handle"/"HandleAsync")` logic that `FindHandlerMethod()` uses, but operating on the `Type` rather than an instance.
@@ -699,16 +718,42 @@ This is a structural-only tidy (no behavioral change) — all existing callers g
 
 ### Subscriber Registry Inspection
 
-`IAmASubscriberRegistry.Get<T>()` requires an instance of `T` and a request context, which we don't have at startup. We add a type-based lookup:
+`IAmASubscriberRegistry.Get<T>()` requires an instance of `T` and a request context, which we don't have at startup. We add two type-based methods:
 
 ```csharp
-// Addition to IAmASubscriberRegistry
+// Additions to IAmASubscriberRegistry
 IEnumerable<Type> GetHandlerTypes(Type requestType);
+IEnumerable<Type> GetRegisteredRequestTypes();
+```
+
+**`GetHandlerTypes(Type requestType)`** returns all handler types registered for a given request type — the superset of types that routing functions may return, without evaluating any routing predicate.
+
+**`GetRegisteredRequestTypes()`** returns all request types that have at least one handler registration. This is the method `PipelineBuilder.Describe()` (parameterless) uses to enumerate all pipelines.
+
+**How the pieces connect end-to-end**: At startup, the validator constructs a describe-only `PipelineBuilder` (no handler factory) and calls its parameterless `Describe()`. Internally, `Describe()` calls `_subscriberRegistry.GetRegisteredRequestTypes()` to get every request type that has handlers, then for each type calls `Describe(Type requestType)`, which in turn calls `_subscriberRegistry.GetHandlerTypes(requestType)` to get the handler types for that specific request type. The validator never iterates the registry directly — `PipelineBuilder` owns that coordination:
+
+```
+Validator                PipelineBuilder              SubscriberRegistry
+   │                          │                              │
+   │── Describe() ──────────► │                              │
+   │                          │── GetRegisteredRequestTypes() ──►│
+   │                          │◄── [OrderCreated, Payment...]──│
+   │                          │                              │
+   │                          │ for each request type:       │
+   │                          │── GetHandlerTypes(type) ────►│
+   │                          │◄── [HandlerA, HandlerB] ────│
+   │                          │                              │
+   │                          │  reflect on each handler:    │
+   │                          │  find Handle/HandleAsync     │
+   │                          │  extract attributes           │
+   │                          │  build description model      │
+   │                          │                              │
+   │◄── IEnumerable<HandlerPipelineDescription> ────────────│
 ```
 
 **Implementation detail**: Today `SubscriberRegistry._observers` stores routing functions (`Func<IRequest?, IRequestContext?, List<Type>>`), not handler types directly. For simple registrations via `Register<TRequest, TImplementation>()`, the handler type is captured in a lambda. For routing registrations via `Register<TRequest>(Func<...> router, IEnumerable<Type> handlerTypes)`, the `handlerTypes` parameter represents the set of all possible types the routing function may return — these are passed through to the DI container (`ServiceCollectionSubscriberRegistry`) for registration, but `SubscriberRegistry` itself does not currently store them.
 
-To support `GetHandlerTypes(Type)`, `SubscriberRegistry` gains a parallel `Dictionary<Type, HashSet<Type>> _allHandlerTypes` that both `Add` overloads populate. This is a plain `Dictionary`, not a `ConcurrentDictionary` — matching the existing `_observers` field. Both are written during the single-threaded DI registration phase and only read after the service provider is built. The static caches in `PipelineBuilder` (`s_preAttributesMemento`, `s_postAttributesMemento`) use `ConcurrentDictionary` because they are lazily populated during concurrent message dispatch; `_allHandlerTypes` does not have this concern.
+To support both methods, `SubscriberRegistry` gains a parallel `Dictionary<Type, HashSet<Type>> _allHandlerTypes` that both `Add` overloads populate. This is a plain `Dictionary`, not a `ConcurrentDictionary` — matching the existing `_observers` field. Both are written during the single-threaded DI registration phase and only read after the service provider is built. The static caches in `PipelineBuilder` (`s_preAttributesMemento`, `s_postAttributesMemento`) use `ConcurrentDictionary` because they are lazily populated during concurrent message dispatch; `_allHandlerTypes` does not have this concern.
 
 ```csharp
 // In SubscriberRegistry
@@ -734,9 +779,12 @@ public void Add(Type requestType, Func<IRequest?, IRequestContext?, List<Type>> 
 
 public IEnumerable<Type> GetHandlerTypes(Type requestType)
     => _allHandlerTypes.TryGetValue(requestType, out var types) ? types : [];
+
+public IEnumerable<Type> GetRegisteredRequestTypes()
+    => _allHandlerTypes.Keys;
 ```
 
-This is a structural-only tidy (no behavioral change to existing callers) — `Get<T>()` continues to evaluate routing functions at runtime. `GetHandlerTypes(Type)` returns the superset of all possible handler types without needing an instance of the request or evaluation of routing predicates.
+This is a structural-only tidy (no behavioral change to existing callers) — `Get<T>()` continues to evaluate routing functions at runtime. `GetHandlerTypes(Type)` returns the superset of all possible handler types without needing an instance of the request or evaluation of routing predicates. `GetRegisteredRequestTypes()` returns the keys of the same dictionary — the set of all request types that have been registered.
 
 ### Mapper Resolution Inspection
 
@@ -816,7 +864,8 @@ foreach (var description in pipelineBuilder.Describe())
 | `TransformPipelineBuilder.DescribeTransforms()` | `Paramore.Brighter` | Dry-run mode on existing builder |
 | `MessageMapperRegistry.ResolveMapperInfo()` | `Paramore.Brighter` | Sync mapper introspection without instantiation |
 | `MessageMapperRegistry.ResolveAsyncMapperInfo()` | `Paramore.Brighter` | Async mapper introspection without instantiation |
-| `IAmASubscriberRegistry.GetHandlerTypes()` | `Paramore.Brighter` | Type-based handler lookup |
+| `IAmASubscriberRegistry.GetHandlerTypes()` | `Paramore.Brighter` | Type-based handler lookup for a single request type |
+| `IAmASubscriberRegistry.GetRegisteredRequestTypes()` | `Paramore.Brighter` | Enumerate all registered request types |
 | **Specification & Validation Rules** | | |
 | `ISpecification<T>` | `Paramore.Brighter` | Moved from Mediator; general-purpose specification pattern |
 | `Specification<T>` | `Paramore.Brighter` | Moved from Mediator; predicate composition (And/Or/Not) |
@@ -976,7 +1025,7 @@ new Specification<Subscription>(s =>
 - **Risk**: Validation rules could produce false positives.
   **Mitigation**: Only definite errors are reported as errors. Attribute ordering and ambiguous RequestType are warnings. Opt-in means developers can disable validation.
 
-- **Risk**: Adding `GetHandlerTypes(Type)` to `IAmASubscriberRegistry` is a breaking interface change.
+- **Risk**: Adding `GetHandlerTypes(Type)` and `GetRegisteredRequestTypes()` to `IAmASubscriberRegistry` is a breaking interface change.
   **Mitigation**: Add it as a default interface method that returns empty, or add it to a new `IAmASubscriberRegistryInspector` interface that `SubscriberRegistry` also implements.
 
 - **Risk**: Coordination between `BrighterValidationHostedService` and `ServiceActivatorHostedService`.
