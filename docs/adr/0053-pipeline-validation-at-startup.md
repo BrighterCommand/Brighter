@@ -332,9 +332,17 @@ internal static class HandlerPipelineValidationRules
             specification: new Specification<HandlerPipelineDescription>(d =>
                 d.BeforeSteps.Concat(d.AfterSteps).All(step =>
                 {
-                    var stepIsAsync = typeof(IHandleRequestsAsync)
+                    var isSync = typeof(IHandleRequests)
                         .IsAssignableFrom(step.HandlerType);
-                    return d.IsAsync == stepIsAsync;
+                    var isAsync = typeof(IHandleRequestsAsync)
+                        .IsAssignableFrom(step.HandlerType);
+
+                    if (!isSync && !isAsync)
+                        throw new InvalidOperationException(
+                            $"Pipeline step handler type '{step.HandlerType.FullName}' " +
+                            "implements neither IHandleRequests nor IHandleRequestsAsync.");
+
+                    return d.IsAsync == isAsync;
                 })),
             severity: PipelineValidationSeverity.Error,
             source: d => $"Handler '{d.HandlerType.Name}'",
@@ -916,12 +924,21 @@ new Specification<HandlerPipelineDescription>(d =>
 new Specification<HandlerPipelineDescription>(d =>
     d.BeforeSteps.Concat(d.AfterSteps).All(step =>
     {
-        var stepIsAsync = typeof(IHandleRequestsAsync).IsAssignableFrom(step.HandlerType);
-        return d.IsAsync == stepIsAsync;
+        var isSync = typeof(IHandleRequests).IsAssignableFrom(step.HandlerType);
+        var isAsync = typeof(IHandleRequestsAsync).IsAssignableFrom(step.HandlerType);
+
+        if (!isSync && !isAsync)
+            throw new InvalidOperationException(
+                $"Pipeline step handler type '{step.HandlerType.FullName}' implements neither " +
+                $"IHandleRequests nor IHandleRequestsAsync.");
+
+        return d.IsAsync == isAsync;
     }))
 // Severity: Error
 // Message: "Async handler has sync pipeline attributes (or vice versa) — they will be silently ignored"
 ```
+
+Note: the `InvalidOperationException` is not a validation finding — it is a programming error. All pipeline step handlers must implement one of the two base interfaces; this is an invariant of Brighter's handler model. The exception guards against silently treating an unrecognised type as sync.
 
 #### AddProducers Rules — `ValidationRule<Publication>`
 
