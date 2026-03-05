@@ -21,8 +21,8 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
     private {{ Subscription }}? _subscription;
     private {{ Publication }}? _publication;
 
-    private IAmAMessageProducerAsync? _producer;
-    private IAmAChannelAsync? _channel;
+    private IAmAMessageProducerAsync? _producer = null;
+    private IAmAChannelAsync? _channel = null;
 
     public WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync()
     {

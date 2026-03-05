@@ -3,55 +3,46 @@
 // </auto-generated>
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Threading;
 
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
+namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
-public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsync
+public class WhenPostingAMessageButNoBrokerCreatedShouldThrowException
 {
-    private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
+    private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
 
     private List<Message> _sentMessages = [];
 
-    private Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription? _subscription;
     private Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication? _publication;
 
-    private IAmAMessageProducerAsync? _producer;
-    private IAmAChannelAsync? _channel;
+    private IAmAMessageProducerSync? _producer = null;
 
-    public WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsync()
+    public WhenPostingAMessageButNoBrokerCreatedShouldThrowException()
     {
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
     }
 
     [Fact]
-    public async Task When_infrastructure_missing_and_validate_channel_should_throw_exception_async()
+    public void When_posting_a_message_but_no_broker_created_should_throw_exception()
     {
         try
         {
             // Arrange
             _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
-            _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
-                _messageGatewayProvider.GetOrCreateChannelName(),
-                OnMissingChannel.Validate);
-
-            _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
-            _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
+            _publication.MakeChannels = OnMissingChannel.Validate;
+            _producer = _messageGatewayProvider.CreateProducer(_publication);
 
             var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
             _sentMessages.Add(message);
 
             // Act
-            await _producer.SendAsync(message);
-
-            await Task.Delay(5000);
+            _producer.Send(message);
 
             // Assert
-            await _channel.ReceiveAsync(null);
             Assert.Fail("We are expected to throw an exception");
         }
         catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)

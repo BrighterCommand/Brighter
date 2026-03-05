@@ -1,10 +1,14 @@
 {
   "Namespace": "Paramore.Brighter.RMQ.Async.Tests",
+  "MessageAssertion": "RmqMessageAssertion",
   "MessagingGateway": {
     "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication",
     "Subscription": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription",
     "MessageGatewayProvider": "Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqMessageGatewayProvider",
     "DelayBetweenReceiveMessageInMilliseconds": 5000,
-    "HasSupportToPublishConfirmation": true
+    "HasSupportToPublishConfirmation": true,
+    "HasSupportToDeadLetterQueue": true,
+    "HasSupportToDelayedMessages": true,
+    "HasSupportToValidateBrokerExistence": true
   }
 }

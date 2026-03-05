@@ -19,7 +19,7 @@ public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IA
 
     private {{ Publication }}? _publication;
 
-    private IAmAMessageProducerAsync? _producer;
+    private IAmAMessageProducerAsync? _producer = null;
 
     public WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync()
     {
@@ -32,16 +32,9 @@ public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IA
         return Task.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public Task DisposeAsync()
     {
-        try
-        {
-            await _messageGatewayProvider.CleanUpAsync(_producer, null, _sentMessages);
-        }
-        catch
-        {
-            // The infrastructure might not exist, so we ignore any cleanup errors
-        }
+        return Task.CompletedTask;
     }
 
     [Fact]

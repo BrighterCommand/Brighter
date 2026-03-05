@@ -3,16 +3,13 @@
 // </auto-generated>
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
-
-using Paramore.Brighter.Extensions;
 
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
-public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDisposable
+public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -23,46 +20,57 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDi
     private Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription? _subscription;
     private Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication? _publication;
 
-    private IAmAMessageProducerSync? _producer;
-    private IAmAChannelSync? _channel;
+    private IAmAMessageProducerSync? _producer = null;
+    private IAmAChannelSync? _channel = null;
 
-    public WhenConfirmingPostingAMessageShouldReceivePublishConfirmation()
+    public WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue()
     {
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
         _messageAssertion = new RmqMessageAssertion();
     }
 
-    public async void Dispose()
+    public void Dispose()
     {
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
     [Fact]
-    public void When_confirming_posting_a_message_should_receive_publish_confirmation()
+    public void When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
             _messageGatewayProvider.GetOrCreateChannelName(),
-            OnMissingChannel.Create);
+            OnMissingChannel.Create,
+            true);
 
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var confirmation = (ISupportPublishConfirmation)_producer;
-
-        var messageSent = false;
-        confirmation.OnMessagePublished += (confirmed, _) => messageSent = confirmed;
-
         var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
         _sentMessages.Add(message);
-        
-        // Act
+
         _producer.Send(message);
+
         Thread.Sleep(5000);
-        
+
+        Message? received;
+        for (var i = 0; i < _subscription.RequeueCount; i++)
+        {
+            received = _channel.Receive(null);
+            _channel.Requeue(received);
+
+            Thread.Sleep(5000);
+        }
+
+        received = _channel.Receive(null);
+        Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
+
+        // Act
+        received = _messageGatewayProvider.GetMessageFromDeadLetterQueue(_subscription);
+
         // Assert
-        Assert.True(messageSent);
+        _messageAssertion.Assert(message, received);
     }
 }

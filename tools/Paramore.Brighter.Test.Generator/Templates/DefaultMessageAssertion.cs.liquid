@@ -56,6 +56,8 @@ public class DefaultMessageAssertion : IAmAMessageAssertion
        Xunit.Assert.Equal(expected.Header.Topic, actual.Header.Topic);
        Xunit.Assert.Equal(expected.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), actual.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
        Xunit.Assert.Equal(expected.Header.Type, actual.Header.Type);
+       Xunit.Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+       Xunit.Assert.Equal(System.TimeSpan.Zero, actual.Header.Delayed);
        Xunit.Assert.Equal(expected.Body.Value, actual.Body.Value);
        Xunit.Assert.Equal(expected.Header.TraceParent, actual.Header.TraceParent);
        Xunit.Assert.Equal(expected.Header.TraceState, actual.Header.TraceState);

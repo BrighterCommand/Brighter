@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
-public class WhenInfrastructureMissingAndValidateChannelShouldThrowException : IDisposable
+public class WhenInfrastructureMissingAndValidateChannelShouldThrowException 
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -26,18 +26,6 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowException : I
     {
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-    }
-
-    public void Dispose()
-    {
-        try
-        {
-            _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
-        }
-        catch
-        {
-            // The infrastructure might not exist, so we ignore any cleanup errors
-        }
     }
 
     [Fact]

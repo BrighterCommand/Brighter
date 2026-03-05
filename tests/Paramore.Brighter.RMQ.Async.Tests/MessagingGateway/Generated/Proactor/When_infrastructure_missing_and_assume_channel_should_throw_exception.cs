@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync : IAsyncLifetime
+public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -26,23 +26,6 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync 
     {
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-    }
-
-    public Task InitializeAsync()
-    {
-        return Task.CompletedTask;
-    }
-
-    public async Task DisposeAsync()
-    {
-        try
-        {
-            await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
-        }
-        catch
-        {
-            // The infrastructure might not exist, so we ignore any cleanup errors
-        }
     }
 
     [Fact]

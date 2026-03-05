@@ -27,7 +27,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
     {
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new RmqMessageAssertion();
     }
 
     public Task InitializeAsync()
@@ -82,8 +82,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, requeued.Header.MessageType);
-        Assert.Equal(message.Body.Value, requeued.Body.Value);
-        Assert.Equal(message.Header.Topic, requeued.Header.Topic);
-        Assert.Equal(message.Header.MessageType, requeued.Header.MessageType);
+        Assert.Equal(message.Header.MessageId.ToString(), requeued.Header.Bag[Message.OriginalMessageIdHeaderName]);
+        _messageAssertion.Assert(message, requeued);
     }
 }

@@ -27,7 +27,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
     {
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new RmqMessageAssertion();
     }
 
     public Task InitializeAsync()

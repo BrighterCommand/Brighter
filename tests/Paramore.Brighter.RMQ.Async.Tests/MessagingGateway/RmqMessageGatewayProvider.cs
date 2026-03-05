@@ -8,6 +8,7 @@ using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
+using RabbitMQ.Client;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
@@ -15,15 +16,46 @@ public class RmqMessageGatewayProvider
     : IAmAMessageGatewayProactorProvider,
         IAmAMessageGatewayReactorProvider
 {
+    private static readonly Uri s_amqpUri = new("amqp://guest:guest@localhost:5672/%2f");
+    private static readonly Lazy<bool> s_delaySupported = new(DetectDelaySupport);
     private readonly RmqMessagingGatewayConnection _connection;
 
     public RmqMessageGatewayProvider()
     {
+        var delaySupported = s_delaySupported.Value;
+
         _connection = new RmqMessagingGatewayConnection
         {
-            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-            Exchange = new Exchange("paramore.brighter.exchange"),
+            AmpqUri = new AmqpUriSpecification(s_amqpUri),
+            Exchange = delaySupported
+                ? new Exchange("paramore.brighter.gentest.delay.exchange", supportDelay: true)
+                : new Exchange("paramore.brighter.gentest.exchange"),
+            DeadLetterExchange = new Exchange("paramore.brighter.gentest.exchange.dlq"),
         };
+    }
+
+    private static bool DetectDelaySupport()
+    {
+        try
+        {
+            var factory = new ConnectionFactory { Uri = s_amqpUri };
+            using var connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();
+            using var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
+
+            channel.ExchangeDeclareAsync(
+                "_brighter_delay_detect",
+                "x-delayed-message",
+                durable: false,
+                autoDelete: true,
+                arguments: new Dictionary<string, object?> { { "x-delayed-type", "direct" } }
+            ).GetAwaiter().GetResult();
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public void CleanUp(
@@ -71,6 +103,11 @@ public class RmqMessageGatewayProvider
             channel.Receive(TimeSpan.FromMilliseconds(100));
         }
 
+        if (subscription.DeadLetterChannelName != null && subscription.RequeueCount > 0)
+        {
+            return new RequeueTrackingChannelSync(channel, subscription.RequeueCount);
+        }
+
         return channel;
     }
 
@@ -89,12 +126,29 @@ public class RmqMessageGatewayProvider
             await channel.ReceiveAsync(TimeSpan.FromMilliseconds(100), cancellationToken);
         }
 
+        if (subscription.DeadLetterChannelName != null && subscription.RequeueCount > 0)
+        {
+            return new RequeueTrackingChannelAsync(channel, subscription.RequeueCount);
+        }
+
         return channel;
     }
 
     public IAmAMessageProducerSync CreateProducer(RmqPublication publication)
     {
-        var produces = new RmqMessageProducerFactory(_connection, [publication]).Create();
+        var connection = _connection;
+
+        // Use a non-existent exchange for validate-mode tests (no broker created scenario)
+        if (publication.MakeChannels == OnMissingChannel.Validate)
+        {
+            connection = new RmqMessagingGatewayConnection
+            {
+                AmpqUri = _connection.AmpqUri,
+                Exchange = new Exchange(Guid.NewGuid().ToString()),
+            };
+        }
+
+        var produces = new RmqMessageProducerFactory(connection, [publication]).Create();
 
         var producer = produces.First().Value;
         return (IAmAMessageProducerSync)producer;
@@ -105,8 +159,20 @@ public class RmqMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
+        var connection = _connection;
+
+        // Use a non-existent exchange for validate-mode tests (no broker created scenario)
+        if (publication.MakeChannels == OnMissingChannel.Validate)
+        {
+            connection = new RmqMessagingGatewayConnection
+            {
+                AmpqUri = _connection.AmpqUri,
+                Exchange = new Exchange(Guid.NewGuid().ToString()),
+            };
+        }
+
         var produces = await new RmqMessageProducerFactory(
-            _connection,
+            connection,
             [publication]
         ).CreateAsync();
 
@@ -130,6 +196,20 @@ public class RmqMessageGatewayProvider
         bool setupDeadLetterQueue = false
     )
     {
+        if (setupDeadLetterQueue)
+        {
+            return new RmqSubscription<MyCommand>(
+                subscriptionName: new SubscriptionName(Uuid.NewAsString()),
+                channelName: channelName,
+                routingKey: routingKey,
+                messagePumpType: MessagePumpType.Proactor,
+                makeChannels: makeChannel,
+                deadLetterChannelName: new ChannelName($"{routingKey}.DLQ"),
+                deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                requeueCount: 3
+            );
+        }
+
         return new RmqSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(Uuid.NewAsString()),
             channelName: channelName,
@@ -149,16 +229,188 @@ public class RmqMessageGatewayProvider
         return new RoutingKey($"Topic{Uuid.New():N}");
     }
 
-    public Task<Message> GetMessageFromDeadLetterQueueAsync(
+    public async Task<Message> GetMessageFromDeadLetterQueueAsync(
         RmqSubscription subscription,
         CancellationToken cancellationToken = default
     )
     {
-        throw new NotImplementedException();
+        var dlqConsumer = new RmqMessageConsumer(
+            connection: _connection,
+            queueName: subscription.DeadLetterChannelName!,
+            routingKey: subscription.DeadLetterRoutingKey!,
+            isDurable: false,
+            makeChannels: OnMissingChannel.Assume
+        );
+
+        try
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                var messages = await dlqConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                var message = messages.First();
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    await dlqConsumer.AcknowledgeAsync(message, cancellationToken);
+                    return message;
+                }
+                await Task.Delay(1000, cancellationToken);
+            }
+
+            return new Message();
+        }
+        finally
+        {
+            await dlqConsumer.DisposeAsync();
+        }
     }
 
     public Message GetMessageFromDeadLetterQueue(RmqSubscription subscription)
     {
-        throw new NotImplementedException();
+        var dlqConsumer = new RmqMessageConsumer(
+            connection: _connection,
+            queueName: subscription.DeadLetterChannelName!,
+            routingKey: subscription.DeadLetterRoutingKey!,
+            isDurable: false,
+            makeChannels: OnMissingChannel.Assume
+        );
+
+        try
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                var messages = dlqConsumer.Receive(TimeSpan.FromSeconds(5));
+                var message = messages.First();
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    dlqConsumer.Acknowledge(message);
+                    return message;
+                }
+                Thread.Sleep(1000);
+            }
+
+            return new Message();
+        }
+        finally
+        {
+            dlqConsumer.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Channel decorator that tracks requeue count per original message ID and
+    /// rejects (sending to DLQ) after the max requeue count is reached.
+    /// </summary>
+    private class RequeueTrackingChannelAsync : IAmAChannelAsync
+    {
+        private readonly IAmAChannelAsync _inner;
+        private readonly int _maxRequeueCount;
+        private readonly Dictionary<string, int> _requeueCounts = new();
+
+        public RequeueTrackingChannelAsync(IAmAChannelAsync inner, int maxRequeueCount)
+        {
+            _inner = inner;
+            _maxRequeueCount = maxRequeueCount;
+        }
+
+        public ChannelName Name => _inner.Name;
+        public RoutingKey RoutingKey => _inner.RoutingKey;
+        public void Enqueue(params Message[] messages) => _inner.Enqueue(messages);
+        public void Stop(RoutingKey topic) => _inner.Stop(topic);
+        public void Dispose() => _inner.Dispose();
+
+        public Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
+            => _inner.AcknowledgeAsync(message, cancellationToken);
+
+        public Task PurgeAsync(CancellationToken cancellationToken = default)
+            => _inner.PurgeAsync(cancellationToken);
+
+        public Task<Message> ReceiveAsync(TimeSpan? timeout, CancellationToken cancellationToken = default)
+            => _inner.ReceiveAsync(timeout, cancellationToken);
+
+        public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
+            => _inner.RejectAsync(message, reason, cancellationToken);
+
+        public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+            => _inner.NackAsync(message, cancellationToken);
+
+        public async Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
+        {
+            var originalId = GetOriginalMessageId(message);
+
+            _requeueCounts.TryGetValue(originalId, out var count);
+            count++;
+            _requeueCounts[originalId] = count;
+
+            if (count >= _maxRequeueCount)
+            {
+                await _inner.RejectAsync(message, cancellationToken: cancellationToken);
+                return false;
+            }
+
+            return await _inner.RequeueAsync(message, timeOut, cancellationToken);
+        }
+
+        private static string GetOriginalMessageId(Message message)
+        {
+            return message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out var id)
+                ? id?.ToString() ?? message.Header.MessageId.ToString()
+                : message.Header.MessageId.ToString();
+        }
+    }
+
+    /// <summary>
+    /// Channel decorator that tracks requeue count per original message ID and
+    /// rejects (sending to DLQ) after the max requeue count is reached.
+    /// </summary>
+    private class RequeueTrackingChannelSync : IAmAChannelSync
+    {
+        private readonly IAmAChannelSync _inner;
+        private readonly int _maxRequeueCount;
+        private readonly Dictionary<string, int> _requeueCounts = new();
+
+        public RequeueTrackingChannelSync(IAmAChannelSync inner, int maxRequeueCount)
+        {
+            _inner = inner;
+            _maxRequeueCount = maxRequeueCount;
+        }
+
+        public ChannelName Name => _inner.Name;
+        public RoutingKey RoutingKey => _inner.RoutingKey;
+        public void Enqueue(params Message[] messages) => _inner.Enqueue(messages);
+        public void Stop(RoutingKey topic) => _inner.Stop(topic);
+        public void Dispose() => _inner.Dispose();
+
+        public void Acknowledge(Message message) => _inner.Acknowledge(message);
+        public void Purge() => _inner.Purge();
+        public Message Receive(TimeSpan? timeout) => _inner.Receive(timeout);
+
+        public bool Reject(Message message, MessageRejectionReason? reason = null)
+            => _inner.Reject(message, reason);
+
+        public void Nack(Message message) => _inner.Nack(message);
+
+        public bool Requeue(Message message, TimeSpan? timeOut = null)
+        {
+            var originalId = GetOriginalMessageId(message);
+
+            _requeueCounts.TryGetValue(originalId, out var count);
+            count++;
+            _requeueCounts[originalId] = count;
+
+            if (count >= _maxRequeueCount)
+            {
+                _inner.Reject(message);
+                return false;
+            }
+
+            return _inner.Requeue(message, timeOut);
+        }
+
+        private static string GetOriginalMessageId(Message message)
+        {
+            return message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out var id)
+                ? id?.ToString() ?? message.Header.MessageId.ToString()
+                : message.Header.MessageId.ToString();
+        }
     }
 }
