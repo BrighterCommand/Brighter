@@ -31,8 +31,19 @@ using Paramore.Brighter.Test.Generator.Configuration;
 
 namespace Paramore.Brighter.Test.Generator.Generators;
 
+/// <summary>
+/// Generates outbox test code from Liquid templates based on <see cref="OutboxConfiguration"/>.
+/// Supports both single and multiple outbox configurations, producing synchronous and asynchronous test variants,
+/// and conditionally skipping tests for outboxes that do not support transactions.
+/// </summary>
+/// <param name="logger">The logger instance used for diagnostic output during generation.</param>
 public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(logger)
 {
+    /// <summary>
+    /// Generates outbox test files for the configured outbox(es) in the provided <paramref name="configuration"/>.
+    /// Uses <see cref="TestConfiguration.Outbox"/> for a single outbox or <see cref="TestConfiguration.Outboxes"/> for multiple.
+    /// </summary>
+    /// <param name="configuration">The root test configuration containing outbox settings and destination folder.</param>
     public async Task GenerateAsync(TestConfiguration configuration)
     {
         if (configuration.Outbox != null)
@@ -100,6 +111,12 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
         }
     }
 
+    /// <summary>
+    /// Determines whether a test template should be skipped based on the outbox's feature support.
+    /// </summary>
+    /// <param name="outboxConfiguration">The outbox configuration describing supported features.</param>
+    /// <param name="fileName">The template file name to evaluate.</param>
+    /// <returns><c>true</c> if the template should be skipped; otherwise, <c>false</c>.</returns>
     private static bool SkipTest(OutboxConfiguration outboxConfiguration, string fileName)
     {
         if (
@@ -113,6 +130,12 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
         return false;
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Applies default values from the root <paramref name="configuration"/> to the
+    /// <see cref="OutboxConfiguration"/> model when its own values are not set,
+    /// including <see cref="OutboxConfiguration.MessageBuilder"/> and <see cref="OutboxConfiguration.Namespace"/>.
+    /// </remarks>
     protected override Task GenerateAsync(
         TestConfiguration configuration,
         string prefix,

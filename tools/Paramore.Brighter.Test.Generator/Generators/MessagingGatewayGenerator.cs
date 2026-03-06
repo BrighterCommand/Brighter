@@ -32,9 +32,20 @@ using Paramore.Brighter.Test.Generator.Configuration;
 
 namespace Paramore.Brighter.Test.Generator.Generators;
 
+/// <summary>
+/// Generates messaging gateway test code from Liquid templates based on <see cref="MessagingGatewayConfiguration"/>.
+/// Supports both single and multiple gateway configurations, producing Reactor and Proactor test variants,
+/// and conditionally skipping tests for unsupported gateway features.
+/// </summary>
+/// <param name="logger">The logger instance used for diagnostic output during generation.</param>
 public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
     : BaseGenerator(logger)
 {
+    /// <summary>
+    /// Generates messaging gateway test files for the configured gateway(s) in the provided <paramref name="configuration"/>.
+    /// Uses <see cref="TestConfiguration.MessagingGateway"/> for a single gateway or <see cref="TestConfiguration.MessagingGateways"/> for multiple.
+    /// </summary>
+    /// <param name="configuration">The root test configuration containing messaging gateway settings and destination folder.</param>
     public async Task GenerateAsync(TestConfiguration configuration)
     {
         if (configuration.MessagingGateway != null)
@@ -107,6 +118,12 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
         }
     }
 
+    /// <summary>
+    /// Determines whether a test template should be skipped based on the gateway's feature support flags.
+    /// </summary>
+    /// <param name="configuration">The messaging gateway configuration describing supported features.</param>
+    /// <param name="fileName">The template file name to evaluate.</param>
+    /// <returns><c>true</c> if the template should be skipped; otherwise, <c>false</c>.</returns>
     private static bool SkipTest(MessagingGatewayConfiguration configuration, string fileName)
     {
         if (
@@ -168,6 +185,13 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
         return false;
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Applies default values from the root <paramref name="configuration"/> to the
+    /// <see cref="MessagingGatewayConfiguration"/> model when its own values are not set,
+    /// including <see cref="MessagingGatewayConfiguration.MessageBuilder"/>,
+    /// <see cref="MessagingGatewayConfiguration.Namespace"/>, and <see cref="MessagingGatewayConfiguration.MessageAssertion"/>.
+    /// </remarks>
     protected override Task GenerateAsync(
         TestConfiguration configuration,
         string prefix,

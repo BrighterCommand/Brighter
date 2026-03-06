@@ -75,15 +75,33 @@ public class MessagingGatewayConfiguration
     /// </summary>
     public int? DelayBetweenReceiveMessageInMilliseconds { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports publish confirmations.
+    /// </summary>
     public bool HasSupportToPublishConfirmation { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports delayed message delivery.
+    /// </summary>
     public bool HasSupportToDelayedMessages { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports partition keys for message routing.
+    /// </summary>
     public bool HasSupportToPartitionKey { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports dead letter queues.
+    /// </summary>
     public bool HasSupportToDeadLetterQueue { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports validating broker existence.
+    /// </summary>
     public bool HasSupportToValidateBrokerExistence { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports requeuing messages.
+    /// </summary>
     public bool HasSupportToRequeue { get; set; }
 }
