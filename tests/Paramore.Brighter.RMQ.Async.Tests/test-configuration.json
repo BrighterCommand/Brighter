@@ -10,7 +10,7 @@
       "DelayBetweenReceiveMessageInMilliseconds": 5000,
       "HasSupportToPublishConfirmation": true,
       "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": true,
+      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true
     },
     "Quorum": {
