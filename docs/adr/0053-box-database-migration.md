@@ -125,6 +125,26 @@ This package defines the interfaces and the hosted service. It has no database-s
 
 ```csharp
 /// <summary>
+/// Captures the current state of a box table in the database, as detected by
+/// the provisioner before handing off to the migration runner.
+/// </summary>
+/// <param name="TableExists">Whether the box table (inbox or outbox) exists in the database.</param>
+/// <param name="HistoryExists">Whether the <c>__BrighterMigrationHistory</c> table has rows
+/// for this specific box table and schema. Only meaningful when <paramref name="TableExists"/>
+/// is <c>true</c>. An empty history table (created by a different box provisioner) is treated
+/// the same as no history for this table.</param>
+/// <param name="CurrentVersion">The highest migration version already reflected in the schema.
+/// <list type="bullet">
+///   <item><c>0</c> when the table does not exist (fresh install)</item>
+///   <item>Introspected version (from column checks) when the table exists but has no history
+///     (bootstrap of a pre-migration installation)</item>
+///   <item>Max applied version from <c>__BrighterMigrationHistory</c> when history exists</item>
+/// </list></param>
+public record BoxTableState(bool TableExists, bool HistoryExists, int CurrentVersion);
+```
+
+```csharp
+/// <summary>
 /// Knows how to provision (create and migrate) a box (inbox or outbox) table.
 /// </summary>
 public interface IAmABoxProvisioner
@@ -142,32 +162,19 @@ public interface IAmABoxProvisioner
     /// and re-throws as a <see cref="ConfigurationException"/> to fail-fast the host.
     /// </exception>
     Task ProvisionAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Detects the current schema version by introspecting the database.
-    /// Used during bootstrap when the table exists but has no migration history.
-    /// Returns the highest migration version that matches the current schema.
-    /// Default implementation returns 1, which assumes the table was created by the
-    /// original static builder (e.g. SqlOutboxBuilder) and matches the version-1 migration DDL.
-    ///
-    /// Backend-specific provisioners MUST override this method to introspect actual column
-    /// existence (e.g. querying INFORMATION_SCHEMA.COLUMNS on MSSQL/PostgreSQL, or
-    /// pragma_table_info on SQLite) to determine whether the schema matches version 2
-    /// or later. This is required — not optional — for any backend that ships migrations
-    /// beyond version 1. A fresh install created with newer DDL (that already includes
-    /// v2+ columns) would otherwise be bootstrapped at version 1 and then fail when the
-    /// runner attempts ALTER TABLE ADD COLUMN for columns that already exist.
-    ///
-    /// The default returns 1, which is a safe fallback only when the table was created by
-    /// the original static builder. Backend implementations should inspect the actual schema
-    /// and return the highest version whose columns are all present.
-    /// </summary>
-    Task<int> DetectCurrentVersionAsync(CancellationToken cancellationToken = default)
-        => Task.FromResult(1);
 }
 
 public enum BoxType { Inbox, Outbox }
 ```
+
+The provisioner gathers all detection state into a `BoxTableState` record before calling the runner. This makes the three scenarios (fresh install, bootstrap, normal migration) explicit in the type system and eliminates ambiguity about the meaning of `currentVersion`.
+
+The provisioner performs cascading checks to build the `BoxTableState`:
+
+1. **`DoesTableExistAsync()`** — always called. Queries backend-specific catalog (e.g. `sys.tables` for MSSQL, `information_schema` for PostgreSQL/MySQL, `sqlite_master` for SQLite). If false, returns `BoxTableState(false, false, 0)`.
+2. **`DoesHistoryExistAsync()`** — called only when the table exists. Checks whether `__BrighterMigrationHistory` has rows for this specific table name and schema. If false, falls through to version detection.
+3. **`DetectCurrentVersionAsync()`** — called only in the bootstrap case (table exists, no history). Introspects actual column existence (e.g. via `INFORMATION_SCHEMA.COLUMNS` on MSSQL/PostgreSQL/MySQL, `pragma_table_info` on SQLite) to determine the highest migration version that matches the current schema. Returns 1 as a safe fallback for tables created by the original static builders; backend implementations must check for v2+ columns (e.g. `DataRef`, `SpecVersion`) and return a higher version when they are present.
+4. **`GetMaxVersionAsync()`** — called only when history exists. Reads `MAX(MigrationVersion)` from `__BrighterMigrationHistory` for this table and schema.
 
 ```csharp
 /// <summary>
@@ -184,17 +191,21 @@ public interface IAmABoxMigrationRunner
     /// distinguish identically-named tables in different schemas within the migration
     /// history. Defaults to the backend's default schema when null.</param>
     /// <param name="migrations">The ordered list of migrations to apply.</param>
+    /// <param name="tableState">The current state of the box table, as detected by the
+    /// provisioner. The runner uses this to determine its strategy:
+    /// <list type="bullet">
+    ///   <item><c>!TableExists</c> — run all migrations from version 1</item>
+    ///   <item><c>TableExists &amp;&amp; !HistoryExists</c> — bootstrap: insert synthetic
+    ///     history rows up to <c>CurrentVersion</c>, then apply remaining migrations</item>
+    ///   <item><c>TableExists &amp;&amp; HistoryExists</c> — normal: skip migrations up to
+    ///     and including <c>CurrentVersion</c>, apply remaining</item>
+    /// </list></param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <param name="currentVersion">The highest migration version already applied.
-    /// For new tables this is 0. For pre-migration tables the provisioner determines
-    /// this by calling <see cref="IAmABoxProvisioner.DetectCurrentVersionAsync"/>
-    /// and passes the result here. The runner skips migrations up to and including
-    /// this version.</param>
     Task MigrateAsync(
         string tableName,
         string? schemaName,
         IReadOnlyList<IAmABoxMigration> migrations,
-        int currentVersion = 0,
+        BoxTableState tableState,
         CancellationToken cancellationToken = default);
 }
 ```
@@ -451,20 +462,47 @@ public class MsSqlOutboxProvisioner : IAmABoxProvisioner
     {
         var migrations = MsSqlOutboxMigrations.All(_configuration);
 
-        // The provisioner owns schema introspection knowledge, so it determines
-        // the current version and passes it to the runner. The runner's job is
-        // purely "apply migrations from version X onwards".
-        var currentVersion = await DetectCurrentVersionAsync(cancellationToken);
+        // The provisioner owns all schema introspection knowledge and gathers
+        // the current state into a BoxTableState record. The runner's job is
+        // purely "apply the right migrations given this state".
+        var tableState = await DetectTableStateAsync(cancellationToken);
 
         await _migrationRunner.MigrateAsync(
             _configuration.OutBoxTableName,
             _configuration.SchemaName,
             migrations,
-            currentVersion,
+            tableState,
             cancellationToken);
+    }
+
+    private async Task<BoxTableState> DetectTableStateAsync(
+        CancellationToken cancellationToken)
+    {
+        await using var connection = new SqlConnection(_configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        // 1. Does the box table exist?
+        var tableExists = await DoesTableExistAsync(connection, cancellationToken);
+        if (!tableExists)
+            return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
+
+        // 2. Does migration history exist for this table?
+        var historyExists = await DoesHistoryExistAsync(connection, cancellationToken);
+        if (!historyExists)
+        {
+            // 3. Bootstrap: introspect columns to detect current schema version
+            var detectedVersion = await DetectCurrentVersionAsync(connection, cancellationToken);
+            return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
+        }
+
+        // 4. Normal: read max applied version from history
+        var maxVersion = await GetMaxVersionAsync(connection, cancellationToken);
+        return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 }
 ```
+
+The `DetectTableStateAsync` method is private to each backend provisioner, not part of the `IAmABoxProvisioner` interface. The interface stays minimal (`BoxType` + `ProvisionAsync`), while backend implementations encapsulate all detection logic internally. The four helper methods (`DoesTableExistAsync`, `DoesHistoryExistAsync`, `DetectCurrentVersionAsync`, `GetMaxVersionAsync`) are also private/protected — they use backend-specific SQL and share a single open connection to avoid unnecessary reconnections.
 
 ### 5. Migration Runner and Version Tracking
 
@@ -488,10 +526,14 @@ BEGIN
 END
 ```
 
-The migration runner:
+The migration runner receives a `BoxTableState` from the provisioner and uses it to determine its strategy:
+
 1. Acquires a database-level advisory lock to prevent concurrent migration attempts (see below)
 2. Creates the history table if it doesn't exist
-3. Queries which versions have already been applied for the target schema and table name
+3. Determines which migrations to apply based on `BoxTableState`:
+   - `!TableExists` — all migrations are pending (fresh install)
+   - `TableExists && !HistoryExists` — bootstrap: insert synthetic history rows for versions up to and including `CurrentVersion`, then apply remaining migrations
+   - `TableExists && HistoryExists` — skip migrations up to and including `CurrentVersion`, apply remaining
 4. For each unapplied migration (in version order):
    a. Begins a transaction (where supported)
    b. Executes the `UpScript`
@@ -512,7 +554,7 @@ Each backend's migration runner acquires a database-level lock before running mi
 | PostgreSQL | `pg_try_advisory_lock(hashtext('BrighterMigration_' \|\| tableName)::bigint)` with a retry loop. The runner calls `pg_try_advisory_lock` in a loop with a short delay between attempts, logging "Waiting for migration lock on {tableName}..." on each retry so operators can diagnose slow startups. The total retry budget is bounded by `MigrationLockTimeout` (default 30s). If the lock is not acquired within the timeout, the runner throws `TimeoutException`. Note: `hashtext` returns a 32-bit integer, so hash collisions between different table names are theoretically possible but unlikely in practice. Two tables locked by the same hash would serialize rather than deadlock, causing spurious contention but no correctness issue. An alternative is the two-argument form `pg_advisory_lock(constant, hash)` with a Brighter-specific namespace constant, but the single-argument form is simpler and sufficient given the small number of box tables per database. |
 | MySQL | `GET_LOCK('BrighterMigration_{tableName}', lockTimeout)` where `lockTimeout` defaults to 30 seconds, configurable via `BoxProvisioningOptions.MigrationLockTimeout` |
 | SQLite | SQLite's file-level locking provides implicit serialization |
-| Spanner | Spanner DDL operations are submitted via `ExecuteDdlAsync` (a separate DDL batch API) and are serialized by the Spanner service — they cannot run inside read-write transactions. The migration runner submits each DDL statement via `ExecuteDdlAsync`, then updates the history table in a normal read-write transaction. |
+| Spanner | Spanner DDL operations are submitted via `ExecuteDdlAsync` (a separate DDL batch API) and are serialized by the Spanner service — they cannot run inside read-write transactions. The migration runner submits each DDL statement via `ExecuteDdlAsync`, then updates the history table in a normal read-write transaction. **Failure window**: Because DDL and history updates cannot share a transaction, there is a window where DDL has been applied but the history row has not been written (e.g. if the process crashes between the two steps). On next startup, the runner would attempt to re-apply the migration. To handle this safely, Spanner DDL migrations must be idempotent: `CREATE TABLE` uses `IF NOT EXISTS`; for `ALTER TABLE` (which does not support `IF NOT EXISTS` on columns), the Spanner runner must catch "column already exists" errors from `ExecuteDdlAsync` and treat them as success — the migration was applied but untracked, so the runner writes the missing history row and continues. |
 
 **TimeSpan-to-backend unit conversions**: `BoxProvisioningOptions.MigrationLockTimeout` is a `TimeSpan`. Each backend converts it to the units expected by its locking API:
 
@@ -574,61 +616,35 @@ new BoxMigration(
 
 **Payload mode validation**: When the table already exists and has migration history, the provisioner performs a schema introspection step to check that the actual column type of the message body column matches the configured `binaryMessagePayload` mode. If there is a mismatch (e.g. the table has `NVARCHAR(MAX)` but the configuration specifies `binaryMessagePayload = true`), the provisioner throws a `ConfigurationException` at startup with a descriptive message. This fail-fast check prevents silent data corruption where binary data would be stored as text or vice versa. The introspection uses `INFORMATION_SCHEMA.COLUMNS` (MSSQL/PostgreSQL/MySQL) or `pragma_table_info` (SQLite) to determine the actual column data type.
 
+The column to introspect differs by box type: `Body` for outbox tables, `CommandBody` for inbox tables. The expected column types per backend and payload mode are:
+
+| Backend | Text mode (`binaryMessagePayload = false`) | Binary mode (`binaryMessagePayload = true`) |
+|---------|---------------------------------------------|----------------------------------------------|
+| MSSQL | `NVARCHAR(MAX)` | `VARBINARY(MAX)` |
+| PostgreSQL | `TEXT` | `BYTEA` |
+| MySQL | `LONGTEXT` / `TEXT` | `BLOB` / `LONGBLOB` |
+| SQLite | `TEXT` | `BLOB` |
+
 The version-1 migration for new installations runs the full `CREATE TABLE` DDL. For existing installations that pre-date the migration system, the runner detects the table exists (via the existing `GetExistsQuery` pattern), creates the history table, records version 1 as already applied (since the table was created by the old builder), and then applies any subsequent migrations.
 
 ### 7. Handling Pre-Migration Installations (Bootstrap)
 
-When the migration runner encounters a table that exists but has no entry in `__BrighterMigrationHistory`, it performs a bootstrap. **The entire bootstrap path runs within the advisory lock** (acquired in step 1 of the migration runner's flow in section 5), so concurrent instances cannot race on the detection and synthetic history insertion:
+The provisioner detects the bootstrap case before calling the runner: the box table exists but `__BrighterMigrationHistory` has no rows for it. The provisioner packages this as `BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: N)` where `N` is determined by introspecting actual column existence (see section 2).
 
-1. Detect the table exists (query `information_schema` or equivalent)
-2. The provisioner has already called `DetectCurrentVersionAsync()` and passed the result as `currentVersion` to `MigrateAsync`
-3. Insert synthetic history rows for all versions up to and including `currentVersion`
-4. Apply any remaining migrations from `currentVersion` onwards
+When the runner receives a `BoxTableState` with `TableExists && !HistoryExists`, it performs a bootstrap. **The entire bootstrap path runs within the advisory lock** (acquired in step 1 of the migration runner's flow in section 5), so concurrent instances cannot race on the synthetic history insertion:
 
-The migration runner calls `DetectCurrentVersionAsync()` on the provisioner (see `IAmABoxProvisioner` in section 2) to determine the schema's actual state. The default implementation returns version 1, which is a safe fallback only for the common case where the table was created by the original static builder. **Backend-specific provisioners must override this** to introspect actual column existence — for example, checking whether `SpecVersion` or `DataRef` columns exist via `INFORMATION_SCHEMA.COLUMNS` (MSSQL/PostgreSQL/MySQL) or `pragma_table_info` (SQLite) to determine if the schema matches version 2 or later. This is required because a fresh install created with newer DDL that already includes v2+ columns would otherwise be bootstrapped at version 1 and then fail when the runner attempts `ALTER TABLE ADD COLUMN` for columns that already exist (MySQL does not support `IF NOT EXISTS` for columns).
+1. Insert synthetic history rows for all versions up to and including `CurrentVersion`
+2. Apply any remaining migrations after `CurrentVersion`
+
+**Backend-specific provisioners must implement `DetectCurrentVersionAsync`** to introspect actual column existence — for example, checking whether `SpecVersion` or `DataRef` columns exist via `INFORMATION_SCHEMA.COLUMNS` (MSSQL/PostgreSQL/MySQL) or `pragma_table_info` (SQLite) to determine if the schema matches version 2 or later. This is required because a fresh install created with newer DDL that already includes v2+ columns would otherwise be bootstrapped at version 1 and then fail when the runner attempts `ALTER TABLE ADD COLUMN` for columns that already exist (MySQL does not support `IF NOT EXISTS` for columns). The safe fallback is version 1, which assumes the table was created by the original static builder.
 
 This ensures smooth upgrades for existing applications. The detection uses the same exists-query logic as the current builders, unified behind the provisioner.
 
 ### 8. .NET Aspire Integration
 
-Two Aspire integration packages follow [Aspire's conventions for component authoring](https://learn.microsoft.com/en-us/dotnet/aspire/extensibility/custom-component):
+Aspire integration is covered by a separate ADR: [ADR 0054 — Box Provisioning Aspire Integration](0054-box-provisioning-aspire-integration.md) (Proposed).
 
-**Package: `Paramore.Brighter.BoxProvisioning.Aspire.Hosting`** — AppHost-side
-
-This package provides extensions on Aspire's `IDistributedApplicationBuilder` to declare that a project uses a Brighter outbox/inbox backed by a database resource:
-
-```csharp
-// In the AppHost Program.cs
-var sqlServer = builder.AddSqlServer("sql").AddDatabase("brighter");
-
-builder.AddProject<Projects.MyService>("my-service")
-    .WithReference(sqlServer)
-    .WithBrighterOutbox(sqlServer, tableName: "Outbox");
-```
-
-The `WithBrighterOutbox` extension:
-1. **Annotates the project resource** with metadata indicating it uses a Brighter outbox backed by the given database resource
-2. **Writes environment variables** into the project resource's configuration (e.g. `Brighter__Outbox__ConnectionName`, `Brighter__Outbox__TableName`) so the service project can resolve them at runtime
-3. **Ensures the database resource is referenced** by the project (calls `WithReference` if not already present), so Aspire's orchestrator starts the database before the service
-
-The extension does **not** execute any DDL or provision the database — that remains the responsibility of `BoxProvisioningHostedService` running inside the service. The AppHost extension purely wires configuration so the service-side `AddMsSqlOutbox(connectionName)` overload can resolve the correct connection string.
-
-**Package: `Paramore.Brighter.BoxProvisioning.Aspire.MsSql`** (and per-backend equivalents) — Service-side
-
-These provide overloads of `AddMsSqlOutbox()` that resolve connection strings from Aspire's `IConfiguration` (populated by Aspire's service discovery):
-
-```csharp
-// In the service's Program.cs
-services.AddBrighter()
-    .AddProducers(...)
-    .UseBoxProvisioning(options =>
-    {
-        // Connection string resolved from Aspire's configuration
-        options.AddMsSqlOutbox(connectionName: "brighter");
-    });
-```
-
-The `connectionName`-based overload resolves the connection string via `IConfiguration.GetConnectionString(connectionName)`, which Aspire populates through its service discovery mechanism. This cleanly separates infrastructure wiring (AppHost) from application code (service).
+The core provisioning library defined in this ADR is self-contained and does not depend on Aspire. Aspire integration will add connection-string resolution from `IConfiguration` and AppHost-side resource wiring, but does not change the provisioner/runner architecture. See ADR 0054 for open questions including `IConfiguration` scope, package structure, testing patterns, and API stability.
 
 ### 9. Package Structure
 
@@ -668,15 +684,21 @@ Each backend package depends on:
 
 ### 10. Implementation Approach
 
+**Prerequisites**:
+
+1. `IAmARelationalDatabaseConfiguration` must be extended with a `string? SchemaName { get; }` property. The concrete `RelationalDatabaseConfiguration` already has this property, but the interface does not expose it. The provisioner code in this ADR references `_configuration.SchemaName` through the interface, so this is a required change before implementation begins. The test stub `StubSqlDbConfiguration` in `Paramore.Brighter.Extensions.Tests` must also be updated to satisfy the new interface member.
+
+2. `SpannerOutboxBuilder` must be updated to add the missing `DataRef` and `SpecVersion` columns to both the text and binary DDL templates. All other outbox builders (MSSQL, PostgreSQL, MySQL, SQLite) already include these columns. There are no known Spanner users, so this is a safe cleanup with no migration concern.
+
 Ordered to enable incremental delivery and testing:
 
-1. **Core abstractions** — `Paramore.Brighter.BoxProvisioning` with interfaces, `BoxProvisioningHostedService`, and registration extensions
+1. **Core abstractions** — `Paramore.Brighter.BoxProvisioning` with interfaces, `BoxTableState`, `BoxProvisioningHostedService`, and registration extensions
 2. **MSSQL backend** — `Paramore.Brighter.BoxProvisioning.MsSql` as the first implementation, with full tests against SQL Server in Docker
 3. **PostgreSQL backend** — Second backend to validate the abstraction works across different SQL dialects
 4. **MySQL, SQLite, Spanner backends** — Remaining relational backends
-5. **Aspire hosting** — AppHost-side extensions
-6. **Aspire service-side** — Per-backend Aspire connection resolution
-7. **Sample update** — Update `samples/WebAPI/` to use the new library instead of `DbMaker/SchemaCreation`
+5. **Sample update** — Update `samples/WebAPI/` to use the new library instead of `DbMaker/SchemaCreation`
+
+Aspire integration (AppHost-side extensions, service-side connection resolution) is deferred to [ADR 0054](0054-box-provisioning-aspire-integration.md).
 
 ## Consequences
 
@@ -686,7 +708,7 @@ Ordered to enable incremental delivery and testing:
 - **Migration support**: Schema evolution is handled automatically at startup — no manual ALTER TABLE scripts when upgrading Brighter
 - **Modular**: Each backend is an independent NuGet package; new backends can be added without touching core code
 - **Backward compatible**: The existing static builder classes are unchanged; applications that use them directly continue to work. The new library calls the existing builders internally
-- **Aspire-ready**: First-class Aspire integration follows Microsoft's conventions
+- **Aspire-ready**: The architecture supports future Aspire integration (see [ADR 0054](0054-box-provisioning-aspire-integration.md)) without changes to the core provisioning library
 - **Testable**: `IAmABoxProvisioner` and `IAmABoxMigrationRunner` are interfaces that can be mocked
 - **Bootstrap path**: Existing installations that pre-date the migration system are detected and handled gracefully
 
@@ -703,13 +725,13 @@ Ordered to enable incremental delivery and testing:
   - **Mitigation**: Each migration runs in a transaction (where supported). For backends without DDL transaction support (e.g. some MySQL DDL), migrations are designed to be individually idempotent (using `IF NOT EXISTS`, `IF NOT EXISTS COLUMN` patterns)
 
 - **Risk**: Bootstrap detection incorrectly identifies a pre-migration installation's schema version
-  - **Mitigation**: Version 1 migration matches the exact DDL of the current builders. Backend provisioners must override `DetectCurrentVersionAsync` to introspect the actual schema (e.g. via `INFORMATION_SCHEMA.COLUMNS`) and return the highest version whose columns are all present. This ensures that tables created with newer DDL are correctly bootstrapped at the right version. Additionally, future migrations use `ALTER TABLE IF NOT EXISTS COLUMN` patterns as a safety net where supported
+  - **Mitigation**: Version 1 migration matches the exact DDL of the current builders. Backend provisioners implement `DetectCurrentVersionAsync` to introspect the actual schema (e.g. via `INFORMATION_SCHEMA.COLUMNS`) and return the highest version whose columns are all present. The provisioner packages the result into a `BoxTableState` record so the runner has unambiguous context: `TableExists`, `HistoryExists`, and `CurrentVersion`. This ensures that tables created with newer DDL are correctly bootstrapped at the right version. Additionally, future migrations use `ALTER TABLE IF NOT EXISTS COLUMN` patterns as a safety net where supported
 
 - **Risk**: Concurrent migration attempts from multiple service instances corrupt the schema or history table
   - **Mitigation**: Each backend's migration runner acquires a database-level advisory lock before running migrations. Concurrent instances block until the lock is released, then find no outstanding migrations to apply. See "Concurrency Control" in section 5.
 
 - **Risk**: Aspire conventions change in future versions
-  - **Mitigation**: Follow the official Aspire extensibility guide closely. Keep Aspire packages as thin wrappers over the core provisioning library, minimizing the surface area that depends on Aspire APIs
+  - **Mitigation**: Aspire integration is deferred to [ADR 0054](0054-box-provisioning-aspire-integration.md) and designed as thin wrappers over the core provisioning library, minimizing the surface area that depends on Aspire APIs
 
 ## Alternatives Considered
 
