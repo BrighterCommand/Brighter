@@ -30,8 +30,9 @@ public interface IAmAMessageGatewayReactorProvider
     /// Creates a publication configuration for the specified routing key.
     /// </summary>
     /// <param name="routingKey">The routing key for message publishing.</param>
+    /// <param name="makeChannels">The action to take when the channel is missing. Defaults to Create.</param>
     /// <returns>A publication configuration.</returns>
-    Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication CreatePublication(RoutingKey routingKey);
+    Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create);
     
     /// <summary>
     /// Creates a subscription configuration for the specified routing key and channel.

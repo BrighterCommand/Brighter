@@ -35,7 +35,7 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowException
         try
         {
             // Arrange
-            _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
+            _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey(), OnMissingChannel.Assume);
             _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
                 _messageGatewayProvider.GetOrCreateChannelName(),
                 OnMissingChannel.Validate);

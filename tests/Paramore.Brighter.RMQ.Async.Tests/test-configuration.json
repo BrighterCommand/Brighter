@@ -11,7 +11,8 @@
       "HasSupportToPublishConfirmation": true,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
-      "HasSupportToValidateBrokerExistence": true
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true
     },
     "Quorum": {
       "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication",
@@ -22,7 +23,8 @@
       "HasSupportToPublishConfirmation": true,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
-      "HasSupportToValidateBrokerExistence": true
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true
     }
   }
 }

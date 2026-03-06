@@ -180,12 +180,12 @@ public class RmqClassicMessageGatewayProvider
         return (IAmAMessageProducerAsync)producer;
     }
 
-    public RmqPublication CreatePublication(RoutingKey routingKey)
+    public RmqPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
     {
         return new RmqPublication<MyCommand>
         {
             Topic = routingKey,
-            MakeChannels = OnMissingChannel.Create,
+            MakeChannels = makeChannels,
         };
     }
 
