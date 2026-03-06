@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
-public class WhenMultipleOutboxesMissingPrefixShouldUseKeyAsPrefix: IDisposable
+public class WhenMultipleOutboxesMissingPrefixShouldUseKeyAsPrefix : IDisposable
 {
     private readonly string _testDirectory;
     private readonly ILogger<Generators.OutboxGenerator> _logger;
@@ -30,18 +30,18 @@ public class WhenMultipleOutboxesMissingPrefixShouldUseKeyAsPrefix: IDisposable
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,
-            MessageFactory = "TestMessageFactory",
+            MessageBuilder = "TestMessageBuilder",
             Outboxes = new Dictionary<string, OutboxConfiguration>
             {
-                { 
-                    "SqlServer", 
-                    new OutboxConfiguration 
-                    { 
+                {
+                    "SqlServer",
+                    new OutboxConfiguration
+                    {
                         OutboxProvider = "MsSqlOutbox",
-                        SupportsTransactions = true
-                    } 
-                }
-            }
+                        SupportsTransactions = true,
+                    }
+                },
+            },
         };
         var generator = new Generators.OutboxGenerator(_logger);
 
@@ -51,7 +51,7 @@ public class WhenMultipleOutboxesMissingPrefixShouldUseKeyAsPrefix: IDisposable
         // Assert - prefix should be derived from key
         Assert.Equal(".SqlServer", configuration.Outboxes["SqlServer"].Prefix);
     }
-    
+
     public void Dispose()
     {
         if (Directory.Exists(_testDirectory))

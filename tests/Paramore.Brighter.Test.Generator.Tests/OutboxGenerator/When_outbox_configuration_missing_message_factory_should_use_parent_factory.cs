@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
-public class WhenOutboxConfigurationMissingMessageFactoryShouldUseParentFactory: IDisposable
+public class WhenOutboxConfigurationMissingMessageFactoryShouldUseParentFactory : IDisposable
 {
     private readonly string _testDirectory;
     private readonly ILogger<Generators.OutboxGenerator> _logger;
@@ -29,13 +29,13 @@ public class WhenOutboxConfigurationMissingMessageFactoryShouldUseParentFactory:
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,
-            MessageFactory = "TestMessageFactory",
+            MessageBuilder = "TestMessageBuilder",
             Outbox = new OutboxConfiguration
             {
                 Prefix = "SqlServer",
                 Transaction = "SqlTransaction",
-                OutboxProvider = "MsSqlOutbox"
-            }
+                OutboxProvider = "MsSqlOutbox",
+            },
         };
         var generator = new Generators.OutboxGenerator(_logger);
 
@@ -43,9 +43,9 @@ public class WhenOutboxConfigurationMissingMessageFactoryShouldUseParentFactory:
         await generator.GenerateAsync(configuration);
 
         // Assert - message factory should be inherited from parent configuration
-        Assert.Equal("TestMessageFactory", configuration.Outbox.MessageFactory);
+        Assert.Equal("TestMessageBuilder", configuration.Outbox.MessageBuilder);
     }
-    
+
     public void Dispose()
     {
         if (Directory.Exists(_testDirectory))
