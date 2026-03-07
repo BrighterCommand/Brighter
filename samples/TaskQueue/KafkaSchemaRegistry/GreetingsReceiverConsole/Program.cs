@@ -66,7 +66,11 @@ builder.Services.AddConsumers(options =>
                 Name = "paramore.brighter", BootStrapServers = ["localhost:9092"]
             }
         ));
-}).AutoFromAssemblies();
+})
+// InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+// Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+.UseScheduler(new InMemorySchedulerFactory())
+.AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();
 

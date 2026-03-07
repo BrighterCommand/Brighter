@@ -69,6 +69,9 @@ builder.Services.AddConsumers(options =>
             }
         ));
 })
+// InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+// Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+.UseScheduler(new InMemorySchedulerFactory())
 //This is the default mapper type, but we are  explicit  for the sample anyway
 .AutoFromAssemblies([typeof(TaskCreated).Assembly], defaultMessageMapper: typeof(JsonMessageMapper<>), asyncDefaultMessageMapper: typeof(JsonMessageMapper<>));
 

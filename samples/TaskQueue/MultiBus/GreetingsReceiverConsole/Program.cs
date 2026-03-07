@@ -84,7 +84,11 @@ builder.Services.AddConsumers(options =>
         new Paramore.Brighter.MessagingGateway.Kafka.ChannelFactory(consumerFactory),
         new Paramore.Brighter.MessagingGateway.RMQ.Async.ChannelFactory(rmqMessageConsumerFactory)
     ]);
-}).AutoFromAssemblies();
+})
+// InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+// Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+.UseScheduler(new InMemorySchedulerFactory())
+.AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();
 
