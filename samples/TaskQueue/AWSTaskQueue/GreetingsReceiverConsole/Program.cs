@@ -81,9 +81,14 @@ if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var cr
             options.DefaultChannelFactory = new ChannelFactory(awsConnection);
         })
         .AutoFromAssemblies();
-}
 
-builder.Services.AddHostedService<ServiceActivatorHostedService>();
+    builder.Services.AddHostedService<ServiceActivatorHostedService>();
+}
+else
+{
+    Console.Error.WriteLine("AWS credentials not found. Configure a 'default' profile and retry.");
+    return;
+}
 
 var host = builder.Build();
 await host.RunAsync();
