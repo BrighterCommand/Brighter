@@ -1,4 +1,4 @@
-﻿using Amazon;
+using Amazon;
 using JustSaying;
 using JustSaying.Messaging;
 using JustSaying.Messaging.MessageHandling;
@@ -7,24 +7,22 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-var host = new HostBuilder()
-    .ConfigureLogging(builder => builder.AddConsole())
-    .ConfigureServices(services =>
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services
+    .AddHostedService<BusService>()
+    .AddJustSayingHandler<Greeting, GreetingHandler>()
+    .AddJustSaying(cfg =>
     {
-        services
-            .AddHostedService<BusService>()
-            .AddJustSayingHandler<Greeting, GreetingHandler>()
-            .AddJustSaying(cfg =>
-            {
-                cfg
-                    .Client(client => client.WithServiceUrl("http://localhost:4566")
-                        .WithBasicCredentials("test", "test"))
-                    .Messaging(messaging => messaging.WithRegion(RegionEndpoint.USEast1))
-                    .Publications(pub => pub.WithTopic<Greeting>(topic => topic.WithTag("Source", "Brighter")))
-                    .Subscriptions(sub => sub.ForTopic<Greeting>(topic => topic.WithQueueName("justsaying-greeting")));
-            });
-    })
-    .Build();
+        cfg
+            .Client(client => client.WithServiceUrl("http://localhost:4566")
+                .WithBasicCredentials("test", "test"))
+            .Messaging(messaging => messaging.WithRegion(RegionEndpoint.USEast1))
+            .Publications(pub => pub.WithTopic<Greeting>(topic => topic.WithTag("Source", "Brighter")))
+            .Subscriptions(sub => sub.ForTopic<Greeting>(topic => topic.WithQueueName("justsaying-greeting")));
+    });
+
+var host = builder.Build();
 
 await host.StartAsync();
 
