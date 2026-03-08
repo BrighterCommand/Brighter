@@ -642,9 +642,7 @@ This ensures smooth upgrades for existing applications. The detection uses the s
 
 ### 8. .NET Aspire Integration
 
-Aspire integration is covered by a separate ADR: [ADR 0054 — Box Provisioning Aspire Integration](0054-box-provisioning-aspire-integration.md) (Proposed).
-
-The core provisioning library defined in this ADR is self-contained and does not depend on Aspire. Aspire integration will add connection-string resolution from `IConfiguration` and AppHost-side resource wiring, but does not change the provisioner/runner architecture. See ADR 0054 for open questions including `IConfiguration` scope, package structure, testing patterns, and API stability.
+The core provisioning library is self-contained and does not depend on Aspire. Connection strings are passed in via `IAmARelationalDatabaseConfiguration`, so Aspire (or any other connection-string source) can be layered on top without changes to the provisioning architecture. Aspire integration will be addressed separately in a future ADR.
 
 ### 9. Package Structure
 
@@ -670,11 +668,6 @@ Paramore.Brighter.BoxProvisioning.MySql                   ← MySQL backend
 Paramore.Brighter.BoxProvisioning.PostgreSql              ← PostgreSQL backend
 Paramore.Brighter.BoxProvisioning.Sqlite                  ← SQLite backend
 Paramore.Brighter.BoxProvisioning.Spanner                 ← Spanner backend
-
-Paramore.Brighter.BoxProvisioning.Aspire.Hosting          ← AppHost extensions
-Paramore.Brighter.BoxProvisioning.Aspire.MsSql            ← Aspire service-side MSSQL
-Paramore.Brighter.BoxProvisioning.Aspire.MySql            ← etc.
-Paramore.Brighter.BoxProvisioning.Aspire.PostgreSql
 ```
 
 Each backend package depends on:
@@ -698,7 +691,7 @@ Ordered to enable incremental delivery and testing:
 4. **MySQL, SQLite, Spanner backends** — Remaining relational backends
 5. **Sample update** — Update `samples/WebAPI/` to use the new library instead of `DbMaker/SchemaCreation`
 
-Aspire integration (AppHost-side extensions, service-side connection resolution) is deferred to [ADR 0054](0054-box-provisioning-aspire-integration.md).
+Aspire integration is out of scope for this ADR and will be addressed separately.
 
 ## Consequences
 
@@ -708,13 +701,13 @@ Aspire integration (AppHost-side extensions, service-side connection resolution)
 - **Migration support**: Schema evolution is handled automatically at startup — no manual ALTER TABLE scripts when upgrading Brighter
 - **Modular**: Each backend is an independent NuGet package; new backends can be added without touching core code
 - **Backward compatible**: The existing static builder classes are unchanged; applications that use them directly continue to work. The new library calls the existing builders internally
-- **Aspire-ready**: The architecture supports future Aspire integration (see [ADR 0054](0054-box-provisioning-aspire-integration.md)) without changes to the core provisioning library
+- **Aspire-ready**: The architecture accepts connection strings via configuration, so Aspire integration can be layered on top without changes to the core provisioning library
 - **Testable**: `IAmABoxProvisioner` and `IAmABoxMigrationRunner` are interfaces that can be mocked
 - **Bootstrap path**: Existing installations that pre-date the migration system are detected and handled gracefully
 
 ### Negative
 
-- **New NuGet packages**: Adds 5+ new packages to the Brighter ecosystem (core + backends + Aspire)
+- **New NuGet packages**: Adds 5+ new packages to the Brighter ecosystem (core + backends)
 - **Migration history table**: Introduces a new `__BrighterMigrationHistory` table in each database — a small footprint but visible to DBAs
 - **Two ways to create tables**: Until the old builders are deprecated, developers have two options — direct builder usage and the new provisioning library. This could cause confusion
 - **Transaction support varies**: SQLite has limited transaction support for DDL; Spanner requires special handling for DDL operations. Each backend must handle these differences
@@ -729,9 +722,6 @@ Aspire integration (AppHost-side extensions, service-side connection resolution)
 
 - **Risk**: Concurrent migration attempts from multiple service instances corrupt the schema or history table
   - **Mitigation**: Each backend's migration runner acquires a database-level advisory lock before running migrations. Concurrent instances block until the lock is released, then find no outstanding migrations to apply. See "Concurrency Control" in section 5.
-
-- **Risk**: Aspire conventions change in future versions
-  - **Mitigation**: Aspire integration is deferred to [ADR 0054](0054-box-provisioning-aspire-integration.md) and designed as thin wrappers over the core provisioning library, minimizing the surface area that depends on Aspire APIs
 
 ## Alternatives Considered
 

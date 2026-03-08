@@ -11,7 +11,6 @@ Today, Brighter provides static builder classes (e.g. `SqlInboxBuilder`, `MsSqlO
 - **No migration support**: The builders only support initial table creation via "CREATE IF NOT EXISTS". There is no mechanism to evolve schemas when Brighter adds new columns or changes types between versions.
 - **No unified API**: Each builder has a different static method signature (e.g. `GetExistsQuery` takes different parameters across providers; Spanner lacks it entirely). There is no common interface or abstraction.
 - **Sample-only orchestration**: The only orchestration code lives in `samples/WebAPI/WebAPI_Common/DbMaker/SchemaCreation.cs`, which is a sample — not a reusable library. It mixes concerns (local app DB creation, inbox, outbox) and is tightly coupled to the sample's configuration patterns.
-- **No .NET Aspire integration**: The codebase has no Aspire `AppHost`, `ServiceDefaults`, or service discovery integration. Developers using Aspire must wire up connections manually.
 
 ## Proposed Solution
 
@@ -20,7 +19,6 @@ Provide a set of NuGet libraries that allow developers to create and migrate Inb
 1. **Offer a common abstraction** for box (inbox/outbox) database provisioning and migration, so that switching between database backends requires changing only registration — not application code.
 2. **Support schema migrations** for relational databases, so that upgrading Brighter versions automatically applies any required schema changes to existing inbox/outbox tables.
 3. **Be modular**: each database backend is a separate NuGet package with a shared core, making it easy to add new backends without modifying existing code.
-4. **Integrate with .NET Aspire** for connection management and service discovery, allowing developers to use Aspire's resource model to provision and connect to their inbox/outbox databases.
 
 ## Requirements
 
@@ -42,13 +40,12 @@ Provide a set of NuGet libraries that allow developers to create and migrate Inb
 - Per-database-backend packages (e.g. `Paramore.Brighter.BoxProvisioning.MsSql`) that implement the abstractions for each backend.
 - Adding a new database backend should only require implementing the backend-specific package — no changes to the core.
 
-#### FR-4: .NET Aspire Integration
-- Provide Aspire hosting integration packages that allow developers to wire up inbox/outbox database provisioning through Aspire's `IDistributedApplicationBuilder`.
-- Support Aspire's connection string resolution and service discovery for database connections.
-- Follow Aspire's conventions for hosting extensions (e.g. `AddBrighterOutbox()` on the app model).
+#### FR-4: Update Samples
+- Update the `samples/WebAPI` samples to replace the use of `samples/WebAPI/WebAPI_Common/DbMaker` for inbox and outbox table creation with the new box provisioning library.
+- `DbMaker` should remain for sample-specific application database creation, but inbox/outbox provisioning should use the new unified API.
 
 #### FR-5: Startup/Hosting Extensions
-- Provide `IHostBuilder` / `IServiceCollection` extension methods for non-Aspire scenarios.
+- Provide `IHostBuilder` / `IServiceCollection` extension methods for configuring box provisioning.
 - Allow configuration of which box type (inbox, outbox, or both) to provision.
 - Allow configuration of table names, schemas, and payload format (text/binary/JSON).
 
@@ -74,7 +71,6 @@ Provide a set of NuGet libraries that allow developers to create and migrate Inb
 
 - **Relational focus for migrations**: Schema migrations only apply to relational backends (MSSQL, MySQL, PostgreSQL, SQLite, Spanner). NoSQL backends (DynamoDB, MongoDB, Firestore) handle schema evolution differently and are out of scope for migration support.
 - **Brighter-managed schemas only**: The migration system manages only inbox and outbox tables — not the application's own domain tables. Application database migration remains the developer's responsibility.
-- **.NET 9+**: The Aspire integration targets .NET 9 or later, consistent with Aspire's requirements.
 - **Existing builder DDL**: The initial "create" migration for each backend will reuse the DDL from the existing builder classes rather than rewriting it.
 
 ### Out of Scope
@@ -82,7 +78,7 @@ Provide a set of NuGet libraries that allow developers to create and migrate Inb
 - **Application database migration**: Migration of the developer's own domain/business tables.
 - **NoSQL migration**: Schema evolution for DynamoDB, MongoDB, or Firestore backends.
 - **Data migration**: Moving data between database backends (e.g. migrating from MSSQL to PostgreSQL).
-- **Aspire resource provisioning**: Actually provisioning database server instances (e.g. spinning up a PostgreSQL container). Aspire integration covers connection wiring, not infrastructure provisioning.
+- **.NET Aspire integration**: Aspire hosting integration, service discovery, and connection string resolution are out of scope for this feature. The provisioning tool accepts connection strings directly; Aspire integration can be layered on top separately.
 - **Queue/transport table provisioning**: The `MsSqlQueueBuilder` and similar transport-level tables are not covered by this feature.
 - **Removing the existing static builders**: The current `*InboxBuilder` / `*OutboxBuilder` classes remain as-is.
 
@@ -100,8 +96,8 @@ Provide a set of NuGet libraries that allow developers to create and migrate Inb
 ### AC-4: Multiple Backends
 - Given the same application code using the unified API, when switching from one database backend to another (e.g. MSSQL to PostgreSQL) by changing only DI registration, then the correct backend-specific DDL is used.
 
-### AC-5: Aspire Integration
-- Given an Aspire AppHost that includes a Brighter service with outbox configuration, when the application starts, then the outbox database connection is resolved through Aspire's service discovery and the outbox table is provisioned.
+### AC-5: Sample Migration
+- Given the existing `samples/WebAPI` samples that use `DbMaker` for inbox/outbox creation, when updated to use the new box provisioning library, then inbox/outbox tables are created correctly and `DbMaker` is only used for sample-specific application databases.
 
 ### AC-6: Backward Compatibility
 - Given an existing application that uses the static builder classes directly, when upgrading to the Brighter version that includes this feature, then the existing code continues to compile and work without changes.
