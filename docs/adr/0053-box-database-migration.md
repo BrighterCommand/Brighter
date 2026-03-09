@@ -28,8 +28,6 @@ Brighter provides static builder classes (`SqlInboxBuilder`, `MySqlOutboxBuilder
 
 3. **Sample-only orchestration**: The only code that wires builders together lives in `samples/WebAPI/WebAPI_Common/DbMaker/SchemaCreation.cs`. It mixes concerns (application DB creation, FluentMigrator, inbox, outbox) and cannot be reused as a library.
 
-4. **No .NET Aspire integration**: Developers using Aspire must manually extract connection strings and construct inbox/outbox instances. There is no `AddBrighterOutbox()` Aspire hosting extension.
-
 ### How Inbox/Outbox Are Currently Configured
 
 Today, inbox and outbox instances are constructed by the application before DI registration:
@@ -330,7 +328,7 @@ public class BoxProvisioningOptions
 }
 ```
 
-Each backend package adds extension methods to `BoxProvisioningOptions`. Two overloads are provided: one that accepts an explicit configuration (for non-Aspire use), and one that accepts a connection name and resolves the configuration from `IServiceProvider` at runtime (for Aspire and deferred configuration scenarios):
+Each backend package adds extension methods to `BoxProvisioningOptions`. Two overloads are provided: one that accepts an explicit configuration, and one that accepts a connection name and resolves the configuration from `IServiceProvider` at runtime (for  deferred configuration scenarios):
 
 ```csharp
 // In Paramore.Brighter.BoxProvisioning.MsSql
