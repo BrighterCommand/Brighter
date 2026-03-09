@@ -3,6 +3,7 @@
 internal class MyDeferredCommand : Command
 {
     public string Value { get; set; }
-    public MyDeferredCommand() : base(Guid.NewGuid()) { }
-        
+
+    public MyDeferredCommand()
+        : base(Guid.NewGuid()) { }
 }
