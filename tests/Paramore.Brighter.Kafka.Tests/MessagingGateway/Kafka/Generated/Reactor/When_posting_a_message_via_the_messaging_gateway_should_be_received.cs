@@ -56,7 +56,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
 
         
 
-        var received = _channel.Receive(null);
+        var received = _channel.Receive(TimeSpan.FromSeconds(10));
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);

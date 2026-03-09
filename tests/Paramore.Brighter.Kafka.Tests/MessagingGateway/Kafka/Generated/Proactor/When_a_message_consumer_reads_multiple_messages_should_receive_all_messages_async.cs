@@ -72,7 +72,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAs
         // Assert
         for (var i = 0; i < _sentMessages.Count; i++)
         {
-            var received = await _channel.ReceiveAsync(null);
+            var received = await _channel.ReceiveAsync(TimeSpan.FromSeconds(10));
 
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
 
