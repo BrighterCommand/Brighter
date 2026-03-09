@@ -83,7 +83,8 @@ We introduce validation and diagnostic reporting as a layered architecture that 
                 ┌──────────┴──────────┐
                 │                     │
            IsValid → continue    !IsValid → throw
-                                 AggregateException
+                                 PipelineValidationException
+                                 (: ConfigurationException)
 
 
 Integration Points:
@@ -95,8 +96,8 @@ Integration Points:
   │ ServiceActivator     │        │ BrighterValidation      │
   │ HostedService        │        │ HostedService            │
   │ .StartAsync():       │        │ .StartAsync():          │
-  │   describe()         │        │   describe()            │
-  │   validate()         │        │   validate()            │
+  │   Describe()         │        │   Describe()            │
+  │   Validate()         │        │   Validate()            │
   │   dispatcher.Receive │        │   (no dispatcher)       │
   └─────────────────────┘        └─────────────────────────┘
 ```
@@ -119,39 +120,39 @@ public interface IAmAPipelineValidator
 
 The validator is parameterless — it has all its dependencies via constructor injection (subscriber registry, mapper registries, optionally subscriptions and publications). It validates everything that has been configured.
 
-**Composite Implementation**: The validator is composed of `ValidationRule<T>` instances, each wrapping a `Specification<T>` predicate with severity and message metadata. Rules are grouped into rule sets by configuration path:
+**Composite Implementation**: The validator is composed of `ISpecification<T>` instances — each specification encapsulates both the predicate (what to check) and the validation metadata (what to report when it fails). Specifications are grouped into rule sets by configuration path:
 
 ```csharp
 // In Paramore.Brighter (core handler rules)
 internal static class HandlerPipelineValidationRules
 {
-    // Returns ValidationRule<HandlerPipelineDescription> instances for:
+    // Returns ISpecification<HandlerPipelineDescription> instances for:
     // FR-1: Backstop attribute ordering
     // FR-2: Sync/async attribute consistency
-    public static IEnumerable<ValidationRule<HandlerPipelineDescription>> Rules();
+    public static IEnumerable<ISpecification<HandlerPipelineDescription>> Rules();
 }
 
 // In Paramore.Brighter (producer rules, same project as AddProducers)
 internal static class ProducerValidationRules
 {
-    // Returns ValidationRule<Publication> instances for:
+    // Returns ISpecification<Publication> instances for:
     // FR-4: Publication.RequestType validation
-    public static IEnumerable<ValidationRule<Publication>> Rules();
+    public static IEnumerable<ISpecification<Publication>> Rules();
 }
 
 // In Paramore.Brighter.ServiceActivator (consumer rules)
 internal static class ConsumerValidationRules
 {
-    // Returns ValidationRule<Subscription> instances for:
+    // Returns ISpecification<Subscription> instances for:
     // FR-6: Pump ↔ handler type match
     // FR-7: Handler registered for subscription
     // FR-8: MessageType ↔ IRequest subtype
-    public static IEnumerable<ValidationRule<Subscription>> Rules(
+    public static IEnumerable<ISpecification<Subscription>> Rules(
         IAmASubscriberRegistry subscriberRegistry);
 }
 ```
 
-Each rule set is registered only when its corresponding configuration path is used. The top-level `PipelineValidator` evaluates all registered rules and aggregates the results.
+Each rule set is registered only when its corresponding configuration path is used. The top-level `PipelineValidator` evaluates all registered specifications and uses the visitor pattern to collect detailed findings from failed specifications.
 
 #### 2. `IAmAPipelineDiagnosticWriter` — Interfacer
 
@@ -210,88 +211,275 @@ The report uses `ILogger` so it integrates with whatever logging infrastructure 
 // In Paramore.Brighter
 public class PipelineValidationResult
 {
-    public IReadOnlyList<PipelineValidationError> Errors { get; }
-    public IReadOnlyList<PipelineValidationError> Warnings { get; }
+    public IReadOnlyList<ValidationError> Errors { get; }
+    public IReadOnlyList<ValidationError> Warnings { get; }
     public bool IsValid => Errors.Count == 0;
 
     public void ThrowIfInvalid()
     {
         if (!IsValid)
-            throw new AggregateException(
-                "Brighter pipeline validation failed. See inner exceptions for details.",
-                Errors.Select(e => new ConfigurationException(e.Message)));
+            throw new PipelineValidationException(this);
     }
 
     // Compose results from multiple rule sets
     public static PipelineValidationResult Combine(
         params PipelineValidationResult[] results);
 }
+
+/// <summary>
+/// Thrown when pipeline validation finds one or more errors.
+/// Extends ConfigurationException so existing catch blocks that handle Brighter
+/// configuration errors (the established Brighter convention) will also catch
+/// validation failures. The PipelineValidationResult is available for programmatic
+/// inspection, and the exception message includes all errors with their source context.
+/// </summary>
+public class PipelineValidationException : ConfigurationException
+{
+    public PipelineValidationResult ValidationResult { get; }
+
+    public PipelineValidationException(PipelineValidationResult result)
+        : base(FormatMessage(result))
+    {
+        ValidationResult = result;
+    }
+
+    private static string FormatMessage(PipelineValidationResult result)
+    {
+        var errorLines = result.Errors
+            .Select(e => $"  [{e.Source}] {e.Message}");
+        return $"Brighter pipeline validation failed with {result.Errors.Count} error(s):\n"
+            + string.Join("\n", errorLines);
+    }
+}
 ```
 
-#### 4. `PipelineValidationError` — Information Holder
+#### 4. `ValidationError` — Information Holder
 
-**Responsibility**: Knowing the details of one validation finding.
+**Responsibility**: Knowing the details of one validation finding. This type is generic (not pipeline-specific) so that `Specification<T>` can carry validation metadata without coupling to the pipeline domain.
 
 ```csharp
 // In Paramore.Brighter
-public class PipelineValidationError
+public class ValidationError
 {
-    public PipelineValidationSeverity Severity { get; }
+    public ValidationSeverity Severity { get; }
     public string Source { get; }   // e.g. "Subscription 'OrderCreated'" or "Handler 'OrderCreatedHandler'"
     public string Message { get; }  // actionable description
 }
 
-public enum PipelineValidationSeverity { Error, Warning }
+public enum ValidationSeverity { Error, Warning }
 ```
 
-#### 5. `Specification<T>` — Moved to Paramore.Brighter (Tidy First)
+#### 5. `Specification<T>` — Enhanced with Validation Support (Tidy First + Behavioral)
 
 `ISpecification<T>` and `Specification<T>` currently live in `Paramore.Brighter.Mediator`. They are a general-purpose implementation of the Specification pattern (predicate composition via `And()`, `Or()`, `Not()`) and have no inherent dependency on the Mediator workflow — they just happened to be introduced there for `ExclusiveChoice<TData>` branching.
 
-We move both types to `Paramore.Brighter` (namespace `Paramore.Brighter`) so they are available to the core library. `Paramore.Brighter.Mediator` already depends on `Paramore.Brighter`, so existing consumers (e.g. `ExclusiveChoice<TData>`) continue to work with a `using` update. This is a structural-only tidy committed separately.
+We move both types to `Paramore.Brighter` (namespace `Paramore.Brighter`) so they are available to the core library. `Paramore.Brighter.Mediator` already depends on `Paramore.Brighter`, so existing consumers (e.g. `ExclusiveChoice<TData>`) continue to work with a `using` update. The move is a structural-only tidy committed separately.
 
-#### 6. `ValidationRule<T>` — Coordinator
+Beyond the move, we enhance `Specification<T>` so that each specification carries its own validation metadata. This eliminates the need for a separate `ValidationRule<T>` coordinator — the specification itself knows what to report when it fails. We use the **visitor pattern** to allow calling code to interrogate the specification graph for detailed validation results after `IsSatisfiedBy` returns `false`.
 
-**Responsibility**: Pairing a predicate (what to check) with validation metadata (what to report when it fails).
+**Updated interface:**
 
 ```csharp
 // In Paramore.Brighter
-public class ValidationRule<T>
+public interface ISpecification<TData>
 {
-    public ISpecification<T> Specification { get; }
-    public PipelineValidationSeverity Severity { get; }
-    public Func<T, string> Source { get; }    // e.g. entity => $"Handler '{entity.HandlerType.Name}'"
-    public Func<T, string> Message { get; }   // e.g. entity => "backstop attribute should come before resilience"
+    bool IsSatisfiedBy(TData entity);
 
-    public ValidationRule(
-        ISpecification<T> specification,
-        PipelineValidationSeverity severity,
-        Func<T, string> source,
-        Func<T, string> message)
+    /// <summary>
+    /// Accepts a visitor that can traverse the specification graph. Calling code
+    /// invokes this after IsSatisfiedBy returns false to collect detailed results.
+    /// </summary>
+    TResult Accept<TResult>(ISpecificationVisitor<TData, TResult> visitor);
+
+    ISpecification<TData> And(ISpecification<TData> other);
+    ISpecification<TData> Or(ISpecification<TData> other);
+    ISpecification<TData> Not();
+    ISpecification<TData> Not(Func<TData, ValidationError> errorFactory);
+    ISpecification<TData> AndNot(ISpecification<TData> other);
+    ISpecification<TData> OrNot(ISpecification<TData> other);
+}
+```
+
+**`Specification<T>` — three constructors:**
+
+```csharp
+// In Paramore.Brighter
+public class Specification<T>(Func<T, bool> expression) : ISpecification<T>
+{
+    private readonly Func<T, bool> _expression = expression
+        ?? throw new ArgumentNullException(nameof(expression));
+    private readonly Func<T, ValidationError>? _errorFactory;
+    private readonly Func<T, IEnumerable<ValidationResult>>? _resultEvaluator;
+    private IReadOnlyList<ValidationResult> _lastResults = [];
+
+    /// <summary>
+    /// Pure predicate — no validation metadata. Used by non-validation consumers
+    /// (e.g. ExclusiveChoice workflow branching). The visitor returns empty results.
+    /// This is the existing constructor, unchanged.
+    /// </summary>
+    public Specification(Func<T, bool> expression) : this(expression) { }
+
+    /// <summary>
+    /// Simple rule: a predicate paired with an error factory. IsSatisfiedBy evaluates
+    /// the predicate; on failure, stores a single ValidationResult with the error.
+    /// Yields zero or one findings.
+    /// </summary>
+    public Specification(Func<T, bool> expression, Func<T, ValidationError> errorFactory)
+        : this(expression)
     {
-        Specification = specification;
-        Severity = severity;
-        Source = source;
-        Message = message;
+        _errorFactory = errorFactory;
     }
 
     /// <summary>
-    /// Evaluates the rule against an entity. Returns null if the specification is satisfied,
-    /// or a PipelineValidationError if it is not.
+    /// Collapsed rule: a single function that evaluates the entity and returns zero
+    /// or more ValidationResults. IsSatisfiedBy derives its bool from the results —
+    /// returns true only when all results indicate success (or the enumerable is empty).
+    /// Used for per-element rules where a single entity (e.g. a handler pipeline)
+    /// contains multiple elements that each need individual error reporting.
     /// </summary>
-    public PipelineValidationError? Evaluate(T entity)
+    public Specification(Func<T, IEnumerable<ValidationResult>> resultEvaluator)
+        : this(_ => true) // predicate is derived, not used directly
     {
-        if (Specification.IsSatisfiedBy(entity))
-            return null;
-
-        return new PipelineValidationError(Severity, Source(entity), Message(entity));
+        _resultEvaluator = resultEvaluator;
     }
+
+    public bool IsSatisfiedBy(T entity)
+    {
+        if (_resultEvaluator != null)
+        {
+            // Collapsed mode: evaluate and store all results
+            try
+            {
+                _lastResults = _resultEvaluator(entity).ToList();
+            }
+            catch (Exception ex)
+            {
+                _lastResults = [ValidationResult.Fail(new ValidationError(
+                    ValidationSeverity.Error,
+                    entity?.ToString() ?? "(unknown)",
+                    $"Rule evaluation failed: {ex.Message}"))];
+            }
+            return _lastResults.All(r => r.Success);
+        }
+
+        // Simple or pure-predicate mode
+        bool satisfied;
+        try
+        {
+            satisfied = _expression(entity);
+        }
+        catch (Exception ex)
+        {
+            _lastResults = [ValidationResult.Fail(new ValidationError(
+                ValidationSeverity.Error,
+                entity?.ToString() ?? "(unknown)",
+                $"Rule evaluation failed: {ex.Message}"))];
+            return false;
+        }
+
+        if (!satisfied && _errorFactory != null)
+            _lastResults = [ValidationResult.Fail(_errorFactory(entity))];
+        else
+            _lastResults = [];
+
+        return satisfied;
+    }
+
+    /// <summary>
+    /// Returns the stored validation results from the most recent IsSatisfiedBy call.
+    /// The visitor uses this to collect results from leaf nodes.
+    /// </summary>
+    internal IReadOnlyList<ValidationResult> LastResults => _lastResults;
+
+    public TResult Accept<TResult>(ISpecificationVisitor<T, TResult> visitor)
+        => visitor.Visit(this);
+
+    // And(), Or(), Not(), AndNot(), OrNot() — composition methods
+    // return AndSpecification, OrSpecification, NotSpecification etc.
+    // that implement ISpecification<T> and delegate to children via the visitor.
+}
+```
+
+The exception-catching wrapper in `IsSatisfiedBy` ensures that even programming errors in handler types — such as a type that implements neither `IHandleRequests` nor `IHandleRequestsAsync` — produce a structured Error-severity finding rather than crashing startup with an unhandled exception.
+
+**Statefulness note**: `_lastResults` is set during `IsSatisfiedBy` and read by the visitor. This makes the specification stateful, but startup validation is single-threaded so this is safe. Non-validation consumers (e.g. `ExclusiveChoice`) never call the visitor and are unaffected.
+
+#### 6. `ValidationResult` and the Visitor Pattern
+
+**`ValidationResult`** — pairs a success/failure bool with an optional `ValidationError`:
+
+```csharp
+// In Paramore.Brighter
+public class ValidationResult
+{
+    public bool Success { get; }
+    public ValidationError? Error { get; }
+
+    private ValidationResult(bool success, ValidationError? error)
+    {
+        Success = success;
+        Error = error;
+    }
+
+    public static ValidationResult Ok() => new(true, null);
+    public static ValidationResult Fail(ValidationError error) => new(false, error);
+}
+```
+
+**`ISpecificationVisitor<TData, TResult>`** — the visitor interface that traverses the specification graph. For validation, `TResult` is `IEnumerable<ValidationResult>`:
+
+```csharp
+// In Paramore.Brighter
+public interface ISpecificationVisitor<TData, TResult>
+{
+    TResult Visit(Specification<TData> specification);
+    TResult Visit(AndSpecification<TData> specification);
+    TResult Visit(OrSpecification<TData> specification);
+    TResult Visit(NotSpecification<TData> specification);
+}
+```
+
+**`ValidationResultCollector<TData>`** — a concrete visitor that collects all stored `ValidationResult` instances from the specification graph:
+
+```csharp
+// In Paramore.Brighter
+public class ValidationResultCollector<TData> : ISpecificationVisitor<TData, IEnumerable<ValidationResult>>
+{
+    public IEnumerable<ValidationResult> Visit(Specification<TData> spec)
+        => spec.LastResults;
+
+    public IEnumerable<ValidationResult> Visit(AndSpecification<TData> spec)
+        => spec.Left.Accept(this).Concat(spec.Right.Accept(this));
+
+    public IEnumerable<ValidationResult> Visit(OrSpecification<TData> spec)
+        => spec.Left.Accept(this).Concat(spec.Right.Accept(this));
+
+    public IEnumerable<ValidationResult> Visit(NotSpecification<TData> spec)
+        => spec.LastResults; // Not stores its own ValidationResult (see below)
+}
+```
+
+**Composition and the visitor** — `And`, `Or`, and `Not` are thin wrappers that delegate `IsSatisfiedBy` to their children and expose them for the visitor:
+
+- **`AndSpecification<T>`**: `IsSatisfiedBy` returns `left.IsSatisfiedBy(entity) && right.IsSatisfiedBy(entity)`. On failure, the visitor walks both children and collects all failed results.
+- **`OrSpecification<T>`**: `IsSatisfiedBy` returns `left.IsSatisfiedBy(entity) || right.IsSatisfiedBy(entity)`. On failure (both children failed), the visitor collects from both.
+- **`NotSpecification<T>`**: `IsSatisfiedBy` returns `!inner.IsSatisfiedBy(entity)`. When negation fails (the inner spec *succeeded*), the inner spec has no stored errors. Therefore `Not` needs its own error — provided via `Not(Func<T, ValidationError> errorFactory)`. The parameterless `Not()` remains for non-validation uses (e.g. `ExclusiveChoice`) and produces no validation metadata.
+
+**Flow** — calling code uses the visitor only when it wants detailed information:
+
+```csharp
+if (!specification.IsSatisfiedBy(entity))
+{
+    // Calling code decides it wants detail
+    var collector = new ValidationResultCollector<HandlerPipelineDescription>();
+    var results = specification.Accept(collector);
+    findings.AddRange(results.Where(r => !r.Success).Select(r => r.Error!));
 }
 ```
 
 #### 7. Marker Interfaces for Handler Classification
 
-Validation rules need to distinguish backstop handlers from resilience handlers. Rather than hardcoding a list of known Brighter attribute types or using naming conventions, we follow the existing `IAmA*` pattern with marker interfaces on the handler types produced by `RequestHandlerAttribute.GetHandlerType()`:
+Validation specifications need to distinguish backstop handlers from resilience handlers. Rather than hardcoding a list of known Brighter attribute types or using naming conventions, we follow the existing `IAmA*` pattern with marker interfaces on the handler types produced by `RequestHandlerAttribute.GetHandlerType()`:
 
 ```csharp
 // In Paramore.Brighter — marker interfaces for handler classification
@@ -305,94 +493,125 @@ Brighter's built-in handlers implement the appropriate interface:
 
 Third-party handlers (e.g. custom Polly wrappers) can implement these interfaces to participate in validation. This is the standard Brighter extensibility pattern — role interfaces express what a type does, not what it is.
 
-**How rules are defined** — each rule is a `Specification<T>` expressing the *valid* condition, paired with the error to report when it fails:
+**How specifications are defined** — simple specifications use the two-argument constructor (predicate + error factory) expressing the *valid* condition and what to report when it fails. Per-element specifications use the collapsed constructor (`Func<T, IEnumerable<ValidationResult>>`) that can store zero or more findings, so the developer can identify exactly which attribute is misconfigured:
 
 ```csharp
-// Example: backstop attributes should come before resilience pipelines
+// Example: backstop and async consistency specifications with per-attribute error messages
 internal static class HandlerPipelineValidationRules
 {
-    public static IEnumerable<ValidationRule<HandlerPipelineDescription>> Rules()
+    public static IEnumerable<ISpecification<HandlerPipelineDescription>> Rules()
     {
-        yield return new ValidationRule<HandlerPipelineDescription>(
-            specification: new Specification<HandlerPipelineDescription>(d =>
+        // Per-pair analysis — yields one Warning per misordered backstop/resilience pair.
+        // Uses the collapsed constructor: the function returns ValidationResult per bad pair,
+        // and IsSatisfiedBy derives its bool from the results.
+        yield return new Specification<HandlerPipelineDescription>(d =>
+        {
+            var backstops = d.BeforeSteps.Where(s =>
+                typeof(IAmABackstopHandler).IsAssignableFrom(s.HandlerType));
+            var resilience = d.BeforeSteps.Where(s =>
+                typeof(IAmAResilienceHandler).IsAssignableFrom(s.HandlerType));
+
+            return backstops.SelectMany(b => resilience
+                .Where(r => b.Step > r.Step)
+                .Select(r => ValidationResult.Fail(new ValidationError(
+                    ValidationSeverity.Warning,
+                    $"Handler '{d.HandlerType.Name}'",
+                    $"'{b.AttributeType.Name}' at step {b.Step} is after " +
+                    $"'{r.AttributeType.Name}' at step {r.Step} — " +
+                    "in Brighter, lower step values are outer wrappers, so the backstop " +
+                    "will never execute on failure"))));
+        });
+
+        // Per-attribute analysis — yields one Error per mismatched sync/async attribute.
+        // Also catches handler types that implement neither interface and reports them
+        // as Error-severity findings rather than throwing (see Specification<T>.IsSatisfiedBy
+        // exception handling).
+        yield return new Specification<HandlerPipelineDescription>(d =>
+        {
+            return d.BeforeSteps.Concat(d.AfterSteps).SelectMany(step =>
             {
-                var backstops = d.BeforeSteps.Where(s =>
-                    typeof(IAmABackstopHandler).IsAssignableFrom(s.HandlerType));
-                var resilience = d.BeforeSteps.Where(s =>
-                    typeof(IAmAResilienceHandler).IsAssignableFrom(s.HandlerType));
-                return !backstops.Any(b => resilience.Any(r => b.Step > r.Step));
-            }),
-            severity: PipelineValidationSeverity.Warning,
-            source: d => $"Handler '{d.HandlerType.Name}'",
-            message: d => "Backstop attribute (Reject/Defer/DontAck) has a higher step number than " +
-                          "a resilience pipeline attribute, so it will never execute on failure"
-        );
+                var isSync = typeof(IHandleRequests).IsAssignableFrom(step.HandlerType);
+                var isAsync = typeof(IHandleRequestsAsync).IsAssignableFrom(step.HandlerType);
 
-        yield return new ValidationRule<HandlerPipelineDescription>(
-            specification: new Specification<HandlerPipelineDescription>(d =>
-                d.BeforeSteps.Concat(d.AfterSteps).All(step =>
+                if (!isSync && !isAsync)
                 {
-                    var isSync = typeof(IHandleRequests)
-                        .IsAssignableFrom(step.HandlerType);
-                    var isAsync = typeof(IHandleRequestsAsync)
-                        .IsAssignableFrom(step.HandlerType);
+                    return [ValidationResult.Fail(new ValidationError(
+                        ValidationSeverity.Error,
+                        $"Handler '{d.HandlerType.Name}'",
+                        $"Pipeline step '{step.HandlerType.FullName}' at step {step.Step} " +
+                        "implements neither IHandleRequests nor IHandleRequestsAsync"))];
+                }
 
-                    if (!isSync && !isAsync)
-                        throw new InvalidOperationException(
-                            $"Pipeline step handler type '{step.HandlerType.FullName}' " +
-                            "implements neither IHandleRequests nor IHandleRequestsAsync.");
+                if (d.IsAsync != isAsync)
+                {
+                    return [ValidationResult.Fail(new ValidationError(
+                        ValidationSeverity.Error,
+                        $"Handler '{d.HandlerType.Name}'",
+                        d.IsAsync
+                            ? $"Async handler uses sync attribute '{step.AttributeType.Name}' " +
+                              $"at step {step.Step} — it will be silently ignored"
+                            : $"Sync handler uses async attribute '{step.AttributeType.Name}' " +
+                              $"at step {step.Step} — it will be silently ignored"))];
+                }
 
-                    return d.IsAsync == isAsync;
-                })),
-            severity: PipelineValidationSeverity.Error,
-            source: d => $"Handler '{d.HandlerType.Name}'",
-            message: d => d.IsAsync
-                ? "Async handler has sync pipeline attributes — they will be silently ignored"
-                : "Sync handler has async pipeline attributes — they will be silently ignored"
-        );
+                return [];
+            });
+        });
     }
 }
 ```
 
-**How the validator evaluates rules**:
+**How the validator evaluates specifications**:
 
 ```csharp
-// PipelineValidator evaluates all rules across all configured paths
+// PipelineValidator evaluates all specifications across all configured paths
 public PipelineValidationResult Validate()
 {
-    var findings = new List<PipelineValidationError>();
+    var findings = new List<ValidationError>();
+    var collector = new ValidationResultCollector<HandlerPipelineDescription>();
 
-    // Handler pipeline rules
+    // Handler pipeline specifications
     foreach (var description in _pipelineBuilder.Describe())
     {
-        foreach (var rule in HandlerPipelineValidationRules.Rules())
+        foreach (var spec in HandlerPipelineValidationRules.Rules())
         {
-            var error = rule.Evaluate(description);
-            if (error != null) findings.Add(error);
-        }
-    }
-
-    // Producer rules (if configured)
-    if (_publications != null)
-    {
-        foreach (var publication in _publications)
-        {
-            foreach (var rule in ProducerValidationRules.Rules())
+            if (!spec.IsSatisfiedBy(description))
             {
-                var error = rule.Evaluate(publication);
-                if (error != null) findings.Add(error);
+                findings.AddRange(
+                    spec.Accept(collector)
+                        .Where(r => !r.Success)
+                        .Select(r => r.Error!));
             }
         }
     }
 
-    // Consumer rules (if configured)
+    // Producer specifications (if configured)
+    if (_publications != null)
+    {
+        var pubCollector = new ValidationResultCollector<Publication>();
+        foreach (var publication in _publications)
+        {
+            foreach (var spec in ProducerValidationRules.Rules())
+            {
+                if (!spec.IsSatisfiedBy(publication))
+                {
+                    findings.AddRange(
+                        spec.Accept(pubCollector)
+                            .Where(r => !r.Success)
+                            .Select(r => r.Error!));
+                }
+            }
+        }
+    }
+
+    // Consumer specifications (if configured)
     // ...same pattern with ConsumerValidationRules.Rules()
 
     return new PipelineValidationResult(findings);
 }
 ```
 
-The `Specification<T>` handles the predicate logic and supports composition (`And()`, `Or()`, `Not()`) when rules need to be combined. The `ValidationRule<T>` adds the "why it failed" metadata that a bare boolean can't express.
+Each specification is one rule. **Simple specifications** use the two-argument constructor (predicate + error factory) and produce zero or one findings. **Collapsed specifications** use the `Func<T, IEnumerable<ValidationResult>>` constructor and can produce zero or more findings — enabling per-attribute detail (e.g. identifying which specific attribute is misconfigured). Both modes catch exceptions during evaluation and surface them as Error-severity findings. Calling code evaluates `IsSatisfiedBy` first; only on failure does it invoke the visitor to collect the detailed results.
 
 ### Opt-In Configuration via IBrighterBuilder
 
@@ -558,7 +777,7 @@ The subscriber registry exposes `GetRegisteredRequestTypes()` for this purpose (
 
 `Describe(Type requestType)` executes phase 1 only:
 
-1. Queries `IAmASubscriberRegistry` for handler types (via the new `GetHandlerTypes(Type)` method — see below).
+1. Queries the subscriber registry inspector for handler types (via `IAmASubscriberRegistryInspector.GetHandlerTypes(Type)` — see below).
 2. For each handler type, finds the handler method **statically** — the same `GetMethods().Where(m => m.Name == "Handle"/"HandleAsync")` logic that `FindHandlerMethod()` uses, but operating on the `Type` rather than an instance.
 3. Calls `GetCustomAttributes<RequestHandlerAttribute>(true)` on the method.
 4. Separates into Before/After by `Timing`, sorts by `Step`.
@@ -726,13 +945,20 @@ This is a structural-only tidy (no behavioral change) — all existing callers g
 
 ### Subscriber Registry Inspection
 
-`IAmASubscriberRegistry.Get<T>()` requires an instance of `T` and a request context, which we don't have at startup. We add two type-based methods:
+`IAmASubscriberRegistry.Get<T>()` requires an instance of `T` and a request context, which we don't have at startup. We need type-based introspection methods for the validator.
+
+Rather than adding these methods to `IAmASubscriberRegistry` (which would be a breaking change to a public interface), we introduce a new **`IAmASubscriberRegistryInspector`** interface. This follows the Interface Segregation Principle — runtime dispatch (`Get<T>()`) and startup inspection are separate concerns with separate consumers:
 
 ```csharp
-// Additions to IAmASubscriberRegistry
-IEnumerable<Type> GetHandlerTypes(Type requestType);
-IEnumerable<Type> GetRegisteredRequestTypes();
+// In Paramore.Brighter — new interface for startup-time introspection
+public interface IAmASubscriberRegistryInspector
+{
+    IEnumerable<Type> GetHandlerTypes(Type requestType);
+    IEnumerable<Type> GetRegisteredRequestTypes();
+}
 ```
+
+`SubscriberRegistry` implements both `IAmASubscriberRegistry` and `IAmASubscriberRegistryInspector`. Custom registry implementations only need to implement `IAmASubscriberRegistryInspector` if they want to participate in pipeline validation — there is no silent degradation. If the validator cannot resolve `IAmASubscriberRegistryInspector` from DI, it reports a clear error explaining that the custom registry must implement the inspector interface to support validation.
 
 **`GetHandlerTypes(Type requestType)`** returns all handler types registered for a given request type — the superset of types that routing functions may return, without evaluating any routing predicate.
 
@@ -742,7 +968,7 @@ IEnumerable<Type> GetRegisteredRequestTypes();
 
 ```
 Validator                PipelineBuilder              SubscriberRegistry
-   │                          │                              │
+   │                          │                       (IAmASubscriberRegistryInspector)
    │── Describe() ──────────► │                              │
    │                          │── GetRegisteredRequestTypes() ──►│
    │                          │◄── [OrderCreated, Payment...]──│
@@ -804,7 +1030,7 @@ public (Type? mapperType, bool isDefault) ResolveMapperInfo(Type requestType)
 {
     if (_messageMappers.TryGetValue(requestType, out var mapperType))
         return (mapperType, false);  // explicit registration
-    if (_defaultMessageMapper != null)
+    if (_defaultMessageMapper != null && _defaultMessageMapper.IsGenericTypeDefinition)
         return (_defaultMessageMapper.MakeGenericType(requestType), true);
     return (null, false);
 }
@@ -813,11 +1039,13 @@ public (Type? mapperType, bool isDefault) ResolveAsyncMapperInfo(Type requestTyp
 {
     if (_asyncMessageMappers.TryGetValue(requestType, out var mapperType))
         return (mapperType, false);  // explicit registration
-    if (_defaultMessageMapperAsync != null)
+    if (_defaultMessageMapperAsync != null && _defaultMessageMapperAsync.IsGenericTypeDefinition)
         return (_defaultMessageMapperAsync.MakeGenericType(requestType), true);
     return (null, false);
 }
 ```
+
+The `IsGenericTypeDefinition` guard prevents `MakeGenericType` from throwing `InvalidOperationException` if the default mapper is not an open generic type. Without this guard, a misconfigured default mapper (e.g. a closed generic or non-generic type registered by mistake) would crash startup with an unhandled exception rather than returning `(null, false)` and allowing the validator to report the issue.
 
 These methods accept `Type` directly rather than using a generic `<TRequest>` constraint. The underlying dictionaries (`_messageMappers`, `_asyncMessageMappers`) are already keyed by `Type`, so the generic parameter would add nothing — and would force the validator to use `MakeGenericMethod()` reflection to call them from runtime `Type` objects. The existing generic `Get<T>()` / `GetAsync<T>()` methods need generics only to cast the return value to `IAmAMessageMapper<TRequest>`, which `ResolveMapperInfo` does not need to do.
 
@@ -827,16 +1055,22 @@ The diagnostic report uses the appropriate variant based on context: `ResolveMap
 
 The validator and writer both consume the same `HandlerPipelineDescription` model from `Describe()`, but for different purposes.
 
-**Validator** — evaluates `ValidationRule<T>` instances against each description:
+**Validator** — evaluates `ISpecification<T>` instances against each description, using the visitor to collect detailed findings on failure:
 
 ```csharp
-// Each rule is a Specification<T> + severity + message
+// Each specification is one rule; on failure the visitor collects the details
+var collector = new ValidationResultCollector<HandlerPipelineDescription>();
 foreach (var description in pipelineBuilder.Describe())
 {
-    foreach (var rule in HandlerPipelineValidationRules.Rules())
+    foreach (var spec in HandlerPipelineValidationRules.Rules())
     {
-        var error = rule.Evaluate(description);
-        if (error != null) findings.Add(error);
+        if (!spec.IsSatisfiedBy(description))
+        {
+            findings.AddRange(
+                spec.Accept(collector)
+                    .Where(r => !r.Success)
+                    .Select(r => r.Error!));
+        }
     }
 }
 ```
@@ -872,17 +1106,23 @@ foreach (var description in pipelineBuilder.Describe())
 | `TransformPipelineBuilder.DescribeTransforms()` | `Paramore.Brighter` | Dry-run mode on existing builder |
 | `MessageMapperRegistry.ResolveMapperInfo()` | `Paramore.Brighter` | Sync mapper introspection without instantiation |
 | `MessageMapperRegistry.ResolveAsyncMapperInfo()` | `Paramore.Brighter` | Async mapper introspection without instantiation |
-| `IAmASubscriberRegistry.GetHandlerTypes()` | `Paramore.Brighter` | Type-based handler lookup for a single request type |
-| `IAmASubscriberRegistry.GetRegisteredRequestTypes()` | `Paramore.Brighter` | Enumerate all registered request types |
-| **Specification & Validation Rules** | | |
-| `ISpecification<T>` | `Paramore.Brighter` | Moved from Mediator; general-purpose specification pattern |
-| `Specification<T>` | `Paramore.Brighter` | Moved from Mediator; predicate composition (And/Or/Not) |
-| `ValidationRule<T>` | `Paramore.Brighter` | Wraps specification with severity + message metadata |
-| **Validation & Diagnostics** | | |
+| `IAmASubscriberRegistryInspector` | `Paramore.Brighter` | New interface for startup-time introspection; `SubscriberRegistry` implements it |
+| `IAmASubscriberRegistryInspector.GetHandlerTypes()` | `Paramore.Brighter` | Type-based handler lookup for a single request type |
+| `IAmASubscriberRegistryInspector.GetRegisteredRequestTypes()` | `Paramore.Brighter` | Enumerate all registered request types |
+| **Specification & Validation** | | |
+| `ISpecification<T>` | `Paramore.Brighter` | Moved from Mediator; enhanced with `Accept` visitor method |
+| `Specification<T>` | `Paramore.Brighter` | Moved from Mediator; three constructors (pure predicate, simple rule, collapsed rule) |
+| `AndSpecification<T>`, `OrSpecification<T>`, `NotSpecification<T>` | `Paramore.Brighter` | Composition nodes; delegate to children via visitor |
+| `ValidationResult` | `Paramore.Brighter` | Success/failure bool paired with optional `ValidationError` |
+| `ValidationError` | `Paramore.Brighter` | Severity + Source + Message — generic validation finding |
+| `ValidationSeverity` | `Paramore.Brighter` | Enum: Error, Warning |
+| `ISpecificationVisitor<TData, TResult>` | `Paramore.Brighter` | Visitor interface for traversing specification graphs |
+| `ValidationResultCollector<TData>` | `Paramore.Brighter` | Concrete visitor that collects `ValidationResult` from the graph |
+| **Pipeline Validation & Diagnostics** | | |
 | `IAmAPipelineValidator` | `Paramore.Brighter` | Core interface |
 | `IAmAPipelineDiagnosticWriter` | `Paramore.Brighter` | Core interface |
-| `PipelineValidationResult` | `Paramore.Brighter` | Information holder |
-| `PipelineValidationError` | `Paramore.Brighter` | Information holder |
+| `PipelineValidationResult` | `Paramore.Brighter` | Aggregates `ValidationError` instances; pipeline-specific information holder |
+| `PipelineValidationException` | `Paramore.Brighter` | Extends `ConfigurationException`; holds `PipelineValidationResult` for programmatic access |
 | `HandlerPipelineValidationRules` | `Paramore.Brighter` | Attribute checks (internal) |
 | `ProducerValidationRules` | `Paramore.Brighter` | Publication checks (internal) |
 | `ConsumerValidationRules` | `Paramore.Brighter.ServiceActivator` | Pump/handler/MessageType checks (internal) |
@@ -893,117 +1133,170 @@ foreach (var description in pipelineBuilder.Describe())
 | Consumer rule registration | `Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection` | Adds consumer rules to validator |
 | `ServiceActivatorHostedService` changes | `Paramore.Brighter.ServiceActivator.Extensions.Hosting` | Invokes validator/writer before Receive() |
 
-### Validation Rule Details
+### Validation Specification Details
 
-Each rule is a `ValidationRule<T>` wrapping a `Specification<T>` that expresses the *valid* condition. The specification returns `true` when the entity is correctly configured, `false` when it isn't. The `ValidationRule<T>` adds severity and message for the failing case.
+Each specification encapsulates both the predicate and its validation metadata. **Simple specifications** use the two-argument constructor (`Func<T, bool>` + `Func<T, ValidationError>`) — the predicate expresses the *valid* condition, and the error factory provides what to report when it fails. **Collapsed specifications** use the single-argument constructor (`Func<T, IEnumerable<ValidationResult>>`) for per-element rules that need to report on multiple sub-elements individually.
 
-#### AddBrighter Rules — `ValidationRule<HandlerPipelineDescription>`
+#### AddBrighter Specifications — `ISpecification<HandlerPipelineDescription>`
 
-**Rule: BackstopAttributeOrdering** (Warning)
+**Specification: BackstopAttributeOrdering** (Warning, per-pair, collapsed)
 
 ```csharp
 // Warning, not Error: a resilience pipeline placed before a backstop could
 // intentionally catch and act on the exception before passing it on. This is
 // unusual and probably not what the developer intended, but it is not provably
 // wrong — so we warn rather than block startup.
+//
+// Collapsed constructor: the function returns one ValidationResult per misordered
+// backstop/resilience pair, identifying the specific attribute names and step numbers.
+// IsSatisfiedBy derives its bool from the results. Example message:
+//   "Handler 'OrderCreatedHandler' — 'RejectMessageOnErrorAsync' at step 5 is
+//    after 'UseResiliencePipelineAsync' at step 3 — in Brighter, lower step values
+//    are outer wrappers, so the backstop will never execute on failure"
 new Specification<HandlerPipelineDescription>(d =>
 {
     var backstops = d.BeforeSteps.Where(s =>
         typeof(IAmABackstopHandler).IsAssignableFrom(s.HandlerType));
     var resilience = d.BeforeSteps.Where(s =>
         typeof(IAmAResilienceHandler).IsAssignableFrom(s.HandlerType));
-    return !backstops.Any(b => resilience.Any(r => b.Step > r.Step));
+
+    return backstops.SelectMany(b => resilience
+        .Where(r => b.Step > r.Step)
+        .Select(r => ValidationResult.Fail(new ValidationError(
+            ValidationSeverity.Warning,
+            $"Handler '{d.HandlerType.Name}'",
+            $"'{b.AttributeType.Name}' at step {b.Step} is after " +
+            $"'{r.AttributeType.Name}' at step {r.Step} — " +
+            "in Brighter, lower step values are outer wrappers, so the backstop " +
+            "will never execute on failure"))));
 })
-// Severity: Warning
-// Message: "Backstop attribute has a higher step number than resilience pipeline — it will never execute on failure"
 ```
 
-**Rule: AttributeAsyncConsistency** (Error)
+**Specification: AttributeAsyncConsistency** (Error, per-attribute, collapsed)
 
 ```csharp
+// Collapsed constructor: yields one ValidationResult per mismatched attribute,
+// identifying the specific attribute type name and step number. Example message:
+//   "Handler 'OrderCreatedHandler' — Async handler uses sync attribute
+//    'RejectMessageOnError' at step 2 — it will be silently ignored"
+//
+// Handler types that implement neither IHandleRequests nor IHandleRequestsAsync
+// are reported as Error-severity findings rather than throwing an exception. This
+// ensures corrupted or unexpected types in the registry produce clean validation
+// output instead of crashing startup. (Additionally, Specification<T>.IsSatisfiedBy
+// catches any unexpected exceptions as a safety net.)
 new Specification<HandlerPipelineDescription>(d =>
-    d.BeforeSteps.Concat(d.AfterSteps).All(step =>
+{
+    return d.BeforeSteps.Concat(d.AfterSteps).SelectMany(step =>
     {
         var isSync = typeof(IHandleRequests).IsAssignableFrom(step.HandlerType);
         var isAsync = typeof(IHandleRequestsAsync).IsAssignableFrom(step.HandlerType);
 
         if (!isSync && !isAsync)
-            throw new InvalidOperationException(
-                $"Pipeline step handler type '{step.HandlerType.FullName}' implements neither " +
-                $"IHandleRequests nor IHandleRequestsAsync.");
+        {
+            return [ValidationResult.Fail(new ValidationError(
+                ValidationSeverity.Error,
+                $"Handler '{d.HandlerType.Name}'",
+                $"Pipeline step '{step.HandlerType.FullName}' at step {step.Step} " +
+                "implements neither IHandleRequests nor IHandleRequestsAsync"))];
+        }
 
-        return d.IsAsync == isAsync;
-    }))
-// Severity: Error
-// Message: "Async handler has sync pipeline attributes (or vice versa) — they will be silently ignored"
+        if (d.IsAsync != isAsync)
+        {
+            return [ValidationResult.Fail(new ValidationError(
+                ValidationSeverity.Error,
+                $"Handler '{d.HandlerType.Name}'",
+                d.IsAsync
+                    ? $"Async handler uses sync attribute '{step.AttributeType.Name}' " +
+                      $"at step {step.Step} — it will be silently ignored"
+                    : $"Sync handler uses async attribute '{step.AttributeType.Name}' " +
+                      $"at step {step.Step} — it will be silently ignored"))];
+        }
+
+        return [];
+    });
+})
 ```
 
-Note: the `InvalidOperationException` is not a validation finding — it is a programming error. All pipeline step handlers must implement one of the two base interfaces; this is an invariant of Brighter's handler model. The exception guards against silently treating an unrecognised type as sync.
+#### AddProducers Specifications — `ISpecification<Publication>`
 
-#### AddProducers Rules — `ValidationRule<Publication>`
-
-**Rule: PublicationRequestTypeSet** (Error)
+**Specification: PublicationRequestTypeSet** (Error, simple)
 
 ```csharp
-new Specification<Publication>(p => p.RequestType != null)
-// Severity: Error
-// Message: "Publication.RequestType is null — Post()/Deposit() will throw ConfigurationException"
+// Simple constructor: predicate + error factory. Yields zero or one findings.
+new Specification<Publication>(
+    p => p.RequestType != null,
+    p => new ValidationError(
+        ValidationSeverity.Error,
+        $"Publication '{p.Topic}'",
+        "Publication.RequestType is null — Post()/Deposit() will throw ConfigurationException"))
 ```
 
-**Rule: PublicationRequestTypeImplementsIRequest** (Error)
+**Specification: PublicationRequestTypeImplementsIRequest** (Error, simple)
 
 ```csharp
-new Specification<Publication>(p =>
-    p.RequestType == null || typeof(IRequest).IsAssignableFrom(p.RequestType))
-// Severity: Error
-// Message: "Publication.RequestType does not implement IRequest"
+new Specification<Publication>(
+    p => p.RequestType == null || typeof(IRequest).IsAssignableFrom(p.RequestType),
+    p => new ValidationError(
+        ValidationSeverity.Error,
+        $"Publication '{p.Topic}'",
+        $"Publication.RequestType '{p.RequestType?.Name}' does not implement IRequest"))
 ```
 
 Note: these two could be composed via `And()` if evaluated together, but are kept separate for distinct error messages.
 
-#### AddConsumers Rules — `ValidationRule<Subscription>`
+#### AddConsumers Specifications — `ISpecification<Subscription>`
 
-**Rule: PumpHandlerMatch** (Error)
+**Specification: PumpHandlerMatch** (Error, simple)
 
 ```csharp
-// Note: All() returns true on an empty collection, so this rule vacuously passes
-// when no handlers are registered. This is intentional — the HandlerRegistered rule
-// (below) catches the missing-handler case with a more specific error message.
-new Specification<Subscription>(s =>
-{
-    var handlerTypes = subscriberRegistry.GetHandlerTypes(s.DataType);
-    return s.MessagePumpType switch
+// Note: All() returns true on an empty collection, so this specification vacuously
+// passes when no handlers are registered. This is intentional — the HandlerRegistered
+// specification (below) catches the missing-handler case with a more specific error.
+new Specification<Subscription>(
+    s =>
     {
-        MessagePumpType.Reactor => handlerTypes.All(t =>
-            typeof(IHandleRequests).IsAssignableFrom(t)),
-        MessagePumpType.Proactor => handlerTypes.All(t =>
-            typeof(IHandleRequestsAsync).IsAssignableFrom(t)),
-        _ => true
-    };
-})
-// Severity: Error
-// Message: "Reactor subscription has only async handlers (or Proactor has only sync) — handler will not be found at runtime"
+        var handlerTypes = subscriberRegistry.GetHandlerTypes(s.DataType);
+        return s.MessagePumpType switch
+        {
+            MessagePumpType.Reactor => handlerTypes.All(t =>
+                typeof(IHandleRequests).IsAssignableFrom(t)),
+            MessagePumpType.Proactor => handlerTypes.All(t =>
+                typeof(IHandleRequestsAsync).IsAssignableFrom(t)),
+            _ => true
+        };
+    },
+    s => new ValidationError(
+        ValidationSeverity.Error,
+        $"Subscription '{s.Name}'",
+        "Reactor subscription has only async handlers (or Proactor has only sync) — handler will not be found at runtime"))
 ```
 
-**Rule: HandlerRegistered** (Error)
+**Specification: HandlerRegistered** (Error, simple)
 
 ```csharp
-new Specification<Subscription>(s =>
-    subscriberRegistry.GetHandlerTypes(s.DataType).Any())
-// Severity: Error
-// Message: "No handler registered for subscription's RequestType"
+new Specification<Subscription>(
+    s => subscriberRegistry.GetHandlerTypes(s.DataType).Any(),
+    s => new ValidationError(
+        ValidationSeverity.Error,
+        $"Subscription '{s.Name}'",
+        "No handler registered for subscription's RequestType"))
 ```
 
-**Rule: RequestTypeSubtype** (Warning)
+**Specification: RequestTypeSubtype** (Warning, simple)
 
 ```csharp
-new Specification<Subscription>(s =>
-    s.DataType == null
-    || typeof(ICommand).IsAssignableFrom(s.DataType)
-    || typeof(IEvent).IsAssignableFrom(s.DataType))
-// Severity: Warning
-// Message: "RequestType implements neither ICommand nor IEvent — message dispatch uses Send vs Publish based on this distinction"
+new Specification<Subscription>(
+    s => s.DataType == null
+        || typeof(ICommand).IsAssignableFrom(s.DataType)
+        || typeof(IEvent).IsAssignableFrom(s.DataType),
+    s => new ValidationError(
+        ValidationSeverity.Warning,
+        $"Subscription '{s.Name}'",
+        "RequestType implements neither ICommand nor IEvent — message dispatch uses Send vs Publish based on this distinction"))
 ```
+
+**Note: Mapper coverage is diagnostic, not a validation error.** Brighter has a default mapper fallback (`JsonMessageMapper<T>`) — a missing custom mapper is not an error, it just means the default resolves. The diagnostic report (FR-5, FR-9) shows which mapper resolves for each publication and subscription (custom vs default), giving the developer visibility to confirm it matches their intent. There is no mapper validation specification because the default mapper makes this a valid configuration. The `RequestTypeSubtype` null guard (`s.DataType == null ||`) is defensive — `Subscription` constructors validate `DataType`, but validation specifications should not assume preconditions of other code.
 
 ## Consequences
 
@@ -1015,8 +1308,10 @@ new Specification<Subscription>(s =>
 - The dry-run model (`HandlerPipelineDescription`, `TransformPipelineDescription`) is a single source of truth — both validator and writer consume the same model, ensuring consistency.
 - The model is produced by the same `PipelineBuilder` and `TransformPipelineBuilder` that build the real pipelines, so it accurately reflects what will be instantiated at runtime. If the builder logic changes, the description stays in sync.
 - The dry-run reuses the existing static attribute caches, so subsequent `Build()` calls benefit from the reflection already done during `Describe()`.
-- Validation rules are expressed as `Specification<T>` predicates — a well-known pattern already used in Brighter's workflow engine. Each rule is testable in isolation and composable via `And()`, `Or()`, `Not()`.
-- `ValidationRule<T>` cleanly separates the predicate ("is this valid?") from the reporting metadata ("what to tell the developer when it isn't"), avoiding the loss of diagnostic detail that bare boolean specifications would cause.
+- Validation specifications carry their own error metadata, eliminating the need for a separate `ValidationRule<T>` coordinator. Each `Specification<T>` encapsulates both the predicate and the validation findings, keeping the rule definition self-contained and testable in isolation.
+- Two construction modes cover all cases: simple specifications (predicate + error factory) for single-finding rules, and collapsed specifications (`Func<T, IEnumerable<ValidationResult>>`) for per-element rules that report on multiple sub-elements individually.
+- The visitor pattern (`ISpecificationVisitor<TData, TResult>`) allows calling code to traverse the specification graph and collect detailed validation results only when needed — `IsSatisfiedBy` gives the fast boolean answer, and the visitor provides the detail on failure.
+- The exception-catching wrapper in `IsSatisfiedBy` ensures corrupted types produce clean validation output rather than crashing startup.
 - Moving `Specification<T>` from `Paramore.Brighter.Mediator` to `Paramore.Brighter` makes it available as a general-purpose building block, which better reflects its nature.
 - Validation scales to what's configured: only relevant rules run for each combination of paths.
 - Opt-in design means zero impact on existing users and zero production overhead when not enabled.
@@ -1027,8 +1322,8 @@ new Specification<Subscription>(s =>
 
 - Adds new types across multiple projects — though each type is focused and cohesive.
 - `PipelineBuilder` gains a new public method (`Describe`) which increases its surface area. However, this is a natural companion to `Build` — same inputs, different output.
-- `MessageMapperRegistry` and `IAmASubscriberRegistry` need minor extensions for inspection without instantiation.
-- Moving `ISpecification<T>` / `Specification<T>` from `Paramore.Brighter.Mediator` to `Paramore.Brighter` is a breaking namespace change for Mediator consumers — they must update `using` directives. However, the Mediator project depends on Brighter, so the types remain accessible.
+- `MessageMapperRegistry` needs minor extensions for inspection without instantiation. `SubscriberRegistry` gains a second interface (`IAmASubscriberRegistryInspector`) — though this is non-breaking since `IAmASubscriberRegistry` itself is unchanged.
+- Moving `ISpecification<T>` / `Specification<T>` from `Paramore.Brighter.Mediator` to `Paramore.Brighter` is a minor breaking change. The types move from the `Paramore.Brighter.Mediator` namespace to `Paramore.Brighter`, so any user code with `using Paramore.Brighter.Mediator` that references these types directly will need to add `using Paramore.Brighter` (or the compiler will find them via the Brighter dependency). This is acknowledged as an acceptable breaking change for V10.x — type-forwarding shims are not provided because the types are moving to a more fundamental layer and the fix is a single `using` update. The `Paramore.Brighter.Mediator` project continues to depend on `Paramore.Brighter`, so the types remain transitively available.
 - Two potential integration points (dedicated `BrighterValidationHostedService` for non-consumer apps, `ServiceActivatorHostedService` for consumer apps) need to coordinate to avoid double-running. This is handled via optional DI resolution rather than shared mutable state.
 
 ### Risks and Mitigations
@@ -1042,8 +1337,8 @@ new Specification<Subscription>(s =>
 - **Risk**: Validation rules could produce false positives.
   **Mitigation**: Only definite errors are reported as errors. Attribute ordering and ambiguous RequestType are warnings. Opt-in means developers can disable validation.
 
-- **Risk**: Adding `GetHandlerTypes(Type)` and `GetRegisteredRequestTypes()` to `IAmASubscriberRegistry` is a breaking interface change.
-  **Mitigation**: Add it as a default interface method that returns empty, or add it to a new `IAmASubscriberRegistryInspector` interface that `SubscriberRegistry` also implements.
+- **Risk**: Startup introspection requires methods not present on `IAmASubscriberRegistry`.
+  **Mitigation**: A new `IAmASubscriberRegistryInspector` interface carries the introspection methods (`GetHandlerTypes(Type)`, `GetRegisteredRequestTypes()`). `SubscriberRegistry` implements both interfaces. `IAmASubscriberRegistry` is untouched — no breaking change. Custom registry implementations that want to participate in validation implement the inspector interface; those that do not are unaffected.
 
 - **Risk**: Coordination between `BrighterValidationHostedService` and `ServiceActivatorHostedService`.
   **Mitigation**: Each service resolves an optional DI dependency to decide whether to act: `BrighterValidationHostedService` checks for `IDispatcher?` (no-op if present), `ServiceActivatorHostedService` checks for `IAmAPipelineValidator?` (runs validation if present). No shared mutable state — decisions are based on immutable DI registrations. See "Hosted Service Coordination" section above for the full scenario matrix.

@@ -14,8 +14,8 @@ Validate pipelines at startup so configuration errors are caught immediately, re
 
 ## Status Checklist
 
-- [ ] Requirements (`requirements.md`) — use `/spec:requirements`
-- [ ] Design (`design.md` / ADR) — use `/spec:design`
+- [x] Requirements (`requirements.md`) — use `/spec:requirements`
+- [x] Design (`design.md` / ADR) — use `/spec:design`
 - [ ] Tasks (`tasks.md`) — use `/spec:tasks`
 - [ ] Implementation — use `/spec:implement`
 - [ ] Review & merge
