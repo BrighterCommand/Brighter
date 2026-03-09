@@ -68,6 +68,6 @@ var host = builder.Build();
 
 var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
 
-commandProcessor.Post(new GreetingCommand("Ian"));
+await commandProcessor.PostAsync(new GreetingCommand("Ian"));
 
 await host.RunAsync();
