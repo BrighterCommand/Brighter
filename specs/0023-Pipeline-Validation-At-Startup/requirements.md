@@ -45,12 +45,12 @@ Each path has its own validation needs. A developer may use only path 1 (pure CQ
 - **Pattern**: Simplest approach — pipeline visualization via standard logging.
 
 ### Common patterns across all frameworks
-1. A **layered approach**: Roslyn analyzers catch what they can statically, and runtime startup validation catches everything else.
+1. A **layered approach**: Static analyzers catch what they can at compile time, and runtime startup validation catches everything else.
 2. A **diagnostic report** in addition to pass/fail validation: frameworks give developers visibility into "here's what I configured" — not just "something is wrong".
 
 ## Proposed Solution
 
-A three-layer strategy aligned with .NET ecosystem conventions, applied across all three configuration paths:
+A two-layer strategy aligned with .NET ecosystem conventions, applied across all three configuration paths (Roslyn analyzer extensions are out of scope — see ADR 0054):
 
 ### Layer 1: Diagnostic Report
 
@@ -67,9 +67,9 @@ An opt-in validation that checks the fully-wired configuration at startup, befor
 
 **Developer experience**: If validation fails, Brighter throws an `AggregateException` containing all errors, preventing the host from starting.
 
-### Layer 3: Roslyn Analyzers (extending existing `Paramore.Brighter.Analyzer`)
+### Layer 3: Roslyn Analyzers — OUT OF SCOPE
 
-Extend the existing analyzer package (currently BRT001–BRT005) with new diagnostics for common pipeline mistakes at compile time / in the IDE.
+Roslyn analyzer extensions are out of scope for this specification. They are documented separately in ADR 0054 (`0054-roslyn-analyzer-extensions-for-pipeline-validation.md`) for future implementation.
 
 ## Requirements
 
@@ -142,14 +142,6 @@ Validation must work correctly regardless of which combination of paths the deve
 - **AddBrighter + AddConsumers**: Validates handler pipelines and subscriptions.
 - **All three**: Validates everything.
 
-### Functional Requirements — Roslyn Analyzers
-
-#### FR-14: Roslyn Analyzer — Attribute Ordering (new BRT diagnostic)
-A new Roslyn analyzer diagnostic that warns when backstop attributes (Reject, Defer, DontAck) have a step number higher than a resilience pipeline attribute on the same handler method.
-
-#### FR-15: Roslyn Analyzer — Handler/Pump Type Mismatch (new BRT diagnostic)
-A new Roslyn analyzer diagnostic that detects when a subscription's `MessagePumpType` is statically determinable and doesn't match the handler's interface (sync vs async). This catches the issue at compile time in the IDE.
-
 ### Non-Functional Requirements
 
 #### NFR-1: Opt-In by Default
@@ -161,21 +153,17 @@ Validation should complete in well under 1 second for typical configurations (�
 #### NFR-3: No Breaking Changes
 The feature must not change any existing API signatures or default behavior. Existing applications that do not opt in must work identically.
 
-#### NFR-4: Roslyn Analyzer Backward Compatibility
-New analyzer diagnostics must be added to the existing `Paramore.Brighter.Analyzer` package. New diagnostics should default to **Warning** severity (consistent with BRT001–BRT005) so they do not break existing builds.
-
-#### NFR-5: Works with IBrighterBuilder Interface
+#### NFR-4: Works with IBrighterBuilder Interface
 Validation must be configured through the `IBrighterBuilder` interface, not tied to a specific implementation. Although `ServiceCollectionBrighterBuilder` is the only implementation today, the design should allow other implementations to participate.
 
 ### Constraints and Assumptions
 
-- **Constraint**: Roslyn analyzers can only inspect statically-determinable values. When `MessagePumpType` or `RequestType` is set from a variable or configuration, the analyzer cannot validate — startup validation covers those cases.
 - **Constraint**: Startup validation requires a built `IServiceProvider` and thus runs after DI registration, not at compile time.
 - **Constraint**: Handler pipeline validation (FR-1, FR-2, FR-3) applies even without producers or consumers — a pure CQRS application benefits from these checks.
-- **Assumption**: Developers use the `Paramore.Brighter.Analyzer` NuGet package for compile-time checks. It is a development dependency (`DevelopmentDependency = true`).
 
 ### Out of Scope
 
+- **Roslyn analyzer extensions**: New compile-time diagnostics for the `Paramore.Brighter.Analyzer` package (e.g. attribute ordering warnings, pump/handler mismatch detection in the IDE). Documented in ADR 0054 for future implementation.
 - **Broker connectivity validation**: Checking whether the broker is reachable or topics/queues exist. This is a separate concern (health checks).
 - **Message schema validation**: Validating that message payloads match expected schemas.
 - **Comprehensive pipeline correctness**: Validating that the business logic in handlers is correct (that's what tests are for).
@@ -220,12 +208,6 @@ Given an existing application that does not enable validation or diagnostics, wh
 ### AC-12: Pure CQRS Application Works
 Given an application that only calls `AddBrighter()` (no producers, no consumers), when validation is enabled, then only handler pipeline checks run — no errors about missing subscriptions or publications.
 
-### AC-13: Roslyn Analyzer Reports Attribute Ordering in IDE
-Given a handler method with `[RejectMessageOnError(step: 2)]` and `[UseResiliencePipeline(step: 1)]`, the analyzer reports a warning in the IDE.
-
-### AC-14: Roslyn Analyzer Reports Pump/Handler Mismatch in IDE
-Given code with a `KafkaSubscription<OrderCreated>` using `MessagePumpType.Reactor` where `OrderCreatedHandler : RequestHandlerAsync<OrderCreated>`, the analyzer reports a warning in the IDE.
-
 ## Additional Context
 
 ### Existing Validation in Brighter Today
@@ -248,12 +230,12 @@ Given code with a `KafkaSubscription<OrderCreated>` using `MessagePumpType.React
 | Gap | Configuration Path | Layer |
 |-----|-------------------|-------|
 | No visibility into handler pipeline wiring | AddBrighter | Diagnostic Report |
-| Backstop attribute after resilience pipeline attribute | AddBrighter | Validation + Analyzer |
-| Sync attribute on async handler (or vice versa) | AddBrighter | Validation + Analyzer |
+| Backstop attribute after resilience pipeline attribute | AddBrighter | Validation |
+| Sync attribute on async handler (or vice versa) | AddBrighter | Validation |
 | No visibility into outgoing mappers (custom vs default) | AddProducers | Diagnostic Report |
 | No visibility into outgoing transforms | AddProducers | Diagnostic Report |
 | Programmatic Publication missing RequestType | AddProducers | Validation |
 | No visibility into incoming mappers and subscription wiring | AddConsumers | Diagnostic Report |
-| Reactor subscription with async handler (or vice versa) | AddConsumers | Validation + Analyzer |
+| Reactor subscription with async handler (or vice versa) | AddConsumers | Validation |
 | Subscription with no handler registered | AddConsumers | Validation |
 | Ambiguous RequestType (neither ICommand nor IEvent) | AddConsumers | Validation |
