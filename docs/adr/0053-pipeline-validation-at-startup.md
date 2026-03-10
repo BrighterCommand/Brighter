@@ -1072,22 +1072,30 @@ public (Type? mapperType, bool isDefault) ResolveMapperInfo(Type requestType)
 {
     if (_messageMappers.TryGetValue(requestType, out var mapperType))
         return (mapperType, false);  // explicit registration
-    if (_defaultMessageMapper != null && _defaultMessageMapper.IsGenericTypeDefinition)
-        return (_defaultMessageMapper.MakeGenericType(requestType), true);
-    return (null, false);
+    if (_defaultMessageMapper == null)
+        return (null, false);        // no mapper at all
+    if (!_defaultMessageMapper.IsGenericTypeDefinition)
+        return (null, true);         // misconfigured: default exists but is not an open generic
+    return (_defaultMessageMapper.MakeGenericType(requestType), true);
 }
 
 public (Type? mapperType, bool isDefault) ResolveAsyncMapperInfo(Type requestType)
 {
     if (_asyncMessageMappers.TryGetValue(requestType, out var mapperType))
         return (mapperType, false);  // explicit registration
-    if (_defaultMessageMapperAsync != null && _defaultMessageMapperAsync.IsGenericTypeDefinition)
-        return (_defaultMessageMapperAsync.MakeGenericType(requestType), true);
-    return (null, false);
+    if (_defaultMessageMapperAsync == null)
+        return (null, false);        // no mapper at all
+    if (!_defaultMessageMapperAsync.IsGenericTypeDefinition)
+        return (null, true);         // misconfigured: default exists but is not an open generic
+    return (_defaultMessageMapperAsync.MakeGenericType(requestType), true);
 }
 ```
 
-The `IsGenericTypeDefinition` guard prevents `MakeGenericType` from throwing `InvalidOperationException` if the default mapper is not an open generic type. Without this guard, a misconfigured default mapper (e.g. a closed generic or non-generic type registered by mistake) would crash startup with an unhandled exception rather than returning `(null, false)` and allowing the validator to report the issue.
+The `IsGenericTypeDefinition` guard prevents `MakeGenericType` from throwing `InvalidOperationException` if the default mapper is not an open generic type. The three return states are:
+- `(mapperType, false)` — explicit registration found.
+- `(mapperType, true)` — default mapper resolved successfully (open generic closed over request type).
+- `(null, false)` — no mapper registered and no default configured.
+- `(null, true)` — default mapper is registered but misconfigured (not an open generic type). The validator should report a distinct error: *"Default message mapper '{type.Name}' is not an open generic type — it cannot be closed over the request type. Register an open generic (e.g. `typeof(JsonMessageMapper<>)`) or provide an explicit mapper."*
 
 These methods accept `Type` directly rather than using a generic `<TRequest>` constraint. The underlying dictionaries (`_messageMappers`, `_asyncMessageMappers`) are already keyed by `Type`, so the generic parameter would add nothing — and would force the validator to use `MakeGenericMethod()` reflection to call them from runtime `Type` objects. The existing generic `Get<T>()` / `GetAsync<T>()` methods need generics only to cast the return value to `IAmAMessageMapper<TRequest>`, which `ResolveMapperInfo` does not need to do.
 
