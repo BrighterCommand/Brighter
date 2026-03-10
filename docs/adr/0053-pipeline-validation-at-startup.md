@@ -345,24 +345,29 @@ public class Specification<T>(Func<T, bool> expression) : ISpecification<T>
 
     public bool IsSatisfiedBy(T entity)
     {
-        if (_resultEvaluator != null)
-        {
-            // Collapsed mode: evaluate and store all results
-            try
-            {
-                _lastResults = _resultEvaluator(entity).ToList();
-            }
-            catch (Exception ex)
-            {
-                _lastResults = [ValidationResult.Fail(new ValidationError(
-                    ValidationSeverity.Error,
-                    entity?.ToString() ?? "(unknown)",
-                    $"Rule evaluation failed: {ex.Message}"))];
-            }
-            return _lastResults.All(r => r.Success);
-        }
+        return _resultEvaluator != null
+            ? EvaluateCollapsed(entity)
+            : EvaluateSimple(entity);
+    }
 
-        // Simple or pure-predicate mode
+    private bool EvaluateCollapsed(T entity)
+    {
+        try
+        {
+            _lastResults = _resultEvaluator!(entity).ToList();
+        }
+        catch (Exception ex)
+        {
+            _lastResults = [ValidationResult.Fail(new ValidationError(
+                ValidationSeverity.Error,
+                entity?.ToString() ?? "(unknown)",
+                $"Rule evaluation failed: {ex.Message}"))];
+        }
+        return _lastResults.All(r => r.Success);
+    }
+
+    private bool EvaluateSimple(T entity)
+    {
         bool satisfied;
         try
         {
