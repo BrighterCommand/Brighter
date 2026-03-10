@@ -46,7 +46,7 @@ public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessages : ID
         _outboxProvider = new {{ OutboxProvider }}();
         _outboxProvider.CreateStore();
 
-        _messageFactory = new {{ MessageFactory }}();
+        _messageFactory = new {{ MessageBuilder  }}();
     }
 
     [Fact]
