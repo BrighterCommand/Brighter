@@ -29,16 +29,12 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
-var host = Host.CreateDefaultBuilder()
-    .ConfigureServices((context, collection) =>
-    {
-        collection.AddBrighter().AutoFromAssemblies();
-    })
-    .UseConsoleLifetime()
-    .Build();
+var builder = Host.CreateApplicationBuilder();
+builder.Services.AddBrighter().AutoFromAssemblies();
+var host = builder.Build();
 
-var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
+var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
 
 commandProcessor.Send(new GreetingCommand("Ian"));
 
-host.WaitForShutdown();
+host.Run();

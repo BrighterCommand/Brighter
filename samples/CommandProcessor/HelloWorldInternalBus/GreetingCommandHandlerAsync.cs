@@ -22,18 +22,18 @@ THE SOFTWARE. */
 
 #endregion
 
-using HelloWorldInternalBus;
 using Paramore.Brighter;
 using Paramore.Brighter.Logging.Attributes;
 
-namespace HelloWorld
+namespace HelloWorldInternalBus
 {
-    internal sealed class GreetingCommandHandler : RequestHandlerAsync<GreetingCommand>
+    internal sealed class GreetingCommandHandlerAsync : RequestHandlerAsync<GreetingCommand>
     {
         [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
-        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken)
+        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default)
         {
-            Console.WriteLine("Hello {0}", command.Name);
+            Console.WriteLine($"Hello {command.Name}");
+
             return await base.HandleAsync(command, cancellationToken);
         }
     }
