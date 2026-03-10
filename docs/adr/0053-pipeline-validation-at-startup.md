@@ -1311,7 +1311,9 @@ new Specification<Subscription>(
     s => new ValidationError(
         ValidationSeverity.Error,
         $"Subscription '{s.Name}'",
-        "Reactor subscription has only async handlers (or Proactor has only sync) — handler will not be found at runtime"))
+        s.MessagePumpType == MessagePumpType.Reactor
+            ? $"uses Reactor but handler implements IHandleRequestsAsync. Use Proactor or change the handler to implement IHandleRequests<{s.DataType.Name}>."
+            : $"uses Proactor but handler implements IHandleRequests. Use Reactor or change the handler to implement IHandleRequestsAsync<{s.DataType.Name}>."))
 ```
 
 **Specification: HandlerRegistered** (Error, simple)
