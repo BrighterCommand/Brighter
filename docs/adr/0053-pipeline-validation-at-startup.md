@@ -305,10 +305,9 @@ public interface ISpecification<TData>
 
 ```csharp
 // In Paramore.Brighter
-public class Specification<T>(Func<T, bool> expression) : ISpecification<T>
+public class Specification<T> : ISpecification<T>
 {
-    private readonly Func<T, bool> _expression = expression
-        ?? throw new ArgumentNullException(nameof(expression));
+    private readonly Func<T, bool> _expression;
     private readonly Func<T, ValidationError>? _errorFactory;
     private readonly Func<T, IEnumerable<ValidationResult>>? _resultEvaluator;
     private IReadOnlyList<ValidationResult> _lastResults = [];
@@ -318,7 +317,10 @@ public class Specification<T>(Func<T, bool> expression) : ISpecification<T>
     /// (e.g. ExclusiveChoice workflow branching). The visitor returns empty results.
     /// This is the existing constructor, unchanged.
     /// </summary>
-    public Specification(Func<T, bool> expression) : this(expression) { }
+    public Specification(Func<T, bool> expression)
+    {
+        _expression = expression ?? throw new ArgumentNullException(nameof(expression));
+    }
 
     /// <summary>
     /// Simple rule: a predicate paired with an error factory. IsSatisfiedBy evaluates
@@ -467,7 +469,7 @@ public class ValidationResultCollector<TData> : ISpecificationVisitor<TData, IEn
 
 **Composition and the visitor** — `And`, `Or`, and `Not` are thin wrappers that delegate `IsSatisfiedBy` to their children and expose them for the visitor:
 
-- **`AndSpecification<T>`**: `IsSatisfiedBy` returns `left.IsSatisfiedBy(entity) && right.IsSatisfiedBy(entity)`. On failure, the visitor walks both children and collects all failed results.
+- **`AndSpecification<T>`**: `IsSatisfiedBy` evaluates **both** children unconditionally — `var l = left.IsSatisfiedBy(entity); var r = right.IsSatisfiedBy(entity); return l && r;` — so that on failure the visitor can safely walk both children and collect all failed results. Using C#'s `&&` operator directly would short-circuit when the left side fails, leaving `right._lastResults` stale from a previous evaluation. Unconditional evaluation aligns with FR-10 (aggregate error reporting): the developer sees every problem, not just the first failing branch.
 - **`OrSpecification<T>`**: `IsSatisfiedBy` returns `left.IsSatisfiedBy(entity) || right.IsSatisfiedBy(entity)`. On failure (both children failed), the visitor collects from both.
 - **`NotSpecification<T>`**: `IsSatisfiedBy` returns `!inner.IsSatisfiedBy(entity)`. When negation fails (the inner spec *succeeded*), the inner spec has no stored errors. Therefore `Not` needs its own error — provided via `Not(Func<T, ValidationError> errorFactory)`. The parameterless `Not()` remains for non-validation uses (e.g. `ExclusiveChoice`) and produces no validation metadata.
 
