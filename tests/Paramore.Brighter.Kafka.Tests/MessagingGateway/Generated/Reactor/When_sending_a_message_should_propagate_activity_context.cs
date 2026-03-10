@@ -11,7 +11,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Kafka.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
 public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable

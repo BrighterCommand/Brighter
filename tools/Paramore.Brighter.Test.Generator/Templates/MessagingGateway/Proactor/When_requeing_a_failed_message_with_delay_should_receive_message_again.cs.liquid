@@ -60,7 +60,7 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgainAsync :
         await Task.Delay(TimeSpan.FromSeconds(6));
 
         // Act
-        var received = await _channel.ReceiveAsync(null);
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));
         Assert.NotEqual(MessageType.MT_QUIT, received.Header.MessageType);
 
         await _channel.RequeueAsync(received);
@@ -68,7 +68,7 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgainAsync :
         {%if DelayBetweenReceiveMessageInMilliseconds != null %}await Task.Delay({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
 
         // Assert
-        received = await _channel.ReceiveAsync(null);
+        received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));
         await _channel.AcknowledgeAsync(received);
         _messageAssertion.Assert(message, received);
     }

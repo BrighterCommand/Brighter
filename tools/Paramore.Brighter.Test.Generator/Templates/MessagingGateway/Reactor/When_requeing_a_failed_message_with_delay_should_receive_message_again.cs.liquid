@@ -55,7 +55,7 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDis
         Thread.Sleep(TimeSpan.FromSeconds(6));
 
         // Act
-        var received = _channel.Receive(null);
+        var received = _channel.Receive(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));
         Assert.NotEqual(MessageType.MT_QUIT, received.Header.MessageType);
 
         _channel.Requeue(received);
@@ -63,7 +63,7 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDis
         {%if DelayBetweenReceiveMessageInMilliseconds != null %}Thread.Sleep({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
 
         // Assert
-        received = _channel.Receive(null);
+        received = _channel.Receive(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));
         _channel.Acknowledge(received);
         _messageAssertion.Assert(message, received);
     }

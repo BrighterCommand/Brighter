@@ -104,4 +104,6 @@ public class MessagingGatewayConfiguration
     /// Gets or sets a value indicating whether the messaging gateway supports requeuing messages.
     /// </summary>
     public bool HasSupportToRequeue { get; set; }
+
+    public int ReceiveMessageTimeoutInMilliseconds { get; set; } = 300;
 }

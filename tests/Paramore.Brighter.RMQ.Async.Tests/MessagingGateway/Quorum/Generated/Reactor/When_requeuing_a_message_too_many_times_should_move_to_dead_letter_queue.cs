@@ -59,13 +59,13 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)
         {
-            received = _channel.Receive(null);
+            received = _channel.Receive(TimeSpan.FromMilliseconds(300));
             _channel.Requeue(received);
 
             Thread.Sleep(5000);
         }
 
-        received = _channel.Receive(null);
+        received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         // Act

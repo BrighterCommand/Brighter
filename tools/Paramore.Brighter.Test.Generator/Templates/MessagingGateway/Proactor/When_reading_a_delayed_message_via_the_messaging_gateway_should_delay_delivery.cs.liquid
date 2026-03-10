@@ -59,7 +59,7 @@ public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery
         await _producer.SendWithDelayAsync(message, TimeSpan.FromSeconds(5));
 
         // Act
-        var received = await _channel.ReceiveAsync(null);
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         await Task.Delay(TimeSpan.FromSeconds(5));

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Kafka.Proactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Kafka")]
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExceptionAsync : IAsyncLifetime

@@ -56,7 +56,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
         Thread.Sleep(5000);
 
         // Act
-        var received = _channel.Receive(null);
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         _channel.Requeue(received);
@@ -64,10 +64,10 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
         Thread.Sleep(5000);
 
         // Retry receiving in case the requeued message is not immediately available
-        Message requeued = new Message();
+        var requeued = new Message();
         for (var i = 0; i < 10; i++)
         {
-            requeued = _channel.Receive(null);
+            requeued = _channel.Receive(TimeSpan.FromMilliseconds(300));
             if (requeued.Header.MessageType != MessageType.MT_NONE)
             {
                 break;

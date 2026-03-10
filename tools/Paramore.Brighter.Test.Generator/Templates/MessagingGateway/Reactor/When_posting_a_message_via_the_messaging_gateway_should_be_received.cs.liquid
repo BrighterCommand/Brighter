@@ -56,7 +56,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
 
         {%if DelayBetweenReceiveMessageInMilliseconds != null %}Thread.Sleep({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
 
-        var received = _channel.Receive(null);
+        var received = _channel.Receive(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);

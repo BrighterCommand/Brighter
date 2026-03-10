@@ -54,13 +54,13 @@ public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery
         _producer.SendWithDelay(message, TimeSpan.FromSeconds(5));
 
         // Act
-        var received = _channel.Receive(null);
+        var received = _channel.Receive(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         Thread.Sleep(TimeSpan.FromSeconds(5));
 
         // Assert
-        received = _channel.Receive(null);
+        received = _channel.Receive(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
         _messageAssertion.Assert(message, received);
     }

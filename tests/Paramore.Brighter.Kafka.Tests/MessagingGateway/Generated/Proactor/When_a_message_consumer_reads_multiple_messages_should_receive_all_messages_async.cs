@@ -3,14 +3,17 @@
 // </auto-generated>
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Kafka.Proactor;
+using Paramore.Brighter.Extensions;
+
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Kafka")]
-public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IAsyncLifetime
+public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -24,7 +27,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
     private IAmAMessageProducerAsync? _producer;
     private IAmAChannelAsync? _channel;
 
-    public WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync()
+    public WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync()
     {
         _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
@@ -42,7 +45,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
     }
 
     [Fact]
-    public async Task When_posting_a_message_via_the_messaging_gateway_should_be_received_async()
+    public async Task When_a_message_consumer_reads_multiple_messages_should_receive_all_messages_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -53,16 +56,34 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
-        _sentMessages.Add(message);
+        _sentMessages =
+        [
+            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build()
+        ];
 
         // Act
-        await _producer.SendAsync(message);
+        await _sentMessages.EachAsync(async message => await _producer.SendAsync(message));
 
-        var received = await _channel.ReceiveAsync(TimeSpan.FromSeconds(10));
+        
 
         // Assert
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
-        _messageAssertion.Assert(message, received);
+        for (var i = 0; i < _sentMessages.Count; i++)
+        {
+            var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
+
+            Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
+
+            var expectedMessage = _sentMessages.FirstOrDefault(x => x.Header.MessageId == received.Header.MessageId);
+            Assert.NotNull(expectedMessage);
+
+            _messageAssertion.Assert(expectedMessage, received);
+
+            await _channel.AcknowledgeAsync(received);
+
+            
+        }
     }
 }

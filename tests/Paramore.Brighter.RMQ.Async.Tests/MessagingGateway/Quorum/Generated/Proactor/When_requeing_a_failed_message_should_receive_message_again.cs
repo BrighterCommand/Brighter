@@ -69,10 +69,10 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
         await Task.Delay(5000);
 
         // Retry receiving in case the requeued message is not immediately available
-        Message requeued = new Message();
+        var requeued = new Message();
         for (var i = 0; i < 10; i++)
         {
-            requeued = await _channel.ReceiveAsync(null);
+            requeued = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
             if (requeued.Header.MessageType != MessageType.MT_NONE)
             {
                 break;

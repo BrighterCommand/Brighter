@@ -3,17 +3,14 @@
 // </auto-generated>
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
-
-using Paramore.Brighter.Extensions;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Kafka.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
-public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDisposable
+public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -27,20 +24,20 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDi
     private IAmAMessageProducerSync? _producer;
     private IAmAChannelSync? _channel;
 
-    public WhenConfirmingPostingAMessageShouldReceivePublishConfirmation()
+    public WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived()
     {
         _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
         _messageAssertion = new KafkaMessageAssertion();
     }
 
-    public async void Dispose()
+    public void Dispose()
     {
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
     [Fact]
-    public void When_confirming_posting_a_message_should_receive_publish_confirmation()
+    public void When_posting_a_message_via_the_messaging_gateway_should_be_received()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -51,19 +48,18 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDi
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var confirmation = (ISupportPublishConfirmation)_producer;
-
-        var messageSent = false;
-        confirmation.OnMessagePublished += (confirmed, _) => messageSent = confirmed;
-
         var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
         _sentMessages.Add(message);
-        
+
         // Act
         _producer.Send(message);
-        Thread.Sleep(1000);
+
         
+
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
+
         // Assert
-        Assert.True(messageSent);
+        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        _messageAssertion.Assert(message, received);
     }
 }

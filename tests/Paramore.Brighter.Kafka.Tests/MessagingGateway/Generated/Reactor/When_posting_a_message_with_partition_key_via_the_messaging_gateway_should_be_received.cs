@@ -7,10 +7,10 @@ using System.Threading;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Kafka.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
-public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDisposable
+public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceived : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -24,7 +24,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
     private IAmAMessageProducerSync? _producer;
     private IAmAChannelSync? _channel;
 
-    public WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived()
+    public WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceived()
     {
         _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
@@ -37,7 +37,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
     }
 
     [Fact]
-    public void When_posting_a_message_via_the_messaging_gateway_should_be_received()
+    public void When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -48,7 +48,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(new PartitionKey(Uuid.NewAsString())).Build();
         _sentMessages.Add(message);
 
         // Act
@@ -56,7 +56,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
 
         
 
-        var received = _channel.Receive(TimeSpan.FromSeconds(10));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);

@@ -4,15 +4,13 @@
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Kafka.Proactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 /// <summary>
-/// Defines a provider for creating and managing asynchronous messaging gateway components for testing.
+/// Defines a provider for creating and managing synchronous messaging gateway components for testing.
 /// </summary>
-public interface IAmAMessageGatewayProactorProvider
+public interface IAmAMessageGatewayReactorProvider
 {
     /// <summary>
     /// Gets or creates a routing key based on the test name.
@@ -47,28 +45,18 @@ public interface IAmAMessageGatewayProactorProvider
     Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription CreateSubscription(RoutingKey routingKey, ChannelName channelName, OnMissingChannel makeChannel, bool setupDeadLetterQueue = false);
 
     /// <summary>
-    /// Retrieves a message from the dead letter queue for the specified subscription.
-    /// </summary>
-    /// <param name="subscription">The subscription configuration.</param>
-    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
-    /// <returns>A message from the dead letter queue.</returns>
-    Task<Message> GetMessageFromDeadLetterQueueAsync(Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription subscription, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Creates an asynchronous message producer for the specified publication.
+    /// Creates an synchronous message producer for the specified publication.
     /// </summary>
     /// <param name="publication">The publication configuration.</param>
-    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
-    /// <returns>An asynchronous message producer.</returns>
-    Task<IAmAMessageProducerAsync> CreateProducerAsync(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication publication, CancellationToken cancellationToken = default);
+    /// <returns>An synchronous message producer.</returns>
+    IAmAMessageProducerSync CreateProducer(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication publication);
     
     /// <summary>
-    /// Creates an asynchronous channel for the specified subscription.
+    /// Creates an synchronous channel for the specified subscription.
     /// </summary>
     /// <param name="subscription">The subscription configuration.</param>
-    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
     /// <returns>An asynchronous channel for receiving messages.</returns>
-    Task<IAmAChannelAsync> CreateChannelAsync(Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription subscription, CancellationToken cancellationToken = default);
+    IAmAChannelSync CreateChannel(Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription subscription);
 
     /// <summary>
     /// Cleans up the specified producer and channel resources.
@@ -77,5 +65,12 @@ public interface IAmAMessageGatewayProactorProvider
     /// <param name="channel">The channel to clean up, or null.</param>
     /// <param name="messages">The messages to clean up.</param>
     /// <returns>A task representing the cleanup operation.</returns>
-    Task CleanUpAsync(IAmAMessageProducerAsync? producer, IAmAChannelAsync? channel, IEnumerable<Message> messages);
+    void CleanUp(IAmAMessageProducerSync? producer, IAmAChannelSync? channel, IEnumerable<Message> messages);
+
+    /// <summary>
+    /// Gets a message from the dead letter queue for the specified subscription.
+    /// </summary>
+    /// <param name="subscription">The subscription configuration.</param>
+    /// <returns>The message from the dead letter queue.</returns>
+    Message GetMessageFromDeadLetterQueue(Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription subscription);
 }

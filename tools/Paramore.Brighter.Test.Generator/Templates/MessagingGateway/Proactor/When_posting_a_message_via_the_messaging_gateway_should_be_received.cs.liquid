@@ -61,7 +61,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
 
         {%if DelayBetweenReceiveMessageInMilliseconds != null %}await Task.Delay({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
 
-        var received = await _channel.ReceiveAsync(null);
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);

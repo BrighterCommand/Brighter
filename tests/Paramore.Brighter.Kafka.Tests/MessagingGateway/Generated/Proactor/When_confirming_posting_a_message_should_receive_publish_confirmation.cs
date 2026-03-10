@@ -3,14 +3,17 @@
 // </auto-generated>
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Kafka.Proactor;
+using Paramore.Brighter.Extensions;
+
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Kafka")]
-public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceivedAsync : IAsyncLifetime
+public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -24,7 +27,7 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
     private IAmAMessageProducerAsync? _producer;
     private IAmAChannelAsync? _channel;
 
-    public WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceivedAsync()
+    public WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync()
     {
         _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
@@ -42,7 +45,7 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
     }
 
     [Fact]
-    public async Task When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received_async()
+    public async Task When_confirming_posting_a_message_should_receive_publish_confirmation_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -53,16 +56,19 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(new PartitionKey(Uuid.NewAsString())).Build();
-        _sentMessages.Add(message);
+        var confirmation = (ISupportPublishConfirmation)_producer;
 
+        var messageSent = false;
+        confirmation.OnMessagePublished += (confirmed, _) => messageSent = confirmed;
+
+        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        _sentMessages.Add(message);
+        
         // Act
         await _producer.SendAsync(message);
-
-        var received = await _channel.ReceiveAsync(TimeSpan.FromSeconds(10));
-
+        
+        
         // Assert
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
-        _messageAssertion.Assert(message, received);
+        Assert.True(messageSent);
     }
 }

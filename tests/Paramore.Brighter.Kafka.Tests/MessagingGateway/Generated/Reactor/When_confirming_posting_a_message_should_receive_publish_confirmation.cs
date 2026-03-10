@@ -10,10 +10,10 @@ using Paramore.Brighter.Extensions;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Kafka.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
-public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages : IDisposable
+public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -27,7 +27,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
     private IAmAMessageProducerSync? _producer;
     private IAmAChannelSync? _channel;
 
-    public WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages()
+    public WhenConfirmingPostingAMessageShouldReceivePublishConfirmation()
     {
         _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
@@ -40,7 +40,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
     }
 
     [Fact]
-    public void When_a_message_consumer_reads_multiple_messages_should_receive_all_messages()
+    public void When_confirming_posting_a_message_should_receive_publish_confirmation()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -51,34 +51,19 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        _sentMessages =
-        [
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build()
-        ];
+        var confirmation = (ISupportPublishConfirmation)_producer;
 
-        // Act
-        _sentMessages.Each(message => _producer.Send(message));
+        var messageSent = false;
+        confirmation.OnMessagePublished += (confirmed, _) => messageSent = confirmed;
 
+        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        _sentMessages.Add(message);
         
-
+        // Act
+        _producer.Send(message);
+        Thread.Sleep(1000);
+        
         // Assert
-        for (var i = 0; i < _sentMessages.Count; i++)
-        {
-            var received = _channel.Receive(TimeSpan.FromSeconds(10));
-
-            Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
-
-            var expectedMessage = _sentMessages.FirstOrDefault(x => x.Header.MessageId == received.Header.MessageId);
-            Assert.NotNull(expectedMessage);
-
-            _messageAssertion.Assert(expectedMessage, received);
-
-            _channel.Acknowledge(received);
-
-            
-        }
+        Assert.True(messageSent);
     }
 }
