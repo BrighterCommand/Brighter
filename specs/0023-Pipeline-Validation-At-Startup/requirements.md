@@ -65,7 +65,7 @@ A startup diagnostic report that shows the developer exactly how Brighter has be
 
 An opt-in validation that checks the fully-wired configuration at startup, before any messages are sent or consumed. Separate validation rules apply to each configuration path.
 
-**Developer experience**: If validation fails, Brighter throws an `AggregateException` containing all errors, preventing the host from starting.
+**Developer experience**: If validation fails, Brighter throws a single exception containing all errors, preventing the host from starting.
 
 ### Layer 3: Roslyn Analyzers — OUT OF SCOPE
 
@@ -122,7 +122,7 @@ The diagnostic report must show, for each `Subscription`:
 ### Functional Requirements — Cross-Cutting
 
 #### FR-10: Aggregate Error Reporting
-All validation errors from all configuration paths must be collected and reported together as an `AggregateException` (or similar aggregating mechanism), not one at a time. The developer should see every problem in a single startup failure, not have to fix-and-restart repeatedly.
+All validation errors from all configuration paths must be collected and reported together in a single exception, not one at a time. The developer should see every problem in a single startup failure, not have to fix-and-restart repeatedly. The exception type should extend Brighter's existing `ConfigurationException` so that existing catch blocks continue to work (ADR 0053 specifies `PipelineValidationException : ConfigurationException`).
 
 #### FR-11: Clear, Actionable Error Messages
 Each validation error message must identify:

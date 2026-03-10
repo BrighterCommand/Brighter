@@ -410,7 +410,7 @@ public class Specification<T> : ISpecification<T>
 
 The exception-catching wrapper in `IsSatisfiedBy` ensures that even programming errors in handler types — such as a type that implements neither `IHandleRequests` nor `IHandleRequestsAsync` — produce a structured Error-severity finding rather than crashing startup with an unhandled exception.
 
-**Statefulness note**: `_lastResults` is set during `IsSatisfiedBy` and read by the visitor. This makes the specification stateful, but startup validation is single-threaded so this is safe. Non-validation consumers (e.g. `ExclusiveChoice`) never call the visitor and are unaffected.
+**Statefulness note**: `_lastResults` is set during `IsSatisfiedBy` and read by the visitor. This makes the specification stateful, but startup validation is single-threaded so this is safe. Non-validation consumers (e.g. `ExclusiveChoice`) never call the visitor and are unaffected. Importantly, `_lastResults` acts as a cache — `EvaluateCollapsed` materializes the result enumerable once (via `.ToList()`), and the visitor's `Visit(Specification<TData>)` returns the stored `LastResults` without re-evaluating. There is no double evaluation.
 
 #### 6. `ValidationResult` and the Visitor Pattern
 
@@ -668,6 +668,8 @@ builder.Services.AddBrighter(options => { /* ... */ })
 The extension methods register:
 - `IAmAPipelineValidator` and/or `IAmAPipelineDiagnosticWriter` in DI.
 - A dedicated `BrighterValidationHostedService` (an `IHostedService`) that runs validation at startup.
+
+**Precondition**: `ValidatePipelines()` requires the subscriber registry to implement `IAmASubscriberRegistryInspector`. The built-in `SubscriberRegistry` satisfies this automatically. Applications using a custom `IAmASubscriberRegistry` implementation must also implement `IAmASubscriberRegistryInspector` on that type — if the inspector interface cannot be resolved from DI, the validator throws at startup with a message identifying the missing interface and the required action.
 
 ### Integration Points and Hosted Service Coordination
 
