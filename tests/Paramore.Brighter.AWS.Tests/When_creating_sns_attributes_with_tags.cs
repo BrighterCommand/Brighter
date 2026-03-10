@@ -24,23 +24,25 @@ public class When_creating_sns_attributes_with_tags
     }
 
     [Fact]
-    public void When_no_tags_provided_should_be_null()
+    public void When_no_tags_provided_should_be_empty()
     {
         //act
         var snsAttributes = new SnsAttributes();
 
         //assert
-        Assert.Null(snsAttributes.Tags);
+        Assert.NotNull(snsAttributes.Tags);
+        Assert.Empty(snsAttributes.Tags);
     }
 
     [Fact]
-    public void When_empty_should_have_null_tags()
+    public void When_empty_should_have_empty_tags()
     {
         //act
         var snsAttributes = SnsAttributes.Empty;
 
         //assert
-        Assert.Null(snsAttributes.Tags);
+        Assert.NotNull(snsAttributes.Tags);
+        Assert.Empty(snsAttributes.Tags);
     }
 
     [Fact]

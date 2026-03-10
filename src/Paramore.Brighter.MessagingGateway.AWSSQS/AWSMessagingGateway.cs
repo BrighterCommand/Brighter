@@ -374,12 +374,12 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
     private Dictionary<string, string> CreateQueueTags(SqsAttributes? sqsAttributes)
     {
-        var tags = new Dictionary<string, string> { { "Source", "Brighter" } };
+        var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { { "Source", "Brighter" } };
         if (sqsAttributes?.Tags == null) return tags;
-        
+
         foreach (var tag in sqsAttributes.Tags)
         {
-            tags.Add(tag.Key, tag.Value);
+            tags[tag.Key] = tag.Value;
         }
 
         return tags;
@@ -387,11 +387,15 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
     private static List<Tag> CreateTopicTags(SnsAttributes? snsAttributes)
     {
-        var tags = new List<Tag> { new() { Key = "Source", Value = "Brighter" } };
-        if (snsAttributes?.Tags == null) return tags;
+        var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { { "Source", "Brighter" } };
 
-        tags.AddRange(snsAttributes.Tags);
-        return tags;
+        if (snsAttributes?.Tags != null)
+        {
+            foreach (var tag in snsAttributes.Tags)
+                tags[tag.Key] = tag.Value;
+        }
+
+        return tags.Select(kvp => new Tag { Key = kvp.Key, Value = kvp.Value }).ToList();
     }
 
     private static Dictionary<string, string?> CreateTopicAttributes(SnsAttributes snsAttributes)

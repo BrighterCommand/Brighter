@@ -9,6 +9,23 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLEANUP_SCRIPT="$SCRIPT_DIR/clean_failed_tests_aws_assets.sh"
 
+# --- Cleanup trap: ensure test resources are removed regardless of outcome ---
+TAGGED_QUEUE_URL=""
+UNTAGGED_QUEUE_URL=""
+TAGGED_TOPIC_ARN=""
+UNTAGGED_TOPIC_ARN=""
+
+cleanup_test_resources() {
+    echo ""
+    echo "=== Trap Teardown ==="
+    [[ -n "$UNTAGGED_QUEUE_URL" ]] && aws sqs delete-queue --queue-url "$UNTAGGED_QUEUE_URL" 2>/dev/null || true
+    [[ -n "$UNTAGGED_TOPIC_ARN" ]] && aws sns delete-topic --topic-arn "$UNTAGGED_TOPIC_ARN" 2>/dev/null || true
+    [[ -n "$TAGGED_QUEUE_URL" ]] && aws sqs delete-queue --queue-url "$TAGGED_QUEUE_URL" 2>/dev/null || true
+    [[ -n "$TAGGED_TOPIC_ARN" ]] && aws sns delete-topic --topic-arn "$TAGGED_TOPIC_ARN" 2>/dev/null || true
+    echo "  Cleaned up test fixtures"
+}
+trap cleanup_test_resources EXIT
+
 # --- Test harness ---
 PASS=0
 FAIL=0
@@ -17,10 +34,10 @@ assert_eq() {
     local expected="$1" actual="$2" message="$3"
     if [[ "$expected" == "$actual" ]]; then
         echo "  PASS: $message"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "  FAIL: $message (expected='$expected', actual='$actual')"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 }
 
@@ -28,10 +45,10 @@ assert_contains() {
     local haystack="$1" needle="$2" message="$3"
     if echo "$haystack" | grep -qE "$needle"; then
         echo "  PASS: $message"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "  FAIL: $message (output did not contain '$needle')"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 }
 
@@ -39,10 +56,10 @@ assert_not_empty() {
     local value="$1" message="$2"
     if [[ -n "$value" ]]; then
         echo "  PASS: $message"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "  FAIL: $message (value was empty)"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 }
 
@@ -132,10 +149,10 @@ TOPIC_LINE=$(echo "$RUN_OUTPUT" | grep -n "topic" | grep -v "subscription" | hea
 if [[ -n "$SUB_LINE" && -n "$TOPIC_LINE" ]]; then
     if [[ "$SUB_LINE" -lt "$TOPIC_LINE" ]]; then
         echo "  PASS: subscriptions deleted before topics (line $SUB_LINE < $TOPIC_LINE)"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "  FAIL: subscriptions should be deleted before topics (sub=$SUB_LINE, topic=$TOPIC_LINE)"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 else
     echo "  SKIP: could not determine deletion order from output"
@@ -164,15 +181,7 @@ assert_not_empty "$UNTAGGED_QUEUE_CHECK" "untagged queue was NOT deleted"
 UNTAGGED_TOPIC_CHECK=$(aws sns get-topic-attributes --topic-arn "$UNTAGGED_TOPIC_ARN" --query 'Attributes.TopicArn' --output text 2>/dev/null || echo "")
 assert_not_empty "$UNTAGGED_TOPIC_CHECK" "untagged topic was NOT deleted"
 
-# --- Teardown: clean up untagged test resources ---
-echo ""
-echo "=== Teardown ==="
-aws sqs delete-queue --queue-url "$UNTAGGED_QUEUE_URL" 2>/dev/null || true
-aws sns delete-topic --topic-arn "$UNTAGGED_TOPIC_ARN" 2>/dev/null || true
-# Also clean up tagged resources in case they weren't deleted (test failure path)
-aws sqs delete-queue --queue-url "$TAGGED_QUEUE_URL" 2>/dev/null || true
-aws sns delete-topic --topic-arn "$TAGGED_TOPIC_ARN" 2>/dev/null || true
-echo "  Cleaned up test fixtures"
+# Teardown is handled by the EXIT trap defined at the top of the script.
 
 # --- Results ---
 echo ""

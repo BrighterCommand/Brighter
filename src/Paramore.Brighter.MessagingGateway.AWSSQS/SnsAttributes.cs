@@ -45,7 +45,7 @@ public class SnsAttributes
         Policy = policy;
         Type = type;
         ContentBasedDeduplication = contentBasedDeduplication;
-        Tags = tags;
+        Tags = tags ?? [];
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public class SnsAttributes
     /// Ignored if TopicARN is set
     /// </summary>
     public string? DeliveryPolicy { get; }
-    
+
     /// <summary>
     /// Creates a new instance of the <see cref="SnsAttributes"/> class. All attributes will be default values.
     /// </summary>
@@ -65,11 +65,12 @@ public class SnsAttributes
     /// Ignored if TopicARN is set
     /// </summary>
     public string? Policy { get; }
-        
+
     /// <summary>
-    /// A list of resource tags to use when creating the publication  Ignored if TopicARN is set
+    /// A list of resource tags to use when creating the publication. Ignored if TopicARN is set.
+    /// The "Source" tag key is reserved and will be overridden with the value "Brighter".
     /// </summary>
-    public List<Tag>? Tags { get; }
+    public List<Tag> Tags { get; }
 
     /// <summary>
     /// The <see cref="SqsType"/>.

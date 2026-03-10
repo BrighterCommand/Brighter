@@ -6,6 +6,7 @@
 #   ./clean_failed_tests_aws_assets.sh            # delete tagged resources
 #   ./clean_failed_tests_aws_assets.sh --dry-run   # list without deleting
 
+# Intentionally omitting -e: individual deletion failures are soft errors handled inline.
 set -uo pipefail
 
 DRY_RUN=false
@@ -19,6 +20,7 @@ echo "Querying resources tagged Environment=Test ..."
 
 RESOURCE_ARNS=$(aws resourcegroupstaggingapi get-resources \
     --tag-filters Key=Environment,Values=Test \
+    --resource-type-filters sqs:queue sns:topic \
     --query 'ResourceTagMappingList[*].ResourceARN' \
     --output text 2>&1)
 TAG_API_EXIT=$?
@@ -35,16 +37,19 @@ if [[ -z "$RESOURCE_ARNS" ]]; then
 fi
 
 # --- Categorise ARNs by resource type ---
+# Note: SNS subscriptions cannot be tagged and will not appear in the Tagging API response.
+# Subscriptions are cleaned up implicitly in the topic-deletion loop below via list-subscriptions-by-topic.
+# The subscription bucket is kept for completeness in case AWS adds subscription tagging in future.
 SUBSCRIPTIONS=()
 TOPICS=()
 QUEUES=()
 
 for arn in $RESOURCE_ARNS; do
-    # Count colon-separated segments to distinguish SNS topics (6) from subscriptions (7)
+    # Count colons to distinguish SNS topics (5 colons) from subscriptions (6 colons)
     COLON_COUNT=$(echo "$arn" | tr -cd ':' | wc -c | tr -d ' ')
     case "$arn" in
         *:sns:*)
-            if [[ "$COLON_COUNT" -ge 7 ]]; then
+            if [[ "$COLON_COUNT" -ge 6 ]]; then
                 SUBSCRIPTIONS+=("$arn")
             else
                 TOPICS+=("$arn")
