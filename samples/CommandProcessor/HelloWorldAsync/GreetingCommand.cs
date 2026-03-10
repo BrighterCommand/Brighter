@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using Paramore.Brighter;
 
 namespace HelloWorldAsync
