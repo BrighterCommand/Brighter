@@ -53,11 +53,15 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 
         _producer.Send(message);
 
+        
+
         // Act
         var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         _channel.Requeue(received);
+
+        
 
         // Retry receiving in case the requeued message is not immediately available
         var requeued = new Message();
@@ -68,6 +72,8 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
             {
                 break;
             }
+
+            
         }
 
         // Assert

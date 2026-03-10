@@ -13,13 +13,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Async;
 public class WhenAddingADuplicateMessageItShouldNotThrowAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenAddingADuplicateMessageItShouldNotThrowAsync()
     {
         _outboxProvider = new PostgresBinaryOutboxProvider();
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     public async Task InitializeAsync()
@@ -37,7 +37,7 @@ public class WhenAddingADuplicateMessageItShouldNotThrowAsync : IAsyncLifetime
     {
         // Arrange
         var context = new RequestContext();
-        var message = _messageFactory.Create();
+        var message = _messageBuilder.Build();
 
         _createdMessages.Add(message);
         

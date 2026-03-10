@@ -37,7 +37,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Sync;
 public class WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommit : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommit()
@@ -45,7 +45,7 @@ public class WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommit : ID
         _outboxProvider = new PostgresBinaryOutboxProvider();
         _outboxProvider.CreateStore();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommit : ID
         _ = transaction.GetTransaction();
 
         var context = new RequestContext();
-        var message = _messageFactory.Create();
+        var message = _messageBuilder.Build();
 
         _createdMessages.Add(message );
 

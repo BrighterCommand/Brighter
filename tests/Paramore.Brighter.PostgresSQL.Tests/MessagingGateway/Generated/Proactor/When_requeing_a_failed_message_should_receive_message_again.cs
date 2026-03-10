@@ -83,7 +83,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, requeued.Header.MessageType);
-        Assert.Equal(message.Header.MessageId.ToString(), requeued.Header.Bag[Message.OriginalMessageIdHeaderName]);
+        Assert.Equal(message.Header.MessageId.ToString(), requeued.Header.Bag[Message.OriginalMessageIdHeaderName].ToString());
         _messageAssertion.Assert(message, requeued);
     }
 }
