@@ -573,14 +573,45 @@ internal static class HandlerPipelineValidationRules
 public PipelineValidationResult Validate()
 {
     var findings = new List<ValidationError>();
-    var collector = new ValidationResultCollector<HandlerPipelineDescription>();
 
-    // Handler pipeline specifications
-    foreach (var description in _pipelineBuilder.Describe())
+    ValidateHandlerPipelines(findings);
+    ValidateProducers(findings);
+    ValidateConsumers(findings);
+
+    return new PipelineValidationResult(findings);
+}
+
+private void ValidateHandlerPipelines(List<ValidationError> findings)
+{
+    EvaluateSpecs(
+        _pipelineBuilder.Describe(),
+        HandlerPipelineValidationRules.Rules(),
+        findings);
+}
+
+private void ValidateProducers(List<ValidationError> findings)
+{
+    if (_publications == null) return;
+
+    EvaluateSpecs(_publications, ProducerValidationRules.Rules(), findings);
+}
+
+private void ValidateConsumers(List<ValidationError> findings)
+{
+    // ...same pattern with ConsumerValidationRules.Rules()
+}
+
+private static void EvaluateSpecs<T>(
+    IEnumerable<T> entities,
+    IEnumerable<ISpecification<T>> specs,
+    List<ValidationError> findings)
+{
+    var collector = new ValidationResultCollector<T>();
+    foreach (var entity in entities)
     {
-        foreach (var spec in HandlerPipelineValidationRules.Rules())
+        foreach (var spec in specs)
         {
-            if (!spec.IsSatisfiedBy(description))
+            if (!spec.IsSatisfiedBy(entity))
             {
                 findings.AddRange(
                     spec.Accept(collector)
@@ -589,30 +620,6 @@ public PipelineValidationResult Validate()
             }
         }
     }
-
-    // Producer specifications (if configured)
-    if (_publications != null)
-    {
-        var pubCollector = new ValidationResultCollector<Publication>();
-        foreach (var publication in _publications)
-        {
-            foreach (var spec in ProducerValidationRules.Rules())
-            {
-                if (!spec.IsSatisfiedBy(publication))
-                {
-                    findings.AddRange(
-                        spec.Accept(pubCollector)
-                            .Where(r => !r.Success)
-                            .Select(r => r.Error!));
-                }
-            }
-        }
-    }
-
-    // Consumer specifications (if configured)
-    // ...same pattern with ConsumerValidationRules.Rules()
-
-    return new PipelineValidationResult(findings);
 }
 ```
 
