@@ -673,26 +673,40 @@ The extension methods register:
 
 ### Integration Points and Hosted Service Coordination
 
-When both `BrighterValidationHostedService` and `ServiceActivatorHostedService` are registered, validation must run exactly once. Rather than shared mutable state (flags, singletons), coordination is based on **DI registration presence** — which is deterministic and immutable after the service provider is built:
+When both `BrighterValidationHostedService` and `ServiceActivatorHostedService` are registered, validation must run exactly once. Coordination uses an explicit options object rather than implicit DI-presence probing, so that both hosted services read a single, documented flag to decide who acts:
 
-- `ValidatePipelines()` always registers `IAmAPipelineValidator` in DI and always registers `BrighterValidationHostedService`.
-- `AddConsumers()` always registers `IDispatcher` in DI (via `ServiceCollectionExtensions`).
+```csharp
+// In Paramore.Brighter.Extensions.DependencyInjection
+public class BrighterPipelineValidationOptions
+{
+    /// <summary>
+    /// When true, ServiceActivatorHostedService is responsible for running
+    /// validation before _dispatcher.Receive(). BrighterValidationHostedService
+    /// becomes a no-op. Set by AddConsumers() when validation is opted in.
+    /// </summary>
+    public bool ConsumerOwnsValidation { get; set; }
+}
+```
 
-The two hosted services use optional DI resolution to decide who acts:
+Registration rules:
+- `ValidatePipelines()` always registers `IAmAPipelineValidator` in DI, always registers `BrighterValidationHostedService`, and always registers `BrighterPipelineValidationOptions` (with `ConsumerOwnsValidation = false`).
+- `AddConsumers()`, if `BrighterPipelineValidationOptions` is already registered, sets `ConsumerOwnsValidation = true`. This is a `Configure<BrighterPipelineValidationOptions>` call, so registration order between `ValidatePipelines()` and `AddConsumers()` does not matter.
 
-**`BrighterValidationHostedService.StartAsync()`**: Resolves `IDispatcher?` (optional) from DI. If `IDispatcher` is present, `ServiceActivatorHostedService` will handle validation — this service becomes a no-op. If absent (pure CQRS or producers only), it runs validation and diagnostics.
+The two hosted services read the flag explicitly:
+
+**`BrighterValidationHostedService.StartAsync()`**: Reads `BrighterPipelineValidationOptions`. If `ConsumerOwnsValidation` is true, this service is a no-op — `ServiceActivatorHostedService` will handle validation. If false (pure CQRS or producers only), it runs validation and diagnostics.
 
 **`ServiceActivatorHostedService.StartAsync()`**: Resolves `IAmAPipelineValidator?` and `IAmAPipelineDiagnosticWriter?` (both optional) from DI. If present, calls them before `_dispatcher.Receive()`. If absent (validation not opted in), proceeds directly to `Receive()`.
 
 ```
 Scenario 1: Pure CQRS / Producers Only
   BrighterValidationHostedService:
-    IDispatcher? → null → RUN validation
+    ConsumerOwnsValidation → false → RUN validation
   (no ServiceActivatorHostedService)
 
 Scenario 2: Full Messaging, Validation Opted In
   BrighterValidationHostedService:
-    IDispatcher? → present → NO-OP
+    ConsumerOwnsValidation → true → NO-OP
   ServiceActivatorHostedService:
     IAmAPipelineValidator? → present → RUN validation
     _dispatcher.Receive()
@@ -704,7 +718,7 @@ Scenario 3: Full Messaging, Validation Not Opted In
     _dispatcher.Receive()
 ```
 
-This requires no shared mutable state — each service makes a local decision based on what DI contains. `IHostedService` startup order is deterministic (registration order), but the design does not depend on ordering.
+This makes the coordination contract explicit — both services reference a named flag with clear semantics, rather than inferring intent from the presence of unrelated DI registrations. `IHostedService` startup order is deterministic (registration order), but the design does not depend on ordering.
 
 ### Core Design: Pipeline Description Model (Dry Run)
 
@@ -1040,10 +1054,10 @@ public void Add(Type requestType, Func<IRequest?, IRequestContext?, List<Type>> 
 }
 
 public IEnumerable<Type> GetHandlerTypes(Type requestType)
-    => _allHandlerTypes.TryGetValue(requestType, out var types) ? types : [];
+    => _allHandlerTypes.TryGetValue(requestType, out var types) ? types.ToArray() : [];
 
 public IEnumerable<Type> GetRegisteredRequestTypes()
-    => _allHandlerTypes.Keys;
+    => _allHandlerTypes.Keys.ToArray();
 ```
 
 This is a structural-only tidy (no behavioral change to existing callers) — `Get<T>()` continues to evaluate routing functions at runtime. `GetHandlerTypes(Type)` returns the superset of all possible handler types without needing an instance of the request or evaluation of routing predicates. `GetRegisteredRequestTypes()` returns the keys of the same dictionary — the set of all request types that have been registered.
@@ -1157,6 +1171,7 @@ foreach (var description in pipelineBuilder.Describe())
 | **DI & Hosting Integration** | | |
 | `ValidatePipelines()` extension | `Paramore.Brighter.Extensions.DependencyInjection` | Extension on `IBrighterBuilder` |
 | `DescribePipelines()` extension | `Paramore.Brighter.Extensions.DependencyInjection` | Extension on `IBrighterBuilder` |
+| `BrighterPipelineValidationOptions` | `Paramore.Brighter.Extensions.DependencyInjection` | Explicit coordination flag between hosted services |
 | `BrighterValidationHostedService` | `Paramore.Brighter.Extensions.DependencyInjection` | Runs at startup for non-consumer apps |
 | Consumer rule registration | `Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection` | Adds consumer rules to validator |
 | `ServiceActivatorHostedService` changes | `Paramore.Brighter.ServiceActivator.Extensions.Hosting` | Invokes validator/writer before Receive() |
@@ -1370,7 +1385,7 @@ new Specification<Subscription>(
 - `PipelineBuilder` gains a new public method (`Describe`) which increases its surface area. However, this is a natural companion to `Build` — same inputs, different output.
 - `MessageMapperRegistry` needs minor extensions for inspection without instantiation. `SubscriberRegistry` gains a second interface (`IAmASubscriberRegistryInspector`) — though this is non-breaking since `IAmASubscriberRegistry` itself is unchanged.
 - Moving `ISpecification<T>` / `Specification<T>` from `Paramore.Brighter.Mediator` to `Paramore.Brighter` is a breaking change: the namespace changes (fix: update `using`), and `ISpecification<T>` gains new members (`Accept<TResult>`, `Not(Func<TData, ValidationError>)`) which break any user code implementing the interface directly. Both are acceptable — `Paramore.Brighter.Mediator` is alpha, not advertised as a stable public API, and the only known implementation is the framework's own `Specification<T>`. The `Paramore.Brighter.Mediator` project continues to depend on `Paramore.Brighter`, so the types remain transitively available.
-- Two potential integration points (dedicated `BrighterValidationHostedService` for non-consumer apps, `ServiceActivatorHostedService` for consumer apps) need to coordinate to avoid double-running. This is handled via optional DI resolution rather than shared mutable state.
+- Two potential integration points (dedicated `BrighterValidationHostedService` for non-consumer apps, `ServiceActivatorHostedService` for consumer apps) need to coordinate to avoid double-running. This is handled via an explicit `BrighterPipelineValidationOptions.ConsumerOwnsValidation` flag rather than shared mutable state.
 
 ### Risks and Mitigations
 
@@ -1387,7 +1402,7 @@ new Specification<Subscription>(
   **Mitigation**: A new `IAmASubscriberRegistryInspector` interface carries the introspection methods (`GetHandlerTypes(Type)`, `GetRegisteredRequestTypes()`). `SubscriberRegistry` implements both interfaces. `IAmASubscriberRegistry` is untouched — no breaking change. Custom registry implementations that want to participate in validation implement the inspector interface; those that do not are unaffected.
 
 - **Risk**: Coordination between `BrighterValidationHostedService` and `ServiceActivatorHostedService`.
-  **Mitigation**: Each service resolves an optional DI dependency to decide whether to act: `BrighterValidationHostedService` checks for `IDispatcher?` (no-op if present), `ServiceActivatorHostedService` checks for `IAmAPipelineValidator?` (runs validation if present). No shared mutable state — decisions are based on immutable DI registrations. See "Hosted Service Coordination" section above for the full scenario matrix.
+  **Mitigation**: Coordination uses an explicit `BrighterPipelineValidationOptions.ConsumerOwnsValidation` flag. `AddConsumers()` sets the flag to `true`; `BrighterValidationHostedService` reads it and becomes a no-op when set. `ServiceActivatorHostedService` resolves `IAmAPipelineValidator?` (optional) to decide whether validation was opted in. Both decisions are based on immutable configuration — no shared mutable state. See "Hosted Service Coordination" section above for the full scenario matrix.
 
 ## Alternatives Considered
 
