@@ -30,7 +30,7 @@ A developer may use only path 1 (pure CQRS in-process), paths 1+2 (sends message
 
 ### What Can Go Wrong at Each Level
 
-**AddBrighter**: Handler attributes ordered such that a backstop (Reject/Defer/DontAck) comes after a resilience pipeline, rendering it ineffective. Sync attributes on async handlers (or vice versa) are silently ignored. Only discovered when the pipeline runs.
+**AddBrighter**: Handler attributes ordered such that a backstop (Reject/Defer/DontAck) comes after a resilience pipeline, rendering it ineffective. Sync attributes on async handlers (or vice versa) are silently ignored. A handler declared as `internal` rather than `public` will not be found by the pipeline builder — Brighter only supports public handler types. Only discovered when the pipeline runs.
 
 **AddProducers**: `Publication.RequestType` not set (causes `ConfigurationException` at `Post()`/`Deposit()` time). No mapper registered for a published type (causes `ArgumentOutOfRangeException` at send time). Transform pipeline misconfigured. Developer has no visibility into which mapper (custom vs default) resolves for outgoing messages.
 
@@ -129,6 +129,7 @@ internal static class HandlerPipelineValidationRules
     // Returns ISpecification<HandlerPipelineDescription> instances for:
     // FR-1: Backstop attribute ordering
     // FR-2: Sync/async attribute consistency
+    // FR-3: Handler type visibility (must be public)
     public static IEnumerable<ISpecification<HandlerPipelineDescription>> Rules();
 }
 
@@ -506,6 +507,17 @@ internal static class HandlerPipelineValidationRules
 {
     public static IEnumerable<ISpecification<HandlerPipelineDescription>> Rules()
     {
+        // Simple rule: handler type must be public. Brighter only supports public
+        // handler types — internal handlers will not be found by the pipeline builder.
+        yield return new Specification<HandlerPipelineDescription>(
+            d => d.HandlerType.IsVisible,
+            d => new ValidationError(
+                ValidationSeverity.Error,
+                $"Handler '{d.HandlerType.Name}'",
+                $"Handler type '{d.HandlerType.FullName}' is not public — " +
+                "Brighter only supports public handler types. Make the class public " +
+                "so the pipeline builder can find it"));
+
         // Per-pair analysis — yields one Warning per misordered backstop/resilience pair.
         // Uses the collapsed constructor: the function returns ValidationResult per bad pair,
         // and IsSatisfiedBy derives its bool from the results.
@@ -1150,6 +1162,22 @@ foreach (var description in pipelineBuilder.Describe())
 Each specification encapsulates both the predicate and its validation metadata. **Simple specifications** use the two-argument constructor (`Func<T, bool>` + `Func<T, ValidationError>`) — the predicate expresses the *valid* condition, and the error factory provides what to report when it fails. **Collapsed specifications** use the single-argument constructor (`Func<T, IEnumerable<ValidationResult>>`) for per-element rules that need to report on multiple sub-elements individually.
 
 #### AddBrighter Specifications — `ISpecification<HandlerPipelineDescription>`
+
+**Specification: HandlerTypeVisibility** (Error, simple)
+
+```csharp
+// Brighter only supports public handler types. Internal handlers will not be found
+// by the pipeline builder at runtime. Type.IsVisible accounts for both top-level
+// non-public types and public types nested inside non-public parents.
+new Specification<HandlerPipelineDescription>(
+    d => d.HandlerType.IsVisible,
+    d => new ValidationError(
+        ValidationSeverity.Error,
+        $"Handler '{d.HandlerType.Name}'",
+        $"Handler type '{d.HandlerType.FullName}' is not public — " +
+        "Brighter only supports public handler types. Make the class public " +
+        "so the pipeline builder can find it"))
+```
 
 **Specification: BackstopAttributeOrdering** (Warning, per-pair, collapsed)
 
