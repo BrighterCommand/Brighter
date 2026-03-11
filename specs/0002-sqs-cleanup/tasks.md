@@ -30,8 +30,8 @@ Task 4 (SQS test tags)    ────────▶ Task 5 (Cleanup script)
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Add `List<Tag>? tags = null` parameter to `SnsAttributes` constructor in `src/Paramore.Brighter.MessagingGateway.AWSSQS/SnsAttributes.cs`
-    - Change `Tags` from `public List<Tag> Tags => [];` to `public List<Tag>? Tags { get; }`
-    - Store tags in constructor body: `Tags = tags;`
+    - Change `Tags` from `public List<Tag> Tags => [];` to `public List<Tag> Tags { get; }`
+    - Store tags in constructor body: `Tags = tags ?? [];`
     - Apply identical changes to `src/Paramore.Brighter.MessagingGateway.AWSSQS.V4/SnsAttributes.cs`
 
 - [x] **TEST + IMPLEMENT: CreateTopicAsync applies custom tags from SnsAttributes**

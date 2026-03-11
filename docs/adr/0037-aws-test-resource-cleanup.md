@@ -100,10 +100,10 @@ public SnsAttributes(
     List<Tag>? tags = null)
 {
     // ...existing assignments...
-    Tags = tags;
+    Tags = tags ?? [];
 }
 
-public List<Tag>? Tags { get; }
+public List<Tag> Tags { get; }
 ```
 
 **Files affected**:
