@@ -14,28 +14,28 @@ Tasks are organized into 7 phases. Phases 1-2 are structural tidies (no behavior
 
 These tasks use `/tidy-first` — they change code structure without changing behavior. Existing tests must continue to pass.
 
-- [ ] **TIDY: Move ISpecification<T> and Specification<T> from Mediator to Brighter**
+- [x] **TIDY: Move ISpecification<T> and Specification<T> from Mediator to Brighter**
   - **USE COMMAND**: `/tidy-first move Specification types from Paramore.Brighter.Mediator to Paramore.Brighter`
   - Move `ISpecification<TData>`, `Specification<T>`, `AndSpecification<T>`, `OrSpecification<T>`, `NotSpecification<T>` from `src/Paramore.Brighter.Mediator/Specification.cs` to `src/Paramore.Brighter/`
   - Change namespace from `Paramore.Brighter.Mediator` to `Paramore.Brighter`
   - Update `using` statements in `ExclusiveChoice<TData>` and any other Mediator consumers
   - Existing Mediator tests must pass unchanged (except `using` updates)
 
-- [ ] **TIDY: Extract HandlerMethodDiscovery static utility**
+- [x] **TIDY: Extract HandlerMethodDiscovery static utility**
   - **USE COMMAND**: `/tidy-first extract HandlerMethodDiscovery from RequestHandler and RequestHandlerAsync`
   - Create `src/Paramore.Brighter/HandlerMethodDiscovery.cs` (internal static class)
   - Extract `FindHandlerMethod(Type handlerType, Type requestType)` — single source of truth
   - Refactor `RequestHandler<T>.FindHandlerMethod()` and `RequestHandlerAsync<T>.FindHandlerMethod()` to delegate to it
   - Existing pipeline tests must pass unchanged
 
-- [ ] **TIDY: Extract MapperMethodDiscovery static utility**
+- [x] **TIDY: Extract MapperMethodDiscovery static utility**
   - **USE COMMAND**: `/tidy-first extract MapperMethodDiscovery from TransformPipelineBuilder`
   - Create `src/Paramore.Brighter/MapperMethodDiscovery.cs` (internal static class)
   - Extract `FindMapToMessage`, `FindMapToMessageAsync`, `FindMapToRequest`, `FindMapToRequestAsync`
   - Refactor `TransformPipelineBuilder` and `TransformPipelineBuilderAsync` to delegate to them
   - Existing transform pipeline tests must pass unchanged
 
-- [ ] **TIDY: Fix PipelineBuilder double AddGlobalInboxAttributesAsync bug**
+- [x] **TIDY: Fix PipelineBuilder double AddGlobalInboxAttributesAsync bug**
   - **USE COMMAND**: `/tidy-first fix double AddGlobalInboxAttributesAsync call in PipelineBuilder.BuildAsyncPipeline`
   - `BuildAsyncPipeline()` calls `AddGlobalInboxAttributesAsync()` twice — once inside the cache-miss block (correct) and once unconditionally outside it (bug)
   - Remove the duplicate call outside the `if` block
@@ -47,7 +47,7 @@ These tasks use `/tidy-first` — they change code structure without changing be
 
 These tidies add new interfaces and fields but no new consumers yet. No behavioral change to existing code.
 
-- [ ] **TIDY: Add IAmASubscriberRegistryInspector and implement on SubscriberRegistry**
+- [x] **TIDY: Add IAmASubscriberRegistryInspector and implement on SubscriberRegistry**
   - **USE COMMAND**: `/tidy-first add IAmASubscriberRegistryInspector to SubscriberRegistry`
   - Create `src/Paramore.Brighter/IAmASubscriberRegistryInspector.cs` with `GetHandlerTypes(Type)` and `GetRegisteredRequestTypes()`
   - Add `Dictionary<Type, HashSet<Type>> _allHandlerTypes` to `SubscriberRegistry`
@@ -56,14 +56,14 @@ These tidies add new interfaces and fields but no new consumers yet. No behavior
   - `SubscriberRegistry` implements `IAmASubscriberRegistryInspector`
   - Existing tests pass unchanged — new methods are additive
 
-- [ ] **TIDY: Add ResolveMapperInfo and ResolveAsyncMapperInfo to MessageMapperRegistry**
+- [x] **TIDY: Add ResolveMapperInfo and ResolveAsyncMapperInfo to MessageMapperRegistry**
   - **USE COMMAND**: `/tidy-first add ResolveMapperInfo to MessageMapperRegistry`
   - Add `ResolveMapperInfo(Type requestType)` returning `(Type? mapperType, bool isDefault)`
   - Add `ResolveAsyncMapperInfo(Type requestType)` with same signature
   - Four return states: explicit, default resolved, no mapper, misconfigured default
   - Existing tests pass unchanged — new methods are additive
 
-- [ ] **TIDY: Add IAmABackstopHandler and IAmAResilienceHandler marker interfaces**
+- [x] **TIDY: Add IAmABackstopHandler and IAmAResilienceHandler marker interfaces**
   - **USE COMMAND**: `/tidy-first add marker interfaces for handler classification`
   - Create `src/Paramore.Brighter/IAmABackstopHandler.cs` and `src/Paramore.Brighter/IAmAResilienceHandler.cs`
   - Apply `IAmABackstopHandler` to: `RejectMessageOnErrorHandler<T>`, `RejectMessageOnErrorHandlerAsync<T>`, `DeferMessageOnErrorHandler<T>`, `DeferMessageOnErrorHandlerAsync<T>`, `DontAckOnErrorHandler<T>`, `DontAckOnErrorHandlerAsync<T>`
@@ -76,7 +76,7 @@ These tidies add new interfaces and fields but no new consumers yet. No behavior
 
 These tasks add new types that the specifications and validator depend on.
 
-- [ ] **TEST + IMPLEMENT: Specification<T> enhanced with validation support and visitor pattern**
+- [x] **TEST + IMPLEMENT: Specification<T> enhanced with validation support and visitor pattern**
   - **USE COMMAND**: `/test-first when Specification is created with error factory and entity fails predicate then visitor collects the validation error`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_specification_with_error_factory_fails_should_collect_error.cs`
@@ -94,7 +94,7 @@ These tasks add new types that the specifications and validator depend on.
     - Add `LastResults` internal property
     - Add `Accept<TResult>(ISpecificationVisitor<TData, TResult>)` to `ISpecification<T>` and all composition types
 
-- [ ] **TEST + IMPLEMENT: AndSpecification evaluates both children unconditionally**
+- [x] **TEST + IMPLEMENT: AndSpecification evaluates both children unconditionally**
   - **USE COMMAND**: `/test-first when AndSpecification left side fails then right side is still evaluated and visitor collects both errors`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_and_specification_left_fails_should_evaluate_both_sides.cs`
@@ -106,7 +106,7 @@ These tasks add new types that the specifications and validator depend on.
   - Implementation should:
     - `AndSpecification.IsSatisfiedBy`: `var l = Left.IsSatisfiedBy(entity); var r = Right.IsSatisfiedBy(entity); return l && r;`
 
-- [ ] **TEST + IMPLEMENT: ValidationResult, ValidationError, and ValidationResultCollector**
+- [x] **TEST + IMPLEMENT: ValidationResult, ValidationError, and ValidationResultCollector**
   - **USE COMMAND**: `/test-first when ValidationResultCollector visits a specification graph then it collects all failed results`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_collector_visits_specification_graph_should_collect_all_failures.cs`
@@ -122,7 +122,7 @@ These tasks add new types that the specifications and validator depend on.
     - Create `src/Paramore.Brighter/Validation/ISpecificationVisitor.cs`
     - Create `src/Paramore.Brighter/Validation/ValidationResultCollector.cs`
 
-- [ ] **TEST + IMPLEMENT: PipelineValidationResult and PipelineValidationException**
+- [x] **TEST + IMPLEMENT: PipelineValidationResult and PipelineValidationException**
   - **USE COMMAND**: `/test-first when PipelineValidationResult has errors then ThrowIfInvalid throws PipelineValidationException`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_validation_result_has_errors_should_throw_pipeline_validation_exception.cs`
