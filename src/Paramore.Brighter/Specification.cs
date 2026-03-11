@@ -54,6 +54,10 @@ public interface ISpecification<TData>
     /// <summary>Negates this specification.</summary>
     ISpecification<TData> Not();
 
+    /// <summary>Negates this specification with a validation error factory for reporting.</summary>
+    /// <param name="errorFactory">Produces a ValidationError when negation fails.</param>
+    ISpecification<TData> Not(Func<TData, ValidationError> errorFactory);
+
     /// <summary>Composes this specification with the negation of another using logical AND.</summary>
     ISpecification<TData> AndNot(ISpecification<TData> other);
 
@@ -132,11 +136,15 @@ public class Specification<T> : ISpecification<T>
 
     /// <inheritdoc />
     public ISpecification<T> Or(ISpecification<T> other)
-        => new Specification<T>(x => IsSatisfiedBy(x) || other.IsSatisfiedBy(x));
+        => new OrSpecification<T>(this, other);
 
     /// <inheritdoc />
     public ISpecification<T> Not()
         => new Specification<T>(x => !IsSatisfiedBy(x));
+
+    /// <inheritdoc />
+    public ISpecification<T> Not(Func<T, ValidationError> errorFactory)
+        => new NotSpecification<T>(this, errorFactory);
 
     /// <inheritdoc />
     public ISpecification<T> AndNot(ISpecification<T> other)

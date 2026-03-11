@@ -28,11 +28,11 @@ using Paramore.Brighter.Validation;
 namespace Paramore.Brighter;
 
 /// <summary>
-/// Composes two specifications with logical AND, evaluating both sides unconditionally
-/// so the visitor can collect errors from both children.
+/// Composes two specifications with logical OR, evaluating both sides unconditionally
+/// so the visitor can collect errors from both children on failure.
 /// </summary>
 /// <typeparam name="T">The entity type to evaluate.</typeparam>
-public class AndSpecification<T>(ISpecification<T> left, ISpecification<T> right) : ISpecification<T>
+public class OrSpecification<T>(ISpecification<T> left, ISpecification<T> right) : ISpecification<T>
 {
     /// <summary>The left child specification.</summary>
     public ISpecification<T> Left { get; } = left;
@@ -41,14 +41,13 @@ public class AndSpecification<T>(ISpecification<T> left, ISpecification<T> right
     public ISpecification<T> Right { get; } = right;
 
     /// <summary>
-    /// Evaluates both children unconditionally (no short-circuit) and returns true
-    /// only when both are satisfied.
+    /// Evaluates both children unconditionally and returns true when either is satisfied.
     /// </summary>
     public bool IsSatisfiedBy(T entity)
     {
         var l = Left.IsSatisfiedBy(entity);
         var r = Right.IsSatisfiedBy(entity);
-        return l && r;
+        return l || r;
     }
 
     /// <inheritdoc />
@@ -77,5 +76,5 @@ public class AndSpecification<T>(ISpecification<T> left, ISpecification<T> right
 
     /// <inheritdoc />
     public ISpecification<T> OrNot(ISpecification<T> other)
-        => new Specification<T>(x => IsSatisfiedBy(x) || !other.IsSatisfiedBy(x));
+        => new OrSpecification<T>(this, new Specification<T>(x => !other.IsSatisfiedBy(x)));
 }

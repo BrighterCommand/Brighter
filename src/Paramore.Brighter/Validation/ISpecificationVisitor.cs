@@ -36,4 +36,10 @@ public interface ISpecificationVisitor<TData, TResult>
 
     /// <summary>Visits an AND composition node.</summary>
     TResult Visit(AndSpecification<TData> specification);
+
+    /// <summary>Visits an OR composition node.</summary>
+    TResult Visit(OrSpecification<TData> specification);
+
+    /// <summary>Visits a NOT composition node.</summary>
+    TResult Visit(NotSpecification<TData> specification);
 }

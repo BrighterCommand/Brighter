@@ -41,4 +41,12 @@ public class ValidationResultCollector<TData> : ISpecificationVisitor<TData, IEn
     /// <summary>Collects results from both children of an AND node.</summary>
     public IEnumerable<ValidationResult> Visit(AndSpecification<TData> specification)
         => specification.Left.Accept(this).Concat(specification.Right.Accept(this));
+
+    /// <summary>Collects results from both children of an OR node.</summary>
+    public IEnumerable<ValidationResult> Visit(OrSpecification<TData> specification)
+        => specification.Left.Accept(this).Concat(specification.Right.Accept(this));
+
+    /// <summary>Collects stored results from a NOT node.</summary>
+    public IEnumerable<ValidationResult> Visit(NotSpecification<TData> specification)
+        => specification.LastResults;
 }

@@ -23,33 +23,51 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using Paramore.Brighter.Validation;
 
 namespace Paramore.Brighter;
 
 /// <summary>
-/// Composes two specifications with logical AND, evaluating both sides unconditionally
-/// so the visitor can collect errors from both children.
+/// Negates an inner specification. When negation fails (inner succeeded), stores its
+/// own validation error provided via the error factory constructor.
 /// </summary>
 /// <typeparam name="T">The entity type to evaluate.</typeparam>
-public class AndSpecification<T>(ISpecification<T> left, ISpecification<T> right) : ISpecification<T>
+public class NotSpecification<T> : ISpecification<T>
 {
-    /// <summary>The left child specification.</summary>
-    public ISpecification<T> Left { get; } = left;
-
-    /// <summary>The right child specification.</summary>
-    public ISpecification<T> Right { get; } = right;
+    private readonly ISpecification<T> _inner;
+    private readonly Func<T, ValidationError>? _errorFactory;
+    private IReadOnlyList<ValidationResult> _lastResults = [];
 
     /// <summary>
-    /// Evaluates both children unconditionally (no short-circuit) and returns true
-    /// only when both are satisfied.
+    /// Creates a Not specification with an error factory for validation reporting.
+    /// When the inner spec succeeds (making Not fail), the error factory provides
+    /// the validation error since the inner spec has no stored errors.
     /// </summary>
+    /// <param name="inner">The specification to negate.</param>
+    /// <param name="errorFactory">Produces a ValidationError when negation fails.</param>
+    public NotSpecification(ISpecification<T> inner, Func<T, ValidationError> errorFactory)
+    {
+        _inner = inner;
+        _errorFactory = errorFactory;
+    }
+
+    /// <summary>Returns true when the inner specification is NOT satisfied.</summary>
     public bool IsSatisfiedBy(T entity)
     {
-        var l = Left.IsSatisfiedBy(entity);
-        var r = Right.IsSatisfiedBy(entity);
-        return l && r;
+        var innerResult = _inner.IsSatisfiedBy(entity);
+        if (innerResult && _errorFactory != null)
+            _lastResults = [ValidationResult.Fail(_errorFactory(entity))];
+        else
+            _lastResults = [];
+
+        return !innerResult;
     }
+
+    /// <summary>
+    /// Returns the stored validation results from the most recent IsSatisfiedBy call.
+    /// </summary>
+    internal IReadOnlyList<ValidationResult> LastResults => _lastResults;
 
     /// <inheritdoc />
     public TResult Accept<TResult>(ISpecificationVisitor<T, TResult> visitor)
@@ -77,5 +95,5 @@ public class AndSpecification<T>(ISpecification<T> left, ISpecification<T> right
 
     /// <inheritdoc />
     public ISpecification<T> OrNot(ISpecification<T> other)
-        => new Specification<T>(x => IsSatisfiedBy(x) || !other.IsSatisfiedBy(x));
+        => new OrSpecification<T>(this, new Specification<T>(x => !other.IsSatisfiedBy(x)));
 }
