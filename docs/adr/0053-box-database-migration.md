@@ -289,9 +289,12 @@ public static class BrighterBuilderBoxProvisioningExtensions
 {
     public static IBrighterBuilder UseBoxProvisioning(
         this IBrighterBuilder builder,
-        Action<BoxProvisioningOptions> configure)
+        Action<BoxProvisioningOptions> configure,
+        TimeSpan? migrationLockTimeout = null)
     {
         var options = new BoxProvisioningOptions();
+        if (migrationLockTimeout.HasValue)
+            options.MigrationLockTimeout = migrationLockTimeout.Value;
         configure(options);
 
         foreach (var registration in options.Registrations)
@@ -327,8 +330,13 @@ public class BoxProvisioningOptions
     /// <para>
     /// This value is captured by each backend extension method (e.g. <c>AddMsSqlOutbox</c>)
     /// at registration time. Changing this property after calling a backend extension method
-    /// has no effect on previously registered provisioners. Set this property before calling
-    /// any <c>Add*</c> methods.
+    /// has no effect on previously registered provisioners.
+    /// </para>
+    /// <para>
+    /// <b>Recommended</b>: Pass the timeout via the <c>migrationLockTimeout</c> parameter
+    /// on <c>UseBoxProvisioning()</c>, which sets it before the configure delegate runs,
+    /// eliminating any ordering sensitivity. Alternatively, set this property at the top
+    /// of the configure delegate, before calling any <c>Add*</c> methods.
     /// </para>
     /// </summary>
     public TimeSpan MigrationLockTimeout { get; set; } = TimeSpan.FromSeconds(30);
@@ -444,7 +452,7 @@ public static class MsSqlBoxProvisioningExtensions
 
 The factory-based overload (`connectionName`) is critical for Aspire integration: Aspire populates `IConfiguration` with connection strings via service discovery *after* the DI container is configured but *before* hosted services run. By using an `IServiceProvider` factory, the provisioner's configuration is resolved at the right time.
 
-Note that `MigrationLockTimeout` is captured from `BoxProvisioningOptions` at registration time and passed through to the provisioner constructor. This ensures the timeout configured centrally on the options flows through to each backend's migration runner, which uses it when acquiring database-level advisory locks (e.g. MySQL's `GET_LOCK`, MSSQL's `sp_getapplock`).
+Note that `MigrationLockTimeout` is captured from `BoxProvisioningOptions` at registration time and passed through to the provisioner constructor. This ensures the timeout configured centrally on the options flows through to each backend's migration runner, which uses it when acquiring database-level advisory locks (e.g. MySQL's `GET_LOCK`, MSSQL's `sp_getapplock`). The `migrationLockTimeout` parameter on `UseBoxProvisioning()` sets the timeout before the configure delegate runs, eliminating the ordering footgun where a caller sets `MigrationLockTimeout` after calling `Add*` methods (which would silently ignore the value for already-registered provisioners).
 
 ### 4. Backend Provisioner Implementation Pattern
 
@@ -559,7 +567,7 @@ Each backend's migration runner acquires a database-level lock before running mi
 | Backend | Locking Mechanism |
 |---------|------------------|
 | MSSQL | `sp_getapplock @Resource='BrighterMigration_{tableName}', @LockMode='Exclusive'` within a transaction |
-| PostgreSQL | `pg_try_advisory_lock(74726, hashtext('BrighterMigration_' \|\| tableName))` with a retry loop. The two-argument form uses a Brighter-specific namespace constant (`74726`, derived from the ASCII values of `'Br'`) as the first argument, which eliminates hash collisions with other applications or libraries that also use PostgreSQL advisory locks on the same database. The runner calls `pg_try_advisory_lock` in a loop with a short delay between attempts, logging "Waiting for migration lock on {tableName}..." on each retry so operators can diagnose slow startups. The total retry budget is bounded by `MigrationLockTimeout` (default 30s). If the lock is not acquired within the timeout, the runner throws `TimeoutException`. |
+| PostgreSQL | `pg_try_advisory_lock(74726, hashtext('BrighterMigration_' \|\| tableName))` with a retry loop. The two-argument form uses a Brighter-specific namespace constant (`74726`, an application-specific constant reserved for Brighter) as the first argument, which eliminates hash collisions with other applications or libraries that also use PostgreSQL advisory locks on the same database. The runner calls `pg_try_advisory_lock` in a loop with a short delay between attempts, logging "Waiting for migration lock on {tableName}..." on each retry so operators can diagnose slow startups. The inter-attempt delay uses `Task.Delay(delay, cancellationToken)` so that the retry loop exits promptly if the host signals shutdown during startup. The total retry budget is bounded by `MigrationLockTimeout` (default 30s). If the lock is not acquired within the timeout, the runner throws `TimeoutException`. |
 | MySQL | `GET_LOCK('BrighterMigration_{tableName}', lockTimeout)` where `lockTimeout` defaults to 30 seconds, configurable via `BoxProvisioningOptions.MigrationLockTimeout` |
 | SQLite | SQLite's file-level locking provides implicit serialization |
 | Spanner | Spanner DDL operations are submitted via `ExecuteDdlAsync` (a separate DDL batch API) and are serialized by the Spanner service — they cannot run inside read-write transactions. The migration runner submits each DDL statement via `ExecuteDdlAsync`, then updates the history table in a normal read-write transaction. **Failure window**: Because DDL and history updates cannot share a transaction, there is a window where DDL has been applied but the history row has not been written (e.g. if the process crashes between the two steps). On next startup, the runner would attempt to re-apply the migration. To handle this safely, Spanner DDL migrations have a **formal idempotency contract**: all `UpScript` values for Spanner migrations must be idempotent. `CREATE TABLE` must use `IF NOT EXISTS`; `ALTER TABLE ADD COLUMN` must be guarded. The `SpannerBoxMigrationRunner` enforces the runner side of this contract by catching "already exists" errors from `ExecuteDdlAsync` and treating them as success — writing the missing history row and continuing. This contract should be documented in the `IAmABoxMigration.UpScript` XML doc for the Spanner backend, and the Spanner migration definition classes (`SpannerOutboxMigrations`, `SpannerInboxMigrations`) must ensure all `UpScript` values are idempotent. |
@@ -574,7 +582,7 @@ Each backend's migration runner acquires a database-level lock before running mi
 | SQLite | File-level locking | N/A | Implicit serialization |
 | Spanner | `ExecuteDdlAsync` | N/A | DDL serialized by Spanner service; history updates use normal transactions |
 
-**Cancellation token propagation**: The `CancellationToken` passed through `StartAsync` → `ProvisionAsync` → `MigrateAsync` must be propagated to every `DbCommand.ExecuteNonQueryAsync(cancellationToken)` call. If the host signals shutdown during startup (before provisioning completes), in-flight DDL commands must respect the token to avoid blocking shutdown indefinitely.
+**Cancellation token propagation**: The `CancellationToken` passed through `StartAsync` → `ProvisionAsync` → `MigrateAsync` must be propagated to every `DbCommand.ExecuteNonQueryAsync(cancellationToken)` call and to any inter-attempt `Task.Delay` in retry loops (e.g. the PostgreSQL advisory lock retry). If the host signals shutdown during startup (before provisioning completes), in-flight DDL commands and lock-wait delays must respect the token to avoid blocking shutdown indefinitely.
 
 The lock is held for the duration of the migration run (typically milliseconds for a single ALTER TABLE). Other instances that attempt to migrate concurrently will block until the lock is released, then check the history table and find no outstanding migrations to apply. This makes the migration runner safe for multi-instance deployments.
 
@@ -646,7 +654,9 @@ When the runner receives a `BoxTableState` with `TableExists && !HistoryExists`,
 1. Insert synthetic history rows for all versions up to and including `CurrentVersion`
 2. Apply any remaining migrations after `CurrentVersion`
 
-**Backend-specific provisioners must implement `DetectCurrentVersionAsync`** to introspect actual column existence — for example, checking whether `SpecVersion` or `DataRef` columns exist via `INFORMATION_SCHEMA.COLUMNS` (MSSQL/PostgreSQL/MySQL) or `pragma_table_info` (SQLite) to determine if the schema matches version 2 or later. This is required because a fresh install created with newer DDL that already includes v2+ columns would otherwise be bootstrapped at version 1 and then fail when the runner attempts `ALTER TABLE ADD COLUMN` for columns that already exist (MySQL does not support `IF NOT EXISTS` for columns). The safe fallback is version 1, which assumes the table was created by the original static builder.
+**Backend-specific provisioners must implement `DetectCurrentVersionAsync`** to introspect actual column existence — for example, checking whether `SpecVersion` or `DataRef` columns exist via `INFORMATION_SCHEMA.COLUMNS` (MSSQL/PostgreSQL/MySQL) or `pragma_table_info` (SQLite) to determine if the schema matches version 2 or later. This is required because a fresh install created with newer DDL that already includes v2+ columns would otherwise be bootstrapped at version 1 and then fail when the runner attempts `ALTER TABLE ADD COLUMN` for columns that already exist. The safe fallback is version 1, which assumes the table was created by the original static builder.
+
+**MySQL version requirement**: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` is only available in MySQL 8.0.2+ and MariaDB 10.0.2+. MySQL 5.7.x does not support this syntax. To avoid depending on this syntax as a safety net, the MySQL backend provisioner must use `INFORMATION_SCHEMA.COLUMNS` to check for column existence before issuing `ALTER TABLE ADD COLUMN`. This makes the bootstrap `DetectCurrentVersionAsync` implementation critical for MySQL — it is the primary guard against duplicate column errors, not an optional optimisation. The minimum supported MySQL version for the migration library is **MySQL 8.0** (consistent with Brighter's existing MySQL support).
 
 This ensures smooth upgrades for existing applications. The detection uses the same exists-query logic as the current builders, unified behind the provisioner.
 
@@ -732,10 +742,13 @@ Deeper Aspire hosting integration (Aspire-specific packages, `IResourceBuilder` 
   - **Mitigation**: Each migration runs in a transaction (where supported). For backends without DDL transaction support (e.g. some MySQL DDL), migrations are designed to be individually idempotent (using `IF NOT EXISTS`, `IF NOT EXISTS COLUMN` patterns)
 
 - **Risk**: Bootstrap detection incorrectly identifies a pre-migration installation's schema version
-  - **Mitigation**: Version 1 migration matches the exact DDL of the current builders. Backend provisioners implement `DetectCurrentVersionAsync` to introspect the actual schema (e.g. via `INFORMATION_SCHEMA.COLUMNS`) and return the highest version whose columns are all present. The provisioner packages the result into a `BoxTableState` record so the runner has unambiguous context: `TableExists`, `HistoryExists`, and `CurrentVersion`. This ensures that tables created with newer DDL are correctly bootstrapped at the right version. Additionally, future migrations use `ALTER TABLE IF NOT EXISTS COLUMN` patterns as a safety net where supported
+  - **Mitigation**: Version 1 migration matches the exact DDL of the current builders. Backend provisioners implement `DetectCurrentVersionAsync` to introspect the actual schema (e.g. via `INFORMATION_SCHEMA.COLUMNS`) and return the highest version whose columns are all present. The provisioner packages the result into a `BoxTableState` record so the runner has unambiguous context: `TableExists`, `HistoryExists`, and `CurrentVersion`. This ensures that tables created with newer DDL are correctly bootstrapped at the right version. For MySQL, `INFORMATION_SCHEMA.COLUMNS` column-existence checks are the primary guard (not `ALTER TABLE ADD COLUMN IF NOT EXISTS`, which is unavailable on MySQL 5.7). For MSSQL and PostgreSQL, `ALTER TABLE ADD COLUMN IF NOT EXISTS` patterns serve as an additional safety net where supported
 
 - **Risk**: Concurrent migration attempts from multiple service instances corrupt the schema or history table
   - **Mitigation**: Each backend's migration runner acquires a database-level advisory lock before running migrations. Concurrent instances block until the lock is released, then find no outstanding migrations to apply. See "Concurrency Control" in section 5.
+
+- **Risk**: MSSQL multi-version upgrade rolls back all migrations on a single failure
+  - **Mitigation**: MSSQL uses a single transaction for both the advisory lock (`sp_getapplock`) and all migration DDL/history inserts (see "Connection Lifecycle" in section 5). This means if migration N fails, migrations 1..N-1 applied in the same run are also rolled back — the database returns to the last committed state before the migration run began. This **all-or-nothing** behaviour differs from PostgreSQL, MySQL, and SQLite, where each migration commits in its own transaction and a failure at migration N leaves 1..N-1 intact. In practice this difference is only observable when multiple migrations are pending (e.g. upgrading across several Brighter versions at once). Operators troubleshooting a failed multi-version upgrade on MSSQL should be aware that intermediate migrations will not appear in the history table. The MSSQL runner's XML doc comments must document this behaviour.
 
 ## Alternatives Considered
 
