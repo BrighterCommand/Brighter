@@ -57,7 +57,7 @@ internal static class HandlerMethodDiscovery
                 && method.GetParameters().Single().ParameterType == requestType);
     }
 
-    private static bool IsAsyncHandler(Type handlerType)
+    internal static bool IsAsyncHandler(Type handlerType)
     {
         var type = handlerType;
         while (type != null)

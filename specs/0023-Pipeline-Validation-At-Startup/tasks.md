@@ -141,7 +141,7 @@ These tasks add new types that the specifications and validator depend on.
 
 ## Phase 4: Pipeline Description Model (Dry Run)
 
-- [ ] **TEST + IMPLEMENT: PipelineBuilder.Describe(Type) produces HandlerPipelineDescription**
+- [x] **TEST + IMPLEMENT: PipelineBuilder.Describe(Type) produces HandlerPipelineDescription**
   - **USE COMMAND**: `/test-first when PipelineBuilder describes a handler type then it returns pipeline description with attribute chain`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_pipeline_builder_describes_handler_should_return_pipeline_description.cs`

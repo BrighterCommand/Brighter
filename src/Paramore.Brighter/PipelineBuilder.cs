@@ -28,6 +28,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Validation;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Attributes;
 
@@ -80,7 +81,78 @@ namespace Paramore.Brighter
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
         }
-        
+
+        /// <summary>
+        /// Describe-only constructor for startup validation and diagnostics.
+        /// Does not require a handler factory — only uses reflection to describe pipelines.
+        /// </summary>
+        /// <param name="subscriberRegistry">A <see cref="IAmASubscriberRegistry"/> subscriber registry.</param>
+        /// <param name="inboxConfiguration">Optional inbox configuration for global inbox attribute detection.</param>
+        public PipelineBuilder(
+            IAmASubscriberRegistry subscriberRegistry,
+            InboxConfiguration? inboxConfiguration = null)
+        {
+            _subscriberRegistry = subscriberRegistry;
+            _inboxConfiguration = inboxConfiguration;
+        }
+
+        /// <summary>
+        /// Describes the handler pipeline(s) for a given request type without instantiating handlers.
+        /// Uses the same reflection path as <see cref="Build"/> to prevent drift.
+        /// </summary>
+        /// <param name="requestType">The request type to describe pipelines for.</param>
+        /// <returns>One <see cref="HandlerPipelineDescription"/> per handler type registered for the request type.</returns>
+        public IEnumerable<HandlerPipelineDescription> Describe(Type requestType)
+        {
+            if (_subscriberRegistry is not IAmASubscriberRegistryInspector inspector)
+                throw new ConfigurationException(
+                    "SubscriberRegistry must implement IAmASubscriberRegistryInspector for pipeline description");
+
+            var handlerTypes = inspector.GetHandlerTypes(requestType);
+
+            foreach (var handlerType in handlerTypes)
+            {
+                var handlerMethod = HandlerMethodDiscovery.FindHandlerMethod(handlerType, requestType);
+                var attributes = handlerMethod.GetOtherHandlersInPipeline();
+
+                var beforeSteps = attributes
+                    .Where(a => a.Timing == HandlerTiming.Before)
+                    .OrderByDescending(a => a.Step)
+                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing))
+                    .ToList()
+                    .AsReadOnly();
+
+                var afterSteps = attributes
+                    .Where(a => a.Timing == HandlerTiming.After)
+                    .OrderByDescending(a => a.Step)
+                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing))
+                    .ToList()
+                    .AsReadOnly();
+
+                var isAsync = HandlerMethodDiscovery.IsAsyncHandler(handlerType);
+
+                yield return new HandlerPipelineDescription(requestType, handlerType, isAsync, beforeSteps, afterSteps);
+            }
+        }
+
+        /// <summary>
+        /// Describes all registered handler pipelines without instantiating handlers.
+        /// Iterates all request types from the subscriber registry.
+        /// </summary>
+        /// <returns>One <see cref="HandlerPipelineDescription"/> per handler type per request type.</returns>
+        public IEnumerable<HandlerPipelineDescription> Describe()
+        {
+            if (_subscriberRegistry is not IAmASubscriberRegistryInspector inspector)
+                throw new ConfigurationException(
+                    "SubscriberRegistry must implement IAmASubscriberRegistryInspector for pipeline description");
+
+            foreach (var requestType in inspector.GetRegisteredRequestTypes())
+            {
+                foreach (var description in Describe(requestType))
+                    yield return description;
+            }
+        }
+
         /// <summary>
         /// Builds a pipeline of synchronous handlers for the given <paramref name="requestContext"/>.
         /// </summary>
