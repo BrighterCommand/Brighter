@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
@@ -21,7 +22,7 @@ public class AWSValidateQueuesTests : IAsyncDisposable
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
         
-        var queueAttributes = new SqsAttributes(type:SqsType.Fifo);
+        var queueAttributes = new SqsAttributes(type:SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } });
         var channelName = new ChannelName(queueName);
 
         _subscription = new SqsSubscription<MyCommand>(

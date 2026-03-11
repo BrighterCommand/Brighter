@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Mime;
 using System.Threading.Tasks;
@@ -38,7 +38,8 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
             messagePumpType: MessagePumpType.Reactor,
             queueAttributes: new SqsAttributes(
                 rawMessageDelivery: false,
-                type: SqsType.Fifo), 
+                type: SqsType.Fifo,
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }), 
             topicAttributes: topicAttributes,
             makeChannels: OnMissingChannel.Create));
 

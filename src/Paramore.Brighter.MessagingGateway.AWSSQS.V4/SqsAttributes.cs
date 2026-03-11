@@ -115,7 +115,8 @@ public class SqsAttributes
     public SqsType Type { get; }
 
     /// <summary>
-    /// A list of resource tags to use when creating the queue
+    /// A list of resource tags to use when creating the queue.
+    /// The "Source" tag key is reserved and will be overridden with the value "Brighter".
     /// </summary>
     public Dictionary<string, string>? Tags { get; }
 

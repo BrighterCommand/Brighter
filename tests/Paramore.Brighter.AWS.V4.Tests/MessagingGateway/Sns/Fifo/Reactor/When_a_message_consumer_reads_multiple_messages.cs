@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
@@ -44,8 +44,8 @@ public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
                 type: SqsType.Fifo,
                 contentBasedDeduplication: true,
                 deduplicationScope: DeduplicationScope.MessageGroup,
-                fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId
-            ), 
+                fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId,
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }), 
             topicAttributes: topicAttributes,
             makeChannels: OnMissingChannel.Create,
             messagePumpType: MessagePumpType.Reactor);

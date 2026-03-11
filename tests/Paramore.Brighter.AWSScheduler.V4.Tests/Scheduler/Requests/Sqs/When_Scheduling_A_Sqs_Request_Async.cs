@@ -36,7 +36,8 @@ public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
             messageRetentionPeriod: TimeSpan.FromMinutes(1),
             lockTimeout: TimeSpan.FromSeconds(30),
             timeOut: TimeSpan.FromSeconds(30),
-            delaySeconds: TimeSpan.Zero
+            delaySeconds: TimeSpan.Zero,
+            tags: new Dictionary<string, string> { { "Environment", "Test" } }
         );
         
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
