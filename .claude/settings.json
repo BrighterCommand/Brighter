@@ -29,6 +29,10 @@
     ]
   },
   "enabledPlugins": {
-    "commit-commands@claude-plugins-official": true
+    "commit-commands@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "csharp-lsp@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true
   }
 }
