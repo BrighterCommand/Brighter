@@ -26,7 +26,7 @@ using Paramore.Brighter;
 
 namespace HelloWorld
 {
-    internal sealed class GreetingCommand(string name) : Command(Id.Random())
+    public sealed class GreetingCommand(string name) : Command(Id.Random())
     {
         public string Name { get; } = name;
     }
