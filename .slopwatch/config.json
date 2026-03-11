@@ -19,6 +19,11 @@
       "ruleId": "SW003",
       "pattern": "**/KafkaMessageConsumer.cs",
       "justification": "DLQ rejection catch blocks intentionally log and acknowledge offset to prevent reprocessing loops (ADR 0034)"
+    },
+    {
+      "ruleId": "SW003",
+      "pattern": "**/SqsMessageConsumer.cs",
+      "justification": "ReceiptHandleIsInvalidException catch blocks intentionally catch and log invalid receipt handle errors to prevent dispatcher crash (GitHub issue #4031)"
     }
   ],
   "globalSuppressions": []
