@@ -28,7 +28,7 @@ using System.Linq;
 using Paramore.Brighter.Validation;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.Validation;
+namespace Paramore.Brighter.Core.Tests.Specifications;
 
 public class SpecificationValidationTests
 {
