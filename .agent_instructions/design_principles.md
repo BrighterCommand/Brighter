@@ -41,6 +41,6 @@
     - Never mix structural and behavioral changes in the same commit
     - Always make structural changes first when both are needed
     - Validate structural changes do not alter behavior by running tests before and after
-    - Not all of our code follows these conventions.
-        - Some of our older code uses older conventions.
-        - Follow the boy scout rule, and fix these, as part of your work.
+- Not all of our code follows these conventions.
+    - Some of our older code uses older conventions.
+    - Follow the boy scout rule, and fix these, as part of your work.
