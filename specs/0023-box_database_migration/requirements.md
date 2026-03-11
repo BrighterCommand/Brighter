@@ -78,7 +78,7 @@ Provide a set of NuGet libraries that allow developers to create and migrate Inb
 - **Application database migration**: Migration of the developer's own domain/business tables.
 - **NoSQL migration**: Schema evolution for DynamoDB, MongoDB, or Firestore backends.
 - **Data migration**: Moving data between database backends (e.g. migrating from MSSQL to PostgreSQL).
-- **.NET Aspire integration**: Aspire hosting integration, service discovery, and connection string resolution are out of scope for this feature. The provisioning tool accepts connection strings directly; Aspire integration can be layered on top separately.
+- **.NET Aspire hosting integration**: The provisioning library is compatible with Aspire — the `connectionName` overloads resolve connection strings from `IConfiguration` at runtime, which is the standard Aspire service discovery pattern. What is out of scope is deeper Aspire hosting integration: Aspire-specific NuGet packages (`Aspire.Hosting.*`), `IResourceBuilder` extensions, health check integration, or OpenTelemetry enrichment.
 - **Queue/transport table provisioning**: The `MsSqlQueueBuilder` and similar transport-level tables are not covered by this feature.
 - **Removing the existing static builders**: The current `*InboxBuilder` / `*OutboxBuilder` classes remain as-is.
 

@@ -10,7 +10,7 @@ Accepted
 
 **Parent Requirement**: [specs/0023-box_database_migration/requirements.md](../../specs/0023-box_database_migration/requirements.md)
 
-**Scope**: This ADR covers the architecture for a modular library that creates and migrates Inbox and Outbox database tables, and integrates with .NET Aspire for connection management.
+**Scope**: This ADR covers the architecture for a modular library that creates and migrates Inbox and Outbox database tables. The design accommodates .NET Aspire connection management (via `connectionName` overloads that resolve from `IConfiguration` at runtime) but does not add Aspire-specific packages, hosting integration, or service discovery to Brighter.
 
 Brighter provides static builder classes (`SqlInboxBuilder`, `MySqlOutboxBuilder`, etc.) that return DDL strings for creating inbox and outbox tables. However, there are significant gaps:
 
@@ -302,6 +302,10 @@ public static class BrighterBuilderBoxProvisioningExtensions
         // Guard against multiple calls — TryAddEnumerable ensures the hosted
         // service is registered at most once, even if UseBoxProvisioning is
         // called multiple times (e.g. from different configuration paths).
+        // Note: each call creates a new BoxProvisioningOptions instance, so
+        // options are NOT shared across calls. All provisioner registrations
+        // from all calls are added to the same IServiceCollection and will
+        // all be resolved by the single BoxProvisioningHostedService.
         builder.Services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, BoxProvisioningHostedService>());
         return builder;
@@ -320,6 +324,12 @@ public class BoxProvisioningOptions
     /// <summary>
     /// Timeout for acquiring a database-level migration lock. Used by backends
     /// that require an explicit timeout (e.g. MySQL GET_LOCK). Default: 30 seconds.
+    /// <para>
+    /// This value is captured by each backend extension method (e.g. <c>AddMsSqlOutbox</c>)
+    /// at registration time. Changing this property after calling a backend extension method
+    /// has no effect on previously registered provisioners. Set this property before calling
+    /// any <c>Add*</c> methods.
+    /// </para>
     /// </summary>
     public TimeSpan MigrationLockTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
@@ -549,10 +559,10 @@ Each backend's migration runner acquires a database-level lock before running mi
 | Backend | Locking Mechanism |
 |---------|------------------|
 | MSSQL | `sp_getapplock @Resource='BrighterMigration_{tableName}', @LockMode='Exclusive'` within a transaction |
-| PostgreSQL | `pg_try_advisory_lock(hashtext('BrighterMigration_' \|\| tableName)::bigint)` with a retry loop. The runner calls `pg_try_advisory_lock` in a loop with a short delay between attempts, logging "Waiting for migration lock on {tableName}..." on each retry so operators can diagnose slow startups. The total retry budget is bounded by `MigrationLockTimeout` (default 30s). If the lock is not acquired within the timeout, the runner throws `TimeoutException`. Note: `hashtext` returns a 32-bit integer, so hash collisions between different table names are theoretically possible but unlikely in practice. Two tables locked by the same hash would serialize rather than deadlock, causing spurious contention but no correctness issue. An alternative is the two-argument form `pg_advisory_lock(constant, hash)` with a Brighter-specific namespace constant, but the single-argument form is simpler and sufficient given the small number of box tables per database. |
+| PostgreSQL | `pg_try_advisory_lock(74726, hashtext('BrighterMigration_' \|\| tableName))` with a retry loop. The two-argument form uses a Brighter-specific namespace constant (`74726`, derived from the ASCII values of `'Br'`) as the first argument, which eliminates hash collisions with other applications or libraries that also use PostgreSQL advisory locks on the same database. The runner calls `pg_try_advisory_lock` in a loop with a short delay between attempts, logging "Waiting for migration lock on {tableName}..." on each retry so operators can diagnose slow startups. The total retry budget is bounded by `MigrationLockTimeout` (default 30s). If the lock is not acquired within the timeout, the runner throws `TimeoutException`. |
 | MySQL | `GET_LOCK('BrighterMigration_{tableName}', lockTimeout)` where `lockTimeout` defaults to 30 seconds, configurable via `BoxProvisioningOptions.MigrationLockTimeout` |
 | SQLite | SQLite's file-level locking provides implicit serialization |
-| Spanner | Spanner DDL operations are submitted via `ExecuteDdlAsync` (a separate DDL batch API) and are serialized by the Spanner service — they cannot run inside read-write transactions. The migration runner submits each DDL statement via `ExecuteDdlAsync`, then updates the history table in a normal read-write transaction. **Failure window**: Because DDL and history updates cannot share a transaction, there is a window where DDL has been applied but the history row has not been written (e.g. if the process crashes between the two steps). On next startup, the runner would attempt to re-apply the migration. To handle this safely, Spanner DDL migrations must be idempotent: `CREATE TABLE` uses `IF NOT EXISTS`; for `ALTER TABLE` (which does not support `IF NOT EXISTS` on columns), the Spanner runner must catch "column already exists" errors from `ExecuteDdlAsync` and treat them as success — the migration was applied but untracked, so the runner writes the missing history row and continues. |
+| Spanner | Spanner DDL operations are submitted via `ExecuteDdlAsync` (a separate DDL batch API) and are serialized by the Spanner service — they cannot run inside read-write transactions. The migration runner submits each DDL statement via `ExecuteDdlAsync`, then updates the history table in a normal read-write transaction. **Failure window**: Because DDL and history updates cannot share a transaction, there is a window where DDL has been applied but the history row has not been written (e.g. if the process crashes between the two steps). On next startup, the runner would attempt to re-apply the migration. To handle this safely, Spanner DDL migrations have a **formal idempotency contract**: all `UpScript` values for Spanner migrations must be idempotent. `CREATE TABLE` must use `IF NOT EXISTS`; `ALTER TABLE ADD COLUMN` must be guarded. The `SpannerBoxMigrationRunner` enforces the runner side of this contract by catching "already exists" errors from `ExecuteDdlAsync` and treating them as success — writing the missing history row and continuing. This contract should be documented in the `IAmABoxMigration.UpScript` XML doc for the Spanner backend, and the Spanner migration definition classes (`SpannerOutboxMigrations`, `SpannerInboxMigrations`) must ensure all `UpScript` values are idempotent. |
 
 **TimeSpan-to-backend unit conversions**: `BoxProvisioningOptions.MigrationLockTimeout` is a `TimeSpan`. Each backend converts it to the units expected by its locking API:
 
@@ -560,7 +570,7 @@ Each backend's migration runner acquires a database-level lock before running mi
 |---------|-----|--------------|------------|
 | MSSQL | `sp_getapplock @LockTimeout` | Milliseconds (int) | `(int)timeout.TotalMilliseconds` |
 | MySQL | `GET_LOCK(name, timeout)` | Whole seconds (int) | `(int)timeout.TotalSeconds` |
-| PostgreSQL | `pg_try_advisory_lock` with retry | Milliseconds (int) | `(int)timeout.TotalMilliseconds` used as total retry budget |
+| PostgreSQL | `pg_try_advisory_lock(int, int)` with retry | Milliseconds (int) | `(int)timeout.TotalMilliseconds` used as total retry budget |
 | SQLite | File-level locking | N/A | Implicit serialization |
 | Spanner | `ExecuteDdlAsync` | N/A | DDL serialized by Spanner service; history updates use normal transactions |
 
@@ -576,6 +586,8 @@ The migration runner opens a **single `DbConnection`** (e.g. `SqlConnection`, `N
 2. **Provisioning runs at startup before DI is fully built**, so connection providers may not yet be available when the hosted service runs.
 
 The connection is opened once, the advisory lock is acquired, all migrations run on that connection (each in its own transaction), and the lock is released before the connection is disposed. For MSSQL, which uses `sp_getapplock` within a transaction, the runner opens a single transaction that spans the entire migration run. MSSQL does not support true nested transactions — `BEGIN TRANSACTION` inside an outer transaction merely increments `@@TRANCOUNT`, and a rollback at any level rolls back everything. Therefore, on MSSQL the lock transaction and the migration transaction are the **same** transaction: the runner begins one transaction, acquires the app lock, executes all migration DDL and history inserts within it, and commits once at the end. If any migration step fails, the entire transaction (including the lock) rolls back, leaving the database at the last successfully committed state.
+
+**Important**: This means MSSQL has **all-or-nothing semantics** for a migration run: if migration N fails, migrations 1..N-1 that were applied in the same run are also rolled back. This differs from PostgreSQL, MySQL, and SQLite, where each migration is committed in its own transaction and a failure at migration N leaves migrations 1..N-1 intact. In practice this difference is only observable when multiple migrations are pending (e.g. upgrading across several Brighter versions at once). Contributors implementing the MSSQL runner must be aware of this distinction and should document it in the runner's XML doc comments.
 
 ### 6. Migration Definitions — Reusing Existing Builders
 
@@ -612,7 +624,7 @@ new BoxMigration(
 
 **Binary vs text payload mode**: The `binaryMessagePayload` flag on `IAmARelationalDatabaseConfiguration` produces a structurally different table schema (e.g. `VARBINARY(MAX)` vs `NVARCHAR(MAX)` for the message body column). Changing this flag after the table has been created is **not supported** — the version-1 migration is already recorded in the history table, and the runner will not re-run it with different DDL. If a user needs to switch payload modes, they must drop and recreate the table (or manually alter the column), which is a destructive operation outside the scope of this library.
 
-**Payload mode validation**: When the table already exists and has migration history, the provisioner performs a schema introspection step to check that the actual column type of the message body column matches the configured `binaryMessagePayload` mode. If there is a mismatch (e.g. the table has `NVARCHAR(MAX)` but the configuration specifies `binaryMessagePayload = true`), the provisioner throws a `ConfigurationException` at startup with a descriptive message. This fail-fast check prevents silent data corruption where binary data would be stored as text or vice versa. The introspection uses `INFORMATION_SCHEMA.COLUMNS` (MSSQL/PostgreSQL/MySQL) or `pragma_table_info` (SQLite) to determine the actual column data type.
+**Payload mode validation**: This is a **separate validation step** in the provisioner, distinct from `BoxTableState` detection and migration execution. Payload mode information does not flow through `BoxTableState` — the record captures only structural state (table existence, history, version). When the table already exists (regardless of whether history exists), the provisioner performs a schema introspection step to check that the actual column type of the message body column matches the configured `binaryMessagePayload` mode. If there is a mismatch (e.g. the table has `NVARCHAR(MAX)` but the configuration specifies `binaryMessagePayload = true`), the provisioner throws a `ConfigurationException` at startup with a descriptive message. This fail-fast check prevents silent data corruption where binary data would be stored as text or vice versa. The introspection uses `INFORMATION_SCHEMA.COLUMNS` (MSSQL/PostgreSQL/MySQL) or `pragma_table_info` (SQLite) to determine the actual column data type.
 
 The column to introspect differs by box type: `Body` for outbox tables, `CommandBody` for inbox tables. The expected column types per backend and payload mode are:
 
@@ -638,9 +650,11 @@ When the runner receives a `BoxTableState` with `TableExists && !HistoryExists`,
 
 This ensures smooth upgrades for existing applications. The detection uses the same exists-query logic as the current builders, unified behind the provisioner.
 
-### 8. .NET Aspire Integration
+### 8. .NET Aspire Compatibility
 
-The core provisioning library is self-contained and does not depend on Aspire. Connection strings are passed in via `IAmARelationalDatabaseConfiguration`, so Aspire (or any other connection-string source) can be layered on top without changes to the provisioning architecture. Aspire integration will be addressed separately in a future ADR.
+The core provisioning library is self-contained and does not depend on Aspire. The `connectionName` overloads on the registration extensions (e.g. `AddMsSqlOutbox("BrighterDb")`) resolve connection strings from `IConfiguration` via `IServiceProvider` at runtime — this is the standard pattern that Aspire uses to populate connection strings via service discovery. This means the provisioning library **works with Aspire out of the box** without any Aspire-specific code in Brighter.
+
+What is **out of scope** for this ADR is deeper Aspire hosting integration: Aspire-specific NuGet packages (`Aspire.Hosting.*`), `IResourceBuilder` extensions, health check integration, or OpenTelemetry enrichment. These may be addressed in a future ADR.
 
 ### 9. Package Structure
 
@@ -677,7 +691,7 @@ Each backend package depends on:
 
 **Prerequisites**:
 
-1. `IAmARelationalDatabaseConfiguration` must be extended with a `string? SchemaName { get; }` property. The concrete `RelationalDatabaseConfiguration` already has this property, but the interface does not expose it. The provisioner code in this ADR references `_configuration.SchemaName` through the interface, so this is a required change before implementation begins. The test stub `StubSqlDbConfiguration` in `Paramore.Brighter.Extensions.Tests` must also be updated to satisfy the new interface member.
+1. `IAmARelationalDatabaseConfiguration` must be extended with a `string? SchemaName { get; }` property. The concrete `RelationalDatabaseConfiguration` already has this property, but the interface does not expose it. The provisioner code in this ADR references `_configuration.SchemaName` through the interface, so this is a required change before implementation begins. To avoid breaking any external implementors of the interface, this will be added as a **default interface member**: `string? SchemaName => null;`. Existing implementations that do not override `SchemaName` will return `null`, which the provisioner interprets as the backend's default schema (e.g. `dbo` for MSSQL, `public` for PostgreSQL). The `RelationalDatabaseConfiguration` class already has the property and will satisfy the interface implicitly. The test stub `StubSqlDbConfiguration` in `Paramore.Brighter.Extensions.Tests` must also be updated to satisfy the new interface member.
 
 2. `SpannerOutboxBuilder` must be updated to add the missing `DataRef` and `SpecVersion` columns to both the text and binary DDL templates. All other outbox builders (MSSQL, PostgreSQL, MySQL, SQLite) already include these columns. There are no known Spanner users, so this is a safe cleanup with no migration concern.
 
@@ -689,7 +703,7 @@ Ordered to enable incremental delivery and testing:
 4. **MySQL, SQLite, Spanner backends** — Remaining relational backends
 5. **Sample update** — Update `samples/WebAPI/` to use the new library instead of `DbMaker/SchemaCreation`
 
-Aspire integration is out of scope for this ADR and will be addressed separately.
+Deeper Aspire hosting integration (Aspire-specific packages, `IResourceBuilder` extensions, health checks) is out of scope for this ADR and will be addressed separately. The `connectionName` overloads already enable Aspire compatibility without Aspire-specific dependencies.
 
 ## Consequences
 
@@ -699,12 +713,14 @@ Aspire integration is out of scope for this ADR and will be addressed separately
 - **Migration support**: Schema evolution is handled automatically at startup — no manual ALTER TABLE scripts when upgrading Brighter
 - **Modular**: Each backend is an independent NuGet package; new backends can be added without touching core code
 - **Backward compatible**: The existing static builder classes are unchanged; applications that use them directly continue to work. The new library calls the existing builders internally
-- **Aspire-ready**: The architecture accepts connection strings via configuration, so Aspire integration can be layered on top without changes to the core provisioning library
+- **Aspire-compatible**: The `connectionName` overloads resolve connection strings from `IConfiguration` at runtime, which is the standard Aspire service discovery pattern. No Aspire-specific packages are required — the provisioning library works with Aspire out of the box
 - **Testable**: `IAmABoxProvisioner` and `IAmABoxMigrationRunner` are interfaces that can be mocked
 - **Bootstrap path**: Existing installations that pre-date the migration system are detected and handled gracefully
 
 ### Negative
 
+- **Interface change to `IAmARelationalDatabaseConfiguration`**: Adding `SchemaName` as a default interface member is source-compatible but requires recompilation. External implementors on older target frameworks that do not support default interface members (pre-.NET Core 3.0) would need to add the property explicitly. This is mitigated by Brighter's target framework requirements already being above this threshold.
+- **Startup blocking**: `BoxProvisioningHostedService.StartAsync` blocks the host from completing startup. If a provisioner waits on an advisory lock (up to `MigrationLockTimeout`, default 30s), health check and readiness probe endpoints will not respond during that window. Operators on Kubernetes or similar platforms should tune `initialDelaySeconds` on readiness probes accordingly.
 - **New NuGet packages**: Adds 5+ new packages to the Brighter ecosystem (core + backends)
 - **Migration history table**: Introduces a new `__BrighterMigrationHistory` table in each database — a small footprint but visible to DBAs
 - **Two ways to create tables**: Until the old builders are deprecated, developers have two options — direct builder usage and the new provisioning library. This could cause confusion

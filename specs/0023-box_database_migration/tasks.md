@@ -12,10 +12,10 @@ These tasks address interface gaps and builder inconsistencies that must be reso
 - [ ] **IMPLEMENT: Expose SchemaName on the relational database configuration interface**
   - `SchemaName` exists on `RelationalDatabaseConfiguration` but not on `IAmARelationalDatabaseConfiguration`
   - The provisioner code references `_configuration.SchemaName` through the interface
-  - Add `string? SchemaName { get; }` to `IAmARelationalDatabaseConfiguration` in `src/Paramore.Brighter/IAmARelationalDatabaseConfiguration.cs`
+  - Add `string? SchemaName => null;` as a **default interface member** on `IAmARelationalDatabaseConfiguration` in `src/Paramore.Brighter/IAmARelationalDatabaseConfiguration.cs`
+  - Using a default interface member avoids breaking any external implementors — existing implementations that do not override `SchemaName` will return `null`, which the provisioner interprets as the backend's default schema (e.g. `dbo` for MSSQL, `public` for PostgreSQL)
   - Update `StubSqlDbConfiguration` in `tests/Paramore.Brighter.Extensions.Tests/TestDifferentSetups.cs` to implement the new member
-  - Verify existing code compiles — `RelationalDatabaseConfiguration` already has the property, so no changes needed there
-  - **Risk**: Any other `IAmARelationalDatabaseConfiguration` implementations outside the repo will break. This is acceptable as the ADR calls for it.
+  - Verify existing code compiles — `RelationalDatabaseConfiguration` already has the property and will satisfy the interface implicitly
 
 ### Task 0.2: Fix Spanner Outbox Builder Missing Columns
 
@@ -198,6 +198,14 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
     - Compare against expected type for configured payload mode (NVARCHAR(MAX) vs VARBINARY(MAX))
     - Throw `ConfigurationException` on mismatch
 
+### Task 2.5a: Extract Shared Payload Validation Helper (Structural)
+
+- [ ] **REFACTOR: Extract shared payload validation logic into a reusable helper**
+  - This is a **structural change only** (no new behavior) — separated from Task 2.6 per tidy-first guidelines
+  - Extract the payload mode validation logic from `MsSqlOutboxProvisioner` (implemented in Task 2.5) into a shared helper method or class (e.g. `MsSqlPayloadModeValidator`) that can be reused by both outbox and inbox provisioners
+  - The helper should accept: connection, table name, schema name, column name (e.g. `Body` or `CommandBody`), expected binary mode, and cancellation token
+  - All existing tests from Task 2.5 must continue to pass unchanged
+
 ### Task 2.6: MSSQL Inbox Provisioner Validates Payload Mode
 
 - [ ] **TEST + IMPLEMENT: MsSql inbox provisioner fails when payload mode mismatches existing table**
@@ -213,7 +221,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
     - After detecting table exists, introspect `CommandBody` column type via `INFORMATION_SCHEMA.COLUMNS`
     - Compare against expected type for configured payload mode (NVARCHAR(MAX) vs VARBINARY(MAX))
     - Throw `ConfigurationException` on mismatch
-    - Refactor: extract shared payload validation logic from outbox provisioner (Task 2.5) into a helper used by both
+    - Reuse the shared payload validation helper extracted in Task 2.5a
 
 ### Task 2.7: MSSQL Inbox Provisioner Creates Table on Fresh Database
 
@@ -287,7 +295,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
     - Create project `src/Paramore.Brighter.BoxProvisioning.PostgreSql/`
     - Create `PostgreSqlOutboxProvisioner`, `PostgreSqlBoxMigrationRunner`
     - `PostgreSqlOutboxMigrations.All()` reuses `PostgreSqlOutboxBuilder.GetDDL()`
-    - Runner uses `pg_try_advisory_lock(hashtext(...))` for concurrency control
+    - Runner uses `pg_try_advisory_lock(74726, hashtext(...))` for concurrency control (two-argument form with Brighter namespace constant)
     - `DoesTableExistAsync` uses `INFORMATION_SCHEMA.TABLES`
 
 ### Task 3.2: PostgreSQL Outbox Provisioner Bootstraps Pre-Migration Installation
@@ -350,7 +358,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
     - Then table exists once and history has exactly one version-1 row
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - `PostgreSqlBoxMigrationRunner` uses `pg_try_advisory_lock` with retry loop
+    - `PostgreSqlBoxMigrationRunner` uses `pg_try_advisory_lock(74726, hashtext(...))` with retry loop (two-argument form with Brighter namespace constant `74726`)
     - Retry budget bounded by `MigrationLockTimeout`
     - Throws `TimeoutException` if lock not acquired within timeout
 
@@ -501,7 +509,9 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 Task 0.1, 0.2 ──→ Task 1.1 ──→ Tasks 1.2, 1.3, 1.4, 1.5 (can be parallel)
                                         │
                                         ▼
-                                  Task 2.1 ──→ Task 2.2 ──→ Tasks 2.3–2.9 (2.3–2.6 can be parallel after 2.2)
+                                  Task 2.1 ──→ Task 2.2 ──→ Tasks 2.3–2.5, 2.7–2.9 (can be parallel after 2.2)
+                                                                │
+                                                          Task 2.5 ──→ Task 2.5a (structural) ──→ Task 2.6
                                                                 │
                                                                 ▼
                                                           Tasks 3.x (PostgreSQL)
