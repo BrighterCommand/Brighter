@@ -27,7 +27,7 @@ using Paramore.Brighter.Logging.Attributes;
 
 namespace HelloWorldInternalBus
 {
-    internal sealed class GreetingCommandHandlerAsync : RequestHandlerAsync<GreetingCommand>
+    public sealed class GreetingCommandHandlerAsync : RequestHandlerAsync<GreetingCommand>
     {
         [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
         public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default)
