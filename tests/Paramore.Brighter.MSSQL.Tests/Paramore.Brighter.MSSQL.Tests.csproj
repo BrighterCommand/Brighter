@@ -17,6 +17,8 @@
       </PackageReference>
       <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
       <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+      <PackageReference Include="Microsoft.Extensions.Logging" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" />
       <PackageReference Include="xunit" />
       <PackageReference Include="xunit.runner.visualstudio">
@@ -26,6 +28,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.MsSql\Paramore.Brighter.BoxProvisioning.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.MsSql\Paramore.Brighter.Inbox.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.MsSql\Paramore.Brighter.Locking.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.MsSql\Paramore.Brighter.MessagingGateway.MsSql.csproj" />

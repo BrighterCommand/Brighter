@@ -9,7 +9,7 @@ These tasks address interface gaps and builder inconsistencies that must be reso
 
 ### Task 0.1: Add SchemaName to IAmARelationalDatabaseConfiguration
 
-- [ ] **IMPLEMENT: Expose SchemaName on the relational database configuration interface**
+- [x] **IMPLEMENT: Expose SchemaName on the relational database configuration interface**
   - `SchemaName` exists on `RelationalDatabaseConfiguration` but not on `IAmARelationalDatabaseConfiguration`
   - The provisioner code references `_configuration.SchemaName` through the interface
   - Add `string? SchemaName => null;` as a **default interface member** on `IAmARelationalDatabaseConfiguration` in `src/Paramore.Brighter/IAmARelationalDatabaseConfiguration.cs`
@@ -19,7 +19,7 @@ These tasks address interface gaps and builder inconsistencies that must be reso
 
 ### Task 0.2: Fix Spanner Outbox Builder Missing Columns
 
-- [ ] **IMPLEMENT: Add missing DataRef and SpecVersion columns to Spanner outbox builder**
+- [x] **IMPLEMENT: Add missing DataRef and SpecVersion columns to Spanner outbox builder**
   - `SpannerOutboxBuilder` is missing `DataRef` and `SpecVersion` columns that all other outbox builders include
   - Add `DataRef STRING(MAX)` and `SpecVersion STRING(10)` columns to both text and binary DDL templates in `src/Paramore.Brighter.Outbox.Spanner/SpannerOutboxBuilder.cs`
   - No migration concern — there are no known Spanner users per ADR
@@ -32,7 +32,7 @@ Create `Paramore.Brighter.BoxProvisioning` with interfaces, records, hosted serv
 
 ### Task 1.1: Core Interfaces and Types
 
-- [ ] **IMPLEMENT: Create BoxProvisioning core package with interfaces and types**
+- [x] **IMPLEMENT: Create BoxProvisioning core package with interfaces and types**
   - Create new project `src/Paramore.Brighter.BoxProvisioning/Paramore.Brighter.BoxProvisioning.csproj`
   - Follow existing .csproj patterns (SDK, target frameworks from `$(BrighterCoreTargetFrameworks)`, nullable enable)
   - Reference `Paramore.Brighter` and `Microsoft.Extensions.Hosting.Abstractions`
@@ -48,7 +48,7 @@ Create `Paramore.Brighter.BoxProvisioning` with interfaces, records, hosted serv
 
 ### Task 1.2: Hosted Service Runs Provisioners at Startup
 
-- [ ] **TEST + IMPLEMENT: BoxProvisioningHostedService runs all registered provisioners on StartAsync**
+- [x] **TEST + IMPLEMENT: BoxProvisioningHostedService runs all registered provisioners on StartAsync**
   - **USE COMMAND**: `/test-first when box provisioning hosted service starts it should run all registered provisioners`
   - Test location: `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/`
   - Test file: `When_box_provisioning_hosted_service_starts_it_should_run_all_registered_provisioners.cs`
@@ -65,7 +65,7 @@ Create `Paramore.Brighter.BoxProvisioning` with interfaces, records, hosted serv
 
 ### Task 1.3: Hosted Service Orders Outbox Before Inbox
 
-- [ ] **TEST + IMPLEMENT: BoxProvisioningHostedService provisions outbox before inbox**
+- [x] **TEST + IMPLEMENT: BoxProvisioningHostedService provisions outbox before inbox**
   - **USE COMMAND**: `/test-first when box provisioning hosted service starts it should provision outbox before inbox`
   - Test location: `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/`
   - Test file: `When_box_provisioning_hosted_service_starts_it_should_provision_outbox_before_inbox.cs`
@@ -79,7 +79,7 @@ Create `Paramore.Brighter.BoxProvisioning` with interfaces, records, hosted serv
 
 ### Task 1.4: Hosted Service Wraps Failures in ConfigurationException
 
-- [ ] **TEST + IMPLEMENT: BoxProvisioningHostedService wraps provisioner failures in ConfigurationException**
+- [x] **TEST + IMPLEMENT: BoxProvisioningHostedService wraps provisioner failures in ConfigurationException**
   - **USE COMMAND**: `/test-first when box provisioning fails it should throw configuration exception`
   - Test location: `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/`
   - Test file: `When_box_provisioning_fails_it_should_throw_configuration_exception.cs`
@@ -94,7 +94,7 @@ Create `Paramore.Brighter.BoxProvisioning` with interfaces, records, hosted serv
 
 ### Task 1.5: Registration Extension Wires Up DI
 
-- [ ] **TEST + IMPLEMENT: UseBoxProvisioning registers provisioners and hosted service**
+- [x] **TEST + IMPLEMENT: UseBoxProvisioning registers provisioners and hosted service**
   - **USE COMMAND**: `/test-first when using box provisioning extension it should register hosted service and provisioners`
   - Test location: `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/`
   - Test file: `When_using_box_provisioning_extension_it_should_register_hosted_service_and_provisioners.cs`
@@ -119,7 +119,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
 
 ### Task 2.1: MSSQL Backend Project Setup
 
-- [ ] **IMPLEMENT: Create MsSql BoxProvisioning project with migration definitions**
+- [x] **IMPLEMENT: Create MsSql BoxProvisioning project with migration definitions**
   - Create new project `src/Paramore.Brighter.BoxProvisioning.MsSql/Paramore.Brighter.BoxProvisioning.MsSql.csproj`
   - Reference `Paramore.Brighter.BoxProvisioning`, `Paramore.Brighter.Inbox.MsSql`, `Paramore.Brighter.Outbox.MsSql`
   - Reference `Microsoft.Data.SqlClient`
@@ -131,7 +131,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
 
 ### Task 2.2: MSSQL Outbox Provisioner Creates Table on Fresh Database
 
-- [ ] **TEST + IMPLEMENT: MsSql outbox provisioner creates outbox table when none exists**
+- [x] **TEST + IMPLEMENT: MsSql outbox provisioner creates outbox table when none exists**
   - **USE COMMAND**: `/test-first when mssql outbox provisioner runs on fresh database it should create outbox table`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`
@@ -150,7 +150,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
 
 ### Task 2.3: MSSQL Outbox Provisioner Is Idempotent
 
-- [ ] **TEST + IMPLEMENT: MsSql outbox provisioner is idempotent when table already at latest version**
+- [x] **TEST + IMPLEMENT: MsSql outbox provisioner is idempotent when table already at latest version**
   - **USE COMMAND**: `/test-first when mssql outbox provisioner runs on already provisioned database it should be idempotent`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent.cs`
@@ -166,7 +166,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
 
 ### Task 2.4: MSSQL Outbox Provisioner Bootstraps Pre-Migration Installation
 
-- [ ] **TEST + IMPLEMENT: MsSql outbox provisioner bootstraps existing table without migration history**
+- [x] **TEST + IMPLEMENT: MsSql outbox provisioner bootstraps existing table without migration history**
   - **USE COMMAND**: `/test-first when mssql outbox provisioner finds existing table without history it should bootstrap`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap.cs`
@@ -184,7 +184,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
 
 ### Task 2.5: MSSQL Outbox Provisioner Validates Payload Mode
 
-- [ ] **TEST + IMPLEMENT: MsSql outbox provisioner fails when payload mode mismatches existing table**
+- [x] **TEST + IMPLEMENT: MsSql outbox provisioner fails when payload mode mismatches existing table**
   - **USE COMMAND**: `/test-first when mssql outbox provisioner detects payload mode mismatch it should throw`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_outbox_provisioner_detects_payload_mode_mismatch_it_should_throw.cs`
@@ -200,7 +200,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
 
 ### Task 2.5a: Extract Shared Payload Validation Helper (Structural)
 
-- [ ] **REFACTOR: Extract shared payload validation logic into a reusable helper**
+- [x] **REFACTOR: Extract shared payload validation logic into a reusable helper**
   - This is a **structural change only** (no new behavior) — separated from Task 2.6 per tidy-first guidelines
   - Extract the payload mode validation logic from `MsSqlOutboxProvisioner` (implemented in Task 2.5) into a shared helper method or class (e.g. `MsSqlPayloadModeValidator`) that can be reused by both outbox and inbox provisioners
   - The helper should accept: connection, table name, schema name, column name (e.g. `Body` or `CommandBody`), expected binary mode, and cancellation token
@@ -208,7 +208,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
 
 ### Task 2.6: MSSQL Inbox Provisioner Validates Payload Mode
 
-- [ ] **TEST + IMPLEMENT: MsSql inbox provisioner fails when payload mode mismatches existing table**
+- [x] **TEST + IMPLEMENT: MsSql inbox provisioner fails when payload mode mismatches existing table**
   - **USE COMMAND**: `/test-first when mssql inbox provisioner detects payload mode mismatch it should throw`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_inbox_provisioner_detects_payload_mode_mismatch_it_should_throw.cs`
@@ -225,7 +225,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
 
 ### Task 2.7: MSSQL Inbox Provisioner Creates Table on Fresh Database
 
-- [ ] **TEST + IMPLEMENT: MsSql inbox provisioner creates inbox table when none exists**
+- [x] **TEST + IMPLEMENT: MsSql inbox provisioner creates inbox table when none exists**
   - **USE COMMAND**: `/test-first when mssql inbox provisioner runs on fresh database it should create inbox table`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table.cs`
@@ -241,7 +241,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
 
 ### Task 2.8: MSSQL Registration Extensions Resolve from IConfiguration
 
-- [ ] **TEST + IMPLEMENT: MsSql box provisioning extensions resolve connection string from IConfiguration**
+- [x] **TEST + IMPLEMENT: MsSql box provisioning extensions resolve connection string from IConfiguration**
   - **USE COMMAND**: `/test-first when mssql box provisioning uses connection name it should resolve from configuration`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_box_provisioning_uses_connection_name_it_should_resolve_from_configuration.cs`
@@ -258,7 +258,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
 
 ### Task 2.9: MSSQL Migration Runner Handles Concurrent Instances
 
-- [ ] **TEST + IMPLEMENT: MsSql migration runner serializes concurrent migration attempts**
+- [x] **TEST + IMPLEMENT: MsSql migration runner serializes concurrent migration attempts**
   - **USE COMMAND**: `/test-first when multiple mssql provisioners run concurrently they should not corrupt state`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_multiple_mssql_provisioners_run_concurrently_they_should_not_corrupt_state.cs`
