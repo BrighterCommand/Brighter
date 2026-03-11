@@ -33,4 +33,7 @@ public interface ISpecificationVisitor<TData, TResult>
 {
     /// <summary>Visits a leaf specification node.</summary>
     TResult Visit(Specification<TData> specification);
+
+    /// <summary>Visits an AND composition node.</summary>
+    TResult Visit(AndSpecification<TData> specification);
 }

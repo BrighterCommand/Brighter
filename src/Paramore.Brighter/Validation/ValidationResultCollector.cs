@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Paramore.Brighter.Validation;
 
@@ -36,4 +37,8 @@ public class ValidationResultCollector<TData> : ISpecificationVisitor<TData, IEn
     /// <summary>Collects results from a leaf specification.</summary>
     public IEnumerable<ValidationResult> Visit(Specification<TData> specification)
         => specification.LastResults;
+
+    /// <summary>Collects results from both children of an AND node.</summary>
+    public IEnumerable<ValidationResult> Visit(AndSpecification<TData> specification)
+        => specification.Left.Accept(this).Concat(specification.Right.Accept(this));
 }

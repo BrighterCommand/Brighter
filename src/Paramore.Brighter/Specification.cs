@@ -128,7 +128,7 @@ public class Specification<T> : ISpecification<T>
 
     /// <inheritdoc />
     public ISpecification<T> And(ISpecification<T> other)
-        => new Specification<T>(x => IsSatisfiedBy(x) && other.IsSatisfiedBy(x));
+        => new AndSpecification<T>(this, other);
 
     /// <inheritdoc />
     public ISpecification<T> Or(ISpecification<T> other)
