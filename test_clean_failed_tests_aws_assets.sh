@@ -109,7 +109,7 @@ SUBSCRIPTION_ARN=$(aws sns subscribe \
     --query 'SubscriptionArn' --output text)
 echo "  Created subscription: $SUBSCRIPTION_ARN"
 
-# Allow tag propagation time
+# Allow time for tag propagation — the Resource Groups Tagging API is eventually consistent
 sleep 5
 
 # --- Test 1: --dry-run lists tagged resources without deleting ---
@@ -162,7 +162,7 @@ fi
 echo ""
 echo "=== Test 4: tagged resources were deleted ==="
 
-# Allow eventual consistency
+# Allow time for eventual consistency — SQS/SNS deletions may take a few seconds to propagate
 sleep 5
 
 TAGGED_QUEUE_CHECK=$(aws sqs get-queue-url --queue-name "$TAGGED_QUEUE" 2>&1 || true)

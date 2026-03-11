@@ -33,7 +33,7 @@ if [[ $TAG_API_EXIT -ne 0 ]]; then
     exit 1
 fi
 
-if [[ -z "$RESOURCE_ARNS" ]]; then
+if [[ -z "$RESOURCE_ARNS" || "$RESOURCE_ARNS" == "None" ]]; then
     echo "No resources found with Environment=Test tag."
     exit 0
 fi

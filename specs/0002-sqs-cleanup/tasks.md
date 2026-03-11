@@ -24,8 +24,8 @@ Task 4 (SQS test tags)    ────────▶ Task 5 (Cleanup script)
   - Test file: `When_creating_sns_attributes_with_tags.cs`
   - Test should verify:
     - `SnsAttributes` constructed with `tags: [new Tag { Key = "Environment", Value = "Test" }]` stores them in the `Tags` property
-    - `SnsAttributes` constructed without tags has `Tags` as `null`
-    - `SnsAttributes.Empty` has `Tags` as `null`
+    - `SnsAttributes` constructed without tags has `Tags` as an empty list
+    - `SnsAttributes.Empty` has `Tags` as an empty list
     - Existing constructor parameters (deliveryPolicy, policy, type, contentBasedDeduplication) are unaffected
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
