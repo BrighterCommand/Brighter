@@ -229,30 +229,10 @@ namespace Paramore.Brighter
         }
 
         private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
-        {
-            return FindMethods(messageMapper)
-                .Where(method => method.Name == nameof(IAmAMessageMapper<TRequest>.MapToMessage))
-                .SingleOrDefault(
-                    method => method.GetParameters().Length == 2 
-                    && method.GetParameters().First().ParameterType == typeof(TRequest)
-                    && method.GetParameters().Last().ParameterType == typeof(Publication)
-                )!;
-        }
+            => MapperMethodDiscovery.FindMapToMessage(messageMapper.GetType(), typeof(TRequest));
 
         private MethodInfo FindMapToRequest<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
-        {
-            return FindMethods(messageMapper)
-                .Where(method => method.Name == nameof(IAmAMessageMapper<TRequest>.MapToRequest))
-                .SingleOrDefault(
-                    method => method.GetParameters().Length == 1 
-                    && method.GetParameters().Single().ParameterType == typeof(Message)
-                )!;
-        }
-
-        private static MethodInfo[] FindMethods<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
-        {
-            return messageMapper.GetType().GetMethods();
-        }
+            => MapperMethodDiscovery.FindMapToRequest(messageMapper.GetType());
 
         private TransformPipelineTracer TraceWrapPipeline<TRequest>(WrapPipeline<TRequest> pipeline) where TRequest : class, IRequest
         {
