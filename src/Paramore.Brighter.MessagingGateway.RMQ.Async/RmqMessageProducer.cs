@@ -151,9 +151,9 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
 
             message.Persist = Connection.PersistMessages;
-            Channel.BasicAcksAsync += OnPublishSucceeded;
-            Channel.BasicNacksAsync += OnPublishFailed;
             
+            RegisterChannelEvents(true);
+
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message, _instrumentationOptions);
 
             Log.PublishingMessageAsync(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay.Value.TotalMilliseconds,
@@ -188,6 +188,20 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
         }
     }
 
+    private void RegisterChannelEvents(bool add)
+    {
+        if (add)
+        {
+            Channel?.BasicAcksAsync += OnPublishSucceeded;
+            Channel?.BasicNacksAsync += OnPublishFailed;
+        }
+        else
+        {
+            Channel?.BasicAcksAsync -= OnPublishSucceeded;
+            Channel?.BasicNacksAsync -= OnPublishFailed;
+        }
+    }
+
     public sealed override void Dispose()
     {
         GC.SuppressFinalize(this);
@@ -195,6 +209,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 
     private Task OnPublishFailed(object sender, BasicNackEventArgs e)
     {
+        RegisterChannelEvents(false);
         if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out var messageId))
         {
             OnMessagePublished?.Invoke(false, messageId);
@@ -207,6 +222,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 
     private Task OnPublishSucceeded(object sender, BasicAckEventArgs e)
     {
+        RegisterChannelEvents(false);
         if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out var messageId))
         {
             OnMessagePublished?.Invoke(true, messageId);
