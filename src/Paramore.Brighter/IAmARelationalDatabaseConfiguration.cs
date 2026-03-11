@@ -40,5 +40,11 @@
         /// Gets the name of the queue table.
         /// </summary>
         string QueueStoreTable { get; }
+
+        /// <summary>
+        /// Gets the name of the schema containing the tables.
+        /// </summary>
+        /// <value>The schema name, or <c>null</c> for the backend's default schema.</value>
+        string? SchemaName { get; }
     }
 }

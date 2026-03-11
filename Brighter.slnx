@@ -222,6 +222,7 @@
   <Project Path="src/Paramore.Brighter.Analyzer.Package/Paramore.Brighter.Analyzer.Package.csproj" />
   <Project Path="src/Paramore.Brighter.Analyzer/Paramore.Brighter.Analyzer.csproj" />
   <Project Path="src/Paramore.Brighter.Archive.Azure/Paramore.Brighter.Archive.Azure.csproj" />
+  <Project Path="src/Paramore.Brighter.BoxProvisioning/Paramore.Brighter.BoxProvisioning.csproj" />
   <Project Path="src/Paramore.Brighter.Dapper/Paramore.Brighter.Dapper.csproj" />
   <Project Path="src/Paramore.Brighter.DynamoDb.V4/Paramore.Brighter.DynamoDb.V4.csproj" />
   <Project Path="src/Paramore.Brighter.DynamoDb/Paramore.Brighter.DynamoDb.csproj" />

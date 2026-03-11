@@ -183,6 +183,8 @@ namespace Tests
             public string DatabaseName => throw new NotImplementedException();
 
             public string QueueStoreTable => throw new NotImplementedException();
+
+            public string? SchemaName => null;
         }
 
         public class StubRelationDatabaseOutboxQueries : IRelationDatabaseOutboxQueries
