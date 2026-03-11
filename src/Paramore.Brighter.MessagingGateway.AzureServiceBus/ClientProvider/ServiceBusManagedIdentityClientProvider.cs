@@ -23,9 +23,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
                     "Fully qualified Namespace is null or empty, ensure this is set in the constructor.");
             }
             
-            Client = new ServiceBusClient(fullyQualifiedNameSpace, new ManagedIdentityCredential());
+            Client = new ServiceBusClient(fullyQualifiedNameSpace, new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned));
             AdminClient = new ServiceBusAdministrationClient(fullyQualifiedNameSpace,
-                new ManagedIdentityCredential());
+                new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned));
         }
     }
 }
