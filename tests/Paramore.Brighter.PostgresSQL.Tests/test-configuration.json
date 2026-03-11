@@ -9,5 +9,16 @@
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "PostgresBinaryOutboxProvider"
     }
+  },
+  "MessagingGateway": {
+    "MessageGatewayProvider": "Paramore.Brighter.PostgresSQL.Tests.MessagingGateway.PostgresMessageGatewayProvider",
+    "Publication": "Paramore.Brighter.MessagingGateway.Postgres.PostgresPublication",
+    "Subscription": "Paramore.Brighter.MessagingGateway.Postgres.PostgresSubscription",
+    "Category": "PostgresSql",
+    "HasSupportToPublishConfirmation": false,
+    "HasSupportToDeadLetterQueue": false,
+    "HasSupportToDelayedMessages": false,
+    "HasSupportToPartitionKey": false,
+    "HasSupportToRequeue": true
   }
 }

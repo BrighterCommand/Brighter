@@ -1,0 +1,109 @@
+﻿#region Licence
+
+/* The MIT License (MIT)
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+namespace Paramore.Brighter.Test.Generator.Configuration;
+
+/// <summary>
+/// Represents the configuration for generating messaging gateway tests.
+/// </summary>
+public class MessagingGatewayConfiguration
+{
+    /// <summary>
+    /// Gets or sets the prefix to use for the generated test class names.
+    /// </summary>
+    public string Prefix { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the namespace for the generated messaging gateway test code. If null, uses the parent configuration's namespace.
+    /// </summary>
+    public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message builder for creating test messages. If null, uses the parent configuration's message builder.
+    /// </summary>
+    public string? MessageBuilder { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message assertion helper to use for validating test messages. If null, uses the parent configuration's message assertion.
+    /// </summary>
+    public string? MessageAssertion { get; set; }
+
+    /// <summary>
+    /// Gets or sets the messaging gateway provider implementation to test.
+    /// </summary>
+    public string? MessageGatewayProvider { get; set; }
+
+    /// <summary>
+    /// Gets or sets the test category to apply to generated test classes.
+    /// </summary>
+    public string? Category { get; set; }
+
+    /// <summary>
+    /// Gets or sets the publication configuration for the messaging gateway.
+    /// </summary>
+    public string Publication { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the subscription configuration for the messaging gateway.
+    /// </summary>
+    public string Subscription { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the delay between consecutive receive message operations in milliseconds.
+    /// </summary>
+    public int? DelayBetweenReceiveMessageInMilliseconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports publish confirmations.
+    /// </summary>
+    public bool HasSupportToPublishConfirmation { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports delayed message delivery.
+    /// </summary>
+    public bool HasSupportToDelayedMessages { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports partition keys for message routing.
+    /// </summary>
+    public bool HasSupportToPartitionKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports dead letter queues.
+    /// </summary>
+    public bool HasSupportToDeadLetterQueue { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports validating broker existence.
+    /// </summary>
+    public bool HasSupportToValidateBrokerExistence { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports requeuing messages.
+    /// </summary>
+    public bool HasSupportToRequeue { get; set; }
+
+    public int ReceiveMessageTimeoutInMilliseconds { get; set; } = 300;
+}

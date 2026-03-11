@@ -37,15 +37,12 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox.Text.Sync;
 public class WhenRetrievingOutstandingMessagesItShouldFilterByAge : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
     private List<Message> _createdMessages = [];
 
     public WhenRetrievingOutstandingMessagesItShouldFilterByAge()
     {
         _outboxProvider = new MySQLTextOutboxProvider();
         _outboxProvider.CreateStore();
-
-        _messageFactory = new DefaultMessageFactory();
     }
 
     [Fact]
@@ -53,9 +50,9 @@ public class WhenRetrievingOutstandingMessagesItShouldFilterByAge : IDisposable
     {
         // Arrange
         var context = new RequestContext();
-        var earliest = _messageFactory.Create();
-        var dispatched = _messageFactory.Create();
-        var undispatched = _messageFactory.Create();
+        var earliest = new DefaultMessageBuilder().Build();
+        var dispatched = new DefaultMessageBuilder().Build();
+        var undispatched = new DefaultMessageBuilder().Build();
 
         _createdMessages.Add(earliest);
         _createdMessages.Add(dispatched);

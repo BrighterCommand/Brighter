@@ -39,14 +39,11 @@ namespace {{ Namespace }}.Outbox{{ Prefix }}.Async;
 public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
     private List<Message> _createdMessages = [];
 
     public WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessagesAsync()
     {
         _outboxProvider = new {{ OutboxProvider }}();
-
-        _messageFactory = new {{ MessageFactory }}();
     }
 
     public async Task InitializeAsync()
@@ -64,9 +61,9 @@ public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessagesAsync
     {
         // Arrange
         var context = new RequestContext();
-        var earliest = _messageFactory.Create();
-        var dispatched = _messageFactory.Create();
-        var undispatched = _messageFactory.Create();
+        var earliest = new {{ MessageBuilder }}().Build();
+        var dispatched = new {{ MessageBuilder }}().Build();
+        var undispatched = new {{ MessageBuilder }}().Build();
 
         _createdMessages.Add(earliest);
         _createdMessages.Add(dispatched);

@@ -13,14 +13,14 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox.Text.Async;
 public class WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommitAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommitAsync()
     {
         _outboxProvider = new MySQLTextOutboxProvider();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     public async Task InitializeAsync()
@@ -43,7 +43,7 @@ public class WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommitAsync
         _ = await transaction.GetTransactionAsync();
 
         var context = new RequestContext();
-        var message = _messageFactory.Create();
+        var message = _messageBuilder.Build();
 
         _createdMessages.Add(message );
 

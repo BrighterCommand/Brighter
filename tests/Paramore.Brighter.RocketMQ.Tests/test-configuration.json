@@ -1,0 +1,17 @@
+{
+  "Namespace": "Paramore.Brighter.RocketMQ.Tests",
+  "MessageAssertion": "RocketMqMessageAssertion",
+  "MessagingGateway": {
+    "Publication": "Paramore.Brighter.MessagingGateway.RocketMQ.RocketMqPublication",
+    "Subscription": "Paramore.Brighter.MessagingGateway.RocketMQ.RocketSubscription",
+    "MessageGatewayProvider": "Paramore.Brighter.RocketMQ.Tests.MessagingGateway.RocketMqMessageGatewayProvider",
+    "Category": "RocketMQ",
+    "DelayBetweenReceiveMessageInMilliseconds": 5000,
+    "HasSupportToPublishConfirmation": false,
+    "HasSupportToDeadLetterQueue": true,
+    "HasSupportToDelayedMessages": true,
+    "HasSupportToPartitionKey": true,
+    "HasSupportToValidateBrokerExistence": false,
+    "HasSupportToRequeue": true
+  }
+}

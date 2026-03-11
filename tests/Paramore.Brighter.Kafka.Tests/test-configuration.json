@@ -1,0 +1,16 @@
+{
+  "Namespace": "Paramore.Brighter.Kafka.Tests",
+  "MessageAssertion": "KafkaMessageAssertion",
+  "MessagingGateway": {
+    "Publication": "Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication",
+    "Subscription": "Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription",
+    "MessageGatewayProvider": "Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider",
+    "Category": "Kafka",
+    "HasSupportToPublishConfirmation": true,
+    "HasSupportToDeadLetterQueue": false,
+    "HasSupportToDelayedMessages": false,
+    "HasSupportToPartitionKey": true,
+    "HasSupportToValidateBrokerExistence": false,
+    "HasSupportToRequeue": false
+  }
+}

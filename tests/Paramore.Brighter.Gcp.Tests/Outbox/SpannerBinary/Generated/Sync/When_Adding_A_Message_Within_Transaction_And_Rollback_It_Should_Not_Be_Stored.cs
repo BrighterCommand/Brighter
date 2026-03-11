@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerBinary.Sync;
 public class WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStored : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStored()
@@ -46,7 +46,7 @@ public class WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStored :
         _outboxProvider = new SpannerBinaryOutboxProvider();
         _outboxProvider.CreateStore();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStored :
         _ = transaction.GetTransaction();
 
         var context = new RequestContext();
-        var message = _messageFactory.Create();
+        var message = _messageBuilder.Build();
 
         _createdMessages.Add(message);
 

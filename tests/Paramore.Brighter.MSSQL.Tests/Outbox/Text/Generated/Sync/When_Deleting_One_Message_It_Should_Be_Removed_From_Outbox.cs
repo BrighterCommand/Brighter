@@ -37,15 +37,12 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text.Sync;
 public class WhenDeletingOneMessageItShouldBeRemovedFromOutbox : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
     private List<Message> _createdMessages = [];
 
     public WhenDeletingOneMessageItShouldBeRemovedFromOutbox()
     {
         _outboxProvider = new MSSQLTextOutboxProvider();
         _outboxProvider.CreateStore();
-
-        _messageFactory = new DefaultMessageFactory();
     }
 
     [Fact]
@@ -53,9 +50,9 @@ public class WhenDeletingOneMessageItShouldBeRemovedFromOutbox : IDisposable
     {
         // Arrange
         var context = new RequestContext();
-        var firstMessage = _messageFactory.Create();
-        var secondMessage = _messageFactory.Create();
-        var thirdMessage = _messageFactory.Create();
+        var firstMessage = new DefaultMessageBuilder().Build();
+        var secondMessage = new DefaultMessageBuilder().Build();
+        var thirdMessage = new DefaultMessageBuilder().Build();
 
         _createdMessages.Add(firstMessage);
         _createdMessages.Add(secondMessage);

@@ -9,5 +9,17 @@
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "MSSQLBinaryOutboxProvider"
     }
+  },
+  "MessagingGateway": {
+    "MessageGatewayProvider": "Paramore.Brighter.MSSQL.Tests.MessagingGateway.MsSqlMessageGatewayProvider",
+    "Publication": "Paramore.Brighter.Publication",
+    "Subscription": "Paramore.Brighter.MessagingGateway.MsSql.MsSqlSubscription",
+    "Category": "MSSQL",
+    "HasSupportToPublishConfirmation": false,
+    "HasSupportToDeadLetterQueue": false,
+    "HasSupportToDelayedMessages": false,
+    "HasSupportToPartitionKey": false,
+    "HasSupportToRequeue": true,
+    "HasSupportToValidateBrokerExistence": false
   }
 }
