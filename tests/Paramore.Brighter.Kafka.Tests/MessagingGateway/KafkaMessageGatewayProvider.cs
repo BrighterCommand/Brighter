@@ -30,9 +30,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using Confluent.Kafka.Admin;
-using Paramore.Brighter.Kafka.Tests.MessagingGateway.Kafka.Proactor;
-using Paramore.Brighter.Kafka.Tests.MessagingGateway.Kafka.Reactor;
+using Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
+using Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 
@@ -128,7 +127,10 @@ public class KafkaMessageGatewayProvider
         return (IAmAMessageProducerAsync)producerRegistry.LookupBy(publication.Topic!);
     }
 
-    public KafkaPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
+    public KafkaPublication CreatePublication(
+        RoutingKey routingKey,
+        OnMissingChannel makeChannels = OnMissingChannel.Create
+    )
     {
         return new KafkaPublication
         {
