@@ -16,6 +16,8 @@ if [[ "${1:-}" == "--dry-run" ]]; then
 fi
 
 # --- Discover tagged resources via Resource Groups Tagging API ---
+# Note: AWS CLI v2 auto-paginates by default. The --query/--output flags are applied
+# after all pages are aggregated, so this handles >100 resources without manual pagination.
 echo "Querying resources tagged Environment=Test ..."
 
 RESOURCE_ARNS=$(aws resourcegroupstaggingapi get-resources \
