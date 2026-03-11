@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,7 +14,7 @@ using Xunit;
 
 namespace Tests
 {
-    public class TestBrighterExtension
+    public partial class TestBrighterExtension
     {
         [Fact]
         public void BasicSetup()
@@ -33,8 +31,8 @@ namespace Tests
         }
 
         [Theory]
-        [InlineData(typeof(SomeSqlConnectionProvider), typeof(StubSqlTransactionProvider))]
-        [InlineData(typeof(StubSqlTransactionProvider), typeof(StubSqlTransactionProvider))]
+        [InlineData(typeof(Paramore.Brighter.Extensions.Tests.TestDoubles.TestBrighterExtension.SomeSqlConnectionProvider), typeof(Paramore.Brighter.Extensions.Tests.TestDoubles.TestBrighterExtension.StubSqlTransactionProvider))]
+        [InlineData(typeof(Paramore.Brighter.Extensions.Tests.TestDoubles.TestBrighterExtension.StubSqlTransactionProvider), typeof(Paramore.Brighter.Extensions.Tests.TestDoubles.TestBrighterExtension.StubSqlTransactionProvider))]
         public void WithExternalBus(Type connectionProvider, Type transactionProvider)
         {
             var serviceCollection = new ServiceCollection();
@@ -54,12 +52,12 @@ namespace Tests
                 new SimpleMessageMapperFactoryAsync(type => new TestEventMessageMapperAsync())
             );
 
-            var outbox = new StubSqlOutbox(
+            var outbox = new Paramore.Brighter.Extensions.Tests.TestDoubles.TestBrighterExtension.StubSqlOutbox(
                 DbSystem.MySql,
-                new StubSqlDbConfiguration(),
-                new SomeSqlConnectionProvider(),
-                new StubRelationDatabaseOutboxQueries(),
-                new Logger<StubSqlOutbox>(new LoggerFactory()));
+                new Paramore.Brighter.Extensions.Tests.TestDoubles.TestBrighterExtension.StubSqlDbConfiguration(),
+                new Paramore.Brighter.Extensions.Tests.TestDoubles.TestBrighterExtension.SomeSqlConnectionProvider(),
+                new Paramore.Brighter.Extensions.Tests.TestDoubles.TestBrighterExtension.StubRelationDatabaseOutboxQueries(),
+                new Logger<Paramore.Brighter.Extensions.Tests.TestDoubles.TestBrighterExtension.StubSqlOutbox>(new LoggerFactory()));
 
             serviceCollection.AddSingleton<ILoggerFactory, LoggerFactory>();
 
@@ -125,93 +123,6 @@ namespace Tests
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
             Assert.NotNull(commandProcessor);
-        }
-
-        public class SomeSqlConnectionProvider : RelationalDbConnectionProvider
-        {
-            public override DbConnection GetConnection()
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-
-        public class StubSqlTransactionProvider : RelationalDbTransactionProvider
-        {
-            public override DbConnection GetConnection()
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        public class StubSqlOutbox : RelationDatabaseOutbox
-        {
-            public StubSqlOutbox(DbSystem dbSystem,
-                IAmARelationalDatabaseConfiguration configuration,
-                IAmARelationalDbConnectionProvider connectionProvider,
-                IRelationDatabaseOutboxQueries queries,
-                ILogger logger,
-                InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-                : base(dbSystem, configuration, connectionProvider, queries, logger, instrumentationOptions)
-            {
-            }
-
-            protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override IDbDataParameter CreateSqlParameter(string parameterName, DbType dbType, object? value)
-            {
-                throw new NotImplementedException();
-            }
-
-            protected override bool IsExceptionUniqueOrDuplicateIssue(Exception ex)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        public class StubSqlDbConfiguration : IAmARelationalDatabaseConfiguration
-        {
-            public bool JsonMessagePayload => throw new NotImplementedException();
-            public string ConnectionString => throw new NotImplementedException();
-            public string OutBoxTableName => throw new NotImplementedException();
-            public string InBoxTableName => throw new NotImplementedException();
-            public bool BinaryMessagePayload => throw new NotImplementedException();
-
-            public string DatabaseName => throw new NotImplementedException();
-
-            public string QueueStoreTable => throw new NotImplementedException();
-
-            public string? SchemaName => null;
-        }
-
-        public class StubRelationDatabaseOutboxQueries : IRelationDatabaseOutboxQueries
-        {
-            public string PagedDispatchedCommand => throw new NotImplementedException();
-
-            public string PagedReadCommand => throw new NotImplementedException();
-
-            public string PagedOutstandingCommand => throw new NotImplementedException();
-
-            public string PagedOutstandingCommandInStatement => throw new NotImplementedException();
-
-            public string AddCommand => throw new NotImplementedException();
-
-            public string BulkAddCommand => throw new NotImplementedException();
-
-            public string MarkDispatchedCommand => throw new NotImplementedException();
-
-            public string MarkMultipleDispatchedCommand => throw new NotImplementedException();
-
-            public string GetMessageCommand => throw new NotImplementedException();
-
-            public string GetMessagesCommand => throw new NotImplementedException();
-
-            public string DeleteMessagesCommand => throw new NotImplementedException();
-
-            public string GetNumberOfOutstandingMessagesCommand => throw new NotImplementedException();
         }
     }
 }
