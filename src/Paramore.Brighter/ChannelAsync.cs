@@ -190,6 +190,15 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Performs async disposal of the channel and its consumer.
+        /// </summary>
+        public virtual async ValueTask DisposeAsync()
+        {
+            await _messageConsumer.DisposeAsync();
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public virtual void Dispose()
