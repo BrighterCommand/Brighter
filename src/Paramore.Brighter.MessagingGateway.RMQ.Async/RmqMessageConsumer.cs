@@ -525,8 +525,6 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             _consumer,
             cancellationToken: cancellationToken);
 
-        await _consumer.HandleBasicConsumeOkAsync(_consumerTag, cancellationToken);
-
         Log.CreatedConsumer(s_logger, _queueName.Value,
             string.Join(";", _routingKeys.Select(rk => rk.Value)),
             Connection.Exchange.Name,
