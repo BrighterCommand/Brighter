@@ -43,6 +43,7 @@ namespace Paramore.Brighter
         private ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
         private static readonly Message s_noneMessage = new();
+        private bool _disposed;
         
         /// <summary>
         /// The name of a channel is its identifier
@@ -194,7 +195,11 @@ namespace Paramore.Brighter
         /// </summary>
         public virtual async ValueTask DisposeAsync()
         {
+            if (_disposed) return;
+            _disposed = true;
+
             await _messageConsumer.DisposeAsync().ConfigureAwait(false);
+            Dispose(false);
             GC.SuppressFinalize(this);
         }
 
@@ -209,6 +214,9 @@ namespace Paramore.Brighter
 
         private void Dispose(bool disposing)
         {
+            if (_disposed) return;
+            _disposed = true;
+
             if (disposing)
             {
                 _messageConsumer.DisposeAsync();
