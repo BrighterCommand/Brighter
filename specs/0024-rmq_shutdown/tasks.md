@@ -10,7 +10,7 @@
 These tasks fix the TOCTOU and stale-handler bugs in the sync connection pool (#4024).
 No behavioral changes to the async dispose path yet.
 
-- [ ] **1.1 TEST + IMPLEMENT: Sync pool stale shutdown handler does not dispose replacement connection**
+- [x] **1.1 TEST + IMPLEMENT: Sync pool stale shutdown handler does not dispose replacement connection** (afaa64df6)
   - **USE COMMAND**: `/test-first when sync pool shutdown handler fires for replaced connection then it should not dispose current connection`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessagingGateway/RMQ/`
   - Test file: `When_sync_pool_shutdown_handler_fires_for_replaced_connection_should_not_dispose_current.cs`
@@ -23,7 +23,7 @@ No behavioral changes to the async dispose path yet.
     - In `RmqMessageGatewayConnectionPool` (Sync), add `ReferenceEquals(pooled.Connection, sender)` guard to `ShutdownHandler` closure (`RmqMessageGatewayConnectionPool.cs:111-119`)
     - Only call `TryRemoveConnection` if the sender is the current pooled instance
 
-- [ ] **1.2 TEST + IMPLEMENT: Sync pool RemoveConnection is thread-safe without TOCTOU**
+- [x] **1.2 TEST + IMPLEMENT: Sync pool RemoveConnection is thread-safe without TOCTOU** (afaa64df6)
   - **USE COMMAND**: `/test-first when sync pool RemoveConnection is called then ContainsKey check is inside lock`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessagingGateway/RMQ/`
   - Test file: `When_sync_pool_remove_connection_should_be_thread_safe.cs`
@@ -39,7 +39,7 @@ No behavioral changes to the async dispose path yet.
 
 Mirror the sync fixes in the async connection pool.
 
-- [ ] **2.1 TEST + IMPLEMENT: Async pool stale shutdown handler does not dispose replacement connection**
+- [x] **2.1 TEST + IMPLEMENT: Async pool stale shutdown handler does not dispose replacement connection** (a7810257e)
   - **USE COMMAND**: `/test-first when async pool shutdown handler fires for replaced connection then it should not dispose current connection`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessagingGateway/RMQ/`
   - Test file: `When_async_pool_shutdown_handler_fires_for_replaced_connection_should_not_dispose_current.cs`
@@ -51,7 +51,7 @@ Mirror the sync fixes in the async connection pool.
     - In `RmqMessageGatewayConnectionPool` (Async), add `ReferenceEquals` guard to async `ShutdownHandler` closure (`RmqMessageGatewayConnectionPool.cs:151-165`)
     - Only call `TryRemoveConnectionAsync` if `sender` is the current pooled instance
 
-- [ ] **2.2 TEST + IMPLEMENT: Async pool RemoveConnectionAsync is thread-safe without TOCTOU**
+- [x] **2.2 TEST + IMPLEMENT: Async pool RemoveConnectionAsync is thread-safe without TOCTOU** (a7810257e)
   - **USE COMMAND**: `/test-first when async pool RemoveConnectionAsync is called then ContainsKey check is inside semaphore`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessagingGateway/RMQ/`
   - Test file: `When_async_pool_remove_connection_should_be_thread_safe.cs`
@@ -62,7 +62,7 @@ Mirror the sync fixes in the async connection pool.
   - Implementation should:
     - In `RemoveConnectionAsync` (`RmqMessageGatewayConnectionPool.cs:115-131`), move the `ContainsKey` check inside the semaphore (or remove it entirely)
 
-- [ ] **2.3 IMPLEMENT: Add ConfigureAwait(false) to async connection pool methods**
+- [x] **2.3 IMPLEMENT: Add ConfigureAwait(false) to async connection pool methods** (a7810257e)
   - This is a structural tidy — no behavioral test needed (defence-in-depth)
   - Implementation should add `ConfigureAwait(false)` to every `await` in `RmqMessageGatewayConnectionPool` (Async):
     - `GetConnectionAsync`: `await s_lock.WaitAsync(cancellationToken).ConfigureAwait(false)`
