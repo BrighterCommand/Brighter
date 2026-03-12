@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
@@ -24,7 +25,8 @@ public class AWSValidateQueuesTestsAsync : IAsyncDisposable
         _subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
-            channelType: ChannelType.PointToPoint, routingKey: routingKey, makeChannels: OnMissingChannel.Validate);
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, makeChannels: OnMissingChannel.Validate,
+            queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }));
 
         _awsConnection = GatewayFactory.CreateFactory();
     }

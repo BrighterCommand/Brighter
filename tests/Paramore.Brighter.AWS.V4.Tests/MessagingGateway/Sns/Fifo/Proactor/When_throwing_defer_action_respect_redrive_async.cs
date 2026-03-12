@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Mime;
@@ -50,7 +50,8 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Proactor,
             queueAttributes: new SqsAttributes(
-                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)),
+                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2),
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: topicAttributes
             );
 

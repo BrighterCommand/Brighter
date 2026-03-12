@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Mime;
@@ -11,6 +11,7 @@ using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
+using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
@@ -42,11 +43,11 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
             queueAttributes: new SqsAttributes(
-                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
-            ),
+                redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2),
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create
-        );
+            makeChannels: OnMissingChannel.Create,
+            topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]));
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,

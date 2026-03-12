@@ -443,12 +443,12 @@ To get started, <a href="https://www.clahub.com/agreements/iancooper/Paramore">s
 
 We are evolving our support for agentic coding; we are focused on making it easy to use Claude Code to work with Brighter, though other agents may benefit from this work.
 
-- CLAUDE.md: We provide a CLAUDE.md file to direct Claude Code to `docs/agent_instructions` for a version of these guidelines for agents
+- CLAUDE.md: We provide a CLAUDE.md file to direct Claude Code to `.agent_instructions` for a version of these guidelines for agents
 - .claude
   - commands: we provide a set of commands that help an agent follow Brighter's preferred workflow: Issue => ADR => Tasks => Implementation using TDD
   - skills: we will provide skills that help an agent complete common tasks within Brighter.
 
-As our instructions are located in `docs/agent_instructions` it is relatively easy for other agents to use.
+As our instructions are located in `.agent_instructions` it is relatively easy for other agents to use.
 
 
 We provide explicit support for CoPilot via:
