@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2026 Jonny Olliff-Lee <jonny.ollifflee@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -162,6 +162,9 @@ namespace Paramore.Brighter.AsyncAPI
             };
         }
 
+        // codescene:ignore
+        // Rationale: assembly scanning has unavoidable branching to preserve error handling,
+        // deduplication, and null-safe reflection behavior without changing semantics.
         private async Task AddFromAssemblyScanningAsync(
             GenerationContext context,
             CancellationToken ct)
@@ -328,6 +331,9 @@ namespace Paramore.Brighter.AsyncAPI
             return rewritten.RootElement.Clone();
         }
 
+        // codescene:ignore
+        // Rationale: recursive JSON tree traversal is intentionally centralized here so
+        // ref-rewriting stays consistent for objects and arrays across all schema shapes.
         private static void RewriteRefs(JsonNode node, string definitionsPrefix, string defsPrefix)
         {
             if (node is JsonObject obj)
