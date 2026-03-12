@@ -110,14 +110,17 @@ Mirror the sync fixes in the async connection pool.
 
 ## Phase 5: Regression
 
-- [ ] **5.1 VERIFY: All existing core tests pass**
+- [x] **5.1 VERIFY: All existing core tests pass**
   - Run `dotnet test tests/Paramore.Brighter.Core.Tests/`
   - All non-fragile tests must pass
   - Focus on MessageDispatch/Proactor tests — these exercise the dispose path
+  - **Result**: 542 passed, 0 failed, 7 skipped (both net9.0 and net10.0)
 
-- [ ] **5.2 VERIFY: Existing RMQ async tests pass (if Docker available)**
+- [x] **5.2 VERIFY: Existing RMQ async tests pass (if Docker available)**
   - Run `dotnet test tests/Paramore.Brighter.RMQ.Async.Tests/`
   - If Docker/RabbitMQ not available, skip and note
+  - **Result**: 73 passed, 4 skipped, 13 failed (both net9.0 and net10.0)
+  - All 13 failures are pre-existing infrastructure issues (mTLS certs not generated, delayed-message plugin not installed) — no regressions from our changes
 
 ## Dependencies
 
