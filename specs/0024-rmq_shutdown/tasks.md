@@ -90,7 +90,7 @@ Mirror the sync fixes in the async connection pool.
 
 ## Phase 4: Proactor uses async dispose on shutdown
 
-- [ ] **4.1 TEST + IMPLEMENT: Proactor disposes channel asynchronously on MT_QUIT**
+- [x] **4.1 TEST + IMPLEMENT: Proactor disposes channel asynchronously on MT_QUIT** (7a66a16a0)
   - **USE COMMAND**: `/test-first when proactor receives quit message then channel is disposed asynchronously and pump stops`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/`
   - Test file: `When_proactor_receives_quit_should_dispose_channel_async.cs`
