@@ -4,7 +4,7 @@ Date: 2026-03-11
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -234,7 +234,16 @@ Ctrl+C → ServiceActivatorHostedService.StopAsync()
 
 ### Impact on Other Transports
 
-Adding `IAsyncDisposable` to `IAmAChannelAsync` means all implementations of `IAmAChannelAsync` must implement `DisposeAsync()`. Since `ChannelAsync` is the concrete class used by all transports and it wraps `IAmAMessageConsumerAsync` (which already extends `IAsyncDisposable`), this is a single-point change. Custom channel implementations that inherit from `ChannelAsync` will inherit the new `DisposeAsync()`.
+Adding `IAsyncDisposable` to `IAmAChannelAsync` means all implementations of `IAmAChannelAsync` must implement `DisposeAsync()`. A codebase-wide analysis confirms the blast radius is contained:
+
+1. **No transport implements `IAmAChannelAsync` directly.** Every transport's channel factory (RMQ, Kafka, AWS SQS V3/V4, Azure Service Bus, GCP Pub/Sub, Redis, MsSql, PostgreSQL, MQTT, RocketMQ, InMemory) creates `new ChannelAsync(...)` — the concrete class. The only subclass is a test double (`FailingChannelAsync` in core tests), which will inherit the new `DisposeAsync()` from its base class.
+
+2. **All async message consumers already implement `DisposeAsync()`** because `IAmAMessageConsumerAsync` already extends `IAsyncDisposable`. Verified for all 13 consumer implementations:
+   - RMQ Async (`RmqMessageConsumer`), Kafka (`KafkaMessageConsumer`), AWS SQS V3 (`SqsMessageConsumer`), AWS SQS V4 (`SqsMessageConsumer`), Azure Service Bus (`AzureServiceBusConsumer`), GCP Pull (`GcpPullMessageConsumer`), GCP Stream (`GcpPubSubStreamMessageConsumer`), Redis (`RedisMessageConsumer`), MsSql (`MsSqlMessageConsumer`), PostgreSQL (`PostgresMessageConsumer`), MQTT (`MqttMessageConsumer`), RocketMQ (`RocketMessageConsumer`), InMemory (`InMemoryMessageConsumer`).
+
+3. **`ChannelAsync.DisposeAsync()` delegates to `await _messageConsumer.DisposeAsync()`**, which is the existing, already-working method on every transport's consumer. No gateway projects require additional changes.
+
+The interface change is technically breaking for any **external** code that implements `IAmAChannelAsync` directly (they would need to add `DisposeAsync()`), but this is unlikely — `ChannelAsync` is the standard concrete implementation and all known usages go through it.
 
 ## Consequences
 
