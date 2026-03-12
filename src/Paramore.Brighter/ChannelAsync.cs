@@ -194,7 +194,7 @@ namespace Paramore.Brighter
         /// </summary>
         public virtual async ValueTask DisposeAsync()
         {
-            await _messageConsumer.DisposeAsync();
+            await _messageConsumer.DisposeAsync().ConfigureAwait(false);
             GC.SuppressFinalize(this);
         }
 
