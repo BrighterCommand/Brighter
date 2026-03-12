@@ -1,9 +1,8 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 using Xunit;
-using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
 using Polly;
 using Polly.Registry;
@@ -60,31 +59,5 @@ public class CommandProcessorWithSharedResiliencePipelineAsyncTests
         //Assert
         Assert.True(MyCommandHandlerWithSharedPipelineAsync.ReceivedCommand);
         Assert.True(MyOtherCommandHandlerWithSharedPipelineAsync.ReceivedCommand);
-    }
-}
-
-internal sealed class MyOtherCommand() : Command(Id.Random());
-
-internal sealed class MyCommandHandlerWithSharedPipelineAsync : RequestHandlerAsync<MyCommand>
-{
-    public static bool ReceivedCommand { get; set; }
-
-    [UseResiliencePipelineAsync("SharedRetryPolicy", 1)]
-    public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
-    {
-        ReceivedCommand = true;
-        return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-    }
-}
-
-internal sealed class MyOtherCommandHandlerWithSharedPipelineAsync : RequestHandlerAsync<MyOtherCommand>
-{
-    public static bool ReceivedCommand { get; set; }
-
-    [UseResiliencePipelineAsync("SharedRetryPolicy", 1)]
-    public override async Task<MyOtherCommand> HandleAsync(MyOtherCommand command, CancellationToken cancellationToken = default)
-    {
-        ReceivedCommand = true;
-        return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
     }
 }

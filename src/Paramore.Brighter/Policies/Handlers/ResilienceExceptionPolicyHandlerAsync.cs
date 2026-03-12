@@ -94,14 +94,14 @@ public class ResilienceExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsy
             return Context?.ResilienceContext != null
                 ? await _pipeline.ExecuteAsync(async context => await base.HandleAsync(command, context.CancellationToken).ConfigureAwait(ContinueOnCapturedContext), Context.ResilienceContext)
                     .ConfigureAwait(ContinueOnCapturedContext)
-                : await _pipeline.ExecuteAsync(async ct => await base.HandleAsync(command, ct), cancellationToken)
+                : await _pipeline.ExecuteAsync(async ct => await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext), cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
         }
 
         return Context?.ResilienceContext != null
             ? await _typePipeline.ExecuteAsync(async context => await base.HandleAsync(command, context.CancellationToken).ConfigureAwait(ContinueOnCapturedContext), Context.ResilienceContext)
                 .ConfigureAwait(ContinueOnCapturedContext)
-            : await _typePipeline.ExecuteAsync(async ct => await base.HandleAsync(command, ct), cancellationToken)
+            : await _typePipeline.ExecuteAsync(async ct => await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext), cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
     }
 }
