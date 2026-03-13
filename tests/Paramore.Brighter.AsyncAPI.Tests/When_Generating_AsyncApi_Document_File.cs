@@ -66,7 +66,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public async Task It_Should_Write_File()
+        public async Task It_Should_Write_Json_File()
         {
             var document = new AsyncApiDocument
             {
@@ -81,6 +81,41 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
+        public async Task It_Should_Write_Yaml_File_Alongside_Json()
+        {
+            var document = new AsyncApiDocument
+            {
+                Info = new AsyncApiInfo { Title = "Test", Version = "1.0.0" }
+            };
+            var host = CreateHostWithGenerator(document);
+            var outputPath = Path.Combine(_tempDir, "asyncapi.json");
+
+            await host.GenerateAsyncApiDocumentAsync(outputPath);
+
+            var yamlPath = Path.Combine(_tempDir, "asyncapi.yaml");
+            Assert.True(File.Exists(yamlPath));
+        }
+
+        [Fact]
+        public async Task It_Should_Write_Valid_Yaml_Content()
+        {
+            var document = new AsyncApiDocument
+            {
+                Info = new AsyncApiInfo { Title = "YAML Test", Version = "2.0.0" }
+            };
+            var host = CreateHostWithGenerator(document);
+            var outputPath = Path.Combine(_tempDir, "asyncapi.json");
+
+            await host.GenerateAsyncApiDocumentAsync(outputPath);
+
+            var yamlPath = Path.Combine(_tempDir, "asyncapi.yaml");
+            var yaml = File.ReadAllText(yamlPath);
+            Assert.Contains("asyncapi: 3.0.0", yaml);
+            Assert.Contains("title: YAML Test", yaml);
+            Assert.Contains("version: 2.0.0", yaml);
+        }
+
+        [Fact]
         public async Task It_Should_Create_Parent_Directory()
         {
             var document = new AsyncApiDocument();
@@ -92,6 +127,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             Assert.True(Directory.Exists(nestedDir));
             Assert.True(File.Exists(outputPath));
+            Assert.True(File.Exists(Path.Combine(nestedDir, "asyncapi.yaml")));
         }
 
         [Fact]
@@ -162,6 +198,22 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             using var parsed = JsonDocument.Parse(json);
             Assert.Equal(result.Info.Title, parsed.RootElement.GetProperty("info").GetProperty("title").GetString());
             Assert.Equal(result.Info.Version, parsed.RootElement.GetProperty("info").GetProperty("version").GetString());
+        }
+
+        [Fact]
+        public async Task It_Should_Omit_Nulls_From_Yaml()
+        {
+            var document = new AsyncApiDocument
+            {
+                Info = new AsyncApiInfo { Title = "Null Test", Version = "1.0.0", Description = null }
+            };
+            var host = CreateHostWithGenerator(document);
+            var outputPath = Path.Combine(_tempDir, "asyncapi.json");
+
+            await host.GenerateAsyncApiDocumentAsync(outputPath);
+
+            var yaml = File.ReadAllText(Path.Combine(_tempDir, "asyncapi.yaml"));
+            Assert.DoesNotContain("description", yaml);
         }
     }
 }

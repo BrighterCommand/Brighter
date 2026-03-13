@@ -31,6 +31,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.AsyncAPI.Model;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace Paramore.Brighter.AsyncAPI
 {
@@ -42,6 +44,19 @@ namespace Paramore.Brighter.AsyncAPI
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
+        private static readonly ISerializer s_yamlSerializer = new SerializerBuilder()
+            .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
+            .Build();
+
+        private static readonly IDeserializer s_yamlDeserializer = new DeserializerBuilder()
+            .Build();
+
+        /// <summary>
+        /// Generates the AsyncAPI document and writes it to both JSON and YAML files.
+        /// The JSON file is written to <paramref name="outputPath"/>, and a corresponding
+        /// YAML file is written alongside it (e.g. asyncapi.json → asyncapi.yaml).
+        /// </summary>
         public static async Task<AsyncApiDocument> GenerateAsyncApiDocumentAsync(this IHost host, string outputPath, CancellationToken ct = default)
         {
             var generator = host.Services.GetService<IAmAnAsyncApiDocumentGenerator>();
@@ -60,7 +75,14 @@ namespace Paramore.Brighter.AsyncAPI
                 Directory.CreateDirectory(directory);
             }
 
+            // Write JSON
             await File.WriteAllTextAsync(outputPath, json, ct).ConfigureAwait(false);
+
+            // Write YAML alongside the JSON file
+            var yamlPath = Path.ChangeExtension(outputPath, ".yaml");
+            var objectGraph = s_yamlDeserializer.Deserialize<object>(json);
+            var yaml = s_yamlSerializer.Serialize(objectGraph);
+            await File.WriteAllTextAsync(yamlPath, yaml, ct).ConfigureAwait(false);
 
             return document;
         }
