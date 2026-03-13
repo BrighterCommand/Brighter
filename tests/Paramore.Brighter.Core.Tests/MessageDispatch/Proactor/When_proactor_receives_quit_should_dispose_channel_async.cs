@@ -59,12 +59,11 @@ public class ProactorQuitAsyncDisposalTests
         performer.Stop(_routingKey);
     }
 
-#pragma warning disable xUnit1031
     [Fact]
-    public void When_Proactor_Receives_Quit_Should_Dispose_Channel_Async()
+    public async Task When_Proactor_Receives_Quit_Should_Dispose_Channel_Async()
     {
         // Assert — the performer task should complete cleanly
-        _performerTask.Wait(TimeSpan.FromSeconds(10));
+        await _performerTask.WaitAsync(TimeSpan.FromSeconds(10));
 
         Assert.True(_performerTask.IsCompleted);
         Assert.False(_performerTask.IsFaulted);
@@ -73,7 +72,6 @@ public class ProactorQuitAsyncDisposalTests
         // Assert — the Proactor should have called DisposeAsync, not Dispose
         Assert.True(_trackingChannel.DisposeAsyncCalled, "Proactor should call DisposeAsync on MT_QUIT, not Dispose");
     }
-#pragma warning restore xUnit1031
 }
 
 /// <summary>
