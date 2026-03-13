@@ -149,7 +149,14 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
         {
             Log.SubscriptionHasBeenShutdown(s_logger, connection.Endpoint, e.ToString());
 
-            await s_lock.WaitAsync(e.CancellationToken).ConfigureAwait(false);
+            try
+            {
+                await s_lock.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
 
             try
             {

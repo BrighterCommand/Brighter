@@ -672,7 +672,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     {
         await CancelConsumerAsync(CancellationToken.None);
         if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
-        Dispose(true);
+        await base.DisposeAsync();
         GC.SuppressFinalize(this);
     }
 

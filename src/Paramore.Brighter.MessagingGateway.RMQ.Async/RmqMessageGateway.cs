@@ -58,6 +58,7 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
     private readonly AsyncPolicy _circuitBreakerPolicy;
     private readonly ConnectionFactory _connectionFactory;
     private readonly AsyncPolicy _retryPolicy;
+    private bool _disposed;
     protected readonly RmqMessagingGatewayConnection Connection;
     protected IChannel? Channel;
 
@@ -189,6 +190,9 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     public virtual async ValueTask DisposeAsync()
     {
+        if (_disposed) return;
+        _disposed = true;
+
         if (Channel != null)
         {
             await Channel.AbortAsync();
