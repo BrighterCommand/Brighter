@@ -1,0 +1,442 @@
+{
+  "project": "Paramore.Brighter",
+  "branchName": "feature/3828-AsyncAPI-Generation",
+  "description": "AsyncAPI 3.0 Document Generation - Post-review fixes for stateful singleton bug, incomplete deduplication, dead code, defensive API design, regex performance, documentation, and principal engineer review remediation (thread safety, sync-over-async, sealing, API cleanup)",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create project files and add to solution",
+      "description": "As a developer, I need the package to exist as a buildable project in the solution so I can reference it from my services.",
+      "acceptanceCriteria": [
+        "src/Paramore.Brighter.AsyncAPI/Paramore.Brighter.AsyncAPI.csproj exists targeting $(BrighterCoreTargetFrameworks) which resolves to net8.0;net9.0;net10.0",
+        "tests/Paramore.Brighter.AsyncAPI.Tests/Paramore.Brighter.AsyncAPI.Tests.csproj exists",
+        "Both projects are added to Brighter.slnx (NOT .sln - the solution file is Brighter.slnx in XML format)",
+        "All projects use central package management (Directory.Packages.props) - use <PackageReference Include=\"...\"/> without explicit Version attributes",
+        "dotnet build Brighter.slnx succeeds with no errors",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "CRITICAL CODEBASE FACTS from previous iterations:\n1. The solution file is Brighter.slnx (XML format), NOT Brighter.sln\n2. This repo DOES use central package management via Directory.Packages.props - do NOT specify versions on PackageReference\n3. Source targets use $(BrighterCoreTargetFrameworks). Test targets use $(BrighterTestTargetFrameworks) which resolves to net9.0;net10.0\n4. FluentAssertions was deliberately removed from the codebase (PR #3540). Do NOT add it. Test project must use xUnit Assert.* only\n5. NJsonSchema is already in Directory.Packages.props - just reference it without a version\n6. Previous implementation also created a separate Paramore.Brighter.AsyncAPI.NJsonSchema project to keep the heavyweight NJsonSchema dependency out of the core AsyncAPI package"
+    },
+    {
+      "id": "US-002",
+      "title": "Create AsyncAPI 3.0 document model POCOs",
+      "description": "As a developer working on the library, I need C# POCOs representing the AsyncAPI 3.0 document structure so the generator has a typed model to populate and serialize.",
+      "acceptanceCriteria": [
+        "AsyncApiDocument POCO exists with properties: AsyncApi ('3.0.0'), Info, Channels, Operations, Components",
+        "AsyncApiInfo POCO exists with properties: Title, Version, Description (nullable)",
+        "AsyncApiChannel POCO exists with properties: Address, Messages (dict of message refs)",
+        "AsyncApiOperation POCO exists with properties: Action ('send'/'receive'), Channel ($ref), Messages (list of $refs)",
+        "AsyncApiComponents POCO exists with property: Messages (dict of message definitions)",
+        "AsyncApiMessage POCO exists with properties: Name, ContentType ('application/json'), Payload (nullable JsonElement), Description (nullable)",
+        "AsyncApiRef POCO exists with property: Ref (serialised as '$ref')",
+        "All POCOs serialise correctly to JSON using System.Text.Json with JsonPropertyName attributes and JsonIgnoreCondition.WhenWritingNull",
+        "Unit tests verify serialization output matches expected JSON shape",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Previous implementation also included AsyncApiServer class (Host, Protocol, Description) for server entries - this is useful for the AsyncAPI 3.0 spec even though not explicitly in the PRD. Tests must use xUnit Assert.* only, NOT FluentAssertions."
+    },
+    {
+      "id": "US-003",
+      "title": "Create AsyncApiOptions configuration class",
+      "description": "As a service developer, I need to configure the title, version, and description of my AsyncAPI document so that the output identifies my service correctly.",
+      "acceptanceCriteria": [
+        "AsyncApiOptions class exists with settable properties: Title (default 'Brighter Application'), Version (default '1.0.0'), Description (nullable)",
+        "AssembliesToScan property exists (IEnumerable<Assembly>?, default null meaning AppDomain.CurrentDomain.GetAssemblies())",
+        "DisableAssemblyScanning property exists (bool, default false)",
+        "Unit test verifies default values using Assert.Equal/Assert.Null",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Previous implementation also added:\n1. Servers property (Dictionary<string, AsyncApiServer>?, default null) for specifying broker endpoints\n2. SupplementalPublications property (IEnumerable<Publication>?, default null) for publications NOT already registered via IAmAProducerRegistry\n3. Changed assembly scanning default to Assembly.GetEntryAssembly() instead of AppDomain to avoid picking up test assemblies - consider which approach is correct"
+    },
+    {
+      "id": "US-004",
+      "title": "Create schema generator interface and NJsonSchema implementation",
+      "description": "As an advanced user, I want to substitute the default JSON Schema generator so I can control the schema output.",
+      "acceptanceCriteria": [
+        "IAmASchemaGenerator interface exists with method: Task<JsonElement?> GenerateAsync(Type? requestType, CancellationToken ct = default)",
+        "NJsonSchemaGenerator class implements IAmASchemaGenerator using NJsonSchema.JsonSchema.FromType()",
+        "When requestType is null, returns JsonElement representing {} (empty object schema)",
+        "When NJsonSchema throws, returns JsonElement representing {} (graceful degradation, does not propagate exception)",
+        "NJsonSchemaGenerator is registered as the default IAmASchemaGenerator in DI",
+        "Unit tests cover null type, successful generation, and exception degradation. Use Assert.*",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Previous implementation used sync Generate() instead of async GenerateAsync(). NJsonSchema API: JsonSchema.FromType(type).ToJson() to get JSON string; parse with JsonDocument and .Clone() the RootElement. Intermediate JsonDocument instances MUST be disposed via using statements. Previous implementation put NJsonSchemaGenerator in a separate Paramore.Brighter.AsyncAPI.NJsonSchema project to isolate the NJsonSchema dependency."
+    },
+    {
+      "id": "US-005",
+      "title": "Create document generator with subscription (receive) support",
+      "description": "As a service developer, I want subscriptions registered with the Service Activator to appear as receive operations in the AsyncAPI document so consumers know what topics the service listens on.",
+      "acceptanceCriteria": [
+        "IAmAnAsyncApiDocumentGenerator interface exists with method: Task<AsyncApiDocument> GenerateAsync(CancellationToken ct = default)",
+        "AsyncApiDocumentGenerator implements IAmAnAsyncApiDocumentGenerator",
+        "For each subscription with non-empty RoutingKey: produces one AsyncApiChannel (address = routing key value) and one AsyncApiOperation with action 'receive'",
+        "If RequestType is non-null, produces AsyncApiMessage with Name = type name and Payload from schema generator",
+        "If RequestType is null, produces placeholder message named '{channelId}Message' with Payload = {} (empty object schema)",
+        "Subscription with empty/null RoutingKey is skipped",
+        "When IAmConsumerOptions is not registered in DI, no receive operations are produced (no exception)",
+        "Unit tests cover: subscription with type, subscription without type, empty routing key, missing consumer options. Use Assert.*",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "CRITICAL CODEBASE FACTS:\n1. The correct property is subscription.RequestType (NOT DataType). Set by Subscription<T> to typeof(T).\n2. RoutingKey.IsNullOrEmpty may not exist in all targets - check routingKey == null || string.IsNullOrEmpty(routingKey.Value)\n3. Channel IDs should be sanitized: non-alphanumeric characters replaced with underscores\n4. Operation IDs formatted as '{action}_{channelId}'\n5. Previous implementation used sync Generate() instead of async GenerateAsync()\n6. Previous implementation took IEnumerable<Subscription>? and IEnumerable<Publication>? in constructor"
+    },
+    {
+      "id": "US-006",
+      "title": "Add publication (send) support to document generator",
+      "description": "As a service developer, I want publications registered in the producer registry to appear as send operations in the AsyncAPI document so consumers know what topics the service publishes to.",
+      "acceptanceCriteria": [
+        "For each IAmAMessageProducer in IAmAProducerRegistry.Producers: producer whose Publication.Topic is non-empty produces one AsyncApiChannel and one AsyncApiOperation with action 'send'",
+        "AsyncApiMessage component is produced per US-005 rules (RequestType for typed messages, placeholder for null)",
+        "Producer with empty/null Publication.Topic is skipped",
+        "When IAmAProducerRegistry is not registered in DI, no send operations are produced (no exception)",
+        "Unit tests cover: producer with topic and type, producer without topic, missing registry. Use Assert.*",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "CRITICAL CODEBASE FACTS:\n1. Publication.RequestType exists (Publication.cs) and Publication<T> auto-sets it to typeof(T). Publications CAN generate full typed schemas.\n2. IAmAMessageProducer interface may not directly expose Publication - previous implementation used IEnumerable<Publication> instead of IAmAProducerRegistry directly in the generator constructor.\n3. IAmAProducerRegistry.Producers exposes values without topic keys.\n4. Publication is a concrete class - create instances directly with new Publication { Topic = new RoutingKey(\"...\") }"
+    },
+    {
+      "id": "US-007",
+      "title": "Add assembly scanning for PublicationTopic-decorated IRequest types",
+      "description": "As a service developer, I want IRequest types decorated with [PublicationTopic] to be included in the document even if they aren't wired into DI, so the document reflects the full messaging surface area.",
+      "acceptanceCriteria": [
+        "Generator scans AsyncApiOptions.AssembliesToScan (falling back to AppDomain.CurrentDomain.GetAssemblies()) for concrete non-abstract types implementing IRequest with [PublicationTopic]",
+        "Each found type produces a send operation using attr.Destination.RoutingKey.Value as channel address",
+        "When DisableAssemblyScanning = true, no scanning is performed",
+        "DI sources win: if routing key+action pair already covered by subscription or publication, assembly-scanned entry is skipped",
+        "ReflectionTypeLoadException is caught; types that did load are still processed",
+        "Unit tests cover: type with attribute produces channel, disabled scanning, DI source wins dedup, partial assembly load. Use Assert.*",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "CRITICAL: PublicationTopicAttribute ALREADY EXISTS in core Paramore.Brighter (src/Paramore.Brighter/PublicationTopicAttribute.cs). Do NOT create a new one. It has:\n- [AttributeUsage(AttributeTargets.Class, Inherited = false)]\n- A Destination property of type ProducerKey\n- ProducerKey has RoutingKey and Type (CloudEventsType)\n- Constructed as: new PublicationTopicAttribute(\"topic.name\")\n\nTests that don't test assembly scanning must set DisableAssemblyScanning = true to avoid picking up [PublicationTopic]-decorated types from the test assembly."
+    },
+    {
+      "id": "US-008",
+      "title": "Add deduplication and channel merging logic",
+      "description": "As a service developer, I want the document to be correct when the same routing key appears in multiple sources so there are no duplicate channels or messages.",
+      "acceptanceCriteria": [
+        "Two subscriptions on same routing key produce one channel and two receive operations (different operation IDs, e.g. using subscription name)",
+        "A subscription and publication on same routing key produce one channel, one receive operation, one send operation",
+        "Same IRequest type across sources produces only one AsyncApiMessage component (keyed by type name)",
+        "Channel IDs and operation IDs with special characters (. / spaces) are sanitized to alphanumeric + hyphens + underscores",
+        "Unit tests cover all three deduplication scenarios. Use Assert.*",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Implementation details from previous run: GetUniqueOperationId helper handles operation ID dedup with _2, _3 suffixes. Channel merging is implicit: if (!document.Channels.ContainsKey(channelId)) prevents duplicates. Message component dedup keyed by type name."
+    },
+    {
+      "id": "US-009",
+      "title": "Create DI registration via UseAsyncApi extension method",
+      "description": "As a service developer, I want to register the AsyncAPI generator with a single call on the Brighter builder so I don't need to wire up services manually.",
+      "acceptanceCriteria": [
+        "IBrighterBuilder.UseAsyncApi(Action<AsyncApiOptions>?) extension method exists in AsyncApiBrighterBuilderExtensions",
+        "Calling UseAsyncApi() registers AsyncApiOptions as singleton",
+        "Calling UseAsyncApi() registers IAmAnAsyncApiDocumentGenerator as singleton (resolving IAmConsumerOptions and IAmAProducerRegistry via GetService, not GetRequiredService)",
+        "Calling UseAsyncApi() registers IAmASchemaGenerator as NJsonSchemaGenerator singleton (unless already registered by user)",
+        "IBrighterBuilder is returned for chaining",
+        "Unit tests verify all three services are registered after calling UseAsyncApi(). Use Assert.*",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "CRITICAL CODEBASE FACTS:\n1. Both IAmConsumerOptions and IAmAProducerRegistry are interfaces in core Paramore.Brighter - NO reflection or ServiceActivator dependency needed to resolve them.\n2. Previous implementation resolved subscriptions via sp.GetService<IAmConsumerOptions>()?.Subscriptions\n3. Previous implementation resolved publications via sp.GetService<IAmAProducerRegistry>()?.Producers\n4. Previous implementation also merged SupplementalPublications from AsyncApiOptions with producer registry publications\n5. Previous implementation registered NJsonSchemaGenerator via reflection (Type.GetType) using TryAddSingleton to keep the core package free of NJsonSchema dependency\n6. NO hard compile-time dependency on ServiceActivator.Extensions.DependencyInjection is needed"
+    },
+    {
+      "id": "US-010",
+      "title": "Create file generation via IHost extension method",
+      "description": "As a service developer, I want to call a single method on the built host to write the AsyncAPI document to a JSON file, so I can integrate this into a startup argument check or CI step.",
+      "acceptanceCriteria": [
+        "IHost.GenerateAsyncApiDocumentAsync(string outputPath, CancellationToken ct = default) extension method exists and returns Task<AsyncApiDocument>",
+        "Method resolves IAmAnAsyncApiDocumentGenerator and calls GenerateAsync()",
+        "Output is serialized with WriteIndented = true and WhenWritingNull ignore condition",
+        "Parent directory of outputPath is created if it does not exist",
+        "Generated AsyncApiDocument is returned to the caller for inspection or logging",
+        "Throws InvalidOperationException with clear message if UseAsyncApi() was not called",
+        "Synchronous overload GenerateAsyncApiDocument(string outputPath) exists and returns AsyncApiDocument",
+        "Unit tests cover: file written, directory created, returned document, exception when not configured, valid JSON. Use Assert.*",
+        "Tests pass"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Previous implementation was sync-only (GenerateAsyncApiDocument). File.WriteAllTextAsync not available on netstandard2.0 - use FileStream + WriteAsync with traditional using blocks if targeting netstandard2.0, or use #if NET8_0_OR_GREATER for modern APIs."
+    },
+    {
+      "id": "US-011",
+      "title": "Create RabbitMQ sample project demonstrating end-to-end usage",
+      "description": "As a developer evaluating Brighter, I want a sample project that demonstrates AsyncAPI generation with a real transport so I can understand the intended usage pattern.",
+      "acceptanceCriteria": [
+        "Sample project exists at samples/AsyncAPI/RMQAsyncAPI/",
+        "Sample configures a Brighter service with at least one subscription and one publication using RabbitMQ transport",
+        "Program.cs includes --generate-asyncapi argument check that calls GenerateAsyncApiDocumentAsync('asyncapi.json') and exits",
+        "Running dotnet run -- --generate-asyncapi produces a valid asyncapi.json file",
+        "Sample project is added to Brighter.slnx",
+        "dotnet build succeeds for the sample",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Key implementation details from previous run:\n1. Use Publication<T> to get typed publications (e.g. new RmqPublication<OrderCreatedEvent>())\n2. Use the EXISTING PublicationTopicAttribute from core Brighter\n3. Target net9.0 matching other recent samples\n4. Solution is Brighter.slnx (XML format)\n5. Message mappers should follow current Brighter patterns (check existing samples/ for reference)\n6. All .cs files need the standard MIT licence header with copyright year 2025"
+    },
+    {
+      "id": "US-012",
+      "title": "Fix stateful singleton bug in AsyncApiDocumentGenerator",
+      "description": "As a library consumer, I need GenerateAsync() to produce identical documents on repeated calls so the generator is safe to use as a singleton in DI.",
+      "acceptanceCriteria": [
+        "The three instance dictionaries (_channels, _operations, _messages) in AsyncApiDocumentGenerator are cleared at the start of GenerateAsync() before processing subscriptions/publications/assembly scanning",
+        "New test: calling GenerateAsync() twice on the same generator instance produces identical documents (same channel count, same operation count, same operation keys, same message count)",
+        "New test: second call does NOT produce operations with _2 suffixed IDs that weren't in the first call",
+        "All existing tests in When_Generating_Document_From_Subscriptions, When_Generating_Document_From_Publications, When_Deduplicating_Channels_And_Messages still pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "BUG: AsyncApiDocumentGenerator accumulates state in _channels, _operations, _messages dictionaries across calls. It is registered as a singleton via the DI factory in AsyncApiBrighterBuilderExtensions.cs:63. On second call to GenerateAsync(), existing entries are still in the dictionaries, causing GetUniqueOperationId to produce _2 suffixed IDs and corrupt the document.\n\nFIX: Add three .Clear() calls at the top of GenerateAsync():\n  _channels.Clear();\n  _operations.Clear();\n  _messages.Clear();\n\nFile to modify: src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs (line ~61, start of GenerateAsync)\nTest file to add to: tests/Paramore.Brighter.AsyncAPI.Tests/ (new class or add to existing dedup test class)"
+    },
+    {
+      "id": "US-013",
+      "title": "Fix incomplete assembly scanning deduplication",
+      "description": "As a library consumer, I need assembly scanning to correctly skip types already registered via DI even when the DI publication was assigned a unique-ified operation ID.",
+      "acceptanceCriteria": [
+        "Assembly scanning deduplication uses a tracked set of (channelId, action) pairs rather than checking _operations.ContainsKey with a constructed string",
+        "New test: register two DI publications on the same topic (producing send_topic and send_topic_2), then assembly-scan a type with [PublicationTopic] for the same topic — the scanned type is skipped because a send operation for that channel already exists from DI",
+        "Existing test It_Should_Skip_Types_Already_Registered_Via_DI still passes",
+        "All existing tests pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "BUG: In AddFromAssemblyScanningAsync (line ~201), the dedup check is:\n  var sendOpId = $\"send_{channelId}\";\n  if (_operations.ContainsKey(sendOpId)) continue;\n\nThis only catches the exact string 'send_{channelId}'. If a DI-registered publication for the same topic got a unique-ified ID like 'send_{channelId}_2' (because another publication already took the base ID), the assembly scan will NOT detect it and will add a duplicate.\n\nFIX: Add a HashSet<(string channelId, string action)> field (e.g. _coveredChannelActions) that is populated in AddSubscriptionsAsync and AddPublicationsAsync. In AddFromAssemblyScanningAsync, check _coveredChannelActions.Contains((channelId, \"send\")) instead of string-matching operation IDs. Clear it in GenerateAsync() alongside the other dictionaries.\n\nFiles to modify:\n- src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs\n- tests/Paramore.Brighter.AsyncAPI.Tests/When_Generating_Document_From_Assembly_Scanning.cs"
+    },
+    {
+      "id": "US-014",
+      "title": "Remove dead #else branch in AsyncApiHostExtensions",
+      "description": "As a maintainer, I want to remove unreachable code so the codebase is clean and doesn't mislead future contributors.",
+      "acceptanceCriteria": [
+        "The #if NET8_0_OR_GREATER / #else / #endif conditional in AsyncApiHostExtensions.cs is removed",
+        "Only the async File.WriteAllTextAsync path remains (the sync File.WriteAllText #else branch is deleted)",
+        "Existing tests in When_Generating_AsyncApi_Document_File still pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "The project targets $(BrighterCoreTargetFrameworks) = net8.0;net9.0;net10.0. The #else branch (File.WriteAllText sync fallback) is dead code since NET8_0_OR_GREATER is always true for all TFMs.\n\nFile to modify: src/Paramore.Brighter.AsyncAPI/AsyncApiHostExtensions.cs (lines ~63-67)\nRemove the #if/#else/#endif and keep only:\n  await File.WriteAllTextAsync(outputPath, json, ct).ConfigureAwait(false);"
+    },
+    {
+      "id": "US-015",
+      "title": "Defensive copy of Servers dictionary in document generation",
+      "description": "As a library consumer, I need the generated document to be isolated from options mutations so that modifying options after generation doesn't retroactively change the document.",
+      "acceptanceCriteria": [
+        "In AsyncApiDocumentGenerator.GenerateAsync(), the Servers dictionary is shallow-copied when assigned to the document (not the same reference as _options.Servers)",
+        "New test: generate a document, then mutate _options.Servers by adding a new key — the previously generated document's Servers dictionary must NOT contain the new key",
+        "All existing tests pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "Currently line ~74 in AsyncApiDocumentGenerator.cs:\n  Servers = _options.Servers,\n\nFIX: Change to:\n  Servers = _options.Servers != null ? new Dictionary<string, AsyncApiServer>(_options.Servers) : null,\n\nFile to modify: src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs\nTest file: tests/Paramore.Brighter.AsyncAPI.Tests/ (add test to existing class or new class)"
+    },
+    {
+      "id": "US-016",
+      "title": "Cache compiled regex for channel ID sanitization",
+      "description": "As a library consumer, I want the regex used for channel ID sanitization to be compiled and cached to avoid per-call overhead.",
+      "acceptanceCriteria": [
+        "The SanitizeChannelId method uses a private static readonly Regex with RegexOptions.Compiled instead of calling Regex.Replace with a string pattern on every invocation",
+        "Channel ID sanitization behavior is unchanged (non-alphanumeric chars replaced with underscore)",
+        "All existing tests pass (especially those checking sanitized channel IDs like 'shared_topic')",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "Currently line ~286-289 in AsyncApiDocumentGenerator.cs:\n  private static string SanitizeChannelId(string value)\n  {\n      return Regex.Replace(value, \"[^a-zA-Z0-9]\", \"_\");\n  }\n\nFIX: Add a static field and use it:\n  private static readonly Regex s_sanitizeRegex = new(\"[^a-zA-Z0-9]\", RegexOptions.Compiled);\n  private static string SanitizeChannelId(string value) => s_sanitizeRegex.Replace(value, \"_\");\n\nFile to modify: src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs"
+    },
+    {
+      "id": "US-017",
+      "title": "Add XML documentation for UseAsyncApi explaining IAmConsumerOptions coupling",
+      "description": "As a library consumer, I need clear documentation on UseAsyncApi() explaining where subscriptions and publications are sourced from so I understand the DI requirements.",
+      "acceptanceCriteria": [
+        "UseAsyncApi() extension method has XML doc comment (/// <summary>) explaining: subscriptions are sourced from IAmConsumerOptions (requires AddConsumers() registration), publications from IAmAProducerRegistry (requires AddProducers() registration), and send-only apps without consumers will correctly produce documents with no receive operations",
+        "IAmAnAsyncApiDocumentGenerator interface has XML doc comment describing its purpose",
+        "IAmASchemaGenerator interface has XML doc comment describing its purpose and the contract for null/error cases",
+        "All existing tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "Files to modify:\n1. src/Paramore.Brighter.AsyncAPI/AsyncApiBrighterBuilderExtensions.cs - Add /// summary to UseAsyncApi method\n2. src/Paramore.Brighter.AsyncAPI/IAmAnAsyncApiDocumentGenerator.cs - Add /// summary to interface\n3. src/Paramore.Brighter.AsyncAPI/IAmASchemaGenerator.cs - Add /// summary to interface and GenerateAsync method\n\nKeep documentation concise. Follow Brighter's existing XML doc patterns (see other IAmA* interfaces for reference style)."
+    },
+    {
+      "id": "US-018",
+      "title": "Fix thread-safety bug: eliminate shared mutable state in AsyncApiDocumentGenerator",
+      "description": "As a library consumer running in a multi-threaded host (e.g. ASP.NET), I need GenerateAsync() to be safe to call concurrently so that two simultaneous callers don't corrupt each other's output.",
+      "acceptanceCriteria": [
+        "The instance-level dictionaries (_channels, _operations, _messages) and _coveredChannelActions HashSet are replaced with local variables created inside GenerateAsync()",
+        "Local variables are passed to the private helper methods (AddSubscriptionsAsync, AddPublicationsAsync, AddFromAssemblyScanningAsync, EnsureChannel, EnsureMessageAsync, EnsurePlaceholderMessage, AddChannelMessageRef, GetUniqueOperationId) as parameters or via a private context object",
+        "The .Clear() calls at the top of GenerateAsync() are removed (no longer needed since state is local)",
+        "Two concurrent calls to GenerateAsync() produce correct, independent documents (no cross-contamination)",
+        "Existing test When_Generating_Document_Multiple_Times still passes (sequential idempotency preserved)",
+        "All existing tests pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "CRITICAL BUG (P0): AsyncApiDocumentGenerator is registered as a singleton via services.AddSingleton<IAmAnAsyncApiDocumentGenerator>(...) in AsyncApiBrighterBuilderExtensions.cs:73. It holds four mutable instance fields:\n  - _channels (Dictionary)\n  - _operations (Dictionary)\n  - _messages (Dictionary)\n  - _coveredChannelActions (HashSet)\n\nGenerateAsync() clears them then repopulates, but if two threads call GenerateAsync() concurrently, one thread's Clear() will destroy the other thread's in-progress data, producing corrupt output.\n\nFIX APPROACH: Move all four collections to be local variables in GenerateAsync() and pass them through the private methods. This eliminates shared mutable state entirely — no locks needed.\n\nAlternative approaches (less preferred):\n1. Add a SemaphoreSlim — serializes calls unnecessarily\n2. Change to transient/scoped registration — breaks the existing DI contract\n\nFile to modify: src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs\nThe private methods will need additional parameters (or create a private GenerationContext record to bundle them)."
+    },
+    {
+      "id": "US-019",
+      "title": "Remove sync-over-async wrapper GenerateAsyncApiDocument to prevent deadlocks",
+      "description": "As a library consumer using ASP.NET or any host with a SynchronizationContext, I need the public API not to contain .GetAwaiter().GetResult() calls that can deadlock my application.",
+      "acceptanceCriteria": [
+        "The synchronous extension method GenerateAsyncApiDocument(this IHost host, string outputPath) is removed from AsyncApiHostExtensions",
+        "Only the async method GenerateAsyncApiDocumentAsync remains",
+        "The sample project (samples/AsyncAPI/RMQAsyncAPI/Program.cs) already uses the async path — verify it still compiles",
+        "No other code in the repository references the removed sync method",
+        "All existing tests pass (update any test that calls the sync overload to use the async one)",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": "P1 ISSUE: AsyncApiHostExtensions.cs:68-71 contains:\n  public static AsyncApiDocument GenerateAsyncApiDocument(this IHost host, string outputPath)\n  {\n      return host.GenerateAsyncApiDocumentAsync(outputPath).GetAwaiter().GetResult();\n  }\n\n.GetAwaiter().GetResult() is a known deadlock risk when called from contexts with a SynchronizationContext (ASP.NET, WPF, etc.). Since this is a public API on IHost, it's plausible someone calls it from middleware or a controller.\n\nThe async method GenerateAsyncApiDocumentAsync is the correct API. The sync wrapper adds risk with no benefit — remove it entirely rather than marking it [Obsolete], since this is pre-release code.\n\nFile to modify: src/Paramore.Brighter.AsyncAPI/AsyncApiHostExtensions.cs\nVerify no references: grep for GenerateAsyncApiDocument (without Async) across the codebase"
+    },
+    {
+      "id": "US-020",
+      "title": "Seal concrete classes to follow codebase convention and prevent virtual dispatch",
+      "description": "As a maintainer, I want concrete classes that have corresponding interfaces for extensibility to be sealed, following the codebase convention established in PR #3552.",
+      "acceptanceCriteria": [
+        "AsyncApiDocumentGenerator is sealed (extensibility is via IAmAnAsyncApiDocumentGenerator interface)",
+        "NJsonSchemaGenerator is sealed (extensibility is via IAmASchemaGenerator interface)",
+        "Model POCOs are sealed: AsyncApiDocument, AsyncApiChannel, AsyncApiComponents, AsyncApiInfo, AsyncApiMessage, AsyncApiOperation, AsyncApiRef, AsyncApiServer",
+        "All existing tests pass (no test subclasses any of these types)",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": "P1 ISSUE: The codebase convention (commit a2d3d7b5a — 'making internal & private classes sealed to avoid virtual dispatch') is to seal classes that don't need inheritance. All concrete classes in this feature have interfaces or are plain DTOs:\n\n1. AsyncApiDocumentGenerator → sealed (interface IAmAnAsyncApiDocumentGenerator exists)\n2. NJsonSchemaGenerator → sealed (interface IAmASchemaGenerator exists)\n3. All Model/ POCOs → sealed (pure data carriers, no inheritance expected)\n\nFiles to modify:\n- src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs\n- src/Paramore.Brighter.AsyncAPI.NJsonSchema/NJsonSchemaGenerator.cs\n- src/Paramore.Brighter.AsyncAPI/Model/AsyncApiDocument.cs\n- src/Paramore.Brighter.AsyncAPI/Model/AsyncApiChannel.cs\n- src/Paramore.Brighter.AsyncAPI/Model/AsyncApiComponents.cs\n- src/Paramore.Brighter.AsyncAPI/Model/AsyncApiInfo.cs\n- src/Paramore.Brighter.AsyncAPI/Model/AsyncApiMessage.cs\n- src/Paramore.Brighter.AsyncAPI/Model/AsyncApiOperation.cs\n- src/Paramore.Brighter.AsyncAPI/Model/AsyncApiRef.cs\n- src/Paramore.Brighter.AsyncAPI/Model/AsyncApiServer.cs"
+    },
+    {
+      "id": "US-021",
+      "title": "Replace ContainsKey + indexer double-lookups with TryAdd / TryGetValue",
+      "description": "As a maintainer, I want dictionary operations to use idiomatic single-lookup patterns instead of ContainsKey followed by indexer, reducing unnecessary hash lookups and improving code clarity.",
+      "acceptanceCriteria": [
+        "EnsureChannel uses _channels.TryAdd() or equivalent single-lookup pattern instead of ContainsKey + indexer assignment",
+        "EnsureMessageAsync uses _messages.TryAdd() or equivalent single-lookup pattern instead of ContainsKey + indexer assignment",
+        "EnsurePlaceholderMessage uses _messages.TryAdd() or equivalent single-lookup pattern",
+        "AddChannelMessageRef uses TryGetValue or equivalent instead of indexer + ContainsKey",
+        "GetUniqueOperationId uses TryAdd or equivalent instead of ContainsKey check",
+        "Behavior is unchanged — all existing tests pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 21,
+      "passes": true,
+      "notes": "P1 ISSUE: Multiple methods in AsyncApiDocumentGenerator use the ContainsKey-then-indexer anti-pattern which does two hash lookups instead of one:\n\n1. EnsureChannel (line ~238): if (!_channels.ContainsKey(channelId)) _channels[channelId] = ...\n2. EnsureMessageAsync (line ~250): if (!_messages.ContainsKey(messageName)) _messages[messageName] = ...\n3. EnsurePlaceholderMessage (line ~262): same pattern\n4. AddChannelMessageRef (line ~278): channel.Messages.ContainsKey then channel.Messages[messageName] = ...\n5. GetUniqueOperationId (line ~287): _operations.ContainsKey check\n\nNOTE: If US-018 moves these to local variables, apply TryAdd to the local variable versions.\nNOTE: For EnsureMessageAsync, TryAdd won't work directly because the value requires an async call. Use CollectionsMarshal.GetValueRefOrAddDefault (NET8+) or check-then-add with TryGetValue pattern:\n  if (!_messages.TryGetValue(messageName, out _))\n  {\n      _messages[messageName] = new AsyncApiMessage { ... };\n  }\n\nFile to modify: src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs"
+    },
+    {
+      "id": "US-022",
+      "title": "Verify schema $ref rewriting resolves embedded payload refs correctly",
+      "description": "As a library consumer, I need embedded JSON Schema $ref values in message payloads to resolve correctly inside the AsyncAPI document so that tools like AsyncAPI Studio can parse the schemas.",
+      "acceptanceCriteria": [
+        "Schema $ref values generated by NJsonSchema (e.g. '#/definitions/SubType') are rewritten to resolve inside #/components/messages/{messageName}/payload/definitions/SubType",
+        "A message with a complex type containing nested $ref references produces a valid payload where all $refs resolve within the message's payload subtree",
+        "A message with a simple type (no nested $refs) has its payload unchanged",
+        "Unit test: generate a document with a type that has nested properties producing $ref entries, verify all $ref values start with #/components/messages/{messageName}/payload/",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 22,
+      "passes": true,
+      "notes": "PR Review required item: 'Keep schema $ref rewriting behavior that ensures embedded payload refs resolve inside #/components/messages/{messageName}/payload/...'\n\nNJsonSchema generates schemas with internal $refs like '#/definitions/SubType'. When embedded in an AsyncAPI document at #/components/messages/{name}/payload, these refs become dangling because the definitions are nested under payload, not at the document root.\n\nThe RewriteRefs method should recursively walk the JSON payload and rewrite any $ref value from '#/definitions/...' to '#/components/messages/{messageName}/payload/definitions/...'.\n\nFile: src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs (RewriteRefs method)\nTest file: tests/Paramore.Brighter.AsyncAPI.Tests/"
+    },
+    {
+      "id": "US-023",
+      "title": "Refactor AsyncApiDocumentGenerator to reduce duplication and complexity",
+      "description": "As a maintainer, I want the generator code to be cleaner and simpler so it passes CodeScene complexity checks and is easier to review for merge.",
+      "acceptanceCriteria": [
+        "Shared logic between AddSubscriptionsAsync and AddPublicationsAsync is consolidated into common helper methods",
+        "Complexity in AddFromAssemblyScanningAsync is reduced (extract helper methods or simplify control flow)",
+        "Complexity in RewriteRefs is reduced (extract recursive helper or simplify)",
+        "No behavioral changes - all existing tests still pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 23,
+      "passes": true,
+      "notes": "Advisory but recommended to improve mergeability. PR #4034 review flagged CodeScene complexity warnings.\n\nSuggested extractions:\n1. ProcessChannelAndOperation() - shared logic for creating channel + operation from a routing key, action, and request type\n2. ScanAssemblyTypes() - extract the inner type-processing loop from AddFromAssemblyScanningAsync\n3. RewriteRefNode() - extract single-node ref rewriting from the recursive RewriteRefs\n\nKeep changes purely structural (refactoring) with no behavioral changes. All existing tests must pass unchanged."
+    },
+    {
+      "id": "US-024",
+      "title": "Address Primitive Obsession in method signatures",
+      "description": "As a maintainer, I want method signatures to use a context object instead of passing 4-5 collection parameters individually, addressing the CodeScene Primitive Obsession finding.",
+      "acceptanceCriteria": [
+        "A private GenerationContext record/class is introduced bundling the four collections: channels (Dictionary<string, AsyncApiChannel>), operations (Dictionary<string, AsyncApiOperation>), messages (Dictionary<string, AsyncApiMessage>), coveredChannelActions (HashSet<(string, string)>)",
+        "ProcessSourceAsync accepts GenerationContext instead of 4 separate collection parameters",
+        "AddSubscriptionsAsync accepts GenerationContext instead of 4 separate collection parameters",
+        "AddPublicationsAsync accepts GenerationContext instead of 4 separate collection parameters",
+        "AddFromAssemblyScanningAsync accepts GenerationContext instead of 4 separate collection parameters",
+        "EnsureChannel, EnsureMessageAsync, EnsurePlaceholderMessage, AddChannelMessageRef, GetUniqueOperationId updated to use context or remain as-is if they only take 1-2 collections",
+        "No behavioral changes - all existing tests still pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 24,
+      "passes": true,
+      "notes": "CodeScene flagged Primitive Obsession on ProcessSourceAsync (8 params), AddSubscriptionsAsync (5 params), AddPublicationsAsync (5 params), and AddFromAssemblyScanningAsync (5 params). All four methods pass the same 4 collection locals created in GenerateAsync().\n\nFIX: Introduce a private record:\n  private record GenerationContext(\n      Dictionary<string, AsyncApiChannel> Channels,\n      Dictionary<string, AsyncApiOperation> Operations,\n      Dictionary<string, AsyncApiMessage> Messages,\n      HashSet<(string ChannelId, string Action)> CoveredChannelActions);\n\nInstantiate in GenerateAsync() and pass through. ProcessSourceAsync drops from 8 params to 5 (context, address, action, requestType, ct). The Add*Async methods drop from 5 params to 2 (context, ct).\n\nFile to modify: src/Paramore.Brighter.AsyncAPI/AsyncApiDocumentGenerator.cs\nKeep changes purely structural with no behavioral changes."
+    },
+    {
+      "id": "US-025",
+      "title": "Verify CodeScene gate passes or suppress with rationale",
+      "description": "As a maintainer, I need the CodeScene CI gate on PR #4034 to pass so the PR can be merged.",
+      "acceptanceCriteria": [
+        "All CodeScene findings in AsyncApiDocumentGenerator.cs are either resolved by prior stories (US-023, US-024) or explicitly suppressed",
+        "If suppression is needed: add a codescene-suppress comment or .codescene/config entry with a rationale explaining why the finding is acceptable",
+        "Document any remaining suppressions in the PR description or as inline code comments with justification",
+        "No behavioral changes - all existing tests still pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 25,
+      "passes": true,
+      "notes": "This is a gate-check story. After US-023 (refactoring) and US-024 (Primitive Obsession fix), re-evaluate whether the CodeScene gate would pass.\n\nCodeScene findings from PR #4034:\n1. Complexity in AddSubscriptionsAsync / AddPublicationsAsync - addressed by US-023 (consolidated into ProcessSourceAsync)\n2. Complexity in AddFromAssemblyScanningAsync - addressed by US-023 (extracted GetPublicationTopicTypes)\n3. Complexity in RewriteRefs - addressed by US-023 (extracted RewriteRefProperty)\n4. Argument count hotspots - addressed by US-024 (GenerationContext record)\n5. Primitive Obsession - addressed by US-024 (GenerationContext record)\n\nIf any findings remain after those fixes, suppress with rationale. CodeScene suppression options:\n- Inline: // codescene:ignore\n- Config: .codescene/project.json exclusion\n- PR comment explaining why the finding is a false positive or acceptable\n\nPrefer completing the refactors over suppression. Only suppress if the finding is genuinely a false positive."
+    },
+    {
+      "id": "US-026",
+      "title": "Create Kafka sample project demonstrating end-to-end AsyncAPI generation",
+      "description": "As a developer evaluating Brighter with Kafka, I want a sample project that demonstrates AsyncAPI generation with Kafka transport so I can understand the intended usage pattern for the major production use case.",
+      "acceptanceCriteria": [
+        "Sample project exists at samples/AsyncAPI/KafkaAsyncAPI/",
+        "Sample configures a Brighter service with at least one subscription and one publication using Kafka transport",
+        "Program.cs includes --generate-asyncapi argument check that calls GenerateAsyncApiDocumentAsync('asyncapi.json') and exits",
+        "Sample project is added to Brighter.slnx",
+        "dotnet build succeeds for the sample",
+        "Sample uses the contributor's name (Jonny Olliff-Lee) in copyright headers",
+        "Sample uses Brighter's default message mapper unless there is a specific reason for a custom one",
+        "Typecheck passes"
+      ],
+      "priority": 26,
+      "passes": true,
+      "notes": "PRD Amendment 3: Kafka is the major Brighter use case at JET. Mirror the RMQ sample pattern at samples/AsyncAPI/RMQAsyncAPI/ but use Kafka transport classes:\n\nKafka equivalents:\n- RmqMessagingGatewayConnection → KafkaMessagingGatewayConfiguration (BootStrapServers, Name)\n- RmqMessageConsumerFactory → KafkaMessageConsumerFactory\n- RmqProducerRegistryFactory → KafkaProducerRegistryFactory\n- RmqSubscription<T> → KafkaSubscription<T>\n- RmqPublication<T> → KafkaPublication<T>\n\nAll classes are in namespace Paramore.Brighter.MessagingGateway.Kafka.\n\nKey differences from RMQ sample:\n1. KafkaMessagingGatewayConfiguration uses BootStrapServers = new[] { \"localhost:9092\" } instead of AmqpUri\n2. KafkaPublication<T> has Kafka-specific properties: NumPartitions, MessageSendMaxRetries, MessageTimeoutMs, MaxInFlightRequestsPerConnection\n3. KafkaSubscription<T> has Kafka-specific properties: GroupId, OffsetDefault, CommitBatchSize, SessionTimeout\n4. Server protocol should be 'kafka' with host 'localhost:9092'\n5. The project reference is src/Paramore.Brighter.MessagingGateway.Kafka/Paramore.Brighter.MessagingGateway.Kafka.csproj\n6. Use similar events (OrderCreatedEvent with [PublicationTopic], PaymentReceivedEvent for subscription)\n7. Target net9.0;net10.0 like the RMQ sample\n8. Use the same MIT licence header pattern with copyright 2026 Jonny Olliff-Lee\n9. The Brighter.slnx is XML format - add the project entry following the existing pattern\n10. PRD Amendment 6 says to use Brighter's default message mapper rather than explicit custom MessageMapper implementations - check if a default mapper is available; if not, use the same pattern as the RMQ sample"
+    }
+  ]
+}
