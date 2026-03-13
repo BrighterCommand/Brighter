@@ -102,10 +102,11 @@ var host = new HostBuilder()
     .Build();
 
 // Generate AsyncAPI document if --generate-asyncapi argument is provided
+// This writes both asyncapi.json and asyncapi.yaml
 if (args.Length > 0 && args[0] == "--generate-asyncapi")
 {
     var document = await host.GenerateAsyncApiDocumentAsync("asyncapi.json");
-    Console.WriteLine($"AsyncAPI document generated: {document.Info.Title} v{document.Info.Version}");
+    Console.WriteLine($"AsyncAPI document generated: {document.Info.Title} v{document.Info.Version} (JSON + YAML)");
     return;
 }
 
