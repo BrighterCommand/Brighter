@@ -27,6 +27,13 @@ API documentation as part of their CI/CD pipeline — without any extra manual w
   schema generation logic.
 - Provide a working sample project demonstrating end-to-end usage with a real transport.
 - The generated document must pass validation against the AsyncAPI 3.0 specification.
+- *(Added per review)* Support output in both JSON and YAML formats, since YAML is more
+  human-readable and the two are readily convertible (see Amendment 2).
+- *(Added per review)* Use the official [AsyncAPI .NET SDK](https://github.com/asyncapi/net-sdk)
+  as the document model layer instead of custom POCOs, gaining built-in support for the full
+  specification including bindings, tags, and protocol-specific metadata (see Amendment 1).
+- *(Added per review)* Provide a Kafka sample in addition to the RabbitMQ sample, as Kafka is the
+  major production use case (see Amendment 3).
 
 ---
 
@@ -311,3 +318,113 @@ The following are explicitly out of scope for this iteration:
 - **Should `GenerateAsyncApiDocumentAsync` return the document?** Yes. The method returns
   `Task<AsyncApiDocument>` so callers can inspect, log, or further process the document without
   re-reading and deserializing the file. Callers who only care about the file can discard the return value.
+
+---
+
+## PR Review Feedback (PR #4034)
+
+The following amendments incorporate feedback from the maintainer review on PR #4034.
+
+### Amendment 1: Use the AsyncAPI .NET SDK instead of custom POCOs
+
+**Reviewer:** iancooper
+**Impact:** US-002 (Document Model), FR-7, Technical Considerations
+
+There is an official [AsyncAPI .NET SDK](https://github.com/asyncapi/net-sdk) (`LEGO.AsyncAPI`)
+that defines the abstractions of the specification and the various protocols. Using this instead of
+custom POCOs means:
+- We don't need to define the model primitives ourselves
+- We get built-in support for bindings, tags, and protocol-specific metadata
+- Community-maintained spec compliance — we don't need to track spec changes
+
+**Action:** Evaluate replacing the custom `Model/*.cs` POCOs with `LEGO.AsyncAPI` types. If adopted,
+US-002 acceptance criteria should change from verifying custom POCO serialization to verifying correct
+population of the SDK's `AsyncApiDocument`. The `IAmASchemaGenerator` interface (US-004) and generator
+logic (US-005 through US-008) remain the same — only the model layer changes.
+
+### Amendment 2: Support YAML output alongside JSON
+
+**Reviewer:** iancooper
+**Impact:** Non-Goals, US-010, FR-9
+
+The original PRD listed YAML as a non-goal. The reviewer notes that YAML is more human-readable and
+is readily convertible from JSON, so we should support both formats without requiring two passes.
+
+**Action:** Move "No YAML output" out of Non-Goals. Update US-010 to support writing both
+`asyncapi.json` and `asyncapi.yaml` (or accept a format parameter). If adopting the AsyncAPI .NET SDK
+(Amendment 1), YAML serialization comes built-in.
+
+### Amendment 3: Add a Kafka sample project
+
+**Reviewer:** iancooper
+**Impact:** US-011, FR-11
+
+Kafka is the major Brighter use case at JET. A Kafka sample would be valuable in addition to the
+RabbitMQ sample.
+
+**Action:** Add a second sample at `samples/AsyncAPI/KafkaAsyncAPI/` demonstrating end-to-end usage
+with the Kafka transport. This can be a follow-up PR after the RabbitMQ sample lands.
+
+### Amendment 4: Support for custom schema attributes
+
+**Reviewer:** iancooper
+**Impact:** US-004 (Schema Generation)
+
+Brighter has custom attributes used for schema generation, and it would be useful to support these
+in the schema output.
+
+**Action:** Ensure `IAmASchemaGenerator` is flexible enough for implementations to inspect custom
+attributes on `IRequest` types. The default NJsonSchema-based generator should honour standard
+`System.ComponentModel.DataAnnotations` and `JsonProperty` attributes. Support for Brighter-specific
+custom attributes can be added as a separate `IAmASchemaGenerator` implementation or via
+NJsonSchema's extensibility points.
+
+### Amendment 5: Bindings and tags support (future PR)
+
+**Reviewer:** iancooper
+**Impact:** Non-Goals
+
+The reviewer wants bindings and tags support eventually, likely via attributes on message types or
+configuration. This was listed as a non-goal for this iteration.
+
+**Action:** Keep as a non-goal for the initial PR but add as planned follow-up work. If the AsyncAPI
+.NET SDK (Amendment 1) is adopted, the model already supports bindings and tags — only the attribute
+discovery and population logic would be needed.
+
+### Amendment 6: Sample project conventions
+
+**Reviewer:** iancooper
+**Impact:** US-011
+
+- **Copyright headers:** Contributors keep IP and license it to the project. Copyright headers in
+  sample files should use the contributor's name, not a generic placeholder.
+- **Default mappers:** The sample should use Brighter's default message mapper rather than explicit
+  custom `MessageMapper` implementations, unless there is a specific reason for custom mappers.
+
+### Amendment 7: Code quality issues (CodeScene / Copilot)
+
+**Impact:** US-005, US-006, US-007
+
+Automated reviewers flagged several code health issues in `AsyncApiDocumentGenerator.cs`:
+- **Code duplication** between `AddPublicationsAsync` and `AddSubscriptionsAsync` — extract shared logic
+- **Complex method** `GetPublicationTopicTypes` (cyclomatic complexity 12, threshold 9) — simplify
+- **Bumpy road** in `AddFromAssemblyScanningAsync` and `RewriteRefs` — reduce nesting
+- **Excess function arguments** in `ProcessSourceAsync` (5 args, max 4) — consider a parameter object
+- **Primitive obsession / string-heavy arguments** (43.2% primitive, threshold 30%) — partially
+  addressed by earlier value-type refactoring, further work needed
+- **Bug:** Assembly-scanned operations use hardcoded `sendOpId` instead of `GetUniqueOperationId`,
+  which can silently overwrite if two scanned types share the same topic
+
+### Amendment 8: TFM and solution file fixes
+
+**Reviewer:** Copilot
+**Impact:** US-001, FR-1
+
+- Both `Paramore.Brighter.AsyncAPI` and `Paramore.Brighter.AsyncAPI.NJsonSchema` hardcode
+  `net9.0;net10.0` instead of `$(BrighterCoreTargetFrameworks)` (`net8.0;net9.0;net10.0`).
+  Net8.0 consumers cannot use these packages.
+- Source projects (`Paramore.Brighter.AsyncAPI`, `Paramore.Brighter.AsyncAPI.NJsonSchema`) and the
+  test project (`Paramore.Brighter.AsyncAPI.Tests`) are not added to `Brighter.slnx`. Only the
+  sample was added.
+
+**Action:** These are bugs in the current implementation that should be fixed immediately.

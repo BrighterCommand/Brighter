@@ -69,11 +69,32 @@ Brighter's runtime configuration and writes it to a file.
 - R8.2: Channel ID sanitization regex should be compiled/cached to avoid per-call overhead (use `RegexOptions.Compiled` or `[GeneratedRegex]`).
 - R8.3: The coupling between `IAmConsumerOptions` (a consumer configuration interface) and subscription discovery should be documented explicitly, noting that send-only apps without Service Activator registration will not have this service in DI.
 
+### R9: Document Model (Post-Review)
+
+- R9.1: Evaluate and adopt the official [AsyncAPI .NET SDK](https://github.com/asyncapi/net-sdk) (`LEGO.AsyncAPI`) as the document model layer instead of custom POCOs, gaining built-in spec compliance, bindings, tags, and protocol metadata support.
+- R9.2: If the SDK is adopted, remove the custom `Model/*.cs` POCOs and use the SDK's types throughout.
+
+### R10: Output Formats (Post-Review)
+
+- R10.1: The generator must support both JSON and YAML output formats.
+- R10.2: YAML is more human-readable and the two are readily convertible, so both should be supported without requiring two generation passes.
+
+### R11: Sample Projects (Post-Review)
+
+- R11.1: A Kafka sample project should be provided in addition to the RabbitMQ sample, as Kafka is the major production use case.
+- R11.2: Sample projects should use the contributor's name in copyright headers (contributors keep IP, license to project).
+- R11.3: Sample projects should use Brighter's default message mapper unless there is a specific reason for a custom one.
+
+### R12: Custom Schema Attributes (Post-Review)
+
+- R12.1: The schema generator should support Brighter's custom attributes used for schema generation.
+- R12.2: The `IAmASchemaGenerator` interface must be flexible enough for implementations to inspect custom attributes on `IRequest` types.
+
 ## Non-Goals
 
-- No YAML output (JSON only).
+- ~~No YAML output (JSON only).~~ *Moved to R10 per review.*
 - No HTTP endpoint (file generation only).
 - No built-in AsyncAPI Studio UI.
 - No MSBuild task or dotnet global tool.
 - No message filtering.
-- No custom channel metadata (bindings, tags, externalDocs).
+- No custom channel metadata (bindings, tags, externalDocs) — *planned as follow-up work per review; if the AsyncAPI .NET SDK is adopted the model supports these natively, only attribute discovery and population logic would be needed.*
