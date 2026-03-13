@@ -1,0 +1,53 @@
+{
+  "Namespace": "Paramore.Brighter.AWS.Tests",
+  "MessagingGateways": {
+    "SnsStandard": {
+      "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SnsPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.AWS.Tests.MessagingGateway.SnsStandardMessageGatewayProvider",
+      "Category": "AWS",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": false,
+      "HasSupportToPartitionKey": false,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true
+    },
+    "SnsFifo": {
+      "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SnsPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.AWS.Tests.MessagingGateway.SnsFifoMessageGatewayProvider",
+      "Category": "AWS",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": false,
+      "HasSupportToPartitionKey": true,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true
+    },
+    "SqsStandard": {
+      "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandardMessageGatewayProvider",
+      "Category": "AWS",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": true,
+      "HasSupportToPartitionKey": false,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true
+    },
+    "SqsFifo": {
+      "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifoMessageGatewayProvider",
+      "Category": "AWS",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": true,
+      "HasSupportToPartitionKey": true,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true
+    }
+  }
+}
