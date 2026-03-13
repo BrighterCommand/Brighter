@@ -445,8 +445,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             Channel.BasicConsume(_queueName.Value, false, _consumerTag, false, false, SetQueueArguments(), _consumer);
 
-            _consumer.HandleBasicConsumeOk(_consumerTag);
-
             Log.CreatedConsumer(s_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
         }
 

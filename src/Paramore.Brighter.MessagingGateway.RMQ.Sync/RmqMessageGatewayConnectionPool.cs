@@ -114,7 +114,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
                 lock (s_lock)
                 {
-                    TryRemoveConnection(connectionId);
+                    if (s_connectionPool.TryGetValue(connectionId, out var pooled)
+                        && ReferenceEquals(pooled.Connection, sender))
+                    {
+                        TryRemoveConnection(connectionId);
+                    }
                 }
             }
 
@@ -158,12 +162,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             var connectionId = GetConnectionId(connectionFactory);
 
-            if (s_connectionPool.ContainsKey(connectionId))
+            lock (s_lock)
             {
-                lock (s_lock)
-                {
-                    TryRemoveConnection(connectionId);
-                }
+                TryRemoveConnection(connectionId);
             }
         }
 
