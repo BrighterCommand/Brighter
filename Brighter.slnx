@@ -7,6 +7,7 @@
   </Configurations>
   <Folder Name="/samples/" />
   <Folder Name="/samples/AsyncAPI/">
+    <Project Path="samples/AsyncAPI/KafkaAsyncAPI/KafkaAsyncAPI.csproj" />
     <Project Path="samples/AsyncAPI/RMQAsyncAPI/RMQAsyncAPI.csproj" />
   </Folder>
   <Folder Name="/samples/Analyzer/">
