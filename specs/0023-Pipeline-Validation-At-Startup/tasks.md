@@ -159,7 +159,7 @@ These tasks add new types that the specifications and validator depend on.
     - Add `Describe(Type requestType)` method — phase 1 only (reflection, no instantiation)
     - Add parameterless `Describe()` that iterates `GetRegisteredRequestTypes()`
 
-- [ ] **TEST + IMPLEMENT: TransformPipelineBuilder.DescribeTransforms produces TransformPipelineDescription**
+- [x] **TEST + IMPLEMENT: TransformPipelineBuilder.DescribeTransforms produces TransformPipelineDescription**
   - **USE COMMAND**: `/test-first when TransformPipelineBuilder describes transforms then it returns mapper type and transform chain`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_transform_builder_describes_should_return_mapper_and_transforms.cs`
