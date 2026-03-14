@@ -47,6 +47,14 @@ Claude Code skills automate common workflows and enforce mandatory engineering p
 - Use `/adr` when documenting architectural decisions
 - Use `/spec:*` commands for full feature development from requirements to implementation
 
+## Context Management
+
+When asked to remember learnings or update guidance:
+- **Prefer project-owned files** (`.agent_instructions/`, `CLAUDE.md`, `PROMPT.md`) over ephemeral Claude memory (`~/.claude/projects/.../memory/`). Project-owned files are shared, version-controlled, and authoritative.
+- Update `.agent_instructions/code_style.md` for coding conventions, `.agent_instructions/testing.md` for test practices, etc.
+- Use `PROMPT.md` (if it exists) for temporary state that should persist across conversations.
+- Only use Claude memory (`MEMORY.md`) for user-specific preferences that don't belong in the project, or for tracking conversation-spanning work state.
+
 ## Detailed Instructions
 For comprehensive guidance on working with this codebase, Claude should read the following files as needed:
 
