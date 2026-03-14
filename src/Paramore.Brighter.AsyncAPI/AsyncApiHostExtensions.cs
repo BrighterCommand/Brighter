@@ -24,34 +24,18 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Neuroglia.AsyncApi;
+using Neuroglia.AsyncApi.IO;
 using Neuroglia.AsyncApi.v3;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace Paramore.Brighter.AsyncAPI
 {
     public static class AsyncApiHostExtensions
     {
-        private static readonly JsonSerializerOptions s_serializerOptions = new()
-        {
-            WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
-
-        private static readonly ISerializer s_yamlSerializer = new SerializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
-            .Build();
-
-        private static readonly IDeserializer s_yamlDeserializer = new DeserializerBuilder()
-            .Build();
-
         /// <summary>
         /// Generates the AsyncAPI document and writes it to both JSON and YAML files.
         /// The JSON file is written to <paramref name="outputPath"/>, and a corresponding
@@ -66,8 +50,14 @@ namespace Paramore.Brighter.AsyncAPI
                     "IAmAnAsyncApiDocumentGenerator is not registered. Call UseAsyncApi() on IBrighterBuilder during service configuration.");
             }
 
+            var writer = host.Services.GetService<IAsyncApiDocumentWriter>();
+            if (writer == null)
+            {
+                throw new InvalidOperationException(
+                    "IAsyncApiDocumentWriter is not registered. Ensure UseAsyncApi() calls AddAsyncApiIO() during service configuration.");
+            }
+
             var document = await generator.GenerateAsync(ct).ConfigureAwait(false);
-            var json = JsonSerializer.Serialize(document, s_serializerOptions);
 
             var directory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(directory))
@@ -75,14 +65,23 @@ namespace Paramore.Brighter.AsyncAPI
                 Directory.CreateDirectory(directory);
             }
 
+            // Determine JSON file path
+            var jsonPath = outputPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+                ? outputPath
+                : $"{outputPath}.json";
+
             // Write JSON
-            await File.WriteAllTextAsync(outputPath, json, ct).ConfigureAwait(false);
+            using (var jsonStream = new FileStream(jsonPath, FileMode.Create, FileAccess.Write))
+            {
+                await writer.WriteAsync(document, jsonStream, AsyncApiDocumentFormat.Json, ct).ConfigureAwait(false);
+            }
 
             // Write YAML alongside the JSON file
-            var yamlPath = Path.ChangeExtension(outputPath, ".yaml");
-            var objectGraph = s_yamlDeserializer.Deserialize<object>(json);
-            var yaml = s_yamlSerializer.Serialize(objectGraph);
-            await File.WriteAllTextAsync(yamlPath, yaml, ct).ConfigureAwait(false);
+            var yamlPath = Path.ChangeExtension(jsonPath, ".yaml");
+            using (var yamlStream = new FileStream(yamlPath, FileMode.Create, FileAccess.Write))
+            {
+                await writer.WriteAsync(document, yamlStream, AsyncApiDocumentFormat.Yaml, ct).ConfigureAwait(false);
+            }
 
             return document;
         }

@@ -27,6 +27,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Neuroglia.AsyncApi.IO;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.AsyncAPI
@@ -53,6 +54,9 @@ namespace Paramore.Brighter.AsyncAPI
             var options = new AsyncApiOptions();
             configure?.Invoke(options);
             services.AddSingleton(options);
+
+            // Register SDK serialization services (IAsyncApiDocumentWriter, IAsyncApiDocumentReader)
+            services.AddAsyncApiIO();
 
             // Register default schema generator via reflection (NJsonSchema package)
             var generatorType = Type.GetType(NJsonSchemaGeneratorTypeName);

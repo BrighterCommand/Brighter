@@ -110,7 +110,7 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "SDK serialization API:\n- IAsyncApiDocumentWriter is registered via services.AddAsyncApiIO() (see US-007)\n- Method: Task WriteAsync(IAsyncApiDocument document, Stream stream, AsyncApiDocumentFormat format, CancellationToken cancellationToken)\n- AsyncApiDocumentFormat enum: Yaml = 1, Json = 2\n- V3AsyncApiDocument implements IAsyncApiDocument\n\nUse MemoryStream + StreamWriter to capture output, then write to file. Or use FileStream directly.\n\nRemove the static s_serializerOptions field and the JSON→YAML conversion logic."
     },
     {
@@ -126,7 +126,7 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "AddAsyncApiIO() is an extension method on IServiceCollection from the Neuroglia.AsyncApi.IO package. It registers:\n- IAsyncApiDocumentWriter\n- IAsyncApiDocumentReader\n- Various serialization/deserialization services\n\nCall it inside UseAsyncApi() before the existing registrations:\n  services.AddAsyncApiIO();\n\nKeep the existing TryAddSingleton for NJsonSchemaGenerator via reflection.\nKeep the existing factory for IAmAnAsyncApiDocumentGenerator."
     },
     {
