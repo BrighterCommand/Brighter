@@ -23,16 +23,16 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Neuroglia.AsyncApi.v3;
 
 namespace Paramore.Brighter.AsyncAPI
 {
     /// <summary>
     /// Generates JSON Schema representations for message payload types used in AsyncAPI document generation.
-    /// Implementations should return an empty object schema ({}) when the request type is null or when an error occurs,
-    /// rather than propagating exceptions.
+    /// Implementations should return a <see cref="V3SchemaDefinition"/> wrapping the schema,
+    /// or null when the request type is null or when an error occurs.
     /// </summary>
     public interface IAmASchemaGenerator
     {
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.AsyncAPI
         /// </summary>
         /// <param name="requestType">The type to generate a schema for, or null to produce an empty object schema.</param>
         /// <param name="ct">Cancellation token.</param>
-        /// <returns>A <see cref="JsonElement"/> representing the JSON Schema, or an empty object schema on null/error.</returns>
-        Task<JsonElement?> GenerateAsync(Type? requestType, CancellationToken ct = default);
+        /// <returns>A <see cref="V3SchemaDefinition"/> containing the JSON Schema, or null on error.</returns>
+        Task<V3SchemaDefinition?> GenerateAsync(Type? requestType, CancellationToken ct = default);
     }
 }

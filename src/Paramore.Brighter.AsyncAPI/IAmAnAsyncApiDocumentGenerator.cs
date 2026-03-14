@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.AsyncAPI.Model;
+using Neuroglia.AsyncApi.v3;
 
 namespace Paramore.Brighter.AsyncAPI
 {
@@ -39,6 +39,6 @@ namespace Paramore.Brighter.AsyncAPI
         /// </summary>
         /// <param name="ct">Cancellation token.</param>
         /// <returns>The generated AsyncAPI document.</returns>
-        Task<AsyncApiDocument> GenerateAsync(CancellationToken ct = default);
+        Task<V3AsyncApiDocument> GenerateAsync(CancellationToken ct = default);
     }
 }

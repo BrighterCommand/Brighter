@@ -89,6 +89,8 @@
     <PackageVersion Include="MQTTnet" Version="4.3.7.1207" />
     <PackageVersion Include="MySqlConnector" Version="2.5.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageVersion Include="Neuroglia.AsyncApi.Core" Version="3.0.6" />
+    <PackageVersion Include="Neuroglia.AsyncApi.IO" Version="3.0.6" />
     <PackageVersion Include="NJsonSchema" Version="11.5.2" />
     <PackageVersion Include="NJsonSchema.NewtonsoftJson" Version="11.5.2" />
     <PackageVersion Include="NUnit" Version="4.5.1" />

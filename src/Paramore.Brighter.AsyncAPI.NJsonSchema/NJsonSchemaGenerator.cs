@@ -27,12 +27,14 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Neuroglia.AsyncApi.v3;
 using NJsonSchema;
 
 namespace Paramore.Brighter.AsyncAPI.NJsonSchema
 {
     public sealed class NJsonSchemaGenerator : IAmASchemaGenerator
     {
+        private const string SchemaFormat = "application/schema+json;version=draft-07";
         private static readonly JsonElement s_emptyObject;
         private readonly ILogger<NJsonSchemaGenerator> _logger;
 
@@ -47,22 +49,22 @@ namespace Paramore.Brighter.AsyncAPI.NJsonSchema
             _logger = logger;
         }
 
-        public Task<JsonElement?> GenerateAsync(Type? requestType, CancellationToken ct = default)
+        public Task<V3SchemaDefinition?> GenerateAsync(Type? requestType, CancellationToken ct = default)
         {
             if (requestType == null)
-                return Task.FromResult<JsonElement?>(s_emptyObject);
+                return Task.FromResult<V3SchemaDefinition?>(new V3SchemaDefinition { SchemaFormat = SchemaFormat, Schema = s_emptyObject });
 
             try
             {
                 var schema = JsonSchema.FromType(requestType);
                 var json = schema.ToJson();
                 using var doc = JsonDocument.Parse(json);
-                return Task.FromResult<JsonElement?>(doc.RootElement.Clone());
+                return Task.FromResult<V3SchemaDefinition?>(new V3SchemaDefinition { SchemaFormat = SchemaFormat, Schema = doc.RootElement.Clone() });
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to generate JSON schema for type {TypeName}, returning empty object", requestType.FullName);
-                return Task.FromResult<JsonElement?>(s_emptyObject);
+                return Task.FromResult<V3SchemaDefinition?>(new V3SchemaDefinition { SchemaFormat = SchemaFormat, Schema = s_emptyObject });
             }
         }
     }

@@ -31,16 +31,17 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.AsyncAPI.Model;
+using Neuroglia;
+using Neuroglia.AsyncApi.v3;
 
 namespace Paramore.Brighter.AsyncAPI
 {
     public sealed class AsyncApiDocumentGenerator : IAmAnAsyncApiDocumentGenerator
     {
         private sealed record GenerationContext(
-            Dictionary<string, AsyncApiChannel> Channels,
-            Dictionary<string, AsyncApiOperation> Operations,
-            Dictionary<string, AsyncApiMessage> Messages,
+            Dictionary<string, V3ChannelDefinition> Channels,
+            Dictionary<string, V3OperationDefinition> Operations,
+            Dictionary<string, V3MessageDefinition> Messages,
             HashSet<(string ChannelId, string Action)> CoveredChannelActions);
 
         private readonly AsyncApiOptions _options;
@@ -60,30 +61,37 @@ namespace Paramore.Brighter.AsyncAPI
             _publications = publications;
         }
 
-        public async Task<AsyncApiDocument> GenerateAsync(CancellationToken ct = default)
+        public async Task<V3AsyncApiDocument> GenerateAsync(CancellationToken ct = default)
         {
             var context = new GenerationContext(
-                new Dictionary<string, AsyncApiChannel>(),
-                new Dictionary<string, AsyncApiOperation>(),
-                new Dictionary<string, AsyncApiMessage>(),
+                new Dictionary<string, V3ChannelDefinition>(),
+                new Dictionary<string, V3OperationDefinition>(),
+                new Dictionary<string, V3MessageDefinition>(),
                 new HashSet<(string ChannelId, string Action)>());
 
             await AddSubscriptionsAsync(context, ct).ConfigureAwait(false);
             await AddPublicationsAsync(context, ct).ConfigureAwait(false);
             await AddFromAssemblyScanningAsync(context, ct).ConfigureAwait(false);
 
-            var doc = new AsyncApiDocument
+            var doc = new V3AsyncApiDocument
             {
-                Info = new AsyncApiInfo
+                Info = new V3ApiInfo
                 {
                     Title = _options.Title,
                     Version = _options.Version,
                     Description = _options.Description
                 },
-                Servers = _options.Servers != null ? new Dictionary<string, AsyncApiServer>(_options.Servers) : null,
-                Channels = context.Channels.Count > 0 ? context.Channels : null,
-                Operations = context.Operations.Count > 0 ? context.Operations : null,
-                Components = context.Messages.Count > 0 ? new AsyncApiComponents { Messages = context.Messages } : null
+                Servers = _options.Servers != null
+                    ? new EquatableDictionary<string, V3ServerDefinition>(_options.Servers)
+                    : null,
+                Channels = new EquatableDictionary<string, V3ChannelDefinition>(context.Channels),
+                Operations = new EquatableDictionary<string, V3OperationDefinition>(context.Operations),
+                Components = context.Messages.Count > 0
+                    ? new V3ComponentDefinitionCollection
+                    {
+                        Messages = new EquatableDictionary<string, V3MessageDefinition>(context.Messages)
+                    }
+                    : null
             };
 
             return doc;
@@ -101,7 +109,7 @@ namespace Paramore.Brighter.AsyncAPI
                     continue;
 
                 await ProcessSourceAsync(
-                    subscription.RoutingKey.Value, "receive", subscription.RequestType,
+                    subscription.RoutingKey.Value, V3OperationAction.Receive, subscription.RequestType,
                     context, ct).ConfigureAwait(false);
             }
         }
@@ -118,14 +126,14 @@ namespace Paramore.Brighter.AsyncAPI
                     continue;
 
                 await ProcessSourceAsync(
-                    publication.Topic.Value, "send", publication.RequestType,
+                    publication.Topic.Value, V3OperationAction.Send, publication.RequestType,
                     context, ct).ConfigureAwait(false);
             }
         }
 
         private async Task ProcessSourceAsync(
             string address,
-            string action,
+            V3OperationAction action,
             Type? requestType,
             GenerationContext context,
             CancellationToken ct)
@@ -148,16 +156,17 @@ namespace Paramore.Brighter.AsyncAPI
 
             AddChannelMessageRef(context.Channels, channelId, messageName);
 
-            context.CoveredChannelActions.Add((channelId, action));
+            var actionString = action == V3OperationAction.Send ? "send" : "receive";
+            context.CoveredChannelActions.Add((channelId, actionString));
 
-            var operationId = GetUniqueOperationId(context.Operations, action, channelId);
-            context.Operations[operationId] = new AsyncApiOperation
+            var operationId = GetUniqueOperationId(context.Operations, actionString, channelId);
+            context.Operations[operationId] = new V3OperationDefinition
             {
                 Action = action,
-                Channel = new AsyncApiRef { Ref = $"#/channels/{channelId}" },
-                Messages = new List<AsyncApiRef>
+                Channel = new V3ReferenceDefinition { Reference = $"#/channels/{channelId}" },
+                Messages = new EquatableList<V3ReferenceDefinition>
                 {
-                    new AsyncApiRef { Ref = $"#/channels/{channelId}/messages/{messageName}" }
+                    new V3ReferenceDefinition { Reference = $"#/channels/{channelId}/messages/{messageName}" }
                 }
             };
         }
@@ -194,13 +203,13 @@ namespace Paramore.Brighter.AsyncAPI
                     AddChannelMessageRef(context.Channels, channelId, messageName);
 
                     var sendOpId = $"send_{channelId}";
-                    context.Operations[sendOpId] = new AsyncApiOperation
+                    context.Operations[sendOpId] = new V3OperationDefinition
                     {
-                        Action = "send",
-                        Channel = new AsyncApiRef { Ref = $"#/channels/{channelId}" },
-                        Messages = new List<AsyncApiRef>
+                        Action = V3OperationAction.Send,
+                        Channel = new V3ReferenceDefinition { Reference = $"#/channels/{channelId}" },
+                        Messages = new EquatableList<V3ReferenceDefinition>
                         {
-                            new AsyncApiRef { Ref = $"#/channels/{channelId}/messages/{messageName}" }
+                            new V3ReferenceDefinition { Reference = $"#/channels/{channelId}/messages/{messageName}" }
                         }
                     };
                 }
@@ -234,51 +243,55 @@ namespace Paramore.Brighter.AsyncAPI
             }
         }
 
-        private static void EnsureChannel(Dictionary<string, AsyncApiChannel> channels, string channelId, string address)
+        private static void EnsureChannel(Dictionary<string, V3ChannelDefinition> channels, string channelId, string address)
         {
             channels.TryAdd(
                 channelId,
-                new AsyncApiChannel
+                new V3ChannelDefinition
                 {
                     Address = address,
-                    Messages = new Dictionary<string, AsyncApiRef>()
+                    Messages = new EquatableDictionary<string, V3MessageDefinition>()
                 });
         }
 
-        private async Task EnsureMessageAsync(Dictionary<string, AsyncApiMessage> messages, string messageName, Type requestType, CancellationToken ct)
+        private async Task EnsureMessageAsync(Dictionary<string, V3MessageDefinition> messages, string messageName, Type requestType, CancellationToken ct)
         {
             if (!messages.TryGetValue(messageName, out _))
             {
-                var message = new AsyncApiMessage
+                var schema = await _schemaGenerator.GenerateAsync(requestType, ct).ConfigureAwait(false);
+
+                var message = new V3MessageDefinition
                 {
                     Name = messageName,
                     ContentType = "application/json",
-                    Payload = RewriteEmbeddedSchemaRefs(
-                        await _schemaGenerator.GenerateAsync(requestType, ct).ConfigureAwait(false),
-                        messageName)
+                    Payload = RewriteEmbeddedSchemaRefs(schema, messageName)
                 };
 
                 messages.TryAdd(messageName, message);
             }
         }
 
-        private static void EnsurePlaceholderMessage(Dictionary<string, AsyncApiMessage> messages, string messageName)
+        private static void EnsurePlaceholderMessage(Dictionary<string, V3MessageDefinition> messages, string messageName)
         {
             if (!messages.TryGetValue(messageName, out _))
             {
                 using var emptyDoc = JsonDocument.Parse("{}");
-                var message = new AsyncApiMessage
+                var message = new V3MessageDefinition
                 {
                     Name = messageName,
                     ContentType = "application/json",
-                    Payload = emptyDoc.RootElement.Clone()
+                    Payload = new V3SchemaDefinition
+                    {
+                        SchemaFormat = "application/schema+json;version=draft-07",
+                        Schema = emptyDoc.RootElement.Clone()
+                    }
                 };
 
                 messages.TryAdd(messageName, message);
             }
         }
 
-        private static void AddChannelMessageRef(Dictionary<string, AsyncApiChannel> channels, string channelId, string messageName)
+        private static void AddChannelMessageRef(Dictionary<string, V3ChannelDefinition> channels, string channelId, string messageName)
         {
             if (!channels.TryGetValue(channelId, out var channel) || channel.Messages == null)
             {
@@ -287,13 +300,13 @@ namespace Paramore.Brighter.AsyncAPI
 
             channel.Messages.TryAdd(
                 messageName,
-                new AsyncApiRef
+                new V3MessageDefinition
                 {
-                    Ref = $"#/components/messages/{messageName}"
+                    Reference = $"#/components/messages/{messageName}"
                 });
         }
 
-        private static string GetUniqueOperationId(Dictionary<string, AsyncApiOperation> operations, string action, string channelId)
+        private static string GetUniqueOperationId(Dictionary<string, V3OperationDefinition> operations, string action, string channelId)
         {
             var baseId = $"{action}_{channelId}";
             if (!operations.TryGetValue(baseId, out _))
@@ -310,17 +323,17 @@ namespace Paramore.Brighter.AsyncAPI
 
         private static string SanitizeChannelId(string value) => s_sanitizeRegex.Replace(value, "_");
 
-        private static JsonElement? RewriteEmbeddedSchemaRefs(JsonElement? payload, string messageName)
+        private static V3SchemaDefinition? RewriteEmbeddedSchemaRefs(V3SchemaDefinition? schema, string messageName)
         {
-            if (payload is null)
+            if (schema?.Schema is not JsonElement payload)
             {
-                return null;
+                return schema;
             }
 
-            var root = JsonNode.Parse(payload.Value.GetRawText());
+            var root = JsonNode.Parse(payload.GetRawText());
             if (root is null)
             {
-                return payload;
+                return schema;
             }
 
             var definitionsPrefix = $"#/components/messages/{messageName}/payload/definitions/";
@@ -328,7 +341,11 @@ namespace Paramore.Brighter.AsyncAPI
             RewriteRefs(root, definitionsPrefix, defsPrefix);
 
             using var rewritten = JsonDocument.Parse(root.ToJsonString());
-            return rewritten.RootElement.Clone();
+            return new V3SchemaDefinition
+            {
+                SchemaFormat = schema.SchemaFormat,
+                Schema = rewritten.RootElement.Clone()
+            };
         }
 
         // codescene:ignore
