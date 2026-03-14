@@ -281,7 +281,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 3.1: PostgreSQL Outbox Provisioner Creates Table on Fresh Database
 
-- [ ] **TEST + IMPLEMENT: PostgreSql outbox provisioner creates outbox table when none exists**
+- [x] **TEST + IMPLEMENT: PostgreSql outbox provisioner creates outbox table when none exists**
   - **USE COMMAND**: `/test-first when postgresql outbox provisioner runs on fresh database it should create outbox table`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgresql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`
@@ -300,7 +300,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 3.2: PostgreSQL Outbox Provisioner Bootstraps Pre-Migration Installation
 
-- [ ] **TEST + IMPLEMENT: PostgreSql outbox provisioner bootstraps existing table without history**
+- [x] **TEST + IMPLEMENT: PostgreSql outbox provisioner bootstraps existing table without history**
   - **USE COMMAND**: `/test-first when postgresql outbox provisioner finds existing table without history it should bootstrap`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgresql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap.cs`
@@ -316,7 +316,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 3.3: PostgreSQL Inbox Provisioner Creates Table on Fresh Database
 
-- [ ] **TEST + IMPLEMENT: PostgreSql inbox provisioner creates inbox table when none exists**
+- [x] **TEST + IMPLEMENT: PostgreSql inbox provisioner creates inbox table when none exists**
   - **USE COMMAND**: `/test-first when postgresql inbox provisioner runs on fresh database it should create inbox table`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgresql_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table.cs`
@@ -332,7 +332,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 3.4: PostgreSQL Outbox Provisioner Is Idempotent
 
-- [ ] **TEST + IMPLEMENT: PostgreSql outbox provisioner is idempotent when table already at latest version**
+- [x] **TEST + IMPLEMENT: PostgreSql outbox provisioner is idempotent when table already at latest version**
   - **USE COMMAND**: `/test-first when postgresql outbox provisioner runs on already provisioned database it should be idempotent`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgresql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent.cs`
@@ -348,7 +348,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 3.5: PostgreSQL Migration Runner Handles Concurrent Instances
 
-- [ ] **TEST + IMPLEMENT: PostgreSql migration runner serializes concurrent migration attempts**
+- [x] **TEST + IMPLEMENT: PostgreSql migration runner serializes concurrent migration attempts**
   - **USE COMMAND**: `/test-first when multiple postgresql provisioners run concurrently they should not corrupt state`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_multiple_postgresql_provisioners_run_concurrently_they_should_not_corrupt_state.cs`
@@ -368,7 +368,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 4.1: MySQL Outbox Provisioner Creates Table on Fresh Database
 
-- [ ] **TEST + IMPLEMENT: MySql outbox provisioner creates outbox table when none exists**
+- [x] **TEST + IMPLEMENT: MySql outbox provisioner creates outbox table when none exists**
   - **USE COMMAND**: `/test-first when mysql outbox provisioner runs on fresh database it should create outbox table`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
   - Test file: `When_mysql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`
