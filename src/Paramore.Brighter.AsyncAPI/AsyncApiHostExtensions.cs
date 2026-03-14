@@ -30,7 +30,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Paramore.Brighter.AsyncAPI.Model;
+using Neuroglia.AsyncApi.v3;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.AsyncAPI
         /// The JSON file is written to <paramref name="outputPath"/>, and a corresponding
         /// YAML file is written alongside it (e.g. asyncapi.json → asyncapi.yaml).
         /// </summary>
-        public static async Task<AsyncApiDocument> GenerateAsyncApiDocumentAsync(this IHost host, string outputPath, CancellationToken ct = default)
+        public static async Task<V3AsyncApiDocument> GenerateAsyncApiDocumentAsync(this IHost host, string outputPath, CancellationToken ct = default)
         {
             var generator = host.Services.GetService<IAmAnAsyncApiDocumentGenerator>();
             if (generator == null)

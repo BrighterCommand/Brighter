@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Reflection;
-using Paramore.Brighter.AsyncAPI.Model;
+using Neuroglia.AsyncApi.v3;
 
 namespace Paramore.Brighter.AsyncAPI
 {
@@ -33,7 +33,7 @@ namespace Paramore.Brighter.AsyncAPI
         public string Title { get; set; } = "Brighter Application";
         public string Version { get; set; } = "1.0.0";
         public string? Description { get; set; }
-        public Dictionary<string, AsyncApiServer>? Servers { get; set; }
+        public Dictionary<string, V3ServerDefinition>? Servers { get; set; }
         public IEnumerable<Assembly>? AssembliesToScan { get; set; }
         public bool DisableAssemblyScanning { get; set; }
         public IEnumerable<Publication>? SupplementalPublications { get; set; }
