@@ -22,24 +22,31 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Validation;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Paramore.Brighter;
 
 /// <summary>
-/// Visitor interface for traversing a specification graph and collecting results.
+/// Concrete visitor that collects all stored <see cref="ValidationResult"/> instances
+/// from a specification graph.
 /// </summary>
 /// <typeparam name="TData">The entity type the specifications evaluate.</typeparam>
-/// <typeparam name="TResult">The type of result collected by the visitor.</typeparam>
-public interface ISpecificationVisitor<TData, TResult>
+public class ValidationResultCollector<TData> : ISpecificationVisitor<TData, IEnumerable<ValidationResult>>
 {
-    /// <summary>Visits a leaf specification node.</summary>
-    TResult Visit(Specification<TData> specification);
+    /// <summary>Collects results from a leaf specification.</summary>
+    public IEnumerable<ValidationResult> Visit(Specification<TData> specification)
+        => specification.LastResults;
 
-    /// <summary>Visits an AND composition node.</summary>
-    TResult Visit(AndSpecification<TData> specification);
+    /// <summary>Collects results from both children of an AND node.</summary>
+    public IEnumerable<ValidationResult> Visit(AndSpecification<TData> specification)
+        => specification.Left.Accept(this).Concat(specification.Right.Accept(this));
 
-    /// <summary>Visits an OR composition node.</summary>
-    TResult Visit(OrSpecification<TData> specification);
+    /// <summary>Collects results from both children of an OR node.</summary>
+    public IEnumerable<ValidationResult> Visit(OrSpecification<TData> specification)
+        => specification.Left.Accept(this).Concat(specification.Right.Accept(this));
 
-    /// <summary>Visits a NOT composition node.</summary>
-    TResult Visit(NotSpecification<TData> specification);
+    /// <summary>Collects stored results from a NOT node.</summary>
+    public IEnumerable<ValidationResult> Visit(NotSpecification<TData> specification)
+        => specification.LastResults;
 }

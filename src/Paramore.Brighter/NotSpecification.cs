@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Paramore.Brighter.Validation;
 
 namespace Paramore.Brighter;
 

@@ -33,42 +33,30 @@ namespace Paramore.Brighter.Validation;
 /// Produced by <see cref="PipelineBuilder{TRequest}.Describe(Type)"/> without
 /// instantiating any handlers.
 /// </summary>
-public class HandlerPipelineDescription
+/// <param name="requestType">The request type this pipeline handles.</param>
+/// <param name="handlerType">The concrete handler type.</param>
+/// <param name="isAsync">True if the handler extends <see cref="RequestHandlerAsync{TRequest}"/>.</param>
+/// <param name="beforeSteps">Attributes that run before the handler, sorted by step order.</param>
+/// <param name="afterSteps">Attributes that run after the handler, sorted by step order.</param>
+public sealed class HandlerPipelineDescription(
+    Type requestType,
+    Type handlerType,
+    bool isAsync,
+    IReadOnlyList<PipelineStepDescription> beforeSteps,
+    IReadOnlyList<PipelineStepDescription> afterSteps)
 {
     /// <summary>The request type this pipeline handles.</summary>
-    public Type RequestType { get; }
+    public Type RequestType { get; } = requestType;
 
     /// <summary>The concrete handler type.</summary>
-    public Type HandlerType { get; }
+    public Type HandlerType { get; } = handlerType;
 
     /// <summary>True if the handler extends <see cref="RequestHandlerAsync{TRequest}"/>.</summary>
-    public bool IsAsync { get; }
+    public bool IsAsync { get; } = isAsync;
 
     /// <summary>Attributes that run before the handler, sorted by step order.</summary>
-    public IReadOnlyList<PipelineStepDescription> BeforeSteps { get; }
+    public IReadOnlyList<PipelineStepDescription> BeforeSteps { get; } = beforeSteps;
 
     /// <summary>Attributes that run after the handler, sorted by step order.</summary>
-    public IReadOnlyList<PipelineStepDescription> AfterSteps { get; }
-
-    /// <summary>
-    /// Creates a new handler pipeline description.
-    /// </summary>
-    /// <param name="requestType">The request type.</param>
-    /// <param name="handlerType">The handler type.</param>
-    /// <param name="isAsync">Whether the handler is async.</param>
-    /// <param name="beforeSteps">The before-handler steps.</param>
-    /// <param name="afterSteps">The after-handler steps.</param>
-    public HandlerPipelineDescription(
-        Type requestType,
-        Type handlerType,
-        bool isAsync,
-        IReadOnlyList<PipelineStepDescription> beforeSteps,
-        IReadOnlyList<PipelineStepDescription> afterSteps)
-    {
-        RequestType = requestType;
-        HandlerType = handlerType;
-        IsAsync = isAsync;
-        BeforeSteps = beforeSteps;
-        AfterSteps = afterSteps;
-    }
+    public IReadOnlyList<PipelineStepDescription> AfterSteps { get; } = afterSteps;
 }

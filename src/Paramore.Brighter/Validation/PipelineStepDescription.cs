@@ -30,21 +30,8 @@ namespace Paramore.Brighter.Validation;
 /// Describes one step in a handler pipeline — the attribute that declared it,
 /// the handler type it resolves to, its step number, and its timing (before/after).
 /// </summary>
-/// <param name="attributeType">The concrete <see cref="RequestHandlerAttribute"/> type (e.g. <c>typeof(UseInboxAttribute)</c>).</param>
-/// <param name="handlerType">The handler type returned by <see cref="RequestHandlerAttribute.GetHandlerType"/>.</param>
-/// <param name="step">The step number from the attribute.</param>
-/// <param name="timing">Whether this step runs before or after the main handler.</param>
-public class PipelineStepDescription(Type attributeType, Type handlerType, int step, HandlerTiming timing)
-{
-    /// <summary>The concrete attribute type that declared this step.</summary>
-    public Type AttributeType { get; } = attributeType;
-
-    /// <summary>The handler type from <see cref="RequestHandlerAttribute.GetHandlerType"/>.</summary>
-    public Type HandlerType { get; } = handlerType;
-
-    /// <summary>The step number from the attribute.</summary>
-    public int Step { get; } = step;
-
-    /// <summary>Whether this step runs before or after the main handler.</summary>
-    public HandlerTiming Timing { get; } = timing;
-}
+/// <param name="AttributeType">The concrete <see cref="RequestHandlerAttribute"/> type (e.g. <c>typeof(UseInboxAttribute)</c>).</param>
+/// <param name="HandlerType">The handler type returned by <see cref="RequestHandlerAttribute.GetHandlerType"/>.</param>
+/// <param name="Step">The step number from the attribute.</param>
+/// <param name="Timing">Whether this step runs before or after the main handler.</param>
+public record PipelineStepDescription(Type AttributeType, Type HandlerType, int Step, HandlerTiming Timing);

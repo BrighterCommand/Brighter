@@ -22,14 +22,14 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Validation;
+namespace Paramore.Brighter;
 
 /// <summary>
 /// Pairs a success/failure bool with an optional <see cref="ValidationError"/>.
 /// Stored by specifications during <see cref="ISpecification{TData}.IsSatisfiedBy"/> and
 /// collected by visitors for detailed reporting.
 /// </summary>
-public class ValidationResult
+public record ValidationResult
 {
     /// <summary>Whether the evaluation succeeded.</summary>
     public bool Success { get; }

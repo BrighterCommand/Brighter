@@ -22,22 +22,16 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Validation;
+namespace Paramore.Brighter;
 
 /// <summary>
-/// Describes a single validation finding with severity, source context, and a human-readable message.
+/// The severity of a validation finding.
 /// </summary>
-/// <param name="severity">The severity of the finding.</param>
-/// <param name="source">Identifies which configuration element produced the finding.</param>
-/// <param name="message">A human-readable description of the issue.</param>
-public class ValidationError(ValidationSeverity severity, string source, string message)
+public enum ValidationSeverity
 {
-    /// <summary>The severity of the finding.</summary>
-    public ValidationSeverity Severity { get; } = severity;
+    /// <summary>Validation error — prevents startup.</summary>
+    Error = 0,
 
-    /// <summary>Identifies which configuration element produced the finding (e.g. "Handler 'OrderCreatedHandler'").</summary>
-    public string Source { get; } = source;
-
-    /// <summary>A human-readable description of the issue.</summary>
-    public string Message { get; } = message;
+    /// <summary>Validation warning — logged but does not prevent startup.</summary>
+    Warning = 1
 }

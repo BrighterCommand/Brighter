@@ -31,27 +31,18 @@ namespace Paramore.Brighter.Validation;
 /// Aggregates validation findings (errors and warnings) from pipeline validation.
 /// Errors prevent startup; warnings are logged but do not prevent startup.
 /// </summary>
-public class PipelineValidationResult
+/// <param name="errors">Validation errors (severity = Error).</param>
+/// <param name="warnings">Validation warnings (severity = Warning).</param>
+public sealed class PipelineValidationResult(IEnumerable<ValidationError> errors, IEnumerable<ValidationError> warnings)
 {
     /// <summary>Validation errors that prevent startup.</summary>
-    public IReadOnlyList<ValidationError> Errors { get; }
+    public IReadOnlyList<ValidationError> Errors { get; } = errors.ToList().AsReadOnly();
 
     /// <summary>Validation warnings that are logged but do not prevent startup.</summary>
-    public IReadOnlyList<ValidationError> Warnings { get; }
+    public IReadOnlyList<ValidationError> Warnings { get; } = warnings.ToList().AsReadOnly();
 
     /// <summary>True when there are no errors. Warnings alone do not make the result invalid.</summary>
     public bool IsValid => Errors.Count == 0;
-
-    /// <summary>
-    /// Creates a new <see cref="PipelineValidationResult"/> from the given errors and warnings.
-    /// </summary>
-    /// <param name="errors">Validation errors (severity = Error).</param>
-    /// <param name="warnings">Validation warnings (severity = Warning).</param>
-    public PipelineValidationResult(IEnumerable<ValidationError> errors, IEnumerable<ValidationError> warnings)
-    {
-        Errors = errors.ToList().AsReadOnly();
-        Warnings = warnings.ToList().AsReadOnly();
-    }
 
     /// <summary>
     /// Throws <see cref="PipelineValidationException"/> if this result contains any errors.

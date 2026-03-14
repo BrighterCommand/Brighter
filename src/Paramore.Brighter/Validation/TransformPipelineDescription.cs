@@ -33,32 +33,25 @@ namespace Paramore.Brighter.Validation;
 /// Produced by <see cref="TransformPipelineBuilder.DescribeTransforms"/> without
 /// instantiating any mappers or transforms.
 /// </summary>
-public class TransformPipelineDescription
+/// <param name="mapperType">The resolved mapper type for this request type.</param>
+/// <param name="isDefaultMapper">True if the mapper was resolved from a default mapper template.</param>
+/// <param name="wrapTransforms">Outgoing transform steps (wrap), sorted by step order.</param>
+/// <param name="unwrapTransforms">Incoming transform steps (unwrap), sorted by step order.</param>
+public sealed class TransformPipelineDescription(
+    Type mapperType,
+    bool isDefaultMapper,
+    IReadOnlyList<TransformStepDescription> wrapTransforms,
+    IReadOnlyList<TransformStepDescription> unwrapTransforms)
 {
     /// <summary>The resolved mapper type for this request type.</summary>
-    public Type MapperType { get; }
+    public Type MapperType { get; } = mapperType;
 
     /// <summary>True if the mapper was resolved from a default mapper template.</summary>
-    public bool IsDefaultMapper { get; }
+    public bool IsDefaultMapper { get; } = isDefaultMapper;
 
     /// <summary>Outgoing transform steps (wrap), sorted by step order.</summary>
-    public IReadOnlyList<TransformStepDescription> WrapTransforms { get; }
+    public IReadOnlyList<TransformStepDescription> WrapTransforms { get; } = wrapTransforms;
 
     /// <summary>Incoming transform steps (unwrap), sorted by step order.</summary>
-    public IReadOnlyList<TransformStepDescription> UnwrapTransforms { get; }
-
-    /// <summary>
-    /// Creates a new transform pipeline description.
-    /// </summary>
-    public TransformPipelineDescription(
-        Type mapperType,
-        bool isDefaultMapper,
-        IReadOnlyList<TransformStepDescription> wrapTransforms,
-        IReadOnlyList<TransformStepDescription> unwrapTransforms)
-    {
-        MapperType = mapperType;
-        IsDefaultMapper = isDefaultMapper;
-        WrapTransforms = wrapTransforms;
-        UnwrapTransforms = unwrapTransforms;
-    }
+    public IReadOnlyList<TransformStepDescription> UnwrapTransforms { get; } = unwrapTransforms;
 }

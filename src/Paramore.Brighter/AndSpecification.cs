@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter.Validation;
 
 namespace Paramore.Brighter;
 

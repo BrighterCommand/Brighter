@@ -22,25 +22,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-
-namespace Paramore.Brighter.Validation;
+namespace Paramore.Brighter;
 
 /// <summary>
-/// Describes one step in a transform pipeline — the attribute that declared it,
-/// the transform type it resolves to, and its step number.
+/// Describes a single validation finding with severity, source context, and a human-readable message.
 /// </summary>
-/// <param name="attributeType">The concrete <see cref="TransformAttribute"/> type (e.g. a <see cref="WrapWithAttribute"/> subclass).</param>
-/// <param name="transformType">The transform type returned by <see cref="TransformAttribute.GetHandlerType"/>.</param>
-/// <param name="step">The step number from the attribute.</param>
-public sealed class TransformStepDescription(Type attributeType, Type transformType, int step)
-{
-    /// <summary>The concrete attribute type that declared this step.</summary>
-    public Type AttributeType { get; } = attributeType;
-
-    /// <summary>The transform type from <see cref="TransformAttribute.GetHandlerType"/>.</summary>
-    public Type TransformType { get; } = transformType;
-
-    /// <summary>The step number from the attribute.</summary>
-    public int Step { get; } = step;
-}
+/// <param name="Severity">The severity of the finding.</param>
+/// <param name="Source">Identifies which configuration element produced the finding (e.g. "Handler 'OrderCreatedHandler'").</param>
+/// <param name="Message">A human-readable description of the issue.</param>
+public record ValidationError(ValidationSeverity Severity, string Source, string Message);

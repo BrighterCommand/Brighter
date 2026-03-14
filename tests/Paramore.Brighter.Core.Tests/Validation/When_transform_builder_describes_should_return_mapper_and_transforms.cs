@@ -144,20 +144,3 @@ public class TransformPipelineBuilderDescribeTests
         Assert.Empty(description.UnwrapTransforms);
     }
 }
-
-/// <summary>
-/// Minimal factories for description-only tests — no instances are created.
-/// </summary>
-file class SimpleMessageMapperFactory : IAmAMessageMapperFactory
-{
-    private readonly Func<Type, object> _factory;
-    public SimpleMessageMapperFactory(Func<Type, object> factory) => _factory = factory;
-    public IAmAMessageMapper Create(Type messageMapperType) => (IAmAMessageMapper)_factory(messageMapperType);
-}
-
-file class SimpleMessageMapperFactoryAsync : IAmAMessageMapperFactoryAsync
-{
-    private readonly Func<Type, object> _factory;
-    public SimpleMessageMapperFactoryAsync(Func<Type, object> factory) => _factory = factory;
-    public IAmAMessageMapperAsync Create(Type messageMapperType) => (IAmAMessageMapperAsync)_factory(messageMapperType);
-}

@@ -22,16 +22,24 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Validation;
+namespace Paramore.Brighter;
 
 /// <summary>
-/// The severity of a validation finding.
+/// Visitor interface for traversing a specification graph and collecting results.
 /// </summary>
-public enum ValidationSeverity
+/// <typeparam name="TData">The entity type the specifications evaluate.</typeparam>
+/// <typeparam name="TResult">The type of result collected by the visitor.</typeparam>
+public interface ISpecificationVisitor<TData, TResult>
 {
-    /// <summary>Validation error — prevents startup.</summary>
-    Error,
+    /// <summary>Visits a leaf specification node.</summary>
+    TResult Visit(Specification<TData> specification);
 
-    /// <summary>Validation warning — logged but does not prevent startup.</summary>
-    Warning
+    /// <summary>Visits an AND composition node.</summary>
+    TResult Visit(AndSpecification<TData> specification);
+
+    /// <summary>Visits an OR composition node.</summary>
+    TResult Visit(OrSpecification<TData> specification);
+
+    /// <summary>Visits a NOT composition node.</summary>
+    TResult Visit(NotSpecification<TData> specification);
 }
