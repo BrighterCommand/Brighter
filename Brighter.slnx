@@ -226,6 +226,7 @@
   <Project Path="src/Paramore.Brighter.BoxProvisioning.MsSql/Paramore.Brighter.BoxProvisioning.MsSql.csproj" />
   <Project Path="src/Paramore.Brighter.BoxProvisioning.MySql/Paramore.Brighter.BoxProvisioning.MySql.csproj" />
   <Project Path="src/Paramore.Brighter.BoxProvisioning.PostgreSql/Paramore.Brighter.BoxProvisioning.PostgreSql.csproj" />
+  <Project Path="src/Paramore.Brighter.BoxProvisioning.Sqlite/Paramore.Brighter.BoxProvisioning.Sqlite.csproj" />
   <Project Path="src/Paramore.Brighter.Dapper/Paramore.Brighter.Dapper.csproj" />
   <Project Path="src/Paramore.Brighter.DynamoDb.V4/Paramore.Brighter.DynamoDb.V4.csproj" />
   <Project Path="src/Paramore.Brighter.DynamoDb/Paramore.Brighter.DynamoDb.csproj" />

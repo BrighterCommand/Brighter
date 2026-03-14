@@ -1,0 +1,17 @@
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/bin/Debug/net10.0/Paramore.Brighter.BoxProvisioning.Sqlite.deps.json
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/bin/Debug/net10.0/Paramore.Brighter.BoxProvisioning.Sqlite.dll
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/bin/Debug/net10.0/Paramore.Brighter.BoxProvisioning.dll
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/bin/Debug/net10.0/Paramore.Brighter.dll
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/bin/Debug/net10.0/Paramore.Brighter.Extensions.DependencyInjection.dll
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/bin/Debug/net10.0/Paramore.Brighter.Inbox.Sqlite.dll
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/bin/Debug/net10.0/Paramore.Brighter.Outbox.Sqlite.dll
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/bin/Debug/net10.0/Paramore.Brighter.Sqlite.dll
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/obj/Debug/net10.0/Paramore.Brighter.BoxProvisioning.Sqlite.csproj.AssemblyReference.cache
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/obj/Debug/net10.0/Paramore.Brighter.BoxProvisioning.Sqlite.GeneratedMSBuildEditorConfig.editorconfig
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/obj/Debug/net10.0/Paramore.Brighter.BoxProvisioning.Sqlite.AssemblyInfoInputs.cache
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/obj/Debug/net10.0/Paramore.Brighter.BoxProvisioning.Sqlite.AssemblyInfo.cs
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/obj/Debug/net10.0/Paramore.Brighter.BoxProvisioning.Sqlite.csproj.CoreCompileInputs.cache
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/obj/Debug/net10.0/Paramore.A6C0CF09.Up2Date
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/obj/Debug/net10.0/Paramore.Brighter.BoxProvisioning.Sqlite.dll
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/obj/Debug/net10.0/refint/Paramore.Brighter.BoxProvisioning.Sqlite.dll
+/Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/src/Paramore.Brighter.BoxProvisioning.Sqlite/obj/Debug/net10.0/ref/Paramore.Brighter.BoxProvisioning.Sqlite.dll
