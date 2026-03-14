@@ -25,6 +25,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.PostgreSql\Paramore.Brighter.BoxProvisioning.PostgreSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Postgres\Paramore.Brighter.Inbox.Postgres.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.PostgresSql\Paramore.Brighter.Locking.PostgresSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.Postgres\Paramore.Brighter.MessagingGateway.Postgres.csproj" />
