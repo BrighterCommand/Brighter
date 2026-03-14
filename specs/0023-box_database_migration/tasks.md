@@ -403,7 +403,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 4.3: MySQL Inbox Provisioner and Bootstrap
 
-- [ ] **TEST + IMPLEMENT: MySql inbox provisioner creates table and handles bootstrap**
+- [x] **TEST + IMPLEMENT: MySql inbox provisioner creates table and handles bootstrap**
   - **USE COMMAND**: `/test-first when mysql inbox provisioner runs it should create table or bootstrap existing`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
   - Test file: `When_mysql_inbox_provisioner_runs_it_should_create_table_or_bootstrap_existing.cs`
