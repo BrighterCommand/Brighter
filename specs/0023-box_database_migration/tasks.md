@@ -386,7 +386,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 4.2: MySQL Migration Runner Handles Concurrent Instances
 
-- [ ] **TEST + IMPLEMENT: MySql migration runner serializes concurrent migration attempts via GET_LOCK**
+- [x] **TEST + IMPLEMENT: MySql migration runner serializes concurrent migration attempts via GET_LOCK**
   - **USE COMMAND**: `/test-first when multiple mysql provisioners run concurrently they should not corrupt state`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
   - Test file: `When_multiple_mysql_provisioners_run_concurrently_they_should_not_corrupt_state.cs`
