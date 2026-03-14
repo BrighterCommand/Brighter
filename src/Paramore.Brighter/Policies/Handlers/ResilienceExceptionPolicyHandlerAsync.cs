@@ -22,10 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Policies.Attributes;
 using Polly;
 using Polly.Registry;
@@ -47,25 +45,39 @@ public class ResilienceExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsy
     where TRequest : class, IRequest
 {
     private bool _initialized;
-    
-    private ResiliencePipeline<TRequest> _pipeline = ResiliencePipeline<TRequest>.Empty;
-    
+    private ResiliencePipeline _pipeline = ResiliencePipeline.Empty;
+    private ResiliencePipeline<TRequest> _typePipeline = ResiliencePipeline<TRequest>.Empty;
+
     /// <summary>
     /// Initializes from attribute parameters. This will get the <see cref="PolicyRegistry" /> from the <see cref="IRequestContext" /> and query it for the
     /// policy identified in <see cref="UsePolicyAttribute" />
+    /// Because we call InitializeFromAttributeParams for each request, we need to guard against multiple calls to this method
+    /// adding to the list of policies. Once we have the list of policies, then we do not need to re-initialize them.
     /// </summary>
     /// <param name="initializerList">The initializer list.</param>
     /// <exception cref="System.ArgumentException">Could not find the policy for this attribute, did you register it with the command processor's container;initializerList</exception>
     public override void InitializeFromAttributeParams(params object?[] initializerList)
     {
-        if (_initialized) return;
+        if (_initialized)
+        {
+            return;
+        }
+
+        var typePipeline = initializerList[1] is true;
 
         //we expect the first and only parameter to be a string
         if (initializerList[0] is string pipeline && Context is { ResiliencePipeline: not null })
         {
-            _pipeline =  Context.ResiliencePipeline.GetPipeline<TRequest>(pipeline);
+            if (typePipeline)
+            {
+                _typePipeline = Context.ResiliencePipeline.GetPipeline<TRequest>(pipeline);
+            }
+            else
+            {
+                _pipeline = Context.ResiliencePipeline.GetPipeline(pipeline);
+            }
         }
-        
+
         _initialized = true;
     }
 
@@ -77,12 +89,19 @@ public class ResilienceExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsy
     /// <returns>AA Task<TRequest> that wraps the asynchronous call to the policy, which itself wraps the handler chain</TRequest></returns>
     public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
     {
-        if (Context?.ResilienceContext != null)
+        if (_pipeline != ResiliencePipeline.Empty)
         {
-            return await _pipeline.ExecuteAsync(async context => await base.HandleAsync(command, context.CancellationToken).ConfigureAwait(ContinueOnCapturedContext), Context.ResilienceContext)
-                .ConfigureAwait(ContinueOnCapturedContext);
+            return Context?.ResilienceContext != null
+                ? await _pipeline.ExecuteAsync(async context => await base.HandleAsync(command, context.CancellationToken).ConfigureAwait(ContinueOnCapturedContext), Context.ResilienceContext)
+                    .ConfigureAwait(ContinueOnCapturedContext)
+                : await _pipeline.ExecuteAsync(async ct => await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext), cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
         }
-        
-        return await _pipeline.ExecuteAsync(async ct => await base.HandleAsync(command, ct), cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+
+        return Context?.ResilienceContext != null
+            ? await _typePipeline.ExecuteAsync(async context => await base.HandleAsync(command, context.CancellationToken).ConfigureAwait(ContinueOnCapturedContext), Context.ResilienceContext)
+                .ConfigureAwait(ContinueOnCapturedContext)
+            : await _typePipeline.ExecuteAsync(async ct => await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext), cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
     }
 }
