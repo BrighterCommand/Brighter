@@ -74,4 +74,44 @@ public static class HandlerPipelineValidationRules
                     "in Brighter, lower step values are outer wrappers, so the backstop " +
                     "will never execute on failure"))));
         });
+
+    /// <summary>
+    /// Validates that each pipeline step's handler type matches the sync/async nature of the
+    /// main handler. An async handler with a sync attribute step (or vice versa) means the step
+    /// will be silently ignored at runtime. Handler types that implement neither
+    /// <see cref="IHandleRequests"/> nor <see cref="IHandleRequestsAsync"/> are reported as errors.
+    /// </summary>
+    /// <returns>A collapsed specification that yields one Error per mismatched or unrecognized step.</returns>
+    public static ISpecification<HandlerPipelineDescription> AttributeAsyncConsistency()
+        => new Specification<HandlerPipelineDescription>(d =>
+        {
+            return d.BeforeSteps.Concat(d.AfterSteps).SelectMany<PipelineStepDescription, ValidationResult>(step =>
+            {
+                var isSync = typeof(IHandleRequests).IsAssignableFrom(step.HandlerType);
+                var isAsync = typeof(IHandleRequestsAsync).IsAssignableFrom(step.HandlerType);
+
+                if (!isSync && !isAsync)
+                {
+                    return [ValidationResult.Fail(new ValidationError(
+                        ValidationSeverity.Error,
+                        $"Handler '{d.HandlerType.Name}'",
+                        $"Pipeline step '{step.HandlerType.FullName}' at step {step.Step} " +
+                        "implements neither IHandleRequests nor IHandleRequestsAsync"))];
+                }
+
+                if (d.IsAsync != isAsync)
+                {
+                    return [ValidationResult.Fail(new ValidationError(
+                        ValidationSeverity.Error,
+                        $"Handler '{d.HandlerType.Name}'",
+                        d.IsAsync
+                            ? $"Async handler uses sync attribute '{step.AttributeType.Name}' " +
+                              $"at step {step.Step} — it will be silently ignored"
+                            : $"Sync handler uses async attribute '{step.AttributeType.Name}' " +
+                              $"at step {step.Step} — it will be silently ignored"))];
+                }
+
+                return [];
+            });
+        });
 }
