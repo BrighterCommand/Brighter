@@ -26,6 +26,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using FakeItEasy;
 using Microsoft.Extensions.Logging;
+using Neuroglia.AsyncApi.v3;
 using Paramore.Brighter.AsyncAPI.NJsonSchema;
 using Xunit;
 
@@ -47,8 +48,10 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var result = await _generator.GenerateAsync(null);
 
             Assert.NotNull(result);
-            Assert.Equal(JsonValueKind.Object, result.Value.ValueKind);
-            Assert.Equal("{}", result.Value.GetRawText());
+            Assert.Equal("application/schema+json;version=draft-07", result.SchemaFormat);
+            var schema = (JsonElement)result.Schema;
+            Assert.Equal(JsonValueKind.Object, schema.ValueKind);
+            Assert.Equal("{}", schema.GetRawText());
         }
 
         [Fact]
@@ -57,11 +60,14 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var result = await _generator.GenerateAsync(typeof(TestSchemaType));
 
             Assert.NotNull(result);
-            Assert.Equal(JsonValueKind.Object, result.Value.ValueKind);
-            Assert.True(result.Value.TryGetProperty("properties", out var properties));
+            Assert.Equal("application/schema+json;version=draft-07", result.SchemaFormat);
+            var schema = (JsonElement)result.Schema;
+            Assert.Equal(JsonValueKind.Object, schema.ValueKind);
+            Assert.True(schema.TryGetProperty("properties", out var properties));
             Assert.True(properties.TryGetProperty("Name", out _));
             Assert.True(properties.TryGetProperty("Age", out _));
         }
+
 
         private sealed class TestSchemaType
         {
