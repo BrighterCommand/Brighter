@@ -180,7 +180,7 @@ These tasks add new types that the specifications and validator depend on.
 
 ## Phase 5: Validation Specifications (Rules)
 
-- [ ] **TEST + IMPLEMENT: HandlerPipelineValidationRules — handler visibility, backstop ordering, sync/async consistency**
+- [x] **TEST + IMPLEMENT: HandlerPipelineValidationRules — handler visibility, backstop ordering, sync/async consistency**
   - **USE COMMAND**: `/test-first when handler pipeline has misconfigured attributes then validation rules report correct errors`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_handler_pipeline_misconfigured_should_report_errors.cs`
