@@ -207,7 +207,7 @@ namespace Paramore.Brighter.AsyncAPI
                     await EnsureMessageAsync(context.Messages, messageName, type, ct).ConfigureAwait(false);
                     AddChannelMessageRef(context.Channels, channelId, messageName);
 
-                    var sendOpId = $"send_{channelId}";
+                    var sendOpId = GetUniqueOperationId(context.Operations, "send", channelId);
                     context.Operations[sendOpId] = new V3OperationDefinition
                     {
                         Action = V3OperationAction.Send,
@@ -263,7 +263,8 @@ namespace Paramore.Brighter.AsyncAPI
         {
             if (!messages.TryGetValue(messageName, out _))
             {
-                var schema = await _schemaGenerator.GenerateAsync(requestType, ct).ConfigureAwait(false);
+                var schema = await _schemaGenerator.GenerateAsync(requestType, ct).ConfigureAwait(false)
+                    ?? EmptyObjectSchema();
 
                 var message = new V3MessageDefinition
                 {
@@ -322,6 +323,16 @@ namespace Paramore.Brighter.AsyncAPI
                 counter++;
 
             return $"{baseId}_{counter}";
+        }
+
+        private static V3SchemaDefinition EmptyObjectSchema()
+        {
+            using var doc = JsonDocument.Parse("{}");
+            return new V3SchemaDefinition
+            {
+                SchemaFormat = "application/schema+json;version=draft-07",
+                Schema = doc.RootElement.Clone()
+            };
         }
 
         private static readonly Regex s_sanitizeRegex = new("[^a-zA-Z0-9]", RegexOptions.Compiled);
