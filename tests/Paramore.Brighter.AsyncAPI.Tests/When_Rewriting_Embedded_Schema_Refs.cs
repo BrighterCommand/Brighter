@@ -23,12 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
+using Neuroglia.AsyncApi.v3;
 using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
@@ -47,10 +46,25 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
         }
 
+        private static IAmASchemaGenerator CreateSchemaGenerator(Type requestType, string schemaJson)
+        {
+            using var schemaDoc = JsonDocument.Parse(schemaJson);
+            var schemaElement = schemaDoc.RootElement.Clone();
+
+            var schemaGenerator = A.Fake<IAmASchemaGenerator>();
+            A.CallTo(() => schemaGenerator.GenerateAsync(requestType, A<CancellationToken>.Ignored))
+                .Returns(Task.FromResult<V3SchemaDefinition?>(new V3SchemaDefinition
+                {
+                    SchemaFormat = "application/schema+json;version=draft-07",
+                    Schema = schemaElement
+                }));
+
+            return schemaGenerator;
+        }
+
         [Fact]
         public async Task It_Should_Rewrite_Definitions_Refs_To_Resolve_Inside_Payload()
         {
-            // Schema with nested #/definitions/ refs (as NJsonSchema produces for complex types)
             var schemaJson = """
             {
                 "type": "object",
@@ -69,12 +83,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             }
             """;
 
-            using var schemaDoc = JsonDocument.Parse(schemaJson);
-            var schemaElement = schemaDoc.RootElement.Clone();
-
-            var schemaGenerator = A.Fake<IAmASchemaGenerator>();
-            A.CallTo(() => schemaGenerator.GenerateAsync(typeof(OrderWithAddress), A<CancellationToken>.Ignored))
-                .Returns(Task.FromResult<JsonElement?>(schemaElement));
+            var schemaGenerator = CreateSchemaGenerator(typeof(OrderWithAddress), schemaJson);
 
             var subscriptions = new[]
             {
@@ -93,8 +102,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var message = result.Components.Messages["OrderWithAddress"];
             Assert.NotNull(message.Payload);
 
-            // Find the $ref in the payload and verify it's been rewritten
-            var payload = message.Payload.Value;
+            var payload = (JsonElement)message.Payload.Schema;
             var addressRef = payload.GetProperty("properties").GetProperty("Address").GetProperty("$ref").GetString();
             Assert.Equal("#/components/messages/OrderWithAddress/payload/definitions/AddressInfo", addressRef);
         }
@@ -102,7 +110,6 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         [Fact]
         public async Task It_Should_Rewrite_Defs_Refs_To_Resolve_Inside_Payload()
         {
-            // Schema using $defs (modern JSON Schema draft 2019-09+)
             var schemaJson = """
             {
                 "type": "object",
@@ -120,12 +127,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             }
             """;
 
-            using var schemaDoc = JsonDocument.Parse(schemaJson);
-            var schemaElement = schemaDoc.RootElement.Clone();
-
-            var schemaGenerator = A.Fake<IAmASchemaGenerator>();
-            A.CallTo(() => schemaGenerator.GenerateAsync(typeof(OrderWithContact), A<CancellationToken>.Ignored))
-                .Returns(Task.FromResult<JsonElement?>(schemaElement));
+            var schemaGenerator = CreateSchemaGenerator(typeof(OrderWithContact), schemaJson);
 
             var subscriptions = new[]
             {
@@ -144,7 +146,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var message = result.Components.Messages["OrderWithContact"];
             Assert.NotNull(message.Payload);
 
-            var payload = message.Payload.Value;
+            var payload = (JsonElement)message.Payload.Schema;
             var contactRef = payload.GetProperty("properties").GetProperty("Contact").GetProperty("$ref").GetString();
             Assert.Equal("#/components/messages/OrderWithContact/payload/$defs/ContactInfo", contactRef);
         }
@@ -152,7 +154,6 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         [Fact]
         public async Task It_Should_Not_Change_Payload_Without_Refs()
         {
-            // Simple schema with no $ref values
             var schemaJson = """
             {
                 "type": "object",
@@ -163,12 +164,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             }
             """;
 
-            using var schemaDoc = JsonDocument.Parse(schemaJson);
-            var schemaElement = schemaDoc.RootElement.Clone();
-
-            var schemaGenerator = A.Fake<IAmASchemaGenerator>();
-            A.CallTo(() => schemaGenerator.GenerateAsync(typeof(SimpleEvent), A<CancellationToken>.Ignored))
-                .Returns(Task.FromResult<JsonElement?>(schemaElement));
+            var schemaGenerator = CreateSchemaGenerator(typeof(SimpleEvent), schemaJson);
 
             var subscriptions = new[]
             {
@@ -187,7 +183,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var message = result.Components.Messages["SimpleEvent"];
             Assert.NotNull(message.Payload);
 
-            var payload = message.Payload.Value;
+            var payload = (JsonElement)message.Payload.Schema;
             Assert.Equal("string", payload.GetProperty("properties").GetProperty("Name").GetProperty("type").GetString());
             Assert.Equal("integer", payload.GetProperty("properties").GetProperty("Age").GetProperty("type").GetString());
         }
@@ -195,7 +191,6 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         [Fact]
         public async Task It_Should_Rewrite_Deeply_Nested_Refs()
         {
-            // Schema with multiple levels of nested $ref values
             var schemaJson = """
             {
                 "type": "object",
@@ -226,12 +221,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             }
             """;
 
-            using var schemaDoc = JsonDocument.Parse(schemaJson);
-            var schemaElement = schemaDoc.RootElement.Clone();
-
-            var schemaGenerator = A.Fake<IAmASchemaGenerator>();
-            A.CallTo(() => schemaGenerator.GenerateAsync(typeof(ComplexOrder), A<CancellationToken>.Ignored))
-                .Returns(Task.FromResult<JsonElement?>(schemaElement));
+            var schemaGenerator = CreateSchemaGenerator(typeof(ComplexOrder), schemaJson);
 
             var subscriptions = new[]
             {
@@ -250,7 +240,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var message = result.Components.Messages["ComplexOrder"];
             Assert.NotNull(message.Payload);
 
-            var payload = message.Payload.Value;
+            var payload = (JsonElement)message.Payload.Schema;
 
             // Top-level property ref
             var billingRef = payload.GetProperty("properties").GetProperty("Billing").GetProperty("$ref").GetString();
@@ -270,7 +260,6 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         [Fact]
         public async Task It_Should_Rewrite_Refs_In_Array_Items()
         {
-            // Schema with $ref inside array items
             var schemaJson = """
             {
                 "type": "object",
@@ -292,12 +281,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             }
             """;
 
-            using var schemaDoc = JsonDocument.Parse(schemaJson);
-            var schemaElement = schemaDoc.RootElement.Clone();
-
-            var schemaGenerator = A.Fake<IAmASchemaGenerator>();
-            A.CallTo(() => schemaGenerator.GenerateAsync(typeof(OrderWithItems), A<CancellationToken>.Ignored))
-                .Returns(Task.FromResult<JsonElement?>(schemaElement));
+            var schemaGenerator = CreateSchemaGenerator(typeof(OrderWithItems), schemaJson);
 
             var publications = new[]
             {
@@ -311,7 +295,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var message = result.Components.Messages["OrderWithItems"];
             Assert.NotNull(message.Payload);
 
-            var payload = message.Payload.Value;
+            var payload = (JsonElement)message.Payload.Schema;
             var itemsRef = payload.GetProperty("properties").GetProperty("Items")
                 .GetProperty("items").GetProperty("$ref").GetString();
             Assert.Equal("#/components/messages/OrderWithItems/payload/definitions/LineItem", itemsRef);
@@ -320,7 +304,6 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         [Fact]
         public async Task It_Should_Not_Rewrite_Non_Definition_Refs()
         {
-            // Schema with a $ref that does NOT point to #/definitions/ or #/$defs/
             var schemaJson = """
             {
                 "type": "object",
@@ -330,12 +313,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             }
             """;
 
-            using var schemaDoc = JsonDocument.Parse(schemaJson);
-            var schemaElement = schemaDoc.RootElement.Clone();
-
-            var schemaGenerator = A.Fake<IAmASchemaGenerator>();
-            A.CallTo(() => schemaGenerator.GenerateAsync(typeof(ExternalRefEvent), A<CancellationToken>.Ignored))
-                .Returns(Task.FromResult<JsonElement?>(schemaElement));
+            var schemaGenerator = CreateSchemaGenerator(typeof(ExternalRefEvent), schemaJson);
 
             var subscriptions = new[]
             {
@@ -354,7 +332,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var message = result.Components.Messages["ExternalRefEvent"];
             Assert.NotNull(message.Payload);
 
-            var payload = message.Payload.Value;
+            var payload = (JsonElement)message.Payload.Schema;
             var externalRef = payload.GetProperty("properties").GetProperty("External").GetProperty("$ref").GetString();
             Assert.Equal("https://example.com/schemas/external.json", externalRef);
         }

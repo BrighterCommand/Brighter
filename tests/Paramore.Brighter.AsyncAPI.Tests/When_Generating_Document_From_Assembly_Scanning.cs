@@ -27,6 +27,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
+using Neuroglia.AsyncApi.v3;
 using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
@@ -40,7 +41,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             _schemaGenerator = A.Fake<IAmASchemaGenerator>();
             using var doc = JsonDocument.Parse("{\"type\":\"object\"}");
             A.CallTo(() => _schemaGenerator.GenerateAsync(A<Type?>.Ignored, A<CancellationToken>.Ignored))
-                .Returns(Task.FromResult<JsonElement?>(doc.RootElement.Clone()));
+                .Returns(Task.FromResult<V3SchemaDefinition?>(new V3SchemaDefinition
+                {
+                    SchemaFormat = "application/schema+json;version=draft-07",
+                    Schema = doc.RootElement.Clone()
+                }));
         }
 
         [Fact]
@@ -62,7 +67,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             Assert.NotNull(result.Operations);
             Assert.True(result.Operations.ContainsKey("send_scannable_topic"));
-            Assert.Equal("send", result.Operations["send_scannable_topic"].Action);
+            Assert.Equal(V3OperationAction.Send, result.Operations["send_scannable_topic"].Action);
 
             Assert.NotNull(result.Components?.Messages);
             Assert.True(result.Components.Messages.ContainsKey("ScannableEvent"));
@@ -82,7 +87,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(options, _schemaGenerator, null, null);
             var result = await generator.GenerateAsync();
 
-            Assert.Null(result.Operations);
+            Assert.Empty(result.Operations);
         }
 
         [Fact]

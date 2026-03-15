@@ -28,7 +28,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
-using Paramore.Brighter.AsyncAPI.Model;
+using Neuroglia.AsyncApi.v3;
 using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
@@ -43,7 +43,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             _schemaGenerator = A.Fake<IAmASchemaGenerator>();
             using var doc = JsonDocument.Parse("{\"type\":\"object\"}");
             A.CallTo(() => _schemaGenerator.GenerateAsync(A<Type?>.Ignored, A<CancellationToken>.Ignored))
-                .Returns(Task.FromResult<JsonElement?>(doc.RootElement.Clone()));
+                .Returns(Task.FromResult<V3SchemaDefinition?>(new V3SchemaDefinition
+                {
+                    SchemaFormat = "application/schema+json;version=draft-07",
+                    Schema = doc.RootElement.Clone()
+                }));
 
             _options = new AsyncApiOptions
             {
@@ -75,7 +79,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             Assert.NotNull(result.Operations);
             Assert.True(result.Operations.ContainsKey("receive_order_created"));
-            Assert.Equal("receive", result.Operations["receive_order_created"].Action);
+            Assert.Equal(V3OperationAction.Receive, result.Operations["receive_order_created"].Action);
 
             Assert.NotNull(result.Components?.Messages);
             Assert.True(result.Components.Messages.ContainsKey("TestEvent"));
@@ -119,8 +123,8 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            Assert.Null(result.Channels);
-            Assert.Null(result.Operations);
+            Assert.Empty(result.Channels);
+            Assert.Empty(result.Operations);
         }
 
         [Fact]
@@ -129,16 +133,16 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, null);
             var result = await generator.GenerateAsync();
 
-            Assert.Null(result.Channels);
-            Assert.Null(result.Operations);
+            Assert.Empty(result.Channels);
+            Assert.Empty(result.Operations);
         }
 
         [Fact]
         public async Task It_Should_Include_Servers_When_Configured()
         {
-            _options.Servers = new Dictionary<string, AsyncApiServer>
+            _options.Servers = new Dictionary<string, V3ServerDefinition>
             {
-                ["production"] = new AsyncApiServer
+                ["production"] = new V3ServerDefinition
                 {
                     Host = "rabbitmq:5672",
                     Protocol = "amqp"
@@ -156,9 +160,9 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         [Fact]
         public async Task It_Should_Isolate_Servers_From_Options_Mutations()
         {
-            _options.Servers = new Dictionary<string, AsyncApiServer>
+            _options.Servers = new Dictionary<string, V3ServerDefinition>
             {
-                ["production"] = new AsyncApiServer
+                ["production"] = new V3ServerDefinition
                 {
                     Host = "rabbitmq:5672",
                     Protocol = "amqp"
@@ -169,7 +173,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var result = await generator.GenerateAsync();
 
             // Mutate options after generation
-            _options.Servers["staging"] = new AsyncApiServer
+            _options.Servers["staging"] = new V3ServerDefinition
             {
                 Host = "staging-rabbitmq:5672",
                 Protocol = "amqp"

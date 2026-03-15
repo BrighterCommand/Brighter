@@ -27,6 +27,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
+using Neuroglia.AsyncApi.v3;
 using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
@@ -41,7 +42,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             _schemaGenerator = A.Fake<IAmASchemaGenerator>();
             using var doc = JsonDocument.Parse("{\"type\":\"object\"}");
             A.CallTo(() => _schemaGenerator.GenerateAsync(A<Type?>.Ignored, A<CancellationToken>.Ignored))
-                .Returns(Task.FromResult<JsonElement?>(doc.RootElement.Clone()));
+                .Returns(Task.FromResult<V3SchemaDefinition?>(new V3SchemaDefinition
+                {
+                    SchemaFormat = "application/schema+json;version=draft-07",
+                    Schema = doc.RootElement.Clone()
+                }));
 
             _options = new AsyncApiOptions
             {
@@ -68,7 +73,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             Assert.NotNull(result.Operations);
             Assert.True(result.Operations.ContainsKey("send_order_created"));
-            Assert.Equal("send", result.Operations["send_order_created"].Action);
+            Assert.Equal(V3OperationAction.Send, result.Operations["send_order_created"].Action);
 
             Assert.NotNull(result.Components?.Messages);
             Assert.True(result.Components.Messages.ContainsKey("TestOrderEvent"));
@@ -101,8 +106,8 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
             var result = await generator.GenerateAsync();
 
-            Assert.Null(result.Channels);
-            Assert.Null(result.Operations);
+            Assert.Empty(result.Channels);
+            Assert.Empty(result.Operations);
         }
 
         [Fact]
@@ -116,8 +121,8 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
             var result = await generator.GenerateAsync();
 
-            Assert.Null(result.Channels);
-            Assert.Null(result.Operations);
+            Assert.Empty(result.Channels);
+            Assert.Empty(result.Operations);
         }
 
         [Fact]
@@ -126,8 +131,8 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, null);
             var result = await generator.GenerateAsync();
 
-            Assert.Null(result.Channels);
-            Assert.Null(result.Operations);
+            Assert.Empty(result.Channels);
+            Assert.Empty(result.Operations);
         }
 
         [Fact]
@@ -148,7 +153,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
                 }
                 """);
             A.CallTo(() => _schemaGenerator.GenerateAsync(A<Type?>.Ignored, A<CancellationToken>.Ignored))
-                .Returns(Task.FromResult<JsonElement?>(schema.RootElement.Clone()));
+                .Returns(Task.FromResult<V3SchemaDefinition?>(new V3SchemaDefinition
+                {
+                    SchemaFormat = "application/schema+json;version=draft-07",
+                    Schema = schema.RootElement.Clone()
+                }));
 
             var publications = new[]
             {
@@ -158,7 +167,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
             var result = await generator.GenerateAsync();
 
-            var payload = result.Components!.Messages!["TestOrderEvent"].Payload!.Value;
+            var payload = (JsonElement)result.Components!.Messages!["TestOrderEvent"].Payload!.Schema;
             var rewrittenRef = payload.GetProperty("allOf")[0].GetProperty("$ref").GetString();
             Assert.Equal("#/components/messages/TestOrderEvent/payload/definitions/Event", rewrittenRef);
         }

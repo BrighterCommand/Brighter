@@ -28,6 +28,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
+using Neuroglia.AsyncApi.v3;
 using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
@@ -42,7 +43,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             _schemaGenerator = A.Fake<IAmASchemaGenerator>();
             using var doc = JsonDocument.Parse("{\"type\":\"object\"}");
             A.CallTo(() => _schemaGenerator.GenerateAsync(A<Type?>.Ignored, A<CancellationToken>.Ignored))
-                .Returns(Task.FromResult<JsonElement?>(doc.RootElement.Clone()));
+                .Returns(Task.FromResult<V3SchemaDefinition?>(new V3SchemaDefinition
+                {
+                    SchemaFormat = "application/schema+json;version=draft-07",
+                    Schema = doc.RootElement.Clone()
+                }));
 
             _options = new AsyncApiOptions
             {
