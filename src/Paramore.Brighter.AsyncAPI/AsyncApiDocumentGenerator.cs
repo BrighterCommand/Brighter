@@ -36,6 +36,11 @@ using Neuroglia.AsyncApi.v3;
 
 namespace Paramore.Brighter.AsyncAPI
 {
+    // SDK fluent builders (V3AsyncApiDocumentBuilder etc.) were evaluated but are not used here.
+    // This generator builds documents dynamically: channels, operations, and messages are added
+    // incrementally across multiple loops (subscriptions, publications, assembly scanning) with
+    // deduplication via dictionary TryAdd. The fluent builder's nested Action<> delegates don't
+    // simplify this pattern and would obscure the deduplication logic.
     public sealed class AsyncApiDocumentGenerator : IAmAnAsyncApiDocumentGenerator
     {
         private sealed record GenerationContext(
