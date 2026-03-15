@@ -28,7 +28,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.AsyncAPI;
-using Paramore.Brighter.AsyncAPI.Model;
+using Neuroglia.AsyncApi.v3;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
@@ -86,9 +86,9 @@ var host = new HostBuilder()
                 opts.Title = "RMQ AsyncAPI Sample";
                 opts.Version = "1.0.0";
                 opts.Description = "Sample demonstrating AsyncAPI 3.0 generation with RabbitMQ, showcasing subscription, publication, and assembly scanning discovery";
-                opts.Servers = new Dictionary<string, AsyncApiServer>
+                opts.Servers = new Dictionary<string, V3ServerDefinition>
                 {
-                    ["rabbitmq"] = new AsyncApiServer
+                    ["rabbitmq"] = new V3ServerDefinition
                     {
                         Host = "localhost:5672",
                         Protocol = "amqp",
