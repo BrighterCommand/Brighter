@@ -211,7 +211,7 @@ These tasks add new types that the specifications and validator depend on.
     - Create `src/Paramore.Brighter/Validation/ProducerValidationRules.cs` (internal static)
     - Two simple specifications: PublicationRequestTypeSet, PublicationRequestTypeImplementsIRequest
 
-- [ ] **TEST + IMPLEMENT: ConsumerValidationRules — pump/handler match, handler registered, request type subtype**
+- [x] **TEST + IMPLEMENT: ConsumerValidationRules — pump/handler match, handler registered, request type subtype**
   - **USE COMMAND**: `/test-first when subscription has pump handler mismatch then validation reports directional error`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_subscription_misconfigured_should_report_errors.cs`
