@@ -141,7 +141,7 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 if (UnacceptableMessageLimitReached())
                 {
-                    Channel.Dispose();
+                    await Channel.DisposeAsync();
                     Status = MessagePumpStatus.MP_LIMIT_EXCEEDED;
                     break;
                 }
@@ -180,7 +180,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                 if (message is null)
                 {
-                    Channel.Dispose();
+                    await Channel.DisposeAsync();
                     span?.SetStatus(ActivityStatusCode.Error, "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
                     Tracer?.EndSpan(span);
                     Status = MessagePumpStatus.MP_ERROR;
@@ -215,7 +215,7 @@ namespace Paramore.Brighter.ServiceActivator
                     Log.QuitReceivingMessages(s_logger, Channel.Name, Environment.CurrentManagedThreadId);
                     span?.SetStatus(ActivityStatusCode.Ok);
                     Tracer?.EndSpan(span);
-                    Channel.Dispose();
+                    await Channel.DisposeAsync();
                     Status = MessagePumpStatus.MP_STOPPED;
                     break;
                 }
@@ -319,7 +319,7 @@ namespace Paramore.Brighter.ServiceActivator
                     {
                         await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, $"Not processed due to configuration exception: {rejectReason}"));
                         span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
-                        Channel.Dispose();
+                        await Channel.DisposeAsync();
                         break;
                     }
 
@@ -330,7 +330,7 @@ namespace Paramore.Brighter.ServiceActivator
                     Log.StoppingReceivingMessages2(s_logger, configurationException, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                     await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError,$"Not processed due to configuration exception: {configurationException.Message}"));
                     span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
-                    Channel.Dispose();
+                    await Channel.DisposeAsync();
                     Status = MessagePumpStatus.MP_ERROR;
                     break;
                 }

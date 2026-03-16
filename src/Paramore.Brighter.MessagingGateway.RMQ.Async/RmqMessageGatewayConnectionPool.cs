@@ -66,7 +66,7 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     {
         var connectionId = GetConnectionId(connectionFactory);
 
-        await s_lock.WaitAsync(cancellationToken);
+        await s_lock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -74,7 +74,7 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
 
             if (connectionFound == false || pooledConnection!.Connection.IsOpen == false)
             {
-                pooledConnection = await CreateConnectionAsync(connectionFactory, cancellationToken);
+                pooledConnection = await CreateConnectionAsync(connectionFactory, cancellationToken).ConfigureAwait(false);
             }
 
             return pooledConnection.Connection;
@@ -87,15 +87,15 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
 
       public async Task ResetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
       {
-          await s_lock.WaitAsync(cancellationToken);
+          await s_lock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
           try
           {
-              await DelayReconnectingAsync();
+              await DelayReconnectingAsync().ConfigureAwait(false);
 
               try
               {
-                  await CreateConnectionAsync(connectionFactory, cancellationToken);
+                  await CreateConnectionAsync(connectionFactory, cancellationToken).ConfigureAwait(false);
               }
               catch (BrokerUnreachableException exception)
               {
@@ -116,17 +116,14 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     {
         var connectionId = GetConnectionId(connectionFactory);
 
-        if (s_connectionPool.ContainsKey(connectionId))
+        await s_lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            await s_lock.WaitAsync(cancellationToken);
-            try
-            {
-                await TryRemoveConnectionAsync(connectionId);
-            }
-            finally
-            {
-                s_lock.Release();
-            }
+            await TryRemoveConnectionAsync(connectionId).ConfigureAwait(false);
+        }
+        finally
+        {
+            s_lock.Release();
         }
     }
 
@@ -134,7 +131,7 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     {
         var connectionId = GetConnectionId(connectionFactory);
 
-        await TryRemoveConnectionAsync(connectionId);
+        await TryRemoveConnectionAsync(connectionId).ConfigureAwait(false);
 
         Log.CreatingSubscriptionToRabbitMqEndpoint(s_logger, connectionFactory.Endpoint);
 
@@ -143,7 +140,7 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
         connectionFactory.SocketReadTimeout = TimeSpan.FromMilliseconds(5000);
         connectionFactory.SocketWriteTimeout = TimeSpan.FromMilliseconds(5000);
 
-        var connection = await connectionFactory.CreateConnectionAsync(connectionName, cancellationToken);
+        var connection = await connectionFactory.CreateConnectionAsync(connectionName, cancellationToken).ConfigureAwait(false);
 
         Log.NewConnectedToAddedToPool(s_logger, connection.Endpoint, connection.ClientProvidedName);
 
@@ -152,11 +149,22 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
         {
             Log.SubscriptionHasBeenShutdown(s_logger, connection.Endpoint, e.ToString());
 
-            await s_lock.WaitAsync(e.CancellationToken);
+            try
+            {
+                await s_lock.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
 
             try
             {
-                await TryRemoveConnectionAsync(connectionId);
+                if (s_connectionPool.TryGetValue(connectionId, out var pooled)
+                    && ReferenceEquals(pooled.Connection, sender))
+                {
+                    await TryRemoveConnectionAsync(connectionId).ConfigureAwait(false);
+                }
             }
             finally
             {
@@ -173,14 +181,14 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
         return pooledConnection;
     }
     
-    private static async Task DelayReconnectingAsync() => await Task.Delay(jitter.Next(5, 100));
-    
+    private static async Task DelayReconnectingAsync() => await Task.Delay(jitter.Next(5, 100)).ConfigureAwait(false);
+
     private async Task TryRemoveConnectionAsync(string connectionId)
     {
         if (s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection))
         {
             pooledConnection.Connection.ConnectionShutdownAsync -= pooledConnection.ShutdownHandler;
-            await pooledConnection.Connection.DisposeAsync();
+            await pooledConnection.Connection.DisposeAsync().ConfigureAwait(false);
             s_connectionPool.Remove(connectionId);
         }
     }

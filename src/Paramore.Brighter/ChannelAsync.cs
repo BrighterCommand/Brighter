@@ -28,6 +28,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -43,6 +44,7 @@ namespace Paramore.Brighter
         private ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
         private static readonly Message s_noneMessage = new();
+        private bool _disposed;
         
         /// <summary>
         /// The name of a channel is its identifier
@@ -190,8 +192,25 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// Performs async disposal of the channel and its consumer.
         /// </summary>
+        public virtual async ValueTask DisposeAsync()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            await _messageConsumer.DisposeAsync().ConfigureAwait(false);
+            // We intentionally do not call Dispose(false) here. The sync Dispose path is
+            // marked [Obsolete] and delegates to DisposeAsync via BrighterAsyncContext.Run,
+            // so calling it would be a no-op (guarded by _disposed) and misleading.
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// Prefer <see cref="DisposeAsync"/> for proper async consumer cleanup.
+        /// </summary>
+        [Obsolete("Use DisposeAsync instead. Sync dispose may not fully clean up async resources.")]
         public virtual void Dispose()
         {
             Dispose(true);
@@ -200,9 +219,12 @@ namespace Paramore.Brighter
 
         private void Dispose(bool disposing)
         {
+            if (_disposed) return;
+            _disposed = true;
+
             if (disposing)
             {
-                _messageConsumer.DisposeAsync();
+                BrighterAsyncContext.Run(async () => await _messageConsumer.DisposeAsync());
             }
         }
 
