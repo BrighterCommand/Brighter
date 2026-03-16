@@ -100,6 +100,24 @@ public static class ConsumerValidationRules
                 $"No handler registered for '{s.RequestType!.Name}' — messages will be received but cannot be dispatched"));
 
     /// <summary>
+    /// Validates that the subscription's <see cref="Subscription.RequestType"/> implements either
+    /// <see cref="ICommand"/> or <see cref="IEvent"/>. A type that only implements <see cref="IRequest"/>
+    /// directly will work but is unusual and may indicate a misconfiguration.
+    /// Vacuously passes when RequestType is null.
+    /// </summary>
+    /// <returns>A simple specification that reports a Warning when RequestType implements neither ICommand nor IEvent.</returns>
+    public static ISpecification<Subscription> RequestTypeSubtype()
+        => new Specification<Subscription>(
+            s => s.RequestType == null
+                 || typeof(ICommand).IsAssignableFrom(s.RequestType)
+                 || typeof(IEvent).IsAssignableFrom(s.RequestType),
+            s => new ValidationError(
+                ValidationSeverity.Warning,
+                $"Subscription '{s.Name}'",
+                $"RequestType '{s.RequestType!.Name}' implements neither ICommand nor IEvent " +
+                "— consider implementing one of these marker interfaces"));
+
+    /// <summary>
     /// Checks whether <paramref name="handlerType"/> derives from <c>RequestHandlerAsync&lt;&gt;</c>.
     /// Walks the base type chain so it works with both open and closed generic types.
     /// </summary>
