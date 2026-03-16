@@ -198,7 +198,7 @@ These tasks add new types that the specifications and validator depend on.
     - Three specifications: HandlerTypeVisibility (simple), BackstopAttributeOrdering (collapsed), AttributeAsyncConsistency (collapsed)
     - Uses `IAmABackstopHandler` and `IAmAResilienceHandler` marker interfaces
 
-- [ ] **TEST + IMPLEMENT: ProducerValidationRules — publication RequestType validation**
+- [x] **TEST + IMPLEMENT: ProducerValidationRules — publication RequestType validation**
   - **USE COMMAND**: `/test-first when publication has no RequestType then validation reports error`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_publication_missing_request_type_should_report_error.cs`
