@@ -84,6 +84,22 @@ public static class ConsumerValidationRules
             });
 
     /// <summary>
+    /// Validates that there is at least one handler registered for the subscription's
+    /// <see cref="Subscription.RequestType"/>. A subscription with no handler means messages
+    /// will be received but cannot be dispatched.
+    /// Vacuously passes when RequestType is null (caught by other validation rules).
+    /// </summary>
+    /// <param name="inspector">The subscriber registry inspector to look up handler types.</param>
+    /// <returns>A simple specification that reports an Error when no handler is registered.</returns>
+    public static ISpecification<Subscription> HandlerRegistered(IAmASubscriberRegistryInspector inspector)
+        => new Specification<Subscription>(
+            s => s.RequestType == null || inspector.GetHandlerTypes(s.RequestType).Length > 0,
+            s => new ValidationError(
+                ValidationSeverity.Error,
+                $"Subscription '{s.Name}'",
+                $"No handler registered for '{s.RequestType!.Name}' — messages will be received but cannot be dispatched"));
+
+    /// <summary>
     /// Checks whether <paramref name="handlerType"/> derives from <c>RequestHandlerAsync&lt;&gt;</c>.
     /// Walks the base type chain so it works with both open and closed generic types.
     /// </summary>
