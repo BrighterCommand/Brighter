@@ -43,4 +43,18 @@ public static class ProducerValidationRules
                 ValidationSeverity.Error,
                 $"Publication '{p.Topic}'",
                 "Publication.RequestType is null — Post()/Deposit() will throw ConfigurationException"));
+
+    /// <summary>
+    /// Validates that <see cref="Publication.RequestType"/> implements <see cref="IRequest"/>.
+    /// A RequestType that is not null but does not implement IRequest will fail at runtime.
+    /// Vacuously passes when RequestType is null (caught by <see cref="PublicationRequestTypeSet"/>).
+    /// </summary>
+    /// <returns>A simple specification that reports an Error when RequestType does not implement IRequest.</returns>
+    public static ISpecification<Publication> PublicationRequestTypeImplementsIRequest()
+        => new Specification<Publication>(
+            p => p.RequestType == null || typeof(IRequest).IsAssignableFrom(p.RequestType),
+            p => new ValidationError(
+                ValidationSeverity.Error,
+                $"Publication '{p.Topic}'",
+                $"Publication.RequestType '{p.RequestType!.FullName}' does not implement IRequest"));
 }
