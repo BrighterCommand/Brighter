@@ -3,40 +3,42 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.AWS.Tests.Helpers;
-using Paramore.Brighter.AWS.Tests.TestDoubles;
-using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.AWS.V4.Tests.Helpers;
+using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway;
+namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway;
 
-public class SnsStandardMessageGatewayProvider
-    : SnsStandard.Proactor.IAmAMessageGatewayProactorProvider,
-      SnsStandard.Reactor.IAmAMessageGatewayReactorProvider
+public class SqsFifoMessageGatewayProvider
+    : SqsFifo.Proactor.IAmAMessageGatewayProactorProvider,
+      SqsFifo.Reactor.IAmAMessageGatewayReactorProvider
 {
     private static readonly TimeSpan s_sqsMinTimeout = TimeSpan.FromSeconds(5);
     private readonly AWSMessagingGatewayConnection _awsConnection;
 
-    public SnsStandardMessageGatewayProvider()
+    public SqsFifoMessageGatewayProvider()
     {
         _awsConnection = GatewayFactory.CreateFactory();
     }
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
-        return new RoutingKey($"sns-std-{Uuid.New():N}");
+        return new RoutingKey($"sqs-fifo-{Uuid.New():N}.fifo");
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
     {
-        return new ChannelName($"sns-std-ch-{Uuid.New():N}");
+        return new ChannelName($"sqs-fifo-ch-{Uuid.New():N}.fifo");
     }
 
-    public SnsPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
+    public SqsPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
     {
-        return new SnsPublication
+        return new SqsPublication
         {
             Topic = routingKey,
+            ChannelName = new ChannelName(routingKey),
             MakeChannels = makeChannels,
+            QueueAttributes = new SqsAttributes(type: SqsType.Fifo),
         };
     }
 
@@ -46,17 +48,21 @@ public class SnsStandardMessageGatewayProvider
         OnMissingChannel makeChannel,
         bool setupDeadLetterQueue = false)
     {
+        // For SQS point-to-point, the channel (queue) must match the publication's queue
+        channelName = new ChannelName(routingKey);
+
         if (setupDeadLetterQueue)
         {
-            var deadLetterChannelName = new ChannelName($"{channelName}-dlq");
+            var deadLetterChannelName = new ChannelName($"{channelName.Value.Replace(".fifo", "")}-dlq.fifo");
             return new SqsSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
                 channelName: channelName,
-                channelType: ChannelType.PubSub,
+                channelType: ChannelType.PointToPoint,
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
                 queueAttributes: new SqsAttributes(
+                    type: SqsType.Fifo,
                     redrivePolicy: new RedrivePolicy(deadLetterChannelName, 3)
                 ),
                 deadLetterRoutingKey: new RoutingKey(deadLetterChannelName),
@@ -67,10 +73,11 @@ public class SnsStandardMessageGatewayProvider
         return new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: channelName,
-            channelType: ChannelType.PubSub,
+            channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: makeChannel
+            makeChannels: makeChannel,
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo)
         );
     }
 
@@ -133,7 +140,7 @@ public class SnsStandardMessageGatewayProvider
         return new MinimumTimeoutChannelAsync(channel, s_sqsMinTimeout);
     }
 
-    public IAmAMessageProducerSync CreateProducer(SnsPublication publication)
+    public IAmAMessageProducerSync CreateProducer(SqsPublication publication)
     {
         var connection = _awsConnection;
 
@@ -142,12 +149,12 @@ public class SnsStandardMessageGatewayProvider
             connection = GatewayFactory.CreateFactory();
         }
 
-        var producer = new SnsMessageProducer(connection, publication);
+        var producer = new SqsMessageProducer(connection, publication);
         return producer;
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
-        SnsPublication publication,
+        SqsPublication publication,
         CancellationToken cancellationToken = default)
     {
         var connection = _awsConnection;
@@ -157,7 +164,7 @@ public class SnsStandardMessageGatewayProvider
             connection = GatewayFactory.CreateFactory();
         }
 
-        var producer = new SnsMessageProducer(connection, publication);
+        var producer = new SqsMessageProducer(connection, publication);
         return producer;
     }
 
@@ -171,7 +178,8 @@ public class SnsStandardMessageGatewayProvider
             channelType: ChannelType.PointToPoint,
             routingKey: subscription.DeadLetterRoutingKey!,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Assume
+            makeChannels: OnMissingChannel.Assume,
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo)
         );
 
         var dlqChannel = await new ChannelFactory(_awsConnection)

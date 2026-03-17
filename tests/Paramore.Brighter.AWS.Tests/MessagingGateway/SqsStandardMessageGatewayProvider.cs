@@ -1,12 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.SQS;
-using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -39,6 +35,7 @@ public class SqsStandardMessageGatewayProvider
     {
         return new SqsPublication
         {
+            Topic = routingKey,
             ChannelName = new ChannelName(routingKey),
             MakeChannels = makeChannels,
         };
@@ -50,6 +47,9 @@ public class SqsStandardMessageGatewayProvider
         OnMissingChannel makeChannel,
         bool setupDeadLetterQueue = false)
     {
+        // For SQS point-to-point, the channel (queue) must match the publication's queue
+        channelName = new ChannelName(routingKey);
+
         if (setupDeadLetterQueue)
         {
             var deadLetterChannelName = new ChannelName($"{channelName}-dlq");
@@ -169,39 +169,38 @@ public class SqsStandardMessageGatewayProvider
         SqsSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
-        var queueUrlResponse = await sqsClient.GetQueueUrlAsync(
-            subscription.DeadLetterRoutingKey!.Value, cancellationToken);
+        var dlqSubscription = new SqsSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(subscription.DeadLetterRoutingKey!.Value),
+            channelName: new ChannelName(subscription.DeadLetterRoutingKey!.Value),
+            channelType: ChannelType.PointToPoint,
+            routingKey: subscription.DeadLetterRoutingKey!,
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Assume
+        );
 
-        for (var i = 0; i < 10; i++)
+        var dlqChannel = await new ChannelFactory(_awsConnection)
+            .CreateAsyncChannelAsync(dlqSubscription, cancellationToken);
+
+        try
         {
-            var response = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
+            for (var i = 0; i < 10; i++)
             {
-                QueueUrl = queueUrlResponse.QueueUrl,
-                WaitTimeSeconds = 5,
-                MessageSystemAttributeNames = ["All"],
-                MessageAttributeNames = ["All"]
-            }, cancellationToken);
+                var message = await dlqChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    await dlqChannel.AcknowledgeAsync(message, cancellationToken);
+                    return message;
+                }
 
-            if (response.HttpStatusCode != HttpStatusCode.OK)
-            {
-                throw new AmazonSQSException(
-                    $"Failed to receive from DLQ {subscription.DeadLetterRoutingKey!.Value}. Status: {response.HttpStatusCode}");
+                await Task.Delay(1000, cancellationToken);
             }
 
-            if (response.Messages.Count > 0)
-            {
-                var sqsMsg = response.Messages.First();
-                await sqsClient.DeleteMessageAsync(queueUrlResponse.QueueUrl, sqsMsg.ReceiptHandle, cancellationToken);
-                return new Message(
-                    new MessageHeader(Id.Random(), new RoutingKey(subscription.DeadLetterRoutingKey!.Value), MessageType.MT_EVENT),
-                    new MessageBody(sqsMsg.Body));
-            }
-
-            await Task.Delay(1000, cancellationToken);
+            return new Message();
         }
-
-        return new Message();
+        finally
+        {
+            dlqChannel.Dispose();
+        }
     }
 
     public Message GetMessageFromDeadLetterQueue(SqsSubscription subscription)

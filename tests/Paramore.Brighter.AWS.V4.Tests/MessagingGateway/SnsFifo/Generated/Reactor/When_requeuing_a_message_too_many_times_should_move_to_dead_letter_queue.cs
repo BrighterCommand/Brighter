@@ -7,10 +7,10 @@ using System.Threading;
 
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Reactor;
+namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsFifo.Reactor;
 
 [Trait("Category", "AWS")]
-public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery : IDisposable
+public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -18,15 +18,15 @@ public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery
 
     private List<Message> _sentMessages = [];
 
-    private Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription? _subscription;
-    private Paramore.Brighter.MessagingGateway.AWSSQS.SqsPublication? _publication;
+    private Paramore.Brighter.MessagingGateway.AWSSQS.V4.SqsSubscription? _subscription;
+    private Paramore.Brighter.MessagingGateway.AWSSQS.V4.SnsPublication? _publication;
 
     private IAmAMessageProducerSync? _producer = null;
     private IAmAChannelSync? _channel = null;
 
-    public WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery()
+    public WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue()
     {
-        _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifoMessageGatewayProvider();
+        _messageGatewayProvider = new Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsFifoMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
         _messageAssertion = new DefaultMessageAssertion();
     }
@@ -37,13 +37,14 @@ public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery
     }
 
     [Fact]
-    public void When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery()
+    public void When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
             _messageGatewayProvider.GetOrCreateChannelName(),
-            OnMissingChannel.Create);
+            OnMissingChannel.Create,
+            true);
 
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
@@ -51,17 +52,26 @@ public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery
         var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
         _sentMessages.Add(message);
 
-        _producer.SendWithDelay(message, TimeSpan.FromSeconds(5));
+        _producer.Send(message);
 
-        // Act
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
+        
+
+        Message? received;
+        for (var i = 0; i < _subscription.RequeueCount; i++)
+        {
+            received = _channel.Receive(TimeSpan.FromMilliseconds(300));
+            _channel.Requeue(received);
+
+            
+        }
+
+        received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
-        Thread.Sleep(TimeSpan.FromSeconds(5));
+        // Act
+        received = _messageGatewayProvider.GetMessageFromDeadLetterQueue(_subscription);
 
         // Assert
-        received = _channel.Receive(TimeSpan.FromMilliseconds(300));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
         _messageAssertion.Assert(message, received);
     }
 }

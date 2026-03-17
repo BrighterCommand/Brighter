@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Proactor;
+namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsStandard.Proactor;
 
 [Trait("Category", "AWS")]
-public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgainAsync : IAsyncLifetime
+public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -18,15 +18,15 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgainAsync :
 
     private List<Message> _sentMessages = [];
 
-    private Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription? _subscription;
-    private Paramore.Brighter.MessagingGateway.AWSSQS.SqsPublication? _publication;
+    private Paramore.Brighter.MessagingGateway.AWSSQS.V4.SqsSubscription? _subscription;
+    private Paramore.Brighter.MessagingGateway.AWSSQS.V4.SqsPublication? _publication;
 
-    private IAmAMessageProducerAsync? _producer = null;
-    private IAmAChannelAsync? _channel = null;
+    private IAmAMessageProducerAsync? _producer;
+    private IAmAChannelAsync? _channel;
 
-    public WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgainAsync()
+    public WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync()
     {
-        _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifoMessageGatewayProvider();
+        _messageGatewayProvider = new Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsStandardMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
         _messageAssertion = new DefaultMessageAssertion();
     }
@@ -42,7 +42,7 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgainAsync :
     }
 
     [Fact]
-    public async Task When_requeing_a_failed_message_with_delay_should_receive_message_again_async()
+    public async Task When_requeing_a_failed_message_should_receive_message_again_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -56,20 +56,34 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgainAsync :
         var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
         _sentMessages.Add(message);
 
-        await _producer.SendWithDelayAsync(message, TimeSpan.FromSeconds(5));
-        await Task.Delay(TimeSpan.FromSeconds(6));
+        await _producer.SendAsync(message);
+
+        
 
         // Act
-        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
-        Assert.NotEqual(MessageType.MT_QUIT, received.Header.MessageType);
+        var received = await _channel.ReceiveAsync(null);
+        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         await _channel.RequeueAsync(received);
 
         
 
+        // Retry receiving in case the requeued message is not immediately available
+        var requeued = new Message();
+        for (var i = 0; i < 10; i++)
+        {
+            requeued = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
+            if (requeued.Header.MessageType != MessageType.MT_NONE)
+            {
+                break;
+            }
+
+            
+        }
+
         // Assert
-        received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
-        await _channel.AcknowledgeAsync(received);
-        _messageAssertion.Assert(message, received);
+        Assert.NotEqual(MessageType.MT_NONE, requeued.Header.MessageType);
+        Assert.Equal(message.Header.MessageId.ToString(), requeued.Header.Bag[Message.OriginalMessageIdHeaderName].ToString());
+        _messageAssertion.Assert(message, requeued);
     }
 }

@@ -7,10 +7,10 @@ using System.Threading;
 
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Reactor;
+namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsStandard.Reactor;
 
 [Trait("Category", "AWS")]
-public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDisposable
+public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -18,15 +18,15 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDis
 
     private List<Message> _sentMessages = [];
 
-    private Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription? _subscription;
-    private Paramore.Brighter.MessagingGateway.AWSSQS.SqsPublication? _publication;
+    private Paramore.Brighter.MessagingGateway.AWSSQS.V4.SqsSubscription? _subscription;
+    private Paramore.Brighter.MessagingGateway.AWSSQS.V4.SnsPublication? _publication;
 
     private IAmAMessageProducerSync? _producer = null;
     private IAmAChannelSync? _channel = null;
 
-    public WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain()
+    public WhenRequeingAFailedMessageShouldReceiveMessageAgain()
     {
-        _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifoMessageGatewayProvider();
+        _messageGatewayProvider = new Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsStandardMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
         _messageAssertion = new DefaultMessageAssertion();
     }
@@ -37,7 +37,7 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDis
     }
 
     [Fact]
-    public void When_requeing_a_failed_message_with_delay_should_receive_message_again()
+    public void When_requeing_a_failed_message_should_receive_message_again()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -51,20 +51,34 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDis
         var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
         _sentMessages.Add(message);
 
-        _producer.SendWithDelay(message, TimeSpan.FromSeconds(5));
-        Thread.Sleep(TimeSpan.FromSeconds(6));
+        _producer.Send(message);
+
+        
 
         // Act
         var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
-        Assert.NotEqual(MessageType.MT_QUIT, received.Header.MessageType);
+        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         _channel.Requeue(received);
 
         
 
+        // Retry receiving in case the requeued message is not immediately available
+        var requeued = new Message();
+        for (var i = 0; i < 10; i++)
+        {
+            requeued = _channel.Receive(TimeSpan.FromMilliseconds(300));
+            if (requeued.Header.MessageType != MessageType.MT_NONE)
+            {
+                break;
+            }
+
+            
+        }
+
         // Assert
-        received = _channel.Receive(TimeSpan.FromMilliseconds(300));
-        _channel.Acknowledge(received);
-        _messageAssertion.Assert(message, received);
+        Assert.NotEqual(MessageType.MT_NONE, requeued.Header.MessageType);
+        Assert.Equal(message.Header.MessageId.ToString(), requeued.Header.Bag[Message.OriginalMessageIdHeaderName].ToString());
+        _messageAssertion.Assert(message, requeued);
     }
 }

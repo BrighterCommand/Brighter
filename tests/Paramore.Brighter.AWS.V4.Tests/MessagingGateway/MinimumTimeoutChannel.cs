@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway;
+namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway;
 
 /// <summary>
 /// Enforces a minimum receive timeout for SQS channels and tracks original message ID on requeue.

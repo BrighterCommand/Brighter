@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.AWS.Tests.Helpers;
-using Paramore.Brighter.AWS.Tests.TestDoubles;
-using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.AWS.V4.Tests.Helpers;
+using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway;
+namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway;
 
 public class SnsStandardMessageGatewayProvider
     : SnsStandard.Proactor.IAmAMessageGatewayProactorProvider,
