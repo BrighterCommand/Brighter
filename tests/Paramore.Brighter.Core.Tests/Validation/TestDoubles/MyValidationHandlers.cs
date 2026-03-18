@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Policies.Attributes;
+using Paramore.Brighter.Reject.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 
@@ -48,3 +50,15 @@ internal class MyInternalHandler : RequestHandler<MyDescribableCommand>
 
 /// <summary>A type that is neither a sync nor async handler — used to test AttributeAsyncConsistency rule.</summary>
 public class MyNonHandlerType { }
+
+/// <summary>
+/// A public handler with misordered backstop (step 5) and resilience (step 3) attributes.
+/// In Brighter, lower step = outer wrapper, so the backstop at step 5 is inner and will
+/// never catch resilience failures — triggers a BackstopAttributeOrdering warning.
+/// </summary>
+public class MyMisorderedBackstopHandler : RequestHandler<MyDescribableCommand>
+{
+    [RejectMessageOnError(5)]
+    [UseResiliencePipeline("test-policy", step: 3)]
+    public override MyDescribableCommand Handle(MyDescribableCommand command) => base.Handle(command);
+}
