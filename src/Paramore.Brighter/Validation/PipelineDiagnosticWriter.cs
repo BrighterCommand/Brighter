@@ -61,6 +61,7 @@ public class PipelineDiagnosticWriter(
         LogSummary(descriptions.Count, publicationList.Count, subscriptionList.Count);
         LogHandlerPipelines(descriptions);
         LogPublications(publicationList);
+        LogSubscriptions(subscriptionList);
     }
 
     private void LogSummary(int handlerCount, int publicationCount, int subscriptionCount)
@@ -133,6 +134,20 @@ public class PipelineDiagnosticWriter(
                     }
                 }
             }
+        }
+    }
+
+    private void LogSubscriptions(List<Subscription> subscriptionList)
+    {
+        if (subscriptionList.Count == 0) return;
+
+        _logger.LogDebug("=== Subscriptions (Incoming) ===");
+
+        foreach (var sub in subscriptionList)
+        {
+            _logger.LogDebug("  {SubscriptionName} ({PumpType})", sub.Name, sub.MessagePumpType);
+            _logger.LogDebug("    Channel:  {ChannelName} → {RoutingKey}",
+                sub.ChannelName, sub.RoutingKey);
         }
     }
 }
