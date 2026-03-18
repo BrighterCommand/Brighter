@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.Validation;
@@ -36,16 +35,19 @@ namespace Paramore.Brighter.Validation;
 /// </summary>
 /// <param name="logger">The logger to write diagnostic output to.</param>
 /// <param name="pipelineBuilder">The pipeline builder used to describe handler pipelines.</param>
+/// <param name="mapperRegistry">Optional mapper registry for resolving publication/subscription mapper info.</param>
 /// <param name="publications">Optional publications to describe.</param>
 /// <param name="subscriptions">Optional subscriptions to describe.</param>
 public class PipelineDiagnosticWriter(
     ILogger logger,
     PipelineBuilder<IRequest> pipelineBuilder,
+    MessageMapperRegistry? mapperRegistry = null,
     IEnumerable<Publication>? publications = null,
     IEnumerable<Subscription>? subscriptions = null) : IAmAPipelineDiagnosticWriter
 {
     private readonly ILogger _logger = logger;
     private readonly PipelineBuilder<IRequest> _pipelineBuilder = pipelineBuilder;
+    private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistry;
     private readonly IEnumerable<Publication>? _publications = publications;
     private readonly IEnumerable<Subscription>? _subscriptions = subscriptions;
 
@@ -58,6 +60,7 @@ public class PipelineDiagnosticWriter(
 
         LogSummary(descriptions.Count, publicationList.Count, subscriptionList.Count);
         LogHandlerPipelines(descriptions);
+        LogPublications(publicationList);
     }
 
     private void LogSummary(int handlerCount, int publicationCount, int subscriptionCount)
@@ -93,6 +96,43 @@ public class PipelineDiagnosticWriter(
                         d.HandlerType.Name;
 
             _logger.LogDebug("    Pipeline: {Chain}", chain);
+        }
+    }
+
+    private void LogPublications(List<Publication> publicationList)
+    {
+        if (publicationList.Count == 0) return;
+
+        _logger.LogDebug("=== Publications (Outgoing) ===");
+
+        foreach (var pub in publicationList)
+        {
+            var requestTypeName = pub.RequestType?.Name ?? "(no RequestType)";
+            var topic = pub.Topic?.Value ?? "(no topic)";
+            _logger.LogDebug("  {RequestType} → {Topic}", requestTypeName, topic);
+
+            if (_mapperRegistry != null && pub.RequestType != null)
+            {
+                var transformDesc = TransformPipelineBuilder.DescribeTransforms(_mapperRegistry, pub.RequestType);
+                if (transformDesc != null)
+                {
+                    var mapperLabel = transformDesc.IsDefaultMapper ? "default" : "custom";
+                    _logger.LogDebug("    Mapper:     {MapperType} ({MapperLabel})",
+                        transformDesc.MapperType.Name, mapperLabel);
+
+                    var transforms = transformDesc.WrapTransforms;
+                    if (transforms.Count > 0)
+                    {
+                        var transformChain = string.Join(", ",
+                            transforms.Select(t => $"[{t.AttributeType.Name}({t.Step})]"));
+                        _logger.LogDebug("    Transforms: {Transforms}", transformChain);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("    Transforms: (none)");
+                    }
+                }
+            }
         }
     }
 }
