@@ -233,7 +233,7 @@ These tasks add new types that the specifications and validator depend on.
 
 ## Phase 6: Validator and Diagnostic Writer
 
-- [ ] **TEST + IMPLEMENT: PipelineValidator evaluates all rule sets and aggregates errors**
+- [x] **TEST + IMPLEMENT: PipelineValidator evaluates all rule sets and aggregates errors**
   - **USE COMMAND**: `/test-first when PipelineValidator validates configuration with errors across all paths then all errors are collected`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_validator_finds_errors_across_paths_should_aggregate_all.cs`
@@ -252,7 +252,7 @@ These tasks add new types that the specifications and validator depend on.
     - `Validate()` calls `ValidateHandlerPipelines`, `ValidateProducers`, `ValidateConsumers`
     - Uses `EvaluateSpecs<T>` shared helper with `ValidationResultCollector`
 
-- [ ] **TEST + IMPLEMENT: PipelineDiagnosticWriter logs handler pipelines, publications, and subscriptions**
+- [x] **TEST + IMPLEMENT: PipelineDiagnosticWriter logs handler pipelines, publications, and subscriptions**
   - **USE COMMAND**: `/test-first when diagnostic writer describes pipelines then it logs summary at Information and detail at Debug`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_diagnostic_writer_describes_should_log_summary_and_detail.cs`
