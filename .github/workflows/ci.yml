@@ -217,7 +217,7 @@ jobs:
       - name: MQTT Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Category=MQTT&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
 
-  rabbitmq-ci:
+  rabbitmq-async-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [build]
@@ -244,6 +244,32 @@ jobs:
             10.0.x
       - name: RMQ Async Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
+
+  rabbitmq-sync-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [build]
+
+    services:
+      rabbitmq:
+        image: brightercommand/rabbitmq:3.13-management-delay
+        ports:
+        - 5672:5672 
+        # needed because the rabbitmq container does not provide a healthcheck
+        options: >-
+          --health-cmd "rabbitmqctl node_health_check"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
       - name: RMQ Sync Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions 
 
