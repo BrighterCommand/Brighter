@@ -24,7 +24,7 @@ public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IA
     public WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync()
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SnsFifoMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageBuilder = new FifoMessageBuilder();
     }
 
     public Task InitializeAsync()

@@ -22,7 +22,7 @@ public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExce
     public WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExceptionAsync()
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsFifoMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageBuilder = new FifoMessageBuilder();
     }
 
     public Task InitializeAsync()

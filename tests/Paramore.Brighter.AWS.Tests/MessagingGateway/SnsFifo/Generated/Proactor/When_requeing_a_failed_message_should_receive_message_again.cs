@@ -27,7 +27,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
     public WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync()
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SnsFifoMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageBuilder = new FifoMessageBuilder();
         _messageAssertion = new DefaultMessageAssertion();
     }
 

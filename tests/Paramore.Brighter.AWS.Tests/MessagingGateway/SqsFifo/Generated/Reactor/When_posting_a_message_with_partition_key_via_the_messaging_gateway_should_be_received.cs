@@ -27,7 +27,7 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
     public WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceived()
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifoMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageBuilder = new FifoMessageBuilder();
         _messageAssertion = new DefaultMessageAssertion();
     }
 

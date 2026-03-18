@@ -30,7 +30,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
     public WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages()
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsFifoMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageBuilder = new FifoMessageBuilder();
         _messageAssertion = new DefaultMessageAssertion();
     }
 

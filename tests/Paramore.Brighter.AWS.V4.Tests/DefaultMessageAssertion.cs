@@ -29,7 +29,7 @@ THE SOFTWARE. */
 
 using Paramore.Brighter;
 
-namespace Paramore.Brighter.AWS.Tests;
+namespace Paramore.Brighter.AWS.V4.Tests;
 
 /// <summary>
 /// Default implementation of <see cref="IAmAMessageAssertion"/> that asserts equality of message headers and body.

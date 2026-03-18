@@ -26,7 +26,7 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsyn
     public WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsync()
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsFifoMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageBuilder = new FifoMessageBuilder();
     }
 
     [Fact]
