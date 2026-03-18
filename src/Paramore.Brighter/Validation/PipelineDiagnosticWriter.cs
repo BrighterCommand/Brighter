@@ -57,6 +57,7 @@ public class PipelineDiagnosticWriter(
         var subscriptionList = _subscriptions?.ToList() ?? new List<Subscription>();
 
         LogSummary(descriptions.Count, publicationList.Count, subscriptionList.Count);
+        LogHandlerPipelines(descriptions);
     }
 
     private void LogSummary(int handlerCount, int publicationCount, int subscriptionCount)
@@ -72,5 +73,26 @@ public class PipelineDiagnosticWriter(
 
         if (parts.Count > 0)
             _logger.LogInformation("Brighter: {Summary} configured", string.Join(", ", parts));
+    }
+
+    private void LogHandlerPipelines(List<HandlerPipelineDescription> descriptions)
+    {
+        if (descriptions.Count == 0) return;
+
+        _logger.LogDebug("=== Handler Pipelines ===");
+
+        foreach (var d in descriptions)
+        {
+            var asyncLabel = d.IsAsync ? "async" : "sync";
+            _logger.LogDebug("  {HandlerName} ({AsyncLabel})", d.HandlerType.Name, asyncLabel);
+
+            var steps = d.BeforeSteps
+                .Select(s => $"[{s.AttributeType.Name}({s.Step})]");
+            var chain = string.Join(" → ", steps) +
+                        (d.BeforeSteps.Count > 0 ? " → " : "") +
+                        d.HandlerType.Name;
+
+            _logger.LogDebug("    Pipeline: {Chain}", chain);
+        }
     }
 }
