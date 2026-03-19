@@ -320,7 +320,7 @@ These tasks add new types that the specifications and validator depend on.
     - Add optional constructor parameters: `IAmAPipelineValidator?`, `IAmAPipelineDiagnosticWriter?`
     - In `StartAsync`: if present, call `Describe()` then `Validate().ThrowIfInvalid()` before `_dispatcher.Receive()`
 
-- [ ] **TEST + IMPLEMENT: AddConsumers sets ConsumerOwnsValidation flag when validation is opted in**
+- [x] **TEST + IMPLEMENT: AddConsumers sets ConsumerOwnsValidation flag when validation is opted in**
   - **USE COMMAND**: `/test-first when AddConsumers is called after ValidatePipelines then ConsumerOwnsValidation is true`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_add_consumers_with_validation_should_set_consumer_owns_flag.cs`
