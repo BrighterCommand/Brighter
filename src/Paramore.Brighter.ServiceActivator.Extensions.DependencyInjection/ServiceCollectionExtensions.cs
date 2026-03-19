@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Microsoft.Extensions.Options;
 
 namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
@@ -54,6 +55,8 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                         typeof(IAmAnInboxAsync), BuildInbox<IAmAnInboxAsync>, ServiceLifetime.Singleton));
             }
             
+            services.Configure<BrighterPipelineValidationOptions>(o => o.ConsumerOwnsValidation = true);
+
             return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
         }
 
@@ -116,6 +119,8 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 }
                 return null!;
             }, ServiceLifetime.Singleton));
+
+            services.Configure<BrighterPipelineValidationOptions>(o => o.ConsumerOwnsValidation = true);
 
             return ServiceCollectionExtensions.BrighterHandlerBuilder(
                 services,
