@@ -25,6 +25,9 @@ THE SOFTWARE. */
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Paramore.Brighter.Validation;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection;
 
@@ -35,8 +38,43 @@ namespace Paramore.Brighter.Extensions.DependencyInjection;
 /// </summary>
 public class BrighterValidationHostedService : IHostedService
 {
+    private readonly IOptions<BrighterPipelineValidationOptions> _options;
+    private readonly IAmAPipelineValidator _validator;
+    private readonly IAmAPipelineDiagnosticWriter? _diagnosticWriter;
+    private readonly ILogger<BrighterValidationHostedService> _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BrighterValidationHostedService"/> class.
+    /// </summary>
+    /// <param name="options">Validation options controlling whether this service acts or defers to the consumer.</param>
+    /// <param name="validator">The pipeline validator.</param>
+    /// <param name="diagnosticWriter">Optional diagnostic writer for logging pipeline descriptions.</param>
+    /// <param name="logger">The logger.</param>
+    public BrighterValidationHostedService(
+        IOptions<BrighterPipelineValidationOptions> options,
+        IAmAPipelineValidator validator,
+        IAmAPipelineDiagnosticWriter? diagnosticWriter,
+        ILogger<BrighterValidationHostedService> logger)
+    {
+        _options = options;
+        _validator = validator;
+        _diagnosticWriter = diagnosticWriter;
+        _logger = logger;
+    }
+
     /// <inheritdoc />
-    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (_options.Value.ConsumerOwnsValidation)
+            return Task.CompletedTask;
+
+        _diagnosticWriter?.Describe();
+
+        var result = _validator.Validate();
+        result.ThrowIfInvalid();
+
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc />
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
