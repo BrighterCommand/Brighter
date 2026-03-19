@@ -290,7 +290,7 @@ These tasks add new types that the specifications and validator depend on.
     - Create `BrighterPipelineValidationOptions.cs` in same project
     - Register hosted service, validator, and options
 
-- [ ] **TEST + IMPLEMENT: BrighterValidationHostedService runs validation at startup for non-consumer apps**
+- [x] **TEST + IMPLEMENT: BrighterValidationHostedService runs validation at startup for non-consumer apps**
   - **USE COMMAND**: `/test-first when BrighterValidationHostedService starts without consumers then it runs validation`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_validation_hosted_service_starts_without_consumers_should_validate.cs`
