@@ -108,7 +108,9 @@ namespace GreetingsWeb
                  configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
                  configure.OutBoxBag = new Dictionary<string, object> { { "Topic", "GreetingMade" } };
              })
-             .AutoFromAssemblies([typeof(AddPersonHandlerAsync).Assembly]);
+             .AutoFromAssemblies([typeof(AddPersonHandlerAsync).Assembly])
+             .ValidatePipelines()
+             .DescribePipelines();
         }
 
         private void ConfigureDarker(IServiceCollection services)

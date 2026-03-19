@@ -113,7 +113,9 @@ namespace GreetingsWeb
                         configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
                     }
                 )
-                .AutoFromAssemblies();
+                .AutoFromAssemblies()
+                .ValidatePipelines()
+                .DescribePipelines();
         }
 
         private void ConfigureDarker(IServiceCollection services)

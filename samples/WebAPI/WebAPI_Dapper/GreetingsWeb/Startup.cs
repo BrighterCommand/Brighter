@@ -111,7 +111,9 @@ public class Startup
                 configure.MaxOutStandingMessages = 5;
                 configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
             })
-            .AutoFromAssemblies([typeof(AddPersonHandlerAsync).Assembly]);
+            .AutoFromAssemblies([typeof(AddPersonHandlerAsync).Assembly])
+            .ValidatePipelines()
+            .DescribePipelines();
     }
 
     private void ConfigureDarker(IServiceCollection services)
