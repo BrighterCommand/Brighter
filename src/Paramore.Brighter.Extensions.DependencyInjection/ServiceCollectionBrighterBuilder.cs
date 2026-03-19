@@ -71,15 +71,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             PolicyRegistry = policyRegistry;
 #pragma warning restore CS0618 // Type or member is obsolete
             ResiliencePolicyRegistry = resiliencePipelineRegistry;
-            
-            var brighterAssembly = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
-                !a.IsDynamic && a.FullName?.StartsWith("Paramore.Brighter", true, CultureInfo.InvariantCulture) == true)
-                .ToArray();
-            
-            MapperRegistryFromAssemblies(brighterAssembly);
-            HandlersFromAssemblies(brighterAssembly, null);
-            AsyncHandlersFromAssemblies(brighterAssembly, null);
-            TransformsFromAssemblies(brighterAssembly);
         }
 
         /// <summary>
