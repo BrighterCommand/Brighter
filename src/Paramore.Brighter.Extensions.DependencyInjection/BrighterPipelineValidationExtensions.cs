@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Validation;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection;
@@ -47,6 +48,25 @@ public static class BrighterPipelineValidationExtensions
             var subscriberRegistry = sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
             var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
             return new PipelineValidator(pipelineBuilder);
+        });
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Registers pipeline diagnostic services. At startup, a human-readable description
+    /// of all configured pipelines is logged at Information and Debug levels.
+    /// </summary>
+    /// <param name="builder">The Brighter builder.</param>
+    /// <returns>The builder, for fluent chaining.</returns>
+    public static IBrighterBuilder DescribePipelines(this IBrighterBuilder builder)
+    {
+        builder.Services.TryAddSingleton<IAmAPipelineDiagnosticWriter>(sp =>
+        {
+            var subscriberRegistry = sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
+            var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<PipelineDiagnosticWriter>();
+            return new PipelineDiagnosticWriter(logger, pipelineBuilder);
         });
 
         return builder;
