@@ -273,7 +273,7 @@ These tasks add new types that the specifications and validator depend on.
 
 ## Phase 7: DI and Hosting Integration
 
-- [ ] **TEST + IMPLEMENT: ValidatePipelines() and DescribePipelines() extension methods on IBrighterBuilder**
+- [x] **TEST + IMPLEMENT: ValidatePipelines() and DescribePipelines() extension methods on IBrighterBuilder**
   - **USE COMMAND**: `/test-first when ValidatePipelines is called then IAmAPipelineValidator is registered in DI`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_validate_pipelines_called_should_register_validator_in_di.cs`
