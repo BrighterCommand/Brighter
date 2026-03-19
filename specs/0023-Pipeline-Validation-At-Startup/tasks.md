@@ -305,7 +305,7 @@ These tasks add new types that the specifications and validator depend on.
     - Reads `BrighterPipelineValidationOptions` to decide whether to act
     - Calls `IAmAPipelineValidator.Validate()` and `IAmAPipelineDiagnosticWriter.Describe()`
 
-- [ ] **TEST + IMPLEMENT: ServiceActivatorHostedService runs validation before Receive when opted in**
+- [x] **TEST + IMPLEMENT: ServiceActivatorHostedService runs validation before Receive when opted in**
   - **USE COMMAND**: `/test-first when ServiceActivatorHostedService starts with validator registered then it validates before receiving`
   - Test location: `tests/Paramore.Brighter.ServiceActivator.Tests/`
   - Test file: `When_service_activator_starts_with_validator_should_validate_before_receive.cs`
