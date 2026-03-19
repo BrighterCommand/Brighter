@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Validation;
 
@@ -49,6 +50,9 @@ public static class BrighterPipelineValidationExtensions
             var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
             return new PipelineValidator(pipelineBuilder);
         });
+
+        builder.Services.AddSingleton<IHostedService, BrighterValidationHostedService>();
+        builder.Services.AddOptions<BrighterPipelineValidationOptions>();
 
         return builder;
     }
