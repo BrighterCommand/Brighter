@@ -163,9 +163,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <inheritdoc />
-        public Type[] GetHandlerTypes(Type requestType) => _registry.GetHandlerTypes(requestType);
+        public IReadOnlyCollection<Type> GetHandlerTypes(Type requestType) => _registry.GetHandlerTypes(requestType);
 
         /// <inheritdoc />
-        public Type[] GetRegisteredRequestTypes() => _registry.GetRegisteredRequestTypes();
+        public IReadOnlyCollection<Type> GetRegisteredRequestTypes() => _registry.GetRegisteredRequestTypes();
     }
 }

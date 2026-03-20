@@ -50,7 +50,7 @@ public static class ConsumerValidationRules
                 if (s.RequestType == null) return true;
 
                 var handlerTypes = inspector.GetHandlerTypes(s.RequestType);
-                if (handlerTypes.Length == 0) return true;
+                if (handlerTypes.Count == 0) return true;
 
                 return s.MessagePumpType switch
                 {
@@ -98,7 +98,7 @@ public static class ConsumerValidationRules
     /// <returns>A simple specification that reports an Error when no handler is registered.</returns>
     public static ISpecification<Subscription> HandlerRegistered(IAmASubscriberRegistryInspector inspector)
         => new Specification<Subscription>(
-            s => s.RequestType == null || inspector.GetHandlerTypes(s.RequestType).Length > 0,
+            s => s.RequestType == null || inspector.GetHandlerTypes(s.RequestType).Count > 0,
             s => new ValidationError(
                 ValidationSeverity.Error,
                 $"Subscription '{s.Name}'",

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter;
 
@@ -35,12 +36,12 @@ public interface IAmASubscriberRegistryInspector
     /// Gets all handler types registered for a given request type.
     /// </summary>
     /// <param name="requestType">The request type to look up.</param>
-    /// <returns>An array of handler types registered for the request type.</returns>
-    Type[] GetHandlerTypes(Type requestType);
+    /// <returns>A read-only collection of handler types registered for the request type.</returns>
+    IReadOnlyCollection<Type> GetHandlerTypes(Type requestType);
 
     /// <summary>
     /// Gets all request types that have handlers registered.
     /// </summary>
-    /// <returns>An array of all registered request types.</returns>
-    Type[] GetRegisteredRequestTypes();
+    /// <returns>A read-only collection of all registered request types.</returns>
+    IReadOnlyCollection<Type> GetRegisteredRequestTypes();
 }

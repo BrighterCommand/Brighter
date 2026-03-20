@@ -163,13 +163,13 @@ namespace Paramore.Brighter
         }
         
         /// <inheritdoc />
-        public Type[] GetHandlerTypes(Type requestType)
+        public IReadOnlyCollection<Type> GetHandlerTypes(Type requestType)
         {
             return _allHandlerTypes.TryGetValue(requestType, out var types) ? [..types] : [];
         }
 
         /// <inheritdoc />
-        public Type[] GetRegisteredRequestTypes() => [.._allHandlerTypes.Keys];
+        public IReadOnlyCollection<Type> GetRegisteredRequestTypes() => [.._allHandlerTypes.Keys];
 
         /// <summary>
         /// Returns an enumerator that iterates through the collection.

@@ -33,7 +33,7 @@ public class BrighterPipelineValidationOptions
 {
     /// <summary>
     /// When true, validation is deferred to <c>ServiceActivatorHostedService</c> and the
-    /// <see cref="BrighterValidationHostedService"/> becomes a no-op. Set automatically
+    /// <see cref="BrighterValidationHostedService"/> becomes a no-op.
     /// Set automatically by <c>AddConsumers()</c>.
     /// </summary>
     public bool ConsumerOwnsValidation { get; set; }

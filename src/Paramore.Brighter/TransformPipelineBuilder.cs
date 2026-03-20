@@ -264,10 +264,12 @@ namespace Paramore.Brighter
         }
 
         private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
-            => MapperMethodDiscovery.FindMapToMessage(messageMapper.GetType(), typeof(TRequest));
+            => MapperMethodDiscovery.FindMapToMessage(messageMapper.GetType(), typeof(TRequest))
+               ?? throw new ConfigurationException($"No MapToMessage method found on mapper '{messageMapper.GetType().Name}' for request type '{typeof(TRequest).Name}'");
 
         private MethodInfo FindMapToRequest<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
-            => MapperMethodDiscovery.FindMapToRequest(messageMapper.GetType());
+            => MapperMethodDiscovery.FindMapToRequest(messageMapper.GetType())
+               ?? throw new ConfigurationException($"No MapToRequest method found on mapper '{messageMapper.GetType().Name}'");
 
         private TransformPipelineTracer TraceWrapPipeline<TRequest>(WrapPipeline<TRequest> pipeline) where TRequest : class, IRequest
         {

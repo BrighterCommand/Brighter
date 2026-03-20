@@ -46,7 +46,8 @@ public static class BrighterPipelineValidationExtensions
     {
         builder.Services.TryAddSingleton<IAmAPipelineValidator>(sp =>
         {
-            var subscriberRegistry = sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
+            var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
+                ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
             var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
             return new PipelineValidator(pipelineBuilder);
         });
@@ -67,7 +68,8 @@ public static class BrighterPipelineValidationExtensions
     {
         builder.Services.TryAddSingleton<IAmAPipelineDiagnosticWriter>(sp =>
         {
-            var subscriberRegistry = sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
+            var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
+                ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
             var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
             var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<PipelineDiagnosticWriter>();
             return new PipelineDiagnosticWriter(logger, pipelineBuilder);

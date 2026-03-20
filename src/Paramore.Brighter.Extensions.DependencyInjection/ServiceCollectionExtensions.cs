@@ -147,6 +147,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             // Create registries - they always register as Transient, actual lifetime managed by ServiceProviderHandlerFactory
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
             services.TryAddSingleton(subscriberRegistry);
+            services.TryAddSingleton<IAmASubscriberRegistryInspector>(subscriberRegistry);
 
             var transformRegistry = new ServiceCollectionTransformerRegistry(services);
             services.TryAddSingleton(transformRegistry);

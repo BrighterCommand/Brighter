@@ -35,7 +35,7 @@ internal static class MapperMethodDiscovery
     /// Finds the MapToMessage method on a sync mapper type for a given request type.
     /// Signature: MapToMessage(TRequest, Publication)
     /// </summary>
-    public static MethodInfo FindMapToMessage(Type mapperType, Type requestType)
+    public static MethodInfo? FindMapToMessage(Type mapperType, Type requestType)
     {
         return mapperType.GetMethods()
             .Where(method => method.Name == nameof(IAmAMessageMapper<IRequest>.MapToMessage))
@@ -43,28 +43,28 @@ internal static class MapperMethodDiscovery
                 method => method.GetParameters().Length == 2
                     && method.GetParameters().First().ParameterType == requestType
                     && method.GetParameters().Last().ParameterType == typeof(Publication)
-            )!;
+            );
     }
 
     /// <summary>
     /// Finds the MapToRequest method on a sync mapper type.
     /// Signature: MapToRequest(Message)
     /// </summary>
-    public static MethodInfo FindMapToRequest(Type mapperType)
+    public static MethodInfo? FindMapToRequest(Type mapperType)
     {
         return mapperType.GetMethods()
             .Where(method => method.Name == nameof(IAmAMessageMapper<IRequest>.MapToRequest))
             .SingleOrDefault(
                 method => method.GetParameters().Length == 1
                     && method.GetParameters().Single().ParameterType == typeof(Message)
-            )!;
+            );
     }
 
     /// <summary>
     /// Finds the MapToMessageAsync method on an async mapper type for a given request type.
     /// Signature: MapToMessageAsync(TRequest, Publication, CancellationToken)
     /// </summary>
-    public static MethodInfo FindMapToMessageAsync(Type mapperType, Type requestType)
+    public static MethodInfo? FindMapToMessageAsync(Type mapperType, Type requestType)
     {
         return mapperType.GetMethod(
             nameof(IAmAMessageMapperAsync<IRequest>.MapToMessageAsync),
@@ -72,14 +72,14 @@ internal static class MapperMethodDiscovery
             null,
             CallingConventions.Any,
             [requestType, typeof(Publication), typeof(CancellationToken)],
-            null)!;
+            null);
     }
 
     /// <summary>
     /// Finds the MapToRequestAsync method on an async mapper type.
     /// Signature: MapToRequestAsync(Message, CancellationToken)
     /// </summary>
-    public static MethodInfo FindMapToRequestAsync(Type mapperType)
+    public static MethodInfo? FindMapToRequestAsync(Type mapperType)
     {
         return mapperType.GetMethod(
             nameof(IAmAMessageMapperAsync<IRequest>.MapToRequestAsync),
@@ -87,6 +87,6 @@ internal static class MapperMethodDiscovery
             null,
             CallingConventions.Any,
             [typeof(Message), typeof(CancellationToken)],
-            null)!;
+            null);
     }
 }

@@ -39,7 +39,8 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<PipelineBuilder<TRequest>>();
 
-        private readonly IAmASubscriberRegistry _subscriberRegistry;
+        private readonly IAmASubscriberRegistry? _subscriberRegistry;
+        private readonly IAmASubscriberRegistryInspector? _subscriberRegistryInspector;
         private readonly IAmAHandlerFactorySync? _syncHandlerFactory;
         private readonly InboxConfiguration? _inboxConfiguration;
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
@@ -86,13 +87,13 @@ namespace Paramore.Brighter
         /// Describe-only constructor for startup validation and diagnostics.
         /// Does not require a handler factory — only uses reflection to describe pipelines.
         /// </summary>
-        /// <param name="subscriberRegistry">A <see cref="IAmASubscriberRegistry"/> subscriber registry.</param>
+        /// <param name="subscriberRegistryInspector">An <see cref="IAmASubscriberRegistryInspector"/> for introspecting registered handlers.</param>
         /// <param name="inboxConfiguration">Optional inbox configuration for global inbox attribute detection.</param>
         public PipelineBuilder(
-            IAmASubscriberRegistry subscriberRegistry,
+            IAmASubscriberRegistryInspector subscriberRegistryInspector,
             InboxConfiguration? inboxConfiguration = null)
         {
-            _subscriberRegistry = subscriberRegistry;
+            _subscriberRegistryInspector = subscriberRegistryInspector;
             _inboxConfiguration = inboxConfiguration;
         }
 
@@ -104,8 +105,8 @@ namespace Paramore.Brighter
         /// <returns>One <see cref="HandlerPipelineDescription"/> per handler type registered for the request type.</returns>
         public IEnumerable<HandlerPipelineDescription> Describe(Type requestType)
         {
-            if (_subscriberRegistry is not IAmASubscriberRegistryInspector inspector)
-                throw new ConfigurationException(
+            var inspector = _subscriberRegistryInspector ?? _subscriberRegistry as IAmASubscriberRegistryInspector
+                ?? throw new ConfigurationException(
                     "SubscriberRegistry must implement IAmASubscriberRegistryInspector for pipeline description");
 
             var handlerTypes = inspector.GetHandlerTypes(requestType);
@@ -142,8 +143,8 @@ namespace Paramore.Brighter
         /// <returns>One <see cref="HandlerPipelineDescription"/> per handler type per request type.</returns>
         public IEnumerable<HandlerPipelineDescription> Describe()
         {
-            if (_subscriberRegistry is not IAmASubscriberRegistryInspector inspector)
-                throw new ConfigurationException(
+            var inspector = _subscriberRegistryInspector ?? _subscriberRegistry as IAmASubscriberRegistryInspector
+                ?? throw new ConfigurationException(
                     "SubscriberRegistry must implement IAmASubscriberRegistryInspector for pipeline description");
 
             foreach (var requestType in inspector.GetRegisteredRequestTypes())
@@ -170,7 +171,7 @@ namespace Paramore.Brighter
             
             try
             {
-                var observers = _subscriberRegistry.Get<TRequest>(request, requestContext);
+                var observers = _subscriberRegistry!.Get<TRequest>(request, requestContext);
                 
                 var pipelines = new Pipelines<TRequest>();
 
@@ -215,7 +216,7 @@ namespace Paramore.Brighter
             
             try
             {
-                var observers = _subscriberRegistry.Get<TRequest>(request, requestContext);
+                var observers = _subscriberRegistry!.Get<TRequest>(request, requestContext);
 
                 var pipelines = new AsyncPipelines<TRequest>();
 

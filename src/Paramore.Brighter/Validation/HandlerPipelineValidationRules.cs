@@ -88,8 +88,8 @@ public static class HandlerPipelineValidationRules
         {
             return d.BeforeSteps.Concat(d.AfterSteps).SelectMany<PipelineStepDescription, ValidationResult>(step =>
             {
-                var isSync = IsHandlerType(step.HandlerType, typeof(RequestHandler<>));
-                var isAsync = IsHandlerType(step.HandlerType, typeof(RequestHandlerAsync<>));
+                var isSync = typeof(IHandleRequests).IsAssignableFrom(step.HandlerType);
+                var isAsync = typeof(IHandleRequestsAsync).IsAssignableFrom(step.HandlerType);
 
                 if (!isSync && !isAsync)
                 {
@@ -116,21 +116,4 @@ public static class HandlerPipelineValidationRules
             });
         });
 
-    /// <summary>
-    /// Checks whether <paramref name="handlerType"/> derives from the given open generic
-    /// <paramref name="baseGenericType"/> (e.g. <c>typeof(RequestHandler&lt;&gt;)</c>).
-    /// Walks the base type chain so it works with both open and closed generic types.
-    /// </summary>
-    private static bool IsHandlerType(Type handlerType, Type baseGenericType)
-    {
-        var type = handlerType;
-        while (type != null)
-        {
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == baseGenericType)
-                return true;
-            type = type.BaseType;
-        }
-
-        return false;
-    }
 }
