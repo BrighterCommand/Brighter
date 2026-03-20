@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
@@ -36,7 +36,8 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             type: SqsType.Fifo,
             messageRetentionPeriod: TimeSpan.FromSeconds(3600),
             deduplicationScope: DeduplicationScope.MessageGroup,
-            fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId);
+            fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId,
+            tags: new Dictionary<string, string> { { "Environment", "Test" } });
         
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(_queueName),
