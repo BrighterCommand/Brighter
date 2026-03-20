@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -45,7 +45,8 @@ public class ValidationHostedServiceWarningLoggingTests
         var validator = SpyPipelineValidator.WithWarningsOnly(warning1, warning2);
         var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false });
         var logger = new SpyLogger<BrighterValidationHostedService>();
-        var service = new BrighterValidationHostedService(options, validator, null, logger);
+        var provider = new ServiceCollection().BuildServiceProvider();
+        var service = new BrighterValidationHostedService(options, validator, provider, logger);
 
         // Act
         await service.StartAsync(CancellationToken.None);
@@ -66,7 +67,8 @@ public class ValidationHostedServiceWarningLoggingTests
         var validator = SpyPipelineValidator.WithNoErrors();
         var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false });
         var logger = new SpyLogger<BrighterValidationHostedService>();
-        var service = new BrighterValidationHostedService(options, validator, null, logger);
+        var provider = new ServiceCollection().BuildServiceProvider();
+        var service = new BrighterValidationHostedService(options, validator, provider, logger);
 
         // Act
         await service.StartAsync(CancellationToken.None);

@@ -22,8 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -35,12 +37,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection;
 /// Runs pipeline validation at host startup for non-consumer applications.
 /// When <see cref="BrighterPipelineValidationOptions.ConsumerOwnsValidation"/> is true,
 /// this service is a no-op because <c>ServiceActivatorHostedService</c> handles validation.
+/// Optional dependencies (<see cref="IAmAPipelineDiagnosticWriter"/>) are resolved from
+/// <see cref="IServiceProvider"/> at startup because Microsoft.Extensions.DependencyInjection
+/// does not support optional constructor injection.
 /// </summary>
 public class BrighterValidationHostedService : IHostedService
 {
     private readonly IOptions<BrighterPipelineValidationOptions> _options;
     private readonly IAmAPipelineValidator _validator;
-    private readonly IAmAPipelineDiagnosticWriter? _diagnosticWriter;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<BrighterValidationHostedService> _logger;
 
     /// <summary>
@@ -48,17 +53,17 @@ public class BrighterValidationHostedService : IHostedService
     /// </summary>
     /// <param name="options">Validation options controlling whether this service acts or defers to the consumer.</param>
     /// <param name="validator">The pipeline validator.</param>
-    /// <param name="diagnosticWriter">Optional diagnostic writer for logging pipeline descriptions.</param>
+    /// <param name="serviceProvider">The service provider for resolving optional dependencies.</param>
     /// <param name="logger">The logger.</param>
     public BrighterValidationHostedService(
         IOptions<BrighterPipelineValidationOptions> options,
         IAmAPipelineValidator validator,
-        IAmAPipelineDiagnosticWriter? diagnosticWriter,
+        IServiceProvider serviceProvider,
         ILogger<BrighterValidationHostedService> logger)
     {
         _options = options;
         _validator = validator;
-        _diagnosticWriter = diagnosticWriter;
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -68,7 +73,8 @@ public class BrighterValidationHostedService : IHostedService
         if (_options.Value.ConsumerOwnsValidation)
             return Task.CompletedTask;
 
-        _diagnosticWriter?.Describe();
+        var diagnosticWriter = _serviceProvider.GetService<IAmAPipelineDiagnosticWriter>();
+        diagnosticWriter?.Describe();
 
         var result = _validator.Validate();
         result.ThrowIfInvalid();

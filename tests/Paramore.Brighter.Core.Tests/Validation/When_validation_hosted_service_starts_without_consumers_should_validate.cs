@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
@@ -35,15 +36,34 @@ namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class ValidationHostedServiceTests
 {
+    private static BrighterValidationHostedService BuildService(
+        BrighterPipelineValidationOptions options,
+        IAmAPipelineValidator validator,
+        IAmAPipelineDiagnosticWriter? diagnosticWriter = null)
+    {
+        var services = new ServiceCollection();
+        if (diagnosticWriter != null)
+            services.AddSingleton(diagnosticWriter);
+
+        var provider = services.BuildServiceProvider();
+
+        return new BrighterValidationHostedService(
+            Options.Create(options),
+            validator,
+            provider,
+            NullLogger<BrighterValidationHostedService>.Instance);
+    }
+
     [Fact]
     public async Task When_consumer_does_not_own_validation_should_run_validation_and_diagnostics()
     {
         // Arrange
-        var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false });
         var validator = SpyPipelineValidator.WithNoErrors();
         var diagnosticWriter = new SpyPipelineDiagnosticWriter();
-        var logger = NullLogger<BrighterValidationHostedService>.Instance;
-        var service = new BrighterValidationHostedService(options, validator, diagnosticWriter, logger);
+        var service = BuildService(
+            new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false },
+            validator,
+            diagnosticWriter);
 
         // Act
         await service.StartAsync(CancellationToken.None);
@@ -57,11 +77,12 @@ public class ValidationHostedServiceTests
     public async Task When_consumer_owns_validation_should_be_noop()
     {
         // Arrange
-        var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = true });
         var validator = SpyPipelineValidator.WithNoErrors();
         var diagnosticWriter = new SpyPipelineDiagnosticWriter();
-        var logger = NullLogger<BrighterValidationHostedService>.Instance;
-        var service = new BrighterValidationHostedService(options, validator, diagnosticWriter, logger);
+        var service = BuildService(
+            new BrighterPipelineValidationOptions { ConsumerOwnsValidation = true },
+            validator,
+            diagnosticWriter);
 
         // Act
         await service.StartAsync(CancellationToken.None);
@@ -75,12 +96,13 @@ public class ValidationHostedServiceTests
     public async Task When_validation_has_errors_should_throw_pipeline_validation_exception()
     {
         // Arrange
-        var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false });
         var error = new ValidationError(ValidationSeverity.Error, "TestHandler", "Handler is misconfigured");
         var validator = SpyPipelineValidator.WithErrors(error);
         var diagnosticWriter = new SpyPipelineDiagnosticWriter();
-        var logger = NullLogger<BrighterValidationHostedService>.Instance;
-        var service = new BrighterValidationHostedService(options, validator, diagnosticWriter, logger);
+        var service = BuildService(
+            new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false },
+            validator,
+            diagnosticWriter);
 
         // Act & Assert — validation errors should prevent startup
         await Assert.ThrowsAsync<PipelineValidationException>(
@@ -91,12 +113,13 @@ public class ValidationHostedServiceTests
     public async Task When_validation_has_warnings_only_should_not_throw()
     {
         // Arrange
-        var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false });
         var warning = new ValidationError(ValidationSeverity.Warning, "TestHandler", "Backstop ordering suboptimal");
         var validator = SpyPipelineValidator.WithWarningsOnly(warning);
         var diagnosticWriter = new SpyPipelineDiagnosticWriter();
-        var logger = NullLogger<BrighterValidationHostedService>.Instance;
-        var service = new BrighterValidationHostedService(options, validator, diagnosticWriter, logger);
+        var service = BuildService(
+            new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false },
+            validator,
+            diagnosticWriter);
 
         // Act — should complete without throwing
         await service.StartAsync(CancellationToken.None);
