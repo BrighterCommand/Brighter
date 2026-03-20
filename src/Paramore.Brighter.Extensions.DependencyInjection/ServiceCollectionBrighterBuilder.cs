@@ -241,7 +241,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             assemblies = assemblies.Concat([assembly]);
             var subscribers =
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
-                where ti is { IsClass: true, IsAbstract: false, IsInterface: false, IsGenericTypeDefinition: false } && (ti.IsPublic || ti.IsNestedPublic)
+                where ti is { IsClass: true, IsAbstract: false, IsInterface: false } && (ti.IsPublic || ti.IsNestedPublic)
                 from i in ti.GetInterfaces()
                 where i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType
                 select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti };
@@ -250,8 +250,19 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 if (excludeDynamicHandlerTypes != null && excludeDynamicHandlerTypes.Contains(subscriber.HandlerType))
                     continue; // Skip dynamic handlers
-                
-                _serviceCollectionSubscriberRegistry.Add(subscriber.RequestType, subscriber.HandlerType);
+
+                if (subscriber.HandlerType.IsGenericTypeDefinition)
+                {
+                    // Open generic handlers (e.g. ExceptionPolicyHandler<>) need DI registration
+                    // so they can be resolved as closed types at runtime, but must not be added
+                    // to the subscriber registry where their generic type parameters (e.g. TRequest)
+                    // would appear as registered request types.
+                    _serviceCollectionSubscriberRegistry.EnsureHandlerIsRegistered(subscriber.HandlerType);
+                }
+                else
+                {
+                    _serviceCollectionSubscriberRegistry.Add(subscriber.RequestType, subscriber.HandlerType);
+                }
             }
         }
         

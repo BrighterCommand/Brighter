@@ -65,6 +65,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
+        /// Register a handler type in the DI container only, without adding it to the subscriber registry.
+        /// Used for open generic handler types (e.g. ExceptionPolicyHandler&lt;&gt;) that must be resolvable
+        /// at runtime but should not appear in the subscriber registry (which would expose generic type
+        /// parameters like TRequest as registered request types).
+        /// </summary>
+        /// <param name="handlerType">The handler type to register in DI</param>
+        public void EnsureHandlerIsRegistered(Type handlerType)
+        {
+            _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, ServiceLifetime.Transient));
+        }
+
+        /// <summary>
         /// Adds a type to the registry, with a mapping to a single handler. We will add this to any existing handlers for this type
         /// </summary>
         /// <remarks>Mainly intended for internal use, prefer to use <see cref="Register{TRequest}"/></remarks>
