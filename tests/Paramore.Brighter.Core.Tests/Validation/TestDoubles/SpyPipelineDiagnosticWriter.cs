@@ -33,9 +33,11 @@ namespace Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 public class SpyPipelineDiagnosticWriter : IAmAPipelineDiagnosticWriter
 {
     public bool DescribeWasCalled { get; private set; }
+    public int DescribeCallCount { get; private set; }
 
     public void Describe()
     {
         DescribeWasCalled = true;
+        DescribeCallCount++;
     }
 }

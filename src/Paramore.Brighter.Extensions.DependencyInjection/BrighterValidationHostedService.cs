@@ -73,9 +73,6 @@ public class BrighterValidationHostedService : IHostedService
         if (_options.Value.ConsumerOwnsValidation)
             return Task.CompletedTask;
 
-        var diagnosticWriter = _serviceProvider.GetService<IAmAPipelineDiagnosticWriter>();
-        diagnosticWriter?.Describe();
-
         var result = _validator.Validate();
         result.ThrowIfInvalid();
 

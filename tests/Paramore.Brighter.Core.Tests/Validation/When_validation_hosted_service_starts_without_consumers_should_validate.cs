@@ -55,7 +55,7 @@ public class ValidationHostedServiceTests
     }
 
     [Fact]
-    public async Task When_consumer_does_not_own_validation_should_run_validation_and_diagnostics()
+    public async Task When_consumer_does_not_own_validation_should_run_validation()
     {
         // Arrange
         var validator = SpyPipelineValidator.WithNoErrors();
@@ -68,9 +68,9 @@ public class ValidationHostedServiceTests
         // Act
         await service.StartAsync(CancellationToken.None);
 
-        // Assert — both validation and diagnostics should have been called
+        // Assert — validation should have run; Describe is owned by BrighterDiagnosticHostedService
         Assert.True(validator.ValidateWasCalled);
-        Assert.True(diagnosticWriter.DescribeWasCalled);
+        Assert.False(diagnosticWriter.DescribeWasCalled);
     }
 
     [Fact]
@@ -124,8 +124,8 @@ public class ValidationHostedServiceTests
         // Act — should complete without throwing
         await service.StartAsync(CancellationToken.None);
 
-        // Assert — validation ran, but no exception was thrown
+        // Assert — validation ran, but no exception was thrown; Describe is owned by BrighterDiagnosticHostedService
         Assert.True(validator.ValidateWasCalled);
-        Assert.True(diagnosticWriter.DescribeWasCalled);
+        Assert.False(diagnosticWriter.DescribeWasCalled);
     }
 }
