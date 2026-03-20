@@ -63,8 +63,10 @@ We introduce validation and diagnostic reporting as a layered architecture that 
                     │  .ValidatePipelines()                │
                     │  .DescribePipelines()                │
                     │                                     │
-                    │  Registers IAmAPipelineValidator     │
+                    │  Registers IAmAPipelineValidator      │
+                    │    + BrighterValidationHostedService   │
                     │  Registers IAmAPipelineDiagnosticWriter│
+                    │    + BrighterDiagnosticHostedService   │
                     └─────────────────────────────────────┘
                            │
             ┌──────────────┼──────────────┐
@@ -124,7 +126,7 @@ The validator is parameterless — it has all its dependencies via constructor i
 
 ```csharp
 // In Paramore.Brighter (core handler rules)
-internal static class HandlerPipelineValidationRules
+public static class HandlerPipelineValidationRules
 {
     // Returns ISpecification<HandlerPipelineDescription> instances for:
     // FR-1: Backstop attribute ordering
@@ -134,7 +136,7 @@ internal static class HandlerPipelineValidationRules
 }
 
 // In Paramore.Brighter (producer rules, same project as AddProducers)
-internal static class ProducerValidationRules
+public static class ProducerValidationRules
 {
     // Returns ISpecification<Publication> instances for:
     // FR-4: Publication.RequestType validation
@@ -142,7 +144,7 @@ internal static class ProducerValidationRules
 }
 
 // In Paramore.Brighter.ServiceActivator (consumer rules)
-internal static class ConsumerValidationRules
+public static class ConsumerValidationRules
 {
     // Returns ISpecification<Subscription> instances for:
     // FR-6: Pump ↔ handler type match
@@ -505,7 +507,7 @@ Third-party handlers (e.g. custom Polly wrappers) can implement these interfaces
 
 ```csharp
 // Example: backstop and async consistency specifications with per-attribute error messages
-internal static class HandlerPipelineValidationRules
+public static class HandlerPipelineValidationRules
 {
     public static IEnumerable<ISpecification<HandlerPipelineDescription>> Rules()
     {
@@ -666,10 +668,10 @@ builder.Services.AddBrighter(options => { /* ... */ })
 ```
 
 The extension methods register:
-- `IAmAPipelineValidator` and/or `IAmAPipelineDiagnosticWriter` in DI.
-- A dedicated `BrighterValidationHostedService` (an `IHostedService`) that runs validation at startup.
+- `ValidatePipelines()` registers `IAmAPipelineValidator` and a `BrighterValidationHostedService` (`IHostedService`) that runs validation at startup.
+- `DescribePipelines()` registers `IAmAPipelineDiagnosticWriter` and a `BrighterDiagnosticHostedService` (`IHostedService`) that runs the diagnostic report at startup. This hosted service is independent of `BrighterValidationHostedService` — calling `DescribePipelines()` without `ValidatePipelines()` produces the diagnostic report without validation.
 
-**Precondition**: `ValidatePipelines()` requires the subscriber registry to implement `IAmASubscriberRegistryInspector`. The built-in `SubscriberRegistry` satisfies this automatically. Applications using a custom `IAmASubscriberRegistry` implementation must also implement `IAmASubscriberRegistryInspector` on that type — if the inspector interface cannot be resolved from DI, the validator throws at startup with a message identifying the missing interface and the required action.
+**Precondition**: `ValidatePipelines()` requires the subscriber registry to implement `IAmASubscriberRegistryInspector`. The built-in `SubscriberRegistry` satisfies this automatically. `ServiceCollectionSubscriberRegistry` (the DI wrapper used in `Paramore.Brighter.Extensions.DependencyInjection`) must also implement `IAmASubscriberRegistryInspector` by delegating to its inner `SubscriberRegistry` — since `ValidatePipelines()` resolves `ServiceCollectionSubscriberRegistry` from the container and passes it to `PipelineBuilder`, the wrapper must satisfy the same interface contract. Applications using a custom `IAmASubscriberRegistry` implementation must also implement `IAmASubscriberRegistryInspector` on that type — if the inspector interface cannot be resolved from DI, the validator throws at startup with a message identifying the missing interface and the required action.
 
 ### Integration Points and Hosted Service Coordination
 
@@ -682,7 +684,7 @@ public class BrighterPipelineValidationOptions
     /// <summary>
     /// When true, ServiceActivatorHostedService is responsible for running
     /// validation before _dispatcher.Receive(). BrighterValidationHostedService
-    /// becomes a no-op. Set by AddConsumers() when validation is opted in.
+    /// becomes a no-op. Set unconditionally by AddConsumers().
     /// </summary>
     public bool ConsumerOwnsValidation { get; set; }
 }
@@ -690,13 +692,13 @@ public class BrighterPipelineValidationOptions
 
 Registration rules:
 - `ValidatePipelines()` always registers `IAmAPipelineValidator` in DI, always registers `BrighterValidationHostedService`, and always registers `BrighterPipelineValidationOptions` (with `ConsumerOwnsValidation = false`).
-- `AddConsumers()`, if `BrighterPipelineValidationOptions` is already registered, sets `ConsumerOwnsValidation = true`. This is a `Configure<BrighterPipelineValidationOptions>` call, so registration order between `ValidatePipelines()` and `AddConsumers()` does not matter.
+- `AddConsumers()` always sets `ConsumerOwnsValidation = true` via `Configure<BrighterPipelineValidationOptions>`. This is unconditional — `AddConsumers()` does not check whether `ValidatePipelines()` was called. Registration order between `ValidatePipelines()` and `AddConsumers()` does not matter because `Configure<T>` actions are applied when the options are resolved, not at registration time.
 
 The two hosted services read the flag explicitly:
 
-**`BrighterValidationHostedService.StartAsync()`**: Reads `BrighterPipelineValidationOptions`. If `ConsumerOwnsValidation` is true, this service is a no-op — `ServiceActivatorHostedService` will handle validation. If false (pure CQRS or producers only), it runs validation and diagnostics.
+**`BrighterValidationHostedService.StartAsync()`**: Reads `BrighterPipelineValidationOptions`. If `ConsumerOwnsValidation` is true, this service is a no-op — `ServiceActivatorHostedService` will handle validation. If false (pure CQRS or producers only), it runs validation and diagnostics. After calling `ThrowIfInvalid()`, it logs any warnings from `PipelineValidationResult.Warnings` at `LogLevel.Warning` — fulfilling the contract that warnings are surfaced but do not prevent startup.
 
-**`ServiceActivatorHostedService.StartAsync()`**: Resolves `IAmAPipelineValidator?` and `IAmAPipelineDiagnosticWriter?` (both optional) from DI. If present, calls them before `_dispatcher.Receive()`. If absent (validation not opted in), proceeds directly to `Receive()`.
+**`ServiceActivatorHostedService.StartAsync()`**: Uses a single constructor (no multiple-constructor ambiguity). The constructor takes `ILogger`, `IDispatcher`, and `IServiceProvider`. At `StartAsync` time, it resolves `IAmAPipelineValidator?` and `IAmAPipelineDiagnosticWriter?` from the service provider only when `BrighterPipelineValidationOptions.ConsumerOwnsValidation` is true. This avoids the DI pitfall of nullable constructor parameters — Microsoft.Extensions.DependencyInjection does not support optional constructor injection, so optional dependencies must be resolved explicitly from `IServiceProvider`. After calling `ThrowIfInvalid()`, it logs any warnings at `LogLevel.Warning`, matching `BrighterValidationHostedService`'s behaviour.
 
 ```
 Scenario 1: Pure CQRS / Producers Only
@@ -1000,7 +1002,7 @@ public interface IAmASubscriberRegistryInspector
 }
 ```
 
-`SubscriberRegistry` implements both `IAmASubscriberRegistry` and `IAmASubscriberRegistryInspector`. Custom registry implementations only need to implement `IAmASubscriberRegistryInspector` if they want to participate in pipeline validation — there is no silent degradation. If the validator cannot resolve `IAmASubscriberRegistryInspector` from DI, it reports a clear error explaining that the custom registry must implement the inspector interface to support validation.
+`SubscriberRegistry` implements both `IAmASubscriberRegistry` and `IAmASubscriberRegistryInspector`. `ServiceCollectionSubscriberRegistry` (the DI wrapper in `Paramore.Brighter.Extensions.DependencyInjection`) must also implement `IAmASubscriberRegistryInspector` by delegating to its inner `SubscriberRegistry` — since `ValidatePipelines()` resolves `ServiceCollectionSubscriberRegistry` from the container, the wrapper must satisfy the same interface contract. Custom registry implementations only need to implement `IAmASubscriberRegistryInspector` if they want to participate in pipeline validation — there is no silent degradation. If the validator cannot resolve `IAmASubscriberRegistryInspector` from DI, it reports a clear error explaining that the custom registry must implement the inspector interface to support validation.
 
 **`GetHandlerTypes(Type requestType)`** returns all handler types registered for a given request type — the superset of types that routing functions may return, without evaluating any routing predicate.
 
@@ -1173,16 +1175,17 @@ foreach (var description in pipelineBuilder.Describe())
 | `IAmAPipelineDiagnosticWriter` | `Paramore.Brighter` | Core interface |
 | `PipelineValidationResult` | `Paramore.Brighter` | Aggregates `ValidationError` instances; pipeline-specific information holder |
 | `PipelineValidationException` | `Paramore.Brighter` | Extends `ConfigurationException`; holds `PipelineValidationResult` for programmatic access |
-| `HandlerPipelineValidationRules` | `Paramore.Brighter` | Attribute checks (internal) |
-| `ProducerValidationRules` | `Paramore.Brighter` | Publication checks (internal) |
-| `ConsumerValidationRules` | `Paramore.Brighter.ServiceActivator` | Pump/handler/MessageType checks (internal) |
+| `HandlerPipelineValidationRules` | `Paramore.Brighter` | Attribute checks (public — tests call these directly from separate assemblies) |
+| `ProducerValidationRules` | `Paramore.Brighter` | Publication checks (public — tests call these directly from separate assemblies) |
+| `ConsumerValidationRules` | `Paramore.Brighter.ServiceActivator` | Pump/handler/MessageType checks (public — tests call these directly from separate assemblies) |
 | **DI & Hosting Integration** | | |
 | `ValidatePipelines()` extension | `Paramore.Brighter.Extensions.DependencyInjection` | Extension on `IBrighterBuilder` |
 | `DescribePipelines()` extension | `Paramore.Brighter.Extensions.DependencyInjection` | Extension on `IBrighterBuilder` |
 | `BrighterPipelineValidationOptions` | `Paramore.Brighter.Extensions.DependencyInjection` | Explicit coordination flag between hosted services |
-| `BrighterValidationHostedService` | `Paramore.Brighter.Extensions.DependencyInjection` | Runs at startup for non-consumer apps |
+| `BrighterValidationHostedService` | `Paramore.Brighter.Extensions.DependencyInjection` | Runs validation at startup for non-consumer apps; logs warnings |
+| `BrighterDiagnosticHostedService` | `Paramore.Brighter.Extensions.DependencyInjection` | Runs diagnostic report at startup; independent of validation |
 | Consumer rule registration | `Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection` | Adds consumer rules to validator |
-| `ServiceActivatorHostedService` changes | `Paramore.Brighter.ServiceActivator.Extensions.Hosting` | Invokes validator/writer before Receive() |
+| `ServiceActivatorHostedService` changes | `Paramore.Brighter.ServiceActivator.Extensions.Hosting` | Single constructor; resolves validator/writer from IServiceProvider in StartAsync; logs warnings |
 
 ### Validation Specification Details
 
@@ -1333,12 +1336,20 @@ new Specification<Subscription>(
             _ => true
         };
     },
-    s => new ValidationError(
-        ValidationSeverity.Error,
-        $"Subscription '{s.Name}'",
-        s.MessagePumpType == MessagePumpType.Reactor
-            ? $"uses Reactor but handler implements IHandleRequestsAsync. Use Proactor or change the handler to implement IHandleRequests<{s.DataType.Name}>."
-            : $"uses Proactor but handler implements IHandleRequests. Use Reactor or change the handler to implement IHandleRequestsAsync<{s.DataType.Name}>."))
+    s =>
+    {
+        var handlerTypes = subscriberRegistry.GetHandlerTypes(s.DataType);
+        var mismatchedHandler = s.MessagePumpType == MessagePumpType.Reactor
+            ? handlerTypes.First(h => typeof(IHandleRequestsAsync).IsAssignableFrom(h))
+            : handlerTypes.First(h => typeof(IHandleRequests).IsAssignableFrom(h)
+                && !typeof(IHandleRequestsAsync).IsAssignableFrom(h));
+        return new ValidationError(
+            ValidationSeverity.Error,
+            $"Subscription '{s.Name}'",
+            s.MessagePumpType == MessagePumpType.Reactor
+                ? $"uses Reactor but handler '{mismatchedHandler.Name}' implements IHandleRequestsAsync. Use Proactor or change the handler to implement IHandleRequests<{s.DataType.Name}>."
+                : $"uses Proactor but handler '{mismatchedHandler.Name}' implements IHandleRequests. Use Reactor or change the handler to implement IHandleRequestsAsync<{s.DataType.Name}>.");
+    })
 ```
 
 **Specification: HandlerRegistered** (Error, simple)

@@ -122,7 +122,7 @@ The diagnostic report must show, for each `Subscription`:
 ### Functional Requirements — Cross-Cutting
 
 #### FR-10: Aggregate Error Reporting
-All validation errors from all configuration paths must be collected and reported together in a single exception, not one at a time. The developer should see every problem in a single startup failure, not have to fix-and-restart repeatedly. The exception type should extend Brighter's existing `ConfigurationException` so that existing catch blocks continue to work (ADR 0053 specifies `PipelineValidationException : ConfigurationException`).
+All validation errors from all configuration paths must be collected and reported together in a single exception, not one at a time. The developer should see every problem in a single startup failure, not have to fix-and-restart repeatedly. The exception type should extend Brighter's existing `ConfigurationException` so that existing catch blocks continue to work (ADR 0053 specifies `PipelineValidationException : ConfigurationException`). Validation warnings (severity = Warning) must be logged at `LogLevel.Warning` via `ILogger` after errors are thrown — warnings are surfaced for developer awareness but do not prevent startup.
 
 #### FR-11: Clear, Actionable Error Messages
 Each validation error message must identify:
