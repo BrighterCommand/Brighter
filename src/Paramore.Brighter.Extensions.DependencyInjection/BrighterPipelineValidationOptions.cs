@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@ public class BrighterPipelineValidationOptions
     /// <summary>
     /// When true, validation is deferred to <c>ServiceActivatorHostedService</c> and the
     /// <see cref="BrighterValidationHostedService"/> becomes a no-op. Set automatically
-    /// when <c>AddConsumers()</c> is called alongside <c>ValidatePipelines()</c>.
+    /// Set automatically by <c>AddConsumers()</c>.
     /// </summary>
     public bool ConsumerOwnsValidation { get; set; }
 }
