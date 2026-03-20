@@ -73,6 +73,9 @@ public static class BrighterPipelineValidationExtensions
             return new PipelineDiagnosticWriter(logger, pipelineBuilder);
         });
 
+        builder.Services.AddSingleton<IHostedService, BrighterDiagnosticHostedService>();
+        builder.Services.AddOptions<BrighterPipelineValidationOptions>();
+
         return builder;
     }
 }
