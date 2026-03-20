@@ -62,7 +62,12 @@ public static class ConsumerValidationRules
             s =>
             {
                 var handlerTypes = inspector.GetHandlerTypes(s.RequestType!);
-                var mismatchedHandler = handlerTypes.First();
+                var mismatchedHandler = s.MessagePumpType switch
+                {
+                    MessagePumpType.Reactor => handlerTypes.First(h => IsAsyncHandler(h)),
+                    MessagePumpType.Proactor => handlerTypes.First(h => !IsAsyncHandler(h)),
+                    _ => handlerTypes.First()
+                };
 
                 return s.MessagePumpType switch
                 {
