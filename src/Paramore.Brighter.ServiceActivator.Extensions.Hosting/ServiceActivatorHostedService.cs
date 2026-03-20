@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -48,6 +49,11 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.Hosting
             {
                 var result = _validator.Validate();
                 result.ThrowIfInvalid();
+
+                foreach (var warning in result.Warnings)
+                {
+                    _logger.LogWarning("Pipeline validation warning from {Source}: {Message}", warning.Source, warning.Message);
+                }
             }
 
             _dispatcher.Receive();

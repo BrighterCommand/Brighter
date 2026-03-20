@@ -73,6 +73,11 @@ public class BrighterValidationHostedService : IHostedService
         var result = _validator.Validate();
         result.ThrowIfInvalid();
 
+        foreach (var warning in result.Warnings)
+        {
+            _logger.LogWarning("Pipeline validation warning from {Source}: {Message}", warning.Source, warning.Message);
+        }
+
         return Task.CompletedTask;
     }
 

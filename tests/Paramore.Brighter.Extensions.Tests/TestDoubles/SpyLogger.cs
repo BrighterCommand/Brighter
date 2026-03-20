@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,22 +27,19 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 
-namespace Paramore.Brighter.Core.Tests.Validation.TestDoubles;
+namespace Paramore.Brighter.Extensions.Tests.TestDoubles;
 
 /// <summary>
-/// A simple in-memory logger that captures log entries for test assertions.
+/// A generic in-memory logger that captures log entries for test assertions.
 /// </summary>
-public class SpyLogger : ILogger
+public class SpyLogger<T> : ILogger<T>
 {
     private readonly List<LogEntry> _entries = new();
 
     public IReadOnlyList<LogEntry> Entries => _entries.AsReadOnly();
 
-    public IEnumerable<LogEntry> InformationEntries =>
-        _entries.Where(e => e.LogLevel == LogLevel.Information);
-
-    public IEnumerable<LogEntry> DebugEntries =>
-        _entries.Where(e => e.LogLevel == LogLevel.Debug);
+    public IEnumerable<LogEntry> WarningEntries =>
+        _entries.Where(e => e.LogLevel == LogLevel.Warning);
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
@@ -56,25 +53,3 @@ public class SpyLogger : ILogger
 }
 
 public record LogEntry(LogLevel LogLevel, string Message);
-
-/// <summary>
-/// A generic wrapper around <see cref="SpyLogger"/> that implements <see cref="ILogger{T}"/>
-/// for use with classes that require a typed logger.
-/// </summary>
-public class SpyLogger<T> : ILogger<T>
-{
-    private readonly SpyLogger _inner = new();
-
-    public IReadOnlyList<LogEntry> Entries => _inner.Entries;
-
-    public IEnumerable<LogEntry> WarningEntries =>
-        _inner.Entries.Where(e => e.LogLevel == LogLevel.Warning);
-
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
-        Func<TState, Exception?, string> formatter)
-        => _inner.Log(logLevel, eventId, state, exception, formatter);
-
-    public bool IsEnabled(LogLevel logLevel) => true;
-
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-}

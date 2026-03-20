@@ -47,6 +47,9 @@ public class SpyPipelineValidator : IAmAPipelineValidator
     public static SpyPipelineValidator WithNoErrors(List<string> actionLog) =>
         new(new PipelineValidationResult([], []), actionLog);
 
+    public static SpyPipelineValidator WithWarningsOnly(List<string> actionLog, params ValidationError[] warnings) =>
+        new(new PipelineValidationResult([], warnings), actionLog);
+
     public static SpyPipelineValidator WithErrors(List<string> actionLog, params ValidationError[] errors) =>
         new(new PipelineValidationResult(errors, []), actionLog);
 
