@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// <summary>
     /// .NET IoC backed Subscriber registry, used to find matching handlers
     /// </summary>
-    public class ServiceCollectionSubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry
+    public class ServiceCollectionSubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry, IAmASubscriberRegistryInspector
     {
         private readonly IServiceCollection _services;
         private readonly SubscriberRegistry _registry;
@@ -149,5 +149,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             });
             _registry.RegisterAsync<TRequest>(router, handlerTypes);
         }
+
+        /// <inheritdoc />
+        public Type[] GetHandlerTypes(Type requestType) => _registry.GetHandlerTypes(requestType);
+
+        /// <inheritdoc />
+        public Type[] GetRegisteredRequestTypes() => _registry.GetRegisteredRequestTypes();
     }
 }
