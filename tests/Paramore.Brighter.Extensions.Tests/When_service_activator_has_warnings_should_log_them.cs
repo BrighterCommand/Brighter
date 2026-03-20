@@ -26,7 +26,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Validation;
@@ -45,8 +47,14 @@ public class ServiceActivatorWarningLoggingTests
         var warning2 = new ValidationError(ValidationSeverity.Warning, "HandlerB", "Attribute mismatch suggestion");
         var dispatcher = new SpyDispatcher(actionLog);
         var validator = SpyPipelineValidator.WithWarningsOnly(actionLog, warning1, warning2);
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IAmAPipelineValidator>(validator);
+        var provider = services.BuildServiceProvider();
+
+        var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = true });
         var logger = new SpyLogger<ServiceActivatorHostedService>();
-        var service = new ServiceActivatorHostedService(logger, dispatcher, validator, null);
+        var service = new ServiceActivatorHostedService(logger, dispatcher, provider, options);
 
         // Act
         await service.StartAsync(CancellationToken.None);

@@ -1,8 +1,11 @@
-using System.Linq;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
 
 namespace Paramore.Brighter.ServiceActivator.Extensions.Hosting
@@ -11,48 +14,49 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.Hosting
     {
         private readonly ILogger<ServiceActivatorHostedService> _logger;
         private readonly IDispatcher _dispatcher;
-        private readonly IAmAPipelineValidator? _validator;
-        private readonly IAmAPipelineDiagnosticWriter? _diagnosticWriter;
-
-        public ServiceActivatorHostedService(ILogger<ServiceActivatorHostedService> logger, IDispatcher dispatcher)
-            : this(logger, dispatcher, null, null)
-        {
-        }
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IOptions<BrighterPipelineValidationOptions> _options;
 
         /// <summary>
-        /// Initializes a new instance of <see cref="ServiceActivatorHostedService"/> with optional
-        /// pipeline validation and diagnostic support.
+        /// Initializes a new instance of <see cref="ServiceActivatorHostedService"/>.
+        /// Optional pipeline validation and diagnostic dependencies are resolved from the
+        /// service provider at startup, controlled by <see cref="BrighterPipelineValidationOptions"/>.
         /// </summary>
         /// <param name="logger">The logger.</param>
         /// <param name="dispatcher">The message dispatcher.</param>
-        /// <param name="validator">Optional pipeline validator; when present, validation runs before Receive.</param>
-        /// <param name="diagnosticWriter">Optional diagnostic writer; when present, pipeline descriptions are logged before Receive.</param>
+        /// <param name="serviceProvider">The service provider for resolving optional validation dependencies.</param>
+        /// <param name="options">Validation options controlling whether this service runs validation before Receive.</param>
         public ServiceActivatorHostedService(
             ILogger<ServiceActivatorHostedService> logger,
             IDispatcher dispatcher,
-            IAmAPipelineValidator? validator,
-            IAmAPipelineDiagnosticWriter? diagnosticWriter)
+            IServiceProvider serviceProvider,
+            IOptions<BrighterPipelineValidationOptions> options)
         {
             _logger = logger;
             _dispatcher = dispatcher;
-            _validator = validator;
-            _diagnosticWriter = diagnosticWriter;
+            _serviceProvider = serviceProvider;
+            _options = options;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Starting hosted service dispatcher");
 
-            _diagnosticWriter?.Describe();
-
-            if (_validator != null)
+            if (_options.Value.ConsumerOwnsValidation)
             {
-                var result = _validator.Validate();
-                result.ThrowIfInvalid();
+                var diagnosticWriter = _serviceProvider.GetService<IAmAPipelineDiagnosticWriter>();
+                diagnosticWriter?.Describe();
 
-                foreach (var warning in result.Warnings)
+                var validator = _serviceProvider.GetService<IAmAPipelineValidator>();
+                if (validator != null)
                 {
-                    _logger.LogWarning("Pipeline validation warning from {Source}: {Message}", warning.Source, warning.Message);
+                    var result = validator.Validate();
+                    result.ThrowIfInvalid();
+
+                    foreach (var warning in result.Warnings)
+                    {
+                        _logger.LogWarning("Pipeline validation warning from {Source}: {Message}", warning.Source, warning.Message);
+                    }
                 }
             }
 
