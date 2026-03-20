@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -49,7 +52,13 @@ public static class BrighterPipelineValidationExtensions
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
                 ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
             var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
-            return new PipelineValidator(pipelineBuilder);
+
+            var publications = ResolvePublications(sp);
+            var subscriptions = ResolveSubscriptions(sp);
+            var consumerSpecs = sp.GetServices<ISpecification<Subscription>>();
+            var consumerSpecList = consumerSpecs.Any() ? consumerSpecs : null;
+
+            return new PipelineValidator(pipelineBuilder, publications, subscriptions, consumerSpecList);
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterValidationHostedService>();
@@ -72,12 +81,36 @@ public static class BrighterPipelineValidationExtensions
                 ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
             var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
             var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<PipelineDiagnosticWriter>();
-            return new PipelineDiagnosticWriter(logger, pipelineBuilder);
+
+            var publications = ResolvePublications(sp);
+            var subscriptions = ResolveSubscriptions(sp);
+            var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
+            var mapperRegistry = mapperRegistryBuilder != null
+                ? ServiceCollectionExtensions.MessageMapperRegistry(sp)
+                : null;
+
+            return new PipelineDiagnosticWriter(logger, pipelineBuilder, mapperRegistry, publications, subscriptions);
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterDiagnosticHostedService>();
         builder.Services.AddOptions<BrighterPipelineValidationOptions>();
 
         return builder;
+    }
+
+    private static IEnumerable<Publication>? ResolvePublications(IServiceProvider sp)
+    {
+        var producerRegistry = sp.GetService<IAmAProducerRegistry>();
+        var publications = producerRegistry?.Producers
+            .Select(p => p.Publication)
+            .ToList();
+        return publications is { Count: > 0 } ? publications : null;
+    }
+
+    private static IEnumerable<Subscription>? ResolveSubscriptions(IServiceProvider sp)
+    {
+        var consumerOptions = sp.GetService<IAmConsumerOptions>();
+        var subscriptions = consumerOptions?.Subscriptions?.ToList();
+        return subscriptions is { Count: > 0 } ? subscriptions : null;
     }
 }
