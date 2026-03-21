@@ -421,7 +421,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 5.1: SQLite Outbox Provisioner Creates Table on Fresh Database
 
-- [ ] **TEST + IMPLEMENT: Sqlite outbox provisioner creates outbox table when none exists**
+- [x] **TEST + IMPLEMENT: Sqlite outbox provisioner creates outbox table when none exists**
   - **USE COMMAND**: `/test-first when sqlite outbox provisioner runs on fresh database it should create outbox table`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_sqlite_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`
@@ -440,7 +440,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 5.2: SQLite Inbox Provisioner and Bootstrap
 
-- [ ] **TEST + IMPLEMENT: Sqlite inbox provisioner creates table and handles bootstrap**
+- [x] **TEST + IMPLEMENT: Sqlite inbox provisioner creates table and handles bootstrap**
   - **USE COMMAND**: `/test-first when sqlite inbox provisioner runs it should create table or bootstrap existing`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_sqlite_inbox_provisioner_runs_it_should_create_table_or_bootstrap_existing.cs`
