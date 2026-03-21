@@ -31,6 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.Spanner\Paramore.Brighter.BoxProvisioning.Spanner.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Firestore\Paramore.Brighter.Inbox.Firestore.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Spanner\Paramore.Brighter.Inbox.Spanner.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.Firestore\Paramore.Brighter.Locking.Firestore.csproj" />

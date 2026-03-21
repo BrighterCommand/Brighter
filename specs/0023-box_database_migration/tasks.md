@@ -457,7 +457,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 6.1: Spanner Outbox Provisioner Creates Table on Fresh Database
 
-- [ ] **TEST + IMPLEMENT: Spanner outbox provisioner creates outbox table when none exists**
+- [x] **TEST + IMPLEMENT: Spanner outbox provisioner creates outbox table when none exists**
   - **USE COMMAND**: `/test-first when spanner outbox provisioner runs on fresh database it should create outbox table`
   - Test location: `tests/Paramore.Brighter.Gcp.Tests/Spanner/BoxProvisioning/`
   - Test file: `When_spanner_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`
@@ -476,7 +476,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 6.2: Spanner Inbox Provisioner Creates Table
 
-- [ ] **TEST + IMPLEMENT: Spanner inbox provisioner creates inbox table when none exists**
+- [x] **TEST + IMPLEMENT: Spanner inbox provisioner creates inbox table when none exists**
   - **USE COMMAND**: `/test-first when spanner inbox provisioner runs on fresh database it should create inbox table`
   - Test location: `tests/Paramore.Brighter.Gcp.Tests/Spanner/BoxProvisioning/`
   - Test file: `When_spanner_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table.cs`
