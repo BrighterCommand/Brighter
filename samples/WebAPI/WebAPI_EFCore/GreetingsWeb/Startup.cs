@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi;
 using Paramore.Brighter;
+using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
@@ -113,8 +114,11 @@ namespace GreetingsWeb
                         configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
                     }
                 )
-                .AutoFromAssemblies();
-        }
+                .AutoFromAssemblies()
+                .UseBoxProvisioning(options =>
+                {
+                    BoxProvisioningFactory.AddOutbox(options, rdbms, outboxConfiguration);
+                });
 
         private void ConfigureDarker(IServiceCollection services)
         {

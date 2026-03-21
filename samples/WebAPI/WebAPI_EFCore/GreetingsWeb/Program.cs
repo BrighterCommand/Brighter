@@ -5,13 +5,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using TransportMaker;
 
 var host = CreateHostBuilder(args).Build();
 
 host.CheckDbIsUp(ApplicationType.Greetings);
 host.MigrateDatabase();
-host.CreateOutbox(ApplicationType.Greetings, "Greetings", ConfigureTransport.HasBinaryMessagePayload());
 
 host.Run();
 return;

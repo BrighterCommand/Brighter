@@ -26,6 +26,11 @@
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Outbox.PostgreSql\Paramore.Brighter.Outbox.PostgreSql.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj"/>
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.BoxProvisioning\Paramore.Brighter.BoxProvisioning.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.BoxProvisioning.MsSql\Paramore.Brighter.BoxProvisioning.MsSql.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.BoxProvisioning.MySql\Paramore.Brighter.BoxProvisioning.MySql.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.BoxProvisioning.PostgreSql\Paramore.Brighter.BoxProvisioning.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.BoxProvisioning.Sqlite\Paramore.Brighter.BoxProvisioning.Sqlite.csproj" />
     <ProjectReference Include="..\Greetings_Migrations\Greetings_Migrations.csproj" />
     <ProjectReference Include="..\Salutations_Migrations\Salutations_Migrations.csproj" />
   </ItemGroup>
