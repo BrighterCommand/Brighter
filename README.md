@@ -39,7 +39,7 @@ For messaging support, also install a transport package:
 
 ```bash
 dotnet add package Paramore.Brighter.MessagingGateway.RMQ  # RabbitMQ
-dotnet add package Paramore.Brighter.MessagingGateway.AWSSQS  # AWS SQS
+dotnet add package Paramore.Brighter.MessagingGateway.AWSSQS.V4  # AWS SQS
 dotnet add package Paramore.Brighter.MessagingGateway.Kafka  # Kafka
 ```
 
@@ -306,7 +306,7 @@ Latest stable releases are available on [NuGet](https://www.nuget.org/profiles/B
 
 **Transport Packages:**
 - `Paramore.Brighter.MessagingGateway.RMQ` - RabbitMQ
-- `Paramore.Brighter.MessagingGateway.AWSSQS` - AWS SQS+SNS
+- `Paramore.Brighter.MessagingGateway.AWSSQS.V4` - AWS SQS+SNS
 - `Paramore.Brighter.MessagingGateway.Kafka` - Apache Kafka
 - `Paramore.Brighter.MessagingGateway.AzureServiceBus` - Azure Service Bus
 - `Paramore.Brighter.MessagingGateway.Redis` - Redis Streams
