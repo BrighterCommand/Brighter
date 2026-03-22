@@ -514,7 +514,7 @@ The code of conduct is from [Contributor Covenant](http://contributor-covenant.o
 
 Our code is organized as follows:
 
-- We add code for for the Brighter framework under the src directory
+- We add code for the Brighter framework under the src directory
   - Within src, we use projects for modularity
     - We divide our projects by responsibility
       - Paramore.Brighter contains core functionality for our Command Processor and Command Dispatcher. It also contains core code allowing the framework to act as a message producer in an event driven architecture.
@@ -573,7 +573,7 @@ Our code is organized as follows:
       - Paramore.Brighter.Sqlite support for using Sqlite with Brighter.
       - Paramore.Brighter.Sqlite.Dapper support for using Sqlite with Dapper for Brighter.
       - Paramore.Brighter.Sqlite.EntityFrameworkCore support for using Sqlite with EF Core for Brighter.
-      - Paramore.Brighter.Tranformers.AWS support for using AWS with a Claim Check.
+      - Paramore.Brighter.Transformers.AWS support for using AWS with a Claim Check.
       - Paramore.Brighter.Transformers.Azure support for using Azure with a Claim Check.
       - Paramore.Brighter.Transformers.MongoGridFS support for using MongoGridFS with a Claim Check.
 - We add code for for tests for the Brighter framework under the tests directory
