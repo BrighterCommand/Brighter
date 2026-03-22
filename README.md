@@ -84,7 +84,7 @@ First, install a transport package (pick one for your broker):
 
 ```bash
 dotnet add package Paramore.Brighter.MessagingGateway.RMQ.Async  # RabbitMQ
-dotnet add package Paramore.Brighter.MessagingGateway.AWSSQS.V4  # AWS SQS
+dotnet add package Paramore.Brighter.MessagingGateway.AWSSQS.V4  # AWS SQS (uses AWS SDK v4; use AWSSQS for v3)
 dotnet add package Paramore.Brighter.MessagingGateway.Kafka  # Kafka
 ```
 
@@ -298,7 +298,7 @@ Latest stable releases are available on [NuGet](https://www.nuget.org/profiles/B
 
 **Transport Packages:**
 - `Paramore.Brighter.MessagingGateway.RMQ.Async` - RabbitMQ
-- `Paramore.Brighter.MessagingGateway.AWSSQS.V4` - AWS SQS+SNS
+- `Paramore.Brighter.MessagingGateway.AWSSQS.V4` - AWS SQS+SNS (AWS SDK v4; use `AWSSQS` for v3)
 - `Paramore.Brighter.MessagingGateway.Kafka` - Apache Kafka
 - `Paramore.Brighter.MessagingGateway.AzureServiceBus` - Azure Service Bus
 - `Paramore.Brighter.MessagingGateway.Redis` - Redis Streams
