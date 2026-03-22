@@ -98,14 +98,9 @@ dotnet add package Paramore.Brighter.ServiceActivator.Extensions.Hosting
 ### 1. Define an Event
 
 ```csharp
-public class GreetingEvent : Event
+public class GreetingEvent(string name) : Event(Id.Random())
 {
-    public GreetingEvent(string name) : base(Id.Random())
-    {
-        Name = name;
-    }
-
-    public string Name { get; }
+    public string Name { get; } = name;
 }
 ```
 
