@@ -80,7 +80,7 @@ commandProcessor.Send(new GreetingCommand("World"));
 For microservices communication, Brighter can publish events to external message brokers. First, install a transport package:
 
 ```bash
-dotnet add package Paramore.Brighter.MessagingGateway.RMQ  # RabbitMQ
+dotnet add package Paramore.Brighter.MessagingGateway.RMQ.Async  # RabbitMQ
 dotnet add package Paramore.Brighter.MessagingGateway.AWSSQS.V4  # AWS SQS
 dotnet add package Paramore.Brighter.MessagingGateway.Kafka  # Kafka
 ```
@@ -268,7 +268,7 @@ Latest stable releases are available on [NuGet](https://www.nuget.org/profiles/B
 - `Paramore.Brighter.ServiceActivator` - Message pump for consuming messages
 
 **Transport Packages:**
-- `Paramore.Brighter.MessagingGateway.RMQ` - RabbitMQ
+- `Paramore.Brighter.MessagingGateway.RMQ.Async` - RabbitMQ
 - `Paramore.Brighter.MessagingGateway.AWSSQS.V4` - AWS SQS+SNS
 - `Paramore.Brighter.MessagingGateway.Kafka` - Apache Kafka
 - `Paramore.Brighter.MessagingGateway.AzureServiceBus` - Azure Service Bus
