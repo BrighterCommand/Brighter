@@ -207,6 +207,11 @@ Register resilience pipelines using Polly's `ResiliencePipelineRegistry` and pas
 
 ```csharp
 var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
+
+// Add Brighter's required internal pipelines
+resiliencePipelineRegistry.AddBrighterDefault();
+
+// Add your own pipelines
 resiliencePipelineRegistry.TryAddBuilder("MyRetryPolicy",
     (builder, _) => builder.AddRetry(new RetryStrategyOptions
     {
