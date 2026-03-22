@@ -185,7 +185,7 @@ Add cross-cutting concerns via attributes on your handlers:
 public class GreetingCommandHandler : RequestHandler<GreetingCommand>
 {
     [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-    [UsePolicyAsync(policy: CommandProcessor.RETRYPOLICYASYNC, step: 2)]
+    [UseResiliencePipeline("MyRetryPolicy", step: 2)]
     public override GreetingCommand Handle(GreetingCommand command)
     {
         Console.WriteLine($"Hello {command.Name}");
@@ -194,11 +194,22 @@ public class GreetingCommandHandler : RequestHandler<GreetingCommand>
 }
 ```
 
-Brighter provides default retry and circuit breaker policies. You can also register custom policies using `AddPolicies()`.
+Register resilience pipelines using Polly's `ResiliencePipelineRegistry`:
+
+```csharp
+var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
+resiliencePipelineRegistry.TryAddBuilder("MyRetryPolicy",
+    (builder, _) => builder.AddRetry(new RetryStrategyOptions
+    {
+        BackoffType = DelayBackoffType.Linear,
+        Delay = TimeSpan.FromSeconds(1),
+        MaxRetryAttempts = 3
+    }));
+```
 
 **Available Middleware:**
 - **Logging**: `[RequestLogging]` / `[RequestLoggingAsync]` - Log commands/events automatically
-- **Retry & Circuit Breaker**: `[UsePolicy]` / `[UsePolicyAsync]` - Integrates with Polly for resilience
+- **Retry & Circuit Breaker**: `[UseResiliencePipeline]` / `[UseResiliencePipelineAsync]` - Integrates with Polly 8.x for resilience
 - **Validation**: `[Validation]` - Validate requests before handling
 - **Custom middleware**: Create your own attributes
 
