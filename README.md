@@ -35,14 +35,6 @@
 dotnet add package Paramore.Brighter
 ```
 
-For messaging support, also install a transport package:
-
-```bash
-dotnet add package Paramore.Brighter.MessagingGateway.RMQ  # RabbitMQ
-dotnet add package Paramore.Brighter.MessagingGateway.AWSSQS.V4  # AWS SQS
-dotnet add package Paramore.Brighter.MessagingGateway.Kafka  # Kafka
-```
-
 ### Basic Usage - Command Dispatcher
 
 **1. Define a Command**
@@ -59,7 +51,6 @@ public class GreetingCommand(string name) : Command(Id.Random())
 ```csharp
 public class GreetingCommandHandler : RequestHandler<GreetingCommand>
 {
-    [RequestLogging(step: 1, timing: HandlerTiming.Before)]
     public override GreetingCommand Handle(GreetingCommand command)
     {
         Console.WriteLine($"Hello {command.Name}");
@@ -84,20 +75,17 @@ commandProcessor.Send(new GreetingCommand("World"));
 
 > **Note:** For async operations, use `RequestHandlerAsync<T>` and override `HandleAsync()` instead, then call `SendAsync()`.
 
-### What's Next?
+## Out-of-Process Messaging
 
-Now that you've seen the basics, explore more capabilities:
+For microservices communication, Brighter can publish events to external message brokers. First, install a transport package:
 
-1. **[Out-of-Process Messaging](#out-of-process-messaging)** - Use external message brokers for microservices communication
-2. **[Middleware Pipeline](#middleware-pipeline)** - Add retry, circuit breaker, and logging via attributes
-3. **[Outbox Pattern](#outbox-pattern-for-reliable-messaging)** - Ensure reliable message delivery with transactional outbox
-4. **[Full Documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation/)** - Comprehensive guides, tutorials, and advanced patterns
+```bash
+dotnet add package Paramore.Brighter.MessagingGateway.RMQ  # RabbitMQ
+dotnet add package Paramore.Brighter.MessagingGateway.AWSSQS.V4  # AWS SQS
+dotnet add package Paramore.Brighter.MessagingGateway.Kafka  # Kafka
+```
 
-### Out-of-Process Messaging
-
-For microservices communication, Brighter can publish events to external message brokers.
-
-**1. Define an Event**
+### 1. Define an Event
 
 ```csharp
 public class GreetingEvent : Event
@@ -111,9 +99,7 @@ public class GreetingEvent : Event
 }
 ```
 
-**2. Configure Producers and Post**
-
-> **Note:** Make sure you've installed a transport package like `Paramore.Brighter.MessagingGateway.RMQ.Async`
+### 2. Configure Producers and Post
 
 ```csharp
 var builder = Host.CreateApplicationBuilder();
@@ -144,7 +130,7 @@ var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
 commandProcessor.Post(new GreetingEvent("World"));
 ```
 
-**3. Subscribe to Events**
+### 3. Create an Event Handler
 
 ```csharp
 public class GreetingEventHandler : RequestHandler<GreetingEvent>
@@ -155,8 +141,11 @@ public class GreetingEventHandler : RequestHandler<GreetingEvent>
         return base.Handle(@event);
     }
 }
+```
 
-// Configure consumer subscriptions
+### 4. Configure Consumer Subscriptions
+
+```csharp
 var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
 builder.Services.AddConsumers(options =>
@@ -215,35 +204,9 @@ resiliencePipelineRegistry.TryAddBuilder("MyRetryPolicy",
 
 ### Outbox Pattern for Reliable Messaging
 
-Brighter implements the [Outbox pattern](https://brightercommand.gitbook.io/paramore-brighter-documentation/brighter-outbox-support) to guarantee message delivery in distributed systems. Instead of calling `Post` directly, use `DepositPost` to write messages to the Outbox within your database transaction, then `ClearOutbox` to dispatch them to the broker after the transaction commits:
+Brighter implements the [Outbox pattern](https://brightercommand.gitbook.io/paramore-brighter-documentation/brighter-outbox-support) to guarantee message delivery in distributed systems. Instead of calling `Post` directly, use `DepositPost` to write messages to the Outbox within your database transaction, then `ClearOutbox` to dispatch them after the transaction commits. This ensures consistency between your database state and published messages.
 
-```csharp
-// In your handler - write message to Outbox in the same transaction as your business logic
-var id = await _postBox.DepositPostAsync(
-    new GreetingEvent("World"),
-    _transactionProvider,
-    cancellationToken: cancellationToken);
-
-// After committing the transaction, dispatch messages from the Outbox to the broker
-_postBox.ClearOutbox(id);
-```
-
-Configure the Outbox and a `TransactionProvider` when setting up producers. The `TransactionProvider` tells Brighter how to participate in your application's database transaction, so the Outbox write and your business data are committed atomically:
-
-```csharp
-builder.Services.AddBrighter()
-    .AutoFromAssemblies()
-    .AddProducers(configure =>
-    {
-        configure.ProducerRegistry = producerRegistry;
-        configure.Outbox = new PostgreSqlOutbox(/* configuration */);
-        configure.TransactionProvider = typeof(PostgreSqlEntityFrameworkTransactionProvider<MyDbContext>);
-    });
-```
-
-Brighter provides transaction providers for EF Core, Dapper, and DynamoDB. This ensures consistency between your database state and published messages.
-
-**Supported Outbox Stores:** PostgreSQL, MySQL, MSSQL, SQLite, DynamoDB, MongoDB
+**Supported Outbox Stores:** PostgreSQL, MySQL, MSSQL, SQLite, DynamoDB, MongoDB. See the [full documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation/brighter-outbox-support) for configuration details.
 
 ### Multiple Messaging Patterns
 - **Send/SendAsync**: Commands - one sender → one handler (in-process)
