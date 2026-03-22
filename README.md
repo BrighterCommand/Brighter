@@ -33,6 +33,7 @@
 
 ```bash
 dotnet add package Paramore.Brighter.Extensions.DependencyInjection
+dotnet add package Microsoft.Extensions.Hosting
 ```
 
 ### Basic Usage - Command Dispatcher
