@@ -32,7 +32,7 @@
 ### Installation
 
 ```bash
-dotnet add package Paramore.Brighter
+dotnet add package Paramore.Brighter.Extensions.DependencyInjection
 ```
 
 ### Basic Usage - Command Dispatcher
@@ -77,12 +77,21 @@ commandProcessor.Send(new GreetingCommand("World"));
 
 ## Out-of-Process Messaging
 
-For microservices communication, Brighter can publish events to external message brokers. First, install a transport package:
+For microservices communication, Brighter can send and receive events via external message brokers. This typically involves two separate applications: a **sender** that posts events and a **consumer** that processes them.
+
+First, install a transport package (pick one for your broker):
 
 ```bash
 dotnet add package Paramore.Brighter.MessagingGateway.RMQ.Async  # RabbitMQ
 dotnet add package Paramore.Brighter.MessagingGateway.AWSSQS.V4  # AWS SQS
 dotnet add package Paramore.Brighter.MessagingGateway.Kafka  # Kafka
+```
+
+For the consumer application, also install:
+
+```bash
+dotnet add package Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
+dotnet add package Paramore.Brighter.ServiceActivator.Extensions.Hosting
 ```
 
 ### 1. Define an Event
@@ -99,7 +108,7 @@ public class GreetingEvent : Event
 }
 ```
 
-### 2. Configure Producers and Post
+### 2. Configure Producers and Post (Sender App)
 
 ```csharp
 var builder = Host.CreateApplicationBuilder();
@@ -130,7 +139,7 @@ var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
 commandProcessor.Post(new GreetingEvent("World"));
 ```
 
-### 3. Create an Event Handler
+### 3. Create an Event Handler (Consumer App)
 
 ```csharp
 public class GreetingEventHandler : RequestHandler<GreetingEvent>
@@ -143,9 +152,17 @@ public class GreetingEventHandler : RequestHandler<GreetingEvent>
 }
 ```
 
-### 4. Configure Consumer Subscriptions
+### 4. Configure Consumer Subscriptions (Consumer App)
 
 ```csharp
+var builder = Host.CreateApplicationBuilder();
+
+var rmqConnection = new RmqMessagingGatewayConnection
+{
+    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+    Exchange = new Exchange("paramore.brighter.exchange"),
+};
+
 var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
 builder.Services.AddConsumers(options =>
@@ -163,6 +180,9 @@ builder.Services.AddConsumers(options =>
 }).AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();
+
+var host = builder.Build();
+await host.RunAsync();
 ```
 
 ## Key Features
@@ -183,7 +203,7 @@ public class GreetingCommandHandler : RequestHandler<GreetingCommand>
 }
 ```
 
-Register resilience pipelines using Polly's `ResiliencePipelineRegistry`:
+Register resilience pipelines using Polly's `ResiliencePipelineRegistry` and pass them to `AddBrighter()`:
 
 ```csharp
 var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
@@ -194,6 +214,11 @@ resiliencePipelineRegistry.TryAddBuilder("MyRetryPolicy",
         Delay = TimeSpan.FromSeconds(1),
         MaxRetryAttempts = 3
     }));
+
+builder.Services.AddBrighter(options =>
+{
+    options.ResiliencePipelineRegistry = resiliencePipelineRegistry;
+}).AutoFromAssemblies();
 ```
 
 **Available Middleware:**
@@ -209,9 +234,9 @@ Brighter implements the [Outbox pattern](https://brightercommand.gitbook.io/para
 **Supported Outbox Stores:** PostgreSQL, MySQL, MSSQL, SQLite, DynamoDB, MongoDB. See the [full documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation/brighter-outbox-support) for configuration details.
 
 ### Multiple Messaging Patterns
-- **Send/SendAsync**: Commands - one sender → one handler (in-process)
-- **Publish/PublishAsync**: Events - one publisher → multiple subscribers (in-process or via broker)
-- **Post/PostAsync**: Commands/Events - out-of-process via message broker
+- **Send/SendAsync**: Commands - one sender → one handler (in-process only)
+- **Publish/PublishAsync**: Events - one publisher → multiple handlers (in-process only)
+- **Post/PostAsync**: Send a command or event to an external message broker for out-of-process handling
 - **Request-Reply**: Synchronous RPC-style calls over async messaging
 
 ### Supported Transports
@@ -265,7 +290,10 @@ Latest stable releases are available on [NuGet](https://www.nuget.org/profiles/B
 
 **Core Packages:**
 - `Paramore.Brighter` - Core command processor and dispatcher
+- `Paramore.Brighter.Extensions.DependencyInjection` - `AddBrighter()` for .NET dependency injection
 - `Paramore.Brighter.ServiceActivator` - Message pump for consuming messages
+- `Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection` - `AddConsumers()` for .NET dependency injection
+- `Paramore.Brighter.ServiceActivator.Extensions.Hosting` - Run the message pump as a hosted service
 
 **Transport Packages:**
 - `Paramore.Brighter.MessagingGateway.RMQ.Async` - RabbitMQ
