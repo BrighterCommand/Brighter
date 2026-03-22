@@ -381,7 +381,10 @@ THE SOFTWARE. */
 # Build entire solution
 dotnet build Brighter.slnx
 
-# Run all tests
+# Run core tests (no external dependencies needed)
+dotnet test tests/Paramore.Brighter.Core.Tests
+
+# Run all tests (requires Docker services - see below)
 dotnet test
 ```
 
