@@ -1,5 +1,1 @@
-<<<<<<< shutdown_rmq
-0024-rmq_shutdown
-=======
-0024-resilience_pipeline_bug
->>>>>>> master
+0025-nack_fix
