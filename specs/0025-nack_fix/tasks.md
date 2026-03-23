@@ -48,6 +48,6 @@
 
 ## Verification
 
-- [ ] **Existing Kafka tests pass with no regressions**
+- [x] **Existing Kafka tests pass with no regressions**
   - Run: `dotnet test tests/Paramore.Brighter.Kafka.Tests/ --filter "Category=Kafka"`
   - All existing acknowledge, reject, and consumer tests must continue to pass
