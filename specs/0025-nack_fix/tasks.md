@@ -5,7 +5,7 @@
 
 ## Prerequisites
 
-- [ ] **TIDY: Update interface docstrings to remove incorrect "no-op" language**
+- [x] **TIDY: Update interface docstrings to remove incorrect "no-op" language**
   - Update `IAmAMessageConsumerSync.Nack` in `src/Paramore.Brighter/IAmAMessageConsumerSync.cs` to remove "For stream-based transports, this is a no-op because not committing the offset is sufficient"
   - Update `IAmAMessageConsumerAsync.NackAsync` in `src/Paramore.Brighter/IAmAMessageConsumerAsync.cs` similarly
   - Use transport-neutral language: "Releases the message back to the transport for redelivery"
@@ -13,7 +13,7 @@
 
 ## Implementation Tasks
 
-- [ ] **TEST + IMPLEMENT: Nacking a Kafka message causes it to be redelivered on the next Receive**
+- [x] **TEST + IMPLEMENT: Nacking a Kafka message causes it to be redelivered on the next Receive**
   - **USE COMMAND**: `/test-first when nacking a kafka message it should be redelivered on next receive`
   - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor`
   - Test file: `When_nacking_a_message_it_should_be_redelivered.cs`
