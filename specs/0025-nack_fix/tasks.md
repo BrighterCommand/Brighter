@@ -32,7 +32,7 @@
     - Update `NackAsync` (line 363-366) to delegate to `Nack` (matching `AcknowledgeAsync` pattern)
     - Update XML doc comments on `Nack` and `NackAsync` to describe seek-back behavior
 
-- [ ] **TEST + IMPLEMENT: Nacking a Kafka message asynchronously causes it to be redelivered on the next ReceiveAsync**
+- [x] **TEST + IMPLEMENT: Nacking a Kafka message asynchronously causes it to be redelivered on the next ReceiveAsync**
   - **USE COMMAND**: `/test-first when nacking a kafka message async it should be redelivered on next receive`
   - Test location: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor`
   - Test file: `When_nacking_a_message_it_should_be_redelivered_async.cs`
