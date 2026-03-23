@@ -4,8 +4,8 @@
 
 ## Status
 
-- [ ] Requirements (`requirements.md`)
-- [ ] Design (`design.md` / ADR)
-- [ ] Tasks (`tasks.md`)
-- [ ] Implementation
+- [x] Requirements (`requirements.md`)
+- [x] Design (`design.md` / ADR)
+- [x] Tasks (`tasks.md`)
+- [x] Implementation
 - [ ] Review

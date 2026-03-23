@@ -63,12 +63,12 @@ public class KafkaMessageConsumerNackRedelivery : IDisposable
         using IAmAMessageConsumerSync consumer = CreateConsumer(groupId);
 
         //Act - receive the message, nack it, then receive again
-        var firstReceive = ReceiveMessage(consumer);
+        var firstReceive = await ReceiveMessageAsync(consumer);
         Assert.Equal(sentMessageId, firstReceive.Id);
 
         consumer.Nack(firstReceive);
 
-        var secondReceive = ReceiveMessage(consumer);
+        var secondReceive = await ReceiveMessageAsync(consumer);
 
         //Assert - the same message should be redelivered
         Assert.Equal(sentMessageId, secondReceive.Id);
@@ -104,13 +104,13 @@ public class KafkaMessageConsumerNackRedelivery : IDisposable
         using IAmAMessageConsumerSync consumer = CreateConsumer(groupId);
 
         //Act - receive message 1, nack it; receive message 1 again (redelivered), then ack it
-        var firstReceive = ReceiveMessage(consumer);
+        var firstReceive = await ReceiveMessageAsync(consumer);
         Assert.Equal(firstMessageId, firstReceive.Id);
 
         consumer.Nack(firstReceive);
 
         // After nack, consumer should redeliver the first message, not skip to the second
-        var redelivered = ReceiveMessage(consumer);
+        var redelivered = await ReceiveMessageAsync(consumer);
 
         //Assert - the nacked message is redelivered, not skipped by the second message's existence
         Assert.Equal(firstMessageId, redelivered.Id);
@@ -118,11 +118,11 @@ public class KafkaMessageConsumerNackRedelivery : IDisposable
         // Now ack the redelivered message and confirm we get the second message
         consumer.Acknowledge(redelivered);
 
-        var secondReceive = ReceiveMessage(consumer);
+        var secondReceive = await ReceiveMessageAsync(consumer);
         Assert.Equal(secondMessageId, secondReceive.Id);
     }
 
-    private Message ReceiveMessage(IAmAMessageConsumerSync consumer)
+    private async Task<Message> ReceiveMessageAsync(IAmAMessageConsumerSync consumer)
     {
         Message[] messages = [new Message()];
         int maxTries = 0;
@@ -136,12 +136,12 @@ public class KafkaMessageConsumerNackRedelivery : IDisposable
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     return messages[0];
 
-                Task.Delay(1000).GetAwaiter().GetResult();
+                await Task.Delay(1000);
             }
             catch (ChannelFailureException cfx)
             {
                 _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
-                Task.Delay(1000).GetAwaiter().GetResult();
+                await Task.Delay(1000);
             }
         } while (maxTries <= 10);
 

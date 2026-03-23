@@ -360,16 +360,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 return;
             }
 
-            var topicPartitionOffset = bagData as TopicPartitionOffset;
-            if (topicPartitionOffset == null)
+            try
             {
-                Log.CannotNackMessage(s_logger, message.Id);
-                return;
+                var topicPartitionOffset = bagData as TopicPartitionOffset;
+                if (topicPartitionOffset == null)
+                {
+                    Log.CannotNackMessageTypeMismatch(s_logger, message.Id, bagData?.GetType().FullName ?? "null");
+                    return;
+                }
+
+                Log.NackingMessage(s_logger, topicPartitionOffset.Offset.Value, topicPartitionOffset.Topic, topicPartitionOffset.Partition.Value);
+
+                _consumer.Seek(topicPartitionOffset);
             }
-
-            Log.NackingMessage(s_logger, topicPartitionOffset.Offset.Value, topicPartitionOffset.Topic, topicPartitionOffset.Partition.Value);
-
-            _consumer.Seek(topicPartitionOffset);
+            catch (KafkaException kex)
+            {
+                Log.ErrorSeekingOffsetForNack(s_logger, kex.Message);
+            }
         }
 
         /// <summary>
@@ -1200,8 +1207,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             [LoggerMessage(LogLevel.Warning, "Cannot nack message {MessageId} as no offset data")]
             public static partial void CannotNackMessage(ILogger logger, string messageId);
 
-            [LoggerMessage(LogLevel.Information, "Nacking message at offset {Offset} on topic {Topic} partition {Partition} — seeking back for redelivery")]
+            [LoggerMessage(LogLevel.Warning, "Cannot nack message {MessageId} as offset data is unexpected type {ActualType}")]
+            public static partial void CannotNackMessageTypeMismatch(ILogger logger, string messageId, string actualType);
+
+            [LoggerMessage(LogLevel.Information, "Nacking message at offset {Offset} on topic {Topic} partition {Partition} - seeking back for redelivery")]
             public static partial void NackingMessage(ILogger logger, long offset, string topic, int partition);
+
+            [LoggerMessage(LogLevel.Warning, "Error seeking offset for nack: {ErrorMessage}")]
+            public static partial void ErrorSeekingOffsetForNack(ILogger logger, string errorMessage);
 
             [LoggerMessage(LogLevel.Information, "Storing offset {Offset} to topic {Topic} for partition {ChannelName}")]
             public static partial void StoringOffset(ILogger logger, long offset, string topic, int channelName);
