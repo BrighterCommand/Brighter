@@ -75,6 +75,53 @@ public class KafkaMessageConsumerNackRedelivery : IDisposable
         Assert.Equal(sentBody, secondReceive.Body.Value);
     }
 
+    [Fact]
+    public async Task When_acking_later_message_it_should_not_skip_nacked_message()
+    {
+        // let topic propagate in the broker
+        await Task.Delay(500);
+
+        var groupId = Guid.NewGuid().ToString();
+
+        //Arrange - send two messages to Kafka
+        var routingKey = new RoutingKey(_topic);
+        var producer = (IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey);
+        var firstMessageId = Guid.NewGuid().ToString();
+        var secondMessageId = Guid.NewGuid().ToString();
+
+        producer.Send(
+            new Message(
+                new MessageHeader(firstMessageId, routingKey, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
+                new MessageBody($"first message [{_queueName}]")
+            ));
+        producer.Send(
+            new Message(
+                new MessageHeader(secondMessageId, routingKey, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
+                new MessageBody($"second message [{_queueName}]")
+            ));
+        ((KafkaMessageProducer)producer).Flush();
+
+        using IAmAMessageConsumerSync consumer = CreateConsumer(groupId);
+
+        //Act - receive message 1, nack it; receive message 1 again (redelivered), then ack it
+        var firstReceive = ReceiveMessage(consumer);
+        Assert.Equal(firstMessageId, firstReceive.Id);
+
+        consumer.Nack(firstReceive);
+
+        // After nack, consumer should redeliver the first message, not skip to the second
+        var redelivered = ReceiveMessage(consumer);
+
+        //Assert - the nacked message is redelivered, not skipped by the second message's existence
+        Assert.Equal(firstMessageId, redelivered.Id);
+
+        // Now ack the redelivered message and confirm we get the second message
+        consumer.Acknowledge(redelivered);
+
+        var secondReceive = ReceiveMessage(consumer);
+        Assert.Equal(secondMessageId, secondReceive.Id);
+    }
+
     private Message ReceiveMessage(IAmAMessageConsumerSync consumer)
     {
         Message[] messages = [new Message()];
@@ -88,6 +135,8 @@ public class KafkaMessageConsumerNackRedelivery : IDisposable
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     return messages[0];
+
+                Task.Delay(1000).GetAwaiter().GetResult();
             }
             catch (ChannelFailureException cfx)
             {

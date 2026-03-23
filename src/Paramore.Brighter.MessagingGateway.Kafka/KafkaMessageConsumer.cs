@@ -295,7 +295,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public void Acknowledge(Message message)
         {
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
-                    return;
+            {
+                Log.CannotAcknowledgeMessage(s_logger, message.Id);
+                return;
+            }
             
             try
             {
@@ -352,7 +355,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public void Nack(Message message)
         {
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
+            {
+                Log.CannotNackMessage(s_logger, message.Id);
                 return;
+            }
 
             var topicPartitionOffset = bagData as TopicPartitionOffset;
             if (topicPartitionOffset == null)
@@ -1188,7 +1194,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             [LoggerMessage(LogLevel.Information, "Kafka consumer subscribing to {Topic}")]
             public static partial void SubscribingToTopic(ILogger logger, RoutingKey topic);
             
-            [LoggerMessage(LogLevel.Information, "Cannot acknowledge message {MessageId} as no offset data")]
+            [LoggerMessage(LogLevel.Warning, "Cannot acknowledge message {MessageId} as no offset data")]
             public static partial void CannotAcknowledgeMessage(ILogger logger, string messageId);
 
             [LoggerMessage(LogLevel.Warning, "Cannot nack message {MessageId} as no offset data")]

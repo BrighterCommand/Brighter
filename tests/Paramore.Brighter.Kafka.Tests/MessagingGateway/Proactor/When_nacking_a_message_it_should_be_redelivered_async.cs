@@ -75,6 +75,53 @@ public class KafkaMessageConsumerNackRedeliveryAsync : IDisposable
         Assert.Equal(sentBody, secondReceive.Body.Value);
     }
 
+    [Fact]
+    public async Task When_acking_later_message_async_it_should_not_skip_nacked_message()
+    {
+        // let topic propagate in the broker
+        await Task.Delay(500);
+
+        var groupId = Guid.NewGuid().ToString();
+
+        //Arrange - send two messages to Kafka
+        var routingKey = new RoutingKey(_topic);
+        var producer = (IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey);
+        var firstMessageId = Guid.NewGuid().ToString();
+        var secondMessageId = Guid.NewGuid().ToString();
+
+        await producer.SendAsync(
+            new Message(
+                new MessageHeader(firstMessageId, routingKey, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
+                new MessageBody($"first message [{_queueName}]")
+            ));
+        await producer.SendAsync(
+            new Message(
+                new MessageHeader(secondMessageId, routingKey, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
+                new MessageBody($"second message [{_queueName}]")
+            ));
+        ((KafkaMessageProducer)producer).Flush();
+
+        await using IAmAMessageConsumerAsync consumer = CreateConsumer(groupId);
+
+        //Act - receive message 1, nack it; receive message 1 again (redelivered), then ack it
+        var firstReceive = await ReceiveMessageAsync(consumer);
+        Assert.Equal(firstMessageId, firstReceive.Id);
+
+        await consumer.NackAsync(firstReceive);
+
+        // After nack, consumer should redeliver the first message, not skip to the second
+        var redelivered = await ReceiveMessageAsync(consumer);
+
+        //Assert - the nacked message is redelivered, not skipped by the second message's existence
+        Assert.Equal(firstMessageId, redelivered.Id);
+
+        // Now ack the redelivered message and confirm we get the second message
+        await consumer.AcknowledgeAsync(redelivered);
+
+        var secondReceive = await ReceiveMessageAsync(consumer);
+        Assert.Equal(secondMessageId, secondReceive.Id);
+    }
+
     private async Task<Message> ReceiveMessageAsync(IAmAMessageConsumerAsync consumer)
     {
         Message[] messages = [new Message()];
