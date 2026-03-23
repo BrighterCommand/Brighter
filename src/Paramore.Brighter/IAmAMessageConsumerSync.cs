@@ -68,9 +68,9 @@ namespace Paramore.Brighter
         /// Nacks the specified message, releasing it back to the transport for redelivery.
         /// </summary>
         /// <remarks>
-        /// For queue-based transports, this explicitly releases the transport's lock so the message
-        /// is immediately available to any consumer. For stream-based transports, this is a no-op
-        /// because not committing the offset is sufficient.
+        /// The message should be made available for reprocessing on the next receive call.
+        /// Each transport implements this according to its own semantics (e.g. releasing a lock,
+        /// seeking back to an offset, or re-queuing the message).
         /// </remarks>
         /// <param name="message">The <see cref="Message"/> to nack</param>
         void Nack(Message message);
