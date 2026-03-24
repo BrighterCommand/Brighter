@@ -138,7 +138,7 @@ When a rebalance occurs, Kafka calls the revoke/assign handlers. The current imp
 ### Risks and Mitigations
 
 - **Risk**: `Seek` throws if the consumer is closed or the partition is unassigned.
-  **Mitigation**: The `Nack` method wraps the `Seek` call in a try-catch for `KafkaException`, consistent with the `Acknowledge` method's error handling pattern. Both methods should be called only while the consumer is active.
+  **Mitigation**: The `Nack` method wraps the `Seek` call in a catch filter for `KafkaException` and `InvalidOperationException` (which Seek throws when the consumer is not subscribed or the partition is unassigned during a rebalance). Both methods should be called only while the consumer is active.
 
 - **Risk**: Seek could cause an infinite loop if the handler always throws `DontAckAction`.
   **Mitigation**: This is by design — `Nack` means "try again". Retry limits and DLQ are handled by other components (backstop handler, DLQ specs). The nack mechanism should not impose its own limits.

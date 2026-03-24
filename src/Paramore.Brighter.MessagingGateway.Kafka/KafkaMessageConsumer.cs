@@ -373,9 +373,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 _consumer.Seek(topicPartitionOffset);
             }
-            catch (KafkaException kex)
+            catch (Exception ex) when (ex is KafkaException or InvalidOperationException)
             {
-                Log.ErrorSeekingOffsetForNack(s_logger, kex.Message);
+                Log.ErrorSeekingOffsetForNack(s_logger, ex.Message);
             }
         }
 

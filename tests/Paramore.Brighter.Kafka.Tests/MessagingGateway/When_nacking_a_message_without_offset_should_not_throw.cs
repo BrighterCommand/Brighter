@@ -1,10 +1,13 @@
+using System;
 using Confluent.Kafka;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-public class When_nacking_a_message_without_offset_should_not_throw
+[Trait("Category", "Kafka")]
+[Collection("Kafka")]
+public class When_nacking_a_message_without_offset_should_not_throw : IDisposable
 {
     private readonly KafkaMessageConsumer _consumer;
 
@@ -51,5 +54,10 @@ public class When_nacking_a_message_without_offset_should_not_throw
         //Act & Assert - should return without throwing
         var exception = Record.Exception(() => _consumer.Nack(message));
         Assert.Null(exception);
+    }
+
+    public void Dispose()
+    {
+        _consumer?.Dispose();
     }
 }
