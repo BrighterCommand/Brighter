@@ -20,6 +20,7 @@ internal class MinimumTimeoutChannelAsync(IAmAChannelAsync inner, TimeSpan minim
     public void Enqueue(params Message[] messages) => inner.Enqueue(messages);
     public void Stop(RoutingKey topic) => inner.Stop(topic);
     public void Dispose() => inner.Dispose();
+    public ValueTask DisposeAsync() => inner.DisposeAsync();
 
     public Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
         => inner.AcknowledgeAsync(message, cancellationToken);

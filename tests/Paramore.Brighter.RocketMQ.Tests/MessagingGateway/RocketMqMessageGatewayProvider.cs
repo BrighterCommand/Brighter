@@ -277,6 +277,7 @@ public class RocketMqMessageGatewayProvider
         public void Enqueue(params Message[] messages) => _inner.Enqueue(messages);
         public void Stop(RoutingKey topic) => _inner.Stop(topic);
         public void Dispose() => _inner.Dispose();
+        public ValueTask DisposeAsync() => _inner.DisposeAsync();
 
         public Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
             => _inner.AcknowledgeAsync(message, cancellationToken);
