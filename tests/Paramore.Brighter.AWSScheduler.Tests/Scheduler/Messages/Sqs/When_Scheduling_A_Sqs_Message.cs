@@ -32,13 +32,14 @@ public class SqsSchedulingMessageTest : IDisposable
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(_queueName),
-            channelType: ChannelType.PointToPoint, routingKey: routingKey, bufferSize: BufferSize, makeChannels: OnMissingChannel.Create));
+            channelType: ChannelType.PointToPoint, routingKey: routingKey, bufferSize: BufferSize, makeChannels: OnMissingChannel.Create,
+            queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } })));
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
         _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication { MakeChannels = OnMissingChannel.Create });
+            new SqsPublication { MakeChannels = OnMissingChannel.Create, QueueAttributes = new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }) });
 
         _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {

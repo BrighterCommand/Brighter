@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -8,6 +8,7 @@ using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Xunit;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
@@ -34,8 +35,8 @@ public class AwsValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
         var channelName = new ChannelName($"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
 
         var queueAttributes = new SqsAttributes(
-            type: SqsType.Fifo
-        );
+            type: SqsType.Fifo,
+            tags: new Dictionary<string, string> { { "Environment", "Test" } });
         
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName!),

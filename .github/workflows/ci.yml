@@ -65,7 +65,7 @@ jobs:
           dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build
 
       - name: Upload packages as artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: nuget packages
           path: "**/*.nupkg"
@@ -82,7 +82,7 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: nuget packages
       - name: Push generated package to NuGet
@@ -570,6 +570,12 @@ jobs:
         run: |
           dotnet test ./tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
           dotnet test ./tests/Paramore.Brighter.AWSScheduler.V4.Tests/Paramore.Brighter.AWSScheduler.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
+      - name: Cleanup orphaned test resources
+        if: always()
+        run: |
+          chmod +x ./clean_failed_tests_aws_assets.sh
+          ./clean_failed_tests_aws_assets.sh
+        continue-on-error: true
 
   sqlite-ci:
     runs-on: ubuntu-latest

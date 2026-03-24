@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -7,6 +7,8 @@ using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Xunit;
+using System.Collections.Generic;
+using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
@@ -31,14 +33,14 @@ public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
 
-        var topicAttributes = new SnsAttributes(type: SqsType.Fifo);
+        var topicAttributes = new SnsAttributes(type: SqsType.Fifo, tags: [new Tag { Key = "Environment", Value = "Test" }]);
         
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),         
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo),
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes:topicAttributes,
             messagePumpType: MessagePumpType.Proactor, 
             makeChannels: OnMissingChannel.Create);

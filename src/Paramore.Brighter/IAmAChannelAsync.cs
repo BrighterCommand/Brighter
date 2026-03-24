@@ -33,7 +33,7 @@ namespace Paramore.Brighter
     /// An <see cref="IAmAChannelSync"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     /// and acknowledging receipt of those messages
     /// </summary>
-    public interface IAmAChannelAsync : IAmAChannel
+    public interface IAmAChannelAsync : IAmAChannel, IAsyncDisposable
     {
         /// <summary>
         /// Acknowledges the specified message.

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Mime;
@@ -39,8 +39,8 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
 
         var channelName = new ChannelName(queueName);
         var queueAttributes = new SqsAttributes(
-            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2)
-        );
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2),
+            tags: new Dictionary<string, string> { { "Environment", "Test" } });
         
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),

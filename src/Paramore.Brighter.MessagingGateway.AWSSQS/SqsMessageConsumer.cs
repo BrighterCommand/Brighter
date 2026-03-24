@@ -351,6 +351,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 Log.NackedMessage(s_logger, message.Id, receiptHandle, _channelUrl!);
             }
+            catch (ReceiptHandleIsInvalidException ex)
+            {
+                // Receipt handle is invalid (most likely because the visibility timeout elapsed).
+                // SQS has already made the message visible again for redelivery by another consumer.
+                // Nack sets visibility to zero for immediate redelivery — but the message is already
+                // visible again, so the net effect is the same. Log a warning and continue.
+                Log.NackFailedReceiptHandleExpired(s_logger, ex, message.Id, receiptHandle, _queueName);
+            }
             catch (Exception exception)
             {
                 Log.ErrorNackingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
@@ -399,6 +407,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 Log.RequeuedMessage(s_logger, message.Id);
 
                 return true;
+            }
+            catch (ReceiptHandleIsInvalidException ex)
+            {
+                // Receipt handle is invalid (most likely because the visibility timeout elapsed).
+                // SQS has already made the message visible again for redelivery by another consumer,
+                // but without the intended delay. Log a warning so operators are aware.
+                Log.RequeueFailedReceiptHandleExpired(s_logger, ex, message.Id, receiptHandle, _queueName, delay.Value);
+                return false;
             }
             catch (Exception exception)
             {
@@ -507,6 +523,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 Log.DeletedMessage(s_logger, messageId, receiptHandle, _channelUrl!);
             }
+            catch (ReceiptHandleIsInvalidException ex)
+            {
+                // Receipt handle is invalid (most likely because the visibility timeout elapsed).
+                // SQS has already made the message visible again for redelivery by another consumer.
+                // This is an error because the message was not deleted and may be processed again;
+                // handlers should be idempotent, but an operator may need to investigate.
+                Log.DeleteFailedReceiptHandleExpired(s_logger, ex, messageId, receiptHandle, _queueName);
+            }
             catch (Exception exception)
             {
                 Log.ErrorDeletingMessage(s_logger, exception, messageId, receiptHandle, _queueName);
@@ -554,6 +578,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error during deleting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
             public static partial void ErrorDeletingMessage(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
+
+            [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Could not delete message {Id} with receipt handle {ReceiptHandle} on queue {ChannelName} because the receipt handle is invalid (most likely because the visibility timeout elapsed). SQS has already re-presented it for delivery; if the handler is not idempotent this may result in duplicate processing.")]
+            public static partial void DeleteFailedReceiptHandleExpired(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
+
+            [LoggerMessage(LogLevel.Warning, "SqsMessageConsumer: Could not requeue message {Id} with receipt handle {ReceiptHandle} on queue {ChannelName} because the receipt handle is invalid (most likely because the visibility timeout elapsed). SQS has already re-presented it for delivery without the intended delay of {Delay}.")]
+            public static partial void RequeueFailedReceiptHandleExpired(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName, TimeSpan delay);
+
+            [LoggerMessage(LogLevel.Warning, "SqsMessageConsumer: Could not nack message {Id} with receipt handle {ReceiptHandle} on queue {ChannelName} because the receipt handle is invalid (most likely because the visibility timeout elapsed). SQS has already re-presented it for delivery.")]
+            public static partial void NackFailedReceiptHandleExpired(ILogger logger, Exception exception, string id, string? receiptHandle, string channelName);
 
             [LoggerMessage(LogLevel.Information, "SqsMessageConsumer: Rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName} due to {Reason} because of {Description}")]
             public static partial void RejectingMessage(ILogger logger, string id, string? receiptHandle, string channelName, string? reason, string description);

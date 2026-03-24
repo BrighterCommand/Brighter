@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
@@ -56,7 +57,9 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
                 (
                     deadLetterQueueName: new ChannelName(_dlqChannelName)!,
                     maxReceiveCount: 2
-                ))
+                ),
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }),
+            topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }])
             );
 
         //what do we send

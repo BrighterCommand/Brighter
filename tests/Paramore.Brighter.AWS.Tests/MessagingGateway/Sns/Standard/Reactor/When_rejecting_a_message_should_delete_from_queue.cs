@@ -1,7 +1,9 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Amazon.SimpleNotificationService.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
@@ -36,8 +38,10 @@ public class SqsMessageConsumerRejectTests : IDisposable
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create);
-
+            makeChannels: OnMissingChannel.Create,
+            queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }),
+            topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]));
+            
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo), contentType: contentType),
