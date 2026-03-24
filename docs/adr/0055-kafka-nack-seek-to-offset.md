@@ -76,7 +76,7 @@ The following source-generated log methods should be added to the `private stati
 [LoggerMessage(LogLevel.Warning, "Cannot nack message {MessageId} as no offset data")]
 public static partial void CannotNackMessage(ILogger logger, string messageId);
 
-[LoggerMessage(LogLevel.Information, "Nacking message at offset {Offset} on topic {Topic} partition {Partition} — seeking back for redelivery")]
+[LoggerMessage(LogLevel.Information, "Nacking message at offset {Offset} on topic {Topic} partition {Partition} - seeking back for redelivery")]
 public static partial void NackingMessage(ILogger logger, long offset, string topic, int partition);
 ```
 
@@ -128,6 +128,7 @@ When a rebalance occurs, Kafka calls the revoke/assign handlers. The current imp
 - Minimal code change — two methods updated, no new types or abstractions.
 - Consistent with the existing code patterns (`Acknowledge` guard clauses, async delegation).
 - Works correctly with consumer group rebalancing.
+- The `Acknowledge` method's guard clause for missing offset data was updated to log a warning (via `CannotAcknowledgeMessage`) and upgraded from `Information` to `Warning` level, making both `Acknowledge` and `Nack` consistent in how they report missing offset data.
 
 ### Negative
 
@@ -137,7 +138,7 @@ When a rebalance occurs, Kafka calls the revoke/assign handlers. The current imp
 ### Risks and Mitigations
 
 - **Risk**: `Seek` throws if the consumer is closed or the partition is unassigned.
-  **Mitigation**: The same risk exists for `Acknowledge` (which calls `_consumer.StoreOffset` indirectly). Both methods should be called only while the consumer is active. No additional error handling is needed beyond what already exists.
+  **Mitigation**: The `Nack` method wraps the `Seek` call in a try-catch for `KafkaException`, consistent with the `Acknowledge` method's error handling pattern. Both methods should be called only while the consumer is active.
 
 - **Risk**: Seek could cause an infinite loop if the handler always throws `DontAckAction`.
   **Mitigation**: This is by design — `Nack` means "try again". Retry limits and DLQ are handled by other components (backstop handler, DLQ specs). The nack mechanism should not impose its own limits.

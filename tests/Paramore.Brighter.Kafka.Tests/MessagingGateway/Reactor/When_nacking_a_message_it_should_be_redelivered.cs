@@ -119,6 +119,7 @@ public class KafkaMessageConsumerNackRedelivery : IDisposable
         consumer.Acknowledge(redelivered);
 
         var secondReceive = await ReceiveMessageAsync(consumer);
+        Assert.NotEqual(MessageType.MT_NONE, secondReceive.Header.MessageType);
         Assert.Equal(secondMessageId, secondReceive.Id);
     }
 
