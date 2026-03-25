@@ -3,7 +3,7 @@ applyTo: '**'
 ---
 
 ## How to Use This File
-This file contains instructions for GitHub Copilot to help it understand the context and requirements of the project. It is not intended to be modified by contributors. Human contributors should follow the guidelines in the [CONTRIBUTING.md](CONTRIBUTING.md) file. These guidelines derive from that document.
+This file contains instructions for GitHub Copilot to help it understand the context and requirements of the project. It is not intended to be modified by contributors. Human contributors should follow the guidelines in the [CONTRIBUTING.md](../CONTRIBUTING.md) file. These guidelines derive from that document.
 
 ## Detailed Instructions
 For comprehensive guidance on working with this codebase, Copilot should read the following files as needed:
