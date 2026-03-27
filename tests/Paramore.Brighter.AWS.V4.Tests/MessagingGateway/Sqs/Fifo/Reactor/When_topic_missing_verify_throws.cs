@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
@@ -30,7 +31,7 @@ public class AWSValidateMissingTopicTests
             _awsConnection,
             new SqsPublication(
                 channelName: new ChannelName(Guid.NewGuid().ToString()), 
-                queueAttributes: new SqsAttributes (type:SqsType.Fifo ),
+                queueAttributes: new SqsAttributes (type:SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
                 makeChannels: OnMissingChannel.Validate
                 )
             );

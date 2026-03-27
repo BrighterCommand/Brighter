@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
@@ -27,7 +28,7 @@ public class AwsValidateQueuesTestsAsync : IAsyncDisposable
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            queueAttributes: new SqsAttributes( type: SqsType.Fifo),
+            queueAttributes: new SqsAttributes( type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: topicAttributes,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Validate);

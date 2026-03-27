@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -8,6 +8,7 @@ using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Xunit;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
@@ -59,8 +60,8 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
             routingKey: routingKey,
             findQueueBy: QueueFindBy.Url,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate
-        );
+            makeChannels: OnMissingChannel.Validate,
+            queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }));
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,

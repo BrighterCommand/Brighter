@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Mime;
 using System.Threading.Tasks;
@@ -31,7 +31,8 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         // Set rawMessageDelivery to false
         var queueAttributes = new SqsAttributes(
             rawMessageDelivery: true,
-            type: SqsType.Fifo);
+            type: SqsType.Fifo,
+            tags: new Dictionary<string, string> { { "Environment", "Test" } });
         var channelName = new ChannelName(queueName);
         
         _channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<MyCommand>(

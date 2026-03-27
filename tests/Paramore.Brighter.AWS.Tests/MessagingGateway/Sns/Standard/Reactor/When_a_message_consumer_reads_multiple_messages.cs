@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
@@ -7,6 +7,7 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
+using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
@@ -40,8 +41,9 @@ public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
             routingKey: routingKey,
             bufferSize: BufferSize,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create
-        ));
+            makeChannels: OnMissingChannel.Create,
+            queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }),
+            topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }])));
             
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties

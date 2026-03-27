@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Mime;
@@ -60,8 +60,8 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
                 redrivePolicy: new RedrivePolicy(
                     deadLetterQueueName: new ChannelName(_dlqChannelName)!,
                     maxReceiveCount: 2
-                    )
-                ),
+                    ),
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             makeChannels: OnMissingChannel.Create
             );
 

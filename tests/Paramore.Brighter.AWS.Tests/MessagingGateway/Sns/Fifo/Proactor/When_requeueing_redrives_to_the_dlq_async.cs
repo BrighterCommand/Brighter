@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Mime;
@@ -46,7 +46,8 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             queueAttributes: new SqsAttributes(
-                type: SqsType.Fifo, redrivePolicy: new RedrivePolicy(_deadLetterChannel!, 2)),
+                type: SqsType.Fifo, redrivePolicy: new RedrivePolicy(_deadLetterChannel!, 2),
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: topicAttributes
             );
         

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Mime;
@@ -44,8 +44,8 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         var queueAttributes = new SqsAttributes(
             redrivePolicy: new RedrivePolicy(
                 new ChannelName(_dlqChannelName), 2),
-            type: SqsType.Fifo
-        );
+            type: SqsType.Fifo,
+            tags: new Dictionary<string, string> { { "Environment", "Test" } });
         
         _subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),

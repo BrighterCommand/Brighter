@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
@@ -12,6 +12,7 @@ using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
 using Xunit;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
@@ -53,7 +54,8 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
             queueAttributes: new SqsAttributes(
                 redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2),
-                type: SqsType.Fifo),
+                type: SqsType.Fifo,
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: topicAttributes,
             makeChannels: OnMissingChannel.Create
             );

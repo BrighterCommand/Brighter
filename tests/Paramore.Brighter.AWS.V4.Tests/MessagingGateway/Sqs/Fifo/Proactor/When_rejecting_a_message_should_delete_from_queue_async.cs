@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -7,6 +7,7 @@ using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Xunit;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
@@ -32,8 +33,8 @@ public class SqsMessageConsumerRejectTestsAsync : IDisposable, IAsyncDisposable
 
         var channelName = new ChannelName(queueName);
         var queueAttributes = new SqsAttributes(
-            type: SqsType.Fifo
-        );
+            type: SqsType.Fifo,
+            tags: new Dictionary<string, string> { { "Environment", "Test" } });
         
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(queueName),

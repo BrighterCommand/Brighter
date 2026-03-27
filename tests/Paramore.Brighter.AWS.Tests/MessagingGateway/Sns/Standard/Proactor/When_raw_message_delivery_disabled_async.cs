@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Mime;
 using System.Threading.Tasks;
@@ -6,6 +6,7 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
+using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
@@ -36,8 +37,10 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             bufferSize: bufferSize,
             messagePumpType: MessagePumpType.Proactor,
             queueAttributes: new SqsAttributes(
-                rawMessageDelivery: false), 
-            makeChannels: OnMissingChannel.Create));
+                rawMessageDelivery: false,
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }), 
+            makeChannels: OnMissingChannel.Create,
+            topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }])));
 
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication

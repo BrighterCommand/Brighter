@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -8,6 +8,7 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
@@ -40,7 +41,8 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
             channelName: channelName,
             channelType: ChannelType.PointToPoint, 
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create);
+            makeChannels: OnMissingChannel.Create,
+            queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }));
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,

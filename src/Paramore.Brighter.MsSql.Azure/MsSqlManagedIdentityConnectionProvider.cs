@@ -58,7 +58,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// <returns>A task that represents the asynchronous operation. The task result contains the access token.</returns>
         protected override async Task<AccessToken> GetAccessTokenFromProviderAsync(CancellationToken cancellationToken)
         {
-            var credential = new ManagedIdentityCredential();
+            var credential = new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned);
             return await credential.GetTokenAsync(new TokenRequestContext(AuthenticationTokenScopes), cancellationToken);
         }
     }

@@ -7,6 +7,7 @@ using Paramore.Brighter.AWSScheduler.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessageScheduler.AWS.V4;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
+using SnsTag = Amazon.SimpleNotificationService.Model.Tag;
 using Paramore.Brighter.Scheduler.Events;
 
 namespace Paramore.Brighter.AWSScheduler.V4.Tests.Scheduler.Requests.Sns;
@@ -38,14 +39,15 @@ public class SnsSchedulingMessageViaFireSchedulerRequestTest : IDisposable
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             bufferSize: BufferSize,
-            makeChannels: OnMissingChannel.Create
+            makeChannels: OnMissingChannel.Create,
+            queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } })
         ));
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
         _messageProducer =
-            new SnsMessageProducer(awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+            new SnsMessageProducer(awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes(tags: [new SnsTag { Key = "Environment", Value = "Test" }]) });
 
         // Enforce topic to be created
         _messageProducer.Send(new Message(
