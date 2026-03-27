@@ -144,15 +144,19 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
         {
             Log.PreparingToSendAsync(s_logger, Connection.Exchange.Name);
             
+            var channelInitialized = Channel is not null;   
             await EnsureBrokerAsync(makeExchange: _publication.MakeChannels, cancellationToken: cancellationToken);
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageProducer: Channel is not set for {_publication.Topic}");
+            if (!channelInitialized)
+            {
+                Channel.BasicAcksAsync += OnPublishSucceeded;
+                Channel.BasicNacksAsync += OnPublishFailed;
+            }
 
             var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
 
             message.Persist = Connection.PersistMessages;
-            Channel.BasicAcksAsync += OnPublishSucceeded;
-            Channel.BasicNacksAsync += OnPublishFailed;
             
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message, _instrumentationOptions);
 
@@ -184,12 +188,16 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
         {
             Log.ErrorTalkingToSocketAsync(s_logger, io, Connection.AmpqUri.GetSanitizedUri());
             await ResetConnectionToBrokerAsync(cancellationToken);
+            Channel?.BasicAcksAsync -= OnPublishSucceeded;
+            Channel?.BasicNacksAsync -= OnPublishFailed;
             throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
         }
     }
 
     public sealed override void Dispose()
     {
+        Channel?.BasicAcksAsync -= OnPublishSucceeded;
+        Channel?.BasicNacksAsync -= OnPublishFailed;
         GC.SuppressFinalize(this);
     }
 
