@@ -6,5 +6,8 @@
     <IsPackable>false</IsPackable>
     <BrighterTestTargetFrameworks>net9.0;net10.0</BrighterTestTargetFrameworks>
     <BrighterTestNineOnlyTargetFrameworks>net9.0</BrighterTestNineOnlyTargetFrameworks>
+    <DisableMsCoverageReferencedPathMaps Condition="'$(CollectCoverage)' != 'true'">true</DisableMsCoverageReferencedPathMaps>
+    <EnableSourceLink>false</EnableSourceLink>
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
   </PropertyGroup>
 </Project>

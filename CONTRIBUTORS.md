@@ -75,7 +75,11 @@ Brighter contributors (sorted alphabeticaly)
  * Various fixes
 
 **[Eddie Li](https://github.com/xiaodili)**
-  * Various fixes   
+  * Various fixes
+
+**[Tom Longhurst](https://github.com/thomhurst)**
+ * DI improvements
+ * Open Telemetry additions
   
 **[James Morcom](https://github.com/mrmorcs)**
   * Documentation fixes
@@ -126,6 +130,9 @@ Brighter contributors (sorted alphabeticaly)
 
 **[Tarun Pothulapati](https://github.com/Pothulapati)**
   * PostgreSQL Outbox
+
+**[Ravriel](https://github.com/ravriel)**
+ * RabbitMQ Fixes
 
 **[Paul Reardon](https://github.com/preardon)**
   * Improvements to ASB Transport 

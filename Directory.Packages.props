@@ -185,8 +185,7 @@
     <PackageVersion Include="TickerQ" Version="10.1.1" />
   </ItemGroup>
   <ItemGroup>
-    <GlobalPackageReference Include="MinVer" Version="7.0.0" />
-    <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.201" />
+    <GlobalPackageReference Include="MinVer" Version="7.0.0" Condition="'$(IsPackable)' != 'false' And '$(ContinuousIntegrationBuild)' == 'true'" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net462' Or '$(TargetFramework)' == 'net472'">
     <GlobalPackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3">
