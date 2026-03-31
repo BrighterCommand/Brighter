@@ -401,12 +401,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             //we will be called twice if explicitly disposed as well as closed, so just skip in that case
             if (_isClosed) return;
-            
+
             try
             {
-                _flushToken.Wait(TimeSpan.Zero);
-                //this will release the semaphore
-               CommitAllOffsets(_timeProvider.GetUtcNow().UtcDateTime);
+                //wait for any in-flight background commit to finish before we commit remaining offsets
+                if (_flushToken.Wait(TimeSpan.FromSeconds(5)))
+                {
+                    //this will release the semaphore
+                    CommitAllOffsets(_timeProvider.GetUtcNow().UtcDateTime);
+                }
             }
             catch (Exception ex)
             {
@@ -858,27 +861,43 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         //Called during a revoke, we are passed the partitions that we are revoking and their last offset and we need to
         //commit anything we have not stored.
+        //We acquire the _flushToken to prevent concurrent commits with the background batch/sweep paths,
+        //as librdkafka is not thread-safe for concurrent commit operations.
         private void CommitOffsetsFor(List<TopicPartitionOffset> revokedPartitions)
         {
             try
             {
-                //find the provided set of partitions amongst our stored offsets 
-                var partitionOffsets = _offsetStorage.ToArray();
-                var revokedOffsetsToCommit =
-                    partitionOffsets.Where(tpo =>
-                            revokedPartitions.Any(ptc =>
-                                ptc.TopicPartition == tpo.TopicPartition 
-                                && ptc.Offset.Value != Offset.Unset.Value 
-                                && tpo.Offset.Value > ptc.Offset.Value 
-                            )
-                        )
-                        .ToList();
-                //determine if we have offsets still to commit
-                if (revokedOffsetsToCommit.Any())
+                //wait for any in-flight background commit to finish before we commit revoked offsets
+                if (!_flushToken.Wait(TimeSpan.FromSeconds(5)))
                 {
-                    //commit them
-                    LogOffSetCommitRevokedPartitions(revokedOffsetsToCommit);
-                    _consumer.Commit(revokedOffsetsToCommit);
+                    Log.SkippedCommittingOffsetsForRevokedPartitions(s_logger);
+                    return;
+                }
+
+                try
+                {
+                    //find the provided set of partitions amongst our stored offsets
+                    var partitionOffsets = _offsetStorage.ToArray();
+                    var revokedOffsetsToCommit =
+                        partitionOffsets.Where(tpo =>
+                                revokedPartitions.Any(ptc =>
+                                    ptc.TopicPartition == tpo.TopicPartition
+                                    && ptc.Offset.Value != Offset.Unset.Value
+                                    && tpo.Offset.Value > ptc.Offset.Value
+                                )
+                            )
+                            .ToList();
+                    //determine if we have offsets still to commit
+                    if (revokedOffsetsToCommit.Any())
+                    {
+                        //commit them
+                        LogOffSetCommitRevokedPartitions(revokedOffsetsToCommit);
+                        _consumer.Commit(revokedOffsetsToCommit);
+                    }
+                }
+                finally
+                {
+                    _flushToken.Release(1);
                 }
             }
             catch (KafkaException error)
@@ -1281,6 +1300,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             [LoggerMessage(LogLevel.Information, "Skipped sweeping offsets, as another commit or sweep was running")]
             public static partial void SkippedSweepingOffsets(ILogger logger);
+
+            [LoggerMessage(LogLevel.Warning, "Skipped committing offsets for revoked partitions, timed out waiting for in-flight commit to complete")]
+            public static partial void SkippedCommittingOffsetsForRevokedPartitions(ILogger logger);
             
             [LoggerMessage(LogLevel.Warning, "Message {MessageId} rejected with reason {RejectionReason} but no channels configured for rejection")]
             public static partial void NoChannelsConfiguredForRejection(ILogger logger, string messageId, string rejectionReason);
