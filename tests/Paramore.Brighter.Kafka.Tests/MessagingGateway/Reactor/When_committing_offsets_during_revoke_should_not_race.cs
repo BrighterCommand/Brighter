@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Confluent.Kafka;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -54,8 +55,11 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
     /// This test is inherently timing-dependent — it maximises the chance of overlap between background
     /// commits and the revoke handler by using commitBatchSize: 1 and rapid message acknowledgement.
     /// </summary>
-    [Fact]
-    public async Task When_committing_offsets_during_revoke_should_not_race_with_background_commit()
+    [Theory]
+    [InlineData(PartitionAssignmentStrategy.RoundRobin)]
+    [InlineData(PartitionAssignmentStrategy.CooperativeSticky)]
+    public async Task When_committing_offsets_during_revoke_should_not_race_with_background_commit(
+        PartitionAssignmentStrategy partitionAssignmentStrategy)
     {
         //allow topic to propagate on the broker
         await Task.Delay(500);
@@ -78,7 +82,7 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
 
         //commitBatchSize: 1 means every acknowledge fires a background commit thread
         //this maximises the chance of a commit being in-flight when the revoke handler fires
-        using var consumerA = CreateConsumer(commitBatchSize: 1);
+        using var consumerA = CreateConsumer(commitBatchSize: 1, partitionAssignmentStrategy: partitionAssignmentStrategy);
 
         //consume a few messages to get consumer A established
         for (int j = 0; j < 5; j++)
@@ -121,7 +125,7 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
         await Task.Delay(500);
 
         _output.WriteLine("Adding consumer B to trigger rebalance");
-        using var consumerB = CreateConsumer(commitBatchSize: 10);
+        using var consumerB = CreateConsumer(commitBatchSize: 10, partitionAssignmentStrategy: partitionAssignmentStrategy);
 
         //consumer B polls to join the group and trigger rebalance
         try
@@ -144,7 +148,8 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
         _output.WriteLine("Test completed - no race condition errors");
     }
 
-    private KafkaMessageConsumer CreateConsumer(int commitBatchSize)
+    private KafkaMessageConsumer CreateConsumer(int commitBatchSize,
+        PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin)
     {
         return (KafkaMessageConsumer)new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -161,7 +166,8 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
                 numOfPartitions: 3,
                 replicationFactor: 1,
                 messagePumpType: MessagePumpType.Reactor,
-                makeChannels: OnMissingChannel.Create
+                makeChannels: OnMissingChannel.Create,
+                partitionAssignmentStrategy: partitionAssignmentStrategy
             ));
     }
 

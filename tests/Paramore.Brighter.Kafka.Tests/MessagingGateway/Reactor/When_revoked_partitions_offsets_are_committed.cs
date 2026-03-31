@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Confluent.Kafka;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -55,8 +56,11 @@ public class KafkaMessageConsumerCommitOnRevoke : IDisposable
     /// 3. The revoke handler on A should commit the outstanding offsets from the second batch
     /// 4. A new consumer C verifies it reads from the fully committed position (no replay)
     /// </summary>
-    [Fact]
-    public async Task When_a_partition_is_revoked_offsets_are_committed()
+    [Theory]
+    [InlineData(PartitionAssignmentStrategy.RoundRobin)]
+    [InlineData(PartitionAssignmentStrategy.CooperativeSticky)]
+    public async Task When_a_partition_is_revoked_offsets_are_committed(
+        PartitionAssignmentStrategy partitionAssignmentStrategy)
     {
         //allow topic to propagate on the broker
         await Task.Delay(500);
@@ -82,7 +86,7 @@ public class KafkaMessageConsumerCommitOnRevoke : IDisposable
 
         //Phase 1: Consumer A owns all 3 partitions
         //commitBatchSize: 5 so the first 5 acks trigger a batch commit to Kafka
-        var consumerA = CreateConsumer(commitBatchSize: 5);
+        var consumerA = CreateConsumer(commitBatchSize: 5, partitionAssignmentStrategy: partitionAssignmentStrategy);
 
         //consume and acknowledge first batch — triggers batch commit
         var firstBatchIds = new List<string>();
@@ -121,7 +125,7 @@ public class KafkaMessageConsumerCommitOnRevoke : IDisposable
 
         //Phase 3: Consumer B joins the group — triggers rebalance and revoke on A
         //The revoke handler on A should commit the outstanding offsets from the second batch
-        var consumerB = CreateConsumer(commitBatchSize: 100);
+        var consumerB = CreateConsumer(commitBatchSize: 100, partitionAssignmentStrategy: partitionAssignmentStrategy);
 
         //consumer B polls to join the group
         _ = consumerB.Receive(TimeSpan.FromMilliseconds(5000));
@@ -146,7 +150,7 @@ public class KafkaMessageConsumerCommitOnRevoke : IDisposable
         //If revoke committed offsets correctly, C should NOT replay any messages that A consumed
         await Task.Delay(2000);
 
-        using var consumerC = CreateConsumer(commitBatchSize: 100);
+        using var consumerC = CreateConsumer(commitBatchSize: 100, partitionAssignmentStrategy: partitionAssignmentStrategy);
         var replayedIds = new List<string>();
 
         //try to read messages — any we get that A already consumed are replays
@@ -177,7 +181,8 @@ public class KafkaMessageConsumerCommitOnRevoke : IDisposable
         Assert.Empty(secondBatchReplays);
     }
 
-    private KafkaMessageConsumer CreateConsumer(int commitBatchSize)
+    private KafkaMessageConsumer CreateConsumer(int commitBatchSize,
+        PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin)
     {
         return (KafkaMessageConsumer)new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -194,7 +199,8 @@ public class KafkaMessageConsumerCommitOnRevoke : IDisposable
                 numOfPartitions: 3,
                 replicationFactor: 1,
                 messagePumpType: MessagePumpType.Reactor,
-                makeChannels: OnMissingChannel.Create
+                makeChannels: OnMissingChannel.Create,
+                partitionAssignmentStrategy: partitionAssignmentStrategy
             ));
     }
 
