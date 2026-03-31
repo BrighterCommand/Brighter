@@ -58,6 +58,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan _sweepUncommittedInterval;
         private readonly SemaphoreSlim _flushToken = new(1, 1);
+        // The Kafka revoke window is ~10s; we use half to leave time for cleanup
+        private static readonly TimeSpan s_commitSyncTimeout = TimeSpan.FromSeconds(5);
         private readonly ITimer _sweeperTimer;
         private bool _hasFatalError;
         private bool _isClosed;
@@ -405,10 +407,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             try
             {
                 //wait for any in-flight background commit to finish before we commit remaining offsets
-                if (_flushToken.Wait(TimeSpan.FromSeconds(5)))
+                if (_flushToken.Wait(s_commitSyncTimeout))
                 {
                     //this will release the semaphore
                     CommitAllOffsets(_timeProvider.GetUtcNow().UtcDateTime);
+                }
+                else
+                {
+                    Log.SkippedCommittingOffsetsBeforeClose(s_logger);
                 }
             }
             catch (Exception ex)
@@ -868,7 +874,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             try
             {
                 //wait for any in-flight background commit to finish before we commit revoked offsets
-                if (!_flushToken.Wait(TimeSpan.FromSeconds(5)))
+                if (!_flushToken.Wait(s_commitSyncTimeout))
                 {
                     Log.SkippedCommittingOffsetsForRevokedPartitions(s_logger);
                     return;
@@ -1303,6 +1309,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             [LoggerMessage(LogLevel.Warning, "Skipped committing offsets for revoked partitions, timed out waiting for in-flight commit to complete")]
             public static partial void SkippedCommittingOffsetsForRevokedPartitions(ILogger logger);
+
+            [LoggerMessage(LogLevel.Warning, "Skipped committing offsets before close, timed out waiting for in-flight commit to complete")]
+            public static partial void SkippedCommittingOffsetsBeforeClose(ILogger logger);
             
             [LoggerMessage(LogLevel.Warning, "Message {MessageId} rejected with reason {RejectionReason} but no channels configured for rejection")]
             public static partial void NoChannelsConfiguredForRejection(ILogger logger, string messageId, string rejectionReason);

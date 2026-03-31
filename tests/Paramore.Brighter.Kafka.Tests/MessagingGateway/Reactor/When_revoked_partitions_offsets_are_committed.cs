@@ -11,6 +11,7 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
+[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageConsumerCommitOnRevoke : IDisposable
 {
@@ -86,7 +87,7 @@ public class KafkaMessageConsumerCommitOnRevoke : IDisposable
 
         //Phase 1: Consumer A owns all 3 partitions
         //commitBatchSize: 5 so the first 5 acks trigger a batch commit to Kafka
-        var consumerA = CreateConsumer(commitBatchSize: 5, partitionAssignmentStrategy: partitionAssignmentStrategy);
+        using var consumerA = CreateConsumer(commitBatchSize: 5, partitionAssignmentStrategy: partitionAssignmentStrategy);
 
         //consume and acknowledge first batch — triggers batch commit
         var firstBatchIds = new List<string>();
@@ -125,7 +126,7 @@ public class KafkaMessageConsumerCommitOnRevoke : IDisposable
 
         //Phase 3: Consumer B joins the group — triggers rebalance and revoke on A
         //The revoke handler on A should commit the outstanding offsets from the second batch
-        var consumerB = CreateConsumer(commitBatchSize: 100, partitionAssignmentStrategy: partitionAssignmentStrategy);
+        using var consumerB = CreateConsumer(commitBatchSize: 100, partitionAssignmentStrategy: partitionAssignmentStrategy);
 
         //consumer B polls to join the group
         _ = consumerB.Receive(TimeSpan.FromMilliseconds(5000));
@@ -142,9 +143,7 @@ public class KafkaMessageConsumerCommitOnRevoke : IDisposable
 
         //close both consumers to release group membership
         consumerA.Close();
-        consumerA.Dispose();
         consumerB.Close();
-        consumerB.Dispose();
 
         //Phase 4: Consumer C joins the same group — should start from committed position
         //If revoke committed offsets correctly, C should NOT replay any messages that A consumed
