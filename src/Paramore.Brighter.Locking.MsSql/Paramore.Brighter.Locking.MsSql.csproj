@@ -6,10 +6,7 @@
     <PackageTags>SQL Server;Microsoft;Distributed Locking;Concurrency;Lock;Command Processor;Database;MSSQL;Brighter</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Authors>Paul Reardon</Authors>
-    <Description>A Locking Provider for Microsoft SQL Server</Description>
-    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
