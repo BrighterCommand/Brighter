@@ -4,6 +4,7 @@
     <Authors>Tim van Wijk</Authors>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>MQTT;Message Gateway;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
+    <!-- MQTTnet is not strong-named, so this assembly cannot be signed -->
     <SignAssembly>false</SignAssembly>
     <Nullable>enable</Nullable>
   </PropertyGroup>

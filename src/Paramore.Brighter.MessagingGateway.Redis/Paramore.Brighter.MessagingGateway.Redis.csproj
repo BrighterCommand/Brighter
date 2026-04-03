@@ -5,6 +5,7 @@
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <Nullable>enable</Nullable>
     <PackageTags>Redis;Message Gateway;Pub/Sub;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
+    <!-- ServiceStack.Redis.Core is not strong-named, so this assembly cannot be signed -->
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>

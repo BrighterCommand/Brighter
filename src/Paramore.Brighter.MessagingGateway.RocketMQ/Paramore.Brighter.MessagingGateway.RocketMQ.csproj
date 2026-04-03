@@ -6,6 +6,7 @@
     <Authors>Rafael Andrade</Authors>
     <PackageTags>RocketMQ;Apache;Message Gateway;Pub/Sub;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
     <Nullable>enable</Nullable>
+    <!-- RocketMQ.Client is not strong-named, so this assembly cannot be signed -->
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 

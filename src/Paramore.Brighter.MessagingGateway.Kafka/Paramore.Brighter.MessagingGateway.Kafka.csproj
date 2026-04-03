@@ -4,6 +4,7 @@
     <Authors>Wayne Hunsley</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>Kafka;Apache Kafka;Message Gateway;Schema Registry;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
+    <!-- Confluent.Kafka is not strong-named, so this assembly cannot be signed -->
     <SignAssembly>false</SignAssembly>
     <Nullable>enable</Nullable>
   </PropertyGroup>
