@@ -4,7 +4,6 @@
     <Authors>Daniel Stockhammer, Toby Henderson</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>Dependency Injection;DI;Container;Command;Event;Command Processor;Microsoft Extensions;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
