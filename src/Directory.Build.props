@@ -18,16 +18,15 @@
     <AssemblyOriginatorKeyFile>..\..\Brighter.snk</AssemblyOriginatorKeyFile>
 
     <GeneratePackageOnBuild Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</GeneratePackageOnBuild>
-    <!-- Generate XML docs for NuGet IntelliSense; CI-only to avoid slowing local builds -->
-    <GenerateDocumentationFile Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</GenerateDocumentationFile>
-    <!-- Suppress XML documentation warnings so GenerateDocumentationFile does not conflict
-         with TreatWarningsAsErrors. Fix doc comments over time. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Suppress XML documentation warnings (CS1570-CS1591) so GenerateDocumentationFile
+         does not conflict with TreatWarningsAsErrors. Fix doc comments over time. -->
     <NoWarn>$(NoWarn);CS0419;CS1570;CS1571;CS1572;CS1573;CS1574;CS1580;CS1581;CS1584;CS1587;CS1589;CS1590;CS1591;CS1592;CS1658;CS1711;CS1723;CS1734</NoWarn>
     <!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
-    <PublishRepositoryUrl Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</PublishRepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <!-- Optional: Embed source files that are not tracked by the source control manager to the PDB -->
     <!-- This is useful if you generate files during the build -->
-    <EmbedUntrackedSources Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</EmbedUntrackedSources>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!-- Recommended: Embed symbols containing Source Link in the main file (exe/dll) -->
     <DebugType>embedded</DebugType>
 
@@ -39,23 +38,12 @@
     <InformationalVersion>10.0.0</InformationalVersion>
     <Version>10.0.0</Version>
     
-    <!--  The .NET Version used in all projects.
-          Local builds target a single TFM for speed (~60-75% faster).
-          CI builds the full multi-target matrix.
-          To build all TFMs locally: dotnet build /p:BuildAllTargetFrameworks=true -->
+    <!--  The .NET Version used in all projects -->
     <BrighterNetStandardTargetFrameworks>netstandard2.0;</BrighterNetStandardTargetFrameworks>
-    <BrighterTargetFrameworks Condition="'$(ContinuousIntegrationBuild)' == 'true' Or '$(BuildAllTargetFrameworks)' == 'true'">netstandard2.0;net8.0;net9.0;net10.0</BrighterTargetFrameworks>
-    <BrighterTargetFrameworks Condition="'$(BrighterTargetFrameworks)' == ''">net9.0;net10.0</BrighterTargetFrameworks>
-    <BrighterFrameworkAndCoreTargetFrameworks Condition="'$(ContinuousIntegrationBuild)' == 'true' Or '$(BuildAllTargetFrameworks)' == 'true'">net462;net8.0;net9.0;net10.0</BrighterFrameworkAndCoreTargetFrameworks>
-    <BrighterFrameworkAndCoreTargetFrameworks Condition="'$(BrighterFrameworkAndCoreTargetFrameworks)' == ''">net9.0;net10.0</BrighterFrameworkAndCoreTargetFrameworks>
-    <BrighterCoreTargetFrameworks Condition="'$(ContinuousIntegrationBuild)' == 'true' Or '$(BuildAllTargetFrameworks)' == 'true'">net8.0;net9.0;net10.0</BrighterCoreTargetFrameworks>
-    <BrighterCoreTargetFrameworks Condition="'$(BrighterCoreTargetFrameworks)' == ''">net9.0;net10.0</BrighterCoreTargetFrameworks>
-    <BrighterNetNineEarlierTargetFrameworks Condition="'$(ContinuousIntegrationBuild)' == 'true' Or '$(BuildAllTargetFrameworks)' == 'true'">net8.0;net9.0</BrighterNetNineEarlierTargetFrameworks>
-    <!-- net9.0 locally: these projects depend on packages without net10.0 support (e.g. Pomelo) -->
-    <BrighterNetNineEarlierTargetFrameworks Condition="'$(BrighterNetNineEarlierTargetFrameworks)' == ''">net9.0</BrighterNetNineEarlierTargetFrameworks>
-    <!-- MongoDB projects require net472 (via netstandard2.0) on CI, but locally just build core TFMs -->
-    <BrighterMongoTargetFrameworks Condition="'$(ContinuousIntegrationBuild)' == 'true' Or '$(BuildAllTargetFrameworks)' == 'true'">net472;net8.0;net9.0;net10.0</BrighterMongoTargetFrameworks>
-    <BrighterMongoTargetFrameworks Condition="'$(BrighterMongoTargetFrameworks)' == ''">net9.0;net10.0</BrighterMongoTargetFrameworks>
+    <BrighterTargetFrameworks>netstandard2.0;net8.0;net9.0;net10.0</BrighterTargetFrameworks>
+    <BrighterFrameworkAndCoreTargetFrameworks>net462;net8.0;net9.0;net10.0</BrighterFrameworkAndCoreTargetFrameworks>
+    <BrighterCoreTargetFrameworks>net8.0;net9.0;net10.0</BrighterCoreTargetFrameworks>
+    <BrighterNetNineEarlierTargetFrameworks>net8.0;net9.0</BrighterNetNineEarlierTargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
