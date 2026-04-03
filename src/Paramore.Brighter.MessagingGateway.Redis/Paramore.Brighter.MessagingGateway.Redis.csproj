@@ -13,6 +13,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ServiceStack.Redis.Core" />
+  </ItemGroup>
+  <!-- These polyfill packages are only needed when targeting netstandard2.0 / .NET Framework -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or $(TargetFramework.StartsWith('net4'))">
     <PackageReference Include="System.Text.RegularExpressions" />
     <PackageReference Include="System.Reflection.TypeExtensions" />
   </ItemGroup>
