@@ -18,6 +18,10 @@
     <AssemblyOriginatorKeyFile>..\..\Brighter.snk</AssemblyOriginatorKeyFile>
 
     <GeneratePackageOnBuild Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Suppress XML documentation warnings (CS1570-CS1591) so GenerateDocumentationFile
+         does not conflict with TreatWarningsAsErrors. Fix doc comments over time. -->
+    <NoWarn>$(NoWarn);CS0419;CS1570;CS1571;CS1572;CS1573;CS1574;CS1580;CS1581;CS1584;CS1587;CS1589;CS1590;CS1591;CS1592;CS1658;CS1711;CS1723;CS1734</NoWarn>
     <!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <!-- Optional: Embed source files that are not tracked by the source control manager to the PDB -->
