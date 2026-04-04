@@ -15,7 +15,7 @@
   <ItemGroup>
     <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     <!-- RMQ.Sync uses the legacy synchronous RabbitMQ.Client 6.x API -->
-    <PackageReference Include="RabbitMQ.Client" VersionOverride="$(RabbitMQClientLegacy)" />
+    <PackageReference Include="RabbitMQ.Client" VersionOverride="$(RabbitMQClientV6)" />
   </ItemGroup>
 
 </Project>
