@@ -208,11 +208,10 @@ namespace Paramore.Brighter
                         .Where(attribute => attribute.Timing == HandlerTiming.Before)
                         .OrderByDescending(attribute => attribute.Step);
 
-                AddGlobalInboxAttributes(ref preAttributes, implicitHandler);
-
                 s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
-
             }
+
+            AddGlobalInboxAttributes(ref preAttributes, implicitHandler);
 
             var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext, instanceScope);
 
@@ -250,11 +249,10 @@ namespace Paramore.Brighter
                         .Where(attribute => attribute.Timing == HandlerTiming.Before)
                         .OrderByDescending(attribute => attribute.Step);
 
-                AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
-
                 s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
-
             }
+
+            AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
 
             var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, instanceScope, continueOnCapturedContext);
 
