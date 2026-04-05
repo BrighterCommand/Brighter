@@ -273,14 +273,12 @@ namespace Paramore.Brighter
         private void AddGlobalInboxAttributes(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandler<TRequest> implicitHandler)
         {
             if (
-                _inboxConfiguration == null 
+                _inboxConfiguration == null
                 || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
                 || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
             )
                 return;
 
-            if (_inboxConfiguration is null)
-                throw new ArgumentException("Inbox Configuration must be provided");
             if (_inboxConfiguration.Context is null)
                 throw new ArgumentException("Inbox Configuration must be set");
             var useInboxAttribute = new UseInboxAttribute(
@@ -289,22 +287,18 @@ namespace Paramore.Brighter
                 onceOnly: _inboxConfiguration.OnceOnly,
                 timing: HandlerTiming.Before,
                 onceOnlyAction: _inboxConfiguration.ActionOnExists);
-            
+
              PushOntoAttributeList(ref preAttributes, useInboxAttribute);
         }
 
-
         private void AddGlobalInboxAttributesAsync(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAsync<TRequest> implicitHandler)
         {
-            if (_inboxConfiguration == null 
+            if (_inboxConfiguration == null
                 || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
                 || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
-     
             )
                 return;
 
-            if (_inboxConfiguration is null)
-                throw new ArgumentException("Inbox Configuration must be provided");
             if (_inboxConfiguration.Context is null)
                 throw new ArgumentException("Inbox Configuration must be set");
             var useInboxAttribute = new UseInboxAsyncAttribute(
@@ -370,11 +364,7 @@ namespace Paramore.Brighter
 
             attributeList.Add(requestHandlerAttribute);
 
-            preAttributes.Each(handler =>
-            {
-                handler.Step++;
-                attributeList.Add(handler);
-            });
+            preAttributes.Each(handler => attributeList.Add(handler));
 
             preAttributes = attributeList.OrderByDescending(handler => handler.Step);
         }
