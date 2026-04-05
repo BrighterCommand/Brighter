@@ -361,10 +361,19 @@ namespace Paramore.Brighter
         private static void PushOntoAttributeList(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAttribute requestHandlerAttribute)
         {
             var attributeList = new List<RequestHandlerAttribute>();
+            var minStep = int.MaxValue;
 
+            preAttributes.Each(handler =>
+            {
+                if (handler.Step < minStep)
+                    minStep = handler.Step;
+                attributeList.Add(handler);
+            });
+
+            // Ensure the new attribute has a lower step than all existing attributes
+            // so it is processed last in the descending iteration (outermost in the pipeline)
+            requestHandlerAttribute.Step = minStep == int.MaxValue ? 0 : minStep - 1;
             attributeList.Add(requestHandlerAttribute);
-
-            preAttributes.Each(handler => attributeList.Add(handler));
 
             preAttributes = attributeList.OrderByDescending(handler => handler.Step);
         }
