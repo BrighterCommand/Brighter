@@ -371,7 +371,9 @@ namespace Paramore.Brighter
             });
 
             // Ensure the new attribute has a lower step than all existing attributes
-            // so it is processed last in the descending iteration (outermost in the pipeline)
+            // so it is processed last in the descending iteration (outermost in the pipeline).
+            // Note: requestHandlerAttribute must be a freshly created instance on every call —
+            // callers must not cache or reuse it, as we mutate its Step here.
             requestHandlerAttribute.Step = minStep == int.MaxValue ? 0 : minStep - 1;
             attributeList.Add(requestHandlerAttribute);
 
