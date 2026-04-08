@@ -1,36 +1,97 @@
-name-template: '$RESOLVED_VERSION 🌈'
+name-template: '$RESOLVED_VERSION'
 tag-template: '$RESOLVED_VERSION'
+
 categories:
-  - title: '🚀 Features'
+  - title: 'Breaking Changes'
     labels:
-      - 'feature'
-      - 'enhancement'
+      - 'Breaking Change'
+  - title: 'Features'
+    labels:
       - 'feature request'
-  - title: '🐛 Bug Fixes'
+  - title: 'Bug Fixes'
     labels:
-      - 'fix'
-      - 'bugfix'
-      - 'bug'
       - 'Bug'
-  - title: '🧰 Maintenance'
-    label: 'chore'
-  - title: '🛠️ Dependencies'
-    label: 'dependencies'
+  - title: 'Performance'
+    labels:
+      - 'Performance Improvement'
+  - title: 'Documentation'
+    labels:
+      - 'Documentation'
+  - title: 'Security'
+    labels:
+      - 'security'
+  - title: 'Dependencies'
+    labels:
+      - 'dependencies'
+  - title: 'Maintenance'
+    labels:
+      - 'Maintenance'
+
+exclude-labels:
+  - 'Draft'
 
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
-change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
+change-title-escapes: '\<*_&'
+
 version-resolver:
   major:
     labels:
-      - 'major'
+      - 'Breaking Change'
   minor:
     labels:
-      - 'minor'
+      - 'feature request'
   patch:
     labels:
-      - 'patch'
+      - 'Bug'
+      - 'Performance Improvement'
+      - 'dependencies'
   default: patch
+
+autolabeler:
+  - label: 'feature request'
+    title:
+      - '/^[Ff][Ee][Aa][Tt][Uu]?[Rr]?[Ee]?[\(!:]/'
+      - '/^\[Feature\]/'
+      - '/^Feature\//'
+  - label: 'Bug'
+    title:
+      - '/^[Ff][Ii][Xx][\(:]/'
+      - '/^[Bb][Uu][Gg][\(:]/'
+      - '/^\[Fix\]/'
+      - '/^\[Bug\]/'
+      - '/^[Ff]ix(es)?\s/'
+  - label: 'Performance Improvement'
+    title:
+      - '/^[Pp][Ee][Rr][Ff][\(:]/'
+  - label: 'Documentation'
+    title:
+      - '/^[Dd]ocs[\(:]/'
+      - '/^\[Docs\]/'
+  - label: 'dependencies'
+    title:
+      - '/^[Cc]hore\(deps\)/'
+      - '/^Bump /'
+  - label: 'Maintenance'
+    title:
+      - '/^[Cc]hore[\(:]/'
+      - '/^\[Chore\]/'
+      - '/^[Bb]uild[\(:]/'
+      - '/^[Rr]efactor[\(:]/'
+      - '/^[Tt]est[\(:]/'
+      - '/^[Cc][Ii][\(:]/'
+      - '/^[Ss]tyle[\(:]/'
+      - '/^[Rr]efactor/'
+      - '/^[Mm]igrate\s/'
+  - label: 'Breaking Change'
+    title:
+      - '/^BREAKING[\s:]/'
+      - '/^[a-z]+![\(:]/'
+
 template: |
   ## Changes
 
   $CHANGES
+
+  ## Other
+
+  $UNCATEGORIZED

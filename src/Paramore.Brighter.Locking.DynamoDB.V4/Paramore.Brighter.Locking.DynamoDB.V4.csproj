@@ -8,7 +8,6 @@
     <Nullable>enable</Nullable>
     <Title>This is the Dynamo DB Distributed Locking Provider.</Title>
     <Authors>Dominic Hickie</Authors>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>

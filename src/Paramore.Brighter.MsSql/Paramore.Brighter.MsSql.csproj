@@ -5,7 +5,6 @@
     <Authors>Paul Reardon</Authors>
     <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>SQL Server;MSSQL;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

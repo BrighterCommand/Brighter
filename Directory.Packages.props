@@ -10,6 +10,7 @@
     <AWSSQSV4>4.0.2.18</AWSSQSV4>
     <AWSSDKSimpleNotificationServiceV4>4.0.2.20</AWSSDKSimpleNotificationServiceV4>
     <AWSSDKExtensionsNETCoreSetup>4.0.3.26</AWSSDKExtensionsNETCoreSetup>
+    <RabbitMQClientV6>6.8.1</RabbitMQClientV6>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />
@@ -185,8 +186,7 @@
     <PackageVersion Include="TickerQ" Version="10.1.1" />
   </ItemGroup>
   <ItemGroup>
-    <GlobalPackageReference Include="MinVer" Version="7.0.0" />
-    <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.201" />
+    <GlobalPackageReference Include="MinVer" Version="7.0.0" Condition="'$(IsPackable)' != 'false' And '$(ContinuousIntegrationBuild)' == 'true'" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net462' Or '$(TargetFramework)' == 'net472'">
     <GlobalPackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3">

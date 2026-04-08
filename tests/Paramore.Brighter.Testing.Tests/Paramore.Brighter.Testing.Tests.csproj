@@ -2,8 +2,6 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter.Testing\Paramore.Brighter.Testing.csproj" />

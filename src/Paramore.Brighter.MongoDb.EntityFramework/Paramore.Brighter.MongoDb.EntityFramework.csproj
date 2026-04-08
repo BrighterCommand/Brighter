@@ -5,7 +5,6 @@
     <Authors>Jakub Syty</Authors>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>MongoDB;Entity Framework Core;EF Core;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <NoWarn>$(NoWarn);CS8002</NoWarn>
   </PropertyGroup>

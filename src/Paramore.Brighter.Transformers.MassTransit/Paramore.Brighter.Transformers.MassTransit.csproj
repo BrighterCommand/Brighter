@@ -5,7 +5,6 @@
     <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>MassTransit;Transformers;Message Transformation;Interoperability;Command;Event;Command Processor;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

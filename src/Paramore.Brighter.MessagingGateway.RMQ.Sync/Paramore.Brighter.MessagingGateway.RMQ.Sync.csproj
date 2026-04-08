@@ -5,7 +5,6 @@
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>RabbitMQ;AMQP;Sync;Message Gateway;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
@@ -15,7 +14,8 @@
 
   <ItemGroup>
     <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
-    <PackageReference Include="RabbitMQ.Client" VersionOverride="6.8.1" />
+    <!-- RMQ.Sync uses the legacy synchronous RabbitMQ.Client 6.x API -->
+    <PackageReference Include="RabbitMQ.Client" VersionOverride="$(RabbitMQClientV6)" />
   </ItemGroup>
 
 </Project>

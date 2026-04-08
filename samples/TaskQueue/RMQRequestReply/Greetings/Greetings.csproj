@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <LangVersion>8</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessagingGateway.RMQ.Sync\Paramore.Brighter.MessagingGateway.RMQ.Sync.csproj" />
@@ -12,6 +11,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="RabbitMQ.Client" VersionOverride="6.8.1" />
+    <PackageReference Include="RabbitMQ.Client" VersionOverride="$(RabbitMQClientV6)" />
   </ItemGroup>
 </Project>
