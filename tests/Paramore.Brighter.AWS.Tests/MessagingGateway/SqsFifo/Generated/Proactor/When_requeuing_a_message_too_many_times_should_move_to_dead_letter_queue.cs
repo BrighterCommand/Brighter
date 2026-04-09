@@ -28,7 +28,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifoMessageGatewayProvider();
         _messageBuilder = new FifoMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new AwsMessageAssertion();
     }
 
     public Task InitializeAsync()
@@ -54,7 +54,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         await _producer.SendAsync(message);
@@ -64,13 +64,13 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)
         {
-            received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
+            received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
             await _channel.RequeueAsync(received);
 
             
         }
 
-        received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
+        received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         // Act

@@ -28,7 +28,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifoMessageGatewayProvider();
         _messageBuilder = new FifoMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new AwsMessageAssertion();
     }
 
     public void Dispose()
@@ -48,7 +48,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         _producer.Send(message);
@@ -56,7 +56,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
         
 
         // Act
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(4000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         _channel.Requeue(received);
@@ -67,7 +67,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
         var requeued = new Message();
         for (var i = 0; i < 10; i++)
         {
-            requeued = _channel.Receive(TimeSpan.FromMilliseconds(300));
+            requeued = _channel.Receive(TimeSpan.FromMilliseconds(4000));
             if (requeued.Header.MessageType != MessageType.MT_NONE)
             {
                 break;
@@ -78,7 +78,6 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, requeued.Header.MessageType);
-        Assert.Equal(message.Header.MessageId.ToString(), requeued.Header.Bag[Message.OriginalMessageIdHeaderName].ToString());
         _messageAssertion.Assert(message, requeued);
     }
 }

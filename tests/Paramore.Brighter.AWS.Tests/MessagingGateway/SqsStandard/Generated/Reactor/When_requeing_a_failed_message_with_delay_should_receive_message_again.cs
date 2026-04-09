@@ -28,7 +28,7 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDis
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandardMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new AwsMessageAssertion();
     }
 
     public void Dispose()
@@ -48,14 +48,14 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDis
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         _producer.SendWithDelay(message, TimeSpan.FromSeconds(5));
         Thread.Sleep(TimeSpan.FromSeconds(6));
 
         // Act
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(4000));
         Assert.NotEqual(MessageType.MT_QUIT, received.Header.MessageType);
 
         _channel.Requeue(received);
@@ -63,7 +63,7 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDis
         
 
         // Assert
-        received = _channel.Receive(TimeSpan.FromMilliseconds(300));
+        received = _channel.Receive(TimeSpan.FromMilliseconds(4000));
         _channel.Acknowledge(received);
         _messageAssertion.Assert(message, received);
     }

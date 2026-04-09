@@ -13,7 +13,6 @@ public class SqsStandardMessageGatewayProvider
     : SqsStandard.Proactor.IAmAMessageGatewayProactorProvider,
       SqsStandard.Reactor.IAmAMessageGatewayReactorProvider
 {
-    private static readonly TimeSpan s_sqsMinTimeout = TimeSpan.FromSeconds(5);
     private readonly AWSMessagingGatewayConnection _awsConnection;
 
     public SqsStandardMessageGatewayProvider()
@@ -119,7 +118,7 @@ public class SqsStandardMessageGatewayProvider
             channel.Receive(TimeSpan.FromMilliseconds(100));
         }
 
-        return new MinimumTimeoutChannelSync(channel, s_sqsMinTimeout);
+        return channel;
     }
 
     public async Task<IAmAChannelAsync> CreateChannelAsync(
@@ -134,7 +133,7 @@ public class SqsStandardMessageGatewayProvider
             await channel.ReceiveAsync(TimeSpan.FromMilliseconds(100), cancellationToken);
         }
 
-        return new MinimumTimeoutChannelAsync(channel, s_sqsMinTimeout);
+        return channel;
     }
 
     public IAmAMessageProducerSync CreateProducer(SqsPublication publication)

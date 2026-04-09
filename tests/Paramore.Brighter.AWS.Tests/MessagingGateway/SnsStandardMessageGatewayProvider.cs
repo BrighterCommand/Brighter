@@ -13,7 +13,6 @@ public class SnsStandardMessageGatewayProvider
     : SnsStandard.Proactor.IAmAMessageGatewayProactorProvider,
       SnsStandard.Reactor.IAmAMessageGatewayReactorProvider
 {
-    private static readonly TimeSpan s_sqsMinTimeout = TimeSpan.FromSeconds(5);
     private readonly AWSMessagingGatewayConnection _awsConnection;
 
     public SnsStandardMessageGatewayProvider()
@@ -115,7 +114,7 @@ public class SnsStandardMessageGatewayProvider
             channel.Receive(TimeSpan.FromMilliseconds(100));
         }
 
-        return new MinimumTimeoutChannelSync(channel, s_sqsMinTimeout);
+        return channel;
     }
 
     public async Task<IAmAChannelAsync> CreateChannelAsync(
@@ -130,7 +129,7 @@ public class SnsStandardMessageGatewayProvider
             await channel.ReceiveAsync(TimeSpan.FromMilliseconds(100), cancellationToken);
         }
 
-        return new MinimumTimeoutChannelAsync(channel, s_sqsMinTimeout);
+        return channel;
     }
 
     public IAmAMessageProducerSync CreateProducer(SnsPublication publication)

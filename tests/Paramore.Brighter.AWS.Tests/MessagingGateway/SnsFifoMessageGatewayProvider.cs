@@ -13,13 +13,7 @@ public class SnsFifoMessageGatewayProvider
     : SnsFifo.Proactor.IAmAMessageGatewayProactorProvider,
       SnsFifo.Reactor.IAmAMessageGatewayReactorProvider
 {
-    private static readonly TimeSpan s_sqsMinTimeout = TimeSpan.FromSeconds(5);
-    private readonly AWSMessagingGatewayConnection _awsConnection;
-
-    public SnsFifoMessageGatewayProvider()
-    {
-        _awsConnection = GatewayFactory.CreateFactory();
-    }
+    private readonly AWSMessagingGatewayConnection _awsConnection = GatewayFactory.CreateFactory();
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
@@ -120,7 +114,7 @@ public class SnsFifoMessageGatewayProvider
             channel.Receive(TimeSpan.FromMilliseconds(100));
         }
 
-        return new MinimumTimeoutChannelSync(channel, s_sqsMinTimeout);
+        return channel;
     }
 
     public async Task<IAmAChannelAsync> CreateChannelAsync(
@@ -135,7 +129,7 @@ public class SnsFifoMessageGatewayProvider
             await channel.ReceiveAsync(TimeSpan.FromMilliseconds(100), cancellationToken);
         }
 
-        return new MinimumTimeoutChannelAsync(channel, s_sqsMinTimeout);
+        return channel;
     }
 
     public IAmAMessageProducerSync CreateProducer(SnsPublication publication)

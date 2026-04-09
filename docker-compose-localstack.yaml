@@ -2,7 +2,7 @@ version: '3'
 
 services:
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:4.14
     environment:
       # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
       - "SERVICES=s3,sqs,sns,sts,dynamodb,iam,scheduler"

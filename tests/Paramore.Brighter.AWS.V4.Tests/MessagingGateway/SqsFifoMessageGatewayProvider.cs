@@ -13,7 +13,6 @@ public class SqsFifoMessageGatewayProvider
     : SqsFifo.Proactor.IAmAMessageGatewayProactorProvider,
       SqsFifo.Reactor.IAmAMessageGatewayReactorProvider
 {
-    private static readonly TimeSpan s_sqsMinTimeout = TimeSpan.FromSeconds(5);
     private readonly AWSMessagingGatewayConnection _awsConnection;
 
     public SqsFifoMessageGatewayProvider()
@@ -122,7 +121,7 @@ public class SqsFifoMessageGatewayProvider
             channel.Receive(TimeSpan.FromMilliseconds(100));
         }
 
-        return new MinimumTimeoutChannelSync(channel, s_sqsMinTimeout);
+        return channel;
     }
 
     public async Task<IAmAChannelAsync> CreateChannelAsync(
@@ -137,7 +136,7 @@ public class SqsFifoMessageGatewayProvider
             await channel.ReceiveAsync(TimeSpan.FromMilliseconds(100), cancellationToken);
         }
 
-        return new MinimumTimeoutChannelAsync(channel, s_sqsMinTimeout);
+        return channel;
     }
 
     public IAmAMessageProducerSync CreateProducer(SqsPublication publication)

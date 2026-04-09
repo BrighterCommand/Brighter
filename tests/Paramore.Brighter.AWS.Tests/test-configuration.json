@@ -1,5 +1,6 @@
 {
   "Namespace": "Paramore.Brighter.AWS.Tests",
+  "MessageAssertion": "AwsMessageAssertion",
   "MessagingGateways": {
     "SnsStandard": {
       "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SnsPublication",
@@ -11,7 +12,8 @@
       "HasSupportToDelayedMessages": false,
       "HasSupportToPartitionKey": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
     },
     "SnsFifo": {
       "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SnsPublication",
@@ -24,7 +26,8 @@
       "HasSupportToDelayedMessages": false,
       "HasSupportToPartitionKey": true,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
     },
     "SqsStandard": {
       "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsPublication",
@@ -36,7 +39,8 @@
       "HasSupportToDelayedMessages": true,
       "HasSupportToPartitionKey": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
     },
     "SqsFifo": {
       "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsPublication",
@@ -49,7 +53,8 @@
       "HasSupportToDelayedMessages": false,
       "HasSupportToPartitionKey": true,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
     }
   }
 }

@@ -53,10 +53,10 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
 
         _sentMessages =
         [
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build()
+            _messageBuilder.SetTopic(_publication.Topic!).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).Build()
         ];
 
         // Act

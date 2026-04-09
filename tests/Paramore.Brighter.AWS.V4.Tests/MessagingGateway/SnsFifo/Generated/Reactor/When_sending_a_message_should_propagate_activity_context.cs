@@ -68,7 +68,6 @@ public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
 
         var message = _messageBuilder
             .SetTopic(_publication.Topic!)
-            .SetPartitionKey(PartitionKey.Empty)
             .SetTraceParent(null)
             .SetTraceState(null)
             .SetBaggage(new Paramore.Brighter.Observability.Baggage())

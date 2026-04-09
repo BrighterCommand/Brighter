@@ -40,6 +40,11 @@ public class FifoMessageBuilder : IAmAMessageBuilder
 {
     private readonly DefaultMessageBuilder _inner = new();
 
+    public FifoMessageBuilder()
+    {
+        _inner.SetPartitionKey(new PartitionKey(Uuid.NewAsString()));
+    }
+
     /// <inheritdoc />
     public IAmAMessageBuilder SetBag(Dictionary<string, object> bag) { _inner.SetBag(bag); return this; }
 

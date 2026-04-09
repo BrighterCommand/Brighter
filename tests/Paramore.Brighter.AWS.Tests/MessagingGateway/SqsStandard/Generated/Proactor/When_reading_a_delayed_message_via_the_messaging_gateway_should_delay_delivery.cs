@@ -28,7 +28,7 @@ public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandardMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new AwsMessageAssertion();
     }
 
     public Task InitializeAsync()
@@ -53,13 +53,13 @@ public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         await _producer.SendWithDelayAsync(message, TimeSpan.FromSeconds(5));
 
         // Act
-        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         await Task.Delay(TimeSpan.FromSeconds(5));

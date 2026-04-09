@@ -47,7 +47,7 @@ public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IA
             _publication.MakeChannels = OnMissingChannel.Validate;
             _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
 
-            var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+            var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
             _sentMessages.Add(message);
 
             // Act

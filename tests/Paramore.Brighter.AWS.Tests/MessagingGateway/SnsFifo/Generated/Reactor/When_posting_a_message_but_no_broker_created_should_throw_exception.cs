@@ -37,7 +37,7 @@ public class WhenPostingAMessageButNoBrokerCreatedShouldThrowException
             _publication.MakeChannels = OnMissingChannel.Validate;
             _producer = _messageGatewayProvider.CreateProducer(_publication);
 
-            var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+            var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
             _sentMessages.Add(message);
 
             // Act

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 
 using Paramore.Brighter.Extensions;
@@ -31,7 +32,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SnsFifoMessageGatewayProvider();
         _messageBuilder = new FifoMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new AwsMessageAssertion();
     }
 
     public async void Dispose()
@@ -53,10 +54,10 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
 
         _sentMessages =
         [
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build()
+            _messageBuilder.SetTopic(_publication.Topic!).SetMessageId(Id.Random()).SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString())).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).SetMessageId(Id.Random()).SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString())).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).SetMessageId(Id.Random()).SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString())).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).SetMessageId(Id.Random()).SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString())).Build()
         ];
 
         // Act
@@ -67,7 +68,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
         // Assert
         for (var i = 0; i < _sentMessages.Count; i++)
         {
-            var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
+            var received = _channel.Receive(TimeSpan.FromMilliseconds(4000));
 
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
 
