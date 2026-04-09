@@ -649,27 +649,54 @@ Developers opt in through the existing `IBrighterBuilder` interface, which is co
 // Extension methods on IBrighterBuilder
 builder.Services.AddBrighter(options => { /* ... */ })
     .AutoFromAssemblies()
-    .ValidatePipelines()    // enable startup validation
+    .ValidatePipelines()    // enable startup validation (throws on error by default)
     .DescribePipelines();   // enable diagnostic report
 
-// If using producers
+// With explicit flags — developer controls when validation runs
+var isDevelopment = builder.Environment.IsDevelopment();
 builder.Services.AddBrighter(options => { /* ... */ })
     .AutoFromAssemblies()
-    .AddProducers(config => { /* ... */ })
-    .ValidatePipelines()
+    .ValidatePipelines(enabled: isDevelopment)       // only validate in Development
+    .DescribePipelines(enabled: isDevelopment);       // only describe in Development
+
+// Validate but don't terminate — log errors instead of throwing
+builder.Services.AddBrighter(options => { /* ... */ })
+    .AutoFromAssemblies()
+    .ValidatePipelines(throwOnError: false)  // log errors, don't throw
     .DescribePipelines();
 
-// If using consumers (full messaging)
+// Mix and match — validate everywhere but only throw in Development
+var isDev = builder.Environment.IsDevelopment();
 builder.Services.AddBrighter(options => { /* ... */ })
     .AutoFromAssemblies()
     .AddConsumers(config => { /* ... */ })
-    .ValidatePipelines()
-    .DescribePipelines();
+    .ValidatePipelines(enabled: true, throwOnError: isDev)
+    .DescribePipelines(enabled: isDev);
 ```
 
+#### Method Signatures
+
+```csharp
+// On IBrighterBuilder
+public static IBrighterBuilder ValidatePipelines(
+    this IBrighterBuilder builder,
+    bool enabled = true,
+    bool throwOnError = true);
+
+public static IBrighterBuilder DescribePipelines(
+    this IBrighterBuilder builder,
+    bool enabled = true);
+```
+
+Both `enabled` parameters default to `true`, preserving the existing behavior where calling the method without arguments enables the feature. When `enabled` is `false`, the method is a no-op — no services are registered, no hosted services are added, and the application behaves as if the method was never called.
+
+The `throwOnError` parameter on `ValidatePipelines` controls what happens when validation finds errors. When `true` (the default), errors cause `PipelineValidationException` to be thrown, terminating host startup. When `false`, errors are logged at `LogLevel.Error` via `ILogger` and the application continues starting. This serves two purposes: it acts as an explicit reminder to the developer that validation can terminate the program, and it provides a "warn but don't fail" mode for environments like staging where visibility matters but blocking deployment is undesirable. Warnings are always logged at `LogLevel.Warning` regardless of the `throwOnError` setting.
+
+Brighter does not prescribe how the developer sources these flags. The developer might check `IHostEnvironment.EnvironmentName`, read from `IConfiguration`, use a feature flag, or hardcode the value. By accepting simple `bool` parameters, the decision is left entirely to the caller. The two features (`ValidatePipelines` and `DescribePipelines`) use independent flags — the developer may enable one without the other, and they may use the same or different flag values.
+
 The extension methods register:
-- `ValidatePipelines()` registers `IAmAPipelineValidator` and a `BrighterValidationHostedService` (`IHostedService`) that runs validation at startup.
-- `DescribePipelines()` registers `IAmAPipelineDiagnosticWriter` and a `BrighterDiagnosticHostedService` (`IHostedService`) that runs the diagnostic report at startup. This hosted service is independent of `BrighterValidationHostedService` — calling `DescribePipelines()` without `ValidatePipelines()` produces the diagnostic report without validation.
+- `ValidatePipelines(enabled: true)` registers `IAmAPipelineValidator` and a `BrighterValidationHostedService` (`IHostedService`) that runs validation at startup. The `throwOnError` value is stored in `BrighterPipelineValidationOptions` and read by the hosted service at startup.
+- `DescribePipelines(enabled: true)` registers `IAmAPipelineDiagnosticWriter` and a `BrighterDiagnosticHostedService` (`IHostedService`) that runs the diagnostic report at startup. This hosted service is independent of `BrighterValidationHostedService` — calling `DescribePipelines()` without `ValidatePipelines()` produces the diagnostic report without validation.
 
 **Precondition**: `ValidatePipelines()` requires the subscriber registry to implement `IAmASubscriberRegistryInspector`. The built-in `SubscriberRegistry` satisfies this automatically. `ServiceCollectionSubscriberRegistry` (the DI wrapper used in `Paramore.Brighter.Extensions.DependencyInjection`) must also implement `IAmASubscriberRegistryInspector` by delegating to its inner `SubscriberRegistry` — since `ValidatePipelines()` resolves `ServiceCollectionSubscriberRegistry` from the container and passes it to `PipelineBuilder`, the wrapper must satisfy the same interface contract. Applications using a custom `IAmASubscriberRegistry` implementation must also implement `IAmASubscriberRegistryInspector` on that type — if the inspector interface cannot be resolved from DI, the validator throws at startup with a message identifying the missing interface and the required action.
 
@@ -687,23 +714,32 @@ public class BrighterPipelineValidationOptions
     /// becomes a no-op. Set unconditionally by AddConsumers().
     /// </summary>
     public bool ConsumerOwnsValidation { get; set; }
+
+    /// <summary>
+    /// When true (default), validation errors cause PipelineValidationException to be thrown,
+    /// terminating host startup. When false, errors are logged at LogLevel.Error via ILogger
+    /// and the application continues starting. Set by ValidatePipelines(throwOnError:).
+    /// </summary>
+    public bool ThrowOnError { get; set; } = true;
 }
 ```
 
 Registration rules:
-- `ValidatePipelines()` always registers `IAmAPipelineValidator` in DI, always registers `BrighterValidationHostedService`, and always registers `BrighterPipelineValidationOptions` (with `ConsumerOwnsValidation = false`).
+- `ValidatePipelines(enabled: true, throwOnError: true)` registers `IAmAPipelineValidator` in DI, registers `BrighterValidationHostedService`, and registers `BrighterPipelineValidationOptions` (with `ConsumerOwnsValidation = false`, `ThrowOnError` set to the `throwOnError` parameter value). When `enabled` is `false`, no services or hosted services are registered — the method is a no-op.
+- `DescribePipelines(enabled: true)` registers `IAmAPipelineDiagnosticWriter` and `BrighterDiagnosticHostedService`. When `enabled` is `false`, no services or hosted services are registered — the method is a no-op.
 - `AddConsumers()` always sets `ConsumerOwnsValidation = true` via `Configure<BrighterPipelineValidationOptions>`. This is unconditional — `AddConsumers()` does not check whether `ValidatePipelines()` was called. Registration order between `ValidatePipelines()` and `AddConsumers()` does not matter because `Configure<T>` actions are applied when the options are resolved, not at registration time.
 
 The two hosted services read the flag explicitly:
 
-**`BrighterValidationHostedService.StartAsync()`**: Reads `BrighterPipelineValidationOptions`. If `ConsumerOwnsValidation` is true, this service is a no-op — `ServiceActivatorHostedService` will handle validation. If false (pure CQRS or producers only), it runs validation and diagnostics. After calling `ThrowIfInvalid()`, it logs any warnings from `PipelineValidationResult.Warnings` at `LogLevel.Warning` — fulfilling the contract that warnings are surfaced but do not prevent startup.
+**`BrighterValidationHostedService.StartAsync()`**: Reads `BrighterPipelineValidationOptions`. If `ConsumerOwnsValidation` is true, this service is a no-op — `ServiceActivatorHostedService` will handle validation. If false (pure CQRS or producers only), it runs validation and diagnostics. If `ThrowOnError` is true (the default), it calls `ThrowIfInvalid()` which throws `PipelineValidationException` on errors. If `ThrowOnError` is false, it logs each error at `LogLevel.Error` via `ILogger` instead of throwing, allowing the application to continue starting. In both cases, it logs any warnings from `PipelineValidationResult.Warnings` at `LogLevel.Warning` — fulfilling the contract that warnings are surfaced but do not prevent startup.
 
-**`ServiceActivatorHostedService.StartAsync()`**: Uses a single constructor (no multiple-constructor ambiguity). The constructor takes `ILogger`, `IDispatcher`, and `IServiceProvider`. At `StartAsync` time, it resolves `IAmAPipelineValidator?` and `IAmAPipelineDiagnosticWriter?` from the service provider only when `BrighterPipelineValidationOptions.ConsumerOwnsValidation` is true. This avoids the DI pitfall of nullable constructor parameters — Microsoft.Extensions.DependencyInjection does not support optional constructor injection, so optional dependencies must be resolved explicitly from `IServiceProvider`. After calling `ThrowIfInvalid()`, it logs any warnings at `LogLevel.Warning`, matching `BrighterValidationHostedService`'s behaviour.
+**`ServiceActivatorHostedService.StartAsync()`**: Uses a single constructor (no multiple-constructor ambiguity). The constructor takes `ILogger`, `IDispatcher`, and `IServiceProvider`. At `StartAsync` time, it resolves `IAmAPipelineValidator?` and `IAmAPipelineDiagnosticWriter?` from the service provider only when `BrighterPipelineValidationOptions.ConsumerOwnsValidation` is true. This avoids the DI pitfall of nullable constructor parameters — Microsoft.Extensions.DependencyInjection does not support optional constructor injection, so optional dependencies must be resolved explicitly from `IServiceProvider`. It reads `ThrowOnError` from the options: if true (default), it calls `ThrowIfInvalid()`; if false, it logs errors at `LogLevel.Error` instead. In both cases, it logs any warnings at `LogLevel.Warning`, matching `BrighterValidationHostedService`'s behaviour.
 
 ```
 Scenario 1: Pure CQRS / Producers Only
   BrighterValidationHostedService:
     ConsumerOwnsValidation → false → RUN validation
+    ThrowOnError → true → throw on errors
   (no ServiceActivatorHostedService)
 
 Scenario 2: Full Messaging, Validation Opted In
@@ -711,6 +747,7 @@ Scenario 2: Full Messaging, Validation Opted In
     ConsumerOwnsValidation → true → NO-OP
   ServiceActivatorHostedService:
     IAmAPipelineValidator? → present → RUN validation
+    ThrowOnError → true → throw on errors
     _dispatcher.Receive()
 
 Scenario 3: Full Messaging, Validation Not Opted In
@@ -718,6 +755,15 @@ Scenario 3: Full Messaging, Validation Not Opted In
   ServiceActivatorHostedService:
     IAmAPipelineValidator? → null → SKIP
     _dispatcher.Receive()
+
+Scenario 4: Validation with enabled: false
+  ValidatePipelines(enabled: false) → no services registered → NO-OP
+  Behaves as if ValidatePipelines() was never called.
+
+Scenario 5: Validation with throwOnError: false
+  BrighterValidationHostedService (or ServiceActivatorHostedService):
+    RUN validation → errors found → LOG at Error level → CONTINUE startup
+    Warnings logged at Warning level as usual.
 ```
 
 This makes the coordination contract explicit — both services reference a named flag with clear semantics, rather than inferring intent from the presence of unrelated DI registrations. `IHostedService` startup order is deterministic (registration order), but the design does not depend on ordering.

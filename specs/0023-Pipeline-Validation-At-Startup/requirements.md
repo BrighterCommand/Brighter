@@ -142,6 +142,14 @@ Validation must work correctly regardless of which combination of paths the deve
 - **AddBrighter + AddConsumers**: Validates handler pipelines and subscriptions.
 - **All three**: Validates everything.
 
+### Functional Requirements — Configuration Control
+
+#### FR-14: Enable/Disable Flag for ValidatePipelines and DescribePipelines
+`ValidatePipelines()` and `DescribePipelines()` each accept an optional `bool enabled` parameter (defaulting to `true`) that controls whether the feature actually runs at startup. This allows the developer to gate validation or diagnostics on an external signal — for example, checking `IHostEnvironment.EnvironmentName` or reading from `IConfiguration` — without removing the method call from the configuration chain. The two flags are independent: the developer may enable validation but disable diagnostics, or vice versa. Brighter does not prescribe how the flag is stored — by accepting a simple `bool`, the developer can source it from environment checks, configuration, feature flags, or any other mechanism.
+
+#### FR-15: Throw-on-Error Flag for ValidatePipelines
+`ValidatePipelines()` accepts an optional `bool throwOnError` parameter (defaulting to `true`) that controls whether validation errors cause a `PipelineValidationException` to be thrown. When `throwOnError` is `false`, validation still runs and errors are logged at `LogLevel.Error` via `ILogger`, but the application is allowed to continue starting. This serves as an explicit reminder to the developer that validation can terminate the program, and gives them a way to opt into a "warn but don't fail" mode — for example, in staging environments where they want visibility into issues without blocking deployment.
+
 ### Non-Functional Requirements
 
 #### NFR-1: Opt-In by Default
@@ -207,6 +215,12 @@ Given an existing application that does not enable validation or diagnostics, wh
 
 ### AC-12: Pure CQRS Application Works
 Given an application that only calls `AddBrighter()` (no producers, no consumers), when validation is enabled, then only handler pipeline checks run — no errors about missing subscriptions or publications.
+
+### AC-13: Enable/Disable Flag Skips Execution
+Given `.ValidatePipelines(enabled: false)` and `.DescribePipelines(enabled: false)`, when the application starts, then neither validation nor the diagnostic report runs — behaving as if neither method was called. Given `.ValidatePipelines(enabled: true)`, validation runs normally. The `enabled` parameter defaults to `true` so that `.ValidatePipelines()` without arguments continues to enable validation.
+
+### AC-14: Throw-on-Error Flag Logs Instead of Throwing
+Given a configuration with validation errors and `.ValidatePipelines(throwOnError: false)`, when startup validation runs, then all errors are logged at `LogLevel.Error` via `ILogger` but no exception is thrown and the application continues starting. Given `.ValidatePipelines(throwOnError: true)` (the default), validation errors throw `PipelineValidationException` as before.
 
 ## Additional Context
 

@@ -6,7 +6,7 @@
 
 ## Overview
 
-Tasks are organized into 7 phases. Phases 1-2 are structural tidies (no behavioral change). Phases 3-7 add new behavior via TDD. Each phase builds on the previous.
+Tasks are organized into 8 phases. Phases 1-2 are structural tidies (no behavioral change). Phases 3-8 add new behavior via TDD. Each phase builds on the previous.
 
 ---
 
@@ -337,6 +337,61 @@ These tasks add new types that the specifications and validator depend on.
 
 ---
 
+## Phase 8: Configuration Control Flags (FR-14, FR-15)
+
+These tasks add `enabled` and `throwOnError` parameters to the opt-in extension methods, giving developers control over whether validation/diagnostics run and whether errors terminate the host.
+
+- [x] **TEST + IMPLEMENT: ValidatePipelines and DescribePipelines accept enabled flag that skips registration when false**
+  - **USE COMMAND**: `/test-first when ValidatePipelines is called with enabled false then no validator or hosted service is registered`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
+  - Test file: `When_validate_pipelines_disabled_should_not_register.cs`
+  - Test should verify:
+    - `ValidatePipelines(enabled: false)` → `IAmAPipelineValidator` is NOT in DI, `BrighterValidationHostedService` is NOT registered
+    - `ValidatePipelines(enabled: true)` → registers as before (backward compatible, `true` is the default)
+    - `ValidatePipelines()` without argument → registers as before (default is `true`)
+    - `DescribePipelines(enabled: false)` → `IAmAPipelineDiagnosticWriter` is NOT in DI, `BrighterDiagnosticHostedService` is NOT registered
+    - `DescribePipelines(enabled: true)` → registers as before
+    - `DescribePipelines()` without argument → registers as before (default is `true`)
+    - Both return `IBrighterBuilder` for fluent chaining regardless of `enabled` value
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - Update `ValidatePipelines()` signature to `ValidatePipelines(bool enabled = true, bool throwOnError = true)` in `src/Paramore.Brighter.Extensions.DependencyInjection/`
+    - Update `DescribePipelines()` signature to `DescribePipelines(bool enabled = true)` in same project
+    - When `enabled` is `false`, return `builder` immediately without registering any services
+    - Store `throwOnError` in `BrighterPipelineValidationOptions.ThrowOnError` via `Configure<>`
+
+- [x] **TEST + IMPLEMENT: ValidatePipelines stores throwOnError flag and hosted services respect it**
+  - **USE COMMAND**: `/test-first when ValidatePipelines is called with throwOnError false then validation errors are logged not thrown`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
+  - Test file: `When_throw_on_error_false_should_log_errors_not_throw.cs`
+  - Test should verify:
+    - `ValidatePipelines(throwOnError: false)` → `BrighterPipelineValidationOptions.ThrowOnError` is `false`
+    - `ValidatePipelines(throwOnError: true)` → `ThrowOnError` is `true` (default)
+    - `ValidatePipelines()` without argument → `ThrowOnError` is `true` (default)
+    - `BrighterValidationHostedService` with `ThrowOnError = false`: validation errors are logged at `LogLevel.Error`, no exception thrown, startup continues
+    - `BrighterValidationHostedService` with `ThrowOnError = true`: validation errors throw `PipelineValidationException` (existing behavior)
+    - Warnings are logged at `LogLevel.Warning` regardless of `ThrowOnError` value
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - Add `ThrowOnError` property (default `true`) to `BrighterPipelineValidationOptions`
+    - Update `ValidatePipelines()` to store `throwOnError` via `Configure<BrighterPipelineValidationOptions>(o => o.ThrowOnError = throwOnError)`
+    - Update `BrighterValidationHostedService.StartAsync()`: read `ThrowOnError` from options; if `true`, call `ThrowIfInvalid()`; if `false`, log each error at `LogLevel.Error`
+
+- [x] **TEST + IMPLEMENT: ServiceActivatorHostedService respects throwOnError flag**
+  - **USE COMMAND**: `/test-first when ServiceActivatorHostedService starts with throwOnError false then validation errors are logged not thrown`
+  - Test location: `tests/Paramore.Brighter.ServiceActivator.Tests/`
+  - Test file: `When_service_activator_throw_on_error_false_should_log_not_throw.cs`
+  - Test should verify:
+    - `ThrowOnError = false` + validation errors → errors logged at `LogLevel.Error`, `Receive()` is still called
+    - `ThrowOnError = true` + validation errors → `PipelineValidationException` thrown, `Receive()` is NOT called
+    - `ThrowOnError = false` + no errors → normal startup, `Receive()` called
+    - Warnings logged at `LogLevel.Warning` regardless of `ThrowOnError` value
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - Update `ServiceActivatorHostedService.StartAsync()`: read `ThrowOnError` from `BrighterPipelineValidationOptions`; if `true`, call `ThrowIfInvalid()`; if `false`, log each error at `LogLevel.Error` and continue to `_dispatcher.Receive()`
+
+---
+
 ## Summary
 
 | Phase | Tasks | Type |
@@ -348,7 +403,8 @@ These tasks add new types that the specifications and validator depend on.
 | 5. Validation Specifications | 3 | `/test-first` |
 | 6. Validator & Writer | 2 | `/test-first` |
 | 7. DI & Hosting Integration | 4 | `/test-first` |
-| **Total** | **22** | |
+| 8. Configuration Control Flags | 3 | `/test-first` |
+| **Total** | **25** | |
 
 ## Dependencies
 
@@ -361,4 +417,5 @@ Phase 1 (tidy: move, extract)
               └── Phase 5 (specifications: rules using marker interfaces + description model)
                     └── Phase 6 (validator evaluates specifications)
                           └── Phase 7 (DI + hosting: wire everything together)
+                                └── Phase 8 (configuration control: enabled/throwOnError flags)
 ```

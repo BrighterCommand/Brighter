@@ -37,4 +37,12 @@ public class BrighterPipelineValidationOptions
     /// Set automatically by <c>AddConsumers()</c>.
     /// </summary>
     public bool ConsumerOwnsValidation { get; set; }
+
+    /// <summary>
+    /// When true (the default), validation errors cause <see cref="PipelineValidationException"/> to
+    /// be thrown, terminating host startup. When false, errors are logged at <c>LogLevel.Error</c>
+    /// and the application continues starting.
+    /// Set by <c>ValidatePipelines(throwOnError:)</c>.
+    /// </summary>
+    public bool ThrowOnError { get; set; } = true;
 }

@@ -51,7 +51,18 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.Hosting
                 if (validator != null)
                 {
                     var result = validator.Validate();
-                    result.ThrowIfInvalid();
+
+                    if (_options.Value.ThrowOnError)
+                    {
+                        result.ThrowIfInvalid();
+                    }
+                    else
+                    {
+                        foreach (var error in result.Errors)
+                        {
+                            _logger.LogError("Pipeline validation error from {Source}: {Message}", error.Source, error.Message);
+                        }
+                    }
 
                     foreach (var warning in result.Warnings)
                     {

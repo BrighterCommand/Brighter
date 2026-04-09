@@ -44,9 +44,14 @@ public static class BrighterPipelineValidationExtensions
     /// are evaluated against validation rules and errors prevent the host from starting.
     /// </summary>
     /// <param name="builder">The Brighter builder.</param>
+    /// <param name="enabled">When false, the method is a no-op — no services are registered. Defaults to true.</param>
     /// <returns>The builder, for fluent chaining.</returns>
-    public static IBrighterBuilder ValidatePipelines(this IBrighterBuilder builder)
+    public static IBrighterBuilder ValidatePipelines(this IBrighterBuilder builder, bool enabled = true, bool throwOnError = true)
     {
+        if (!enabled) return builder;
+
+        builder.Services.Configure<BrighterPipelineValidationOptions>(o => o.ThrowOnError = throwOnError);
+
         builder.Services.TryAddSingleton<IAmAPipelineValidator>(sp =>
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
@@ -72,9 +77,11 @@ public static class BrighterPipelineValidationExtensions
     /// of all configured pipelines is logged at Information and Debug levels.
     /// </summary>
     /// <param name="builder">The Brighter builder.</param>
+    /// <param name="enabled">When false, the method is a no-op — no services are registered. Defaults to true.</param>
     /// <returns>The builder, for fluent chaining.</returns>
-    public static IBrighterBuilder DescribePipelines(this IBrighterBuilder builder)
+    public static IBrighterBuilder DescribePipelines(this IBrighterBuilder builder, bool enabled = true)
     {
+        if (!enabled) return builder;
         builder.Services.TryAddSingleton<IAmAPipelineDiagnosticWriter>(sp =>
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
