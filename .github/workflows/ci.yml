@@ -474,7 +474,7 @@ jobs:
 
     services: 
       localstack: 
-        image: localstack/localstack    
+        image: localstack/localstack:4.14 
         ports:
           - 4566:4566
         env: 

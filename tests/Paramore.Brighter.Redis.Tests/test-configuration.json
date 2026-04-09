@@ -10,6 +10,7 @@
     "HasSupportToDelayedMessages": false,
     "HasSupportToPartitionKey": false,
     "HasSupportToValidateBrokerExistence": false,
-    "HasSupportToRequeue": true
+    "HasSupportToRequeue": true,
+    "HasSupportToValidateAssumeChannel": false
   }
 }

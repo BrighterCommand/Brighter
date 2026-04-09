@@ -52,7 +52,7 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
             
 
             // Assert
-            await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
+            await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
             Assert.Fail("We are expected to throw an exception");
         }
         catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)

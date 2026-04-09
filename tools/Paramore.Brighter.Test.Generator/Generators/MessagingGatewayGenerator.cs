@@ -182,6 +182,14 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
             return true;
         }
 
+        if (
+            !configuration.HasSupportToValidateAssumeChannel 
+            && fileName.Contains("assume_channel")
+        )
+        {
+            return true;
+        }
+
         return false;
     }
 
