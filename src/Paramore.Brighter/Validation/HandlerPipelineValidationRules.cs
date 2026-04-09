@@ -79,7 +79,7 @@ public static class HandlerPipelineValidationRules
     /// <summary>
     /// Validates that each pipeline step's handler type matches the sync/async nature of the
     /// main handler. An async handler with a sync attribute step (or vice versa) means the step
-    /// will be silently ignored at runtime. Handler types that implement neither
+    /// will throw a ConfigurationException at pipeline build time. Handler types that implement neither
     /// <see cref="IHandleRequests"/> nor <see cref="IHandleRequestsAsync"/> are reported as errors.
     /// </summary>
     /// <returns>A collapsed specification that yields one Error per mismatched or unrecognized step.</returns>
@@ -107,9 +107,9 @@ public static class HandlerPipelineValidationRules
                         $"Handler '{d.HandlerType.Name}'",
                         d.IsAsync
                             ? $"Async handler uses sync attribute '{step.AttributeType.Name}' " +
-                              $"at step {step.Step} — it will be silently ignored"
+                              $"at step {step.Step} — this will throw a ConfigurationException at pipeline build time"
                             : $"Sync handler uses async attribute '{step.AttributeType.Name}' " +
-                              $"at step {step.Step} — it will be silently ignored"))];
+                              $"at step {step.Step} — this will throw a ConfigurationException at pipeline build time"))];
                 }
 
                 return [];
