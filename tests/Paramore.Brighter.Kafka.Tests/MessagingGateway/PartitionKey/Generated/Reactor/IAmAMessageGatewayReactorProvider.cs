@@ -5,7 +5,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 
 /// <summary>
 /// Defines a provider for creating and managing synchronous messaging gateway components for testing.

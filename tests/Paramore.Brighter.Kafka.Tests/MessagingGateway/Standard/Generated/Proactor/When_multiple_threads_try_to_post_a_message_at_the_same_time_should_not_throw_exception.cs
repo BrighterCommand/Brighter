@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
 
 [Trait("Category", "Kafka")]
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExceptionAsync : IAsyncLifetime
@@ -46,7 +46,7 @@ public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExce
         var options = new ParallelOptions { MaxDegreeOfParallelism = 4 };
         await Parallel.ForEachAsync(Enumerable.Range(0, 10), options, async (_, ct) =>
         {
-            var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+            var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
             await _producer.SendAsync(message, ct);
         });
 

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -30,24 +30,29 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
-using Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Reactor;
+using Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Proactor;
+using Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-public class KafkaMessageGatewayProvider
+/// <summary>
+/// A message gateway provider for Kafka partition key scenarios.
+/// Configures Kafka with partition-key-aware settings for testing
+/// message routing to specific partitions.
+/// </summary>
+public class KafkaPartitionKeyMessageGatewayProvider
     : IAmAMessageGatewayProactorProvider,
         IAmAMessageGatewayReactorProvider
 {
     private readonly KafkaMessagingGatewayConfiguration _configuration;
 
-    public KafkaMessageGatewayProvider()
+    public KafkaPartitionKeyMessageGatewayProvider()
     {
         _configuration = new KafkaMessagingGatewayConfiguration
         {
-            Name = "Kafka Generated Test",
+            Name = "Kafka Partition Key Generated Test",
             BootStrapServers = new[] { "localhost:9092" },
         };
     }
@@ -135,7 +140,7 @@ public class KafkaMessageGatewayProvider
         return new KafkaPublication
         {
             Topic = routingKey,
-            NumPartitions = 1,
+            NumPartitions = 3,
             ReplicationFactor = 1,
             MessageTimeoutMs = 2000,
             RequestTimeoutMs = 2000,
@@ -157,7 +162,7 @@ public class KafkaMessageGatewayProvider
             groupId: Guid.NewGuid().ToString(),
             offsetDefault: AutoOffsetReset.Earliest,
             commitBatchSize: 5,
-            numOfPartitions: 1,
+            numOfPartitions: 3,
             replicationFactor: 1,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: makeChannel
@@ -171,7 +176,7 @@ public class KafkaMessageGatewayProvider
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
-        return new RoutingKey($"gen.test.{Uuid.New():N}");
+        return new RoutingKey($"gen.pk.test.{Uuid.New():N}");
     }
 
     public Task<Message> GetMessageFromDeadLetterQueueAsync(

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Reactor;
 
 [Trait("Category", "Kafka")]
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowException : IDisposable
@@ -43,7 +43,7 @@ public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExce
         var options = new ParallelOptions { MaxDegreeOfParallelism = 4 };
         Parallel.ForEach(Enumerable.Range(0, 10), options, _ =>
         {
-            var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+            var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
             _producer.Send(message);
         });
 

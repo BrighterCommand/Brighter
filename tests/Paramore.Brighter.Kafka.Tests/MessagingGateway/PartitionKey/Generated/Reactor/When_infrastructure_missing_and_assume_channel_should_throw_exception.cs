@@ -7,10 +7,10 @@ using System.Threading;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 
 [Trait("Category", "Kafka")]
-public class WhenInfrastructureMissingAndValidateChannelShouldThrowException 
+public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException 
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -23,14 +23,14 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowException
     private IAmAMessageProducerSync? _producer;
     private IAmAChannelSync? _channel;
 
-    public WhenInfrastructureMissingAndValidateChannelShouldThrowException()
+    public WhenInfrastructureMissingAndAssumeChannelShouldThrowException()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaPartitionKeyMessageGatewayProvider();
+        _messageBuilder = new FifoMessageBuilder();
     }
 
     [Fact]
-    public void When_infrastructure_missing_and_validate_channel_should_throw_exception()
+    public void When_infrastructure_missing_and_assume_channel_should_throw_exception()
     {
         try
         {
@@ -38,12 +38,12 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowException
             _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey(), OnMissingChannel.Assume);
             _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
                 _messageGatewayProvider.GetOrCreateChannelName(),
-                OnMissingChannel.Validate);
+                OnMissingChannel.Assume);
 
             _producer = _messageGatewayProvider.CreateProducer(_publication);
             _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-            var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+            var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
             _sentMessages.Add(message);
 
             // Act

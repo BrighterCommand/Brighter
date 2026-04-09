@@ -11,7 +11,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Proactor;
 
 [Trait("Category", "Kafka")]
 public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLifetime
@@ -29,8 +29,8 @@ public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLife
 
     public WhenSendingAMessageShouldPropagateActivityContextAsync()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaPartitionKeyMessageGatewayProvider();
+        _messageBuilder = new FifoMessageBuilder();
     }
 
     public Task InitializeAsync()
@@ -73,7 +73,6 @@ public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLife
 
         var message = _messageBuilder
             .SetTopic(_publication.Topic!)
-            .SetPartitionKey(PartitionKey.Empty)
             .SetTraceParent(null)
             .SetTraceState(null)
             .SetBaggage(new Paramore.Brighter.Observability.Baggage())

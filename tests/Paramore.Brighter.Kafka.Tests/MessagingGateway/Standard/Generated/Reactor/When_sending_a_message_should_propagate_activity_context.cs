@@ -11,7 +11,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Reactor;
 
 [Trait("Category", "Kafka")]
 public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
@@ -68,7 +68,6 @@ public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
 
         var message = _messageBuilder
             .SetTopic(_publication.Topic!)
-            .SetPartitionKey(PartitionKey.Empty)
             .SetTraceParent(null)
             .SetTraceState(null)
             .SetBaggage(new Paramore.Brighter.Observability.Baggage())

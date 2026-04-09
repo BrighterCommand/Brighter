@@ -10,7 +10,7 @@ using Paramore.Brighter.Extensions;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 
 [Trait("Category", "Kafka")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages : IDisposable
@@ -29,8 +29,8 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
 
     public WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaPartitionKeyMessageGatewayProvider();
+        _messageBuilder = new FifoMessageBuilder();
         _messageAssertion = new KafkaMessageAssertion();
     }
 
@@ -53,10 +53,10 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
 
         _sentMessages =
         [
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build()
+            _messageBuilder.SetTopic(_publication.Topic!).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).Build()
         ];
 
         // Act
