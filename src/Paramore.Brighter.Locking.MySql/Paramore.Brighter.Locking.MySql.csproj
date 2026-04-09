@@ -4,7 +4,6 @@
     <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>$(BrighterNetNineEarlierTargetFrameworks)</TargetFrameworks>
     <PackageTags>MySQL;Distributed Locking;Concurrency;Lock;Command Processor;Database;SQL;Brighter</PackageTags>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>

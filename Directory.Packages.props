@@ -10,6 +10,7 @@
     <AWSSQSV4>4.0.2.18</AWSSQSV4>
     <AWSSDKSimpleNotificationServiceV4>4.0.2.20</AWSSDKSimpleNotificationServiceV4>
     <AWSSDKExtensionsNETCoreSetup>4.0.3.26</AWSSDKExtensionsNETCoreSetup>
+    <RabbitMQClientV6>6.8.1</RabbitMQClientV6>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />

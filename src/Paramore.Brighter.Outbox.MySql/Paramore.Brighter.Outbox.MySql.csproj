@@ -5,7 +5,6 @@
     <Authors>Derek Comartin</Authors>
     <TargetFrameworks>$(BrighterNetNineEarlierTargetFrameworks)</TargetFrameworks>
     <PackageTags>MySQL;Database;Outbox;Transactional;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

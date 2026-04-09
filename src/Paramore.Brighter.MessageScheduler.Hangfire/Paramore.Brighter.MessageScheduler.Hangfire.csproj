@@ -7,6 +7,7 @@
     <PackageTags>Hangfire;Scheduler;Message Scheduling;Delayed Messages;Command Processor;Brighter</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Hangfire.Core is not strong-named, so this assembly cannot be signed -->
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 

@@ -2,7 +2,6 @@
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
-        <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>dotnet-TaskReceiverConsole-c82fb741-a185-4a1e-a9a1-735730517542</UserSecretsId>
     </PropertyGroup>
