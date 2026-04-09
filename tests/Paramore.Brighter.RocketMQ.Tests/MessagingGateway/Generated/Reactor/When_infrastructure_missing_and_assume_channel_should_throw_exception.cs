@@ -43,7 +43,7 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException
             _producer = _messageGatewayProvider.CreateProducer(_publication);
             _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-            var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+            var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
             _sentMessages.Add(message);
 
             // Act
@@ -52,7 +52,7 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException
             Thread.Sleep(5000);
 
             // Assert
-            _channel.Receive(null);
+            _channel.Receive(TimeSpan.FromMilliseconds(300));
             Assert.Fail("We are expected to throw an exception");
         }
         catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)

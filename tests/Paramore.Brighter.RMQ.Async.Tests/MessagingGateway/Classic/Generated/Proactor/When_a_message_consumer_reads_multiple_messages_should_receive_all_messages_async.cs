@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 using Xunit;
@@ -58,10 +59,10 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAs
 
         _sentMessages =
         [
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build(),
-            _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build()
+            _messageBuilder.SetTopic(_publication.Topic!).SetMessageId(Id.Random()).SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString())).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).SetMessageId(Id.Random()).SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString())).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).SetMessageId(Id.Random()).SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString())).Build(),
+            _messageBuilder.SetTopic(_publication.Topic!).SetMessageId(Id.Random()).SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString())).Build()
         ];
 
         // Act

@@ -49,7 +49,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         _producer.Send(message);
@@ -59,13 +59,13 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)
         {
-            received = _channel.Receive(null);
+            received = _channel.Receive(TimeSpan.FromMilliseconds(300));
             _channel.Requeue(received);
 
             Thread.Sleep(5000);
         }
 
-        received = _channel.Receive(null);
+        received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         // Act

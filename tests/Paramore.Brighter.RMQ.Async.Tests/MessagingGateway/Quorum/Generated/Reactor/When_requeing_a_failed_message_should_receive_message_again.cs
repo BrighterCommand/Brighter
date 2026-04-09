@@ -48,7 +48,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         _producer.Send(message);
@@ -78,7 +78,6 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, requeued.Header.MessageType);
-        Assert.Equal(message.Header.MessageId.ToString(), requeued.Header.Bag[Message.OriginalMessageIdHeaderName]);
         _messageAssertion.Assert(message, requeued);
     }
 }

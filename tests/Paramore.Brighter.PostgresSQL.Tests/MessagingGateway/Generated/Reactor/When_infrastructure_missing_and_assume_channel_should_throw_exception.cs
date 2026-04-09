@@ -43,7 +43,7 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException
             _producer = _messageGatewayProvider.CreateProducer(_publication);
             _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-            var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+            var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
             _sentMessages.Add(message);
 
             // Act

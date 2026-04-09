@@ -54,7 +54,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         await _producer.SendAsync(message);
@@ -64,13 +64,13 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)
         {
-            received = await _channel.ReceiveAsync(null);
+            received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
             await _channel.RequeueAsync(received);
 
             await Task.Delay(5000);
         }
 
-        received = await _channel.ReceiveAsync(null);
+        received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         // Act

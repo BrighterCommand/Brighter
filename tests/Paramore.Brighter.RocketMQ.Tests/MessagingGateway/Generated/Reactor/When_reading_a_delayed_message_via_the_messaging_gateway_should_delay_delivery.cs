@@ -48,19 +48,19 @@ public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         _producer.SendWithDelay(message, TimeSpan.FromSeconds(5));
 
         // Act
-        var received = _channel.Receive(null);
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         Thread.Sleep(TimeSpan.FromSeconds(5));
 
         // Assert
-        received = _channel.Receive(null);
+        received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
         _messageAssertion.Assert(message, received);
     }

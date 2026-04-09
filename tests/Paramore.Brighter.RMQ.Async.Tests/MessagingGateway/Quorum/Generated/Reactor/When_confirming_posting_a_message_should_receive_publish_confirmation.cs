@@ -56,7 +56,7 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDi
         var messageSent = false;
         confirmation.OnMessagePublished += (confirmed, _) => messageSent = confirmed;
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
         
         // Act

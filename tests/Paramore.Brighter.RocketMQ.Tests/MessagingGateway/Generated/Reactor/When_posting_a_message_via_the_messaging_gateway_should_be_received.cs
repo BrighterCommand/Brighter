@@ -48,7 +48,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         // Act
@@ -56,7 +56,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
 
         Thread.Sleep(5000);
 
-        var received = _channel.Receive(null);
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);

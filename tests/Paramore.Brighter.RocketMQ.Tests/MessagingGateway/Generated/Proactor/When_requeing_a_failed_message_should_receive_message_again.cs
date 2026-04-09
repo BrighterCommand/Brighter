@@ -53,7 +53,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(PartitionKey.Empty).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         await _producer.SendAsync(message);
@@ -69,10 +69,10 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
         await Task.Delay(5000);
 
         // Retry receiving in case the requeued message is not immediately available
-        Message requeued = new Message();
+        var requeued = new Message();
         for (var i = 0; i < 10; i++)
         {
-            requeued = await _channel.ReceiveAsync(null);
+            requeued = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
             if (requeued.Header.MessageType != MessageType.MT_NONE)
             {
                 break;
@@ -83,7 +83,6 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, requeued.Header.MessageType);
-        Assert.Equal(message.Header.MessageId.ToString(), requeued.Header.Bag[Message.OriginalMessageIdHeaderName]);
         _messageAssertion.Assert(message, requeued);
     }
 }

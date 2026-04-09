@@ -57,7 +57,7 @@ public class DefaultMessageBuilder : IAmAMessageBuilder
     private Id? _jobId = Id.Random();
     private Id? _messageId = Id.Random();
     private MessageType _messageType = MessageType.MT_EVENT;
-    private PartitionKey _partitionKey = new PartitionKey(Uuid.NewAsString());
+    private PartitionKey _partitionKey = PartitionKey.Empty;
     private RoutingKey? _replyTo = new RoutingKey(Uuid.NewAsString());
     private string? _subject = Uuid.NewAsString();
     private string? _specVersion = "1.0";
