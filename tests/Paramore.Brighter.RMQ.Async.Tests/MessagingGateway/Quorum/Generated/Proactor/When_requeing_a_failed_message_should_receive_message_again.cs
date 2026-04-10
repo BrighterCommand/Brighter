@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Quorum.Proactor;
 
-[Trait("Category", "RMQ")]
+[Trait("Category", "Quorum")]
 public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -58,7 +58,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
 
         await _producer.SendAsync(message);
 
-        await Task.Delay(5000);
+        
 
         // Act
         var received = await _channel.ReceiveAsync(null);
@@ -66,19 +66,19 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
 
         await _channel.RequeueAsync(received);
 
-        await Task.Delay(5000);
+        
 
         // Retry receiving in case the requeued message is not immediately available
         var requeued = new Message();
         for (var i = 0; i < 10; i++)
         {
-            requeued = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
+            requeued = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
             if (requeued.Header.MessageType != MessageType.MT_NONE)
             {
                 break;
             }
 
-            await Task.Delay(5000);
+            
         }
 
         // Assert

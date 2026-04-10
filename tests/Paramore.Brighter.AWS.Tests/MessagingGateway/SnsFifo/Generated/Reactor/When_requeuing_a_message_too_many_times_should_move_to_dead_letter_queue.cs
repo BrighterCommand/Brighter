@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SnsFifo.Reactor;
 
-[Trait("Category", "AWS")]
+[Trait("Category", "SnsFifo")]
 public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

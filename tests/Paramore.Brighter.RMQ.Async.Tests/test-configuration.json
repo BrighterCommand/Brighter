@@ -6,25 +6,25 @@
       "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication",
       "Subscription": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription",
       "MessageGatewayProvider": "Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqClassicMessageGatewayProvider",
-      "Category": "RMQ",
-      "DelayBetweenReceiveMessageInMilliseconds": 5000,
+      "Category": "Classic",
       "HasSupportToPublishConfirmation": true,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
     },
     "Quorum": {
       "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication",
       "Subscription": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription",
       "MessageGatewayProvider": "Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.RmqQuorumMessageGatewayProvider",
-      "Category": "RMQ",
-      "DelayBetweenReceiveMessageInMilliseconds": 5000,
+      "Category": "Quorum",
       "HasSupportToPublishConfirmation": true,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
     }
   }
 }

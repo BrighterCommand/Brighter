@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Reactor;
 
-[Trait("Category", "AWS")]
+[Trait("Category", "SqsFifo")]
 public class WhenPostingAMessageButNoBrokerCreatedShouldThrowException
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

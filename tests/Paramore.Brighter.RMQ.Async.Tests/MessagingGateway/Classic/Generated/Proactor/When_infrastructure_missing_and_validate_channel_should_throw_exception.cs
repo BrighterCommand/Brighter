@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Proactor;
 
-[Trait("Category", "RMQ")]
+[Trait("Category", "Classic")]
 public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -49,10 +49,10 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsyn
             // Act
             await _producer.SendAsync(message);
 
-            await Task.Delay(5000);
+            
 
             // Assert
-            await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
+            await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
             Assert.Fail("We are expected to throw an exception");
         }
         catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)

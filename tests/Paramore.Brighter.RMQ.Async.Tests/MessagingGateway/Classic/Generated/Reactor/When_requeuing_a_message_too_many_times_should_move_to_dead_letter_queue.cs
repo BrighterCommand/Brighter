@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Reactor;
 
-[Trait("Category", "RMQ")]
+[Trait("Category", "Classic")]
 public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -54,18 +54,18 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
 
         _producer.Send(message);
 
-        Thread.Sleep(5000);
+        
 
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)
         {
-            received = _channel.Receive(TimeSpan.FromMilliseconds(300));
+            received = _channel.Receive(TimeSpan.FromMilliseconds(4000));
             _channel.Requeue(received);
 
-            Thread.Sleep(5000);
+            
         }
 
-        received = _channel.Receive(TimeSpan.FromMilliseconds(300));
+        received = _channel.Receive(TimeSpan.FromMilliseconds(4000));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         // Act

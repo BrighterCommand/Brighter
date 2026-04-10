@@ -13,7 +13,7 @@ using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Quorum.Proactor;
 
-[Trait("Category", "RMQ")]
+[Trait("Category", "Quorum")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -68,12 +68,12 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAs
         // Act
         await _sentMessages.EachAsync(async message => await _producer.SendAsync(message));
 
-        await Task.Delay(5000);
+        
 
         // Assert
         for (var i = 0; i < _sentMessages.Count; i++)
         {
-            var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
+            var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
 
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
 
@@ -84,10 +84,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAs
 
             await _channel.AcknowledgeAsync(received);
 
-            if ((i + 1) % _subscription.BufferSize == 0)
-            {
-                await Task.Delay(5000);
-            }
+            
         }
     }
 }

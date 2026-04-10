@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SnsStandard.Reactor;
 
-[Trait("Category", "AWS")]
+[Trait("Category", "SnsStandard")]
 public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

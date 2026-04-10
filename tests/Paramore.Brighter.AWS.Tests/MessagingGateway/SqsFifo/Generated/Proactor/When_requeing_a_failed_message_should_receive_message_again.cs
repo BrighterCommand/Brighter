@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Proactor;
 
-[Trait("Category", "AWS")]
+[Trait("Category", "SqsFifo")]
 public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

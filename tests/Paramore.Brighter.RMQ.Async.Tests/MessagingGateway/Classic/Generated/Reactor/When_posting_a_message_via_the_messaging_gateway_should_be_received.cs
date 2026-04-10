@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Reactor;
 
-[Trait("Category", "RMQ")]
+[Trait("Category", "Classic")]
 public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -54,9 +54,9 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
         // Act
         _producer.Send(message);
 
-        Thread.Sleep(5000);
+        
 
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(4000));
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
