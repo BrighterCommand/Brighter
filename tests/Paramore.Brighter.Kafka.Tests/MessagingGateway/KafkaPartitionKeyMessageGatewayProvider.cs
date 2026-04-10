@@ -65,8 +65,8 @@ public class KafkaPartitionKeyMessageGatewayProvider
     {
         var topics = CollectTopics(producer, channel);
 
-        channel?.Dispose();
-        producer?.Dispose();
+        try { channel?.Dispose(); } catch { /* Ignore any error to channel */ }
+        try { producer?.Dispose(); } catch { /* Ignore any error to channel */ }
 
         DeleteTopics(topics);
     }
@@ -79,14 +79,28 @@ public class KafkaPartitionKeyMessageGatewayProvider
     {
         var topics = CollectTopics(producer, channel);
 
-        if (channel != null)
+        try
         {
-            channel.Dispose();
+            if (channel != null)
+            {
+                await channel.DisposeAsync();
+            }
         }
-
-        if (producer != null)
+        catch
         {
-            await producer.DisposeAsync();
+             /* Ignore any error to channel */
+        }
+        
+        try
+        {
+            if (producer != null)
+            {
+                await producer.DisposeAsync();
+            }
+        }
+        catch
+        {
+            /* Ignore any error to channel */
         }
 
         DeleteTopics(topics);
