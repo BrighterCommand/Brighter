@@ -105,7 +105,7 @@ public class MessagingGatewayConfiguration
     /// </summary>
     public bool HasSupportToRequeue { get; set; }
 
-    public bool HasSupportToValidateAssumeChannel { get; set; } = true;
+    public bool HasSupportToValidateInfrastructure { get; set; } = true;
 
     public int ReceiveMessageTimeoutInMilliseconds { get; set; } = 300;
 }

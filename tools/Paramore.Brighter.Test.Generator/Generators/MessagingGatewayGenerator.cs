@@ -183,8 +183,8 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
         }
 
         if (
-            !configuration.HasSupportToValidateAssumeChannel 
-            && fileName.Contains("assume_channel")
+            !configuration.HasSupportToValidateInfrastructure 
+            && (fileName.Contains("assume_channel") || fileName.Contains("validate_channel"))
         )
         {
             return true;
