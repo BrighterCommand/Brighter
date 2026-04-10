@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -49,12 +50,12 @@ public class GcpPullMessageGatewayProvider
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
-        return new RoutingKey($"gen-pull-{Guid.NewGuid():N}"[..45]);
+        return new RoutingKey($"gen-pull-{Guid.NewGuid():N}");
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
     {
-        return new ChannelName($"gen-pull-{Guid.NewGuid():N}"[..45]);
+        return new ChannelName($"gen-pull-{Guid.NewGuid():N}");
     }
 
     public GcpPublication CreatePublication(
