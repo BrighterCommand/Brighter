@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -60,10 +62,25 @@ public class KafkaMessageGatewayProvider
     {
         var topics = CollectTopics(producer, channel);
 
-        channel?.Dispose();
-        producer?.Dispose();
+        Dispose(channel);
+        Dispose(producer);
 
         DeleteTopics(topics);
+
+        static void Dispose(object? disposable)
+        {
+            try
+            {
+                if (disposable is IDisposable syncDisposable)
+                {
+                    syncDisposable.Dispose();
+                }
+            }
+            catch
+            {
+                // Ignore any error during disposing
+            }
+        }
     }
 
     public async Task CleanUpAsync(
@@ -74,17 +91,32 @@ public class KafkaMessageGatewayProvider
     {
         var topics = CollectTopics(producer, channel);
 
-        if (channel != null)
-        {
-            channel.Dispose();
-        }
-
-        if (producer != null)
-        {
-            await producer.DisposeAsync();
-        }
+        DisposeAsync(channel);
+        DisposeAsync(producer);
 
         DeleteTopics(topics);
+
+        static ValueTask DisposeAsync(object? disposable)
+        {
+            try
+            {
+                if (disposable is IAsyncDisposable asyncDisposable)
+                {
+                    return asyncDisposable.DisposeAsync();
+                }
+                else if (disposable is IDisposable syncDisposable)
+                {
+                    syncDisposable.Dispose();
+                }
+
+                return new ValueTask();
+            }
+            catch
+            {
+                // Ignore any error during disposing
+                return new ValueTask();
+            }
+        }
     }
 
     public IAmAChannelSync CreateChannel(KafkaSubscription subscription)
