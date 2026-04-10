@@ -536,6 +536,12 @@ jobs:
         run: |
           dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
           dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions
+      - name: Cleanup orphaned test resources
+        if: always()
+        run: |
+          chmod +x ./clean_failed_tests_aws_assets.sh
+          ./clean_failed_tests_aws_assets.sh
+        continue-on-error: true
 
   aws-scheduler-ci:
     runs-on: ubuntu-latest
