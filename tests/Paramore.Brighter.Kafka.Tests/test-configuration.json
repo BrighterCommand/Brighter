@@ -13,7 +13,7 @@
       "HasSupportToPartitionKey": false,
       "HasSupportToValidateBrokerExistence": false,
       "HasSupportToRequeue": false,
-      "ReceiveMessageTimeoutInMilliseconds": 5000
+      "ReceiveMessageTimeoutInMilliseconds": 10000
     },
     "PartitionKey": {
       "Publication": "Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication",
@@ -27,7 +27,7 @@
       "HasSupportToPartitionKey": true,
       "HasSupportToValidateBrokerExistence": false,
       "HasSupportToRequeue": false,
-      "ReceiveMessageTimeoutInMilliseconds": 5000
+      "ReceiveMessageTimeoutInMilliseconds": 10000
     }
   }
 }

@@ -96,25 +96,22 @@ public class KafkaMessageGatewayProvider
 
         DeleteTopics(topics);
 
-        static ValueTask DisposeAsync(object? disposable)
+        static async ValueTask DisposeAsync(object? disposable)
         {
             try
             {
                 if (disposable is IAsyncDisposable asyncDisposable)
                 {
-                    return asyncDisposable.DisposeAsync();
+                    await asyncDisposable.DisposeAsync();
                 }
                 else if (disposable is IDisposable syncDisposable)
                 {
                     syncDisposable.Dispose();
                 }
-
-                return new ValueTask();
             }
             catch
             {
                 // Ignore any error during disposing
-                return new ValueTask();
             }
         }
     }
