@@ -49,7 +49,7 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowException
             // Act
             _producer.Send(message);
 
-            Thread.Sleep(1000);
+            
 
             // Assert
             _channel.Receive(TimeSpan.FromMilliseconds(5000));

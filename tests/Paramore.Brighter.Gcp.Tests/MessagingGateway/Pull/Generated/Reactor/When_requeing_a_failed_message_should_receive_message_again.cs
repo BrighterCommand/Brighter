@@ -53,7 +53,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 
         _producer.Send(message);
 
-        Thread.Sleep(1000);
+        
 
         // Act
         var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
@@ -61,7 +61,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 
         _channel.Requeue(received);
 
-        Thread.Sleep(1000);
+        
 
         // Retry receiving in case the requeued message is not immediately available
         var requeued = new Message();
@@ -73,7 +73,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
                 break;
             }
 
-            Thread.Sleep(1000);
+            
         }
 
         // Assert

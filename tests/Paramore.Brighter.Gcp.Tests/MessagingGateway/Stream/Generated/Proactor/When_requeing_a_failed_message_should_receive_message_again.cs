@@ -58,7 +58,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
 
         await _producer.SendAsync(message);
 
-        await Task.Delay(1000);
+        
 
         // Act
         var received = await _channel.ReceiveAsync(null);
@@ -66,7 +66,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
 
         await _channel.RequeueAsync(received);
 
-        await Task.Delay(1000);
+        
 
         // Retry receiving in case the requeued message is not immediately available
         var requeued = new Message();
@@ -78,7 +78,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
                 break;
             }
 
-            await Task.Delay(1000);
+            
         }
 
         // Assert

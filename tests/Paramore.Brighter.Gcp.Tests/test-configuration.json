@@ -9,6 +9,20 @@
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
+      "HasSupportToPartitionKey": false,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 5000
+    },
+    "PullOrdering": {
+      "Publication": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpPullOrderingMessageGatewayProvider",
+      "MessageBuilder": "FifoMessageBuilder",
+      "Category": "GcpPubSub",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": false,
       "HasSupportToPartitionKey": true,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,
@@ -23,11 +37,24 @@
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
+      "HasSupportToPartitionKey": false,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 5000
+    },
+    "StreamOrdering": {
+      "Publication": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpStreamOrderingMessageGatewayProvider",
+      "MessageBuilder": "FifoMessageBuilder",
+      "Category": "GcpPubSub",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": false,
       "HasSupportToPartitionKey": true,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,
-      "ReceiveMessageTimeoutInMilliseconds": 5000,
-      "DelayBetweenReceiveMessageInMilliseconds": 1000
+      "ReceiveMessageTimeoutInMilliseconds": 5000
     }
   },
   "Outboxes": {

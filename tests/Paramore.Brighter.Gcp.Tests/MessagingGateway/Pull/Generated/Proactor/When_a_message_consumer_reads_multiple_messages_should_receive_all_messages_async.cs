@@ -68,7 +68,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAs
         // Act
         await _sentMessages.EachAsync(async message => await _producer.SendAsync(message));
 
-        await Task.Delay(1000);
+        
 
         // Assert
         for (var i = 0; i < _sentMessages.Count; i++)
@@ -84,10 +84,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAs
 
             await _channel.AcknowledgeAsync(received);
 
-            if ((i + 1) % _subscription.BufferSize == 0)
-            {
-                await Task.Delay(1000);
-            }
+            
         }
     }
 }

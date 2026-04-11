@@ -7,10 +7,10 @@ using System.Threading;
 
 using Xunit;
 
-namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Reactor;
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.Reactor;
 
 [Trait("Category", "GcpPubSub")]
-public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceived : IDisposable
+public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -24,10 +24,10 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
     private IAmAMessageProducerSync? _producer;
     private IAmAChannelSync? _channel;
 
-    public WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceived()
+    public WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpPullMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageGatewayProvider = new Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpStreamOrderingMessageGatewayProvider();
+        _messageBuilder = new FifoMessageBuilder();
         _messageAssertion = new DefaultMessageAssertion();
     }
 
@@ -37,7 +37,7 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
     }
 
     [Fact]
-    public void When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received()
+    public void When_posting_a_message_via_the_messaging_gateway_should_be_received()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -48,13 +48,13 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(new PartitionKey(Uuid.NewAsString())).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         // Act
         _producer.Send(message);
 
-        Thread.Sleep(1000);
+        
 
         var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 

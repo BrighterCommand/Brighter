@@ -49,7 +49,7 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsyn
             // Act
             await _producer.SendAsync(message);
 
-            await Task.Delay(1000);
+            
 
             // Assert
             await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));

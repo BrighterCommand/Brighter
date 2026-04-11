@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 
 using Xunit;
 
-namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Proactor;
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.Proactor;
 
 [Trait("Category", "GcpPubSub")]
-public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceivedAsync : IAsyncLifetime
+public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -21,13 +21,13 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
     private Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription? _subscription;
     private Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication? _publication;
 
-    private IAmAMessageProducerAsync? _producer;
-    private IAmAChannelAsync? _channel;
+    private IAmAMessageProducerAsync? _producer = null;
+    private IAmAChannelAsync? _channel = null;
 
-    public WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceivedAsync()
+    public WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpPullMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageGatewayProvider = new Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpStreamOrderingMessageGatewayProvider();
+        _messageBuilder = new FifoMessageBuilder();
         _messageAssertion = new DefaultMessageAssertion();
     }
 
@@ -42,29 +42,41 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
     }
 
     [Fact]
-    public async Task When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received_async()
+    public async Task When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
             _messageGatewayProvider.GetOrCreateChannelName(),
-            OnMissingChannel.Create);
+            OnMissingChannel.Create,
+            true);
 
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(new PartitionKey(Uuid.NewAsString())).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
-        // Act
         await _producer.SendAsync(message);
 
-        await Task.Delay(1000);
+        
 
-        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        Message? received;
+        for (var i = 0; i < _subscription.RequeueCount; i++)
+        {
+            received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+            await _channel.RequeueAsync(received);
+
+            
+        }
+
+        received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
+
+        // Act
+        received = await _messageGatewayProvider.GetMessageFromDeadLetterQueueAsync(_subscription);
 
         // Assert
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
         _messageAssertion.Assert(message, received);
     }
 }

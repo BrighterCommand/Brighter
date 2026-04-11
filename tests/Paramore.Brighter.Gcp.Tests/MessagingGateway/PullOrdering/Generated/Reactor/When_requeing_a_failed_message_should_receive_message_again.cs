@@ -7,10 +7,10 @@ using System.Threading;
 
 using Xunit;
 
-namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Reactor;
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering.Reactor;
 
 [Trait("Category", "GcpPubSub")]
-public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceived : IDisposable
+public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -21,13 +21,13 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
     private Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription? _subscription;
     private Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication? _publication;
 
-    private IAmAMessageProducerSync? _producer;
-    private IAmAChannelSync? _channel;
+    private IAmAMessageProducerSync? _producer = null;
+    private IAmAChannelSync? _channel = null;
 
-    public WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeReceived()
+    public WhenRequeingAFailedMessageShouldReceiveMessageAgain()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpStreamMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
+        _messageGatewayProvider = new Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpPullOrderingMessageGatewayProvider();
+        _messageBuilder = new FifoMessageBuilder();
         _messageAssertion = new DefaultMessageAssertion();
     }
 
@@ -37,7 +37,7 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
     }
 
     [Fact]
-    public void When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received()
+    public void When_requeing_a_failed_message_should_receive_message_again()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -48,18 +48,36 @@ public class WhenPostingAMessageWithPartitionKeyViaTheMessagingGatewayShouldBeRe
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).SetPartitionKey(new PartitionKey(Uuid.NewAsString())).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
-        // Act
         _producer.Send(message);
 
         Thread.Sleep(1000);
 
+        // Act
         var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+
+        _channel.Requeue(received);
+
+        Thread.Sleep(1000);
+
+        // Retry receiving in case the requeued message is not immediately available
+        var requeued = new Message();
+        for (var i = 0; i < 10; i++)
+        {
+            requeued = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+            if (requeued.Header.MessageType != MessageType.MT_NONE)
+            {
+                break;
+            }
+
+            Thread.Sleep(1000);
+        }
 
         // Assert
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
-        _messageAssertion.Assert(message, received);
+        Assert.NotEqual(MessageType.MT_NONE, requeued.Header.MessageType);
+        _messageAssertion.Assert(message, requeued);
     }
 }
