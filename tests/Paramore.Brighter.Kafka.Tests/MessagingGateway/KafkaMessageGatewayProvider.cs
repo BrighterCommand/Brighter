@@ -91,8 +91,8 @@ public class KafkaMessageGatewayProvider
     {
         var topics = CollectTopics(producer, channel);
 
-        DisposeAsync(channel);
-        DisposeAsync(producer);
+        await DisposeAsync(channel);
+        await DisposeAsync(producer);
 
         DeleteTopics(topics);
 

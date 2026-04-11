@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -65,10 +65,25 @@ public class KafkaPartitionKeyMessageGatewayProvider
     {
         var topics = CollectTopics(producer, channel);
 
-        try { channel?.Dispose(); } catch { /* Ignore any error to channel */ }
-        try { producer?.Dispose(); } catch { /* Ignore any error to channel */ }
+        Dispose(channel);
+        Dispose(producer);
 
         DeleteTopics(topics);
+
+        static void Dispose(object? disposable)
+        {
+            try
+            {
+                if (disposable is IDisposable syncDisposable)
+                {
+                    syncDisposable.Dispose();
+                }
+            }
+            catch
+            {
+                // Ignore any error during disposing
+            }
+        }
     }
 
     public async Task CleanUpAsync(
@@ -79,31 +94,32 @@ public class KafkaPartitionKeyMessageGatewayProvider
     {
         var topics = CollectTopics(producer, channel);
 
-        try
-        {
-            if (channel != null)
-            {
-                await channel.DisposeAsync();
-            }
-        }
-        catch
-        {
-             /* Ignore any error to channel */
-        }
-        
-        try
-        {
-            if (producer != null)
-            {
-                await producer.DisposeAsync();
-            }
-        }
-        catch
-        {
-            /* Ignore any error to channel */
-        }
+        await DisposeAsync(channel);
+        await DisposeAsync(producer);
 
         DeleteTopics(topics);
+
+        static ValueTask DisposeAsync(object? disposable)
+        {
+            try
+            {
+                if (disposable is IAsyncDisposable asyncDisposable)
+                {
+                    return asyncDisposable.DisposeAsync();
+                }
+                else if (disposable is IDisposable syncDisposable)
+                {
+                    syncDisposable.Dispose();
+                }
+
+                return new ValueTask();
+            }
+            catch
+            {
+                // Ignore any error during disposing
+                return new ValueTask();
+            }
+        }
     }
 
     public IAmAChannelSync CreateChannel(KafkaSubscription subscription)
