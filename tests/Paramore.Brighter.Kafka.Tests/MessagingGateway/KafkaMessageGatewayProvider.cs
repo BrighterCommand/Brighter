@@ -44,6 +44,7 @@ public class KafkaMessageGatewayProvider
         IAmAMessageGatewayReactorProvider
 {
     private readonly KafkaMessagingGatewayConfiguration _configuration;
+    private readonly List<IAmAProducerRegistry> _producerRegistries = [];
 
     public KafkaMessageGatewayProvider()
     {
@@ -63,6 +64,7 @@ public class KafkaMessageGatewayProvider
         var topics = CollectTopics(producer, channel);
 
         Dispose(channel);
+        DisposeRegistries();
         Dispose(producer);
 
         DeleteTopics(topics);
@@ -92,6 +94,7 @@ public class KafkaMessageGatewayProvider
         var topics = CollectTopics(producer, channel);
 
         await DisposeAsync(channel);
+        DisposeRegistries();
         await DisposeAsync(producer);
 
         DeleteTopics(topics);
@@ -140,6 +143,8 @@ public class KafkaMessageGatewayProvider
             [publication]
         ).Create();
 
+        _producerRegistries.Add(producerRegistry);
+
         return (IAmAMessageProducerSync)producerRegistry.LookupBy(publication.Topic!);
     }
 
@@ -152,6 +157,8 @@ public class KafkaMessageGatewayProvider
             _configuration,
             [publication]
         ).CreateAsync(cancellationToken);
+
+        _producerRegistries.Add(producerRegistry);
 
         return (IAmAMessageProducerAsync)producerRegistry.LookupBy(publication.Topic!);
     }
@@ -218,6 +225,22 @@ public class KafkaMessageGatewayProvider
         throw new NotSupportedException(
             "Kafka does not support dead letter queues in generated tests."
         );
+    }
+
+    private void DisposeRegistries()
+    {
+        foreach (var registry in _producerRegistries)
+        {
+            try
+            {
+                registry.Dispose();
+            }
+            catch
+            {
+                // Ignore any error during disposing
+            }
+        }
+        _producerRegistries.Clear();
     }
 
     private static List<string> CollectTopics(object? producer, object? channel)
