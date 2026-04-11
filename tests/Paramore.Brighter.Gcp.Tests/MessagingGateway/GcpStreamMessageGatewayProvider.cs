@@ -29,6 +29,8 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Google.Api.Gax;
+using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
@@ -40,12 +42,26 @@ public class GcpStreamMessageGatewayProvider
     : Stream.Proactor.IAmAMessageGatewayProactorProvider,
         Stream.Reactor.IAmAMessageGatewayReactorProvider
 {
+    private readonly GcpMessagingGatewayConnection _connection;
     private readonly GcpPubSubChannelFactory _channelFactory;
     private GcpPubSubSubscription? _lastSubscription;
 
     public GcpStreamMessageGatewayProvider()
     {
-        _channelFactory = GatewayFactory.CreateChannelFactory();
+        _connection = new GcpMessagingGatewayConnection
+        {
+            Credential = GatewayFactory.GetCredential(),
+            ProjectId = GatewayFactory.GetProjectId(),
+            PublisherConfiguration = cfg =>
+            {
+                cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
+            },
+            SubscriptionManagerConfiguration = cfg =>
+            {
+                cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
+            }
+        };
+        _channelFactory = new GcpPubSubChannelFactory(_connection);
     }
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
@@ -109,15 +125,37 @@ public class GcpStreamMessageGatewayProvider
 
     public IAmAMessageProducerSync CreateProducer(GcpPublication publication)
     {
-        return GatewayFactory.CreateProducer(publication);
+        var topicName = TopicName.FromProjectTopic(_connection.ProjectId, publication.Topic!.Value);
+        var builder = new PublisherClientBuilder
+        {
+            Credential = _connection.Credential,
+            TopicName = topicName,
+            Settings = new PublisherClient.Settings
+            {
+                EnableMessageOrdering = publication.EnableMessageOrdering
+            }
+        };
+        _connection.PublisherConfiguration?.Invoke(builder);
+        return new GcpMessageProducer(builder.Build(), publication);
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
         GcpPublication publication,
         CancellationToken cancellationToken = default)
     {
-        await Task.CompletedTask;
-        return GatewayFactory.CreateProducer(publication);
+        var topicName = TopicName.FromProjectTopic(_connection.ProjectId, publication.Topic!.Value);
+        var builder = new PublisherClientBuilder
+        {
+            Credential = _connection.Credential,
+            TopicName = topicName,
+            Settings = new PublisherClient.Settings
+            {
+                EnableMessageOrdering = publication.EnableMessageOrdering
+            }
+        };
+        _connection.PublisherConfiguration?.Invoke(builder);
+        var client = await builder.BuildAsync(cancellationToken);
+        return new GcpMessageProducer(client, publication);
     }
 
     public IAmAChannelSync CreateChannel(GcpPubSubSubscription subscription)
