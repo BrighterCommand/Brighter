@@ -34,6 +34,7 @@ using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
+using Paramore.Brighter.Tasks;
 using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetterPolicy;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
@@ -135,6 +136,13 @@ public class GcpStreamOrderingMessageGatewayProvider
 
     public IAmAMessageProducerSync CreateProducer(GcpPublication publication)
     {
+        if (publication.MakeChannels == OnMissingChannel.Create)
+        {
+            BrighterAsyncContext.Run(() => _channelFactory.EnsureTopicExistAsync(
+                new TopicAttributes { Name = publication.Topic!.Value, ProjectId = _connection.ProjectId },
+                publication.MakeChannels));
+        }
+
         var topicName = TopicName.FromProjectTopic(_connection.ProjectId, publication.Topic!.Value);
         var builder = new PublisherClientBuilder
         {
@@ -154,6 +162,13 @@ public class GcpStreamOrderingMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
+        if (publication.MakeChannels == OnMissingChannel.Create)
+        {
+            await _channelFactory.EnsureTopicExistAsync(
+                new TopicAttributes { Name = publication.Topic!.Value, ProjectId = _connection.ProjectId },
+                publication.MakeChannels);
+        }
+
         var topicName = TopicName.FromProjectTopic(_connection.ProjectId, publication.Topic!.Value);
         var builder = new PublisherClientBuilder
         {

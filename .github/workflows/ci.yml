@@ -303,7 +303,7 @@ jobs:
           KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
           KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
           KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
-          KAFKA_DELETE_TOPIC_ENABLE: "false"
+          KAFKA_DELETE_TOPIC_ENABLE: "true"
       schema-registry:
         image: confluentinc/cp-schema-registry:latest
         ports:
@@ -657,7 +657,7 @@ jobs:
     
   gcp-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     needs: [build]
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||

@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 
 [Trait("Category", "Kafka")]
-[Collection("PartitionKey")]
+[Collection("Kafka")]
 public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException 
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

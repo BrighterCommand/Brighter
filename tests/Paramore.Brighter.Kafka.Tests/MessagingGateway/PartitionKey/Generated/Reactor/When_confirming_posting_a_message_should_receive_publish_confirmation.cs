@@ -13,7 +13,7 @@ using Xunit;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 
 [Trait("Category", "Kafka")]
-[Collection("PartitionKey")]
+[Collection("Kafka")]
 public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

@@ -14,7 +14,7 @@ using Paramore.Brighter.Extensions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
 
 [Trait("Category", "Kafka")]
-[Collection("Standard")]
+[Collection("Kafka")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

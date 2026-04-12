@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
 
 [Trait("Category", "Kafka")]
-[Collection("Standard")]
+[Collection("Kafka")]
 public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

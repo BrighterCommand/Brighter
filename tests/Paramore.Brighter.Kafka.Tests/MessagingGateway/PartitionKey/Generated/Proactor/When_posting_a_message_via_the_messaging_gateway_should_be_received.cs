@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Proactor;
 
 [Trait("Category", "Kafka")]
-[Collection("PartitionKey")]
+[Collection("Kafka")]
 public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
