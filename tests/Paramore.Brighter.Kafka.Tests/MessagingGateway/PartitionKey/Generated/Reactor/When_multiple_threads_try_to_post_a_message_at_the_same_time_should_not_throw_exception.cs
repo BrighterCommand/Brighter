@@ -12,6 +12,7 @@ using Xunit;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 
 [Trait("Category", "Kafka")]
+[Collection("PartitionKey")]
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowException : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

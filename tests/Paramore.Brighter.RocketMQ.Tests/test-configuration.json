@@ -6,6 +6,7 @@
     "Subscription": "Paramore.Brighter.MessagingGateway.RocketMQ.RocketSubscription",
     "MessageGatewayProvider": "Paramore.Brighter.RocketMQ.Tests.MessagingGateway.RocketMqMessageGatewayProvider",
     "Category": "RocketMQ",
+    "CollectionName": "RocketMQMessagingGateway",
     "DelayBetweenReceiveMessageInMilliseconds": 5000,
     "HasSupportToPublishConfirmation": false,
     "HasSupportToDeadLetterQueue": true,

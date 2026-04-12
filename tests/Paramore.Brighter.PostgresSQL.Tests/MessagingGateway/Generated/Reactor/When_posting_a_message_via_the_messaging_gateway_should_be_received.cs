@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "PostgresSql")]
+[Collection("PostgresMessagingGateway")]
 public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -53,8 +54,6 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
 
         // Act
         _producer.Send(message);
-
-        
 
         var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
 

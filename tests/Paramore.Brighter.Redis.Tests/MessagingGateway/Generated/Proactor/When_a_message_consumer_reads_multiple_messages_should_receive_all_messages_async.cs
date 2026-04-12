@@ -14,6 +14,7 @@ using Paramore.Brighter.Extensions;
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Redis")]
+[Collection("RedisMessagingGateway")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandard.Reactor;
 
-[Trait("Category", "SqsStandard")]
+[Trait("Category", "Sqs")]
+[Collection("SqsStandard")]
 public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

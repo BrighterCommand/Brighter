@@ -3,11 +3,15 @@
   "Outboxes": {
     "Text": {
       "Transaction": "System.Data.Common.DbTransaction",
-      "OutboxProvider": "PostgresTextOutboxProvider"
+      "OutboxProvider": "PostgresTextOutboxProvider",
+      "Category": "PostgresSql",
+      "CollectionName": "PostgresTextOutbox"
     },
     "Binary": {
       "Transaction": "System.Data.Common.DbTransaction",
-      "OutboxProvider": "PostgresBinaryOutboxProvider"
+      "OutboxProvider": "PostgresBinaryOutboxProvider",
+      "Category": "PostgresSql",
+      "CollectionName": "PostgresBinaryOutbox"
     }
   },
   "MessagingGateway": {
@@ -15,6 +19,7 @@
     "Publication": "Paramore.Brighter.MessagingGateway.Postgres.PostgresPublication",
     "Subscription": "Paramore.Brighter.MessagingGateway.Postgres.PostgresSubscription",
     "Category": "PostgresSql",
+    "CollectionName": "PostgresMessagingGateway",
     "HasSupportToPublishConfirmation": false,
     "HasSupportToDeadLetterQueue": false,
     "HasSupportToDelayedMessages": false,

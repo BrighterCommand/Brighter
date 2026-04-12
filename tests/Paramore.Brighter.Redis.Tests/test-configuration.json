@@ -5,6 +5,7 @@
     "Subscription": "Paramore.Brighter.MessagingGateway.Redis.RedisSubscription",
     "MessageGatewayProvider": "Paramore.Brighter.Redis.Tests.MessagingGateway.RedisMessageGatewayProvider",
     "Category": "Redis",
+    "CollectionName": "RedisMessagingGateway",
     "HasSupportToPublishConfirmation": false,
     "HasSupportToDeadLetterQueue": true,
     "HasSupportToDelayedMessages": false,

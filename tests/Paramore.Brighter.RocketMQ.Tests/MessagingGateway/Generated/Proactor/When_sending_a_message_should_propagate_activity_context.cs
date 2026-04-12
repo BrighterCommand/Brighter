@@ -14,6 +14,7 @@ using Xunit;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RocketMQ")]
+[Collection("RocketMQMessagingGateway")]
 public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

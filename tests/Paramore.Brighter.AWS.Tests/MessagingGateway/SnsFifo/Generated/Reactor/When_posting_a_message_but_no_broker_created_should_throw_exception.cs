@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SnsFifo.Reactor;
 
-[Trait("Category", "SnsFifo")]
+[Trait("Category", "Sns")]
+[Collection("SnsFifo")]
 public class WhenPostingAMessageButNoBrokerCreatedShouldThrowException
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

@@ -11,8 +11,9 @@ using Xunit;
 using Paramore.Brighter.Extensions;
 
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Proactor;
-{% if Category != null %}
-[Trait("Category", "{{Category}}")]{% endif %}
+
+{% if Category != null %}[Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -63,11 +64,10 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
 
         var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
-        
+
         // Act
         await _producer.SendAsync(message);
-        {%if DelayBetweenReceiveMessageInMilliseconds != null %}await Task.Delay({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
-        
+
         // Assert
         Assert.True(messageSent);
     }

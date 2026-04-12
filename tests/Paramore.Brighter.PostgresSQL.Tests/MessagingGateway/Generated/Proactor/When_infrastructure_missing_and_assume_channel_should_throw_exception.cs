@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "PostgresSql")]
+[Collection("PostgresMessagingGateway")]
 public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -48,8 +49,6 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
 
             // Act
             await _producer.SendAsync(message);
-
-            
 
             // Assert
             await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));

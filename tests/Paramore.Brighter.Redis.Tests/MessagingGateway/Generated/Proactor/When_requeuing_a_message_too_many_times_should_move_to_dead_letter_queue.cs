@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Redis")]
+[Collection("RedisMessagingGateway")]
 public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -59,15 +60,11 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
 
         await _producer.SendAsync(message);
 
-        
-
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)
         {
             received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
             await _channel.RequeueAsync(received);
-
-            
         }
 
         received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));

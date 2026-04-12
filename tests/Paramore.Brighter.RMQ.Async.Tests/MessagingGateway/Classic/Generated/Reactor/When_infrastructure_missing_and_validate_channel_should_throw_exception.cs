@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Reactor;
 
-[Trait("Category", "Classic")]
+[Trait("Category", "RMQ")]
+[Collection("Classic")]
 public class WhenInfrastructureMissingAndValidateChannelShouldThrowException 
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -48,8 +49,6 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowException
 
             // Act
             _producer.Send(message);
-
-            
 
             // Assert
             _channel.Receive(TimeSpan.FromMilliseconds(4000));

@@ -35,6 +35,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Async;
 
+[Trait("Category", "Sqlite")]
+[Collection("SqliteBinaryOutbox")]
 public class WhenRetrievingAllMessagesTheyShouldIncludeDispatchedAndUndispatchedAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

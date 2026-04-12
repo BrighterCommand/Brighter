@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering.Reactor;
 
 [Trait("Category", "GcpPubSub")]
+[Collection("PullOrdering")]
 public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -53,8 +54,6 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
 
         // Act
         _producer.Send(message);
-
-        
 
         var received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
 

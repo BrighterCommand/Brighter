@@ -14,6 +14,7 @@ using Paramore.Brighter.Extensions;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering.Proactor;
 
 [Trait("Category", "GcpPubSub")]
+[Collection("PullOrdering")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

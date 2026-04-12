@@ -35,6 +35,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Gcp.Tests.Outbox.Firestore.Async;
 
+[Trait("Category", "Firestore")]
+[Collection("FirestoreOutbox")]
 public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

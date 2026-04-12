@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Reactor;
 
-[Trait("Category", "SqsFifo")]
+[Trait("Category", "Sqs")]
+[Collection("SqsFifo")]
 public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -53,8 +54,6 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 
         _producer.Send(message);
 
-        
-
         // Act
         var received = _channel.Receive(TimeSpan.FromMilliseconds(4000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
@@ -72,8 +71,6 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
             {
                 break;
             }
-
-            
         }
 
         // Assert

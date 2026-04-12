@@ -14,6 +14,7 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "PostgresSql")]
+[Collection("PostgresMessagingGateway")]
 public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.Reactor;
 
 [Trait("Category", "GcpPubSub")]
+[Collection("StreamOrdering")]
 public class WhenInfrastructureMissingAndValidateChannelShouldThrowException 
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -48,8 +49,6 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowException
 
             // Act
             _producer.Send(message);
-
-            
 
             // Assert
             _channel.Receive(TimeSpan.FromMilliseconds(10000));

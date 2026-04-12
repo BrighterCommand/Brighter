@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandard.Proactor;
 
-[Trait("Category", "SqsStandard")]
+[Trait("Category", "Sqs")]
+[Collection("SqsStandard")]
 public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -58,15 +59,11 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
 
         await _producer.SendAsync(message);
 
-        
-
         // Act
         var received = await _channel.ReceiveAsync(null);
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         await _channel.RequeueAsync(received);
-
-        
 
         // Retry receiving in case the requeued message is not immediately available
         var requeued = new Message();
@@ -77,8 +74,6 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
             {
                 break;
             }
-
-            
         }
 
         // Assert

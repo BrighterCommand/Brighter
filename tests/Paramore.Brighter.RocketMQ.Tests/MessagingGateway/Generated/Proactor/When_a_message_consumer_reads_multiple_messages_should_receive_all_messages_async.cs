@@ -14,6 +14,7 @@ using Paramore.Brighter.Extensions;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RocketMQ")]
+[Collection("RocketMQMessagingGateway")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

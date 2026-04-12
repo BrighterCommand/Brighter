@@ -13,7 +13,8 @@ using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Proactor;
 
-[Trait("Category", "Classic")]
+[Trait("Category", "RMQ")]
+[Collection("Classic")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

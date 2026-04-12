@@ -11,7 +11,8 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Quorum.Reactor;
 
-[Trait("Category", "Quorum")]
+[Trait("Category", "RMQ")]
+[Collection("Quorum")]
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowException : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

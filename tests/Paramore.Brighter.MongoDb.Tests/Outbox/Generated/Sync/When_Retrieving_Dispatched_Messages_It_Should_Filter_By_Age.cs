@@ -34,6 +34,7 @@ using System.Linq;
 
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.Sync;
 
+[Trait("Category", "MongoDB")]
 public class WhenRetrievingDispatchedMessagesItShouldFilterByAge : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

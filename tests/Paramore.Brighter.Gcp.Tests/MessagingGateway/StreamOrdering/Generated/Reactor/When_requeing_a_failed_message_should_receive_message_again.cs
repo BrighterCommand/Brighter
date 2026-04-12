@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.Reactor;
 
 [Trait("Category", "GcpPubSub")]
+[Collection("StreamOrdering")]
 public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -53,8 +54,6 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 
         _producer.Send(message);
 
-        
-
         // Act
         var received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
@@ -72,8 +71,6 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
             {
                 break;
             }
-
-            
         }
 
         // Assert

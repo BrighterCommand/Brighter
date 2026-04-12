@@ -8,8 +8,9 @@ using System.Threading.Tasks;
 using Xunit;
 
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Proactor;
-{% if Category != null %}
-[Trait("Category", "{{Category}}")]{% endif %}
+
+{% if Category != null %}[Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExceptionAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

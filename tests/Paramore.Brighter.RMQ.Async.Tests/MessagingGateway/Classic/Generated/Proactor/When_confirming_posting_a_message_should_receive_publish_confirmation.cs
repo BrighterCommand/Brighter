@@ -12,7 +12,8 @@ using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Proactor;
 
-[Trait("Category", "Classic")]
+[Trait("Category", "RMQ")]
+[Collection("Classic")]
 public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -63,11 +64,10 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
 
         var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
-        
+
         // Act
         await _producer.SendAsync(message);
-        
-        
+
         // Assert
         Assert.True(messageSent);
     }

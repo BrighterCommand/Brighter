@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsStandard.Proactor;
 
-[Trait("Category", "AWS")]
+[Trait("Category", "Sns")]
+[Collection("Sns")]
 public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

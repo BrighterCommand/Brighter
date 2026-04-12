@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MySQL.Tests.Outbox.Binary.Async;
 
+[Trait("Category", "MySQL")]
+[Collection("MySQLBinaryOutbox")]
 public class WhenRetrievingOutstandingMessagesItShouldFilterByAgeAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

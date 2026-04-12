@@ -13,6 +13,7 @@ using Paramore.Brighter.Extensions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Proactor;
 
 [Trait("Category", "Kafka")]
+[Collection("PartitionKey")]
 public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -63,11 +64,10 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
 
         var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
-        
+
         // Act
         await _producer.SendAsync(message);
-        
-        
+
         // Assert
         Assert.True(messageSent);
     }

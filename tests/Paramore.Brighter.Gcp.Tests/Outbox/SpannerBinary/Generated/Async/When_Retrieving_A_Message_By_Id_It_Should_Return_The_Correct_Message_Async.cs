@@ -36,6 +36,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerBinary.Async;
 
 [Trait("Category", "Spanner")]
+[Collection("SpannerBinaryOutbox")]
 public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessageAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

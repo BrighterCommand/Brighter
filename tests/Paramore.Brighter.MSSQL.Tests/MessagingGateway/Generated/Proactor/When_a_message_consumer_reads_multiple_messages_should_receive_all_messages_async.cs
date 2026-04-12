@@ -14,6 +14,7 @@ using Paramore.Brighter.Extensions;
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "MSSQL")]
+[Collection("MSSQLMessagingGateway")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

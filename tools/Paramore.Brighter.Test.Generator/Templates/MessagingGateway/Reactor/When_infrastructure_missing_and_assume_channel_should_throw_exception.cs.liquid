@@ -8,8 +8,9 @@ using System.Threading;
 using Xunit;
 
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Reactor;
-{% if Category != null %}
-[Trait("Category", "{{Category}}")]{% endif %}
+
+{% if Category != null %}[Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException 
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -48,8 +49,6 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException
 
             // Act
             _producer.Send(message);
-
-            {%if DelayBetweenReceiveMessageInMilliseconds != null %}Thread.Sleep({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
 
             // Assert
             _channel.Receive(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));

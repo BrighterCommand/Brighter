@@ -35,6 +35,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Async;
 
+[Trait("Category", "MSSQL")]
+[Collection("MSSQLBinaryOutbox")]
 public class WhenRetrievingAllMessagesTheyShouldIncludeDispatchedAndUndispatchedAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

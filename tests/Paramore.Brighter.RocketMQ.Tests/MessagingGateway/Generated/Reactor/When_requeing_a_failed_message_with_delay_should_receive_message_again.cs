@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RocketMQ")]
+[Collection("RocketMQMessagingGateway")]
 public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -59,8 +60,6 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDis
         Assert.NotEqual(MessageType.MT_QUIT, received.Header.MessageType);
 
         _channel.Requeue(received);
-
-        Thread.Sleep(5000);
 
         // Assert
         received = _channel.Receive(TimeSpan.FromMilliseconds(300));

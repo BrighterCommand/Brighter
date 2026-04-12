@@ -13,7 +13,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsFifo.Reactor;
 
-[Trait("Category", "AWS")]
+[Trait("Category", "Sqs")]
+[Collection("SqsFifo")]
 public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

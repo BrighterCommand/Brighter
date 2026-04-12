@@ -8,8 +8,9 @@ using System.Threading.Tasks;
 using Xunit;
 
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Proactor;
-{% if Category != null %}
-[Trait("Category", "{{Category}}")]{% endif %}
+
+{% if Category != null %}[Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -58,15 +59,11 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
 
         await _producer.SendAsync(message);
 
-        {%if DelayBetweenReceiveMessageInMilliseconds != null %}await Task.Delay({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
-
         // Act
         var received = await _channel.ReceiveAsync(null);
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         await _channel.RequeueAsync(received);
-
-        {%if DelayBetweenReceiveMessageInMilliseconds != null %}await Task.Delay({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
 
         // Retry receiving in case the requeued message is not immediately available
         var requeued = new Message();
@@ -77,8 +74,6 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
             {
                 break;
             }
-
-            {%if DelayBetweenReceiveMessageInMilliseconds != null %}await Task.Delay({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
         }
 
         // Assert

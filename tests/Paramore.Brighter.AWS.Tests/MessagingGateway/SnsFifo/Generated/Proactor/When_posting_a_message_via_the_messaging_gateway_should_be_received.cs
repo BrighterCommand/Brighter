@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SnsFifo.Proactor;
 
-[Trait("Category", "SnsFifo")]
+[Trait("Category", "Sns")]
+[Collection("SnsFifo")]
 public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -58,8 +59,6 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
 
         // Act
         await _producer.SendAsync(message);
-
-        
 
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
 

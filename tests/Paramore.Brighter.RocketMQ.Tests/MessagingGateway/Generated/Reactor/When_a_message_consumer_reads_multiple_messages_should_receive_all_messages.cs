@@ -14,6 +14,7 @@ using Xunit;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RocketMQ")]
+[Collection("RocketMQMessagingGateway")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -63,8 +64,6 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
         // Act
         _sentMessages.Each(message => _producer.Send(message));
 
-        Thread.Sleep(5000);
-
         // Assert
         for (var i = 0; i < _sentMessages.Count; i++)
         {
@@ -78,11 +77,6 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
             _messageAssertion.Assert(expectedMessage, received);
 
             _channel.Acknowledge(received);
-
-            if ((i + 1) % _subscription.BufferSize == 0)
-            {
-                Thread.Sleep(5000);
-            }
         }
     }
 }

@@ -11,7 +11,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Reactor;
 
-[Trait("Category", "SqsFifo")]
+[Trait("Category", "Sqs")]
+[Collection("SqsFifo")]
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowException : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

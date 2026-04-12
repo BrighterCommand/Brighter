@@ -36,6 +36,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Async;
 
 [Trait("Category", "Spanner")]
+[Collection("SpannerTextOutbox")]
 public class WhenDeletingOneMessageItShouldBeRemovedFromOutboxAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

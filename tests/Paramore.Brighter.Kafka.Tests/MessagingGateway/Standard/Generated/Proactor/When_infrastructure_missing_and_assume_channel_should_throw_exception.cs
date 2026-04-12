@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
 
 [Trait("Category", "Kafka")]
+[Collection("Standard")]
 public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -49,10 +50,8 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
             // Act
             await _producer.SendAsync(message);
 
-            
-
             // Assert
-            await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+            await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
             Assert.Fail("We are expected to throw an exception");
         }
         catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)

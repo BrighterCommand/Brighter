@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox.Async;
 
+[Trait("Category", "DynamoDB")]
+[Collection("DynamoDBOutbox")]
 public class WhenRetrievingANonExistentMessageItShouldReturnEmptyMessageAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

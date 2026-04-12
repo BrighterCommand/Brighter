@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsFifo.Proactor;
 
-[Trait("Category", "AWS")]
+[Trait("Category", "Sns")]
+[Collection("SnsFifo")]
 public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -48,8 +49,6 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
 
             // Act
             await _producer.SendAsync(message);
-
-            
 
             // Assert
             await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Async;
 
 [Trait("Category", "Spanner")]
+[Collection("SpannerTextOutbox")]
 public class WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommitAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

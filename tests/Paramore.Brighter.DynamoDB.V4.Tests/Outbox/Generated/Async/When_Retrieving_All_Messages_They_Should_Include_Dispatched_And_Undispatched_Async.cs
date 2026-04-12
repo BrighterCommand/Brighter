@@ -35,6 +35,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.Outbox.Async;
 
+[Trait("Category", "DynamoDB")]
+[Collection("DynamoDBOutbox")]
 public class WhenRetrievingAllMessagesTheyShouldIncludeDispatchedAndUndispatchedAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

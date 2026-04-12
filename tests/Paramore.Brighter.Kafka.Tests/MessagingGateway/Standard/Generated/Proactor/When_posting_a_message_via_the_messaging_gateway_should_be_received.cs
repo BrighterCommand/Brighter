@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
 
 [Trait("Category", "Kafka")]
+[Collection("Standard")]
 public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -59,9 +60,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
         // Act
         await _producer.SendAsync(message);
 
-        
-
-        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);

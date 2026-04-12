@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Proactor;
 
 [Trait("Category", "GcpPubSub")]
+[Collection("Stream")]
 public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -59,15 +60,11 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
 
         await _producer.SendAsync(message);
 
-        
-
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)
         {
             received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
             await _channel.RequeueAsync(received);
-
-            
         }
 
         received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));

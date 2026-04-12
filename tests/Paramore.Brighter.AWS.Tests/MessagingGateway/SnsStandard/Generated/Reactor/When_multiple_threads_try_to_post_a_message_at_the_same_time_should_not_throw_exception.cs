@@ -11,7 +11,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SnsStandard.Reactor;
 
-[Trait("Category", "SnsStandard")]
+[Trait("Category", "Sns")]
+[Collection("SnsStandard")]
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowException : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 
 [Trait("Category", "Kafka")]
+[Collection("PartitionKey")]
 public class WhenInfrastructureMissingAndValidateChannelShouldThrowException 
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -49,10 +50,8 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowException
             // Act
             _producer.Send(message);
 
-            
-
             // Assert
-            _channel.Receive(TimeSpan.FromMilliseconds(10000));
+            _channel.Receive(TimeSpan.FromMilliseconds(15000));
             Assert.Fail("We are expected to throw an exception");
         }
         catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)

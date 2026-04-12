@@ -13,7 +13,8 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Reactor;
 
-[Trait("Category", "Classic")]
+[Trait("Category", "RMQ")]
+[Collection("Classic")]
 public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

@@ -34,6 +34,7 @@ using System.Linq;
 
 namespace Paramore.Brighter.MySQL.Tests.Outbox.Text.Sync;
 
+[Trait("Category", "MySQL")]
 public class WhenRetrievingANonExistentMessageItShouldReturnEmptyMessage : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

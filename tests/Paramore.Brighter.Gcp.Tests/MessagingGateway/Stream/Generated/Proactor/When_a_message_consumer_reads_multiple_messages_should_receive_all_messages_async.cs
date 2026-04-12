@@ -14,6 +14,7 @@ using Paramore.Brighter.Extensions;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Proactor;
 
 [Trait("Category", "GcpPubSub")]
+[Collection("Stream")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

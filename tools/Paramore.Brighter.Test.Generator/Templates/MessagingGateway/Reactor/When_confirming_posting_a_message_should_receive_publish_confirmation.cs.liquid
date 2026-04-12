@@ -11,8 +11,9 @@ using Paramore.Brighter.Extensions;
 using Xunit;
 
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Reactor;
-{% if Category != null %}
-[Trait("Category", "{{Category}}")]{% endif %}
+
+{% if Category != null %}[Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -61,7 +62,6 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDi
         
         // Act
         _producer.Send(message);
-        Thread.Sleep({{ DelayBetweenReceiveMessageInMilliseconds | default: 1000 }});
         
         // Assert
         Assert.True(messageSent);

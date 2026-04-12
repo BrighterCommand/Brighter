@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RocketMQ")]
+[Collection("RocketMQMessagingGateway")]
 public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -58,8 +59,6 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
 
         // Act
         await _producer.SendAsync(message);
-
-        await Task.Delay(5000);
 
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
 

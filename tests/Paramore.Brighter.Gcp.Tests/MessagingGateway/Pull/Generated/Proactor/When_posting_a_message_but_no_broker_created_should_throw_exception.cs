@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Proactor;
 
 [Trait("Category", "GcpPubSub")]
+[Collection("Pull")]
 public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

@@ -12,8 +12,9 @@ using OpenTelemetry.Trace;
 using Xunit;
 
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Proactor;
-{% if Category != null %}
-[Trait("Category", "{{Category}}")]{% endif %}
+
+{% if Category != null %}[Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

@@ -14,6 +14,7 @@ using Xunit;
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Redis")]
+[Collection("RedisMessagingGateway")]
 public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

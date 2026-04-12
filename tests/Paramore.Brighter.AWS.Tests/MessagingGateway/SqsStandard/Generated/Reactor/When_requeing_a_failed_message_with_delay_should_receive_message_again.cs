@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandard.Reactor;
 
-[Trait("Category", "SqsStandard")]
+[Trait("Category", "Sqs")]
+[Collection("SqsStandard")]
 public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -59,8 +60,6 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgain : IDis
         Assert.NotEqual(MessageType.MT_QUIT, received.Header.MessageType);
 
         _channel.Requeue(received);
-
-        
 
         // Assert
         received = _channel.Receive(TimeSpan.FromMilliseconds(4000));

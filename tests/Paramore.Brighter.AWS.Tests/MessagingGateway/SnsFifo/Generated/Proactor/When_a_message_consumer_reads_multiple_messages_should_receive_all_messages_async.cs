@@ -13,7 +13,8 @@ using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SnsFifo.Proactor;
 
-[Trait("Category", "SnsFifo")]
+[Trait("Category", "Sns")]
+[Collection("SnsFifo")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

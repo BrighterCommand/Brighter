@@ -14,6 +14,7 @@ using Xunit;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 
 [Trait("Category", "Kafka")]
+[Collection("PartitionKey")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -63,12 +64,10 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
         // Act
         _sentMessages.Each(message => _producer.Send(message));
 
-        
-
         // Assert
         for (var i = 0; i < _sentMessages.Count; i++)
         {
-            var received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
+            var received = _channel.Receive(TimeSpan.FromMilliseconds(15000));
 
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
 
@@ -78,8 +77,6 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
             _messageAssertion.Assert(expectedMessage, received);
 
             _channel.Acknowledge(received);
-
-            
         }
     }
 }

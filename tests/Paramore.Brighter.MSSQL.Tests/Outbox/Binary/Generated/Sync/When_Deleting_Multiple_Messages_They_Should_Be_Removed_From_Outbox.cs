@@ -34,6 +34,7 @@ using System.Linq;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Sync;
 
+[Trait("Category", "MSSQL")]
 public class WhenDeletingMultipleMessagesTheyShouldBeRemovedFromOutbox : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

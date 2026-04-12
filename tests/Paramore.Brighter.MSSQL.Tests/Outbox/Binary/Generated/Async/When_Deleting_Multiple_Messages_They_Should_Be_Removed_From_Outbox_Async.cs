@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Async;
 
+[Trait("Category", "MSSQL")]
+[Collection("MSSQLBinaryOutbox")]
 public class WhenDeletingMultipleMessagesTheyShouldBeRemovedFromOutboxAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Quorum.Proactor;
 
-[Trait("Category", "Quorum")]
+[Trait("Category", "RMQ")]
+[Collection("Quorum")]
 public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -48,8 +49,6 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
 
             // Act
             await _producer.SendAsync(message);
-
-            
 
             // Assert
             await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));

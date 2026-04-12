@@ -34,6 +34,7 @@ using System.Linq;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text.Sync;
 
+[Trait("Category", "MSSQL")]
 public class WhenRetrievingAllMessagesTheyShouldIncludeDispatchedAndUndispatched : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

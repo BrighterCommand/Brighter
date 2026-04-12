@@ -3,11 +3,15 @@
   "Outboxes": {
     "Text": {
       "Transaction": "System.Data.Common.DbTransaction",
-      "OutboxProvider": "MSSQLTextOutboxProvider"
+      "OutboxProvider": "MSSQLTextOutboxProvider",
+      "Category": "MSSQL",
+      "CollectionName": "MSSQLTextOutbox"
     },
     "Binary": {
       "Transaction": "System.Data.Common.DbTransaction",
-      "OutboxProvider": "MSSQLBinaryOutboxProvider"
+      "OutboxProvider": "MSSQLBinaryOutboxProvider",
+      "Category": "MSSQL",
+      "CollectionName": "MSSQLBinaryOutbox"
     }
   },
   "MessagingGateway": {
@@ -15,6 +19,7 @@
     "Publication": "Paramore.Brighter.Publication",
     "Subscription": "Paramore.Brighter.MessagingGateway.MsSql.MsSqlSubscription",
     "Category": "MSSQL",
+    "CollectionName": "MSSQLMessagingGateway",
     "HasSupportToPublishConfirmation": false,
     "HasSupportToDeadLetterQueue": false,
     "HasSupportToDelayedMessages": false,

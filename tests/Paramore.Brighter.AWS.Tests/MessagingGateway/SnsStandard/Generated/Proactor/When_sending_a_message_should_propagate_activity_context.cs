@@ -13,7 +13,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SnsStandard.Proactor;
 
-[Trait("Category", "SnsStandard")]
+[Trait("Category", "Sns")]
+[Collection("SnsStandard")]
 public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

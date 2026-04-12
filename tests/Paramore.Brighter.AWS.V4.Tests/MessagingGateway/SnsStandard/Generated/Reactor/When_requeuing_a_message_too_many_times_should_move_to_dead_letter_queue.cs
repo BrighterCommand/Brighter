@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsStandard.Reactor;
 
-[Trait("Category", "AWS")]
+[Trait("Category", "Sns")]
+[Collection("Sns")]
 public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -53,8 +54,6 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
         _sentMessages.Add(message);
 
         _producer.Send(message);
-
-        
 
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)

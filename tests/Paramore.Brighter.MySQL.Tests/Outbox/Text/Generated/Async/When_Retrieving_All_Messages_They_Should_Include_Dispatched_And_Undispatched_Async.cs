@@ -35,6 +35,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MySQL.Tests.Outbox.Text.Async;
 
+[Trait("Category", "MySQL")]
+[Collection("MySQLTextOutbox")]
 public class WhenRetrievingAllMessagesTheyShouldIncludeDispatchedAndUndispatchedAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

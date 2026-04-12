@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Redis")]
+[Collection("RedisMessagingGateway")]
 public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -58,8 +59,6 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
 
         // Act
         await _producer.SendAsync(message);
-
-        
 
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
 

@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SnsStandard.Reactor;
 
-[Trait("Category", "SnsStandard")]
+[Trait("Category", "Sns")]
+[Collection("SnsStandard")]
 public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException 
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -48,8 +49,6 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException
 
             // Act
             _producer.Send(message);
-
-            
 
             // Assert
             _channel.Receive(TimeSpan.FromMilliseconds(4000));

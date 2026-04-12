@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 
 [Trait("Category", "Kafka")]
+[Collection("PartitionKey")]
 public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -54,9 +55,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
         // Act
         _producer.Send(message);
 
-        
-
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(15000));
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);

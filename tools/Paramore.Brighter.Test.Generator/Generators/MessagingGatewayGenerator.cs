@@ -134,34 +134,22 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
             return true;
         }
 
-        if (
-            !configuration.HasSupportToDelayedMessages
-            && fileName.Contains("delayed_message")
-        )
+        if (!configuration.HasSupportToDelayedMessages && fileName.Contains("delayed_message"))
         {
             return true;
         }
 
-        if (
-            !configuration.HasSupportToDelayedMessages
-            && fileName.Contains("with_delay")
-        )
+        if (!configuration.HasSupportToDelayedMessages && fileName.Contains("with_delay"))
         {
             return true;
         }
 
-        if (
-            !configuration.HasSupportToPartitionKey
-            && fileName.Contains("partition_key")
-        )
+        if (!configuration.HasSupportToPartitionKey && fileName.Contains("partition_key"))
         {
             return true;
         }
 
-        if (
-            !configuration.HasSupportToDeadLetterQueue
-            && fileName.Contains("dead_letter_queue")
-        )
+        if (!configuration.HasSupportToDeadLetterQueue && fileName.Contains("dead_letter_queue"))
         {
             return true;
         }
@@ -174,16 +162,13 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
             return true;
         }
 
-        if (
-            !configuration.HasSupportToRequeue
-            && fileName.Contains("requeing")
-        )
+        if (!configuration.HasSupportToRequeue && fileName.Contains("requeing"))
         {
             return true;
         }
 
         if (
-            !configuration.HasSupportToValidateInfrastructure 
+            !configuration.HasSupportToValidateInfrastructure
             && (fileName.Contains("assume_channel") || fileName.Contains("validate_channel"))
         )
         {

@@ -34,6 +34,7 @@ using System.Linq;
 
 namespace Paramore.Brighter.MySQL.Tests.Outbox.Binary.Sync;
 
+[Trait("Category", "MySQL")]
 public class WhenRetrievingDispatchedMessagesItShouldFilterByAge : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

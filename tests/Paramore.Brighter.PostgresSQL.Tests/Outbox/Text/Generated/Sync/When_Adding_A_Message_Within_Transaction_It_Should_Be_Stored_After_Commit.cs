@@ -34,6 +34,7 @@ using System.Linq;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Text.Sync;
 
+[Trait("Category", "PostgresSql")]
 public class WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommit : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

@@ -12,7 +12,8 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Quorum.Reactor;
 
-[Trait("Category", "Quorum")]
+[Trait("Category", "RMQ")]
+[Collection("Quorum")]
 public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -61,7 +62,6 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDi
         
         // Act
         _producer.Send(message);
-        Thread.Sleep(1000);
         
         // Assert
         Assert.True(messageSent);

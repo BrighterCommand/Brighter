@@ -60,6 +60,8 @@ public class MessagingGatewayConfiguration
     /// </summary>
     public string? Category { get; set; }
 
+    public string? CollectionName { get; set; }
+
     /// <summary>
     /// Gets or sets the publication configuration for the messaging gateway.
     /// </summary>

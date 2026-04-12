@@ -12,6 +12,7 @@ using Xunit;
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Redis")]
+[Collection("RedisMessagingGateway")]
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowException : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

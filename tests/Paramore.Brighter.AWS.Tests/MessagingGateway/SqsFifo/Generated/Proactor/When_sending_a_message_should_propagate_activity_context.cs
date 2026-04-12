@@ -13,7 +13,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifo.Proactor;
 
-[Trait("Category", "SqsFifo")]
+[Trait("Category", "Sqs")]
+[Collection("SqsFifo")]
 public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

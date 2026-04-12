@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "MSSQL")]
+[Collection("MSSQLMessagingGateway")]
 public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -48,8 +49,6 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
 
             // Act
             await _producer.SendAsync(message);
-
-            
 
             // Assert
             await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));

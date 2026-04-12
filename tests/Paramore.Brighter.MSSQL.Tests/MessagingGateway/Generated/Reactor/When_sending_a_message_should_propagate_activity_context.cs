@@ -14,6 +14,7 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "MSSQL")]
+[Collection("MSSQLMessagingGateway")]
 public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

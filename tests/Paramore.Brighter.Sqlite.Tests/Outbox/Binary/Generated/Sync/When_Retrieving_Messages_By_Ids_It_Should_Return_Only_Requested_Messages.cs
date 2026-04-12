@@ -34,6 +34,7 @@ using System.Linq;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Sync;
 
+[Trait("Category", "Sqlite")]
 public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessages : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

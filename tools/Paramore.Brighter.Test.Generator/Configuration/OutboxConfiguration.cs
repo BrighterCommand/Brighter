@@ -64,4 +64,6 @@ public class OutboxConfiguration
     /// Gets or sets the test category to apply to generated test classes.
     /// </summary>
     public string? Category { get; set; }
+
+    public string? CollectionName { get; set; }
 }

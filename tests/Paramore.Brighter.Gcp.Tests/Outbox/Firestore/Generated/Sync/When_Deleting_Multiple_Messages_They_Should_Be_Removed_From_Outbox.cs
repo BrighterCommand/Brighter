@@ -34,6 +34,7 @@ using System.Linq;
 
 namespace Paramore.Brighter.Gcp.Tests.Outbox.Firestore.Sync;
 
+[Trait("Category", "Firestore")]
 public class WhenDeletingMultipleMessagesTheyShouldBeRemovedFromOutbox : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

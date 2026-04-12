@@ -8,8 +8,9 @@ using System.Threading.Tasks;
 using Xunit;
 
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Proactor;
-{% if Category != null %}
-[Trait("Category", "{{Category}}")]{% endif %}
+
+{% if Category != null %}[Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgainAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -64,8 +65,6 @@ public class WhenRequeingAFailedMessageWithDelayShouldReceiveMessageAgainAsync :
         Assert.NotEqual(MessageType.MT_QUIT, received.Header.MessageType);
 
         await _channel.RequeueAsync(received);
-
-        {%if DelayBetweenReceiveMessageInMilliseconds != null %}await Task.Delay({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
 
         // Assert
         received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds({{ ReceiveMessageTimeoutInMilliseconds }}));

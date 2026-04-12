@@ -12,8 +12,9 @@ using Paramore.Brighter.Extensions;
 using Xunit;
 
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }}.Reactor;
-{% if Category != null %}
-[Trait("Category", "{{Category}}")]{% endif %}
+
+{% if Category != null %}[Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -63,8 +64,6 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
         // Act
         _sentMessages.Each(message => _producer.Send(message));
 
-        {%if DelayBetweenReceiveMessageInMilliseconds != null %}Thread.Sleep({{ DelayBetweenReceiveMessageInMilliseconds }});{% endif %}
-
         // Assert
         for (var i = 0; i < _sentMessages.Count; i++)
         {
@@ -78,11 +77,6 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
             _messageAssertion.Assert(expectedMessage, received);
 
             _channel.Acknowledge(received);
-
-            {%if DelayBetweenReceiveMessageInMilliseconds != null %}if ((i + 1) % _subscription.BufferSize == 0)
-            {
-                Thread.Sleep({{ DelayBetweenReceiveMessageInMilliseconds }});
-            }{% endif %}
         }
     }
 }

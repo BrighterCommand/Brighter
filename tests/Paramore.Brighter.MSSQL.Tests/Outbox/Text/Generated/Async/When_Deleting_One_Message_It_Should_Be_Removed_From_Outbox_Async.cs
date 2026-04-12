@@ -35,6 +35,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text.Async;
 
+[Trait("Category", "MSSQL")]
+[Collection("MSSQLTextOutbox")]
 public class WhenDeletingOneMessageItShouldBeRemovedFromOutboxAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

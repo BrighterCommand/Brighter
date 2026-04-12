@@ -35,6 +35,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Text.Async;
 
+[Trait("Category", "Sqlite")]
+[Collection("SqliteTextOutbox")]
 public class WhenDeletingOneMessageItShouldBeRemovedFromOutboxAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

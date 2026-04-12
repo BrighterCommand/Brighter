@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Quorum.Proactor;
 
-[Trait("Category", "Quorum")]
+[Trait("Category", "RMQ")]
+[Collection("Quorum")]
 public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -59,15 +60,11 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
 
         await _producer.SendAsync(message);
 
-        
-
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)
         {
             received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
             await _channel.RequeueAsync(received);
-
-            
         }
 
         received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));

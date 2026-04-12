@@ -13,6 +13,7 @@ using Xunit;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Reactor;
 
 [Trait("Category", "Kafka")]
+[Collection("Standard")]
 public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -61,7 +62,6 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDi
         
         // Act
         _producer.Send(message);
-        Thread.Sleep(1000);
         
         // Assert
         Assert.True(messageSent);

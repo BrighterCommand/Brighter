@@ -35,6 +35,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.Async;
 
+[Trait("Category", "MongoDB")]
+[Collection("MongoDbOutbox")]
 public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessageAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

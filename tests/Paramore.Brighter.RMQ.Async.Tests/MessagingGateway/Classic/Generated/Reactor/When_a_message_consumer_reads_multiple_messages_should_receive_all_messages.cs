@@ -13,7 +13,8 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Reactor;
 
-[Trait("Category", "Classic")]
+[Trait("Category", "RMQ")]
+[Collection("Classic")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -63,8 +64,6 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
         // Act
         _sentMessages.Each(message => _producer.Send(message));
 
-        
-
         // Assert
         for (var i = 0; i < _sentMessages.Count; i++)
         {
@@ -78,8 +77,6 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
             _messageAssertion.Assert(expectedMessage, received);
 
             _channel.Acknowledge(received);
-
-            
         }
     }
 }

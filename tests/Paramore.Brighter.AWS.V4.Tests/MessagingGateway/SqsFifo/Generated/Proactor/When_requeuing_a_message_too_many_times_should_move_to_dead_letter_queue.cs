@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsFifo.Proactor;
 
-[Trait("Category", "AWS")]
+[Trait("Category", "Sqs")]
+[Collection("SqsFifo")]
 public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -59,15 +60,11 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
 
         await _producer.SendAsync(message);
 
-        
-
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)
         {
             received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
             await _channel.RequeueAsync(received);
-
-            
         }
 
         received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));

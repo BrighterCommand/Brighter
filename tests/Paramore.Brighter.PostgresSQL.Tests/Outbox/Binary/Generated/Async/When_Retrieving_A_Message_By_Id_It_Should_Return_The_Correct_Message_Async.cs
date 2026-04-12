@@ -35,6 +35,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Async;
 
+[Trait("Category", "PostgresSql")]
+[Collection("PostgresBinaryOutbox")]
 public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessageAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

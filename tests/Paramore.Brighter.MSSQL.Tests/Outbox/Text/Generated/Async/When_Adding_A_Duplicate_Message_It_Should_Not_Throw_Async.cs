@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text.Async;
 
+[Trait("Category", "MSSQL")]
+[Collection("MSSQLTextOutbox")]
 public class WhenAddingADuplicateMessageItShouldNotThrowAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

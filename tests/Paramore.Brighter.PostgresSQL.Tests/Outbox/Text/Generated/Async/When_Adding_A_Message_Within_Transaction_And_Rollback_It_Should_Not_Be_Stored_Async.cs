@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Text.Async;
 
+[Trait("Category", "PostgresSql")]
+[Collection("PostgresTextOutbox")]
 public class WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStoredAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;

@@ -6,6 +6,7 @@
       "Subscription": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription",
       "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpPullMessageGatewayProvider",
       "Category": "GcpPubSub",
+      "CollectionName": "Pull",
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
@@ -20,6 +21,7 @@
       "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpPullOrderingMessageGatewayProvider",
       "MessageBuilder": "FifoMessageBuilder",
       "Category": "GcpPubSub",
+      "CollectionName": "PullOrdering",
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
@@ -33,6 +35,7 @@
       "Subscription": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription",
       "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpStreamMessageGatewayProvider",
       "Category": "GcpPubSub",
+      "CollectionName": "Stream",
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
@@ -47,6 +50,7 @@
       "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpStreamOrderingMessageGatewayProvider",
       "MessageBuilder": "FifoMessageBuilder",
       "Category": "GcpPubSub",
+      "CollectionName": "StreamOrdering",
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
@@ -59,17 +63,21 @@
   "Outboxes": {
     "Firestore": {
       "Transaction": "Paramore.Brighter.Firestore.FirestoreTransaction",
-      "OutboxProvider": "FirestoreOutboxProvider"
+      "OutboxProvider": "FirestoreOutboxProvider",
+      "Category": "Firestore",
+      "CollectionName": "FirestoreOutbox"
     },
     "SpannerBinary": {
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "SpannerBinaryOutboxProvider",
-      "Category": "Spanner"
+      "Category": "Spanner",
+      "CollectionName": "SpannerBinaryOutbox"
     },
     "SpannerText": {
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "SpannerTextOutboxProvider",
-      "Category": "Spanner"
+      "Category": "Spanner",
+      "CollectionName": "SpannerTextOutbox"
     }
   }
 }

@@ -9,7 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsFifo.Reactor;
 
-[Trait("Category", "AWS")]
+[Trait("Category", "Sns")]
+[Collection("SnsFifo")]
 public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -53,8 +54,6 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
 
         // Act
         _producer.Send(message);
-
-        
 
         var received = _channel.Receive(TimeSpan.FromMilliseconds(4000));
 

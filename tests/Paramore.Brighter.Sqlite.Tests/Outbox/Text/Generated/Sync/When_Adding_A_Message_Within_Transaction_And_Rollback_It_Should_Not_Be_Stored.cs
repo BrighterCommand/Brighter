@@ -34,6 +34,7 @@ using System.Linq;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Text.Sync;
 
+[Trait("Category", "Sqlite")]
 public class WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStored : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

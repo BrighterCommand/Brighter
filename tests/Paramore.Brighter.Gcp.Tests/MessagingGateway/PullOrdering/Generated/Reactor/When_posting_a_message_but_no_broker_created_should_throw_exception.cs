@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering.Reactor;
 
 [Trait("Category", "GcpPubSub")]
+[Collection("PullOrdering")]
 public class WhenPostingAMessageButNoBrokerCreatedShouldThrowException
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

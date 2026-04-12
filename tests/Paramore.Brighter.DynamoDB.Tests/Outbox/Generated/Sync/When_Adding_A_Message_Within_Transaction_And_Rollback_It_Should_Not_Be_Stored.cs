@@ -34,6 +34,7 @@ using System.Linq;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox.Sync;
 
+[Trait("Category", "DynamoDB")]
 public class WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStored : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
