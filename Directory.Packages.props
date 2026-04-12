@@ -13,7 +13,7 @@
     <RabbitMQClientV6>6.8.1</RabbitMQClientV6>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.17.8" />
     <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="[3.7.400, 4)" />
     <PackageVersion Include="AWSSDK.S3" Version="[3.7.500.5, 4)" />
