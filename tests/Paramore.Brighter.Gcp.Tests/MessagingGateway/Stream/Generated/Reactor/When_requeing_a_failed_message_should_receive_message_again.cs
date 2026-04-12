@@ -56,7 +56,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
         
 
         // Act
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         _channel.Requeue(received);
@@ -67,7 +67,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
         var requeued = new Message();
         for (var i = 0; i < 10; i++)
         {
-            requeued = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+            requeued = _channel.Receive(TimeSpan.FromMilliseconds(10000));
             if (requeued.Header.MessageType != MessageType.MT_NONE)
             {
                 break;

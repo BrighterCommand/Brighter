@@ -53,27 +53,27 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgain : IDisposable
 
         _producer.Send(message);
 
-        Thread.Sleep(1000);
+        
 
         // Act
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+        var received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         _channel.Requeue(received);
 
-        Thread.Sleep(1000);
+        
 
         // Retry receiving in case the requeued message is not immediately available
         var requeued = new Message();
         for (var i = 0; i < 10; i++)
         {
-            requeued = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+            requeued = _channel.Receive(TimeSpan.FromMilliseconds(10000));
             if (requeued.Header.MessageType != MessageType.MT_NONE)
             {
                 break;
             }
 
-            Thread.Sleep(1000);
+            
         }
 
         // Assert

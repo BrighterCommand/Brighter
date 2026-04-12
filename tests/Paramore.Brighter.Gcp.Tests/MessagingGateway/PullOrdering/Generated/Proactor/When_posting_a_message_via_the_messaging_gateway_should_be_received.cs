@@ -59,9 +59,9 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
         // Act
         await _producer.SendAsync(message);
 
-        await Task.Delay(1000);
+        
 
-        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);

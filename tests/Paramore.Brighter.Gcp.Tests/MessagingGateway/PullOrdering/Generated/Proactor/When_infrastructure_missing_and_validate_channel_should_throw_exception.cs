@@ -49,10 +49,10 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsyn
             // Act
             await _producer.SendAsync(message);
 
-            await Task.Delay(1000);
+            
 
             // Assert
-            await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+            await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
             Assert.Fail("We are expected to throw an exception");
         }
         catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)

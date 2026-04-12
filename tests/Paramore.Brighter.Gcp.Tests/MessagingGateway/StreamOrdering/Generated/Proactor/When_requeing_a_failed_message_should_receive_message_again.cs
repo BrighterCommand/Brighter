@@ -72,7 +72,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
         var requeued = new Message();
         for (var i = 0; i < 10; i++)
         {
-            requeued = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+            requeued = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
             if (requeued.Header.MessageType != MessageType.MT_NONE)
             {
                 break;

@@ -59,7 +59,7 @@ public class GcpPullMessageGatewayProvider
             SubscriptionManagerConfiguration = cfg =>
             {
                 cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
-            }
+            },
         };
         _channelFactory = new GcpPubSubChannelFactory(_connection);
     }
@@ -91,8 +91,8 @@ public class GcpPullMessageGatewayProvider
     {
         if (setupDeadLetterQueue)
         {
-            var dlqTopic = $"dlq-pull-{Guid.NewGuid():N}"[..45];
-            var dlqSub = $"dlq-pull-{Guid.NewGuid():N}"[..45];
+            var dlqTopic = $"dlq-pull-{Guid.NewGuid():N}";
+            var dlqSub = $"dlq-pull-{Guid.NewGuid():N}";
 
             return new GcpPubSubSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
@@ -130,8 +130,8 @@ public class GcpPullMessageGatewayProvider
             TopicName = topicName,
             Settings = new PublisherClient.Settings
             {
-                EnableMessageOrdering = publication.EnableMessageOrdering
-            }
+                EnableMessageOrdering = publication.EnableMessageOrdering,
+            },
         };
         _connection.PublisherConfiguration?.Invoke(builder);
         return new GcpMessageProducer(builder.Build(), publication);
@@ -149,8 +149,8 @@ public class GcpPullMessageGatewayProvider
             TopicName = topicName,
             Settings = new PublisherClient.Settings
             {
-                EnableMessageOrdering = publication.EnableMessageOrdering
-            }
+                EnableMessageOrdering = publication.EnableMessageOrdering,
+            },
         };
         _connection.PublisherConfiguration?.Invoke(builder);
         var client = await builder.BuildAsync(cancellationToken);

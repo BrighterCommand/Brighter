@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -64,7 +64,7 @@ public class GcpPullOrderingMessageGatewayProvider
             SubscriptionManagerConfiguration = cfg =>
             {
                 cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
-            }
+            },
         };
         _channelFactory = new GcpPubSubChannelFactory(_connection);
     }
@@ -81,7 +81,8 @@ public class GcpPullOrderingMessageGatewayProvider
 
     public GcpPublication CreatePublication(
         RoutingKey routingKey,
-        OnMissingChannel makeChannels = OnMissingChannel.Create)
+        OnMissingChannel makeChannels = OnMissingChannel.Create
+    )
     {
         return new GcpPublication<MyCommand>
         {
@@ -95,12 +96,13 @@ public class GcpPullOrderingMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false)
+        bool setupDeadLetterQueue = false
+    )
     {
         if (setupDeadLetterQueue)
         {
-            var dlqTopic = $"dlq-pull-ord-{Guid.NewGuid():N}"[..45];
-            var dlqSub = $"dlq-pull-ord-{Guid.NewGuid():N}"[..45];
+            var dlqTopic = $"dlq-pull-ord-{Guid.NewGuid():N}";
+            var dlqSub = $"dlq-pull-ord-{Guid.NewGuid():N}";
 
             return new GcpPubSubSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
@@ -112,7 +114,7 @@ public class GcpPullOrderingMessageGatewayProvider
                 deadLetter: new DeadLetterPolicy(new RoutingKey(dlqTopic), new ChannelName(dlqSub))
                 {
                     AckDeadlineSeconds = 60,
-                    MaxDeliveryAttempts = 5
+                    MaxDeliveryAttempts = 5,
                 },
                 makeChannels: makeChannel,
                 subscriptionMode: SubscriptionMode.Pull,
@@ -140,8 +142,8 @@ public class GcpPullOrderingMessageGatewayProvider
             TopicName = topicName,
             Settings = new PublisherClient.Settings
             {
-                EnableMessageOrdering = publication.EnableMessageOrdering
-            }
+                EnableMessageOrdering = publication.EnableMessageOrdering,
+            },
         };
         _connection.PublisherConfiguration?.Invoke(builder);
         return new GcpMessageProducer(builder.Build(), publication);
@@ -149,7 +151,8 @@ public class GcpPullOrderingMessageGatewayProvider
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
         GcpPublication publication,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         var topicName = TopicName.FromProjectTopic(_connection.ProjectId, publication.Topic!.Value);
         var builder = new PublisherClientBuilder
@@ -158,8 +161,8 @@ public class GcpPullOrderingMessageGatewayProvider
             TopicName = topicName,
             Settings = new PublisherClient.Settings
             {
-                EnableMessageOrdering = publication.EnableMessageOrdering
-            }
+                EnableMessageOrdering = publication.EnableMessageOrdering,
+            },
         };
         _connection.PublisherConfiguration?.Invoke(builder);
         var client = await builder.BuildAsync(cancellationToken);
@@ -174,7 +177,8 @@ public class GcpPullOrderingMessageGatewayProvider
 
     public async Task<IAmAChannelAsync> CreateChannelAsync(
         GcpPubSubSubscription subscription,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         _lastSubscription = subscription;
         return await _channelFactory.CreateAsyncChannelAsync(subscription, cancellationToken);
@@ -183,7 +187,8 @@ public class GcpPullOrderingMessageGatewayProvider
     public void CleanUp(
         IAmAMessageProducerSync? producer,
         IAmAChannelSync? channel,
-        IEnumerable<Message> messages)
+        IEnumerable<Message> messages
+    )
     {
         channel?.Dispose();
         producer?.Dispose();
@@ -198,7 +203,8 @@ public class GcpPullOrderingMessageGatewayProvider
     public async Task CleanUpAsync(
         IAmAMessageProducerAsync? producer,
         IAmAChannelAsync? channel,
-        IEnumerable<Message> messages)
+        IEnumerable<Message> messages
+    )
     {
         channel?.Dispose();
 
@@ -216,7 +222,8 @@ public class GcpPullOrderingMessageGatewayProvider
 
     public async Task<Message> GetMessageFromDeadLetterQueueAsync(
         GcpPubSubSubscription subscription,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         var dlqSubscription = new GcpPubSubSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscription.DeadLetter!.Subscription!.Value),
@@ -227,12 +234,18 @@ public class GcpPullOrderingMessageGatewayProvider
             subscriptionMode: SubscriptionMode.Pull
         );
 
-        var dlqChannel = await _channelFactory.CreateAsyncChannelAsync(dlqSubscription, cancellationToken);
+        var dlqChannel = await _channelFactory.CreateAsyncChannelAsync(
+            dlqSubscription,
+            cancellationToken
+        );
         try
         {
             for (var i = 0; i < 10; i++)
             {
-                var message = await dlqChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                var message = await dlqChannel.ReceiveAsync(
+                    TimeSpan.FromSeconds(5),
+                    cancellationToken
+                );
                 if (message.Header.MessageType != MessageType.MT_NONE)
                 {
                     await dlqChannel.AcknowledgeAsync(message, cancellationToken);
