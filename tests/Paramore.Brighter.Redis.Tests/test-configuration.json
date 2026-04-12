@@ -12,6 +12,6 @@
     "HasSupportToPartitionKey": false,
     "HasSupportToValidateBrokerExistence": false,
     "HasSupportToRequeue": true,
-    "HasSupportToValidateAssumeChannel": false
+    "HasSupportToValidateInfrastructure": false
   }
 }
