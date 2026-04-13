@@ -16,7 +16,6 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsStandard.Reactor;
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowException : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
-    private readonly IAmAMessageBuilder _messageBuilder;
 
     private Paramore.Brighter.MessagingGateway.AWSSQS.V4.SqsPublication? _publication;
 
@@ -25,7 +24,6 @@ public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExce
     public WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowException()
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsStandardMessageGatewayProvider();
-        _messageBuilder = new DefaultMessageBuilder();
     }
 
     public void Dispose()
@@ -44,7 +42,7 @@ public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExce
         var options = new ParallelOptions { MaxDegreeOfParallelism = 4 };
         Parallel.ForEach(Enumerable.Range(0, 10), options, _ =>
         {
-            var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
+            var message = new DefaultMessageBuilder().SetTopic(_publication.Topic!).Build();
             _producer.Send(message);
         });
 

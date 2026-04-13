@@ -36,7 +36,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
         _messageAssertion = new KafkaMessageAssertion();
     }
 
-    public async void Dispose()
+    public void Dispose()
     {
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }

@@ -14,7 +14,6 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsFifo.Proactor;
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExceptionAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
-    private readonly IAmAMessageBuilder _messageBuilder;
 
     private Paramore.Brighter.MessagingGateway.AWSSQS.V4.SqsPublication? _publication;
 
@@ -23,7 +22,6 @@ public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExce
     public WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExceptionAsync()
     {
         _messageGatewayProvider = new Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsFifoMessageGatewayProvider();
-        _messageBuilder = new FifoMessageBuilder();
     }
 
     public Task InitializeAsync()
@@ -47,7 +45,7 @@ public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExce
         var options = new ParallelOptions { MaxDegreeOfParallelism = 4 };
         await Parallel.ForEachAsync(Enumerable.Range(0, 10), options, async (_, ct) =>
         {
-            var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
+            var message = new FifoMessageBuilder().SetTopic(_publication.Topic!).Build();
             await _producer.SendAsync(message, ct);
         });
 

@@ -36,7 +36,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
         _messageAssertion = new AwsMessageAssertion();
     }
 
-    public async void Dispose()
+    public void Dispose()
     {
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }

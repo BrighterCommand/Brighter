@@ -162,7 +162,7 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
             return true;
         }
 
-        if (!configuration.HasSupportToRequeue && fileName.Contains("requeing"))
+        if (!configuration.HasSupportToRequeue && fileName.Contains("requeuing"))
         {
             return true;
         }
