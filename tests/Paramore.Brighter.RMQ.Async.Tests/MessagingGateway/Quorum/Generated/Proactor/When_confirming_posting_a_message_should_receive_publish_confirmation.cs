@@ -69,6 +69,12 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
         await _producer.SendAsync(message);
 
         // Assert
+        var timeout = DateTime.UtcNow.Add(TimeSpan.FromMilliseconds(1000));
+        while (!messageSent && DateTime.UtcNow < timeout)
+        {
+            await Task.Delay(100);
+        }
+
         Assert.True(messageSent);
     }
 }

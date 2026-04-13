@@ -110,4 +110,9 @@ public class MessagingGatewayConfiguration
     public bool HasSupportToValidateInfrastructure { get; set; } = true;
 
     public int ReceiveMessageTimeoutInMilliseconds { get; set; } = 300;
+
+    /// <summary>
+    /// Gets or sets the maximum time to wait for a message publish confirmation in milliseconds.
+    /// </summary>
+    public int MessageConfirmationTimeoutInMilliseconds { get; set; } = 1000;
 }

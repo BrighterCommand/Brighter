@@ -64,6 +64,12 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDi
         _producer.Send(message);
         
         // Assert
+        var timeout = DateTime.UtcNow.Add(TimeSpan.FromMilliseconds(1000));
+        while (!messageSent && DateTime.UtcNow < timeout)
+        {
+            Thread.Sleep(100);
+        }
+
         Assert.True(messageSent);
     }
 }

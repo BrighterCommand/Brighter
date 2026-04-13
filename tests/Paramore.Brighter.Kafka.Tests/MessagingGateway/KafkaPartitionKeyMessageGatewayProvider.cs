@@ -175,6 +175,8 @@ public class KafkaPartitionKeyMessageGatewayProvider
         {
             Topic = routingKey,
             NumPartitions = 2,
+            ReplicationFactor = 1,
+            MessageTimeoutMs = 5000,
             RequestTimeoutMs = 2000,
             MakeChannels = makeChannels,
         };
@@ -195,6 +197,7 @@ public class KafkaPartitionKeyMessageGatewayProvider
             offsetDefault: AutoOffsetReset.Earliest,
             commitBatchSize: 5,
             numOfPartitions: 2,
+            replicationFactor: 1,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: makeChannel
         );
