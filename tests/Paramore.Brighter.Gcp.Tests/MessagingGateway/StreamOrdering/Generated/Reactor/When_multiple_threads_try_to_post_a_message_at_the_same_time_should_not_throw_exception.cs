@@ -12,7 +12,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.Reactor;
 
 [Trait("Category", "GcpPubSub")]
-[Collection("GcpStream")]
+[Collection("StreamOrdering")]
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowException : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;

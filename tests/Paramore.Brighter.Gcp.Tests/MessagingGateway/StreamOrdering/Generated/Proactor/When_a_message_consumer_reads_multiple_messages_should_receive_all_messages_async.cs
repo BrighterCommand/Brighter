@@ -14,7 +14,7 @@ using Paramore.Brighter.Extensions;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.Proactor;
 
 [Trait("Category", "GcpPubSub")]
-[Collection("GcpStream")]
+[Collection("StreamOrdering")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -74,7 +74,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAs
         // Assert
         for (var i = 0; i < _sentMessages.Count; i++)
         {
-            var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+            var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
 

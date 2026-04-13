@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Proactor;
 
 [Trait("Category", "GcpPubSub")]
-[Collection("GcpStream")]
+[Collection("Stream")]
 public class WhenRequeuingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -60,7 +60,7 @@ public class WhenRequeuingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncL
         await _producer.SendAsync(message);
 
         // Act
-        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         await _channel.RequeueAsync(received);
@@ -69,7 +69,7 @@ public class WhenRequeuingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncL
         var requeued = new Message();
         for (var i = 0; i < 10; i++)
         {
-            requeued = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+            requeued = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
             if (requeued.Header.MessageType != MessageType.MT_NONE)
             {
                 break;

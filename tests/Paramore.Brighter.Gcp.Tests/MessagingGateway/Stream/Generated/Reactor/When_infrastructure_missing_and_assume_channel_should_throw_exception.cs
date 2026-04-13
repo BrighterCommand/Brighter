@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Reactor;
 
 [Trait("Category", "GcpPubSub")]
-[Collection("GcpStream")]
+[Collection("Stream")]
 public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException 
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -51,7 +51,7 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException
             _producer.Send(message);
 
             // Assert
-            _channel.Receive(TimeSpan.FromMilliseconds(10000));
+            _channel.Receive(TimeSpan.FromMilliseconds(5000));
             Assert.Fail("We are expected to throw an exception");
         }
         catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)

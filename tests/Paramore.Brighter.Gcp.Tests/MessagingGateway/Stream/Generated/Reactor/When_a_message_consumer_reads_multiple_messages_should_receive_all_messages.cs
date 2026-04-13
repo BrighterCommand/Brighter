@@ -14,7 +14,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Reactor;
 
 [Trait("Category", "GcpPubSub")]
-[Collection("GcpStream")]
+[Collection("Stream")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -67,7 +67,7 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
         // Assert
         for (var i = 0; i < _sentMessages.Count; i++)
         {
-            var received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
+            var received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
 

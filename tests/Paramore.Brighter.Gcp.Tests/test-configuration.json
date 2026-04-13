@@ -13,7 +13,7 @@
       "HasSupportToPartitionKey": false,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,
-      "ReceiveMessageTimeoutInMilliseconds": 10000
+      "ReceiveMessageTimeoutInMilliseconds": 5000
     },
     "PullOrdering": {
       "Publication": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication",
@@ -28,21 +28,21 @@
       "HasSupportToPartitionKey": true,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,
-      "ReceiveMessageTimeoutInMilliseconds": 10000
+      "ReceiveMessageTimeoutInMilliseconds": 5000
     },
     "Stream": {
       "Publication": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication",
       "Subscription": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription",
       "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpStreamMessageGatewayProvider",
       "Category": "GcpPubSub",
-      "CollectionName": "GcpStream",
+      "CollectionName": "Stream",
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
       "HasSupportToPartitionKey": false,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,
-      "ReceiveMessageTimeoutInMilliseconds": 10000
+      "ReceiveMessageTimeoutInMilliseconds": 5000
     },
     "StreamOrdering": {
       "Publication": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication",
@@ -50,14 +50,14 @@
       "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpStreamOrderingMessageGatewayProvider",
       "MessageBuilder": "FifoMessageBuilder",
       "Category": "GcpPubSub",
-      "CollectionName": "GcpStream",
+      "CollectionName": "StreamOrdering",
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
       "HasSupportToPartitionKey": true,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,
-      "ReceiveMessageTimeoutInMilliseconds": 10000
+      "ReceiveMessageTimeoutInMilliseconds": 5000
     }
   },
   "Outboxes": {

@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Reactor;
 
 [Trait("Category", "GcpPubSub")]
-[Collection("GcpStream")]
+[Collection("Stream")]
 public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -58,13 +58,13 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)
         {
-            received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
+            received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
             _channel.Requeue(received);
 
             
         }
 
-        received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
+        received = _channel.Receive(TimeSpan.FromMilliseconds(5000));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         // Act

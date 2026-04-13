@@ -63,11 +63,11 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
         Message? received;
         for (var i = 0; i < _subscription.RequeueCount; i++)
         {
-            received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+            received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
             await _channel.RequeueAsync(received);
         }
 
-        received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+        received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
         Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
 
         // Act
