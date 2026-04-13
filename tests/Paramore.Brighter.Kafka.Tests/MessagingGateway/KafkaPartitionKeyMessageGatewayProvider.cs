@@ -174,9 +174,7 @@ public class KafkaPartitionKeyMessageGatewayProvider
         return new KafkaPublication
         {
             Topic = routingKey,
-            NumPartitions = 3,
-            ReplicationFactor = 1,
-            MessageTimeoutMs = 2000,
+            NumPartitions = 2,
             RequestTimeoutMs = 2000,
             MakeChannels = makeChannels,
         };
@@ -196,8 +194,7 @@ public class KafkaPartitionKeyMessageGatewayProvider
             groupId: Guid.NewGuid().ToString(),
             offsetDefault: AutoOffsetReset.Earliest,
             commitBatchSize: 5,
-            numOfPartitions: 3,
-            replicationFactor: 1,
+            numOfPartitions: 2,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: makeChannel
         );

@@ -60,7 +60,7 @@ public class WhenRequeingAFailedMessageShouldReceiveMessageAgainAsync : IAsyncLi
         await _producer.SendAsync(message);
 
         // Act
-        var received = await _channel.ReceiveAsync(null);
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         await _channel.RequeueAsync(received);

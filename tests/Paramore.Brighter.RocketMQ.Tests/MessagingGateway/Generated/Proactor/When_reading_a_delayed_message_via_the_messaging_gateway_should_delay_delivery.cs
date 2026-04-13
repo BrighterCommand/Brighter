@@ -66,7 +66,7 @@ public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery
         await Task.Delay(TimeSpan.FromSeconds(5));
 
         // Assert
-        received = await _channel.ReceiveAsync(null);
+        received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
         _messageAssertion.Assert(message, received);
     }
