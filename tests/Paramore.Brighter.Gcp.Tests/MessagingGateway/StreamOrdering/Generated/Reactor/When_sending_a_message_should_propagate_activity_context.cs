@@ -14,7 +14,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering.Reactor;
 
 [Trait("Category", "GcpPubSub")]
-[Collection("StreamOrdering")]
+[Collection("GcpStream")]
 public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
