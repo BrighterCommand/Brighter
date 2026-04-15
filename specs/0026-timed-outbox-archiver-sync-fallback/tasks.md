@@ -58,7 +58,7 @@
     - No additional implementation needed — the three-way branch from the previous task already handles this
     - This test validates FR1 / AC2: async-only outboxes continue to work
 
-- [ ] **TEST + IMPLEMENT: TimedOutboxArchiver prefers async path when both sync and async outbox are available (AC3)**
+- [x] **TEST + IMPLEMENT: TimedOutboxArchiver prefers async path when both sync and async outbox are available (AC3)**
   - **USE COMMAND**: `/test-first when archiving with both sync and async outbox should prefer async`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Archiving`
   - Test file: `When_archiving_with_both_sync_and_async_outbox_should_prefer_async.cs`
