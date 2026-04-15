@@ -43,7 +43,7 @@
       - `else` → `Log.NoOutboxConfigured(s_logger)`
     - Add `NoOutboxConfigured` log message to the `Log` partial class in `TimedOutboxArchiver.cs`
 
-- [ ] **TEST + IMPLEMENT: TimedOutboxArchiver archives messages when only an async outbox is registered (FR1)**
+- [x] **TEST + IMPLEMENT: TimedOutboxArchiver archives messages when only an async outbox is registered (FR1)**
   - **USE COMMAND**: `/test-first when archiving with async-only outbox should call async archive`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Archiving`
   - Test file: `When_archiving_with_async_only_outbox_should_call_async_archive.cs`
