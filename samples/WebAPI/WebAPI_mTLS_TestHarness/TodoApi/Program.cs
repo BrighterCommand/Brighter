@@ -48,7 +48,9 @@ builder.Services.AddBrighter(options =>
             }
         ).Create();
     })
-    .AutoFromAssemblies([typeof(TodoCreatedHandler).Assembly]);
+    .AutoFromAssemblies([typeof(TodoCreatedHandler).Assembly])
+    .ValidatePipelines()
+    .DescribePipelines();
 
 // Configure Service Activator to consume messages
 builder.Services.AddConsumers(options =>

@@ -131,7 +131,9 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             config.MaxOutStandingMessages = 5;
             config.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
         })
-        .AutoFromAssemblies();
+        .AutoFromAssemblies()
+        .ValidatePipelines()
+        .DescribePipelines();
 
     services.AddHostedService<ServiceActivatorHostedService>();
 }
