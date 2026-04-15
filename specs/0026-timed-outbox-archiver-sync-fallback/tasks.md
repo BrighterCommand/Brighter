@@ -73,7 +73,7 @@
     - No additional implementation needed — the three-way branch from the previous task already handles this
     - This test validates AC3: async is preferred when both are available
 
-- [ ] **TEST + IMPLEMENT: TimedOutboxArchiver logs warning when neither sync nor async outbox is available (FR3)**
+- [x] **TEST + IMPLEMENT: TimedOutboxArchiver logs warning when neither sync nor async outbox is available (FR3)**
   - **USE COMMAND**: `/test-first when archiving with no outbox configured should log warning`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Archiving`
   - Test file: `When_archiving_with_no_outbox_configured_should_log_warning.cs`
