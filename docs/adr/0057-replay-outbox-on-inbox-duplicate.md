@@ -217,7 +217,7 @@ public class OutboxEntry(Message message) : IHaveABoxWriteTime
 }
 ```
 
-The `ReplayCausation(causationId)` method finds all entries with a matching `CausationId` and resets `TimeFlushed` to `DateTimeOffset.MinValue`, causing the sweeper to re-dispatch them.
+The `ReplayCausation(causationId)` method finds all entries with a matching `CausationId` and clears the `TimeFlushed` to `DateTimeOffset.MinValue`, causing the sweeper to re-dispatch them. For a persistent outbox it sets `Dispatched` to NULL.
 
 #### Persistent Store Implementations
 
