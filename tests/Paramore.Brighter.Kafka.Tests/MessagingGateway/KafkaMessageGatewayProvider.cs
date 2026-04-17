@@ -43,17 +43,12 @@ public class KafkaMessageGatewayProvider
     : IAmAMessageGatewayProactorProvider,
         IAmAMessageGatewayReactorProvider
 {
-    private readonly KafkaMessagingGatewayConfiguration _configuration;
-    private readonly List<IAmAProducerRegistry> _producerRegistries = [];
-
-    public KafkaMessageGatewayProvider()
+    private readonly KafkaMessagingGatewayConfiguration _configuration = new()
     {
-        _configuration = new KafkaMessagingGatewayConfiguration
-        {
-            Name = "Kafka Generated Test",
-            BootStrapServers = new[] { "localhost:9092" },
-        };
-    }
+        Name = "Kafka Generated Test",
+        BootStrapServers = ["localhost:9092"],
+    };
+    private readonly List<IAmAProducerRegistry> _producerRegistries = [];
 
     public void CleanUp(
         IAmAMessageProducerSync? producer,
@@ -121,9 +116,11 @@ public class KafkaMessageGatewayProvider
 
     public IAmAChannelSync CreateChannel(KafkaSubscription subscription)
     {
-        return new ChannelFactory(
+        var channel = new ChannelFactory(
             new KafkaMessageConsumerFactory(_configuration)
         ).CreateSyncChannel(subscription);
+
+        return new RetryableChannelSync(channel);
     }
 
     public async Task<IAmAChannelAsync> CreateChannelAsync(
@@ -131,9 +128,11 @@ public class KafkaMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
-        return await new ChannelFactory(
+        var channel = await new ChannelFactory(
             new KafkaMessageConsumerFactory(_configuration)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
+
+        return new RetryableChannelAsync(channel);
     }
 
     public IAmAMessageProducerSync CreateProducer(KafkaPublication publication)

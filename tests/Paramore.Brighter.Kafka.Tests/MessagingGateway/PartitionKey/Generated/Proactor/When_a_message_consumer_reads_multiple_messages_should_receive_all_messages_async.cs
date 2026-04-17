@@ -76,12 +76,6 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAs
         {
             var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
 
-            var x = 0;
-            while(received == null && x++ < 5)
-            {
-                received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
-            }
-
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
 
             var expectedMessage = _sentMessages.FirstOrDefault(x => x.Header.MessageId == received.Header.MessageId);

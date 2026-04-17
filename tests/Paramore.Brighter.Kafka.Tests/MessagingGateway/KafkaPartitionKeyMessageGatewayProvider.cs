@@ -124,9 +124,11 @@ public class KafkaPartitionKeyMessageGatewayProvider
 
     public IAmAChannelSync CreateChannel(KafkaSubscription subscription)
     {
-        return new ChannelFactory(
+        var channel = new ChannelFactory(
             new KafkaMessageConsumerFactory(_configuration)
         ).CreateSyncChannel(subscription);
+
+        return new RetryableChannelSync(channel);
     }
 
     public async Task<IAmAChannelAsync> CreateChannelAsync(
@@ -134,9 +136,11 @@ public class KafkaPartitionKeyMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
-        return await new ChannelFactory(
+        var channel = await new ChannelFactory(
             new KafkaMessageConsumerFactory(_configuration)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
+
+        return new RetryableChannelAsync(channel);
     }
 
     public IAmAMessageProducerSync CreateProducer(KafkaPublication publication)
