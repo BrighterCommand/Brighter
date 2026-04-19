@@ -14,6 +14,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
+[Trait("Category", "AWS")]
 public class LargeMessagePayloadWrapTests : IAsyncDisposable 
 {
     private string? _id;

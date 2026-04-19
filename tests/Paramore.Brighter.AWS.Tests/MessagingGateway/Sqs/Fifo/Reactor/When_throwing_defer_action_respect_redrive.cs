@@ -17,7 +17,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessagePump _messagePump;
@@ -126,7 +125,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    [Fact(Skip = "This test is skipped because running tests of the DLQ is unreliable in the CI environment")]
+    [Fact(Skip = "DLQ redelivery test is flaky")]
     public void When_throwing_defer_action_respect_redrive_async()
     {
         _sender.Send(_message);

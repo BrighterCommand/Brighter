@@ -13,7 +13,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
 [Trait("Category", "AWS")] 
-[Trait("Fragile", "CI")]
 public class S3LuggageStoreExistsTests 
 {
     private readonly IHttpClientFactory _httpClientFactory;

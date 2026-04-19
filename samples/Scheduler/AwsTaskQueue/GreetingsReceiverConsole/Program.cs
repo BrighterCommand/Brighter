@@ -91,7 +91,7 @@ public class Program
                 //create the gateway
                 if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                 {
-                    // var serviceURL = "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                    // var serviceURL = "http://localhost:4566/"; // Environment.GetEnvironmentVariable("AWS_SERVICE_URL");
                     // var region = string.IsNullOrWhiteSpace(serviceURL)
                     //     ? RegionEndpoint.EUWest1
                     //     : RegionEndpoint.USEast1;

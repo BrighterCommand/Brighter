@@ -16,7 +16,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.Transformers;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class LargeMessagePaylodUnwrapTests : IAsyncDisposable 
 {
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;

@@ -74,7 +74,7 @@ Added or improved health checks for all services in `.github/workflows/ci.yml`:
 All acceptance test jobs increased from **5 minutes → 8 minutes**:
 - redis-ci, mqtt-ci, rabbitmq-ci
 - postgres-ci, sqlserver-ci, mysql-ci
-- dynamo-ci, localstack-ci, mongodb-ci
+- dynamo-ci, aws-mock-ci, mongodb-ci
 - aws-ci, aws-scheduler-ci, azure-ci
 - sqlite-ci, gcp-ci
 

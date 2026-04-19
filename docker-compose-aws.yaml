@@ -1,0 +1,7 @@
+services:
+  moto:
+    image: motoserver/moto:latest
+    ports:
+      - "4566:4566" # Moto Gateway (same port as former LocalStack for compatibility)
+    environment:
+      - "MOTO_PORT=4566"
