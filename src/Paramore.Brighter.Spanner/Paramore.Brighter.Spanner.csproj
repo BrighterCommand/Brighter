@@ -5,7 +5,6 @@
     <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>Cloud Spanner;Google Cloud;GCP;Database;Connection Provider;Transaction;Distributed Database;Command;Event;Command Processor;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

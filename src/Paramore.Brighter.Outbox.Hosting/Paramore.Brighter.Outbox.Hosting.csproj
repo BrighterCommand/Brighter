@@ -5,7 +5,6 @@
     <Authors>Paul Reardon</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>Outbox;Hosted Service;Background Service;Sweeper;Archiver;Command;Event;Command Processor;Messaging;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

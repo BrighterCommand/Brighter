@@ -4,7 +4,6 @@
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>Command;Event;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

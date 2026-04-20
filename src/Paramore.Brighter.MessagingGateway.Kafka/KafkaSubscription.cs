@@ -87,7 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// How should we assign partitions to consumers in the group?
         /// Range - Assign to co-localise partitions to consumers in the same group
         /// RoundRobin - Assign partitions to consumers in a round robin fashion
-        /// CooperativeSticky - Brighter's default, reduce the number of re-balances by assigning partitions to the consumer that previously owned them
+        /// CooperativeSticky - Reduce the number of re-balances by assigning partitions to the consumer that previously owned them
         /// </summary>
         public PartitionAssignmentStrategy PartitionAssignmentStrategy { get; set; }
 
@@ -206,11 +206,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             PartitionAssignmentStrategy = partitionAssignmentStrategy;
             DeadLetterRoutingKey = deadLetterRoutingKey;
             InvalidMessageRoutingKey = invalidMessageRoutingKey;
-
-            if (PartitionAssignmentStrategy == PartitionAssignmentStrategy.CooperativeSticky)
-                throw new ArgumentOutOfRangeException(nameof(partitionAssignmentStrategy),
-                    "CooperativeSticky is not supported for with manual commits, see https://github.com/confluentinc/librdkafka/issues/4059");
-
             ConfigHook = configHook;
         }
     }

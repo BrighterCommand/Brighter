@@ -71,6 +71,18 @@ namespace Paramore.Brighter
             if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
         }
 
+        /// <summary>
+        /// Do we have an async outbox defined?
+        /// </summary>
+        /// <returns>true if defined</returns>
+        public bool HasAsyncOutbox() => _asyncOutbox != null;
+
+        /// <summary>
+        /// Do we have a synchronous outbox defined?
+        /// </summary>
+        /// <returns>true if defined</returns>
+        public bool HasOutbox() => _outBox != null;
+
         private const string NoSyncOutboxError = "A sync Outbox must be defined.";
         private const string NoArchiveProviderError = "An Archive Provider must be defined.";
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";

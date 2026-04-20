@@ -28,6 +28,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Validation;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Attributes;
 
@@ -38,7 +39,8 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<PipelineBuilder<TRequest>>();
 
-        private readonly IAmASubscriberRegistry _subscriberRegistry;
+        private readonly IAmASubscriberRegistry? _subscriberRegistry;
+        private readonly IAmASubscriberRegistryInspector? _subscriberRegistryInspector;
         private readonly IAmAHandlerFactorySync? _syncHandlerFactory;
         private readonly InboxConfiguration? _inboxConfiguration;
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
@@ -80,7 +82,78 @@ namespace Paramore.Brighter
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
         }
-        
+
+        /// <summary>
+        /// Describe-only constructor for startup validation and diagnostics.
+        /// Does not require a handler factory — only uses reflection to describe pipelines.
+        /// </summary>
+        /// <param name="subscriberRegistryInspector">An <see cref="IAmASubscriberRegistryInspector"/> for introspecting registered handlers.</param>
+        /// <param name="inboxConfiguration">Optional inbox configuration for global inbox attribute detection.</param>
+        public PipelineBuilder(
+            IAmASubscriberRegistryInspector subscriberRegistryInspector,
+            InboxConfiguration? inboxConfiguration = null)
+        {
+            _subscriberRegistryInspector = subscriberRegistryInspector;
+            _inboxConfiguration = inboxConfiguration;
+        }
+
+        /// <summary>
+        /// Describes the handler pipeline(s) for a given request type without instantiating handlers.
+        /// Uses the same reflection path as <see cref="Build"/> to prevent drift.
+        /// </summary>
+        /// <param name="requestType">The request type to describe pipelines for.</param>
+        /// <returns>One <see cref="HandlerPipelineDescription"/> per handler type registered for the request type.</returns>
+        public IEnumerable<HandlerPipelineDescription> Describe(Type requestType)
+        {
+            var inspector = _subscriberRegistryInspector ?? _subscriberRegistry as IAmASubscriberRegistryInspector
+                ?? throw new ConfigurationException(
+                    "SubscriberRegistry must implement IAmASubscriberRegistryInspector for pipeline description");
+
+            var handlerTypes = inspector.GetHandlerTypes(requestType);
+
+            foreach (var handlerType in handlerTypes)
+            {
+                var handlerMethod = HandlerMethodDiscovery.FindHandlerMethod(handlerType, requestType);
+                var attributes = handlerMethod.GetOtherHandlersInPipeline();
+
+                var beforeSteps = attributes
+                    .Where(a => a.Timing == HandlerTiming.Before)
+                    .OrderByDescending(a => a.Step)
+                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing))
+                    .ToList()
+                    .AsReadOnly();
+
+                var afterSteps = attributes
+                    .Where(a => a.Timing == HandlerTiming.After)
+                    .OrderByDescending(a => a.Step)
+                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing))
+                    .ToList()
+                    .AsReadOnly();
+
+                var isAsync = HandlerMethodDiscovery.IsAsyncHandler(handlerType);
+
+                yield return new HandlerPipelineDescription(requestType, handlerType, isAsync, beforeSteps, afterSteps);
+            }
+        }
+
+        /// <summary>
+        /// Describes all registered handler pipelines without instantiating handlers.
+        /// Iterates all request types from the subscriber registry.
+        /// </summary>
+        /// <returns>One <see cref="HandlerPipelineDescription"/> per handler type per request type.</returns>
+        public IEnumerable<HandlerPipelineDescription> Describe()
+        {
+            var inspector = _subscriberRegistryInspector ?? _subscriberRegistry as IAmASubscriberRegistryInspector
+                ?? throw new ConfigurationException(
+                    "SubscriberRegistry must implement IAmASubscriberRegistryInspector for pipeline description");
+
+            foreach (var requestType in inspector.GetRegisteredRequestTypes())
+            {
+                foreach (var description in Describe(requestType))
+                    yield return description;
+            }
+        }
+
         /// <summary>
         /// Builds a pipeline of synchronous handlers for the given <paramref name="requestContext"/>.
         /// </summary>
@@ -98,7 +171,7 @@ namespace Paramore.Brighter
             
             try
             {
-                var observers = _subscriberRegistry.Get<TRequest>(request, requestContext);
+                var observers = _subscriberRegistry!.Get<TRequest>(request, requestContext);
                 
                 var pipelines = new Pipelines<TRequest>();
 
@@ -143,7 +216,7 @@ namespace Paramore.Brighter
             
             try
             {
-                var observers = _subscriberRegistry.Get<TRequest>(request, requestContext);
+                var observers = _subscriberRegistry!.Get<TRequest>(request, requestContext);
 
                 var pipelines = new AsyncPipelines<TRequest>();
 
@@ -256,9 +329,6 @@ namespace Paramore.Brighter
 
             }
 
-
-            AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
-            
             var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, instanceScope, continueOnCapturedContext);
 
             if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute>? postAttributes))

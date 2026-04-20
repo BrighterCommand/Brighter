@@ -5,7 +5,6 @@
     <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>Firestore;Google Cloud;NoSQL;Document Database;Connection Provider;Transaction;Command;Event;Command Processor;GCP;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

@@ -176,14 +176,7 @@ namespace Paramore.Brighter
         public virtual void InitializeFromAttributeParams(params object?[] initializerList) { }
 
         internal MethodInfo FindHandlerMethod()
-        {
-            var methods = GetType().GetMethods();
-            return methods
-                .Where(method => method.Name == nameof(HandleAsync))
-                .Single(method => method.GetParameters().Length == 2 
-                    && method.GetParameters()[0].ParameterType == typeof(TRequest)
-                    && method.GetParameters()[1].ParameterType == typeof(CancellationToken));
-        }
+            => HandlerMethodDiscovery.FindHandlerMethod(GetType(), typeof(TRequest));
 
         private static partial class Log
         {

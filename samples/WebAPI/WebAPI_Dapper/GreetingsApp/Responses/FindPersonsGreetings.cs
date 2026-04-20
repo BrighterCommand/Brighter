@@ -8,12 +8,7 @@ public class FindPersonsGreetings
     public IEnumerable<Salutation>? Greetings { get; set; }
 }
 
-public class Salutation
+public class Salutation(string words)
 {
-    public Salutation(string words)
-    {
-        Words = words;
-    }
-
-    public string Words { get; set; }
+    public string Words { get; set; } = words;
 }

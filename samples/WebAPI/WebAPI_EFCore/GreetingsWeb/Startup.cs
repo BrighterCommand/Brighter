@@ -115,10 +115,14 @@ namespace GreetingsWeb
                     }
                 )
                 .AutoFromAssemblies()
+                .ValidatePipelines()
+                .DescribePipelines()
                 .UseBoxProvisioning(options =>
                 {
                     BoxProvisioningFactory.AddOutbox(options, rdbms, outboxConfiguration);
                 });
+
+        }
 
         private void ConfigureDarker(IServiceCollection services)
         {

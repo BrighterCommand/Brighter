@@ -114,14 +114,17 @@ namespace Paramore.Brighter.Outbox.Hosting
                 Log.OutboxArchiverLookingForMessagesToArchive(s_logger);
                 try
                 {
-                    await _archiver.ArchiveAsync(_options.MinimumAge, new RequestContext(), cancellationToken);
+                    if (_archiver.HasAsyncOutbox())
+                        await _archiver.ArchiveAsync(_options.MinimumAge, new RequestContext(), cancellationToken);
+                    else if (_archiver.HasOutbox())
+                        await Task.Run(() => _archiver.Archive(_options.MinimumAge, new RequestContext()), cancellationToken);
+                    else
+                        Log.NoOutboxConfigured(s_logger);
                 }
                 finally
                 {
                     await _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, cancellationToken);
                 }
-
-                Log.OutboxSweeperSleeping(s_logger);
             }
             catch (Exception e)
             {
@@ -152,6 +155,9 @@ namespace Paramore.Brighter.Outbox.Hosting
 
             [LoggerMessage(LogLevel.Warning, "Outbox Archiver is still running - abandoning attempt")]
             public static partial void OutboxArchiverIsStillRunningAbandoningAttempt(ILogger logger);
+
+            [LoggerMessage(LogLevel.Warning, "No sync or async outbox configured - skipping archive")]
+            public static partial void NoOutboxConfigured(ILogger logger);
         }
     }
 }

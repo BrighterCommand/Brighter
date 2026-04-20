@@ -71,15 +71,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             PolicyRegistry = policyRegistry;
 #pragma warning restore CS0618 // Type or member is obsolete
             ResiliencePolicyRegistry = resiliencePipelineRegistry;
-            
-            var brighterAssembly = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
-                !a.IsDynamic && a.FullName?.StartsWith("Paramore.Brighter", true, CultureInfo.InvariantCulture) == true)
-                .ToArray();
-            
-            MapperRegistryFromAssemblies(brighterAssembly);
-            HandlersFromAssemblies(brighterAssembly, null);
-            AsyncHandlersFromAssemblies(brighterAssembly, null);
-            TransformsFromAssemblies(brighterAssembly);
         }
 
         /// <summary>
@@ -259,8 +250,19 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 if (excludeDynamicHandlerTypes != null && excludeDynamicHandlerTypes.Contains(subscriber.HandlerType))
                     continue; // Skip dynamic handlers
-                
-                _serviceCollectionSubscriberRegistry.Add(subscriber.RequestType, subscriber.HandlerType);
+
+                if (subscriber.HandlerType.IsGenericTypeDefinition)
+                {
+                    // Open generic handlers (e.g. ExceptionPolicyHandler<>) need DI registration
+                    // so they can be resolved as closed types at runtime, but must not be added
+                    // to the subscriber registry where their generic type parameters (e.g. TRequest)
+                    // would appear as registered request types.
+                    _serviceCollectionSubscriberRegistry.EnsureHandlerIsRegistered(subscriber.HandlerType);
+                }
+                else
+                {
+                    _serviceCollectionSubscriberRegistry.Add(subscriber.RequestType, subscriber.HandlerType);
+                }
             }
         }
         

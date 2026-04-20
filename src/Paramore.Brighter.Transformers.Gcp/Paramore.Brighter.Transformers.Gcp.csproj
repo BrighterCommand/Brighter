@@ -4,7 +4,6 @@
     <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>Google Cloud;GCS;Cloud Storage;Transformers;Claim Check;Luggage Store;Large Messages;Message Transformation;Command;Event;Command Processor;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

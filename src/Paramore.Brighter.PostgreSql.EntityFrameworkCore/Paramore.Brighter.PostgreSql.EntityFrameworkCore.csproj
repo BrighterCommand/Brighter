@@ -5,7 +5,6 @@
     <Authors>Sam Rumley</Authors>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>PostgreSQL;Postgres;Entity Framework Core;EF Core;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

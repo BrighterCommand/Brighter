@@ -135,7 +135,9 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
         {
             BoxProvisioningFactory.AddOutbox(options, rdbms, outboxConfiguration);
             BoxProvisioningFactory.AddInbox(options, rdbms, relationalDatabaseConfiguration);
-        });
+        })
+        .ValidatePipelines()
+        .DescribePipelines();
 
     services.AddHostedService<ServiceActivatorHostedService>();
 }

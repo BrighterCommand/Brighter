@@ -4,7 +4,6 @@
     <TargetFrameworks>$(BrighterNetStandardTargetFrameworks)</TargetFrameworks>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <PropertyGroup>

@@ -1,4 +1,10 @@
 <Project>
+  <!-- Deterministic builds ensure that the same binary is produced regardless of the machine building it -->
+  <!-- This setting is set on the build server to normalize stored file paths, should not be set for local dev -->
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
   <PropertyGroup>
     <Company>Brighter Command</Company>
     <Authors>Ian Cooper</Authors>
@@ -11,7 +17,11 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AssemblyOriginatorKeyFile>..\..\Brighter.snk</AssemblyOriginatorKeyFile>
 
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Suppress XML documentation warnings (CS1570-CS1591) so GenerateDocumentationFile
+         does not conflict with TreatWarningsAsErrors. Fix doc comments over time. -->
+    <NoWarn>$(NoWarn);CS0419;CS1570;CS1571;CS1572;CS1573;CS1574;CS1580;CS1581;CS1584;CS1587;CS1589;CS1590;CS1591;CS1592;CS1658;CS1711;CS1723;CS1734</NoWarn>
     <!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <!-- Optional: Embed source files that are not tracked by the source control manager to the PDB -->
@@ -34,12 +44,6 @@
     <BrighterFrameworkAndCoreTargetFrameworks>net462;net8.0;net9.0;net10.0</BrighterFrameworkAndCoreTargetFrameworks>
     <BrighterCoreTargetFrameworks>net8.0;net9.0;net10.0</BrighterCoreTargetFrameworks>
     <BrighterNetNineEarlierTargetFrameworks>net8.0;net9.0</BrighterNetNineEarlierTargetFrameworks>
-  </PropertyGroup>
-
-  <!-- Deterministic builds ensure that the same binary is produced regardless of the machine building it -->
-  <!-- This setting is set on the build server to normalize stored file paths, should not be set for local dev -->
-  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
-    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup>

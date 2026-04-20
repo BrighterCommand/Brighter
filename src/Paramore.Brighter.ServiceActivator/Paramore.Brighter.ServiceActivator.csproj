@@ -4,7 +4,6 @@
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>Service Activator;Message Consumer;Command;Event;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>

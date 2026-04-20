@@ -5,7 +5,6 @@
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>OpenTelemetry;Observability;Tracing;Metrics;Command Processor;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

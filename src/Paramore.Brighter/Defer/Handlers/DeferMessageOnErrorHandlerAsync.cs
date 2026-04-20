@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Defer.Handlers;
 /// This handler should be positioned at the outermost layer of the pipeline (lowest step number)
 /// to act as a backstop for any exceptions that escape inner handlers.
 /// </remarks>
-public partial class DeferMessageOnErrorHandlerAsync<TRequest> : RequestHandlerAsync<TRequest>
+public partial class DeferMessageOnErrorHandlerAsync<TRequest> : RequestHandlerAsync<TRequest>, IAmABackstopHandler
     where TRequest : class, IRequest
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<DeferMessageOnErrorHandlerAsync<TRequest>>();

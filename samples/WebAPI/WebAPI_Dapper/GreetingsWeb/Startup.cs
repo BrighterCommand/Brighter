@@ -116,7 +116,10 @@ public class Startup
             .UseBoxProvisioning(options =>
             {
                 BoxProvisioningFactory.AddOutbox(options, rdbms, outboxConfiguration);
-            });
+            })
+            .ValidatePipelines()
+            .DescribePipelines();
+    }
 
     private void ConfigureDarker(IServiceCollection services)
     {

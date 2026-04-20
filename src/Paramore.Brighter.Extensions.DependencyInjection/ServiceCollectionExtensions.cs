@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -146,6 +147,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             // Create registries - they always register as Transient, actual lifetime managed by ServiceProviderHandlerFactory
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
             services.TryAddSingleton(subscriberRegistry);
+            services.TryAddSingleton<IAmASubscriberRegistryInspector>(subscriberRegistry);
 
             var transformRegistry = new ServiceCollectionTransformerRegistry(services);
             services.TryAddSingleton(transformRegistry);
@@ -177,6 +179,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 transformRegistry,
                 null // PolicyRegistry resolved at runtime
             );
+
+            // Register built-in Brighter handlers, mappers, and transforms from Paramore.Brighter assemblies.
+            // This is done here rather than in the constructor so that direct construction of the builder
+            // (e.g. in tests) does not force assembly scanning.
+            var brighterAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
+                !a.IsDynamic && a.FullName?.StartsWith("Paramore.Brighter", true, CultureInfo.InvariantCulture) == true)
+                .ToArray();
+
+            builder.MapperRegistryFromAssemblies(brighterAssemblies);
+            builder.HandlersFromAssemblies(brighterAssemblies, null);
+            builder.AsyncHandlersFromAssemblies(brighterAssemblies, null);
+            builder.TransformsFromAssemblies(brighterAssemblies);
 
             // Register InMemorySchedulerFactory as the default using TryAddSingleton.
             // TryAddSingleton ensures these are only registered if no scheduler has been

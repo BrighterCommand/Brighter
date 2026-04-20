@@ -20,7 +20,7 @@ public class AddPersonHandlerAsync : RequestHandlerAsync<AddPerson>
     }
 
     [RequestLoggingAsync(0, HandlerTiming.Before)]
-    [UsePolicyAsync(step: 1, policy: Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
+    [UsePolicy(step: 1, policy: Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
     public override async Task<AddPerson> HandleAsync(AddPerson addPerson,
         CancellationToken cancellationToken = default)
     {

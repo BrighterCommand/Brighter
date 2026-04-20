@@ -5,7 +5,6 @@
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterNetNineEarlierTargetFrameworks)</TargetFrameworks>
     <PackageTags>MySQL;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

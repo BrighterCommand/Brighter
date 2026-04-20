@@ -1,0 +1,8 @@
+<Project>
+  <!-- Override coverlet.collector's ReferencedPathMaps target which unconditionally
+       walks all project references before CoreCompile. Only run when collecting coverage. -->
+  <Target Name="ReferencedPathMaps"
+          BeforeTargets="CoreCompile"
+          DependsOnTargets="ResolveProjectReferences"
+          Condition="'$(CollectCoverage)' == 'true' or '$(ContinuousIntegrationBuild)' == 'true'" />
+</Project>

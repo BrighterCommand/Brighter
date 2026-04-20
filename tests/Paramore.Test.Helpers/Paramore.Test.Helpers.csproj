@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
-    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
