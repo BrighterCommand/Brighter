@@ -494,7 +494,7 @@ Create `Paramore.Brighter.BoxProvisioning.PostgreSql` as the second backend to v
 
 ### Task 7.1: Update WebAPI Samples to Use Box Provisioning
 
-- [ ] **IMPLEMENT: Replace DbMaker inbox/outbox creation with UseBoxProvisioning in WebAPI samples**
+- [x] **IMPLEMENT: Replace DbMaker inbox/outbox creation with UseBoxProvisioning in WebAPI samples**
   - Update `samples/WebAPI/` samples to use the new `UseBoxProvisioning()` API
   - Remove inbox/outbox creation from `samples/WebAPI/WebAPI_Common/DbMaker/SchemaCreation.cs`
   - Keep `DbMaker` for sample-specific application database creation (FluentMigrator)
