@@ -12,8 +12,8 @@ These tasks address interface gaps and builder inconsistencies that must be reso
 - [x] **IMPLEMENT: Expose SchemaName on the relational database configuration interface**
   - `SchemaName` exists on `RelationalDatabaseConfiguration` but not on `IAmARelationalDatabaseConfiguration`
   - The provisioner code references `_configuration.SchemaName` through the interface
-  - Add `string? SchemaName => null;` as a **default interface member** on `IAmARelationalDatabaseConfiguration` in `src/Paramore.Brighter/IAmARelationalDatabaseConfiguration.cs`
-  - Using a default interface member avoids breaking any external implementors — existing implementations that do not override `SchemaName` will return `null`, which the provisioner interprets as the backend's default schema (e.g. `dbo` for MSSQL, `public` for PostgreSQL)
+  - Add `string? SchemaName { get; }` as a **plain abstract member** on `IAmARelationalDatabaseConfiguration` in `src/Paramore.Brighter/IAmARelationalDatabaseConfiguration.cs`
+  - **Note**: `Paramore.Brighter` targets `netstandard2.0` (see `src/Directory.Build.props`), which does not support default interface members. The original design (captured in an earlier revision of ADR 0053 §10) called for `string? SchemaName => null;` as a DIM to avoid breaking external implementors, but that approach is not viable on the current target frameworks. This is therefore a **source-breaking change** for any external consumer that implements `IAmARelationalDatabaseConfiguration` directly — they must add a `SchemaName` member on recompile. Accepted by project owners; captured in ADR 0053 "Consequences → Negative".
   - Update `StubSqlDbConfiguration` in `tests/Paramore.Brighter.Extensions.Tests/TestDifferentSetups.cs` to implement the new member
   - Verify existing code compiles — `RelationalDatabaseConfiguration` already has the property and will satisfy the interface implicitly
 
