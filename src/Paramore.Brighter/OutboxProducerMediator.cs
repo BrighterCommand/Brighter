@@ -774,6 +774,17 @@ namespace Paramore.Brighter
             return false;
         }
 
+        private static RoutingKey GetProducerLookupTopic(Message message)
+        {
+            if (message.Header.Bag.TryGetValue(Message.ProducerTopicHeaderName, out var producerTopic)
+                && producerTopic is string topic)
+            {
+                return new RoutingKey(topic);
+            }
+
+            return message.Header.Topic;
+        }
+
         private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object>? args = null)
         {
             var parentSpan = requestContext.Span;
@@ -785,7 +796,7 @@ namespace Paramore.Brighter
                 {
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
-                    var producer = _producerRegistry.LookupBy(message.Header.Topic, message.Header.Type, requestContext);
+                    var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
                         _instrumentationOptions);
                     producer.Span = span;
@@ -843,7 +854,8 @@ namespace Paramore.Brighter
 
                 foreach (var topicBatch in messagesByTopic)
                 {
-                    var producer = _producerRegistry.LookupBy(topicBatch.Key);
+                    var firstMessage = topicBatch.First();
+                    var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(firstMessage));
                     var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span,
                         _instrumentationOptions);
 
@@ -917,7 +929,7 @@ namespace Paramore.Brighter
                 {
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
-                    var producer = _producerRegistry.LookupBy(message.Header.Topic, message.Header.Type, requestContext);
+                    var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
                         _instrumentationOptions);
                     producer.Span = span;

@@ -51,6 +51,12 @@ namespace Paramore.Brighter
         public const string RejectionReasonHeaderName = "RejectionReason";
 
         /// <summary>
+        /// Tag name for the producer topic header, used when the message mapper overrides the topic (e.g. for Reply messages)
+        /// so that the outbox dispatcher can still find the correct producer
+        /// </summary>
+        public const string ProducerTopicHeaderName = "ProducerTopic";
+
+        /// <summary>
         /// Gets the header.
         /// </summary>
         /// <value>The header.</value>
