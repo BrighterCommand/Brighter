@@ -90,6 +90,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             //assert - message topic is the reply address
             Assert.Equal(_myResponse.SendersAddress.Topic, outboxMessage.Header.Topic);
+
+            //assert - internal ProducerTopic bag entry was stripped before dispatch so
+            //transports that serialise Header.Bag don't leak it onto the wire
+            Assert.False(messages[0].Header.Bag.ContainsKey(Message.ProducerTopicHeaderName));
         }
     }
 }

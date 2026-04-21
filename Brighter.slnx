@@ -34,6 +34,11 @@
     <Project Path="samples/Scheduler/TickerQ/Greeting.ServiceDefaults/Greeting.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/samples/TaskQueue/" />
+  <Folder Name="/samples/TaskQueue/ASBRequestReply/">
+    <Project Path="samples/TaskQueue/ASBRequestReply/Greetings/Greetings.csproj" />
+    <Project Path="samples/TaskQueue/ASBRequestReply/GreetingsClient/GreetingsClient.csproj" />
+    <Project Path="samples/TaskQueue/ASBRequestReply/GreetingsServer/GreetingsServer.csproj" />
+  </Folder>
   <Folder Name="/samples/TaskQueue/ASBTaskQueue/">
     <Project Path="samples/TaskQueue/ASBTaskQueue/Greetings/Greetings.csproj" />
     <Project Path="samples/TaskQueue/ASBTaskQueue/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />

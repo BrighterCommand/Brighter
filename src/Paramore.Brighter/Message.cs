@@ -56,7 +56,7 @@ namespace Paramore.Brighter
         /// (e.g. for Reply messages whose topic is the reply address).
         /// Read by the outbox dispatcher so it can still locate the registered producer.
         /// </summary>
-        public const string ProducerTopicHeaderName = "ProducerTopic";
+        public const string ProducerTopicHeaderName = "paramore.brighter.ProducerTopic";
 
         /// <summary>
         /// Gets the header.

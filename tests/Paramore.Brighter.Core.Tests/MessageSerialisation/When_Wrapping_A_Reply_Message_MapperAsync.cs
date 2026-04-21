@@ -37,7 +37,7 @@ public class AsyncReplyMessageWrapRequestTests
     }
 
     [Fact]
-    public async Task When_Wrapping_A_Reply_Message_Mapper()
+    public async Task When_Wrapping_A_Reply_Message_Mapper_Async()
     {
         //act
         var transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyResponse>();

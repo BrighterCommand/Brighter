@@ -785,6 +785,17 @@ namespace Paramore.Brighter
             return message.Header.Topic;
         }
 
+        /// <summary>
+        /// Removes the internal <see cref="Message.ProducerTopicHeaderName"/> bag entry so it is
+        /// not serialised onto the wire by transport adapters that include <c>Header.Bag</c> in
+        /// the message envelope (AMQP headers, SNS/SQS attributes, etc.). Call after producer
+        /// lookup and immediately before dispatch.
+        /// </summary>
+        private static void StripProducerLookupTopic(Message message)
+        {
+            message.Header.Bag.Remove(Message.ProducerTopicHeaderName);
+        }
+
         private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object>? args = null)
         {
             var parentSpan = requestContext.Span;
@@ -800,6 +811,7 @@ namespace Paramore.Brighter
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
+                    StripProducerLookupTopic(message);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
                         _instrumentationOptions);
                     producer.Span = span;
@@ -862,6 +874,10 @@ namespace Paramore.Brighter
                     // mapper overrode the topic), so firstMessage is representative of the batch.
                     var firstMessage = topicBatch.First();
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(firstMessage));
+                    foreach (var m in topicBatch)
+                    {
+                        StripProducerLookupTopic(m);
+                    }
                     var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span,
                         _instrumentationOptions);
 
@@ -939,6 +955,7 @@ namespace Paramore.Brighter
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
+                    StripProducerLookupTopic(message);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
                         _instrumentationOptions);
                     producer.Span = span;

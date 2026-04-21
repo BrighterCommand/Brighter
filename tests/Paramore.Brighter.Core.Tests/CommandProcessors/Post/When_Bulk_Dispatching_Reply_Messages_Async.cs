@@ -109,6 +109,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             //would have thrown and nothing would arrive on the bus.
             var messages = _internalBus.Stream(_replyTopic).ToArray();
             Assert.Equal(2, messages.Length);
+
+            //assert - internal ProducerTopic bag entry was stripped on every message
+            //in the batch so transports that serialise Header.Bag don't leak it
+            Assert.All(messages, m =>
+                Assert.False(m.Header.Bag.ContainsKey(Message.ProducerTopicHeaderName)));
         }
     }
 }
