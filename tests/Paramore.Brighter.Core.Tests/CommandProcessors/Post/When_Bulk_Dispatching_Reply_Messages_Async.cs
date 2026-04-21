@@ -97,8 +97,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 useBulk: true,
                 requestContext: context);
 
-            //allow background clear to run
-            await Task.Delay(500);
+            //poll until the background clear drains the outbox (bounded to avoid flake in CI)
+            var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(5);
+            while (_internalBus.Stream(_replyTopic).Count() < 2 && DateTimeOffset.UtcNow < deadline)
+            {
+                await Task.Delay(25);
+            }
 
             //assert - messages landed on the reply topic. If producer lookup had used
             //Header.Topic (reply address) instead of the bag's ProducerTopic, LookupBy

@@ -794,6 +794,9 @@ namespace Paramore.Brighter
                 if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
                 foreach (var message in posts)
                 {
+                    // Log the wire topic (Header.Topic) — where the message is going. Producer
+                    // lookup uses GetProducerLookupTopic, which may differ from Header.Topic when
+                    // a mapper overrode it (e.g. Reply messages routed to a dynamic reply address).
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
@@ -854,6 +857,9 @@ namespace Paramore.Brighter
 
                 foreach (var topicBatch in messagesByTopic)
                 {
+                    // Messages in this batch share Header.Topic (the group key). They therefore
+                    // share the same ProducerTopic bag entry (set by WrapPipelineAsync when the
+                    // mapper overrode the topic), so firstMessage is representative of the batch.
                     var firstMessage = topicBatch.First();
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(firstMessage));
                     var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span,
@@ -927,6 +933,9 @@ namespace Paramore.Brighter
                 if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
                 foreach (var message in posts)
                 {
+                    // Log the wire topic (Header.Topic) — where the message is going. Producer
+                    // lookup uses GetProducerLookupTopic, which may differ from Header.Topic when
+                    // a mapper overrode it (e.g. Reply messages routed to a dynamic reply address).
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
