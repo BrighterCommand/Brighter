@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using MySqlConnector;
@@ -12,6 +13,11 @@ public class MySqlInboxProvisioner(
     IAmARelationalDatabaseConfiguration configuration,
     IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
+    private static readonly HashSet<string> V1Columns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CommandId", "CommandType", "CommandBody", "Timestamp", "ContextKey"
+    };
+
     public BoxType BoxType => BoxType.Inbox;
 
     /// <inheritdoc />
@@ -72,30 +78,14 @@ public class MySqlInboxProvisioner(
             "CommandBody", configuration.BinaryMessagePayload, cancellationToken);
     }
 
-    internal static Task<int> DetectCurrentVersionAsync(
+    private static async Task<int> DetectCurrentVersionAsync(
         MySqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        // This method is only called when tableExists is true, so at minimum version 1.
-        // When future migrations add columns, extend this to check for version-specific
-        // columns and return higher version numbers accordingly.
-        return Task.FromResult(1);
-    }
-
-    private static async Task<bool> ColumnExistsAsync(
-        MySqlConnection connection, string tableName, string schemaName,
-        string columnName, CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT EXISTS(SELECT 1 FROM information_schema.columns
-WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName AND COLUMN_NAME = @ColumnName)";
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-        command.Parameters.AddWithValue("@TableName", tableName);
-        command.Parameters.AddWithValue("@ColumnName", columnName);
-
-        var result = await command.ExecuteScalarAsync(cancellationToken);
-        return Convert.ToBoolean(result);
+        var actualColumns = await MySqlOutboxProvisioner.GetTableColumnsAsync(
+            connection, tableName, schemaName, cancellationToken);
+        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
+        return 0;
     }
 
     private string DatabaseName()

@@ -22,6 +22,8 @@ Brighter includes a box provisioning system that creates and migrates Outbox and
 
 Applied migrations are tracked in `__BrighterMigrationHistory` with a composite primary key of (SchemaName, BoxTableName, MigrationVersion). Pre-migration tables are bootstrapped with synthetic history rows based on column introspection.
 
+*Spanner exception:* the Spanner backend uses `BrighterMigrationHistory` (no leading underscores) because Spanner GoogleSQL rejects identifiers beginning with `_` (reserved for system objects).
+
 ## Adding New Columns to the Outbox or Inbox
 
 When Brighter needs a new column on the Outbox (or Inbox), the following files must be updated across **all 5 backends** (MSSQL, PostgreSQL, MySQL, SQLite, Spanner):

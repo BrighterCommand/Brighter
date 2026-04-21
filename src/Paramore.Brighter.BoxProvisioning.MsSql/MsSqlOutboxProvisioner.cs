@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -12,6 +14,14 @@ public class MsSqlOutboxProvisioner : IAmABoxProvisioner
 {
     private readonly IAmARelationalDatabaseConfiguration _configuration;
     private readonly IAmABoxMigrationRunner _migrationRunner;
+
+    internal static readonly HashSet<string> V1Columns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Id", "MessageId", "Topic", "MessageType", "Timestamp", "CorrelationId",
+        "ReplyTo", "ContentType", "PartitionKey", "WorkflowId", "JobId", "Dispatched",
+        "HeaderBag", "Body", "Source", "Type", "DataSchema", "Subject",
+        "TraceParent", "TraceState", "Baggage", "DataRef", "SpecVersion"
+    };
 
     public BoxType BoxType => BoxType.Outbox;
 
@@ -112,14 +122,13 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
         return count > 0;
     }
 
-    internal static Task<int> DetectCurrentVersionAsync(
+    internal static async Task<int> DetectCurrentVersionAsync(
         SqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        // This method is only called when tableExists is true, so at minimum version 1.
-        // When future migrations add columns, extend this to check for version-specific
-        // columns and return higher version numbers accordingly.
-        return Task.FromResult(1);
+        var actualColumns = await GetTableColumnsAsync(connection, tableName, schemaName, cancellationToken);
+        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
+        return 0;
     }
 
     internal static async Task<int> GetMaxVersionAsync(
@@ -136,19 +145,23 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
         return (int)(await command.ExecuteScalarAsync(cancellationToken))!;
     }
 
-    private static async Task<bool> ColumnExistsAsync(
+    internal static async Task<HashSet<string>> GetTableColumnsAsync(
         SqlConnection connection, string tableName, string schemaName,
-        string columnName, CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         using var command = connection.CreateCommand();
         command.CommandText = @"
-SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = @TableName AND TABLE_SCHEMA = @SchemaName AND COLUMN_NAME = @ColumnName";
+SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = @TableName AND TABLE_SCHEMA = @SchemaName";
         command.Parameters.AddWithValue("@TableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName);
-        command.Parameters.AddWithValue("@ColumnName", columnName);
 
-        var count = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
-        return count > 0;
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            columns.Add(reader.GetString(0));
+        }
+        return columns;
     }
 }

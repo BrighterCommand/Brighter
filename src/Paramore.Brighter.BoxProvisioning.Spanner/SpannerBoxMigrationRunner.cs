@@ -15,7 +15,10 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 public class SpannerBoxMigrationRunner(
     IAmARelationalDatabaseConfiguration configuration) : IAmABoxMigrationRunner
 {
-    internal const string MigrationHistoryTable = "__BrighterMigrationHistory";
+    // Spanner rejects identifiers starting with `_` (reserved for system objects),
+    // so this backend uses `BrighterMigrationHistory` while other backends use
+    // `__BrighterMigrationHistory`.
+    internal const string MigrationHistoryTable = "BrighterMigrationHistory";
 
     /// <inheritdoc />
     public async Task MigrateAsync(

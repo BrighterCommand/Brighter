@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -11,6 +13,14 @@ public class PostgreSqlOutboxProvisioner : IAmABoxProvisioner
 {
     private readonly IAmARelationalDatabaseConfiguration _configuration;
     private readonly IAmABoxMigrationRunner _migrationRunner;
+
+    internal static readonly HashSet<string> V1Columns = new(StringComparer.Ordinal)
+    {
+        "id", "messageid", "topic", "messagetype", "timestamp", "correlationid",
+        "replyto", "contenttype", "partitionkey", "workflowid", "jobid", "dispatched",
+        "headerbag", "body", "source", "type", "dataschema", "subject",
+        "traceparent", "tracestate", "baggage", "dataref", "specversion"
+    };
 
     public BoxType BoxType => BoxType.Outbox;
 
@@ -109,14 +119,13 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         return count > 0;
     }
 
-    internal static Task<int> DetectCurrentVersionAsync(
+    internal static async Task<int> DetectCurrentVersionAsync(
         NpgsqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        // This method is only called when tableExists is true, so at minimum version 1.
-        // When future migrations add columns, extend this to check for version-specific
-        // columns and return higher version numbers accordingly.
-        return Task.FromResult(1);
+        var actualColumns = await GetTableColumnsAsync(connection, tableName, schemaName, cancellationToken);
+        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
+        return 0;
     }
 
     internal static async Task<int> GetMaxVersionAsync(
@@ -133,18 +142,23 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         return (int)(await command.ExecuteScalarAsync(cancellationToken))!;
     }
 
-    private static async Task<bool> ColumnExistsAsync(
+    internal static async Task<HashSet<string>> GetTableColumnsAsync(
         NpgsqlConnection connection, string tableName, string schemaName,
-        string columnName, CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         using var command = connection.CreateCommand();
         command.CommandText = @"
-SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName AND COLUMN_NAME = @ColumnName)";
+SELECT column_name FROM information_schema.columns
+WHERE table_schema = @SchemaName AND table_name = @TableName";
         command.Parameters.AddWithValue("@SchemaName", schemaName);
         command.Parameters.AddWithValue("@TableName", tableName);
-        command.Parameters.AddWithValue("@ColumnName", columnName);
 
-        return (bool)(await command.ExecuteScalarAsync(cancellationToken))!;
+        var columns = new HashSet<string>(StringComparer.Ordinal);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            columns.Add(reader.GetString(0));
+        }
+        return columns;
     }
 }

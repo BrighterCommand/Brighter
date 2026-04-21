@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
@@ -12,6 +13,15 @@ public class SpannerOutboxProvisioner(
     IAmARelationalDatabaseConfiguration configuration,
     IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
+    internal static readonly HashSet<string> V1Columns = new(StringComparer.Ordinal)
+    {
+        "MessageId", "Topic", "MessageType", "Timestamp", "CorrelationId",
+        "ReplyTo", "ContentType", "PartitionKey", "Dispatched", "HeaderBag",
+        "Body", "Source", "Type", "DataSchema", "Subject",
+        "TraceParent", "TraceState", "Baggage", "WorkflowId", "JobId",
+        "DataRef", "SpecVersion"
+    };
+
     public BoxType BoxType => BoxType.Outbox;
 
     /// <inheritdoc />
@@ -86,7 +96,7 @@ public class SpannerOutboxProvisioner(
             return false;
 
         using var command = connection.CreateSelectCommand(
-            @"SELECT COUNT(1) FROM `__BrighterMigrationHistory`
+            @"SELECT COUNT(1) FROM `BrighterMigrationHistory`
 WHERE `BoxTableName` = @BoxTableName",
             new SpannerParameterCollection { { "BoxTableName", SpannerDbType.String, tableName } });
 
@@ -94,14 +104,13 @@ WHERE `BoxTableName` = @BoxTableName",
         return count > 0;
     }
 
-    internal static Task<int> DetectCurrentVersionAsync(
+    internal static async Task<int> DetectCurrentVersionAsync(
         SpannerConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
-        // This method is only called when tableExists is true, so at minimum version 1.
-        // When future migrations add columns, extend this to check for version-specific
-        // columns and return higher version numbers accordingly.
-        return Task.FromResult(1);
+        var actualColumns = await GetTableColumnsAsync(connection, tableName, cancellationToken);
+        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
+        return 0;
     }
 
     internal static async Task<int> GetMaxVersionAsync(
@@ -109,27 +118,27 @@ WHERE `BoxTableName` = @BoxTableName",
         CancellationToken cancellationToken)
     {
         using var command = connection.CreateSelectCommand(
-            @"SELECT COALESCE(MAX(`MigrationVersion`), 0) FROM `__BrighterMigrationHistory`
+            @"SELECT COALESCE(MAX(`MigrationVersion`), 0) FROM `BrighterMigrationHistory`
 WHERE `BoxTableName` = @BoxTableName",
             new SpannerParameterCollection { { "BoxTableName", SpannerDbType.String, tableName } });
 
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
     }
 
-    internal static async Task<bool> ColumnExistsAsync(
-        SpannerConnection connection, string tableName, string columnName,
+    internal static async Task<HashSet<string>> GetTableColumnsAsync(
+        SpannerConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
         using var command = connection.CreateSelectCommand(
-            @"SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = @TableName AND COLUMN_NAME = @ColumnName",
-            new SpannerParameterCollection
-            {
-                { "TableName", SpannerDbType.String, tableName },
-                { "ColumnName", SpannerDbType.String, columnName }
-            });
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @TableName",
+            new SpannerParameterCollection { { "TableName", SpannerDbType.String, tableName } });
 
-        var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
-        return count > 0;
+        var columns = new HashSet<string>(StringComparer.Ordinal);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            columns.Add(reader.GetString(0));
+        }
+        return columns;
     }
 }

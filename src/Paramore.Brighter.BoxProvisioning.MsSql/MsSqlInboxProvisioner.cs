@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -12,6 +14,11 @@ public class MsSqlInboxProvisioner : IAmABoxProvisioner
 {
     private readonly IAmARelationalDatabaseConfiguration _configuration;
     private readonly IAmABoxMigrationRunner _migrationRunner;
+
+    private static readonly HashSet<string> V1Columns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Id", "CommandId", "CommandType", "CommandBody", "Timestamp", "ContextKey"
+    };
 
     public BoxType BoxType => BoxType.Inbox;
 
@@ -80,13 +87,13 @@ public class MsSqlInboxProvisioner : IAmABoxProvisioner
             "CommandBody", _configuration.BinaryMessagePayload, cancellationToken);
     }
 
-    private static Task<int> DetectCurrentVersionAsync(
+    private static async Task<int> DetectCurrentVersionAsync(
         SqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        // This method is only called when tableExists is true, so at minimum version 1.
-        // When future migrations add columns, extend this to check for version-specific
-        // columns and return higher version numbers accordingly.
-        return Task.FromResult(1);
+        var actualColumns = await MsSqlOutboxProvisioner.GetTableColumnsAsync(
+            connection, tableName, schemaName, cancellationToken);
+        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
+        return 0;
     }
 }

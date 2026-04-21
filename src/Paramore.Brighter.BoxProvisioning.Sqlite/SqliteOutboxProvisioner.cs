@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -12,6 +13,14 @@ public class SqliteOutboxProvisioner(
     IAmARelationalDatabaseConfiguration configuration,
     IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
+    internal static readonly HashSet<string> V1Columns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "MessageId", "MessageType", "Topic", "Timestamp", "CorrelationId",
+        "ReplyTo", "ContentType", "PartitionKey", "WorkflowId", "JobId", "Dispatched",
+        "HeaderBag", "Body", "Source", "Type", "DataSchema", "Subject",
+        "TraceParent", "TraceState", "Baggage", "DataRef", "SpecVersion"
+    };
+
     public BoxType BoxType => BoxType.Outbox;
 
     /// <inheritdoc />
@@ -95,14 +104,13 @@ WHERE [BoxTableName] = @BoxTableName";
         return count > 0;
     }
 
-    internal static Task<int> DetectCurrentVersionAsync(
+    internal static async Task<int> DetectCurrentVersionAsync(
         SqliteConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
-        // This method is only called when tableExists is true, so at minimum version 1.
-        // When future migrations add columns, extend this to check for version-specific
-        // columns and return higher version numbers accordingly.
-        return Task.FromResult(1);
+        var actualColumns = await GetTableColumnsAsync(connection, tableName, cancellationToken);
+        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
+        return 0;
     }
 
     internal static async Task<int> GetMaxVersionAsync(
@@ -118,16 +126,20 @@ WHERE [BoxTableName] = @BoxTableName";
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
     }
 
-    internal static async Task<bool> ColumnExistsAsync(
-        SqliteConnection connection, string tableName, string columnName,
+    internal static async Task<HashSet<string>> GetTableColumnsAsync(
+        SqliteConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT COUNT(1) FROM pragma_table_info(@TableName) WHERE name = @ColumnName";
+        command.CommandText = "SELECT name FROM pragma_table_info(@TableName)";
         command.Parameters.AddWithValue("@TableName", tableName);
-        command.Parameters.AddWithValue("@ColumnName", columnName);
 
-        var count = Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken));
-        return count > 0;
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            columns.Add(reader.GetString(0));
+        }
+        return columns;
     }
 }

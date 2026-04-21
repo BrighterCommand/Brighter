@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -11,6 +13,11 @@ public class PostgreSqlInboxProvisioner : IAmABoxProvisioner
 {
     private readonly IAmARelationalDatabaseConfiguration _configuration;
     private readonly IAmABoxMigrationRunner _migrationRunner;
+
+    private static readonly HashSet<string> V1Columns = new(StringComparer.Ordinal)
+    {
+        "commandid", "commandtype", "commandbody", "timestamp", "contextkey"
+    };
 
     public BoxType BoxType => BoxType.Inbox;
 
@@ -79,13 +86,13 @@ public class PostgreSqlInboxProvisioner : IAmABoxProvisioner
             "commandbody", _configuration.BinaryMessagePayload, cancellationToken);
     }
 
-    private static Task<int> DetectCurrentVersionAsync(
+    private static async Task<int> DetectCurrentVersionAsync(
         NpgsqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        // This method is only called when tableExists is true, so at minimum version 1.
-        // When future migrations add columns, extend this to check for version-specific
-        // columns and return higher version numbers accordingly.
-        return Task.FromResult(1);
+        var actualColumns = await PostgreSqlOutboxProvisioner.GetTableColumnsAsync(
+            connection, tableName, schemaName, cancellationToken);
+        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
+        return 0;
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using MySqlConnector;
@@ -12,6 +13,15 @@ public class MySqlOutboxProvisioner(
     IAmARelationalDatabaseConfiguration configuration,
     IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
+    internal static readonly HashSet<string> V1Columns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "MessageId", "Topic", "MessageType", "Timestamp", "CorrelationId",
+        "ReplyTo", "ContentType", "PartitionKey", "WorkflowId", "JobId", "Dispatched",
+        "HeaderBag", "Body", "Source", "Type", "DataSchema", "Subject",
+        "TraceParent", "TraceState", "Baggage", "DataRef", "SpecVersion",
+        "Created", "CreatedID"
+    };
+
     public BoxType BoxType => BoxType.Outbox;
 
     /// <inheritdoc />
@@ -103,14 +113,13 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
         return count > 0;
     }
 
-    internal static Task<int> DetectCurrentVersionAsync(
+    internal static async Task<int> DetectCurrentVersionAsync(
         MySqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        // This method is only called when tableExists is true, so at minimum version 1.
-        // When future migrations add columns, extend this to check for version-specific
-        // columns and return higher version numbers accordingly.
-        return Task.FromResult(1);
+        var actualColumns = await GetTableColumnsAsync(connection, tableName, schemaName, cancellationToken);
+        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
+        return 0;
     }
 
     internal static async Task<int> GetMaxVersionAsync(
@@ -127,25 +136,29 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
     }
 
+    internal static async Task<HashSet<string>> GetTableColumnsAsync(
+        MySqlConnection connection, string tableName, string schemaName,
+        CancellationToken cancellationToken)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+SELECT COLUMN_NAME FROM information_schema.columns
+WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName";
+        command.Parameters.AddWithValue("@SchemaName", schemaName);
+        command.Parameters.AddWithValue("@TableName", tableName);
+
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            columns.Add(reader.GetString(0));
+        }
+        return columns;
+    }
+
     private string DatabaseName()
     {
         var builder = new MySqlConnectionStringBuilder(configuration.ConnectionString);
         return builder.Database;
-    }
-
-    private static async Task<bool> ColumnExistsAsync(
-        MySqlConnection connection, string tableName, string schemaName,
-        string columnName, CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT EXISTS(SELECT 1 FROM information_schema.columns
-WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName AND COLUMN_NAME = @ColumnName)";
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-        command.Parameters.AddWithValue("@TableName", tableName);
-        command.Parameters.AddWithValue("@ColumnName", columnName);
-
-        var result = await command.ExecuteScalarAsync(cancellationToken);
-        return Convert.ToBoolean(result);
     }
 }

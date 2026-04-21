@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
@@ -12,6 +13,11 @@ public class SpannerInboxProvisioner(
     IAmARelationalDatabaseConfiguration configuration,
     IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
+    private static readonly HashSet<string> V1Columns = new(StringComparer.Ordinal)
+    {
+        "CommandId", "CommandType", "CommandBody", "Timestamp", "ContextKey"
+    };
+
     public BoxType BoxType => BoxType.Inbox;
 
     /// <inheritdoc />
@@ -48,7 +54,8 @@ public class SpannerInboxProvisioner(
 
         if (!historyExists)
         {
-            var detectedVersion = await DetectCurrentVersionAsync(connection, cancellationToken);
+            var detectedVersion = await DetectCurrentVersionAsync(
+                connection, configuration.InBoxTableName, cancellationToken);
             return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
         }
 
@@ -67,12 +74,13 @@ public class SpannerInboxProvisioner(
             "CommandBody", configuration.BinaryMessagePayload, cancellationToken);
     }
 
-    private Task<int> DetectCurrentVersionAsync(
-        SpannerConnection connection, CancellationToken cancellationToken)
+    private static async Task<int> DetectCurrentVersionAsync(
+        SpannerConnection connection, string tableName,
+        CancellationToken cancellationToken)
     {
-        // This method is only called when tableExists is true, so at minimum version 1.
-        // When future migrations add columns, extend this to check for version-specific
-        // columns and return higher version numbers accordingly.
-        return Task.FromResult(1);
+        var actualColumns = await SpannerOutboxProvisioner.GetTableColumnsAsync(
+            connection, tableName, cancellationToken);
+        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
+        return 0;
     }
 }

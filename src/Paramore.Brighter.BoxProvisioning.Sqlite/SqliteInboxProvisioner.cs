@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -12,6 +13,11 @@ public class SqliteInboxProvisioner(
     IAmARelationalDatabaseConfiguration configuration,
     IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
+    private static readonly HashSet<string> V1Columns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CommandId", "CommandType", "CommandBody", "Timestamp", "ContextKey"
+    };
+
     public BoxType BoxType => BoxType.Inbox;
 
     /// <inheritdoc />
@@ -68,13 +74,13 @@ public class SqliteInboxProvisioner(
             "CommandBody", configuration.BinaryMessagePayload, cancellationToken);
     }
 
-    internal static Task<int> DetectCurrentVersionAsync(
+    internal static async Task<int> DetectCurrentVersionAsync(
         SqliteConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
-        // This method is only called when tableExists is true, so at minimum version 1.
-        // When future migrations add columns, extend this to check for version-specific
-        // columns and return higher version numbers accordingly.
-        return Task.FromResult(1);
+        var actualColumns = await SqliteOutboxProvisioner.GetTableColumnsAsync(
+            connection, tableName, cancellationToken);
+        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
+        return 0;
     }
 }
