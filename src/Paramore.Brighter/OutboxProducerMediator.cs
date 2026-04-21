@@ -796,6 +796,14 @@ namespace Paramore.Brighter
             message.Header.Bag.Remove(Message.ProducerTopicHeaderName);
         }
 
+        private static void StripProducerLookupTopic(IEnumerable<Message> messages)
+        {
+            foreach (var m in messages)
+            {
+                StripProducerLookupTopic(m);
+            }
+        }
+
         private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object>? args = null)
         {
             var parentSpan = requestContext.Span;
@@ -874,10 +882,7 @@ namespace Paramore.Brighter
                     // mapper overrode the topic), so firstMessage is representative of the batch.
                     var firstMessage = topicBatch.First();
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(firstMessage));
-                    foreach (var m in topicBatch)
-                    {
-                        StripProducerLookupTopic(m);
-                    }
+                    StripProducerLookupTopic(topicBatch);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span,
                         _instrumentationOptions);
 
