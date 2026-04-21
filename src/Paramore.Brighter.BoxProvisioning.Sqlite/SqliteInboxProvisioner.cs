@@ -20,6 +20,11 @@ public class SqliteInboxProvisioner(
         var migrations = SqliteInboxMigrations.All(configuration);
         var tableState = await DetectTableStateAsync(cancellationToken);
 
+        if (tableState.TableExists)
+        {
+            await ValidatePayloadModeAsync(cancellationToken);
+        }
+
         await migrationRunner.MigrateAsync(
             configuration.InBoxTableName,
             configuration.SchemaName,
@@ -53,12 +58,23 @@ public class SqliteInboxProvisioner(
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
-    internal static async Task<int> DetectCurrentVersionAsync(
+    private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
+    {
+        using var connection = new SqliteConnection(configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await SqlitePayloadModeValidator.ValidateAsync(
+            connection, configuration.InBoxTableName,
+            "CommandBody", configuration.BinaryMessagePayload, cancellationToken);
+    }
+
+    internal static Task<int> DetectCurrentVersionAsync(
         SqliteConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
-        var hasCommandBody = await SqliteOutboxProvisioner.ColumnExistsAsync(
-            connection, tableName, "CommandBody", cancellationToken);
-        return hasCommandBody ? 1 : 0;
+        // This method is only called when tableExists is true, so at minimum version 1.
+        // When future migrations add columns, extend this to check for version-specific
+        // columns and return higher version numbers accordingly.
+        return Task.FromResult(1);
     }
 }

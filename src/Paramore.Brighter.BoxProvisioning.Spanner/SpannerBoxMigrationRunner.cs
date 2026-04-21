@@ -1,8 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
+using Grpc.Core;
 
 namespace Paramore.Brighter.BoxProvisioning.Spanner;
 
@@ -15,7 +15,7 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 public class SpannerBoxMigrationRunner(
     IAmARelationalDatabaseConfiguration configuration) : IAmABoxMigrationRunner
 {
-    internal const string MigrationHistoryTable = "BrighterMigrationHistory";
+    internal const string MigrationHistoryTable = "__BrighterMigrationHistory";
 
     /// <inheritdoc />
     public async Task MigrateAsync(
@@ -76,9 +76,10 @@ public class SpannerBoxMigrationRunner(
             var command = connection.CreateDdlCommand(ddl);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
-        catch (SpannerException ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists
+                                         || ex.RpcException.StatusCode == StatusCode.FailedPrecondition)
         {
-            // Table already exists — safe to continue (crash between DDL and history write)
+            // Table/column already exists — safe to continue (crash between DDL and history write)
         }
     }
 
@@ -102,8 +103,7 @@ public class SpannerBoxMigrationRunner(
         int version, CancellationToken cancellationToken)
     {
         using var command = connection.CreateSelectCommand(
-            @"SELECT COUNT(1) FROM `BrighterMigrationHistory`
-WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @Version",
+            $"SELECT COUNT(1) FROM `{MigrationHistoryTable}` WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @Version",
             new SpannerParameterCollection
             {
                 { "BoxTableName", SpannerDbType.String, tableName },

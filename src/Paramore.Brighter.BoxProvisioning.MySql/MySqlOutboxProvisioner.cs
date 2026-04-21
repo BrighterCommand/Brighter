@@ -20,6 +20,11 @@ public class MySqlOutboxProvisioner(
         var migrations = MySqlOutboxMigrations.All(configuration);
         var tableState = await DetectTableStateAsync(cancellationToken);
 
+        if (tableState.TableExists)
+        {
+            await ValidatePayloadModeAsync(cancellationToken);
+        }
+
         await migrationRunner.MigrateAsync(
             configuration.OutBoxTableName,
             configuration.SchemaName,
@@ -49,6 +54,18 @@ public class MySqlOutboxProvisioner(
 
         var maxVersion = await GetMaxVersionAsync(connection, configuration.OutBoxTableName, schemaName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
+    }
+
+    private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
+    {
+        var schemaName = configuration.SchemaName ?? DatabaseName();
+
+        using var connection = new MySqlConnection(configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await MySqlPayloadModeValidator.ValidateAsync(
+            connection, configuration.OutBoxTableName, schemaName,
+            "Body", configuration.BinaryMessagePayload, cancellationToken);
     }
 
     internal static async Task<bool> DoesTableExistAsync(
@@ -86,12 +103,14 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
         return count > 0;
     }
 
-    internal static async Task<int> DetectCurrentVersionAsync(
+    internal static Task<int> DetectCurrentVersionAsync(
         MySqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        var hasBody = await ColumnExistsAsync(connection, tableName, schemaName, "Body", cancellationToken);
-        return hasBody ? 1 : 0;
+        // This method is only called when tableExists is true, so at minimum version 1.
+        // When future migrations add columns, extend this to check for version-specific
+        // columns and return higher version numbers accordingly.
+        return Task.FromResult(1);
     }
 
     internal static async Task<int> GetMaxVersionAsync(

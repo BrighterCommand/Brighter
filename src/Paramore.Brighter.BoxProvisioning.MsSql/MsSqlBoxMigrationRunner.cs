@@ -38,7 +38,11 @@ public class MsSqlBoxMigrationRunner : IAmABoxMigrationRunner
         using var connection = new SqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
+#if NETFRAMEWORK
         var transaction = connection.BeginTransaction();
+#else
+        var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
+#endif
 
         try
         {
@@ -76,7 +80,7 @@ public class MsSqlBoxMigrationRunner : IAmABoxMigrationRunner
         }
         catch
         {
-            transaction.Rollback();
+            try { transaction.Rollback(); } catch { /* connection may already be closed */ }
             throw;
         }
         finally

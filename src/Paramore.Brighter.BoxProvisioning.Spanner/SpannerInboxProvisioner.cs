@@ -20,6 +20,11 @@ public class SpannerInboxProvisioner(
         var migrations = SpannerInboxMigrations.All(configuration);
         var tableState = await DetectTableStateAsync(cancellationToken);
 
+        if (tableState.TableExists)
+        {
+            await ValidatePayloadModeAsync(cancellationToken);
+        }
+
         await migrationRunner.MigrateAsync(
             configuration.InBoxTableName,
             configuration.SchemaName,
@@ -52,11 +57,22 @@ public class SpannerInboxProvisioner(
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
-    private async Task<int> DetectCurrentVersionAsync(
+    private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
+    {
+        using var connection = SpannerConnectionHelper.CreateConnection(configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await SpannerPayloadModeValidator.ValidateAsync(
+            connection, configuration.InBoxTableName,
+            "CommandBody", configuration.BinaryMessagePayload, cancellationToken);
+    }
+
+    private Task<int> DetectCurrentVersionAsync(
         SpannerConnection connection, CancellationToken cancellationToken)
     {
-        var hasCommandBody = await SpannerOutboxProvisioner.ColumnExistsAsync(
-            connection, configuration.InBoxTableName, "CommandBody", cancellationToken);
-        return hasCommandBody ? 1 : 0;
+        // This method is only called when tableExists is true, so at minimum version 1.
+        // When future migrations add columns, extend this to check for version-specific
+        // columns and return higher version numbers accordingly.
+        return Task.FromResult(1);
     }
 }

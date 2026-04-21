@@ -20,6 +20,11 @@ public class SpannerOutboxProvisioner(
         var migrations = SpannerOutboxMigrations.All(configuration);
         var tableState = await DetectTableStateAsync(cancellationToken);
 
+        if (tableState.TableExists)
+        {
+            await ValidatePayloadModeAsync(cancellationToken);
+        }
+
         await migrationRunner.MigrateAsync(
             configuration.OutBoxTableName,
             configuration.SchemaName,
@@ -49,6 +54,16 @@ public class SpannerOutboxProvisioner(
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
+    private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
+    {
+        using var connection = SpannerConnectionHelper.CreateConnection(configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await SpannerPayloadModeValidator.ValidateAsync(
+            connection, configuration.OutBoxTableName,
+            "Body", configuration.BinaryMessagePayload, cancellationToken);
+    }
+
     internal static async Task<bool> DoesTableExistAsync(
         SpannerConnection connection, string tableName,
         CancellationToken cancellationToken)
@@ -71,7 +86,7 @@ public class SpannerOutboxProvisioner(
             return false;
 
         using var command = connection.CreateSelectCommand(
-            @"SELECT COUNT(1) FROM `BrighterMigrationHistory`
+            @"SELECT COUNT(1) FROM `__BrighterMigrationHistory`
 WHERE `BoxTableName` = @BoxTableName",
             new SpannerParameterCollection { { "BoxTableName", SpannerDbType.String, tableName } });
 
@@ -79,12 +94,14 @@ WHERE `BoxTableName` = @BoxTableName",
         return count > 0;
     }
 
-    internal static async Task<int> DetectCurrentVersionAsync(
+    internal static Task<int> DetectCurrentVersionAsync(
         SpannerConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
-        var hasBody = await ColumnExistsAsync(connection, tableName, "Body", cancellationToken);
-        return hasBody ? 1 : 0;
+        // This method is only called when tableExists is true, so at minimum version 1.
+        // When future migrations add columns, extend this to check for version-specific
+        // columns and return higher version numbers accordingly.
+        return Task.FromResult(1);
     }
 
     internal static async Task<int> GetMaxVersionAsync(
@@ -92,7 +109,7 @@ WHERE `BoxTableName` = @BoxTableName",
         CancellationToken cancellationToken)
     {
         using var command = connection.CreateSelectCommand(
-            @"SELECT COALESCE(MAX(`MigrationVersion`), 0) FROM `BrighterMigrationHistory`
+            @"SELECT COALESCE(MAX(`MigrationVersion`), 0) FROM `__BrighterMigrationHistory`
 WHERE `BoxTableName` = @BoxTableName",
             new SpannerParameterCollection { { "BoxTableName", SpannerDbType.String, tableName } });
 

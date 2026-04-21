@@ -112,14 +112,14 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
         return count > 0;
     }
 
-    internal static async Task<int> DetectCurrentVersionAsync(
+    internal static Task<int> DetectCurrentVersionAsync(
         SqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        // Version 1 columns include the base outbox schema
-        // If the table exists at all, it's at least version 1
-        var hasBody = await ColumnExistsAsync(connection, tableName, schemaName, "Body", cancellationToken);
-        return hasBody ? 1 : 0;
+        // This method is only called when tableExists is true, so at minimum version 1.
+        // When future migrations add columns, extend this to check for version-specific
+        // columns and return higher version numbers accordingly.
+        return Task.FromResult(1);
     }
 
     internal static async Task<int> GetMaxVersionAsync(

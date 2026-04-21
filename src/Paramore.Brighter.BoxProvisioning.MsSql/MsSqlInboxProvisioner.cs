@@ -80,19 +80,13 @@ public class MsSqlInboxProvisioner : IAmABoxProvisioner
             "CommandBody", _configuration.BinaryMessagePayload, cancellationToken);
     }
 
-    private static async Task<int> DetectCurrentVersionAsync(
+    private static Task<int> DetectCurrentVersionAsync(
         SqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        // If the table exists at all, it's at least version 1
-        using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = @TableName AND TABLE_SCHEMA = @SchemaName AND COLUMN_NAME = 'CommandBody'";
-        command.Parameters.AddWithValue("@TableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-
-        var count = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
-        return count > 0 ? 1 : 0;
+        // This method is only called when tableExists is true, so at minimum version 1.
+        // When future migrations add columns, extend this to check for version-specific
+        // columns and return higher version numbers accordingly.
+        return Task.FromResult(1);
     }
 }

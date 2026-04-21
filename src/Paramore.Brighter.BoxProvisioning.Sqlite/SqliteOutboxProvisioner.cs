@@ -20,6 +20,11 @@ public class SqliteOutboxProvisioner(
         var migrations = SqliteOutboxMigrations.All(configuration);
         var tableState = await DetectTableStateAsync(cancellationToken);
 
+        if (tableState.TableExists)
+        {
+            await ValidatePayloadModeAsync(cancellationToken);
+        }
+
         await migrationRunner.MigrateAsync(
             configuration.OutBoxTableName,
             configuration.SchemaName,
@@ -47,6 +52,16 @@ public class SqliteOutboxProvisioner(
 
         var maxVersion = await GetMaxVersionAsync(connection, configuration.OutBoxTableName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
+    }
+
+    private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
+    {
+        using var connection = new SqliteConnection(configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await SqlitePayloadModeValidator.ValidateAsync(
+            connection, configuration.OutBoxTableName,
+            "Body", configuration.BinaryMessagePayload, cancellationToken);
     }
 
     internal static async Task<bool> DoesTableExistAsync(
@@ -80,12 +95,14 @@ WHERE [BoxTableName] = @BoxTableName";
         return count > 0;
     }
 
-    internal static async Task<int> DetectCurrentVersionAsync(
+    internal static Task<int> DetectCurrentVersionAsync(
         SqliteConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
-        var hasBody = await ColumnExistsAsync(connection, tableName, "Body", cancellationToken);
-        return hasBody ? 1 : 0;
+        // This method is only called when tableExists is true, so at minimum version 1.
+        // When future migrations add columns, extend this to check for version-specific
+        // columns and return higher version numbers accordingly.
+        return Task.FromResult(1);
     }
 
     internal static async Task<int> GetMaxVersionAsync(

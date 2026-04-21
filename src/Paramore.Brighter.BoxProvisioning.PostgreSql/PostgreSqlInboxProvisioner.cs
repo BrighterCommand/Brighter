@@ -28,6 +28,11 @@ public class PostgreSqlInboxProvisioner : IAmABoxProvisioner
         var migrations = PostgreSqlInboxMigrations.All(_configuration);
         var tableState = await DetectTableStateAsync(cancellationToken);
 
+        if (tableState.TableExists)
+        {
+            await ValidatePayloadModeAsync(cancellationToken);
+        }
+
         await _migrationRunner.MigrateAsync(
             _configuration.InBoxTableName,
             _configuration.SchemaName,
@@ -62,18 +67,25 @@ public class PostgreSqlInboxProvisioner : IAmABoxProvisioner
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
-    private static async Task<int> DetectCurrentVersionAsync(
+    private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
+    {
+        var schemaName = _configuration.SchemaName ?? "public";
+
+        using var connection = new NpgsqlConnection(_configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await PostgreSqlPayloadModeValidator.ValidateAsync(
+            connection, _configuration.InBoxTableName, schemaName,
+            "commandbody", _configuration.BinaryMessagePayload, cancellationToken);
+    }
+
+    private static Task<int> DetectCurrentVersionAsync(
         NpgsqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName AND COLUMN_NAME = 'commandbody')";
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-        command.Parameters.AddWithValue("@TableName", tableName);
-
-        var exists = (bool)(await command.ExecuteScalarAsync(cancellationToken))!;
-        return exists ? 1 : 0;
+        // This method is only called when tableExists is true, so at minimum version 1.
+        // When future migrations add columns, extend this to check for version-specific
+        // columns and return higher version numbers accordingly.
+        return Task.FromResult(1);
     }
 }

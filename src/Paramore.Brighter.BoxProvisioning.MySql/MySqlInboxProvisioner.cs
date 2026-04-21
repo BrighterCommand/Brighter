@@ -20,6 +20,11 @@ public class MySqlInboxProvisioner(
         var migrations = MySqlInboxMigrations.All(configuration);
         var tableState = await DetectTableStateAsync(cancellationToken);
 
+        if (tableState.TableExists)
+        {
+            await ValidatePayloadModeAsync(cancellationToken);
+        }
+
         await migrationRunner.MigrateAsync(
             configuration.InBoxTableName,
             configuration.SchemaName,
@@ -55,12 +60,26 @@ public class MySqlInboxProvisioner(
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
-    internal static async Task<int> DetectCurrentVersionAsync(
+    private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
+    {
+        var schemaName = configuration.SchemaName ?? DatabaseName();
+
+        using var connection = new MySqlConnection(configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await MySqlPayloadModeValidator.ValidateAsync(
+            connection, configuration.InBoxTableName, schemaName,
+            "CommandBody", configuration.BinaryMessagePayload, cancellationToken);
+    }
+
+    internal static Task<int> DetectCurrentVersionAsync(
         MySqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        var hasCommandBody = await ColumnExistsAsync(connection, tableName, schemaName, "CommandBody", cancellationToken);
-        return hasCommandBody ? 1 : 0;
+        // This method is only called when tableExists is true, so at minimum version 1.
+        // When future migrations add columns, extend this to check for version-specific
+        // columns and return higher version numbers accordingly.
+        return Task.FromResult(1);
     }
 
     private static async Task<bool> ColumnExistsAsync(
