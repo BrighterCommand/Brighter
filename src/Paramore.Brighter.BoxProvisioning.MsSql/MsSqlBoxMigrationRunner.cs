@@ -100,13 +100,13 @@ public class MsSqlBoxMigrationRunner : IAmABoxMigrationRunner
         command.CommandText =
             "DECLARE @result INT; " +
             "EXEC @result = sp_getapplock " +
-            "@Resource = @Resource, " +
+            "@Resource = @lockResourceName, " +
             "@LockMode = 'Exclusive', " +
-            "@LockTimeout = @LockTimeout, " +
+            "@LockTimeout = @lockTimeoutMs, " +
             "@LockOwner = 'Transaction'; " +
             "SELECT @result;";
-        command.Parameters.AddWithValue("@Resource", lockResource);
-        command.Parameters.AddWithValue("@LockTimeout", (int)_lockTimeout.TotalMilliseconds);
+        command.Parameters.AddWithValue("@lockResourceName", lockResource);
+        command.Parameters.AddWithValue("@lockTimeoutMs", (int)_lockTimeout.TotalMilliseconds);
 
         var result = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
 
