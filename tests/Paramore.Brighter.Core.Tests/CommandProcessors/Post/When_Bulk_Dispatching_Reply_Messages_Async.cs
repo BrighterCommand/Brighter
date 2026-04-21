@@ -90,25 +90,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var context = new RequestContext();
             await _commandProcessor.DepositPostAsync<MyResponse>([_replyOne, _replyTwo], context);
 
-            //act - drain via the bulk path (exercised by background outbox sweeps)
+            //act - drain via the bulk path (exercised by background outbox sweeps).
+            //ClearOutstandingFromOutboxAsync awaits BackgroundDispatchUsingAsync which
+            //awaits BulkDispatchAsync, so dispatch is complete when this returns.
             await _mediator.ClearOutstandingFromOutboxAsync(
                 amountToClear: 10,
                 minimumAge: TimeSpan.Zero,
                 useBulk: true,
                 requestContext: context);
 
-            //poll until the background clear drains the outbox (bounded to avoid flake in CI)
-            var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(5);
-            while (_internalBus.Stream(_replyTopic).Count() < 2 && DateTimeOffset.UtcNow < deadline)
-            {
-                await Task.Delay(25);
-            }
-
             //assert - messages landed on the reply topic. If producer lookup had used
             //Header.Topic (reply address) instead of the bag's ProducerTopic, LookupBy
             //would have thrown and nothing would arrive on the bus.
             var messages = _internalBus.Stream(_replyTopic).ToArray();
-            Assert.Equal(2, messages.Length);
+            Assert.True(messages.Length == 2,
+                $"expected 2 reply messages on the bus after bulk dispatch, got {messages.Length} — bulk dispatch or producer lookup failed");
 
             //assert - internal ProducerTopic bag entry was stripped on every message
             //in the batch so transports that serialise Header.Bag don't leak it

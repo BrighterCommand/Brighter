@@ -776,6 +776,8 @@ namespace Paramore.Brighter
 
         private static RoutingKey GetProducerLookupTopic(Message message)
         {
+            // Falls back to Header.Topic when the bag entry is absent — reproducing the
+            // pre-fix behaviour, so publications with a null Topic remain a lookup failure.
             if (message.Header.Bag.TryGetValue(Message.ProducerTopicHeaderName, out var producerTopic)
                 && producerTopic is string topic)
             {
@@ -785,12 +787,8 @@ namespace Paramore.Brighter
             return message.Header.Topic;
         }
 
-        /// <summary>
-        /// Removes the internal <see cref="Message.ProducerTopicHeaderName"/> bag entry so it is
-        /// not serialised onto the wire by transport adapters that include <c>Header.Bag</c> in
-        /// the message envelope (AMQP headers, SNS/SQS attributes, etc.). Call after producer
-        /// lookup and immediately before dispatch.
-        /// </summary>
+        // Strip the internal ProducerTopic bag entry so transports that serialise Header.Bag
+        // (AMQP, SNS/SQS) don't leak it on the wire. Call after lookup, before dispatch.
         private static void StripProducerLookupTopic(Message message)
         {
             message.Header.Bag.Remove(Message.ProducerTopicHeaderName);
@@ -881,7 +879,11 @@ namespace Paramore.Brighter
                     // share the same ProducerTopic bag entry (set by WrapPipelineAsync when the
                     // mapper overrode the topic), so firstMessage is representative of the batch.
                     var firstMessage = topicBatch.First();
-                    var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(firstMessage));
+                    var producerLookupTopic = GetProducerLookupTopic(firstMessage);
+                    Debug.Assert(
+                        topicBatch.All(m => GetProducerLookupTopic(m) == producerLookupTopic),
+                        "all messages in a topicBatch must share the same producer-lookup topic");
+                    var producer = _producerRegistry.LookupBy(producerLookupTopic);
                     StripProducerLookupTopic(topicBatch);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span,
                         _instrumentationOptions);
