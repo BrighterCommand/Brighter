@@ -871,19 +871,14 @@ namespace Paramore.Brighter
             try
             {
                 if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
-                var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
+                // Group by (wire topic, producer-lookup topic) so a batch is guaranteed to
+                // resolve to a single producer — messages with the same wire topic but
+                // different ProducerTopic bag values land in separate batches.
+                var messagesByTopic = posts.GroupBy(m => (WireTopic: m.Header.Topic, LookupTopic: GetProducerLookupTopic(m)));
 
                 foreach (var topicBatch in messagesByTopic)
                 {
-                    // Messages in this batch share Header.Topic (the group key). They therefore
-                    // share the same ProducerTopic bag entry (set by WrapPipelineAsync when the
-                    // mapper overrode the topic), so firstMessage is representative of the batch.
-                    var firstMessage = topicBatch.First();
-                    var producerLookupTopic = GetProducerLookupTopic(firstMessage);
-                    Debug.Assert(
-                        topicBatch.All(m => GetProducerLookupTopic(m) == producerLookupTopic),
-                        "all messages in a topicBatch must share the same producer-lookup topic");
-                    var producer = _producerRegistry.LookupBy(producerLookupTopic);
+                    var producer = _producerRegistry.LookupBy(topicBatch.Key.LookupTopic);
                     StripProducerLookupTopic(topicBatch);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span,
                         _instrumentationOptions);
@@ -891,14 +886,14 @@ namespace Paramore.Brighter
                     if (span is not null)
                     {
                         producer.Span = span;
-                        producerSpans.TryAdd(topicBatch.Key, span);
+                        producerSpans.TryAdd(topicBatch.Key.WireTopic, span);
                     }
 
                     if (producer is IAmABulkMessageProducerAsync bulkMessageProducer and not ISupportPublishConfirmation)
                     {
                         var messages = topicBatch.ToArray();
 
-                        Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key);
+                        Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key.WireTopic);
 
                         foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
                         {
