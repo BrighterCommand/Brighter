@@ -789,6 +789,10 @@ namespace Paramore.Brighter
 
         // Strip the internal ProducerTopic bag entry so transports that serialise Header.Bag
         // (AMQP, SNS/SQS) don't leak it on the wire. Call after lookup, before dispatch.
+        // Persistent outboxes (SQL, Mongo, Dynamo) re-hydrate a fresh object per drain so
+        // this mutation is harmless; InMemoryOutbox stores the reference, so a dispatch that
+        // fails after strip and then retries via the outbox will fall back to Header.Topic
+        // and miss the producer — acceptable since InMemoryOutbox is primarily dev/test.
         private static void StripProducerLookupTopic(Message message)
         {
             message.Header.Bag.Remove(Message.ProducerTopicHeaderName);
@@ -886,7 +890,10 @@ namespace Paramore.Brighter
                     if (span is not null)
                     {
                         producer.Span = span;
-                        producerSpans.TryAdd(topicBatch.Key.WireTopic, span);
+                        // Compose the dictionary key from both grouping keys so two
+                        // batches that share a WireTopic but differ by LookupTopic
+                        // don't collide (their spans must both be ended later).
+                        producerSpans.TryAdd($"{topicBatch.Key.WireTopic}|{topicBatch.Key.LookupTopic}", span);
                     }
 
                     if (producer is IAmABulkMessageProducerAsync bulkMessageProducer and not ISupportPublishConfirmation)

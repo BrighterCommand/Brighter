@@ -12,11 +12,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
-    // Gap: BulkDispatchAsync groups by Header.Topic (the mapper-set reply topic) but
-    // looks up the producer using the first message's bag. The single-message Dispatch
-    // paths are covered; this pins the bulk-outbox-clear path so a future refactor of
-    // GetProducerLookupTopic or the firstMessage assumption cannot silently regress and
-    // fail to locate the producer when draining the outbox via the bulk sweep.
+    // Pins the bulk-outbox-clear path: reply messages drained via BulkDispatchAsync
+    // are grouped by (WireTopic, LookupTopic) and dispatched to the producer resolved
+    // from LookupTopic. Prevents regression to a Header.Topic-only lookup that would
+    // fail to locate the producer for reply messages during outbox sweeps.
     public class CommandProcessorBulkDispatchReplyAsyncTests
     {
         private const string ProducerTopic = "Reply";
