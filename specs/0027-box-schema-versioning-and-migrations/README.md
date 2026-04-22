@@ -28,9 +28,9 @@ Replace the single-version `DetectCurrentVersionAsync` model introduced in spec 
 
 ## Status
 
-- [x] Requirements (`requirements.md`) — drafted 2026-04-22
-- [ ] Design (`design.md` / ADR 0057) — next
-- [ ] Tasks (`tasks.md`)
+- [x] Requirements (`requirements.md`) — drafted + approved 2026-04-22
+- [x] Design (ADR 0057) — drafted, reviewed (NEEDS WORK → PASS after 2 revisions), approved 2026-04-22
+- [ ] Tasks (`tasks.md`) — next
 - [ ] Implementation
 - [ ] Review
 
