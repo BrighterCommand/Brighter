@@ -26,7 +26,6 @@ using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Observability;

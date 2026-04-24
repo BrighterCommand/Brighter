@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
