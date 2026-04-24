@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -75,7 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 }
                 else
                 {
-                    Task.Delay(pause).Wait();
+                    Thread.Sleep(pause);
                 }
                 now = DateTime.UtcNow;
             }

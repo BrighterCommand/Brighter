@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -148,7 +149,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private static void DelayReconnecting()
         {
-            Task.Delay(jitter.Next(5, 100)).Wait();
+            Thread.Sleep(jitter.Next(5, 100));
         }
 
 
