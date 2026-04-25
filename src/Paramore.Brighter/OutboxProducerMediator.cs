@@ -776,8 +776,11 @@ namespace Paramore.Brighter
 
         private static RoutingKey GetProducerLookupTopic(Message message)
         {
-            // Falls back to Header.Topic when the bag entry is absent — reproducing the
-            // pre-fix behaviour, so publications with a null Topic remain a lookup failure.
+            // Reply messages set the ProducerTopic bag entry so the dispatcher can locate
+            // the registered producer even though Header.Topic has been rewritten to the
+            // dynamic reply address. Normal publications don't carry the bag entry, so we
+            // fall back to Header.Topic — and a null/empty Header.Topic remains a lookup
+            // failure, matching pre-fix behaviour.
             if (message.Header.Bag.TryGetValue(Message.ProducerTopicHeaderName, out var producerTopic)
                 && producerTopic is string topic)
             {
