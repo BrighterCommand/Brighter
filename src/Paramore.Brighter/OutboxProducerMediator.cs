@@ -781,6 +781,14 @@ namespace Paramore.Brighter
             // dynamic reply address. Normal publications don't carry the bag entry, so we
             // fall back to Header.Topic — and a null/empty Header.Topic remains a lookup
             // failure, matching pre-fix behaviour.
+            //
+            // The `is string` cast is safe across persistent outboxes (SQL family,
+            // Mongo, DynamoDB) because Brighter's bag round-trip uses
+            // JsonSerialisationOptions.Options, which registers DictionaryStringObjectJsonConverter
+            // + ObjectToInferredTypesConverter — together they preserve the string runtime
+            // type through serialise/deserialise rather than handing back JsonElement.
+            // See When_Bag_String_Values_Round_Trip_Through_Brighter_Json_Options for
+            // a regression pin on that contract.
             if (message.Header.Bag.TryGetValue(Message.ProducerTopicHeaderName, out var producerTopic)
                 && producerTopic is string topic)
             {

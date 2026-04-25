@@ -5,7 +5,6 @@ using Xunit;
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 [Trait("Category", "ASB")]
-[Trait("Fragile", "CI")]
 public class AzureServiceBusMessagePublisherLocalHeaderTests
 {
     [Fact]
