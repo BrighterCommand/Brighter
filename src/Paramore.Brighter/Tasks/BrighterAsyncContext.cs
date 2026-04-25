@@ -125,24 +125,29 @@ public sealed class BrighterAsyncContext : IDisposable
 
         OperationStarted();
 
-        // Attach completion continuation before queueing. The task cannot start until the
-        // scheduler pulls it from the queue, so no completion race is possible here.
+        if (!_taskQueue.TryAdd(task, propagateExceptions))
+        {
+            // Queue is already completed for adding: the task will never be pulled, so we
+            // must not attach the completion continuation - if a caller later inline-executes
+            // the stranded task via TryExecuteTaskInline, the continuation would fire and
+            // double-decrement the outstanding-operations counter. Balance manually instead.
+            // Record shutdown so Send can distinguish "pump will process this task" from
+            // "task will never run".
+            Volatile.Write(ref _shutdown, 1);
+            OperationCompleted();
+            return;
+        }
+
+        // Task is queued. Attach completion continuation to balance OperationStarted when
+        // the task finishes. ExecuteSynchronously runs the continuation inline if the task
+        // has already completed by the time we attach (e.g. the pump pulled and ran it
+        // between TryAdd and here), so the continuation always fires exactly once.
         task.ContinueWith(
             static (_, state) => ((BrighterAsyncContext)state!).OperationCompleted(),
             this,
             CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously,
             _taskScheduler);
-
-        if (!_taskQueue.TryAdd(task, propagateExceptions))
-        {
-            // Queue is already completed for adding: the task will never be pulled, so the
-            // continuation will never fire. Balance the outstanding-operations counter
-            // manually so callers of Execute do not hang. Record shutdown so Send can
-            // distinguish "pump will process this task" from "task will never run".
-            Volatile.Write(ref _shutdown, 1);
-            OperationCompleted();
-        }
     }
 
     /// <summary>
