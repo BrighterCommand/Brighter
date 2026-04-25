@@ -72,7 +72,7 @@ public class Waker<TData>
             if (cancellationToken.IsCancellationRequested)
                 cancellationToken.ThrowIfCancellationRequested();
 
-        }, cancellationToken);
+        }, cancellationToken, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
         
         Task.WaitAll([task], cancellationToken);
         

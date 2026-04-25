@@ -71,12 +71,12 @@ public class Runner<TData>
         var task = Task.Factory.StartNew(async () =>
         {
             cancellationToken.ThrowIfCancellationRequested();
-            
+
             await ProcessJobs(cancellationToken);
-            
+
             cancellationToken.ThrowIfCancellationRequested();
-            
-        }, cancellationToken);
+
+        }, cancellationToken, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
         
         Task.WaitAll([task], cancellationToken);
         

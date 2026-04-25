@@ -27,6 +27,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
@@ -335,7 +336,9 @@ namespace Paramore.Brighter.ServiceActivator
                     Log.DispatcherStopped(s_logger);
                 }
             },
-            TaskCreationOptions.LongRunning);
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
 
             while (State != DispatcherState.DS_RUNNING)
             {
