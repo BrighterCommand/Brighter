@@ -105,10 +105,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             Assert.True(messages.Length == 2,
                 $"expected 2 reply messages on the bus after bulk dispatch, got {messages.Length} — bulk dispatch or producer lookup failed");
 
-            //assert - internal ProducerTopic bag entry was stripped on every message
-            //in the batch so transports that serialise Header.Bag don't leak it
+            //assert - the ProducerTopic bag entry survives bulk dispatch so an InMemoryOutbox
+            //(which holds the message by reference) keeps the producer hint for retries.
+            //Wire-format stripping is the transport's responsibility (see MessageHeader.LocalHeaderNames).
             Assert.All(messages, m =>
-                Assert.False(m.Header.Bag.ContainsKey(Message.ProducerTopicHeaderName)));
+                Assert.True(m.Header.Bag.ContainsKey(Message.ProducerTopicHeaderName)));
         }
     }
 }

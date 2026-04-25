@@ -87,7 +87,33 @@ namespace Paramore.Brighter
         /// The default Brighter source
         /// </summary>
         public const string DefaultSource = "http://goparamore.io";
-            
+
+        /// <summary>
+        /// Bag keys that are internal to Brighter — set by the framework so a downstream
+        /// component (e.g. the outbox dispatcher) can read them, but not intended to travel
+        /// over the wire. Transports that copy <see cref="Bag"/> into their wire format must
+        /// skip these keys (or call <see cref="StripLocalHeaders"/> on a copy of the header).
+        /// </summary>
+        /// <remarks>
+        /// Pre-populated with <see cref="Message.ProducerTopicHeaderName"/>. Add to this set
+        /// from extension code if you introduce additional local-only bag keys.
+        /// </remarks>
+        public static readonly HashSet<string> LocalHeaderNames = new(StringComparer.Ordinal)
+        {
+            Message.ProducerTopicHeaderName
+        };
+
+        /// <summary>
+        /// Removes every <see cref="LocalHeaderNames"/> entry from <see cref="Bag"/>.
+        /// Call on a wire-bound copy of the header to ensure local-only bag entries
+        /// are not serialised onto the transport.
+        /// </summary>
+        public void StripLocalHeaders()
+        {
+            foreach (var name in LocalHeaderNames)
+                Bag.Remove(name);
+        }
+
         /// <summary>
         /// A property bag that can be used for extended header attributes.
         /// Use camelCase for the key names if you intend to read it yourself, as when converted to and from Json serializers will tend convert the property

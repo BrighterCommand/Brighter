@@ -790,41 +790,6 @@ namespace Paramore.Brighter
             return message.Header.Topic;
         }
 
-        // Strip the internal ProducerTopic bag entry so transports that serialise Header.Bag
-        // (AMQP, SNS/SQS) don't leak it on the wire. Returns the prior bag value (or null)
-        // so callers can restore it if dispatch fails — important for InMemoryOutbox, which
-        // stores the message by reference and would otherwise lose the producer hint on retry.
-        private static object? StripProducerLookupTopic(Message message)
-        {
-            message.Header.Bag.TryGetValue(Message.ProducerTopicHeaderName, out var saved);
-            message.Header.Bag.Remove(Message.ProducerTopicHeaderName);
-            return saved;
-        }
-
-        private static void RestoreProducerLookupTopic(Message message, object? saved)
-        {
-            if (saved is not null)
-                message.Header.Bag[Message.ProducerTopicHeaderName] = saved;
-        }
-
-        private static List<(Message Message, object? Saved)> StripProducerLookupTopic(IEnumerable<Message> messages)
-        {
-            var saved = new List<(Message, object?)>();
-            foreach (var m in messages)
-            {
-                saved.Add((m, StripProducerLookupTopic(m)));
-            }
-            return saved;
-        }
-
-        private static void RestoreProducerLookupTopic(IEnumerable<(Message Message, object? Saved)> saved)
-        {
-            foreach (var (message, value) in saved)
-            {
-                RestoreProducerLookupTopic(message, value);
-            }
-        }
-
         private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object>? args = null)
         {
             var parentSpan = requestContext.Span;
@@ -840,51 +805,40 @@ namespace Paramore.Brighter
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
-                    var savedProducerTopic = StripProducerLookupTopic(message);
-                    var dispatched = false;
-                    try
-                    {
-                        var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
-                            _instrumentationOptions);
-                        producer.Span = span;
-                        if (span != null) producerSpans.TryAdd(message.Id, span);
+                    var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
+                        _instrumentationOptions);
+                    producer.Span = span;
+                    if (span != null) producerSpans.TryAdd(message.Id, span);
 
-                        if (producer is IAmAMessageProducerSync producerSync)
+                    if (producer is IAmAMessageProducerSync producerSync)
+                    {
+                        if (producer is ISupportPublishConfirmation)
                         {
-                            if (producer is ISupportPublishConfirmation)
-                            {
-                                //mark dispatch handled by a callback - set in constructor
-                                ExecuteWithResiliencePipeline(
-                                    () => { producerSync.Send(message); },
-                                    requestContext);
-                                dispatched = true;
-                            }
-                            else
-                            {
-                                var sent = ExecuteWithResiliencePipeline(
-                                    () => { producerSync.Send(message); },
-                                    requestContext
-                                );
-                                if (sent)
-                                {
-                                    ExecuteWithResiliencePipeline(
-                                        () => _outBox.MarkDispatched(message.Id, requestContext, _timeProvider.GetUtcNow(), args),
-                                        requestContext
-                                    );
-                                    dispatched = true;
-                                }
-                            }
+                            //mark dispatch handled by a callback - set in constructor
+                            ExecuteWithResiliencePipeline(
+                                () => { producerSync.Send(message); },
+                                requestContext);
                         }
                         else
-                            throw new InvalidOperationException("No sync message producer defined.");
+                        {
+                            var sent = ExecuteWithResiliencePipeline(
+                                () => { producerSync.Send(message); },
+                                requestContext
+                            );
+                            if (sent)
+                            {
+                                ExecuteWithResiliencePipeline(
+                                    () => _outBox.MarkDispatched(message.Id, requestContext, _timeProvider.GetUtcNow(), args),
+                                    requestContext
+                                );
+                            }
+                        }
+                    }
+                    else
+                        throw new InvalidOperationException("No sync message producer defined.");
 
-                        Activity.Current = parentSpan;
-                        producer.Span = null;
-                    }
-                    finally
-                    {
-                        if (!dispatched) RestoreProducerLookupTopic(message, savedProducerTopic);
-                    }
+                    Activity.Current = parentSpan;
+                    producer.Span = null;
                 }
             }
             finally
@@ -914,70 +868,58 @@ namespace Paramore.Brighter
                 foreach (var topicBatch in messagesByTopic)
                 {
                     var producer = _producerRegistry.LookupBy(topicBatch.Key.LookupTopic);
-                    var savedBatchTopics = StripProducerLookupTopic(topicBatch);
-                    var batchDispatched = false;
-                    try
+                    var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span,
+                        _instrumentationOptions);
+
+                    if (span is not null)
                     {
-                        var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span,
-                            _instrumentationOptions);
+                        producer.Span = span;
+                        // Key is only used for uniqueness until EndSpans runs; a Uuid avoids
+                        // any risk of collision from composing topic strings.
+                        producerSpans.TryAdd(Uuid.NewAsString(), span);
+                    }
 
-                        if (span is not null)
+                    if (producer is IAmABulkMessageProducerAsync bulkMessageProducer and not ISupportPublishConfirmation)
+                    {
+                        var messages = topicBatch.ToArray();
+
+                        Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key.WireTopic);
+
+                        foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
                         {
-                            producer.Span = span;
-                            // Key is only used for uniqueness until EndSpans runs; a Uuid avoids
-                            // any risk of collision from composing topic strings.
-                            producerSpans.TryAdd(Uuid.NewAsString(), span);
-                        }
+                            var sent = await ExecuteWithResiliencePipelineAsync(
+                                    async _ => await bulkMessageProducer.SendAsync(batch, cancellationToken)
+                                        .ConfigureAwait(continueOnCapturedContext),
+                                    requestContext,
+                                    continueOnCapturedContext,
+                                    cancellationToken
+                                )
+                                .ConfigureAwait(continueOnCapturedContext);
 
-                        if (producer is IAmABulkMessageProducerAsync bulkMessageProducer and not ISupportPublishConfirmation)
-                        {
-                            var messages = topicBatch.ToArray();
-
-                            Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key.WireTopic);
-
-                            var allSent = true;
-                            foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
+                            if (producer is not ISupportPublishConfirmation && sent)
                             {
-                                var sent = await ExecuteWithResiliencePipelineAsync(
-                                        async _ => await bulkMessageProducer.SendAsync(batch, cancellationToken)
-                                            .ConfigureAwait(continueOnCapturedContext),
+                                foreach (var successfulMessage in batch.Ids())
+                                {
+                                    await ExecuteWithResiliencePipelineAsync(async _ =>
+                                            await _asyncOutbox.MarkDispatchedAsync(
+                                                successfulMessage, requestContext, _timeProvider.GetUtcNow(),
+                                                cancellationToken: cancellationToken
+                                            ),
                                         requestContext,
-                                        continueOnCapturedContext,
-                                        cancellationToken
-                                    )
-                                    .ConfigureAwait(continueOnCapturedContext);
-
-                                if (producer is not ISupportPublishConfirmation && sent)
-                                {
-                                    foreach (var successfulMessage in batch.Ids())
-                                    {
-                                        await ExecuteWithResiliencePipelineAsync(async _ =>
-                                                await _asyncOutbox.MarkDispatchedAsync(
-                                                    successfulMessage, requestContext, _timeProvider.GetUtcNow(),
-                                                    cancellationToken: cancellationToken
-                                                ),
-                                            requestContext,
-                                            cancellationToken: cancellationToken
-                                        );
-                                    }
-                                }
-
-                                if (!sent)
-                                {
-                                    allSent = false;
-                                    TripTopic(batch.RoutingKey);
+                                        cancellationToken: cancellationToken
+                                    );
                                 }
                             }
-                            batchDispatched = allSent;
-                        }
-                        else
-                        {
-                            throw new InvalidOperationException("No async bulk message producer defined.");
+
+                            if (!sent)
+                            {
+                                TripTopic(batch.RoutingKey);
+                            }
                         }
                     }
-                    finally
+                    else
                     {
-                        if (!batchDispatched) RestoreProducerLookupTopic(savedBatchTopics);
+                        throw new InvalidOperationException("No async bulk message producer defined.");
                     }
                 }
             }
@@ -1008,50 +950,38 @@ namespace Paramore.Brighter
                     Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
-                    var savedProducerTopic = StripProducerLookupTopic(message);
-                    var dispatched = false;
-                    try
-                    {
-                        var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
-                            _instrumentationOptions);
-                        producer.Span = span;
-                        if (span != null) producerSpans.TryAdd(message.Id, span);
+                    var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
+                        _instrumentationOptions);
+                    producer.Span = span;
+                    if (span != null) producerSpans.TryAdd(message.Id, span);
 
-                        if (producer is IAmAMessageProducerAsync producerAsync)
+                    if (producer is IAmAMessageProducerAsync producerAsync)
+                    {
+                        var sent = await ExecuteWithResiliencePipelineAsync(
+                                async _ => await producerAsync.SendAsync(message, cancellationToken)
+                                    .ConfigureAwait(continueOnCapturedContext),
+                                requestContext,
+                                continueOnCapturedContext,
+                                cancellationToken
+                            )
+                            .ConfigureAwait(continueOnCapturedContext);
+
+                        if (producer is not ISupportPublishConfirmation && sent)
                         {
-                            var sent = await ExecuteWithResiliencePipelineAsync(
-                                    async _ => await producerAsync.SendAsync(message, cancellationToken)
-                                        .ConfigureAwait(continueOnCapturedContext),
-                                    requestContext,
-                                    continueOnCapturedContext,
-                                    cancellationToken
-                                )
-                                .ConfigureAwait(continueOnCapturedContext);
-
-                            if (producer is not ISupportPublishConfirmation && sent)
-                            {
-                                await ExecuteWithResiliencePipelineAsync(
-                                    async _ => await _asyncOutbox.MarkDispatchedAsync(
-                                        message.Id, requestContext, _timeProvider.GetUtcNow(),
-                                        cancellationToken: cancellationToken
-                                    ),
-                                    requestContext,
+                            await ExecuteWithResiliencePipelineAsync(
+                                async _ => await _asyncOutbox.MarkDispatchedAsync(
+                                    message.Id, requestContext, _timeProvider.GetUtcNow(),
                                     cancellationToken: cancellationToken
-                                );
-                            }
-
-                            dispatched = sent || producer is ISupportPublishConfirmation;
-
-                            if(!sent) TripTopic(message.Header.Topic);
-
+                                ),
+                                requestContext,
+                                cancellationToken: cancellationToken
+                            );
                         }
-                        else
-                            throw new InvalidOperationException("No async message producer defined.");
+
+                        if(!sent) TripTopic(message.Header.Topic);
                     }
-                    finally
-                    {
-                        if (!dispatched) RestoreProducerLookupTopic(message, savedProducerTopic);
-                    }
+                    else
+                        throw new InvalidOperationException("No async message producer defined.");
                 }
             }
             finally
