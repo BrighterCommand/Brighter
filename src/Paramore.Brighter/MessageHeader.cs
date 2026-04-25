@@ -92,7 +92,9 @@ namespace Paramore.Brighter
         /// Bag keys that are internal to Brighter — set by the framework so a downstream
         /// component (e.g. the outbox dispatcher) can read them, but not intended to travel
         /// over the wire. Transports that copy <see cref="Bag"/> into their wire format must
-        /// skip these keys (or call <see cref="StripLocalHeaders"/> on a copy of the header).
+        /// skip these keys: either filter inline (see ASB / RMQ / Kafka publishers) or
+        /// call <see cref="BagWithoutLocalHeaders"/> when serialising the bag in one go
+        /// (see SNS / SQS / Redis publishers).
         /// </summary>
         /// <remarks>
         /// Pre-populated with <see cref="Message.ProducerTopicHeaderName"/>. Add to this set
@@ -112,6 +114,23 @@ namespace Paramore.Brighter
         {
             foreach (var name in LocalHeaderNames)
                 Bag.Remove(name);
+        }
+
+        /// <summary>
+        /// Returns a new dictionary containing every <see cref="Bag"/> entry whose key
+        /// is not in <see cref="LocalHeaderNames"/>. For transports that serialise the
+        /// whole bag in one go (e.g. SNS/SQS/Redis emit it as a single JSON property),
+        /// pass this to the serialiser instead of <see cref="Bag"/> directly.
+        /// </summary>
+        public Dictionary<string, object> BagWithoutLocalHeaders()
+        {
+            var copy = new Dictionary<string, object>(Bag.Count);
+            foreach (var kv in Bag)
+            {
+                if (!LocalHeaderNames.Contains(kv.Key))
+                    copy[kv.Key] = kv.Value;
+            }
+            return copy;
         }
 
         /// <summary>
