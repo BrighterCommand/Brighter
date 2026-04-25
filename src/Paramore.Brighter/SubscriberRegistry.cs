@@ -36,10 +36,11 @@ namespace Paramore.Brighter
     /// The default implementation of <see cref="SubscriberRegistry"/> is usable in most instances 
     /// and this is provided for testing
     /// </summary>
-    public class SubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry,
+    public class SubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry, IAmASubscriberRegistryInspector,
         IEnumerable<KeyValuePair<Type, List<Func<IRequest?, IRequestContext?, List<Type>>>>>
     {
         private readonly Dictionary<Type, List<Func<IRequest?, IRequestContext?, List<Type>>>> _observers = new();
+        private readonly Dictionary<Type, HashSet<Type>> _allHandlerTypes = new();
         
         /// <summary>
         /// Adds a type to the registry, with a mapping to a single handler. We will add this to any existing handlers for this type
@@ -53,6 +54,11 @@ namespace Paramore.Brighter
                 _observers.Add(requestType, [(request, context) => [handlerType]] );
             else
                 observer.Add((request, context) => [handlerType]);
+
+            if (!_allHandlerTypes.TryGetValue(requestType, out var handlerTypes))
+                _allHandlerTypes[requestType] = [handlerType];
+            else
+                handlerTypes.Add(handlerType);
         }
 
         /// <summary>
@@ -68,6 +74,11 @@ namespace Paramore.Brighter
                 _observers.Add(requestType, [router] );
             else
                 observer.Add(router);
+
+            if (!_allHandlerTypes.TryGetValue(requestType, out var existingTypes))
+                _allHandlerTypes[requestType] = [..handlerTypes];
+            else
+                existingTypes.UnionWith(handlerTypes);
         }
 
         /// <summary>
@@ -151,6 +162,15 @@ namespace Paramore.Brighter
             Add(typeof(TRequest), router, handlerTypes);     
         }
         
+        /// <inheritdoc />
+        public IReadOnlyCollection<Type> GetHandlerTypes(Type requestType)
+        {
+            return _allHandlerTypes.TryGetValue(requestType, out var types) ? [..types] : [];
+        }
+
+        /// <inheritdoc />
+        public IReadOnlyCollection<Type> GetRegisteredRequestTypes() => [.._allHandlerTypes.Keys];
+
         /// <summary>
         /// Returns an enumerator that iterates through the collection.
         /// </summary>

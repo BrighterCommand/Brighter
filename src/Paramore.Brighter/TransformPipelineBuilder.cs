@@ -32,6 +32,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Validation;
 
 namespace Paramore.Brighter
 {
@@ -185,6 +186,40 @@ namespace Paramore.Brighter
             return transforms;
         }
 
+        /// <summary>
+        /// Describes the transform pipeline for a given request type using reflection only —
+        /// no mappers or transforms are instantiated. Uses <see cref="MessageMapperRegistry.ResolveMapperInfo"/>
+        /// and <see cref="MapperMethodDiscovery"/> to inspect attributes.
+        /// </summary>
+        /// <param name="mapperRegistry">The message mapper registry to resolve mapper types from.</param>
+        /// <param name="requestType">The request type to describe transforms for.</param>
+        /// <returns>A <see cref="TransformPipelineDescription"/>, or null if no mapper is registered.</returns>
+        public static TransformPipelineDescription? DescribeTransforms(
+            MessageMapperRegistry mapperRegistry, Type requestType)
+        {
+            var (mapperType, isDefault) = mapperRegistry.ResolveMapperInfo(requestType);
+            if (mapperType == null)
+                return null;
+
+            var mapToMessage = MapperMethodDiscovery.FindMapToMessage(mapperType, requestType);
+            var wrapTransforms = mapToMessage != null
+                ? mapToMessage.GetOtherWrapsInPipeline()
+                    .OrderByDescending(a => a.Step)
+                    .Select(a => new TransformStepDescription(a.GetType(), a.GetHandlerType(), a.Step))
+                    .ToList()
+                : new List<TransformStepDescription>();
+
+            var mapToRequest = MapperMethodDiscovery.FindMapToRequest(mapperType);
+            var unwrapTransforms = mapToRequest != null
+                ? mapToRequest.GetOtherUnwrapsInPipeline()
+                    .OrderByDescending(a => a.Step)
+                    .Select(a => new TransformStepDescription(a.GetType(), a.GetHandlerType(), a.Step))
+                    .ToList()
+                : new List<TransformStepDescription>();
+
+            return new TransformPipelineDescription(mapperType, isDefault, wrapTransforms, unwrapTransforms);
+        }
+
         public static void ClearPipelineCache()
         {
             s_wrapTransformsMemento.Clear();
@@ -229,30 +264,12 @@ namespace Paramore.Brighter
         }
 
         private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
-        {
-            return FindMethods(messageMapper)
-                .Where(method => method.Name == nameof(IAmAMessageMapper<TRequest>.MapToMessage))
-                .SingleOrDefault(
-                    method => method.GetParameters().Length == 2 
-                    && method.GetParameters().First().ParameterType == typeof(TRequest)
-                    && method.GetParameters().Last().ParameterType == typeof(Publication)
-                )!;
-        }
+            => MapperMethodDiscovery.FindMapToMessage(messageMapper.GetType(), typeof(TRequest))
+               ?? throw new ConfigurationException($"No MapToMessage method found on mapper '{messageMapper.GetType().Name}' for request type '{typeof(TRequest).Name}'");
 
         private MethodInfo FindMapToRequest<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
-        {
-            return FindMethods(messageMapper)
-                .Where(method => method.Name == nameof(IAmAMessageMapper<TRequest>.MapToRequest))
-                .SingleOrDefault(
-                    method => method.GetParameters().Length == 1 
-                    && method.GetParameters().Single().ParameterType == typeof(Message)
-                )!;
-        }
-
-        private static MethodInfo[] FindMethods<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
-        {
-            return messageMapper.GetType().GetMethods();
-        }
+            => MapperMethodDiscovery.FindMapToRequest(messageMapper.GetType())
+               ?? throw new ConfigurationException($"No MapToRequest method found on mapper '{messageMapper.GetType().Name}'");
 
         private TransformPipelineTracer TraceWrapPipeline<TRequest>(WrapPipeline<TRequest> pipeline) where TRequest : class, IRequest
         {

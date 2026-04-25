@@ -25,6 +25,14 @@
     <Project Path="samples/Scheduler/QuartzTaskQueue/GreetingsPumper/GreetingsPumper.csproj" />
     <Project Path="samples/Scheduler/QuartzTaskQueue/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
   </Folder>
+  <Folder Name="/samples/Scheduler/TickerQ/">
+    <File Path="samples/Scheduler/TickerQ/README.md" />
+    <Project Path="samples/Scheduler/TickerQ/Greeting.AppHost/Greeting.AppHost.csproj" />
+    <Project Path="samples/Scheduler/TickerQ/Greeting.Consumer/Greeting.Consumer.csproj" />
+    <Project Path="samples/Scheduler/TickerQ/Greeting.Models/Greeting.Models.csproj" />
+    <Project Path="samples/Scheduler/TickerQ/Greeting.Producer/Greeting.Producer.csproj" />
+    <Project Path="samples/Scheduler/TickerQ/Greeting.ServiceDefaults/Greeting.ServiceDefaults.csproj" />
+  </Folder>
   <Folder Name="/samples/TaskQueue/" />
   <Folder Name="/samples/TaskQueue/ASBTaskQueue/">
     <Project Path="samples/TaskQueue/ASBTaskQueue/Greetings/Greetings.csproj" />

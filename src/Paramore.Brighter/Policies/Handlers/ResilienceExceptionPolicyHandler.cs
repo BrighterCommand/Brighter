@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Policies.Handlers;
 /// of the target handler implemented by the client.
 /// </summary>
 /// <typeparam name="TRequest">The type of the t request.</typeparam>
-public class ResilienceExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
+public class ResilienceExceptionPolicyHandler<TRequest> : RequestHandler<TRequest>, IAmAResilienceHandler where TRequest : class, IRequest
 {
     private bool _initialized;
     private ResiliencePipeline _pipeline = ResiliencePipeline.Empty;

@@ -19,8 +19,8 @@ $ARGUMENTS
 **Your task:** Write a test that specifies the desired behavior, following the guidelines in [.agent_instructions/testing.md](../../../.agent_instructions/testing.md).
 
 **Test Requirements:**
-1. **Naming Convention**: `When_[condition]_should_[expected_behavior]`
-2. **File Structure**: One test per file: `When_[condition]_should_[expected_behavior].cs`
+1. **Naming Convention**: Method names use `When_[condition]_should_[expected_behavior]`. Class names use `[Behavior]Tests` — never use `When_` for class names.
+2. **File Structure**: One test per file: `When_[condition]_should_[expected_behavior].cs`. If multiple tests share a file, name the file after the happy path test.
 3. **Test Structure**: Use Arrange/Act/Assert with explicit comments
 4. **Evident Data**: Highlight only the data that impacts the test outcome
 5. **Test Exports Only**: Test public methods on public classes only

@@ -213,25 +213,12 @@ namespace Paramore.Brighter
         }
 
         private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapperAsync<TRequest> messageMapper) where TRequest : class, IRequest
-        {
-            return messageMapper.GetType().GetMethod(nameof(IAmAMessageMapperAsync<TRequest>.MapToMessageAsync),
-                BindingFlags.Public | BindingFlags.Instance,
-                null,
-                CallingConventions.Any,
-                new Type[] { typeof(TRequest), typeof(Publication), typeof(CancellationToken) },
-                null)!;
-        }
-
+            => MapperMethodDiscovery.FindMapToMessageAsync(messageMapper.GetType(), typeof(TRequest))
+               ?? throw new ConfigurationException($"No MapToMessageAsync method found on mapper '{messageMapper.GetType().Name}' for request type '{typeof(TRequest).Name}'");
 
         private MethodInfo FindMapToRequest<TRequest>(IAmAMessageMapperAsync<TRequest> messageMapper) where TRequest : class, IRequest
-        {
-            return messageMapper.GetType().GetMethod(nameof(IAmAMessageMapperAsync<TRequest>.MapToRequestAsync),
-                BindingFlags.Public | BindingFlags.Instance,
-                null,
-                CallingConventions.Any,
-                new Type[] { typeof(Message), typeof(CancellationToken) },
-                null)!;
-        }
+            => MapperMethodDiscovery.FindMapToRequestAsync(messageMapper.GetType())
+               ?? throw new ConfigurationException($"No MapToRequestAsync method found on mapper '{messageMapper.GetType().Name}'");
 
         private TransformPipelineTracer TraceWrapPipeline<TRequest>(WrapPipelineAsync<TRequest> pipeline) where TRequest : class, IRequest
         {
