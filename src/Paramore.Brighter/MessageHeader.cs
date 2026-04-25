@@ -135,18 +135,6 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Removes every local-header entry (see <see cref="IsLocalHeader"/>) from
-        /// <see cref="Bag"/>. Call on a wire-bound copy of the header to ensure
-        /// local-only bag entries are not serialised onto the transport.
-        /// </summary>
-        public void StripLocalHeaders()
-        {
-            var locals = Volatile.Read(ref s_localHeaderNames);
-            foreach (var name in locals)
-                Bag.Remove(name);
-        }
-
-        /// <summary>
         /// Returns a new dictionary containing every <see cref="Bag"/> entry whose key
         /// is not a local header (see <see cref="IsLocalHeader"/>). For transports that
         /// serialise the whole bag in one go (e.g. SNS/SQS/Redis emit it as a single JSON

@@ -2,10 +2,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
-public class MessageHeaderStripLocalHeadersTests
+public class MessageHeaderLocalHeadersTests
 {
     [Fact]
-    public void When_Stripping_Local_Headers_The_ProducerTopic_Bag_Entry_Is_Removed_And_Other_Entries_Survive()
+    public void When_BagWithoutLocalHeaders_Removes_Local_Entries_And_Other_Entries_Survive()
     {
         var header = new MessageHeader(
             messageId: "id-1",
@@ -14,14 +14,16 @@ public class MessageHeaderStripLocalHeadersTests
         header.Bag[Message.ProducerTopicHeaderName] = "lookup.topic";
         header.Bag["user.key"] = "user.value";
 
-        header.StripLocalHeaders();
+        var wireBag = header.BagWithoutLocalHeaders();
 
-        Assert.False(header.Bag.ContainsKey(Message.ProducerTopicHeaderName));
-        Assert.True(header.Bag.ContainsKey("user.key"));
+        Assert.False(wireBag.ContainsKey(Message.ProducerTopicHeaderName));
+        Assert.True(wireBag.ContainsKey("user.key"));
+        // original is untouched — InMemoryOutbox-by-reference keeps the local entry for retries
+        Assert.True(header.Bag.ContainsKey(Message.ProducerTopicHeaderName));
     }
 
     [Fact]
-    public void When_Stripping_Local_Headers_With_No_Local_Bag_Entries_Then_The_Bag_Is_Unchanged()
+    public void When_BagWithoutLocalHeaders_With_No_Local_Entries_Returns_Equivalent_Copy()
     {
         var header = new MessageHeader(
             messageId: "id-2",
@@ -29,10 +31,10 @@ public class MessageHeaderStripLocalHeadersTests
             messageType: MessageType.MT_EVENT);
         header.Bag["user.key"] = "user.value";
 
-        header.StripLocalHeaders();
+        var wireBag = header.BagWithoutLocalHeaders();
 
-        Assert.Single(header.Bag);
-        Assert.Equal("user.value", header.Bag["user.key"]);
+        Assert.Single(wireBag);
+        Assert.Equal("user.value", wireBag["user.key"]);
     }
 
     [Fact]
@@ -44,7 +46,7 @@ public class MessageHeaderStripLocalHeadersTests
     [Fact]
     public void When_RegisterLocalHeader_Adds_A_Custom_Key_It_Is_Recognised_And_Is_Idempotent()
     {
-        const string customKey = "custom.local.header." + nameof(MessageHeaderStripLocalHeadersTests);
+        const string customKey = "custom.local.header." + nameof(MessageHeaderLocalHeadersTests);
 
         MessageHeader.RegisterLocalHeader(customKey);
         MessageHeader.RegisterLocalHeader(customKey); // idempotent
