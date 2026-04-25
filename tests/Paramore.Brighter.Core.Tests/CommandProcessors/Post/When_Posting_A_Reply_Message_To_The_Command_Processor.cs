@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             //assert - the ProducerTopic bag entry survives dispatch so an InMemoryOutbox
             //(which holds the message by reference) keeps the producer hint for retries.
-            //Wire-format stripping is the transport's responsibility (see MessageHeader.LocalHeaderNames).
+            //Wire-format stripping is the transport's responsibility (see MessageHeader.IsLocalHeader).
             Assert.True(messages[0].Header.Bag.ContainsKey(Message.ProducerTopicHeaderName));
         }
     }

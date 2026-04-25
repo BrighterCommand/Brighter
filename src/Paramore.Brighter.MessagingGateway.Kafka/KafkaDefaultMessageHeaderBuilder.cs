@@ -114,7 +114,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             message.Header.Bag
                 .Where(x => !BrighterDefinedHeaders.HeadersToReset.Contains(x.Key)
-                            && !MessageHeader.LocalHeaderNames.Contains(x.Key))
+                            && !MessageHeader.IsLocalHeader(x.Key))
                 .Each(header => AddUserDefinedBagHeader(headers, header.Key, header.Value));
         }
 

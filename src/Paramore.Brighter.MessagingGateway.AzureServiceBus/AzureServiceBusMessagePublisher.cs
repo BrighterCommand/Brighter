@@ -64,7 +64,7 @@ public class AzureServiceBusMessagePublisher
 
         foreach (var header in message.Header.Bag.Where(h =>
                      !ASBConstants.ReservedHeaders.Contains(h.Key)
-                     && !MessageHeader.LocalHeaderNames.Contains(h.Key)))
+                     && !MessageHeader.IsLocalHeader(h.Key)))
         {
             azureServiceBusMessage.ApplicationProperties[header.Key] = header.Value;
         }

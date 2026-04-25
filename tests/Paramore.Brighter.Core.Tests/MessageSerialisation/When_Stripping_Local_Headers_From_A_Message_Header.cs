@@ -36,8 +36,31 @@ public class MessageHeaderStripLocalHeadersTests
     }
 
     [Fact]
-    public void When_The_Producer_Topic_Header_Name_Is_In_The_Local_Header_Names_Set()
+    public void When_The_Producer_Topic_Header_Name_Is_A_Local_Header()
     {
-        Assert.Contains(Message.ProducerTopicHeaderName, MessageHeader.LocalHeaderNames);
+        Assert.True(MessageHeader.IsLocalHeader(Message.ProducerTopicHeaderName));
+    }
+
+    [Fact]
+    public void When_RegisterLocalHeader_Adds_A_Custom_Key_It_Is_Recognised_And_Is_Idempotent()
+    {
+        const string customKey = "custom.local.header." + nameof(MessageHeaderStripLocalHeadersTests);
+
+        MessageHeader.RegisterLocalHeader(customKey);
+        MessageHeader.RegisterLocalHeader(customKey); // idempotent
+
+        Assert.True(MessageHeader.IsLocalHeader(customKey));
+
+        var header = new MessageHeader(
+            messageId: "id-3",
+            topic: new RoutingKey("a.topic"),
+            messageType: MessageType.MT_COMMAND);
+        header.Bag[customKey] = "value";
+        header.Bag["user.key"] = "user.value";
+
+        var wireBag = header.BagWithoutLocalHeaders();
+
+        Assert.False(wireBag.ContainsKey(customKey));
+        Assert.True(wireBag.ContainsKey("user.key"));
     }
 }
