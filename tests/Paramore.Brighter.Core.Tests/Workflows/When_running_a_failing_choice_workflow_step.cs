@@ -93,7 +93,8 @@ public class MediatorFailingChoiceFlowTests
 
         try
         {
-            _runner.RunAsync(ct.Token);
+            _ = _runner.RunAsync(ct.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
         }
         catch (Exception e)
         {

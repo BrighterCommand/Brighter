@@ -87,13 +87,14 @@ public class MediatorParallelSplitFlowTests
 
         try
         {
-            _runner.RunAsync(ct.Token);
+            _ = _runner.RunAsync(ct.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
         }
         catch (Exception e)
         {
             _testOutputHelper.WriteLine(e.ToString());
         }
-        
+
         Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "Test");
         Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "TestTwo");
         Assert.True(_firstBranchFinished);

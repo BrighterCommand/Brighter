@@ -70,14 +70,15 @@ public class MediatorChangeStepFlowTests
         ct.CancelAfter( TimeSpan.FromSeconds(1) );
         try
         {
-            _runner.RunAsync(ct.Token);
+            _ = _runner.RunAsync(ct.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
         }
         catch (Exception ex)
         {
             // swallow the exception, we expect it to be cancelled
             _testOutputHelper.WriteLine(ex.ToString());
         }
-        
+
         Assert.Equal(JobState.Done, _job.State);
         Assert.True(_stepCompleted);
         Assert.Equal("Altered", _job.Data.Bag["MyValue"]);

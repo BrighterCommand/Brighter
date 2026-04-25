@@ -84,13 +84,14 @@ public class MediatorReplyMultiStepFlowTests
 
         try
         {
-            _runner.RunAsync(ct.Token);
+            _ = _runner.RunAsync(ct.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
         }
         catch (Exception e)
         {
             _testOutputHelper.WriteLine(e.ToString());
         }
-        
+
         Assert.True(_stepCompletedOne);
         Assert.True(_stepCompletedTwo);
 

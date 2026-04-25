@@ -76,10 +76,10 @@ public class MediatorWaitStepFlowTests
             
             _timeProvider.Advance(TimeSpan.FromMilliseconds(1000));
             
-            _runner.RunAsync(ct.Token);
-            _waker.RunAsync(ct.Token);
+            _ = _runner.RunAsync(ct.Token);
+            _ = _waker.RunAsync(ct.Token);
 
-            await Task.Delay(5, ct.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(500), ct.Token);
 
         }
         catch (Exception e)
