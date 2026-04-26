@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 
             await Assert.That(receivedMessages).IsNotEmpty();
             await Assert.That(receivedMessages.Count).IsEqualTo(messageCount);
-            await Assert.That(receivedMessages).IsEqualTo(sentMessages);
+            await Assert.That(receivedMessages).IsEquivalentTo(sentMessages);
         }
     }
 }

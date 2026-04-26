@@ -165,6 +165,9 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles
                 Outbox);
 
             var builder = WebApplication.CreateBuilder();
+            // Ephemeral port — tests don't make HTTP calls; default :5000 collides under
+            // CI when other listeners or sibling test hosts are present.
+            builder.WebHost.UseSetting("urls", "http://127.0.0.1:0");
             builder.Services.AddTickerQ(options =>
             {
                 options.ConfigureScheduler(s =>
