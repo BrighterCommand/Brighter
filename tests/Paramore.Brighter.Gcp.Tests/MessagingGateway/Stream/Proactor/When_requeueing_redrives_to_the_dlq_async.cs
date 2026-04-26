@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -11,8 +11,8 @@ using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetter
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Proactor;
 
-[Trait("Category", "GCP")]
-[Trait("Fragile", "CI")]
+[Category("GCP")]
+[Property("Fragile", "CI")]
 public class MessageProducerDlqTestsAsync : IDisposable
 {
     private const int MaxDeliveryAttempts = 5;
@@ -66,7 +66,7 @@ public class MessageProducerDlqTestsAsync : IDisposable
         _channel = _channelFactory.CreateAsyncChannel(_pubSubSubscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeueing_redrives_to_the_queue_async()
     {
         await _sender.SendAsync(_message);
@@ -77,7 +77,7 @@ public class MessageProducerDlqTestsAsync : IDisposable
         }
         
         int dlqCount = await GetDLQCountAsync();
-        Assert.True(dlqCount >= 1);
+        await Assert.That(dlqCount >= 1).IsTrue();
     }
 
     private async Task<int> GetDLQCountAsync()

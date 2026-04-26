@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -15,12 +15,10 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Clear;
-
-[Collection("Observability")]
-public class CommandProcessorClearOutstandingObservabilityTests 
+[NotInParallel]
+public class CommandProcessorClearOutstandingObservabilityTests
 {
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
@@ -28,155 +26,94 @@ public class CommandProcessorClearOutstandingObservabilityTests
     private readonly string _topic;
     private readonly InternalBus _internalBus = new();
     private readonly IAmAnOutboxProducerMediator _mediator;
-
     public CommandProcessorClearOutstandingObservabilityTests()
     {
         _topic = "MyEvent";
-        
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
-
-        _traceProvider = builder
-            .AddSource("Paramore.Brighter.Tests", "Paramore.Brighter")
-            .ConfigureResource(r => r.AddService("in-memory-tracer"))
-            .AddInMemoryExporter(_exportedActivities)
-            .Build();
-        
-        
+        _traceProvider = builder.AddSource("Paramore.Brighter.Tests", "Paramore.Brighter").ConfigureResource(r => r.AddService("in-memory-tracer")).AddInMemoryExporter(_exportedActivities).Build();
         var registry = new SubscriberRegistry();
-
-        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
-        
-        var retryPolicy = Policy
-            .Handle<Exception>()
-            .Retry();
-        
-        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
-
-        var timeProvider  = new FakeTimeProvider();
-        var tracer = new BrighterTracer(timeProvider);
-        InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
-        
-        var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-            null);
-        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-
-        var routingKey = new RoutingKey(_topic);
-        
-        InMemoryMessageProducer messageProducer = new(_internalBus, 
-            new Publication 
-            {
-                Source = new Uri("http://localhost"),
-                RequestType = typeof(MyEvent),
-                Topic = routingKey,
-                Type = new CloudEventsType("io.goparamore.brighter.myevent"),
-            });
-
-        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
+        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync();
+        var retryPolicy = Policy.Handle<Exception>().Retry();
+        var policyRegistry = new PolicyRegistry
         {
-            {routingKey, messageProducer}
-        });
-        
-        _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
-            messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), 
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
-            maxOutStandingMessages: -1
-        );
-        
-        _commandProcessor = new Brighter.CommandProcessor(
-            registry, 
-            handlerFactory, 
-            new InMemoryRequestContextFactory(),
-            policyRegistry, 
-            new ResiliencePipelineRegistry<string>(),
-            _mediator,
-            new InMemorySchedulerFactory(),
-            tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            {
+                Brighter.CommandProcessor.RETRYPOLICY,
+                retryPolicy
+            }
+        };
+        var timeProvider = new FakeTimeProvider();
+        var tracer = new BrighterTracer(timeProvider);
+        InMemoryOutbox outbox = new(timeProvider)
+        {
+            Tracer = tracer
+        };
+        var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()), null);
+        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+        var routingKey = new RoutingKey(_topic);
+        InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Source = new Uri("http://localhost"), RequestType = typeof(MyEvent), Topic = routingKey, Type = new CloudEventsType("io.goparamore.brighter.myevent"), });
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, messageProducer } });
+        _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(producerRegistry, new ResiliencePipelineRegistry<string>().AddBrighterDefault(), messageMapperRegistry, new EmptyMessageTransformerFactory(), new EmptyMessageTransformerFactoryAsync(), tracer, new FindPublicationByPublicationTopicOrRequestType(), outbox, maxOutStandingMessages: -1);
+        _commandProcessor = new Brighter.CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new ResiliencePipelineRegistry<string>(), _mediator, new InMemorySchedulerFactory(), tracer: tracer, instrumentationOptions: InstrumentationOptions.All);
     }
-    
-    [Fact(Skip = "This test is fragile due to background processing")]
-    //[Fact]
+
+    [Test, Skip("This test is fragile due to background processing")]
+    //[Test]
     public async Task When_Clearing_Outstanding_Messages_Spans_Are_Exported()
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
-        
         var eventOne = new MyEvent();
         var eventTwo = new MyEvent();
         var eventThree = new MyEvent();
-
-        var context = new RequestContext { Span = parentActivity };
-
+        var context = new RequestContext
+        {
+            Span = parentActivity
+        };
         //act
         _commandProcessor.DepositPost([eventOne, eventTwo, eventThree], context);
-        
         //reset the parent span as deposit and clear are siblings
-        
         context.Span = parentActivity;
         await _mediator.ClearOutstandingFromOutboxAsync(3, TimeSpan.Zero, false, context);
-
-        await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
-        
+        await Task.Delay(3000); //allow bulk clear to run -- can make test fragile
         parentActivity?.Stop();
-        
         _traceProvider.ForceFlush();
-        
         //assert 
         //_exportedActivities.Count.Should().Be(18);
-        Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
-        
+        await Assert.That(_exportedActivities).Contains(a => a.Source.Name == "Paramore.Brighter");
         //there should be a create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
-        Assert.NotNull(createActivity);
-        
+        await Assert.That(createActivity).IsNotNull();
         //there should be a clear span for the batch of messages
         var clearActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
-        
         //retrieving the messages should be an event
         var events = clearActivity.Events.ToList();
         var messages = _internalBus.Stream(new RoutingKey(_topic)).ToArray();
-        
         var depositEvents = events.Where(e => e.Name == BoxDbOperation.OutStandingMessages.ToSpanName()).ToArray();
-        Assert.Equal(messages.Length, depositEvents.Length);
-        
+        await Assert.That(depositEvents.Length).IsEqualTo(messages.Length);
         foreach (var message in messages)
         {
             var depositEvent = depositEvents.Single(e => e.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id));
-            Assert.Contains(depositEvent.Tags, a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false);
-            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.OutboxType && (string)a.Value == "sync");
-            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id);
-            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestination && (string)a.Value == message.Header.Topic);
-            Assert.Contains(depositEvent.Tags, a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length);
-            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageBody && (string)a.Value == message.Body.Value);
-            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageType && (string)a.Value == message.Header.MessageType.ToString());
-            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)a.Value == message.Header.PartitionKey);
-            Assert.Contains(depositEvent.Tags, a => a.Key == BrighterSemanticConventions.MessageHeaders && (string)a.Value == JsonSerializer.Serialize(message.Header));
+            await Assert.That(depositEvent.Tags).Contains(a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false);
+            await Assert.That(depositEvent.Tags).Contains(a => a.Key == BrighterSemanticConventions.OutboxType && (string)a.Value == "sync");
+            await Assert.That(depositEvent.Tags).Contains(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id);
+            await Assert.That(depositEvent.Tags).Contains(a => a.Key == BrighterSemanticConventions.MessagingDestination && (string)a.Value == message.Header.Topic);
+            await Assert.That(depositEvent.Tags).Contains(a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length);
+            await Assert.That(depositEvent.Tags).Contains(a => a.Key == BrighterSemanticConventions.MessageBody && (string)a.Value == message.Body.Value);
+            await Assert.That(depositEvent.Tags).Contains(a => a.Key == BrighterSemanticConventions.MessageType && (string)a.Value == message.Header.MessageType.ToString());
+            await Assert.That(depositEvent.Tags).Contains(a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)a.Value == message.Header.PartitionKey);
+            await Assert.That(depositEvent.Tags).Contains(a => a.Key == BrighterSemanticConventions.MessageHeaders && (string)a.Value == JsonSerializer.Serialize(message.Header));
         }
 
         //there should be a span in the Db for retrieving the message
-        var outBoxActivity = _exportedActivities
-            .Single(a =>
-                a.DisplayName == $"{BoxDbOperation.OutStandingMessages.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}"
-            );
-        Assert.Contains(outBoxActivity.Tags, t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.OutStandingMessages.ToSpanName());
-        Assert.Contains(outBoxActivity.Tags, t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable);
-        Assert.Contains(outBoxActivity.Tags, t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName());
-        Assert.Contains(outBoxActivity.Tags, t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName);
-
+        var outBoxActivity = _exportedActivities.Single(a => a.DisplayName == $"{BoxDbOperation.OutStandingMessages.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
+        await Assert.That(outBoxActivity.Tags).Contains(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.OutStandingMessages.ToSpanName());
+        await Assert.That(outBoxActivity.Tags).Contains(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable);
+        await Assert.That(outBoxActivity.Tags).Contains(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName());
+        await Assert.That(outBoxActivity.Tags).Contains(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName);
         //there should be a span for publishing the message via the producer
-        var producerActivity = _exportedActivities
-            .Single(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
-        
+        var producerActivity = _exportedActivities.Single(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
         var producerEvents = producerActivity.Events.ToArray();
-        Assert.Equal(3, producerEvents.Length);   
+        await Assert.That(producerEvents.Length).IsEqualTo(3);
     }
 }

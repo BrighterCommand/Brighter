@@ -1,129 +1,105 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Transactions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Archiving;
-
 public class ServiceBusMessageStoreArchiverTests
 {
     private readonly InMemoryOutbox _outbox;
     private readonly InMemoryArchiveProvider _archiveProvider;
     private readonly FakeTimeProvider _timeProvider;
     private readonly RoutingKey _routingKey = new("MyTopic");
-    private readonly OutboxArchiver<Message,CommittableTransaction> _archiver;
-
+    private readonly OutboxArchiver<Message, CommittableTransaction> _archiver;
     public ServiceBusMessageStoreArchiverTests()
     {
         _timeProvider = new FakeTimeProvider();
-
         var tracer = new BrighterTracer();
-        _outbox = new InMemoryOutbox(_timeProvider){Tracer = tracer, EntryTimeToLive = TimeSpan.FromMinutes(30)};
+        _outbox = new InMemoryOutbox(_timeProvider)
+        {
+            Tracer = tracer,
+            EntryTimeToLive = TimeSpan.FromMinutes(30)
+        };
         _archiveProvider = new InMemoryArchiveProvider();
-
-        _archiver = new OutboxArchiver<Message, CommittableTransaction>(
-            _outbox,
-            _archiveProvider
-        );
-
+        _archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, _archiveProvider);
     }
 
-    [Fact]
-    public void When_Archiving_All_Messages_From_The_Outbox()
+    [Test]
+    public async Task When_Archiving_All_Messages_From_The_Outbox()
     {
         //arrange
         var context = new RequestContext();
-
         var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageOne, context);
-        _outbox.MarkDispatched(messageOne.Id, context);
-
+        await _outbox.AddAsync(messageOne, context);
+        await _outbox.MarkDispatchedAsync(messageOne.Id, context);
         var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageTwo, context);
-        _outbox.MarkDispatched(messageTwo.Id, context);
-
+        await _outbox.AddAsync(messageTwo, context);
+        await _outbox.MarkDispatchedAsync(messageTwo.Id, context);
         var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageThree, context);
-        _outbox.MarkDispatched(messageThree.Id, context);
-
+        await _outbox.AddAsync(messageThree, context);
+        await _outbox.MarkDispatchedAsync(messageThree.Id, context);
         //act
-        Assert.Equal(3, _outbox.EntryCount);
-
+        await Assert.That(_outbox.EntryCount).IsEqualTo(3);
         _timeProvider.Advance(TimeSpan.FromMinutes(15));
-
-        _archiver.Archive(TimeSpan.FromMilliseconds(500), context);
-
+        await _archiver.ArchiveAsync(TimeSpan.FromMilliseconds(500), context);
         //assert
-        Assert.Equal(0, _outbox.EntryCount);
-        Assert.Contains(new KeyValuePair<string, Message>(messageOne.Id, messageOne), _archiveProvider.ArchivedMessages);
-        Assert.Contains(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo), _archiveProvider.ArchivedMessages);
-        Assert.Contains(new KeyValuePair<string, Message>(messageThree.Id, messageThree), _archiveProvider.ArchivedMessages);
+        await Assert.That(_outbox.EntryCount).IsEqualTo(0);
+        await Assert.That(_archiveProvider.ArchivedMessages).Contains(new KeyValuePair<string, Message>(messageOne.Id, messageOne));
+        await Assert.That(_archiveProvider.ArchivedMessages).Contains(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo));
+        await Assert.That(_archiveProvider.ArchivedMessages).Contains(new KeyValuePair<string, Message>(messageThree.Id, messageThree));
     }
 
-    [Fact]
-    public void When_Archiving_Some_Messages_From_The_Outbox()
+    [Test]
+    public async Task When_Archiving_Some_Messages_From_The_Outbox()
     {
         //arrange
         var context = new RequestContext();
         var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageOne, context);
-        _outbox.MarkDispatched(messageOne.Id, context);
-
+        await _outbox.AddAsync(messageOne, context);
+        await _outbox.MarkDispatchedAsync(messageOne.Id, context);
         var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageTwo, context);
-        _outbox.MarkDispatched(messageTwo.Id, context);
-
+        await _outbox.AddAsync(messageTwo, context);
+        await _outbox.MarkDispatchedAsync(messageTwo.Id, context);
         var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageThree, context);
-
+        await _outbox.AddAsync(messageThree, context);
         //act
-        Assert.Equal(3, _outbox.EntryCount);
-
+        await Assert.That(_outbox.EntryCount).IsEqualTo(3);
         _timeProvider.Advance(TimeSpan.FromSeconds(30));
-
-        _archiver.Archive(TimeSpan.FromSeconds(30), context);
-
+        await _archiver.ArchiveAsync(TimeSpan.FromSeconds(30), context);
         //assert
-        Assert.Equal(1, _outbox.EntryCount);
-        Assert.Contains(new KeyValuePair<string, Message>(messageOne.Id, messageOne), _archiveProvider.ArchivedMessages);
-        Assert.Contains(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo), _archiveProvider.ArchivedMessages);
-        Assert.DoesNotContain(new KeyValuePair<string, Message>(messageThree.Id, messageThree), _archiveProvider.ArchivedMessages);
+        await Assert.That(_outbox.EntryCount).IsEqualTo(1);
+        await Assert.That(_archiveProvider.ArchivedMessages).Contains(new KeyValuePair<string, Message>(messageOne.Id, messageOne));
+        await Assert.That(_archiveProvider.ArchivedMessages).Contains(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo));
+        await Assert.That(_archiveProvider.ArchivedMessages).DoesNotContain(new KeyValuePair<string, Message>(messageThree.Id, messageThree));
     }
 
-    [Fact]
-    public void When_Archiving_No_Messages_From_The_Outbox()
+    [Test]
+    public async Task When_Archiving_No_Messages_From_The_Outbox()
     {
         var context = new RequestContext();
         var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageOne, context);
-
+        await _outbox.AddAsync(messageOne, context);
         var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageTwo, context);
-
+        await _outbox.AddAsync(messageTwo, context);
         var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageThree, context);
-
+        await _outbox.AddAsync(messageThree, context);
         //act
-        Assert.Equal(3, _outbox.EntryCount);
-
-        _archiver.Archive(TimeSpan.FromMilliseconds(20000), context);
-
+        await Assert.That(_outbox.EntryCount).IsEqualTo(3);
+        await _archiver.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context);
         //assert
-        Assert.Equal(3, _outbox.EntryCount);
-        Assert.DoesNotContain(new KeyValuePair<string, Message>(messageOne.Id, messageOne), _archiveProvider.ArchivedMessages);
-        Assert.DoesNotContain(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo), _archiveProvider.ArchivedMessages);
-        Assert.DoesNotContain(new KeyValuePair<string, Message>(messageThree.Id, messageThree), _archiveProvider.ArchivedMessages);
+        await Assert.That(_outbox.EntryCount).IsEqualTo(3);
+        await Assert.That(_archiveProvider.ArchivedMessages).DoesNotContain(new KeyValuePair<string, Message>(messageOne.Id, messageOne));
+        await Assert.That(_archiveProvider.ArchivedMessages).DoesNotContain(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo));
+        await Assert.That(_archiveProvider.ArchivedMessages).DoesNotContain(new KeyValuePair<string, Message>(messageThree.Id, messageThree));
     }
 
-    [Fact]
-    public void When_Archiving_An_Empty_The_Outbox()
+    [Test]
+    public async Task When_Archiving_An_Empty_The_Outbox()
     {
         var context = new RequestContext();
-        _archiver.Archive(TimeSpan.FromMilliseconds(20000), context);
-
+        await _archiver.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context);
         //assert
-        Assert.Equal(0, _outbox.EntryCount);
+        await Assert.That(_outbox.EntryCount).IsEqualTo(0);
     }
 }

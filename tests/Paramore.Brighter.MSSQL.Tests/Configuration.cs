@@ -10,6 +10,7 @@ public static class Configuration
     public const string TablePrefix = "Table";
 
     private static bool s_databaseCreated;
+    private static readonly object s_databaseLock = new();
     private static readonly SemaphoreSlim s_semaphoreSlim = new(1, 1);
     
     public static void EnsureDatabaseExists(string connectionString)
@@ -19,8 +20,7 @@ public static class Configuration
             return;
         }
         
-        s_semaphoreSlim.Wait();
-        try
+        lock (s_databaseLock)
         {
             if (s_databaseCreated)
             {
@@ -43,11 +43,7 @@ public static class Configuration
                  END;
                  """;
             command.ExecuteNonQuery();
-        }
-        finally
-        {
             s_databaseCreated = true;
-            s_semaphoreSlim.Release();
         }
     }
     

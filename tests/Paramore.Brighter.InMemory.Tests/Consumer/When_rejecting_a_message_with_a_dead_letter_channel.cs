@@ -1,15 +1,14 @@
-﻿using System;
+using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
 public class InMemoryConsumerRejectWithDeadLetterTests 
 {
-    [Fact]
-    public void When_rejecting_a_message_with_a_dead_letter_channel()
+    [Test]
+    public async Task When_rejecting_a_message_with_a_dead_letter_channel()
     {
         //arrange
         const string myTopic = "my topic";
@@ -34,7 +33,7 @@ public class InMemoryConsumerRejectWithDeadLetterTests
         timeProvider.Advance(TimeSpan.FromSeconds(2));  //-- the message should be returned to the bus if there is no Acknowledge or Reject
         
         //assert
-        Assert.Empty(bus.Stream(routingKey)); 
-        Assert.NotEmpty(bus.Stream(deadLetterRoutingKey));
+        await Assert.That(bus.Stream(routingKey)).IsEmpty();
+        await Assert.That(bus.Stream(deadLetterRoutingKey)).IsNotEmpty();
     }
 }

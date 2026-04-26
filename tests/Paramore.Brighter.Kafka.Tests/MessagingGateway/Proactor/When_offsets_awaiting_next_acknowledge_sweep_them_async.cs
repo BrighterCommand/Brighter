@@ -1,29 +1,25 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposable
+[Category("Kafka")]
+public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
-    private readonly IAmAProducerRegistry _producerRegistry;
-    private readonly KafkaMessageConsumer _consumer;
+    private IAmAProducerRegistry _producerRegistry;
+    private KafkaMessageConsumer _consumer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaMessageConsumerSweepOffsetsAsync(ITestOutputHelper output)
+    [Before(Test)]
+    public async Task Setup()
     {
         string groupId = Guid.NewGuid().ToString();
-        _output = output;
-        _producerRegistry = new KafkaProducerRegistryFactory(
+        _producerRegistry = await new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
                 Name = "Kafka Producer Send Test",
@@ -41,7 +37,7 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).CreateAsync().Result;
+            ]).CreateAsync();
 
         _consumer = (KafkaMessageConsumer) new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -59,8 +55,8 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                     numOfPartitions: 1, replicationFactor: 1, makeChannels: OnMissingChannel.Create));
     }
 
-    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
-    [Fact]
+    //[Test, Skip("As it has to wait for the messages to flush, only tends to run well in debug")]
+    [Test]
     public async Task When_a_message_is_acknowledged_but_no_batch_sent_sweep_offsets()
     {
         //allow time for topic to propogate
@@ -93,7 +89,7 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
             consumedMessages.Add(await ReadMessageAsync());
         }
 
-        Assert.Equal(9, consumedMessages.Count);
+        await Assert.That(consumedMessages.Count).IsEqualTo(9);
 
         //Let time elapse with no activity
         await Task.Delay(10000);
@@ -110,7 +106,7 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
         }
 
         //Sweeper will commit these
-        Assert.Equal(0,_consumer.StoredOffsets());
+        await Assert.That(_consumer.StoredOffsets()).IsEqualTo(0);
 
        _consumer.Close();
        return;
@@ -140,7 +136,7 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                 catch (ChannelFailureException cfx)
                 {
                     //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
-                    _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                    Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                     await Task.Delay(1000);
                 }
             } while (maxTries <= 10);
@@ -149,10 +145,11 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
         }
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         _producerRegistry?.Dispose();
-        _consumer.Dispose();
+        await _consumer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -161,3 +158,4 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
         await _consumer.DisposeAsync();
     }
 }
+

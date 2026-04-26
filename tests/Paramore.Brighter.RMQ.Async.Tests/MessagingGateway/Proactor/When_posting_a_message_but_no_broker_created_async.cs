@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
@@ -27,7 +26,7 @@ public class RmqBrokerNotPreCreatedTestsAsync : IDisposable
 
     }
         
-    [Fact]
+    [Test]
     public async Task When_posting_a_message_but_no_broker_created()
     {
         bool exceptionHappened = false;
@@ -40,7 +39,7 @@ public class RmqBrokerNotPreCreatedTestsAsync : IDisposable
             exceptionHappened = true;
         }
             
-        Assert.True(exceptionHappened);
+        await Assert.That(exceptionHappened).IsTrue();
     }
 
     public void Dispose()

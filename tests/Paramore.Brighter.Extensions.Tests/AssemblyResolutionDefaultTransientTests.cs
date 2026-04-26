@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
@@ -9,7 +9,6 @@ using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Tests;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests
 {
@@ -27,61 +26,61 @@ namespace Paramore.Brighter.Extensions.Tests
             _provider = _services.BuildServiceProvider();
         }
 
-        [Fact]
-        public void ShouldHaveCommandProcessorRegisteredCorrectly()
+        [Test]
+        public async Task ShouldHaveCommandProcessorRegisteredCorrectly()
         {
-            TestRegistration(typeof(IAmACommandProcessor), ServiceLifetime.Singleton);
+            await TestRegistration(typeof(IAmACommandProcessor), ServiceLifetime.Singleton);
         }
 
-        [Fact]
-        public void ShouldHaveServiceActivatorRegisteredCorrectly()
+        [Test]
+        public async Task ShouldHaveServiceActivatorRegisteredCorrectly()
         {
-            TestRegistration(typeof(IDispatcher), ServiceLifetime.Singleton);
+            await TestRegistration(typeof(IDispatcher), ServiceLifetime.Singleton);
         }
 
-        [Fact]
-        public void ShouldHaveTestHandlerRegisteredCorrectly()
+        [Test]
+        public async Task ShouldHaveTestHandlerRegisteredCorrectly()
         {
-            TestRegistration(typeof(TestEventHandler), ServiceLifetime.Transient);
+            await TestRegistration(typeof(TestEventHandler), ServiceLifetime.Transient);
         }
 
-        [Fact]
-        public void ShouldHaveTestMapperRegisteredCorrectly()
+        [Test]
+        public async Task ShouldHaveTestMapperRegisteredCorrectly()
         {
-            TestRegistration(typeof(TestEventMessageMapper), ServiceLifetime.Transient);
+            await TestRegistration(typeof(TestEventMessageMapper), ServiceLifetime.Transient);
         }
 
-        [Fact]
-        public void ShouldHaveDefaultHandlerRegisteredCorrectly()
+        [Test]
+        public async Task ShouldHaveDefaultHandlerRegisteredCorrectly()
         {
-            TestRegistration(typeof(ExceptionPolicyHandler<>), ServiceLifetime.Transient);
-            TestRegistration(typeof(FallbackPolicyHandler<>), ServiceLifetime.Transient);
-            TestRegistration(typeof(TimeoutPolicyHandler<>), ServiceLifetime.Transient);
-            TestRegistration(typeof(MonitorHandler<>), ServiceLifetime.Transient);
-            TestRegistration(typeof(UseInboxHandler<>), ServiceLifetime.Transient);
-            TestRegistration(typeof(RequestLoggingHandler<>), ServiceLifetime.Transient);
+            await TestRegistration(typeof(ExceptionPolicyHandler<>), ServiceLifetime.Transient);
+            await TestRegistration(typeof(FallbackPolicyHandler<>), ServiceLifetime.Transient);
+            await TestRegistration(typeof(TimeoutPolicyHandler<>), ServiceLifetime.Transient);
+            await TestRegistration(typeof(MonitorHandler<>), ServiceLifetime.Transient);
+            await TestRegistration(typeof(UseInboxHandler<>), ServiceLifetime.Transient);
+            await TestRegistration(typeof(RequestLoggingHandler<>), ServiceLifetime.Transient);
         }
 
-        private void TestRegistration(Type expected, ServiceLifetime serviceLifetime)
+        private async Task TestRegistration(Type expected, ServiceLifetime serviceLifetime)
         {
             var serviceDescriptor = _services.SingleOrDefault(x => x.ServiceType == expected);
 
-            Assert.Equal(expected, serviceDescriptor.ServiceType);
-            Assert.Equal(serviceLifetime, serviceDescriptor.Lifetime);
+            await Assert.That(serviceDescriptor.ServiceType).IsEqualTo(expected);
+            await Assert.That(serviceDescriptor.Lifetime).IsEqualTo(serviceLifetime);
         }
 
 
-        [Fact]
-        public void ShouldHaveCommandProcessor()
+        [Test]
+        public async Task ShouldHaveCommandProcessor()
         {
-            Assert.Equal(typeof(CommandProcessor), _provider.GetService<IAmACommandProcessor>().GetType());
+            await Assert.That(_provider.GetService<IAmACommandProcessor>().GetType()).IsEqualTo(typeof(CommandProcessor));
         } 
 
 
-        [Fact]
-        public void ShouldHaveServiceActivator()
+        [Test]
+        public async Task ShouldHaveServiceActivator()
         {
-            Assert.Equal(typeof(Dispatcher), _provider.GetService<IDispatcher>().GetType());
+            await Assert.That(_provider.GetService<IDispatcher>().GetType()).IsEqualTo(typeof(Dispatcher));
         } 
 
     }

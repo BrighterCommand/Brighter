@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,8 +26,6 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
@@ -36,21 +34,18 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 /// should delegate to the scheduler. This test verifies that the scheduler passed to the consumer
 /// constructor is wired through to the producer's Scheduler property.
 /// </summary>
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Category("Kafka")]
 public class KafkaConsumerRequeueSchedulerTests : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly KafkaMessageConsumer _consumer;
     private readonly SpySchedulerSync _scheduler;
     private readonly Message _message;
 
-    public KafkaConsumerRequeueSchedulerTests(ITestOutputHelper output)
+    public KafkaConsumerRequeueSchedulerTests()
     {
         string groupId = Guid.NewGuid().ToString();
-        _output = output;
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(_topic), MessageType.MT_COMMAND),
@@ -91,27 +86,26 @@ public class KafkaConsumerRequeueSchedulerTests : IDisposable
             scheduler: _scheduler);
     }
 
-    [Fact]
-    public void When_requeuing_with_delay_should_use_scheduler()
+    [Test]
+    public async Task When_requeuing_with_delay_should_use_scheduler()
     {
         // Arrange - send a message and receive it
         var producer = (IAmAMessageProducerSync)_producerRegistry.LookupBy(new RoutingKey(_topic));
         producer.Send(_message);
         ((KafkaMessageProducer)producer).Flush();
 
-        var received = GetMessage();
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        var received = await GetMessage();
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // Act - requeue with non-zero delay (should use scheduler via producer)
-        _consumer.Requeue(received, TimeSpan.FromSeconds(5));
+        await _consumer.RequeueAsync(received, TimeSpan.FromSeconds(5));
 
         // Assert - scheduler should have been called (proves producer has scheduler configured)
-        Assert.True(_scheduler.ScheduleCalled,
-            "Scheduler.Schedule should have been called via the lazily created producer");
-        Assert.Equal(TimeSpan.FromSeconds(5), _scheduler.ScheduledDelay);
+        await Assert.That(_scheduler.ScheduleCalled).IsTrue();
+        await Assert.That(_scheduler.ScheduledDelay).IsEqualTo(TimeSpan.FromSeconds(5));
     }
 
-    private Message GetMessage()
+    private async Task<Message> GetMessage()
     {
         Message[] messages = [];
         int maxTries = 0;
@@ -120,18 +114,18 @@ public class KafkaConsumerRequeueSchedulerTests : IDisposable
             try
             {
                 maxTries++;
-                messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
+                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {
-                    _consumer.Acknowledge(messages[0]);
+                    await _consumer.AcknowledgeAsync(messages[0]);
                     break;
                 }
             }
             catch (ChannelFailureException cfx)
             {
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
-                Task.Delay(1000).GetAwaiter().GetResult();
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
         } while (maxTries <= 10);
 
@@ -178,3 +172,4 @@ public class KafkaConsumerRequeueSchedulerTests : IDisposable
         public void Cancel(string id) { }
     }
 }
+

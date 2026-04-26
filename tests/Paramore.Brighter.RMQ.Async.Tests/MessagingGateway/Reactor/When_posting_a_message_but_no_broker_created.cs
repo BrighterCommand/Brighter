@@ -1,10 +1,7 @@
-﻿using System;
+using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
-
-[Collection("RMQ")]
 public class RmqBrokerNotPreCreatedTests : IDisposable
 {
     private Message _message;
@@ -27,10 +24,10 @@ public class RmqBrokerNotPreCreatedTests : IDisposable
 
     }
         
-    [Fact]
-    public void When_posting_a_message_but_no_broker_created()
+    [Test]
+    public async Task When_posting_a_message_but_no_broker_created()
     {
-        Assert.Throws<ChannelFailureException>(() => _messageProducer.Send(_message));
+        await Assert.That(() => _messageProducer.Send(_message)).ThrowsExactly<ChannelFailureException>();
     }
 
     public void Dispose()
@@ -38,3 +35,4 @@ public class RmqBrokerNotPreCreatedTests : IDisposable
         _messageProducer.Dispose();
     }
 }
+

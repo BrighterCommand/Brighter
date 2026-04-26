@@ -1,31 +1,31 @@
-﻿using System.Net.Mime;
+using System.Net.Mime;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RocketMQ")]
-[Trait("Fragile", "CI")]
+[Category("RocketMQ")]
+[Property("Fragile", "CI")]
 public class MessageProducerDlqTests
 {
-    private readonly RocketMqMessageProducer _sender;
-    private readonly IAmAChannelSync _channel;
-    private readonly Message _message;
+    private RocketMqMessageProducer _sender;
+    private IAmAChannelSync _channel;
+    private Message _message;
 
-    public MessageProducerDlqTests()
+    [Before(Test)]
+    public async Task Setup()
     {
         MyCommand myCommand = new() { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
         const string replyTo = "http:\\queueUrl";
-        var contentType = new ContentType(MediaTypeNames.Text.Plain);  
+        var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var queueName = Guid.NewGuid().ToString();
         var routingKey = new RoutingKey("rmq_dead_letter");
         var channelName = new ChannelName(queueName);
-        
+
         var subscription = new RocketMqSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
@@ -43,19 +43,19 @@ public class MessageProducerDlqTests
 
         var connection = GatewayFactory.CreateConnection();
         var publication = new RocketMqPublication { Topic = routingKey };
-        _sender = new RocketMqMessageProducer(connection,  
-            GatewayFactory.CreateProducer(connection, publication).GetAwaiter().GetResult(),
+        _sender = new RocketMqMessageProducer(connection,
+            await GatewayFactory.CreateProducer(connection, publication),
             publication);
 
         RocketMqChannelFactory channelFactory = new(new RocketMessageConsumerFactory(connection));
         _channel = channelFactory.CreateSyncChannel(subscription);
     }
 
-    [Fact]
-    public void When_requeueing_redrives_to_the_queue()
+    [Test]
+    public async Task When_requeueing_redrives_to_the_queue()
     {
         _channel.Purge();
-        _sender.Send(_message);
+        await _sender.SendAsync(_message);
         Message receivedMessage;
         for (var i = 0; i < 32; i++)
         {
@@ -69,6 +69,6 @@ public class MessageProducerDlqTests
         }
 
         receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-        Assert.Equal(MessageType.MT_NONE, receivedMessage.Header.MessageType);
+        await Assert.That(receivedMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 }

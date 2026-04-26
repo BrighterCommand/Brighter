@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Threading;
 using Paramore.Brighter.Gcp.Tests.Helper;
@@ -7,8 +7,8 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Reactor;
 
-[Trait("Category", "GCP")]
-public class PubSubBufferedConsumerTestsAsync : IDisposable
+[Category("GCP")]
+public class PubSubBufferedConsumerTestsAsync
 {
     private readonly ContentType _contentType = new("text/plain");
     private readonly GcpMessageProducer _messageProducer;
@@ -45,8 +45,8 @@ public class PubSubBufferedConsumerTestsAsync : IDisposable
         });
     }
 
-    [Fact]
-    public  void When_a_message_consumer_reads_multiple_messages()
+    [Test]
+    public async Task When_a_message_consumer_reads_multiple_messages()
     {
         var routingKey = new RoutingKey(_topicName);
 
@@ -75,26 +75,27 @@ public class PubSubBufferedConsumerTestsAsync : IDisposable
         );
 
         //send MESSAGE_COUNT messages
-        _messageProducer.Send(messageOne);
-        _messageProducer.Send(messageTwo);
-        _messageProducer.Send(messageThree);
-        _messageProducer.Send(messageFour);
+        await _messageProducer.SendAsync(messageOne);
+        await _messageProducer.SendAsync(messageTwo);
+        await _messageProducer.SendAsync(messageThree);
+        await _messageProducer.SendAsync(messageFour);
 
         for(var i = 0; i < MessageCount; i++)
         {
             //retrieve  messages
             var message = _channel.Receive(TimeSpan.FromMilliseconds(10000));
-            Assert.NotEqual(MessageType.MT_NONE, message.Header.MessageType);
+            await Assert.That(message.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
             _channel.Acknowledge(message);
             Thread.Sleep(1000);
         } 
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteSubscription(_pubSubSubscription);
-        _channelFactory.DeleteTopic(_pubSubSubscription);
-        _messageProducer.DisposeAsync().GetAwaiter().GetResult();
+        await _channelFactory.DeleteSubscriptionAsync(_pubSubSubscription);
+        await _channelFactory.DeleteTopicAsync(_pubSubSubscription);
+        await _messageProducer.DisposeAsync();
     }
 }

@@ -29,29 +29,29 @@ using System.Threading.Tasks;
 using MQTTnet;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "MQTT")]
-[Collection("MQTT")]
+[Category("MQTT")]
 public class MqttMessageConsumerRejectDeliveryErrorDlqAsyncTests : IDisposable
 {
     private const string SOURCE_TOPIC_PREFIX = "BrighterTests/DlqAsyncSource";
     private const string DLQ_TOPIC_PREFIX = "BrighterTests/DlqAsyncTarget";
 
-    private readonly MqttTestServer? _mqttTestServer;
+    private MqttTestServer? _mqttTestServer;
     private readonly MqttMessageProducer _sourceProducer;
     private readonly MqttMessageConsumer _sourceConsumer;
     private readonly MqttMessageConsumer _dlqConsumer;
+    private readonly MqttFactory _mqttFactory;
+    private readonly int _serverPort;
 
-    public MqttMessageConsumerRejectDeliveryErrorDlqAsyncTests(ITestOutputHelper outputHelper)
+    public MqttMessageConsumerRejectDeliveryErrorDlqAsyncTests()
     {
         var mqttFactory = new MqttFactory();
         int serverPort = MqttTestServer.GetRandomServerPort();
 
-        _mqttTestServer = MqttTestServer.CreateTestMqttServer(mqttFactory, true, serverPort: serverPort);
+        _mqttFactory = mqttFactory;
+        _serverPort = serverPort;
 
         //Arrange — source producer
         var producerConfig = new MqttMessagingGatewayProducerConfiguration
@@ -88,7 +88,13 @@ public class MqttMessageConsumerRejectDeliveryErrorDlqAsyncTests : IDisposable
         _dlqConsumer = new MqttMessageConsumer(dlqConsumerConfig);
     }
 
-    [Fact]
+    [Before(HookType.Test)]
+    public async Task Setup()
+    {
+        _mqttTestServer = await MqttTestServer.CreateTestMqttServer(_mqttFactory, true, serverPort: _serverPort);
+    }
+
+    [Test]
     public async Task When_rejecting_message_async_with_delivery_error_should_send_to_dlq()
     {
         //Arrange
@@ -103,7 +109,7 @@ public class MqttMessageConsumerRejectDeliveryErrorDlqAsyncTests : IDisposable
         await Task.Delay(500);
 
         var received = await _sourceConsumer.ReceiveAsync(TimeSpan.FromSeconds(2));
-        Assert.NotEmpty(received);
+        await Assert.That(received).IsNotEmpty();
         var sourceMessage = received.First(m => m.Header.MessageType != MessageType.MT_NONE);
 
         //Act — reject async with DeliveryError
@@ -113,22 +119,22 @@ public class MqttMessageConsumerRejectDeliveryErrorDlqAsyncTests : IDisposable
         );
 
         //Assert — reject returns true
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         //Assert — DLQ consumer receives the rejected message
         await Task.Delay(500);
         var dlqMessages = await _dlqConsumer.ReceiveAsync(TimeSpan.FromSeconds(2));
-        Assert.NotEmpty(dlqMessages);
+        await Assert.That(dlqMessages).IsNotEmpty();
         var dlqMessage = dlqMessages.First(m => m.Header.MessageType != MessageType.MT_NONE);
 
         //Assert — message body preserved
-        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
+        await Assert.That(dlqMessage.Body.Value).IsEqualTo(message.Body.Value);
 
         //Assert — rejection metadata present
-        Assert.Equal(routingKey.Value, dlqMessage.Header.Bag["originalTopic"]!.ToString());
-        Assert.Equal("DeliveryError", dlqMessage.Header.Bag["rejectionReason"]!.ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp"));
-        Assert.Equal("MT_COMMAND", dlqMessage.Header.Bag["originalMessageType"]!.ToString());
+        await Assert.That(dlqMessage.Header.Bag["originalTopic"]!.ToString()).IsEqualTo(routingKey.Value);
+        await Assert.That(dlqMessage.Header.Bag["rejectionReason"]!.ToString()).IsEqualTo("DeliveryError");
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["originalMessageType"]!.ToString()).IsEqualTo("MT_COMMAND");
     }
 
     public void Dispose()
@@ -139,3 +145,4 @@ public class MqttMessageConsumerRejectDeliveryErrorDlqAsyncTests : IDisposable
         _mqttTestServer?.Dispose();
     }
 }
+

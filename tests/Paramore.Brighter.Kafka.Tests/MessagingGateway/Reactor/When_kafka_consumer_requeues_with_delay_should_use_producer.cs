@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,8 +26,6 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
@@ -36,21 +34,18 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 /// via a lazily-created producer. Previously Requeue was a no-op; now it delegates to the producer
 /// so that requeued messages are actually redelivered.
 /// </summary>
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Category("Kafka")]
 public class KafkaConsumerRequeueTests : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly string _channelName = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly IAmAMessageConsumerSync _consumer;
     private readonly Message _message;
 
-    public KafkaConsumerRequeueTests(ITestOutputHelper output)
+    public KafkaConsumerRequeueTests()
     {
         string groupId = Guid.NewGuid().ToString();
-        _output = output;
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(_topic), MessageType.MT_COMMAND),
@@ -91,33 +86,33 @@ public class KafkaConsumerRequeueTests : IDisposable
             ));
     }
 
-    [Fact]
-    public void When_requeuing_should_publish_message_via_producer()
+    [Test]
+    public async Task When_requeuing_should_publish_message_via_producer()
     {
         // Arrange - send a message and receive it
         var producer = (IAmAMessageProducerSync)_producerRegistry.LookupBy(new RoutingKey(_topic));
         producer.Send(_message);
         ((KafkaMessageProducer)producer).Flush();
 
-        var received = GetMessage();
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
-        _output.WriteLine($"Received body length: {received.Body.Bytes.Length}, value: '{received.Body.Value}'");
-        _output.WriteLine($"Received topic: {received.Header.Topic}");
+        var received = await GetMessage();
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        Console.WriteLine($"Received body length: {received.Body.Bytes.Length}, value: '{received.Body.Value}'");
+        Console.WriteLine($"Received topic: {received.Header.Topic}");
 
         // Act - requeue the message (no delay, so producer sends immediately)
         var result = _consumer.Requeue(received);
 
         // Assert - requeue should return true
-        Assert.True(result, "Requeue should succeed");
+        await Assert.That(result).IsTrue();
 
         // Assert - message should be available again on the topic (published via producer)
-        var requeued = GetMessage();
-        _output.WriteLine($"Requeued body length: {requeued.Body.Bytes.Length}, value: '{requeued.Body.Value}'");
-        _output.WriteLine($"Requeued topic: {requeued.Header.Topic}, type: {requeued.Header.MessageType}");
-        Assert.Equal(_message.Body.Value, requeued.Body.Value);
+        var requeued = await GetMessage();
+        Console.WriteLine($"Requeued body length: {requeued.Body.Bytes.Length}, value: '{requeued.Body.Value}'");
+        Console.WriteLine($"Requeued topic: {requeued.Header.Topic}, type: {requeued.Header.MessageType}");
+        await Assert.That(requeued.Body.Value).IsEqualTo(_message.Body.Value);
     }
 
-    private Message GetMessage()
+    private async Task<Message> GetMessage()
     {
         Message[] messages = [];
         int maxTries = 0;
@@ -136,8 +131,8 @@ public class KafkaConsumerRequeueTests : IDisposable
             }
             catch (ChannelFailureException cfx)
             {
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
-                Task.Delay(1000).GetAwaiter().GetResult();
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
         } while (maxTries <= 10);
 
@@ -153,3 +148,4 @@ public class KafkaConsumerRequeueTests : IDisposable
         _consumer?.Dispose();
     }
 }
+

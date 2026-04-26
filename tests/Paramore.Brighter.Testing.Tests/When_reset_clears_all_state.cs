@@ -23,8 +23,6 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -33,40 +31,40 @@ public class SpyCommandProcessorClearTests
     private readonly SpyCommandProcessor _spy = new();
     private readonly MyCommand _command = new() { Value = "test" };
 
-    [Fact]
-    public void Should_clear_recorded_calls()
+    [Test]
+    public async Task Should_clear_recorded_calls()
     {
         // Arrange
         _spy.Send(_command);
-        _spy.RecordedCalls.Count.ShouldBe(1);
+        await Assert.That(_spy.RecordedCalls.Count).IsEqualTo(1);
 
         // Act
         _spy.Reset();
 
         // Assert
-        _spy.RecordedCalls.ShouldBeEmpty();
+        await Assert.That(_spy.RecordedCalls).IsEmpty();
     }
 
-    [Fact]
-    public void Should_clear_commands()
+    [Test]
+    public async Task Should_clear_commands()
     {
         // Arrange
         _spy.Send(_command);
-        _spy.Commands.Count.ShouldBe(1);
+        await Assert.That(_spy.Commands.Count).IsEqualTo(1);
 
         // Act
         _spy.Reset();
 
         // Assert
-        _spy.Commands.ShouldBeEmpty();
+        await Assert.That(_spy.Commands).IsEmpty();
     }
 
-    [Fact]
-    public void Should_clear_observation_queue()
+    [Test]
+    public async Task Should_clear_observation_queue()
     {
         // Arrange
         _spy.Send(_command);
-        _spy.Observe<MyCommand>().ShouldBe(_command); // Confirm it was observable
+        await Assert.That(_spy.Observe<MyCommand>()).IsEqualTo(_command); // Confirm it was observable
 
         _spy.Send(_command); // Add another one
 
@@ -74,51 +72,50 @@ public class SpyCommandProcessorClearTests
         _spy.Reset();
 
         // Assert - observation queue is empty
-        var observeAction = () => _spy.Observe<MyCommand>();
-        observeAction.ShouldThrow<InvalidOperationException>();
+        Assert.ThrowsExactly<InvalidOperationException>(() => _spy.Observe<MyCommand>());
     }
 
-    [Fact]
-    public void Should_clear_deposited_requests()
+    [Test]
+    public async Task Should_clear_deposited_requests()
     {
         // Arrange
         var id = _spy.DepositPost(_command);
-        _spy.DepositedRequests.Count.ShouldBe(1);
+        await Assert.That(_spy.DepositedRequests.Count).IsEqualTo(1);
 
         // Act
         _spy.Reset();
 
         // Assert
-        _spy.DepositedRequests.ShouldBeEmpty();
+        await Assert.That(_spy.DepositedRequests).IsEmpty();
     }
 
-    [Fact]
-    public void Should_reset_was_called_to_false()
+    [Test]
+    public async Task Should_reset_was_called_to_false()
     {
         // Arrange
         _spy.Send(_command);
-        _spy.WasCalled(CommandType.Send).ShouldBeTrue();
+        await Assert.That(_spy.WasCalled(CommandType.Send)).IsTrue();
 
         // Act
         _spy.Reset();
 
         // Assert
-        _spy.WasCalled(CommandType.Send).ShouldBeFalse();
+        await Assert.That(_spy.WasCalled(CommandType.Send)).IsFalse();
     }
 
-    [Fact]
-    public void Should_reset_call_count_to_zero()
+    [Test]
+    public async Task Should_reset_call_count_to_zero()
     {
         // Arrange
         _spy.Send(_command);
         _spy.Send(_command);
-        _spy.CallCount(CommandType.Send).ShouldBe(2);
+        await Assert.That(_spy.CallCount(CommandType.Send)).IsEqualTo(2);
 
         // Act
         _spy.Reset();
 
         // Assert
-        _spy.CallCount(CommandType.Send).ShouldBe(0);
+        await Assert.That(_spy.CallCount(CommandType.Send)).IsEqualTo(0);
     }
 
     private sealed class MyCommand : Command

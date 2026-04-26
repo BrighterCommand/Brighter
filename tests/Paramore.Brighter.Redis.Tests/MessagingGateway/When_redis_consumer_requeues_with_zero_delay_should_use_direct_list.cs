@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.MessagingGateway.Redis;
-using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 
@@ -33,8 +32,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 /// direct Redis list operations rather than creating a producer. This preserves existing
 /// behavior and ensures immediate requeue without scheduler overhead.
 /// </summary>
-[Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
-[Trait("Category", "Redis")]
+[Category("Redis")]
 public class When_redis_consumer_requeues_with_zero_delay_should_use_direct_list : IDisposable
 {
     private readonly RedisMessageConsumer _consumer;
@@ -57,25 +55,25 @@ public class When_redis_consumer_requeues_with_zero_delay_should_use_direct_list
             new MessageBody("test content for zero delay requeue"));
     }
 
-    [Fact]
-    public void When_requeuing_with_zero_delay_should_not_use_scheduler()
+    [Test]
+    public async Task When_requeuing_with_zero_delay_should_not_use_scheduler()
     {
         // Act - requeue with zero delay; the direct Redis list path will be attempted
         // which may fail without Redis, but the scheduler must NOT be called
-        Record.Exception(() => _consumer.Requeue(_message, TimeSpan.Zero));
+        await _consumer.RequeueAsync(_message, TimeSpan.Zero);
 
         // Assert - scheduler should NOT have been called
-        Assert.False(_scheduler.ScheduleCalled);
+        await Assert.That(_scheduler.ScheduleCalled).IsFalse();
     }
 
-    [Fact]
-    public void When_requeuing_with_null_delay_should_not_use_scheduler()
+    [Test]
+    public async Task When_requeuing_with_null_delay_should_not_use_scheduler()
     {
         // Act - requeue with null delay (defaults to zero)
-        Record.Exception(() => _consumer.Requeue(_message));
+        await _consumer.RequeueAsync(_message);
 
         // Assert - scheduler should NOT have been called
-        Assert.False(_scheduler.ScheduleCalled);
+        await Assert.That(_scheduler.ScheduleCalled).IsFalse();
     }
 
     public void Dispose()
@@ -104,3 +102,4 @@ public class When_redis_consumer_requeues_with_zero_delay_should_use_direct_list
         public void Cancel(string id) { }
     }
 }
+

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
@@ -7,7 +7,6 @@ using MQTTnet;
 using MQTTnet.Server;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Loggers;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor;
-using Shouldly;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server
 {
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server
 
         public string HostName => MqttServerOptions.DefaultEndpointOptions.BoundInterNetworkAddress.ToString();
 
-        public static MqttTestServer? CreateTestMqttServer(MqttFactory mqttFactory, bool startService = true, ILogger? logger = null, IPAddress? serverIPAddress = null, int? serverPort = null, MqttServerOptions? mqttServerOptions = null, [CallerMemberName] string? testMethodName = null)
+        public static async Task<MqttTestServer?> CreateTestMqttServer(MqttFactory mqttFactory, bool startService = true, ILogger? logger = null, IPAddress? serverIPAddress = null, int? serverPort = null, MqttServerOptions? mqttServerOptions = null, [CallerMemberName] string? testMethodName = null)
         {
             ArgumentNullException.ThrowIfNull(mqttFactory);
 
@@ -68,17 +67,14 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server
                 return null;
             }
 
-            testMqttServer.ShouldNotBeNull();
-            testMqttServer.ShouldBeOfType<MqttTestServer>();
-
-            testMqttServer.MqttServer.IsStarted.ShouldBeFalse();
+            if (testMqttServer?.MqttServer is null)
+                return null;
 
             try
             {
                 if (startService)
                 {
-                    testMqttServer.MqttServer.StartAsync().GetAwaiter().GetResult();
-                    testMqttServer.MqttServer.IsStarted.ShouldBeTrue();
+                    await testMqttServer.MqttServer.StartAsync();
                 }
             }
             catch (Exception ex)

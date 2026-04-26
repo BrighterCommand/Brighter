@@ -26,11 +26,10 @@ using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
-[Trait("Category", "PostgresSql")]
+[Category("PostgresSql")]
 public class PostgresMessageConsumerDeliveryErrorDlqTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _producer;
@@ -79,8 +78,8 @@ public class PostgresMessageConsumerDeliveryErrorDlqTests : IDisposable
             new MessageBody("test content"));
     }
 
-    [Fact]
-    public void When_rejecting_message_with_delivery_error_should_send_to_dlq()
+    [Test]
+    public async Task When_rejecting_message_with_delivery_error_should_send_to_dlq()
     {
         // Arrange - send a message and consume it from the source topic
         _producer.Send(_message);
@@ -92,27 +91,25 @@ public class PostgresMessageConsumerDeliveryErrorDlqTests : IDisposable
             new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
 
         // Assert - reject returns true
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - message should appear on DLQ
         var dlqMessage = ConsumeMessage(_dlqConsumer);
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
-        Assert.Equal(_message.Body.Value, dlqMessage.Body.Value);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(dlqMessage.Body.Value).IsEqualTo(_message.Body.Value);
 
         // Assert - rejection metadata present in header bag
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalTopic"));
-        Assert.Equal(originalTopic, dlqMessage.Header.Bag["originalTopic"].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionReason"));
-        Assert.Equal(RejectionReason.DeliveryError.ToString(),
-            dlqMessage.Header.Bag["rejectionReason"].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp"));
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalMessageType"));
-        Assert.Equal(MessageType.MT_COMMAND.ToString(),
-            dlqMessage.Header.Bag["originalMessageType"].ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalTopic")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["originalTopic"].ToString()).IsEqualTo(originalTopic);
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionReason")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalMessageType")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["originalMessageType"].ToString()).IsEqualTo(MessageType.MT_COMMAND.ToString());
 
         // Assert - source message is deleted (re-reading from source returns MT_NONE)
         var sourceMessage = ConsumeMessage(_consumer);
-        Assert.Equal(MessageType.MT_NONE, sourceMessage.Header.MessageType);
+        await Assert.That(sourceMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
     private static Message ConsumeMessage(IAmAMessageConsumerSync consumer)

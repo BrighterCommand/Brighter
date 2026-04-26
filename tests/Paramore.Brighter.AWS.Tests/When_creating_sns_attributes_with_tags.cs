@@ -1,15 +1,14 @@
 using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests;
 
 [Trait("Category", "AWS")]
 public class When_creating_sns_attributes_with_tags
 {
-    [Fact]
-    public void When_tags_provided_should_store_them()
+    [Test]
+    public async Task When_tags_provided_should_store_them()
     {
         //arrange
         var tags = new List<Tag> { new() { Key = "Environment", Value = "Test" } };
@@ -18,36 +17,36 @@ public class When_creating_sns_attributes_with_tags
         var snsAttributes = new SnsAttributes(tags: tags);
 
         //assert
-        Assert.NotNull(snsAttributes.Tags);
-        Assert.Single(snsAttributes.Tags);
-        Assert.Equal("Environment", snsAttributes.Tags[0].Key);
-        Assert.Equal("Test", snsAttributes.Tags[0].Value);
+        await Assert.That(snsAttributes.Tags).IsNotNull();
+        await Assert.That(snsAttributes.Tags).HasSingleItem();
+        await Assert.That(snsAttributes.Tags[0].Key).IsEqualTo("Environment");
+        await Assert.That(snsAttributes.Tags[0].Value).IsEqualTo("Test");
     }
 
-    [Fact]
-    public void When_no_tags_provided_should_be_empty()
+    [Test]
+    public async Task When_no_tags_provided_should_be_empty()
     {
         //act
         var snsAttributes = new SnsAttributes();
 
         //assert
-        Assert.NotNull(snsAttributes.Tags);
-        Assert.Empty(snsAttributes.Tags);
+        await Assert.That(snsAttributes.Tags).IsNotNull();
+        await Assert.That(snsAttributes.Tags).IsEmpty();
     }
 
-    [Fact]
-    public void When_empty_should_have_empty_tags()
+    [Test]
+    public async Task When_empty_should_have_empty_tags()
     {
         //act
         var snsAttributes = SnsAttributes.Empty;
 
         //assert
-        Assert.NotNull(snsAttributes.Tags);
-        Assert.Empty(snsAttributes.Tags);
+        await Assert.That(snsAttributes.Tags).IsNotNull();
+        await Assert.That(snsAttributes.Tags).IsEmpty();
     }
 
-    [Fact]
-    public void When_tags_provided_should_not_affect_other_parameters()
+    [Test]
+    public async Task When_tags_provided_should_not_affect_other_parameters()
     {
         //arrange
         var tags = new List<Tag> { new() { Key = "Environment", Value = "Test" } };
@@ -64,11 +63,11 @@ public class When_creating_sns_attributes_with_tags
         );
 
         //assert
-        Assert.Equal(deliveryPolicy, snsAttributes.DeliveryPolicy);
-        Assert.Equal(policy, snsAttributes.Policy);
-        Assert.Equal(SqsType.Fifo, snsAttributes.Type);
-        Assert.False(snsAttributes.ContentBasedDeduplication);
-        Assert.NotNull(snsAttributes.Tags);
-        Assert.Single(snsAttributes.Tags);
+        await Assert.That(snsAttributes.DeliveryPolicy).IsEqualTo(deliveryPolicy);
+        await Assert.That(snsAttributes.Policy).IsEqualTo(policy);
+        await Assert.That(snsAttributes.Type).IsEqualTo(SqsType.Fifo);
+        await Assert.That(snsAttributes.ContentBasedDeduplication).IsFalse();
+        await Assert.That(snsAttributes.Tags).IsNotNull();
+        await Assert.That(snsAttributes.Tags).HasSingleItem();
     }
 }

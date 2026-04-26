@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,12 +28,10 @@ using System.Net.Mime;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RmqMessageProducerSendMessageTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -97,33 +95,33 @@ public class RmqMessageProducerSendMessageTests : IDisposable
             .GetResult();
     }
 
-    [Fact]
-    public void When_posting_a_message_via_the_messaging_gateway()
+    [Test]
+    public async Task When_posting_a_message_via_the_messaging_gateway()
     {
         _messageProducer.Send(_message);
 
         var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
 
         // Assert message body
-        Assert.Equal(_message.Body.Value, result.Body.Value);
+        await Assert.That(result.Body.Value).IsEqualTo(_message.Body.Value);
 
         // Assert header values
-        Assert.Equal(_message.Header.MessageId, result.Header.MessageId);
-        Assert.Equal(_message.Header.Topic, result.Header.Topic);
-        Assert.Equal(_message.Header.MessageType, result.Header.MessageType);
-        Assert.Equal(_message.Header.Source, result.Header.Source);
-        Assert.Equal(_message.Header.Type, result.Header.Type);
-        Assert.Equal(_message.Header.TimeStamp, result.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(_message.Header.CorrelationId, result.Header.CorrelationId);
-        Assert.Equal(_message.Header.ReplyTo, result.Header.ReplyTo);
-        Assert.Equal(_message.Header.ContentType, result.Header.ContentType);
-        Assert.Equal(_message.Header.HandledCount, result.Header.HandledCount);
-        Assert.Equal(_message.Header.DataSchema, result.Header.DataSchema);
-        Assert.Equal(_message.Header.Subject, result.Header.Subject);
-        Assert.Equal(TimeSpan.Zero, result.Header.Delayed);                                //we clear any delay from the producer, as it represents delay in the pipeline 
-        Assert.Equal(_message.Header.TraceParent, result.Header.TraceParent);
-        Assert.Equal(_message.Header.TraceState, result.Header.TraceState);
-        Assert.Equal(_message.Header.Baggage, result.Header.Baggage);
+        await Assert.That(result.Header.MessageId).IsEqualTo(_message.Header.MessageId);
+        await Assert.That(result.Header.Topic).IsEqualTo(_message.Header.Topic);
+        await Assert.That(result.Header.MessageType).IsEqualTo(_message.Header.MessageType);
+        await Assert.That(result.Header.Source).IsEqualTo(_message.Header.Source);
+        await Assert.That(result.Header.Type).IsEqualTo(_message.Header.Type);
+        await Assert.That(result.Header.TimeStamp).IsEqualTo(_message.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(result.Header.CorrelationId).IsEqualTo(_message.Header.CorrelationId);
+        await Assert.That(result.Header.ReplyTo).IsEqualTo(_message.Header.ReplyTo);
+        await Assert.That(result.Header.ContentType).IsEqualTo(_message.Header.ContentType);
+        await Assert.That(result.Header.HandledCount).IsEqualTo(_message.Header.HandledCount);
+        await Assert.That(result.Header.DataSchema).IsEqualTo(_message.Header.DataSchema);
+        await Assert.That(result.Header.Subject).IsEqualTo(_message.Header.Subject);
+        await Assert.That(result.Header.Delayed).IsEqualTo(TimeSpan.Zero);                                //we clear any delay from the producer, as it represents delay in the pipeline
+        await Assert.That(result.Header.TraceParent).IsEqualTo(_message.Header.TraceParent);
+        await Assert.That(result.Header.TraceState).IsEqualTo(_message.Header.TraceState);
+        await Assert.That(result.Header.Baggage).IsEqualTo(_message.Header.Baggage);
     }
 
     public void Dispose()
@@ -131,3 +129,4 @@ public class RmqMessageProducerSendMessageTests : IDisposable
         _messageProducer.Dispose();
     }
 }
+

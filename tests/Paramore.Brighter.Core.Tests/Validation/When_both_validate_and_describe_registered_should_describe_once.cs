@@ -19,9 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,33 +28,26 @@ using Microsoft.Extensions.Options;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class DoubleDescribePreventionTests
 {
-    [Fact]
+    [Test]
     public async Task When_both_validate_and_describe_registered_should_describe_once()
     {
         // Arrange — a shared diagnostic writer registered in DI, used by both hosted services
         var diagnosticWriter = new SpyPipelineDiagnosticWriter();
         var validator = SpyPipelineValidator.WithNoErrors();
         var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false });
-
         var services = new ServiceCollection();
         services.AddSingleton<IAmAPipelineDiagnosticWriter>(diagnosticWriter);
         var provider = services.BuildServiceProvider();
-
-        var validationService = new BrighterValidationHostedService(
-            options, validator, provider, NullLogger<BrighterValidationHostedService>.Instance);
+        var validationService = new BrighterValidationHostedService(options, validator, provider, NullLogger<BrighterValidationHostedService>.Instance);
         var diagnosticService = new BrighterDiagnosticHostedService(diagnosticWriter, options);
-
         // Act — both hosted services start (as they would in a real host)
         await validationService.StartAsync(CancellationToken.None);
         await diagnosticService.StartAsync(CancellationToken.None);
-
         // Assert — Describe should have been called exactly once, not twice
-        Assert.Equal(1, diagnosticWriter.DescribeCallCount);
+        await Assert.That(diagnosticWriter.DescribeCallCount).IsEqualTo(1);
     }
 }

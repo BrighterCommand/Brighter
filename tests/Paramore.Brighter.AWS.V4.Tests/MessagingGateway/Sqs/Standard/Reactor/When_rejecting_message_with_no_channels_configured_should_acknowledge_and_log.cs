@@ -30,12 +30,12 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
-[Trait("Category", "AWS")]
-public class SqsMessageConsumerNoChannelsRejectTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class SqsMessageConsumerNoChannelsRejectTests : IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelSync _channel;
@@ -78,11 +78,11 @@ public class SqsMessageConsumerNoChannelsRejectTests : IDisposable, IAsyncDispos
             new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create));
     }
 
-    [Fact]
-    public void When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log()
+    [Test]
+    public async Task When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log()
     {
         //Arrange
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
         var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
         //Act - reject with a DeliveryError reason but no DLQ configured
@@ -90,13 +90,14 @@ public class SqsMessageConsumerNoChannelsRejectTests : IDisposable, IAsyncDispos
 
         //Assert - original message should be deleted (acknowledged) since there is no DLQ
         var sourceMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-        Assert.Equal(MessageType.MT_NONE, sourceMessage.Header.MessageType);
+        await Assert.That(sourceMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

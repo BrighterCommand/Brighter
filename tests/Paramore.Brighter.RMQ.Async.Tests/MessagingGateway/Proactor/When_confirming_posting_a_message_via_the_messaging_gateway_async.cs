@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,11 +25,10 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
+[Category("RMQ")]
 public class RmqMessageProducerConfirmationsSendMessageAsyncTests : IDisposable
 {
     private readonly RmqMessageProducer _messageProducer;
@@ -55,7 +54,7 @@ public class RmqMessageProducerConfirmationsSendMessageAsyncTests : IDisposable
         {
             if (success)
             {
-                Assert.Equal(_message.Id, guid);
+                if (guid != _message.Id) throw new Exception($"Expected guid {_message.Id} but got {guid}");
                 _messageWasPublished = true;
                 _messageWasNotPublished = false;
             }
@@ -72,15 +71,15 @@ public class RmqMessageProducerConfirmationsSendMessageAsyncTests : IDisposable
             .GetResult();
     }
 
-    [Fact]
+    [Test]
     public async Task When_confirming_posting_a_message_via_the_messaging_gateway_async()
     {
         await _messageProducer.SendAsync(_message);
 
         await Task.Delay(500);
 
-        Assert.False(_messageWasNotPublished);
-        Assert.True(_messageWasPublished);
+        await Assert.That(_messageWasNotPublished).IsFalse();
+        await Assert.That(_messageWasPublished).IsTrue();
     }
 
     public void Dispose()

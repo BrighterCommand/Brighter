@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Mime;
@@ -9,12 +9,10 @@ using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RMQMessageConsumerRetryDLQTests : IDisposable
 {
     private readonly IAmAMessagePump _messagePump;
@@ -116,19 +114,18 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         );
     }
 
-    [Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]
-    [SuppressMessage("Usage", "xUnit1031:Do not use blocking task operations in test method")]
+    [Test, Skip("Breaks due to fault in Task Scheduler running after context has closed")]
     public async Task When_retry_limits_force_a_message_onto_the_dlq()
     {
         //NOTE: This test is **slow** because it needs to ensure infrastructure and then wait whilst we requeue a message a number of times,
         //then propagate to the DLQ
             
         //start a message pump, let it create infrastructure 
-        var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+        var task = Task.Factory.StartNew(() => _messagePump.Run(), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         await Task.Delay(20000);
 
         //put something on an SNS topic, which will be delivered to our SQS queue
-        _sender.Send(_message);
+        await _sender.SendAsync(_message);
 
         //Let the message be handled and deferred until it reaches the DLQ
         await Task.Delay(20000);
@@ -146,7 +143,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         var dlqMessage = _deadLetterConsumer.Receive(new TimeSpan(10000)).First();
 
         //assert this is our message
-        Assert.Equal(_message.Body.Value, dlqMessage.Body.Value);
+        await Assert.That(dlqMessage.Body.Value).IsEqualTo(_message.Body.Value);
 
         _deadLetterConsumer.Acknowledge(dlqMessage);
 
@@ -159,3 +156,4 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
     }
 
 }
+

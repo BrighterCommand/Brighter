@@ -3,24 +3,19 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")] //Kafka doesn't like multiple consumers of a partition
+[Category("Kafka")]
 public class KafkaMessageConsumerNackRedeliveryAsync : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaMessageConsumerNackRedeliveryAsync(ITestOutputHelper output)
+    public KafkaMessageConsumerNackRedeliveryAsync()
     {
-        _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
@@ -39,7 +34,7 @@ public class KafkaMessageConsumerNackRedeliveryAsync : IDisposable
             ]).Create();
     }
 
-    [Fact]
+    [Test]
     public async Task When_nacking_a_message_async_it_should_be_redelivered()
     {
         // let topic propagate in the broker
@@ -64,18 +59,18 @@ public class KafkaMessageConsumerNackRedeliveryAsync : IDisposable
 
         //Act - receive the message, nack it, then receive again
         var firstReceive = await ReceiveMessageAsync(consumer);
-        Assert.Equal(sentMessageId, firstReceive.Id);
+        await Assert.That(firstReceive.Id).IsEqualTo(sentMessageId);
 
         await consumer.NackAsync(firstReceive);
 
         var secondReceive = await ReceiveMessageAsync(consumer);
 
         //Assert - the same message should be redelivered
-        Assert.Equal(sentMessageId, secondReceive.Id);
-        Assert.Equal(sentBody, secondReceive.Body.Value);
+        await Assert.That(secondReceive.Id).IsEqualTo(sentMessageId);
+        await Assert.That(secondReceive.Body.Value).IsEqualTo(sentBody);
     }
 
-    [Fact]
+    [Test]
     public async Task When_acking_later_message_async_it_should_not_skip_nacked_message()
     {
         // let topic propagate in the broker
@@ -105,7 +100,7 @@ public class KafkaMessageConsumerNackRedeliveryAsync : IDisposable
 
         //Act - receive message 1, nack it; receive message 1 again (redelivered), then ack it
         var firstReceive = await ReceiveMessageAsync(consumer);
-        Assert.Equal(firstMessageId, firstReceive.Id);
+        await Assert.That(firstReceive.Id).IsEqualTo(firstMessageId);
 
         await consumer.NackAsync(firstReceive);
 
@@ -113,14 +108,14 @@ public class KafkaMessageConsumerNackRedeliveryAsync : IDisposable
         var redelivered = await ReceiveMessageAsync(consumer);
 
         //Assert - the nacked message is redelivered, not skipped by the second message's existence
-        Assert.Equal(firstMessageId, redelivered.Id);
+        await Assert.That(redelivered.Id).IsEqualTo(firstMessageId);
 
         // Now ack the redelivered message and confirm we get the second message
         await consumer.AcknowledgeAsync(redelivered);
 
         var secondReceive = await ReceiveMessageAsync(consumer);
-        Assert.NotEqual(MessageType.MT_NONE, secondReceive.Header.MessageType);
-        Assert.Equal(secondMessageId, secondReceive.Id);
+        await Assert.That(secondReceive.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(secondReceive.Id).IsEqualTo(secondMessageId);
     }
 
     private async Task<Message> ReceiveMessageAsync(IAmAMessageConsumerAsync consumer)
@@ -141,7 +136,7 @@ public class KafkaMessageConsumerNackRedeliveryAsync : IDisposable
             }
             catch (ChannelFailureException cfx)
             {
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 await Task.Delay(1000);
             }
         } while (maxTries <= 10);
@@ -176,3 +171,4 @@ public class KafkaMessageConsumerNackRedeliveryAsync : IDisposable
         _producerRegistry?.Dispose();
     }
 }
+

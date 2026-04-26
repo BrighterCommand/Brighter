@@ -1,11 +1,9 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
-
 public class AsyncMessageWrapCleanupTests
 {
     private WrapPipelineAsync<MyTransformableCommand> _transformPipeline;
@@ -13,38 +11,32 @@ public class AsyncMessageWrapCleanupTests
     private readonly MyTransformableCommand _myCommand;
     public static string s_released;
     private readonly Publication _publication;
-
     public AsyncMessageWrapCleanupTests()
     {
         //arrange
-        TransformPipelineBuilder.ClearPipelineCache();
-
-        var mapperRegistry = new MessageMapperRegistry(
-            null,
-            new SimpleMessageMapperFactoryAsync(_ => new MyTransformableCommandMessageMapperAsync()));
+        var mapperRegistry = new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(_ => new MyTransformableCommandMessageMapperAsync()));
         mapperRegistry.RegisterAsync<MyTransformableCommand, MyTransformableCommandMessageMapperAsync>();
-
         _myCommand = new MyTransformableCommand();
-        
-        _publication = new Publication{Topic = new RoutingKey("MyTransformableCommand"), RequestType= typeof(MyTransformableCommand)};
-        
+        _publication = new Publication
+        {
+            Topic = new RoutingKey("MyTransformableCommand"),
+            RequestType = typeof(MyTransformableCommand)
+        };
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, new MyReleaseTrackingTransformFactoryAsync(), InstrumentationOptions.All);
     }
-    
-    [Fact]
+
+    [Test]
     public async Task When_Wrapping_Clean_Up_The_Pipeline()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
         _transformPipeline.Dispose();
-        
         //assert
-        Assert.Equal("|MySimpleTransformAsync", s_released);
-
+        await Assert.That(s_released).IsEqualTo("|MySimpleTransformAsync");
     }
-    
-    private sealed class MyReleaseTrackingTransformFactoryAsync : IAmAMessageTransformerFactoryAsync
+
+    private sealed class MyReleaseTrackingTransformFactoryAsync : Paramore.Brighter.IAmAMessageTransformerFactoryAsync
     {
         public IAmAMessageTransformAsync Create(Type transformerType)
         {
@@ -55,9 +47,7 @@ public class AsyncMessageWrapCleanupTests
         {
             var disposable = transformer as IDisposable;
             disposable?.Dispose();
-
             s_released += "|" + transformer.GetType().Name;
         }
     }
-
 }

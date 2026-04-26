@@ -1,16 +1,17 @@
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Common;
 
-public class BrighterTracerEndSpanTimeProviderTests : IDisposable
+[NotInParallel]
+public class BrighterTracerEndSpanTimeProviderTests
 {
     private readonly TracerProvider _traceProvider;
     private readonly Activity _parentActivity;
@@ -26,8 +27,8 @@ public class BrighterTracerEndSpanTimeProviderTests : IDisposable
             .StartActivity("BrighterTracerEndSpanTimeProviderTests");
     }
 
-    [Fact]
-    public void When_Ending_A_Span_Duration_Reflects_TimeProvider()
+    [Test]
+    public async Task When_Ending_A_Span_Duration_Reflects_TimeProvider()
     {
         //arrange
         var fakeTime = new FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
@@ -46,11 +47,12 @@ public class BrighterTracerEndSpanTimeProviderTests : IDisposable
         tracer.EndSpan(span);
 
         //assert
-        Assert.NotNull(span);
-        Assert.Equal(TimeSpan.FromSeconds(5), span!.Duration);
+        await Assert.That(span).IsNotNull();
+        await Assert.That(span!.Duration).IsEqualTo(TimeSpan.FromSeconds(5));
     }
 
-    public void Dispose()
+    [After(Test)]
+    public void Cleanup()
     {
         _parentActivity.Dispose();
         _traceProvider.Dispose();

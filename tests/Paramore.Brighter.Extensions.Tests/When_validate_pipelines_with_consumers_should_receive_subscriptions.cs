@@ -30,14 +30,13 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ValidatePipelinesWithConsumersTests
 {
-    [Fact]
-    public void When_validate_pipelines_with_consumers_should_detect_missing_handler()
+    [Test]
+    public async Task When_validate_pipelines_with_consumers_should_detect_missing_handler()
     {
         // Arrange — set up a subscription for a request type with no handler registered
         var services = new ServiceCollection();
@@ -61,12 +60,12 @@ public class ValidatePipelinesWithConsumersTests
         var result = validator.Validate();
 
         // Assert — should detect the subscription has no handler registered
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Message.Contains("No handler registered"));
+        await Assert.That(result.IsValid).IsFalse();
+        await Assert.That(result.Errors).Contains(e => e.Message.Contains("No handler registered"));
     }
 
-    [Fact]
-    public void When_add_consumers_should_register_consumer_validation_specs()
+    [Test]
+    public async Task When_add_consumers_should_register_consumer_validation_specs()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -78,7 +77,7 @@ public class ValidatePipelinesWithConsumersTests
         var specs = provider.GetServices<ISpecification<Subscription>>().ToList();
 
         // Assert — AddConsumers should register 3 consumer validation specs
-        Assert.Equal(3, specs.Count);
+        await Assert.That(specs.Count).IsEqualTo(3);
     }
 
     private class UnhandledEvent : Event

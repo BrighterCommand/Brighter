@@ -27,9 +27,9 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal sealed class MyContextAwareEventHandlerAsync : RequestHandlerAsync<MyEvent>
+    internal sealed class MyContextAwareEventHandlerAsync(ContextCapture? contextCapture = null) : RequestHandlerAsync<MyEvent>
     {
-        public static string? TestString { get; set; }
+        public string? TestString { get; private set; }
         
         public override async Task<MyEvent> HandleAsync(MyEvent @event, CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -40,6 +40,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         private void LogContext()
         {
             TestString = (string)Context!.Bag["TestString"];
+            if (contextCapture is not null)
+                contextCapture.TestString = TestString;
             Context.Bag["MyContextAwareEventHandler"] = "I was called and set the context";
         }
     }

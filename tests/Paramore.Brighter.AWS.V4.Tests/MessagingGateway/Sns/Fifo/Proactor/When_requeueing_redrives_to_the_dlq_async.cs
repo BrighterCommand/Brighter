@@ -10,21 +10,22 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
-[Trait("Category", "AWS")]
-public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class SqsMessageProducerDlqTestsAsync : IAsyncDisposable
 {
-    private readonly SnsMessageProducer _sender;
-    private readonly IAmAChannelAsync _channel;
-    private readonly ChannelFactory _channelFactory;
-    private readonly Message _message;
-    private readonly AWSMessagingGatewayConnection _awsConnection;
-    private readonly ChannelName _deadLetterChannel;
+    private SnsMessageProducer _sender;
+    private IAmAChannelAsync _channel;
+    private ChannelFactory _channelFactory;
+    private Message _message;
+    private AWSMessagingGatewayConnection _awsConnection;
+    private ChannelName _deadLetterChannel;
 
-    public SqsMessageProducerDlqTestsAsync()
+    [Before(Test)]
+    public async Task Setup()
     {
         MyCommand myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -66,13 +67,13 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
                 TopicAttributes = topicAttributes
             });
 
-        _sender.ConfirmTopicExistsAsync(topicName).Wait();
+        await _sender.ConfirmTopicExistsAsync(topicName);
 
         _channelFactory = new ChannelFactory(_awsConnection);
-        _channel = _channelFactory.CreateAsyncChannel(subscription);
+        _channel = await _channelFactory.CreateAsyncChannelAsync(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeueing_redrives_to_the_queue_async()
     {
         await _sender.SendAsync(_message);
@@ -88,7 +89,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         await Task.Delay(5000);
 
         int dlqCount = await GetDLQCountAsync();
-        Assert.Equal(1, dlqCount);
+        await Assert.That(dlqCount).IsEqualTo(1);
     }
 
     private async Task<int> GetDLQCountAsync()
@@ -111,10 +112,11 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

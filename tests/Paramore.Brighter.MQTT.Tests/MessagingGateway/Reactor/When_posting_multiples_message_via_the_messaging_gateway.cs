@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,20 +27,17 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 {
-    [Trait("Category", "MQTT")]
-    [Collection("MQTT")]
+    [Category("MQTT")]
     public class MqttMessageProducerSendMessageTests : MqttTestClassBase<MqttMessageProducerSendMessageTests>
     {
         private const string ClientId = "BrighterIntegrationTests-Produce";
         private const string TopicPrefix = "BrighterIntegrationTests/ProducerTests";
 
-        public MqttMessageProducerSendMessageTests(ITestOutputHelper testOutputHelper)
-            : base(ClientId, TopicPrefix, testOutputHelper)
+        public MqttMessageProducerSendMessageTests()
+            : base(ClientId, TopicPrefix)
         {
         }
 
@@ -72,8 +69,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
         /// </exception>
         protected IAmAMessageConsumerSync MessageConsumerSync => (MessageConsumerAsync as IAmAMessageConsumerSync)!;
 
-        [Fact]
-        public void When_posting_multiples_message_via_the_messaging_gateway_sync()
+        [Test]
+        public async Task When_posting_multiples_message_via_the_messaging_gateway_sync()
         {
             const int messageCount = 1000;
             List<Message> sentMessages = [];
@@ -109,9 +106,10 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
                 retries++;
             }
 
-            Assert.NotEmpty(receivedMessages);
-            Assert.Equal(messageCount, receivedMessages.Count);
-            Assert.Equal(sentMessages, receivedMessages);
+            await Assert.That(receivedMessages).IsNotEmpty();
+            await Assert.That(receivedMessages.Count).IsEqualTo(messageCount);
+            await Assert.That(receivedMessages).IsEqualTo(sentMessages);
         }
     }
 }
+

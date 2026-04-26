@@ -1,10 +1,9 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
@@ -12,8 +11,8 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {
-    [Trait("Category", "ASB")]
-    public class ASBProducerTests : IDisposable
+    [Category("ASB")]
+    public class ASBProducerTests
     {
         private readonly IAmAChannelSync _topicChannel;
         private readonly IAmAChannelSync _queueChannel;
@@ -81,9 +80,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 .Create();
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
+        [Test]
+        [Arguments(true)]
+        [Arguments(false)]
         public async Task When_posting_a_message_via_the_producer(bool testQueues)
         {
             //arrange
@@ -104,26 +103,26 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             //clear the queue
             channel.Acknowledge(message);
 
-            Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
-            Assert.Equal(_command.Id, message.Id);
-            Assert.False(message.Redelivered);
-            Assert.Equal(_command.Id, message.Header.MessageId);
-            Assert.Contains(testQueues ? _queueName : _topicName, message.Header.Topic.Value);
-            Assert.Equal(_correlationId, message.Header.CorrelationId);
-            Assert.Equal(_contentType, message.Header.ContentType);
-            Assert.Equal(0, message.Header.HandledCount);
+            await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+            await Assert.That(message.Id).IsEqualTo(_command.Id);
+            await Assert.That(message.Redelivered).IsFalse();
+            await Assert.That(message.Header.MessageId).IsEqualTo(_command.Id);
+            await Assert.That(message.Header.Topic.Value).Contains(testQueues ? _queueName : _topicName);
+            await Assert.That(message.Header.CorrelationId).IsEqualTo(_correlationId);
+            await Assert.That(message.Header.ContentType).IsEqualTo(_contentType);
+            await Assert.That(message.Header.HandledCount).IsEqualTo(0);
             //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-            Assert.True(message.Header.TimeStamp > RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
-            Assert.Equal(TimeSpan.Zero, message.Header.Delayed);
+            await Assert.That(message.Header.TimeStamp > RoundToSeconds(DateTime.UtcNow.AddMinutes(-1))).IsTrue();
+            await Assert.That(message.Header.Delayed).IsEqualTo(TimeSpan.Zero);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
-            Assert.Equal(commandMessage.Body.Value, message.Body.Value);
-            Assert.Contains(testHeader, message.Header.Bag.Keys);
-            Assert.Equal(testHeaderValue, message.Header.Bag[testHeader]);
+            await Assert.That(message.Body.Value).IsEqualTo(commandMessage.Body.Value);
+            await Assert.That(message.Header.Bag.Keys).Contains(testHeader);
+            await Assert.That(message.Header.Bag[testHeader]).IsEqualTo(testHeaderValue);
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
+        [Test]
+        [Arguments(true)]
+        [Arguments(false)]
         public async Task When_posting_a_message_via_the_bulk_producer(bool testQueues)
         {
             //arrange
@@ -145,21 +144,21 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             //clear the queue
             channel.Acknowledge(message);
 
-            Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
-            Assert.Equal(_command.Id, message.Id);
-            Assert.False(message.Redelivered);
-            Assert.Equal(_command.Id, message.Header.MessageId);
-            Assert.Contains(testQueues ? _queueName : _topicName, message.Header.Topic.Value);
-            Assert.Equal(_correlationId, message.Header.CorrelationId);
-            Assert.Equal(_contentType, message.Header.ContentType);
-            Assert.Equal(0, message.Header.HandledCount);
+            await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+            await Assert.That(message.Id).IsEqualTo(_command.Id);
+            await Assert.That(message.Redelivered).IsFalse();
+            await Assert.That(message.Header.MessageId).IsEqualTo(_command.Id);
+            await Assert.That(message.Header.Topic.Value).Contains(testQueues ? _queueName : _topicName);
+            await Assert.That(message.Header.CorrelationId).IsEqualTo(_correlationId);
+            await Assert.That(message.Header.ContentType).IsEqualTo(_contentType);
+            await Assert.That(message.Header.HandledCount).IsEqualTo(0);
             //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-            Assert.True(message.Header.TimeStamp > RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
-            Assert.Equal(TimeSpan.Zero, message.Header.Delayed);
+            await Assert.That(message.Header.TimeStamp > RoundToSeconds(DateTime.UtcNow.AddMinutes(-1))).IsTrue();
+            await Assert.That(message.Header.Delayed).IsEqualTo(TimeSpan.Zero);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
-            Assert.Equal(commandMessage.Body.Value, message.Body.Value);
-            Assert.Contains(testHeader, message.Header.Bag.Keys);
-            Assert.Equal(testHeaderValue, message.Header.Bag[testHeader]);
+            await Assert.That(message.Body.Value).IsEqualTo(commandMessage.Body.Value);
+            await Assert.That(message.Header.Bag.Keys).Contains(testHeader);
+            await Assert.That(message.Header.Bag[testHeader]).IsEqualTo(testHeaderValue);
         }
 
         private Message GenerateMessage(string topicName) => new Message(
@@ -169,10 +168,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
         );
 
-        public void Dispose()
+        [After(Test)]
+        public async Task Cleanup()
         {
-            _administrationClient.DeleteTopicAsync(_topicName).GetAwaiter().GetResult();
-            _administrationClient.DeleteQueueAsync(_queueName).GetAwaiter().GetResult();
+            await _administrationClient.DeleteTopicAsync(_topicName);
+            await _administrationClient.DeleteQueueAsync(_queueName);
         }
 
         private DateTime RoundToSeconds(DateTime dateTime)

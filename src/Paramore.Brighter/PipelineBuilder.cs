@@ -45,9 +45,10 @@ namespace Paramore.Brighter
         private readonly InboxConfiguration? _inboxConfiguration;
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
         private readonly List<IAmALifetime> _instanceScopes = new List<IAmALifetime>();
-        //GLOBAL! cache of handler attributes - won't change post-startup so avoid re-calculation. Method to clear cache below (if a broken test brought you here)
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> s_preAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> s_postAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
+        //GLOBAL cache of handler attributes — derived from reflection so immutable post-startup.
+        //Values are materialized into IReadOnlyList<> so concurrent reads are thread-safe.
+        private static readonly ConcurrentDictionary<string, IReadOnlyList<RequestHandlerAttribute>> s_preAttributesMemento = new ConcurrentDictionary<string, IReadOnlyList<RequestHandlerAttribute>>();
+        private static readonly ConcurrentDictionary<string, IReadOnlyList<RequestHandlerAttribute>> s_postAttributesMemento = new ConcurrentDictionary<string, IReadOnlyList<RequestHandlerAttribute>>();
 
         /// <summary>
         /// Used to build a pipeline of handlers from the target handler and the attributes on that
@@ -272,31 +273,46 @@ namespace Paramore.Brighter
 
             implicitHandler.Context = requestContext;
 
-            if (!s_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(),
-                    out IOrderedEnumerable<RequestHandlerAttribute>? preAttributes))
+            IReadOnlyList<RequestHandlerAttribute>? preAttributes = null;
+            var shouldCachePreAttributes = _inboxConfiguration == null;
+
+            if (shouldCachePreAttributes)
             {
-                preAttributes =
+                s_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(),
+                    out preAttributes);
+            }
+
+            if (preAttributes is null)
+            {
+                var orderedPreAttributes =
                     implicitHandler.FindHandlerMethod()
                         .GetOtherHandlersInPipeline()
                         .Where(attribute => attribute.Timing == HandlerTiming.Before)
                         .OrderByDescending(attribute => attribute.Step);
 
-                s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
-            }
+                AddGlobalInboxAttributes(ref orderedPreAttributes, implicitHandler);
 
-            AddGlobalInboxAttributes(ref preAttributes, implicitHandler);
+                preAttributes = orderedPreAttributes.ToList().AsReadOnly();
+
+                if (shouldCachePreAttributes)
+                {
+                    s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
+                }
+            }
 
             var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext, instanceScope);
 
 
             if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(),
-                    out IOrderedEnumerable<RequestHandlerAttribute>? postAttributes))
+                    out IReadOnlyList<RequestHandlerAttribute>? postAttributes))
             {
                 postAttributes =
                     implicitHandler.FindHandlerMethod()
                         .GetOtherHandlersInPipeline()
                         .Where(attribute => attribute.Timing == HandlerTiming.After)
-                        .OrderByDescending(attribute => attribute.Step);
+                        .OrderByDescending(attribute => attribute.Step)
+                        .ToList()
+                        .AsReadOnly();
 
                 s_postAttributesMemento.TryAdd(implicitHandler.Name.ToString(), postAttributes);
             }
@@ -316,28 +332,43 @@ namespace Paramore.Brighter
             implicitHandler.Context = requestContext;
             implicitHandler.ContinueOnCapturedContext = continueOnCapturedContext;
 
-            if (!s_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute>? preAttributes))
+            IReadOnlyList<RequestHandlerAttribute>? preAttributes = null;
+            var shouldCachePreAttributes = _inboxConfiguration == null;
+
+            if (shouldCachePreAttributes)
             {
-                preAttributes =
+                s_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out preAttributes);
+            }
+
+            if (preAttributes is null)
+            {
+                var orderedPreAttributes =
                     implicitHandler.FindHandlerMethod()
                         .GetOtherHandlersInPipeline()
                         .Where(attribute => attribute.Timing == HandlerTiming.Before)
                         .OrderByDescending(attribute => attribute.Step);
 
-                s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
-            }
+                AddGlobalInboxAttributesAsync(ref orderedPreAttributes, implicitHandler);
 
-            AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
+                preAttributes = orderedPreAttributes.ToList().AsReadOnly();
+
+                if (shouldCachePreAttributes)
+                {
+                    s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
+                }
+            }
 
             var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, instanceScope, continueOnCapturedContext);
 
-            if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute>? postAttributes))
+            if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IReadOnlyList<RequestHandlerAttribute>? postAttributes))
             {
                 postAttributes =
                     implicitHandler.FindHandlerMethod()
                         .GetOtherHandlersInPipeline()
                         .Where(attribute => attribute.Timing == HandlerTiming.After)
-                        .OrderByDescending(attribute => attribute.Step);
+                        .OrderByDescending(attribute => attribute.Step)
+                        .ToList()
+                        .AsReadOnly();
 
                 s_postAttributesMemento.TryAdd(implicitHandler.Name.ToString(), postAttributes);
             }

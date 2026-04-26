@@ -53,12 +53,13 @@ namespace Paramore.Brighter
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
         private readonly InstrumentationOptions _instrumentationOptions;
 
-        //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
-            new ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>>();
+        //GLOBAL cache of message mapper transform attributes — derived from reflection so immutable post-startup.
+        //Values are materialized into IReadOnlyList<> so concurrent reads are thread-safe.
+        private static readonly ConcurrentDictionary<string, IReadOnlyList<WrapWithAttribute>> s_wrapTransformsMemento =
+            new ConcurrentDictionary<string, IReadOnlyList<WrapWithAttribute>>();
 
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento =
-            new ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>>();
+        private static readonly ConcurrentDictionary<string, IReadOnlyList<UnwrapWithAttribute>> s_unWrapTransformsMemento =
+            new ConcurrentDictionary<string, IReadOnlyList<UnwrapWithAttribute>>();
 
         /// <summary>
         /// Creates an instance of a transform pipeline builder.
@@ -220,6 +221,9 @@ namespace Paramore.Brighter
             return new TransformPipelineDescription(mapperType, isDefault, wrapTransforms, unwrapTransforms);
         }
 
+        /// <summary>
+        /// Clears any cached transform pipeline definitions.
+        /// </summary>
         public static void ClearPipelineCache()
         {
             s_wrapTransformsMemento.Clear();
@@ -233,14 +237,16 @@ namespace Paramore.Brighter
             return messageMapper;
         }
 
-        private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
+        private IReadOnlyList<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType().Name;
-            if (!s_wrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<WrapWithAttribute>? transformAttributes))
+            if (!s_wrapTransformsMemento.TryGetValue(key, out IReadOnlyList<WrapWithAttribute>? transformAttributes))
             {
                 transformAttributes = FindMapToMessage(messageMapper)
                     .GetOtherWrapsInPipeline()
-                    .OrderByDescending(attribute => attribute.Step);
+                    .OrderByDescending(attribute => attribute.Step)
+                    .ToList()
+                    .AsReadOnly();
 
                 s_wrapTransformsMemento.TryAdd(key, transformAttributes);
             }
@@ -248,14 +254,16 @@ namespace Paramore.Brighter
             return transformAttributes;
         }
 
-        private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
+        private IReadOnlyList<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType().Name;
-            if (!s_unWrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<UnwrapWithAttribute>? transformAttributes))
+            if (!s_unWrapTransformsMemento.TryGetValue(key, out IReadOnlyList<UnwrapWithAttribute>? transformAttributes))
             {
                 transformAttributes = FindMapToRequest(messageMapper)
                     .GetOtherUnwrapsInPipeline()
-                    .OrderByDescending(attribute => attribute.Step);
+                    .OrderByDescending(attribute => attribute.Step)
+                    .ToList()
+                    .AsReadOnly();
 
                 s_unWrapTransformsMemento.TryAdd(key, transformAttributes);
             }

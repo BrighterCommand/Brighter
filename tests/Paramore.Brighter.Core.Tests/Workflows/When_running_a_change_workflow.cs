@@ -1,67 +1,52 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
-
-public class MediatorChangeStepFlowTests 
+public class MediatorChangeStepFlowTests
 {
-    private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
     private readonly InMemoryJobChannel<WorkflowTestData> _channel;
     private readonly Job<WorkflowTestData> _job;
+    private readonly WorkflowExecutionLog _executionLog = new();
     private bool _stepCompleted;
-
-    public MediatorChangeStepFlowTests (ITestOutputHelper testOutputHelper)
+    public MediatorChangeStepFlowTests()
     {
-        _testOutputHelper = testOutputHelper;
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
-
         CommandProcessor? commandProcessor = null;
-        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
-
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
-        PipelineBuilder<MyCommand>.ClearPipelineCache();    
-        
-        var workflowData= new WorkflowTestData { Bag = { ["MyValue"] = "Test" } };
-
-        _job = new Job<WorkflowTestData>(workflowData) ;
-        
-        var firstStep = new Sequential<WorkflowTestData>(
-            "Test of Job",
-            new ChangeAsync<WorkflowTestData>( (data) =>
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor, _executionLog));
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+        var workflowData = new WorkflowTestData
+        {
+            Bag =
             {
-                var tcs = new TaskCompletionSource();
-                data.Bag["MyValue"] = "Altered";
-                tcs.SetResult();
-                return tcs.Task;
-            }),
-            () => { _stepCompleted = true; },
-            null
-            );
-        
+                ["MyValue"] = "Test"
+            }
+        };
+        _job = new Job<WorkflowTestData>(workflowData);
+        var firstStep = new Sequential<WorkflowTestData>("Test of Job", new ChangeAsync<WorkflowTestData>((data) =>
+        {
+            var tcs = new TaskCompletionSource();
+            data.Bag["MyValue"] = "Altered";
+            tcs.SetResult();
+            return tcs.Task;
+        }), () =>
+        {
+            _stepCompleted = true;
+        }, null);
         _job.InitSteps(firstStep);
-        
-        var store = new InMemoryStateStoreAsync ();
+        var store = new InMemoryStateStoreAsync();
         _channel = new InMemoryJobChannel<WorkflowTestData>();
-
-        _scheduler = new Scheduler<WorkflowTestData>(
-            _channel,
-            store
-        );
-
+        _scheduler = new Scheduler<WorkflowTestData>(_channel, store);
         _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
     }
-    
-    [Fact]
+
+    [Test]
     public async Task When_running_a_change_workflow()
     {
         await _scheduler.ScheduleAsync(_job);
@@ -75,11 +60,11 @@ public class MediatorChangeStepFlowTests
         }
         catch (OperationCanceledException ex)
         {
-            _testOutputHelper.WriteLine(ex.ToString());
+            Console.WriteLine(ex.ToString());
         }
 
-        Assert.Equal(JobState.Done, _job.State);
-        Assert.True(_stepCompleted);
-        Assert.Equal("Altered", _job.Data.Bag["MyValue"]);
+        await Assert.That(_job.State).IsEqualTo(JobState.Done);
+        await Assert.That(_stepCompleted).IsTrue();
+        await Assert.That(_job.Data.Bag["MyValue"]).IsEqualTo("Altered");
     }
 }

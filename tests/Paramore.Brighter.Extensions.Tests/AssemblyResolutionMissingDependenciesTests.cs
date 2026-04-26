@@ -1,14 +1,13 @@
-﻿using System;
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class AssemblyResolutionMissingDependenciesTests
 {
-    [Fact]
-    public void When_we_auto_register_handlers_from_assemblies_with_missing_dependencies()
+    [Test]
+    public async Task When_we_auto_register_handlers_from_assemblies_with_missing_dependencies()
     {
         //arrange
         var factory =
@@ -29,12 +28,12 @@ public class AssemblyResolutionMissingDependenciesTests
         }
         catch (AggregateException ae)
         {
-            Assert.Contains("Some services are not able", ae.Message);
+            await Assert.That(ae.Message).Contains("Some services are not able");
             caught = true;
         }
         
         //assert
-        Assert.True(caught);
+        await Assert.That(caught).IsTrue();
         
     }
 }

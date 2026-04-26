@@ -23,8 +23,6 @@ THE SOFTWARE. */
 
 using Paramore.Brighter;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -32,31 +30,31 @@ public class SpyCommandProcessorInvokedMethodTests
 {
     private readonly SpyCommandProcessor _spy = new();
 
-    [Fact]
-    public void Then_was_called_returns_false_before_any_calls()
+    [Test]
+    public async Task Then_was_called_returns_false_before_any_calls()
     {
         //Assert
-        _spy.WasCalled(CommandType.Send).ShouldBeFalse();
+        await Assert.That(_spy.WasCalled(CommandType.Send)).IsFalse();
     }
 
-    [Fact]
-    public void Then_was_called_returns_true_after_send_called()
+    [Test]
+    public async Task Then_was_called_returns_true_after_send_called()
     {
         //Act
         _spy.Send(new TestCommand());
 
         //Assert
-        _spy.WasCalled(CommandType.Send).ShouldBeTrue();
+        await Assert.That(_spy.WasCalled(CommandType.Send)).IsTrue();
     }
 
-    [Fact]
-    public void Then_was_called_returns_false_for_different_method()
+    [Test]
+    public async Task Then_was_called_returns_false_for_different_method()
     {
         //Act
         _spy.Send(new TestCommand());
 
         //Assert
-        _spy.WasCalled(CommandType.Publish).ShouldBeFalse();
+        await Assert.That(_spy.WasCalled(CommandType.Publish)).IsFalse();
     }
 
     private sealed class TestCommand() : Command(Id.Random());

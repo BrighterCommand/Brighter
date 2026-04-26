@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,7 +26,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
@@ -35,7 +34,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 /// it should delegate to the lazily-created producer's SendWithDelayAsync rather than
 /// sending directly to the SQL queue.
 /// </summary>
-[Trait("Category", "MSSQL")]
+[Category("MSSQL")]
 public class MssqlConsumerRequeueTestsAsync : IAsyncDisposable
 {
     private readonly MsSqlMessageConsumer _consumer;
@@ -62,19 +61,19 @@ public class MssqlConsumerRequeueTestsAsync : IAsyncDisposable
             new MessageBody("test content for async delayed requeue"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeuing_async_with_delay_should_use_producer()
     {
         // Act - requeue with non-zero delay
         var result = await _consumer.RequeueAsync(_message, TimeSpan.FromSeconds(5));
 
         // Assert - should return true
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - async scheduler should have been called via the producer path
-        Assert.True(_scheduler.ScheduleAsyncCalled);
-        Assert.Equal(_message.Body.Value, _scheduler.ScheduledMessage?.Body.Value);
-        Assert.Equal(TimeSpan.FromSeconds(5), _scheduler.ScheduledDelay);
+        await Assert.That(_scheduler.ScheduleAsyncCalled).IsTrue();
+        await Assert.That(_scheduler.ScheduledMessage?.Body.Value).IsEqualTo(_message.Body.Value);
+        await Assert.That(_scheduler.ScheduledDelay).IsEqualTo(TimeSpan.FromSeconds(5));
     }
 
     public ValueTask DisposeAsync()

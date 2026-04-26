@@ -1,15 +1,14 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
 {
-    [Trait("Category", "InMemory")]
+    [Category("InMemory")]
     public class OutboxEntryTimeToLiveTests
     {
-        [Fact]
+        [Test]
         public async Task When_expiring_a_cache_entry_no_longer_there()
         {
             //Arrange
@@ -29,7 +28,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             
             //Act
-            outbox.Add(messageToAdd, new RequestContext());
+            await outbox.AddAsync(messageToAdd, new RequestContext());
             
             timeProvider.Advance(TimeSpan.FromMilliseconds(500)); //give the entry to time to expire
             
@@ -41,10 +40,10 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             var message = await outbox.GetAsync(messageId, new RequestContext());
             
             //Assert
-            Assert.True(message.IsEmpty);
+            await Assert.That(message.IsEmpty).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task When_over_ttl_but_no_sweep_run()
         {
                //Arrange
@@ -71,8 +70,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                var message = await outbox.GetAsync(messageId, new RequestContext());
                
                //Assert
-               Assert.NotNull(message);
-               Assert.Equal(messageId, message.Id);
+               await Assert.That(message).IsNotNull();
+               await Assert.That(message.Id).IsEqualTo(messageId);
         }
     }
 }

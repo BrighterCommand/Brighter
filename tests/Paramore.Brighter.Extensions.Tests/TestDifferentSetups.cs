@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -12,14 +12,13 @@ using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Tests
 {
     public class TestBrighterExtension
     {
-        [Fact]
-        public void BasicSetup()
+        [Test]
+        public async Task BasicSetup()
         {
             var serviceCollection = new ServiceCollection();
 
@@ -29,13 +28,13 @@ namespace Tests
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
-            Assert.NotNull(commandProcessor);
+            await Assert.That(commandProcessor).IsNotNull();
         }
 
-        [Theory]
-        [InlineData(typeof(SomeSqlConnectionProvider), typeof(StubSqlTransactionProvider))]
-        [InlineData(typeof(StubSqlTransactionProvider), typeof(StubSqlTransactionProvider))]
-        public void WithExternalBus(Type connectionProvider, Type transactionProvider)
+        [Test]
+        [Arguments(typeof(SomeSqlConnectionProvider), typeof(StubSqlTransactionProvider))]
+        [Arguments(typeof(StubSqlTransactionProvider), typeof(StubSqlTransactionProvider))]
+        public async Task WithExternalBus(Type connectionProvider, Type transactionProvider)
         {
             var serviceCollection = new ServiceCollection();
             const string mytopic = "MyTopic";
@@ -79,11 +78,11 @@ namespace Tests
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
-            Assert.NotNull(commandProcessor);
+            await Assert.That(commandProcessor).IsNotNull();
         }
 
-        [Fact]
-        public void WithCustomPolicy()
+        [Test]
+        public async Task WithCustomPolicy()
         {
             var serviceCollection = new ServiceCollection();
 
@@ -107,24 +106,24 @@ namespace Tests
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
-            Assert.NotNull(commandProcessor);
+            await Assert.That(commandProcessor).IsNotNull();
         }
 
-        [Fact]
-        public void WithScopedLifetime()
+        [Test]
+        public async Task WithScopedLifetime()
         {
             var serviceCollection = new ServiceCollection();
 
             serviceCollection.AddBrighter(
                 ).AutoFromAssemblies();
 
-            Assert.Equal(ServiceLifetime.Singleton, serviceCollection.SingleOrDefault(x => x.ServiceType == typeof(IAmACommandProcessor))?.Lifetime);
+            await Assert.That(serviceCollection.SingleOrDefault(x => x.ServiceType == typeof(IAmACommandProcessor))?.Lifetime).IsEqualTo(ServiceLifetime.Singleton);
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
-            Assert.NotNull(commandProcessor);
+            await Assert.That(commandProcessor).IsNotNull();
         }
 
         public class SomeSqlConnectionProvider : RelationalDbConnectionProvider

@@ -1,14 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 {
-    [Trait("Category", "MSSQL")]
+    [Category("MSSQL")]
     public class PurgeTest :  IAsyncDisposable, IDisposable
     {
         private readonly string _queueName = Guid.NewGuid().ToString();
@@ -35,8 +34,8 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
         }
 
-        [Fact]
-        public void When_queue_is_Purged()
+        [Test]
+        public async Task When_queue_is_Purged()
         {
             IAmAMessageConsumerSync consumer = _consumer;
                 //Send a sequence of messages to Kafka
@@ -46,7 +45,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
                 var firstMessage = ConsumeMessages(consumer);
                 var message = firstMessage.First();
-                Assert.Equal(msgId, message.Id);
+                await Assert.That(message.Id).IsEqualTo(msgId);
 
                 _consumer.Purge();
 
@@ -55,7 +54,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 var nextMessage = ConsumeMessages(consumer);
                 message = nextMessage.First();
                 
-                Assert.Equal(new Message(), message);
+                await Assert.That(message).IsEqualTo(new Message());
         }
 
         private string SendMessage()

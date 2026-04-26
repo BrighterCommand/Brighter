@@ -19,12 +19,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
@@ -35,30 +32,21 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly RoutingKey _routingKey = new("myTopic");
         private const string ChannelName = "myChannel";
-
         public ChannelNackTests()
         {
             IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
-
             _channel = new Channel(new(ChannelName), _routingKey, gateway);
-
-            var sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
-                new MessageBody("a test body"));
-            
+            var sentMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), new MessageBody("a test body"));
             _bus.Enqueue(sentMessage);
         }
 
-
-        [Fact]
-        public void When_No_Acknowledge_Is_Called_On_A_Channel()
+        [Test]
+        public async Task When_No_Acknowledge_Is_Called_On_A_Channel()
         {
             var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             _channel.Reject(receivedMessage);
-            
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //allow for message to timeout if not rejected 
-
-            Assert.Empty(_bus.Stream(new RoutingKey(_routingKey)));
+            await Assert.That(_bus.Stream(new RoutingKey(_routingKey))).IsEmpty();
         }
     }
 }

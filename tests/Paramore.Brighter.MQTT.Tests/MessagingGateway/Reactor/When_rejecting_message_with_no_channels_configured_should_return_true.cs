@@ -29,27 +29,27 @@ using System.Threading.Tasks;
 using MQTTnet;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "MQTT")]
-[Collection("MQTT")]
+[Category("MQTT")]
 public class MqttMessageConsumerRejectNoChannelsTests : IDisposable
 {
     private const string SOURCE_TOPIC_PREFIX = "BrighterTests/NoChannels";
 
-    private readonly MqttTestServer? _mqttTestServer;
+    private MqttTestServer? _mqttTestServer;
     private readonly MqttMessageProducer _sourceProducer;
     private readonly MqttMessageConsumer _sourceConsumer;
+    private readonly MqttFactory _mqttFactory;
+    private readonly int _serverPort;
 
-    public MqttMessageConsumerRejectNoChannelsTests(ITestOutputHelper outputHelper)
+    public MqttMessageConsumerRejectNoChannelsTests()
     {
         var mqttFactory = new MqttFactory();
         int serverPort = MqttTestServer.GetRandomServerPort();
 
-        _mqttTestServer = MqttTestServer.CreateTestMqttServer(mqttFactory, true, serverPort: serverPort);
+        _mqttFactory = mqttFactory;
+        _serverPort = serverPort;
 
         //Arrange — source producer
         var producerConfig = new MqttMessagingGatewayProducerConfiguration
@@ -73,7 +73,13 @@ public class MqttMessageConsumerRejectNoChannelsTests : IDisposable
         _sourceConsumer = new MqttMessageConsumer(consumerConfig);
     }
 
-    [Fact]
+    [Before(HookType.Test)]
+    public async Task Setup()
+    {
+        _mqttTestServer = await MqttTestServer.CreateTestMqttServer(_mqttFactory, true, serverPort: _serverPort);
+    }
+
+    [Test]
     public async Task When_rejecting_message_with_no_channels_configured_should_return_true()
     {
         //Arrange
@@ -88,7 +94,7 @@ public class MqttMessageConsumerRejectNoChannelsTests : IDisposable
         await Task.Delay(500);
 
         var received = ((IAmAMessageConsumerSync)_sourceConsumer).Receive(TimeSpan.FromSeconds(2));
-        Assert.NotEmpty(received);
+        await Assert.That(received).IsNotEmpty();
         var sourceMessage = received.First(m => m.Header.MessageType != MessageType.MT_NONE);
 
         //Act — reject with DeliveryError (no channels configured)
@@ -98,7 +104,7 @@ public class MqttMessageConsumerRejectNoChannelsTests : IDisposable
         );
 
         //Assert — reject returns true (not false as before the DLQ work)
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
     }
 
     public void Dispose()
@@ -108,3 +114,4 @@ public class MqttMessageConsumerRejectNoChannelsTests : IDisposable
         _mqttTestServer?.Dispose();
     }
 }
+

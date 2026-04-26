@@ -4,13 +4,12 @@ using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
-[Trait("Category", "AWS")]
-public class AwsAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
+[Category("AWS")]
+public class AwsAssumeQueuesTestsAsync : IAsyncDisposable
 {
     private readonly ChannelFactory _channelFactory;
     private readonly IAmAMessageConsumerAsync _consumer;
@@ -39,7 +38,7 @@ public class AwsAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_queues_missing_assume_throws_async()
     {
         //we will try to get the queue url, and fail because it does not exist
@@ -47,9 +46,10 @@ public class AwsAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
             await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)));
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
     }
 
     public async ValueTask DisposeAsync()

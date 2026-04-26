@@ -1,4 +1,4 @@
-﻿using System.Net.Mime;
+using System.Net.Mime;
 using Paramore.Brighter.AWSScheduler.V4.Tests.Helpers;
 using Paramore.Brighter.AWSScheduler.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.AWS.V4;
@@ -6,9 +6,8 @@ using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
 namespace Paramore.Brighter.AWSScheduler.V4.Tests.Scheduler.Messages.Sqs;
 
-[Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
-[Collection("Scheduler SQS")]
-public class SqsSchedulingMessageTest : IDisposable
+[Property("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
+public class SqsSchedulingMessageTest
 {
     private readonly ContentType _contentType = new(MediaTypeNames.Text.Plain);
     private const int BufferSize = 3;
@@ -41,15 +40,15 @@ public class SqsSchedulingMessageTest : IDisposable
         _messageProducer = new SqsMessageProducer(awsConnection,
             new SqsPublication { MakeChannels = OnMissingChannel.Create, QueueAttributes = new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }) });
 
-        _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
+        _factory = new AwsSchedulerFactory(awsConnection, $"brighter-scheduler-{Guid.NewGuid():N}")
         {
             UseMessageTopicAsTarget = true, 
             MakeRole = OnMissingRole.Create
         };
     }
 
-    [Fact]
-    public void When_Scheduling_A_Sqs_Message()
+    [Test]
+    public async Task When_Scheduling_A_Sqs_Message()
     {
         var routingKey = new RoutingKey(_queueName);
         var message = new Message(
@@ -66,14 +65,14 @@ public class SqsSchedulingMessageTest : IDisposable
         var stopAt = DateTimeOffset.UtcNow.AddMinutes(2);
         while (stopAt > DateTimeOffset.UtcNow)
         {
-            var messages = _consumer.Receive(TimeSpan.FromMinutes(1));
-            Assert.Single(messages);
+            var messages = await _consumer.ReceiveAsync(TimeSpan.FromMinutes(1));
+            await Assert.That(messages).HasSingleItem();
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
-                Assert.Equal((string?)message.Body.Value, (string?)messages[0].Body.Value);
-                Assert.Equivalent(message.Header, messages[0].Header);
-                _consumer.Acknowledge(messages[0]);
+                await Assert.That((string?)messages[0].Body.Value).IsEqualTo((string?)message.Body.Value);
+                await Assert.That(messages[0].Header).IsEquivalentTo(message.Header);
+                await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }
 
@@ -83,10 +82,13 @@ public class SqsSchedulingMessageTest : IDisposable
         Assert.Fail("The message wasn't fired");
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteQueueAsync().GetAwaiter().GetResult();
-        _messageProducer.Dispose();
-        _consumer.Dispose();
+        await _channelFactory.DeleteQueueAsync();
+        await _messageProducer.DisposeAsync();
+        await _consumer.DisposeAsync();
     }
 }
+
+

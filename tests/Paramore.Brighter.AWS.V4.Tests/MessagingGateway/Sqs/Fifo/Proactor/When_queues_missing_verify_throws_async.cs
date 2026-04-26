@@ -4,12 +4,11 @@ using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
-[Trait("Category", "AWS")]
+[Category("AWS")]
 public class AwsValidateQueuesTestsAsync : IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -34,7 +33,7 @@ public class AwsValidateQueuesTestsAsync : IAsyncDisposable
         _awsConnection = GatewayFactory.CreateFactory();
     }
 
-    [Fact]
+    [Test]
     public async Task When_queues_missing_verify_throws_async()
     {
         // We have no queues so we should throw

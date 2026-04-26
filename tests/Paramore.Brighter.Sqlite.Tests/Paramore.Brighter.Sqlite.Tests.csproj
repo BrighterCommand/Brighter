@@ -1,37 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
-        <IsPackable>false</IsPackable>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <PackageReference Include="coverlet.collector">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="GitHubActionsTestLogger">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-      <PackageReference Include="Microsoft.Extensions.Logging" />
-      <PackageReference Include="Microsoft.NET.Test.Sdk" />
-      <PackageReference Include="Microsoft.Data.Sqlite" />
-      <PackageReference Include="Newtonsoft.Json"/>
-      <PackageReference Include="Polly" />
-      <PackageReference Include="System.Text.Json" />
-      <PackageReference Include="xunit" />
-      <PackageReference Include="xunit.runner.visualstudio">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Sqlite\Paramore.Brighter.Inbox.Sqlite.csproj" />
-      <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj" />
-      <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
-    </ItemGroup>
-
+  <PropertyGroup>
+    <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Polly" />
+    <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="TUnit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Sqlite\Paramore.Brighter.Inbox.Sqlite.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
+  </ItemGroup>
 </Project>

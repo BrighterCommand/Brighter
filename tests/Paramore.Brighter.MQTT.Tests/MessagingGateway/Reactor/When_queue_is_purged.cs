@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,20 +26,17 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 {
-    [Trait("Category", "MQTT")]
-    [Collection("MQTT")]
+    [Category("MQTT")]
     public class When_queue_is_Purged : MqttTestClassBase<When_queue_is_Purged>
     {
         private const string ClientId = "BrighterIntegrationTests-Purge";
         private const string TopicPrefix = "BrighterIntegrationTests/PurgeTests";
 
-        public When_queue_is_Purged(ITestOutputHelper testOutputHelper)
-            : base(ClientId, TopicPrefix, testOutputHelper)
+        public When_queue_is_Purged()
+            : base(ClientId, TopicPrefix)
         {
         }
 
@@ -71,8 +68,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
         /// </exception>
         protected IAmAMessageConsumerSync MessageConsumerSync => (MessageConsumerAsync as IAmAMessageConsumerSync)!;
 
-        [Fact]
-        public void When_purging_the_queue_on_the_messaging_gateway()
+        [Test]
+        public async Task When_purging_the_queue_on_the_messaging_gateway()
         {
             for (int i = 0; i < 5; i++)
             {
@@ -90,10 +87,11 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 
             Message[] receivedMessages = MessageConsumerSync.Receive(TimeSpan.FromMilliseconds(100));
 
-            Assert.NotEmpty(receivedMessages);
-            Assert.Single(receivedMessages);
-            Assert.Contains(_noopMessage, receivedMessages);
-            Assert.IsType<Message>(receivedMessages[0]);
+            await Assert.That(receivedMessages).IsNotEmpty();
+            await Assert.That(receivedMessages).HasSingleItem();
+            await Assert.That(receivedMessages).Contains(_noopMessage);
+            await Assert.That(receivedMessages[0]).IsTypeOf<Message>();
         }
     }
 }
+
