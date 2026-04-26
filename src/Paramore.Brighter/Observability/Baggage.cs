@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Observability;
 /// Each entry consists of a key-value pair where the key identifies the vendor and the value contains user-defined request or workflow data.
 /// Note that baggage entries are not intended for telemetry data, but rather for user-defined metadata about a trace.
 /// </remarks>
-public class Baggage : IEnumerable<KeyValuePair<string, string?>>
+public class Baggage : IEnumerable<KeyValuePair<string, string?>>, IEquatable<Baggage>
 {
     private readonly Dictionary<string, string> _entries = new();
     private const int MaxKeyValuePairs = 32;
@@ -133,6 +133,35 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
        var baggage = new Baggage();
         baggage.LoadBaggage(baggageString);
         return baggage;
+    }
+
+    /// <summary>
+    /// Two Baggage instances are equal when they contain the same set of key-value
+    /// pairs. W3C baggage is an unordered set, so iteration order is not significant.
+    /// </summary>
+    public bool Equals(Baggage? other)
+    {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        if (_entries.Count != other._entries.Count) return false;
+
+        foreach (var kvp in _entries)
+        {
+            if (!other._entries.TryGetValue(kvp.Key, out var otherValue)) return false;
+            if (!string.Equals(kvp.Value, otherValue, StringComparison.Ordinal)) return false;
+        }
+
+        return true;
+    }
+
+    public override bool Equals(object? obj) => obj is Baggage other && Equals(other);
+
+    public override int GetHashCode()
+    {
+        var hash = 0;
+        foreach (var kvp in _entries)
+            hash ^= HashCode.Combine(kvp.Key, kvp.Value);
+        return hash;
     }
 }
 
