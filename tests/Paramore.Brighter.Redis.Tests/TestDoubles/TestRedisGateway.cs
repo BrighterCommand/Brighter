@@ -15,9 +15,10 @@ public class TestRedisGateway : RedisMessageGateway, IDisposable
     {
         OverrideRedisClientDefaults();
     }
-        
 
     public new TimeSpan MessageTimeToLive => base.MessageTimeToLive;
+
+    public object ExposedPool => Pool;
 
     public void Dispose()
     {
