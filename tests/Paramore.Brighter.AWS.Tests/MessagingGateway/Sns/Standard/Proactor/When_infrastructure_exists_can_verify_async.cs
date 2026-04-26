@@ -7,14 +7,13 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
 {
-    [Trait("Category", "AWS")]
-    public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+    [Category("AWS")]
+    public class AwsValidateInfrastructureTestsAsync : IAsyncDisposable
     {
         private readonly Message _message;
         private readonly IAmAMessageConsumerAsync _consumer;
@@ -69,7 +68,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
             _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
         }
 
-        [Fact]
+        [Test]
         public async Task When_infrastructure_exists_can_verify_async()
         {
             await _messageProducer.SendAsync(_message);
@@ -79,18 +78,19 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
             var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
             var message = messages.First();
-            Assert.Equal(_myCommand.Id, message.Id);
+            await Assert.That(message.Id).IsEqualTo(_myCommand.Id);
 
             await _consumer.AcknowledgeAsync(message);
         }
         
-        public void Dispose()
+        [After(Test)]
+        public async Task Cleanup()
         {
             //Clean up resources that we have created
-            _channelFactory.DeleteTopicAsync().Wait();
-            _channelFactory.DeleteQueueAsync().Wait();
+            await _channelFactory.DeleteTopicAsync();
+            await _channelFactory.DeleteQueueAsync();
             ((IAmAMessageConsumerSync)_consumer).Dispose();
-            _messageProducer.Dispose();
+            await _messageProducer.DisposeAsync();
         }
 
         public async ValueTask DisposeAsync()

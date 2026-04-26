@@ -1,13 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
-[Trait("Category", "AWS")]
+[Category("AWS")]
 public class AWSValidateMissingTopicTests
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -23,8 +22,8 @@ public class AWSValidateMissingTopicTests
         // Because we don't use channel factory to create the infrastructure - it won't exist
     }
 
-    [Fact]
-    public void When_channel_missing_verify_throws()
+    [Test]
+    public async Task When_channel_missing_verify_throws()
     {
         // arrange
         var producer = new SqsMessageProducer(
@@ -39,10 +38,12 @@ public class AWSValidateMissingTopicTests
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
 
         // act & assert
-        Assert.Throws<QueueDoesNotExistException>(() =>
+        Assert.ThrowsExactly<QueueDoesNotExistException>(() =>
+        {
             producer.Send(new Message(
                 new MessageHeader("", _routingKey, MessageType.MT_EVENT,
                     type: new CloudEventsType("plain/text"), partitionKey: messageGroupId),
-                new MessageBody("Test"))));
+                new MessageBody("Test")));
+        });
     }
 }

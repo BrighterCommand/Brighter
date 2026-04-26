@@ -1,135 +1,163 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.JsonMapper.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessageMappers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.JsonMapper;
-
 public class JsonMessageMapperTests
 {
-    [Fact]
-    public void When_mapping_command_to_message()
+    [Test]
+    public async Task When_mapping_command_to_message()
     {
         var mapper = new JsonMessageMapper<MyCommand>();
-        var command = new MyCommand { Value = Guid.NewGuid().ToString() };
-        var publication = new Publication { Topic = new RoutingKey(Guid.NewGuid().ToString()) };
-        var message = mapper.MapToMessage(command, publication);
-
-        Assert.NotNull(message);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), message.Header.ContentType);
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
-        Assert.Equal(publication.Topic, message.Header.Topic);
-        Assert.Equal(message.Id, command.Id);
-        Assert.NotNull(message.Body);
-
+        var command = new MyCommand
+        {
+            Value = Guid.NewGuid().ToString()
+        };
+        var publication = new Publication
+        {
+            Topic = new RoutingKey(Guid.NewGuid().ToString())
+        };
+        var message = await mapper.MapToMessageAsync(command, publication);
+        await Assert.That(message).IsNotNull();
+        await Assert.That(message.Header.ContentType).IsEqualTo(new ContentType(MediaTypeNames.Application.Json));
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(message.Header.Topic).IsEqualTo(publication.Topic);
+        await Assert.That(command.Id).IsEqualTo(message.Id);
+        await Assert.That(message.Body).IsNotNull();
         var body = JsonSerializer.Deserialize<MyCommand>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(body);
-        Assert.Equal(command.Value, body.Value);
+        await Assert.That(body).IsNotNull();
+        await Assert.That(body.Value).IsEqualTo(command.Value);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mapping_command_to_message_async()
     {
         var mapper = new JsonMessageMapper<MyCommand>();
-        var command = new MyCommand { Value = Guid.NewGuid().ToString() };
-        var publication = new Publication { Topic = new RoutingKey(Guid.NewGuid().ToString()) };
+        var command = new MyCommand
+        {
+            Value = Guid.NewGuid().ToString()
+        };
+        var publication = new Publication
+        {
+            Topic = new RoutingKey(Guid.NewGuid().ToString())
+        };
         var message = await mapper.MapToMessageAsync(command, publication);
-
-        Assert.NotNull(message);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), message.Header.ContentType);
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
-        Assert.Equal(publication.Topic, message.Header.Topic);
-        Assert.Equal(message.Id, command.Id);
-        Assert.NotNull(message.Body);
-
+        await Assert.That(message).IsNotNull();
+        await Assert.That(message.Header.ContentType).IsEqualTo(new ContentType(MediaTypeNames.Application.Json));
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(message.Header.Topic).IsEqualTo(publication.Topic);
+        await Assert.That(command.Id).IsEqualTo(message.Id);
+        await Assert.That(message.Body).IsNotNull();
         var body = JsonSerializer.Deserialize<MyCommand>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(body);
-        Assert.Equal(command.Value, body.Value);
+        await Assert.That(body).IsNotNull();
+        await Assert.That(body.Value).IsEqualTo(command.Value);
     }
 
-    [Fact]
-    public void When_mapping_event_to_message()
+    [Test]
+    public async Task When_mapping_event_to_message()
     {
         var mapper = new JsonMessageMapper<MyEvent>();
-        var @event = new MyEvent { Value = Guid.NewGuid().ToString() };
-        var publication = new Publication { Topic = new RoutingKey(Guid.NewGuid().ToString()) };
-        var message = mapper.MapToMessage(@event, publication);
-
-        Assert.NotNull(message);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), message.Header.ContentType);
-        Assert.Equal(MessageType.MT_EVENT, message.Header.MessageType);
-        Assert.Equal(publication.Topic, message.Header.Topic);
-        Assert.Equal(message.Id, @event.Id);
-        Assert.NotNull(message.Body);
-
+        var @event = new MyEvent
+        {
+            Value = Guid.NewGuid().ToString()
+        };
+        var publication = new Publication
+        {
+            Topic = new RoutingKey(Guid.NewGuid().ToString())
+        };
+        var message = await mapper.MapToMessageAsync(@event, publication);
+        await Assert.That(message).IsNotNull();
+        await Assert.That(message.Header.ContentType).IsEqualTo(new ContentType(MediaTypeNames.Application.Json));
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_EVENT);
+        await Assert.That(message.Header.Topic).IsEqualTo(publication.Topic);
+        await Assert.That(@event.Id).IsEqualTo(message.Id);
+        await Assert.That(message.Body).IsNotNull();
         var body = JsonSerializer.Deserialize<MyCommand>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(body);
-        Assert.Equal(@event.Value, body.Value);
+        await Assert.That(body).IsNotNull();
+        await Assert.That(body.Value).IsEqualTo(@event.Value);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mapping_event_to_message_async()
     {
         var mapper = new JsonMessageMapper<MyEvent>();
-        var @event = new MyEvent { Value = Guid.NewGuid().ToString() };
-        var publication = new Publication { Topic = new RoutingKey(Guid.NewGuid().ToString()) };
+        var @event = new MyEvent
+        {
+            Value = Guid.NewGuid().ToString()
+        };
+        var publication = new Publication
+        {
+            Topic = new RoutingKey(Guid.NewGuid().ToString())
+        };
         var message = await mapper.MapToMessageAsync(@event, publication);
-
-        Assert.NotNull(message);
-        Assert.Equal(new ContentType(MediaTypeNames.Application.Json), message.Header.ContentType);
-        Assert.Equal(MessageType.MT_EVENT, message.Header.MessageType);
-        Assert.Equal(publication.Topic, message.Header.Topic);
-        Assert.Equal(message.Id, @event.Id);
-        Assert.NotNull(message.Body);
-
+        await Assert.That(message).IsNotNull();
+        await Assert.That(message.Header.ContentType).IsEqualTo(new ContentType(MediaTypeNames.Application.Json));
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_EVENT);
+        await Assert.That(message.Header.Topic).IsEqualTo(publication.Topic);
+        await Assert.That(@event.Id).IsEqualTo(message.Id);
+        await Assert.That(message.Body).IsNotNull();
         var body = JsonSerializer.Deserialize<MyCommand>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(body);
-        Assert.Equal(@event.Value, body.Value);
+        await Assert.That(body).IsNotNull();
+        await Assert.That(body.Value).IsEqualTo(@event.Value);
     }
 
-    [Fact]
-    public void When_mapping_request_to_message_should_throw_ArgumentNullException()
+    [Test]
+    public async Task When_mapping_request_to_message_should_throw_ArgumentNullException()
     {
         var mapper = new JsonMessageMapper<MyRequest>();
-        var request = new MyRequest { Value = Guid.NewGuid().ToString() };
-        var publication = new Publication { Topic = new RoutingKey(Guid.NewGuid().ToString()) };
-
-        Assert.Throws<ArgumentException>(() => mapper.MapToMessage(request, publication));
+        var request = new MyRequest
+        {
+            Value = Guid.NewGuid().ToString()
+        };
+        var publication = new Publication
+        {
+            Topic = new RoutingKey(Guid.NewGuid().ToString())
+        };
+        await Assert.That(() => mapper.MapToMessage(request, publication)).ThrowsExactly<ArgumentException>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_mapping_request_to_message_should_throw_ArgumentNullException_async()
     {
         var mapper = new JsonMessageMapper<MyRequest>();
-        var request = new MyRequest { Value = Guid.NewGuid().ToString() };
-        var publication = new Publication { Topic = new RoutingKey(Guid.NewGuid().ToString()) };
-
-        await Assert.ThrowsAsync<ArgumentException>(() => mapper.MapToMessageAsync(request, publication));
+        var request = new MyRequest
+        {
+            Value = Guid.NewGuid().ToString()
+        };
+        var publication = new Publication
+        {
+            Topic = new RoutingKey(Guid.NewGuid().ToString())
+        };
+        await Assert.That(() => mapper.MapToMessageAsync(request, publication)).ThrowsExactly<ArgumentException>();
     }
 
-    [Fact]
-    public void When_mapping_message_to_command()
+    [Test]
+    public async Task When_mapping_message_to_command()
     {
-        var command = new MyCommand { Value = Guid.NewGuid().ToString() };
+        var command = new MyCommand
+        {
+            Value = Guid.NewGuid().ToString()
+        };
         var mapper = new JsonMessageMapper<MyCommand>();
-        
-        var request = mapper.MapToRequest(new Message(new MessageHeader(), new MessageBody(JsonSerializer.Serialize(command))));
-        Assert.NotNull(request);
-        Assert.Equal(command.Value, request.Value);
-    }
-    
-    [Fact]
-    public async Task When_mapping_message_to_command_async ()
-    {
-        var command = new MyCommand { Value = Guid.NewGuid().ToString() };
-        var mapper = new JsonMessageMapper<MyCommand>();
-        
         var request = await mapper.MapToRequestAsync(new Message(new MessageHeader(), new MessageBody(JsonSerializer.Serialize(command))));
-        Assert.NotNull(request);
-        Assert.Equal(command.Value, request.Value);
+        await Assert.That(request).IsNotNull();
+        await Assert.That(request.Value).IsEqualTo(command.Value);
+    }
+
+    [Test]
+    public async Task When_mapping_message_to_command_async()
+    {
+        var command = new MyCommand
+        {
+            Value = Guid.NewGuid().ToString()
+        };
+        var mapper = new JsonMessageMapper<MyCommand>();
+        var request = await mapper.MapToRequestAsync(new Message(new MessageHeader(), new MessageBody(JsonSerializer.Serialize(command))));
+        await Assert.That(request).IsNotNull();
+        await Assert.That(request.Value).IsEqualTo(command.Value);
     }
 }

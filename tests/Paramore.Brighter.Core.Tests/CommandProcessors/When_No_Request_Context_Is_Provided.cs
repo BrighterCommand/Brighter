@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -7,318 +7,191 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors;
-
-public class RequestContextFromFactoryTests : IDisposable
+public class RequestContextFromFactoryTests
 {
     private readonly SpyContextFactory _requestContextFactory;
     private readonly IPolicyRegistry<string> _policyRegistry;
-    private readonly ResiliencePipelineRegistry<string>  _resiliencePipelineRegistry;
-
+    private readonly ResiliencePipelineRegistry<string> _resiliencePipelineRegistry;
     public RequestContextFromFactoryTests()
     {
-        MyContextAwareCommandHandler.TestString = null;
-        MyContextAwareCommandHandlerAsync.TestString = null;
-        MyContextAwareEventHandler.TestString = null;
-        MyContextAwareEventHandlerAsync.TestString = null;
-
         _policyRegistry = new DefaultPolicy();
         _resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
-        _requestContextFactory = new SpyContextFactory { Context = null, CreateWasCalled = false };
+        _requestContextFactory = new SpyContextFactory
+        {
+            Context = null,
+            CreateWasCalled = false
+        };
     }
 
-    [Fact]
-    public void When_No_Request_Context_Is_Provided_On_A_Send()
+    [Test]
+    public async Task When_No_Request_Context_Is_Provided_On_A_Send()
     {
-       //arrange
-       var registry = new SubscriberRegistry();
-       registry.Register<MyCommand, MyContextAwareCommandHandler>();
-       var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareCommandHandler());
-       var myCommand = new MyCommand();
-
-       var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
-
-       //act
-       commandProcessor.Send(myCommand);
-
-       //assert
-       Assert.True(_requestContextFactory.CreateWasCalled);
-       Assert.Equal(_requestContextFactory.Context!.Bag["TestString"].ToString(), MyContextAwareCommandHandler.TestString);
-       Assert.Equal("I was called and set the context", _requestContextFactory.Context.Bag["MyContextAwareCommandHandler"]);
+        //arrange
+        var registry = new SubscriberRegistry();
+        registry.Register<MyCommand, MyContextAwareCommandHandler>();
+        var contextCapture = new ContextCapture();
+        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareCommandHandler(contextCapture));
+        var myCommand = new MyCommand();
+        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+        //act
+        commandProcessor.Send(myCommand);
+        //assert
+        await Assert.That(_requestContextFactory.CreateWasCalled).IsTrue();
+        await Assert.That(contextCapture.TestString).IsEqualTo(_requestContextFactory.Context!.Bag["TestString"].ToString());
+        await Assert.That(_requestContextFactory.Context.Bag["MyContextAwareCommandHandler"]).IsEqualTo("I was called and set the context");
     }
 
-    [Fact]
+    [Test]
     public async Task When_No_Request_Context_Is_Provided_On_A_Send_Async()
     {
         //arrange
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyContextAwareCommandHandlerAsync>();
-        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareCommandHandlerAsync());
+        var contextCapture = new ContextCapture();
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareCommandHandlerAsync(contextCapture));
         var myCommand = new MyCommand();
-
         var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
-        
         //act
         await commandProcessor.SendAsync(myCommand);
-
         //assert
-        Assert.True(_requestContextFactory.CreateWasCalled);
-        Assert.Equal(_requestContextFactory.Context!.Bag["TestString"].ToString(), MyContextAwareCommandHandlerAsync.TestString);
-        Assert.Equal("I was called and set the context", _requestContextFactory.Context.Bag["MyContextAwareCommandHandler"]);
+        await Assert.That(_requestContextFactory.CreateWasCalled).IsTrue();
+        await Assert.That(contextCapture.TestString).IsEqualTo(_requestContextFactory.Context!.Bag["TestString"].ToString());
+        await Assert.That(_requestContextFactory.Context.Bag["MyContextAwareCommandHandler"]).IsEqualTo("I was called and set the context");
     }
 
-    [Fact]
-    public void When_No_Request_Context_Is_Provided_On_A_Publish()
+    [Test]
+    public async Task When_No_Request_Context_Is_Provided_On_A_Publish()
     {
         //arrange
         var registry = new SubscriberRegistry();
         registry.Register<MyEvent, MyContextAwareEventHandler>();
-        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareEventHandler());
+        var contextCapture = new ContextCapture();
+        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareEventHandler(contextCapture));
         var myEvent = new MyEvent();
-
-        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
-
+        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         //act
         commandProcessor.Publish(myEvent);
-
         //assert
-        Assert.True(_requestContextFactory.CreateWasCalled);
-        Assert.Equal(_requestContextFactory.Context.Bag["TestString"].ToString(), MyContextAwareEventHandler.TestString);
-        Assert.Equal("I was called and set the context", _requestContextFactory.Context.Bag["MyContextAwareEventHandler"]);
+        await Assert.That(_requestContextFactory.CreateWasCalled).IsTrue();
+        await Assert.That(contextCapture.TestString).IsEqualTo(_requestContextFactory.Context.Bag["TestString"].ToString());
+        await Assert.That(_requestContextFactory.Context.Bag["MyContextAwareEventHandler"]).IsEqualTo("I was called and set the context");
     }
 
-    [Fact]
+    [Test]
     public async Task When_No_Request_Context_Is_Provided_On_A_Publish_Async()
     {
         //arrange
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyEvent, MyContextAwareEventHandlerAsync>();
-        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareEventHandlerAsync());
+        var contextCapture = new ContextCapture();
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareEventHandlerAsync(contextCapture));
         var myEvent = new MyEvent();
-
         var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
-
         //act
         await commandProcessor.PublishAsync(myEvent);
-
         //assert
-        Assert.True(_requestContextFactory.CreateWasCalled);
-        Assert.Equal(_requestContextFactory.Context.Bag["TestString"].ToString(), MyContextAwareEventHandlerAsync.TestString);
-        Assert.Equal("I was called and set the context", _requestContextFactory.Context.Bag["MyContextAwareEventHandler"]);
+        await Assert.That(_requestContextFactory.CreateWasCalled).IsTrue();
+        await Assert.That(contextCapture.TestString).IsEqualTo(_requestContextFactory.Context.Bag["TestString"].ToString());
+        await Assert.That(_requestContextFactory.Context.Bag["MyContextAwareEventHandler"]).IsEqualTo("I was called and set the context");
     }
 
-    [Fact]
-    public void When_No_Request_Context_Is_Provided_On_A_Deposit()
+    [Test]
+    public async Task When_No_Request_Context_Is_Provided_On_A_Deposit()
     {
-        var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
-            null);
+        var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()), null);
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("MyCommand");
-
-        var producerRegistry =
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
-            {
-                {
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
-                }
-            });
-
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { RequestType = typeof(MyCommand), Topic = routingKey }) } });
         var tracer = new BrighterTracer();
-        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-
-        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry,
-            _resiliencePipelineRegistry,
-            messageMapperRegistry,
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            fakeOutbox
-        );
-
-        var commandProcessor = new CommandProcessor(
-            _requestContextFactory,
-            _policyRegistry,
-            new ResiliencePipelineRegistry<string>(),
-            bus,
-            new InMemorySchedulerFactory()
-        );
-
+        var fakeOutbox = new InMemoryOutbox(timeProvider)
+        {
+            Tracer = tracer
+        };
+        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(producerRegistry, _resiliencePipelineRegistry, messageMapperRegistry, new EmptyMessageTransformerFactory(), new EmptyMessageTransformerFactoryAsync(), tracer, new FindPublicationByPublicationTopicOrRequestType(), fakeOutbox);
+        var commandProcessor = new CommandProcessor(_requestContextFactory, _policyRegistry, new ResiliencePipelineRegistry<string>(), bus, new InMemorySchedulerFactory());
         //act
         commandProcessor.DepositPost(new MyCommand());
-
         //assert
-        Assert.True(_requestContextFactory.CreateWasCalled);
+        await Assert.That(_requestContextFactory.CreateWasCalled).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_No_Request_Context_Is_Provided_On_A_Deposit_Async()
     {
-        var messageMapperRegistry = new MessageMapperRegistry(
-            null,
-            new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync()));
+        var messageMapperRegistry = new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("MyCommand");
-
-        var producerRegistry =
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
-            {
-                { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{RequestType = typeof(MyCommand), Topic = routingKey})
-                },
-            });
-
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { RequestType = typeof(MyCommand), Topic = routingKey }) }, });
         var tracer = new BrighterTracer();
-        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-
-        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry,
-            _resiliencePipelineRegistry,
-            messageMapperRegistry,
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            fakeOutbox
-        );
-
-        var commandProcessor = new CommandProcessor(
-            _requestContextFactory,
-            _policyRegistry,
-            new ResiliencePipelineRegistry<string>(),
-            bus,
-            new InMemorySchedulerFactory()
-        );
-
+        var fakeOutbox = new InMemoryOutbox(timeProvider)
+        {
+            Tracer = tracer
+        };
+        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(producerRegistry, _resiliencePipelineRegistry, messageMapperRegistry, new EmptyMessageTransformerFactory(), new EmptyMessageTransformerFactoryAsync(), tracer, new FindPublicationByPublicationTopicOrRequestType(), fakeOutbox);
+        var commandProcessor = new CommandProcessor(_requestContextFactory, _policyRegistry, new ResiliencePipelineRegistry<string>(), bus, new InMemorySchedulerFactory());
         //act
         await commandProcessor.DepositPostAsync(new MyCommand());
-
         //assert
-        Assert.True(_requestContextFactory.CreateWasCalled);
+        await Assert.That(_requestContextFactory.CreateWasCalled).IsTrue();
     }
 
-    [Fact]
-    public void When_No_Request_Context_Is_Provided_On_A_Clear()
+    [Test]
+    public async Task When_No_Request_Context_Is_Provided_On_A_Clear()
     {
         //arrange
-        var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
-            null);
+        var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()), null);
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("MyCommand");
-
-        var producerRegistry =
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
-            {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), instrumentationOptions:InstrumentationOptions.All)
-                {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
-                } },
-            });
-
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, new InMemoryMessageProducer(new InternalBus(), instrumentationOptions: InstrumentationOptions.All) { Publication = new Publication { RequestType = typeof(MyCommand), Topic = routingKey } } }, });
         var tracer = new BrighterTracer();
-        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-
-        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry,
-            _resiliencePipelineRegistry,
-            messageMapperRegistry,
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            fakeOutbox
-        );
-
-        var commandProcessor = new CommandProcessor(
-            _requestContextFactory,
-            _policyRegistry,
-            new ResiliencePipelineRegistry<string>(),
-            bus,
-            new InMemorySchedulerFactory()
-        );
-
-        var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
+        var fakeOutbox = new InMemoryOutbox(timeProvider)
+        {
+            Tracer = tracer
+        };
+        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(producerRegistry, _resiliencePipelineRegistry, messageMapperRegistry, new EmptyMessageTransformerFactory(), new EmptyMessageTransformerFactoryAsync(), tracer, new FindPublicationByPublicationTopicOrRequestType(), fakeOutbox);
+        var commandProcessor = new CommandProcessor(_requestContextFactory, _policyRegistry, new ResiliencePipelineRegistry<string>(), bus, new InMemorySchedulerFactory());
+        var myCommand = new MyCommand()
+        {
+            Id = Guid.NewGuid().ToString()
+        };
         var message = new Message(new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         bus.AddToOutbox(message, new RequestContext());
-
         //act
-        commandProcessor.ClearOutbox(new []{myCommand.Id});
-
+        commandProcessor.ClearOutbox(new[] { myCommand.Id });
         //assert
-        Assert.True(_requestContextFactory.CreateWasCalled);
+        await Assert.That(_requestContextFactory.CreateWasCalled).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_A_Request_Context_Is_Provided_On_A_Clear_Async()
     {
         //arrange
-        var messageMapperRegistry = new MessageMapperRegistry(
-            null,
-            new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync()));
+        var messageMapperRegistry = new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("MyCommand");
-
-        var producerRegistry =
-            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
-            {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), instrumentationOptions:InstrumentationOptions.All)
-                {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
-                } },
-            });
-
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, new InMemoryMessageProducer(new InternalBus(), instrumentationOptions: InstrumentationOptions.All) { Publication = new Publication { RequestType = typeof(MyCommand), Topic = routingKey } } }, });
         var tracer = new BrighterTracer();
-        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-
-        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry,
-            _resiliencePipelineRegistry,
-            messageMapperRegistry,
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            fakeOutbox
-        );
-
-        var commandProcessor = new CommandProcessor(
-            _requestContextFactory,
-            _policyRegistry,
-            new ResiliencePipelineRegistry<string>(),
-            bus,
-            new InMemorySchedulerFactory()
-        );
-
-        var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
+        var fakeOutbox = new InMemoryOutbox(timeProvider)
+        {
+            Tracer = tracer
+        };
+        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(producerRegistry, _resiliencePipelineRegistry, messageMapperRegistry, new EmptyMessageTransformerFactory(), new EmptyMessageTransformerFactoryAsync(), tracer, new FindPublicationByPublicationTopicOrRequestType(), fakeOutbox);
+        var commandProcessor = new CommandProcessor(_requestContextFactory, _policyRegistry, new ResiliencePipelineRegistry<string>(), bus, new InMemorySchedulerFactory());
+        var myCommand = new MyCommand()
+        {
+            Id = Guid.NewGuid().ToString()
+        };
         var message = new Message(new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         bus.AddToOutbox(message, new RequestContext());
-
         //act
-        await commandProcessor.ClearOutboxAsync(new []{myCommand.Id});
-
+        await commandProcessor.ClearOutboxAsync(new[] { myCommand.Id });
         //assert
-        Assert.True(_requestContextFactory.CreateWasCalled);
-
-    }
-
-    public void Dispose()
-    {
-        MyContextAwareCommandHandler.TestString = null;
-        MyContextAwareCommandHandlerAsync.TestString = null;
-        MyContextAwareEventHandler.TestString = null;
-        MyContextAwareEventHandlerAsync.TestString = null;
+        await Assert.That(_requestContextFactory.CreateWasCalled).IsTrue();
     }
 }

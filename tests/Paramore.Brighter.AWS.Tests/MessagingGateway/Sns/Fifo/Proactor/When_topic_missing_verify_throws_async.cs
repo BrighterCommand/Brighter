@@ -1,12 +1,11 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
-[Trait("Category", "AWS")]
+[Category("AWS")]
 public class AwsValidateMissingTopicTestsAsync
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -22,7 +21,7 @@ public class AwsValidateMissingTopicTestsAsync
         // Because we don't use channel factory to create the infrastructure - it won't exist
     }
 
-    [Fact]
+    [Test]
     public async Task When_topic_missing_verify_throws_async()
     {
         // arrange

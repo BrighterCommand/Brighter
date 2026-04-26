@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
-[Trait("Category", "AWS")]
-public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class SQSBufferedConsumerTests : IAsyncDisposable
 {
     private readonly SqsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -52,7 +52,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
             new SqsPublication(channelName:  channelName, makeChannels: OnMissingChannel.Create));
     }
             
-    [Fact]
+    [Test]
     public async Task When_a_message_consumer_reads_multiple_messages()
     {
         var routingKey = new RoutingKey(_queueName);
@@ -82,10 +82,10 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
         );
              
         //send MESSAGE_COUNT messages 
-        _messageProducer.Send(messageOne);
-        _messageProducer.Send(messageTwo);
-        _messageProducer.Send(messageThree);
-        _messageProducer.Send(messageFour);
+        await _messageProducer.SendAsync(messageOne);
+        await _messageProducer.SendAsync(messageTwo);
+        await _messageProducer.SendAsync(messageThree);
+        await _messageProducer.SendAsync(messageFour);
 
 
         int iteration = 0;
@@ -97,18 +97,18 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
             var outstandingMessageCount = MessageCount - messagesReceivedCount;
 
             //retrieve  messages
-            var messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
+            var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
                 
-            Assert.True(messages.Length <= outstandingMessageCount);
+            await Assert.That(messages.Length <= outstandingMessageCount).IsTrue();
                 
             //should not receive more than buffer in one hit
-            Assert.True(messages.Length <= BufferSize);
+            await Assert.That(messages.Length <= BufferSize).IsTrue();
 
             var moreMessages = messages.Where(m => m.Header.MessageType == MessageType.MT_COMMAND);
             foreach (var message in moreMessages)
             {
                 messagesReceived.Add(message);
-                _consumer.Acknowledge(message);
+                await _consumer.AcknowledgeAsync(message);
             }
                  
             messagesReceivedCount = messagesReceived.Count;
@@ -118,16 +118,17 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
         } while ((iteration <= 5) && (messagesReceivedCount <  MessageCount));
     
 
-        Assert.Equal(4, messagesReceivedCount);
+        await Assert.That(messagesReceivedCount).IsEqualTo(4);
 
     }
         
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         //Clean up resources that we have created
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
-        _messageProducer.Dispose();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
+        await _messageProducer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()

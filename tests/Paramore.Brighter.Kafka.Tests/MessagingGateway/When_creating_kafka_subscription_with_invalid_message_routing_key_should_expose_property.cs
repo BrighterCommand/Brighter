@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 public class KafkaSubscriptionInvalidMessageSupportTests
 {
-    [Fact]
-    public void When_creating_kafka_subscription_with_invalid_message_routing_key_should_expose_property()
+    [Test]
+    public async Task When_creating_kafka_subscription_with_invalid_message_routing_key_should_expose_property()
     {
         //Arrange
         var invalidMessageRoutingKey = new RoutingKey("orders.invalid");
@@ -46,8 +45,8 @@ public class KafkaSubscriptionInvalidMessageSupportTests
         );
 
         //Assert
-        Assert.IsAssignableFrom<IUseBrighterInvalidMessageSupport>(subscription);
+        await Assert.That(subscription).IsAssignableTo<IUseBrighterInvalidMessageSupport>();
         var invalidSupport = (IUseBrighterInvalidMessageSupport)subscription;
-        Assert.Equal(invalidMessageRoutingKey, invalidSupport.InvalidMessageRoutingKey);
+        await Assert.That(invalidSupport.InvalidMessageRoutingKey).IsEqualTo(invalidMessageRoutingKey);
     }
 }

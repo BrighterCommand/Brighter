@@ -61,6 +61,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>Task.</returns>
         public Task Run()
         {
+            // Pin to TaskScheduler.Default so ambient schedulers (TUnit/async test hosts,
+            // limited-concurrency schedulers) cannot queue the pump behind other work
+            // and starve it indefinitely.
             return Task.Factory.StartNew(
                 () => _messagePump.Run(),
                 CancellationToken.None,

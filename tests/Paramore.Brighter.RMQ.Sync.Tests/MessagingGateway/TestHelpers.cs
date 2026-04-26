@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
@@ -69,7 +70,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway
             }
 
             //We need to delay to actually create these queues before we send to them
-            Task.Delay(timeToDelayForCreation).Wait();
+            Thread.Sleep(timeToDelayForCreation);
         }
     }
 }    

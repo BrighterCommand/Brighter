@@ -4,17 +4,16 @@ using System.Linq;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
 {
-    [Trait("Category", "InMemory")]
+    [Category("InMemory")]
     public class InMemoryOutboxTests
     {
         private FakeTimeProvider _timeProvider = new();
 
-        [Fact]
-        public void When_reading_from_outbox()
+        [Test]
+        public async Task When_reading_from_outbox()
         {
             //Arrange
             var outbox = new InMemoryOutbox(_timeProvider) { Tracer = new BrighterTracer() };
@@ -26,21 +25,21 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             //Act
             var context = new RequestContext();
-            outbox.Add(messageToAdd, context);
+            await outbox.AddAsync(messageToAdd, context);
 
-            var retrievedMessage = outbox.Get(messageId, context);
+            var retrievedMessage = await outbox.GetAsync(messageId, context);
             
             //Assert
-            Assert.NotNull(retrievedMessage);
-            Assert.Equal(messageId, retrievedMessage.Id);
-            Assert.Equal(messageToAdd.Header.Topic, retrievedMessage.Header.Topic);
-            Assert.Equal(messageToAdd.Header.MessageType, retrievedMessage.Header.MessageType);
-            Assert.Equal(messageToAdd.Body.Value, retrievedMessage.Body.Value);
+            await Assert.That(retrievedMessage).IsNotNull();
+            await Assert.That(retrievedMessage.Id).IsEqualTo(messageId);
+            await Assert.That(retrievedMessage.Header.Topic).IsEqualTo(messageToAdd.Header.Topic);
+            await Assert.That(retrievedMessage.Header.MessageType).IsEqualTo(messageToAdd.Header.MessageType);
+            await Assert.That(retrievedMessage.Body.Value).IsEqualTo(messageToAdd.Body.Value);
 
         }
 
-        [Fact]
-        public void When_marking_dispatched_in_outbox()
+        [Test]
+        public async Task When_marking_dispatched_in_outbox()
         {
             //Arrange
             var outbox = new InMemoryOutbox(_timeProvider){Tracer = new BrighterTracer()};
@@ -53,23 +52,23 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             //Act
             var context = new RequestContext();
-            outbox.Add(messageToAdd, context);
+            await outbox.AddAsync(messageToAdd, context);
             var dispatchedAt = _timeProvider.GetUtcNow();
-            outbox.MarkDispatched(messageId, context, dispatchedAt);
+            await outbox.MarkDispatchedAsync(messageId, context, dispatchedAt);
             
             _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-            var dispatchedMessages = outbox.DispatchedMessages(TimeSpan.FromSeconds(5), context);
+            var dispatchedMessages = await outbox.DispatchedMessagesAsync(TimeSpan.FromSeconds(5), context);
 
             //Assert
             IEnumerable<Message> collection = dispatchedMessages as Message[] ?? dispatchedMessages.ToArray();
-            Assert.Single(collection);
-            Assert.Equal(messageId, collection.First().Id);
+            await Assert.That(collection).HasSingleItem();
+            await Assert.That(collection.First().Id).IsEqualTo(messageId);
 
         }
 
-        [Fact]
-        public void When_looking_for_undispatched_messages_in_outbox()
+        [Test]
+        public async Task When_looking_for_undispatched_messages_in_outbox()
         {
             //Arrange
             var outbox = new InMemoryOutbox(_timeProvider){Tracer = new BrighterTracer()};
@@ -82,21 +81,21 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             //Act
             var context = new RequestContext();
-            outbox.Add(messageToAdd, context);
+            await outbox.AddAsync(messageToAdd, context);
             
             _timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
-            var outstandingMessages = outbox.OutstandingMessages(TimeSpan.Zero, context);
+            var outstandingMessages = await outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
             
             //Assert
             IEnumerable<Message> collection = outstandingMessages as Message[] ?? outstandingMessages.ToArray();
-            Assert.Single(collection);
-            Assert.Equal(messageId, collection.First().Id);
+            await Assert.That(collection).HasSingleItem();
+            await Assert.That(collection.First().Id).IsEqualTo(messageId);
 
         }
 
-        [Fact]
-        public void When_there_are_multiple_items_retrieve_by_id()
+        [Test]
+        public async Task When_there_are_multiple_items_retrieve_by_id()
         {
             //Arrange
             var outbox = new InMemoryOutbox( _timeProvider){Tracer = new BrighterTracer()};
@@ -106,18 +105,18 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             for(int i =0; i <= 4; i++)
             {
                 RequestContext requestContext = context;
-                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]), requestContext);
+                await outbox.AddAsync(new MessageTestDataBuilder().WithId(messageIds[i]), requestContext);
             }
 
             //Act 
-            var message = outbox.Get(messageIds[2], context);
+            var message = await outbox.GetAsync(messageIds[2], context);
             
             //Assert
-            Assert.Equal(messageIds[2], message.Id);
+            await Assert.That(message.Id).IsEqualTo(messageIds[2]);
         }
 
-        [Fact]
-        public void When_there_are_multiple_items_and_some_are_dispatched()
+        [Test]
+        public async Task When_there_are_multiple_items_and_some_are_dispatched()
         {
             //Arrange
             var outbox = new InMemoryOutbox(_timeProvider){Tracer = new BrighterTracer()};
@@ -127,29 +126,29 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             for(int i =0; i <= 4; i++)
             {
                 RequestContext requestContext = context;
-                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]), requestContext);
+                await outbox.AddAsync(new MessageTestDataBuilder().WithId(messageIds[i]), requestContext);
             }
 
             //Act 
             var now = _timeProvider.GetUtcNow();
-            outbox.MarkDispatched(messageIds[0], context, now);
-            outbox.MarkDispatched(messageIds[4], context, now);
+            await outbox.MarkDispatchedAsync(messageIds[0], context, now);
+            await outbox.MarkDispatchedAsync(messageIds[4], context, now);
 
             _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-            var sentMessages = outbox.DispatchedMessages(TimeSpan.FromSeconds(5), context);
-            var outstandingMessages = outbox.OutstandingMessages(TimeSpan.Zero, context);
+            var sentMessages = await outbox.DispatchedMessagesAsync(TimeSpan.FromSeconds(5), context);
+            var outstandingMessages = await outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
 
             //Assert
             var messages = sentMessages as Message[] ?? sentMessages.ToArray();
-            Assert.Equal(2, messages.Length);
-            Assert.Contains(messages, msg => msg.Id == messageIds[0]);
-            Assert.Contains(messages, msg => msg.Id == messageIds[4]);
+            await Assert.That(messages.Length).IsEqualTo(2);
+            await Assert.That(messages).Contains(msg => msg.Id == messageIds[0]);
+            await Assert.That(messages).Contains(msg => msg.Id == messageIds[4]);
 
              var collection = outstandingMessages as Message[] ?? outstandingMessages.ToArray();
-            Assert.Equal(3, collection.Length);
-            Assert.Contains(collection, msg => msg.Id == messageIds[1]);
-            Assert.Contains(collection, msg => msg.Id == messageIds[2]);
-            Assert.Contains(collection, msg => msg.Id == messageIds[3]);        }
+            await Assert.That(collection.Length).IsEqualTo(3);
+            await Assert.That(collection).Contains(msg => msg.Id == messageIds[1]);
+            await Assert.That(collection).Contains(msg => msg.Id == messageIds[2]);
+            await Assert.That(collection).Contains(msg => msg.Id == messageIds[3]);        }
    }
 }

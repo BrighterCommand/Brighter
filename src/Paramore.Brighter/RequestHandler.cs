@@ -73,6 +73,9 @@ namespace Paramore.Brighter
         /// <param name="successor">The successor.</param>
         public void SetSuccessor(IHandleRequests<TRequest> successor)
         {
+            if (this == successor)
+                return;
+
             _successor = successor;
         }
 

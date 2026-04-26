@@ -26,11 +26,10 @@ using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
-[Trait("Category", "PostgresSql")]
+[Category("PostgresSql")]
 public class PostgresMessageConsumerNoChannelsConfiguredTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _producer;
@@ -64,8 +63,8 @@ public class PostgresMessageConsumerNoChannelsConfiguredTests : IDisposable
         _consumer = consumerFactory.Create(sub);
     }
 
-    [Fact]
-    public void When_rejecting_message_with_no_channels_configured_should_delete_and_log_warning()
+    [Test]
+    public async Task When_rejecting_message_with_no_channels_configured_should_delete_and_log_warning()
     {
         // Arrange - send a message and consume it
         var message = new Message(
@@ -79,11 +78,11 @@ public class PostgresMessageConsumerNoChannelsConfiguredTests : IDisposable
             new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
 
         // Assert - reject returns true (source deleted, message silently dropped)
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - source message is deleted (re-reading returns MT_NONE)
         var sourceMessage = ConsumeMessage(_consumer);
-        Assert.Equal(MessageType.MT_NONE, sourceMessage.Header.MessageType);
+        await Assert.That(sourceMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
         // Assert - consumer can continue to receive subsequent messages
         var nextMessage = new Message(
@@ -91,7 +90,7 @@ public class PostgresMessageConsumerNoChannelsConfiguredTests : IDisposable
             new MessageBody("second message"));
         _producer.Send(nextMessage);
         var received = ConsumeMessage(_consumer);
-        Assert.Equal(nextMessage.Id, received.Id);
+        await Assert.That(received.Id).IsEqualTo(nextMessage.Id);
     }
 
     private static Message ConsumeMessage(IAmAMessageConsumerSync consumer)

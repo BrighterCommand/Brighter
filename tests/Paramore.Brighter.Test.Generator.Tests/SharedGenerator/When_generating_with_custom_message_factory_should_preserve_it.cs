@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.SharedGenerator;
 
@@ -21,7 +20,7 @@ public class WhenGeneratingWithCustomMessageFactoryShouldPreserveIt : IDisposabl
         _logger = factory.CreateLogger<Generators.SharedGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_with_custom_message_factory_should_preserve_it()
     {
         // Arrange
@@ -37,7 +36,7 @@ public class WhenGeneratingWithCustomMessageFactoryShouldPreserveIt : IDisposabl
         await generator.GenerateAsync(configuration);
 
         // Assert
-        Assert.Equal("CustomMessageFactory", configuration.MessageFactory);
+        await Assert.That(configuration.MessageFactory).IsEqualTo("CustomMessageFactory");
     }
     
     public void Dispose()

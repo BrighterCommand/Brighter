@@ -19,39 +19,30 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class PipelineValidatorHandlerOnlyTests
 {
-    [Fact]
-    public void When_only_brighter_configured_should_run_only_handler_checks()
+    [Test]
+    public async Task When_only_brighter_configured_should_run_only_handler_checks()
     {
         // Arrange — internal handler triggers a handler-path error;
         //           no publications or subscriptions provided
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyInternalHandler));
         var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
-        PipelineBuilder<IRequest>.ClearPipelineCache();
-
         var validator = new PipelineValidator(pipelineBuilder);
-
         // Act
         var result = validator.Validate();
-
         // Assert — only handler-path errors appear
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Message.Contains("not public"));
-
+        await Assert.That(result.IsValid).IsFalse();
+        await Assert.That(result.Errors).Contains(e => e.Message.Contains("not public"));
         // No producer or consumer errors
-        Assert.DoesNotContain(result.Errors, e => e.Message.Contains("RequestType"));
-        Assert.DoesNotContain(result.Errors, e => e.Message.Contains("No handler registered"));
+        await Assert.That(result.Errors).DoesNotContain(e => e.Message.Contains("RequestType"));
+        await Assert.That(result.Errors).DoesNotContain(e => e.Message.Contains("No handler registered"));
     }
 }

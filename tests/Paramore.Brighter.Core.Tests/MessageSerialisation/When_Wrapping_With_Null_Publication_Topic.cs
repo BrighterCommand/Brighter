@@ -1,5 +1,4 @@
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -39,17 +38,17 @@ public class WrapNullPublicationTopicTests
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
 
-    [Fact]
-    public void When_Wrapping_With_Null_Publication_Topic()
+    [Test]
+    public async Task When_Wrapping_With_Null_Publication_Topic()
     {
         //act
         var transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyResponse>();
         var message = transformPipeline.Wrap(_myResponse, new RequestContext(), _publication);
 
         //assert - topic came from the mapper
-        Assert.Equal(_myResponse.SendersAddress.Topic, message.Header.Topic);
+        await Assert.That(message.Header.Topic).IsEqualTo(_myResponse.SendersAddress.Topic);
 
         //assert - no ProducerTopic entry was written to the bag (the guard held)
-        Assert.False(message.Header.Bag.ContainsKey(Message.ProducerTopicHeaderName));
+        await Assert.That(message.Header.Bag.ContainsKey(Message.ProducerTopicHeaderName)).IsFalse();
     }
 }

@@ -1,10 +1,9 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.Transformers.AWS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
@@ -24,39 +23,39 @@ public class S3LuggageUploadMissingParametersTests
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
     }
 
-    [Fact]
-    public void When_creating_luggagestore_missing_client()
+    [Test]
+    public async Task When_creating_luggagestore_missing_client()
     {
         //arrange
         var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(null!,  null!)));
 
-        Assert.NotNull(exception);
-        Assert.IsType<ArgumentNullException>(exception);
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception).IsTypeOf<ArgumentNullException>();
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void When_creating_luggagestore_missing_bucketName(string? bucketName)
+    [Test]
+    [Arguments("")]
+    [Arguments(null)]
+    public async Task When_creating_luggagestore_missing_bucketName(string? bucketName)
     {
         //arrange
         var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(),  bucketName!)));
 
-        Assert.NotNull(exception);
-        Assert.IsType<ArgumentNullException>(exception);
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception).IsTypeOf<ArgumentNullException>();
     }
     
-    [Fact]
+    [Test]
     public async Task When_creating_luggagestore_bad_bucketName()
     {
         //arrange
         var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), "A" )));
 
-        Assert.NotNull(exception);
-        Assert.IsType<ArgumentException>(exception);
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception).IsTypeOf<ArgumentException>();
     }
     
-    [Fact]
+    [Test]
     public async Task When_creating_luggagestore_missing_httpClient()
     {
         //arrange
@@ -66,11 +65,11 @@ public class S3LuggageUploadMissingParametersTests
             await store.EnsureStoreExistsAsync();
         });
 
-        Assert.NotNull(exception);
-        Assert.IsType<ConfigurationException>(exception);
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception).IsTypeOf<ConfigurationException>();
     }
     
-    [Fact]
+    [Test]
     public async Task When_creating_luggagestore_missing_ACL() 
     {
         //arrange
@@ -84,7 +83,7 @@ public class S3LuggageUploadMissingParametersTests
             await store.EnsureStoreExistsAsync();
         });
     
-        Assert.NotNull(exception);
-        Assert.IsType<ConfigurationException>(exception);
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception).IsTypeOf<ConfigurationException>();
     }
 }

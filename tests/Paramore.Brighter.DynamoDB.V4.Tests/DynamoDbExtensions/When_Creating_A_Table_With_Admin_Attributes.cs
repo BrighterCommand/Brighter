@@ -5,14 +5,13 @@ using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.Outbox.DynamoDB;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.DynamoDbExtensions;
 
 public class DynamoDbFactoryOtherTableAttributesTests
 {
-    [Fact]
-    public void When_Creating_A_Table_With_Admin_Attributes()
+    [Test]
+    public async Task When_Creating_A_Table_With_Admin_Attributes()
     {
         //arrange
         var tableRequestFactory = new DynamoDbTableFactory();
@@ -26,11 +25,11 @@ public class DynamoDbFactoryOtherTableAttributesTests
             tags: new List<Tag> {new Tag{Key="beta", Value = "True"}, new Tag{Key="paramore", Value = "Brighter"}});
 
         //assert
-        Assert.Equal(BillingMode.PAY_PER_REQUEST, tableRequest.BillingMode);
-        Assert.False(tableRequest.SSESpecification.Enabled);
-        Assert.False(tableRequest.SSESpecification.Enabled);
-        Assert.Contains(tableRequest.Tags, tag => tag.Key == "beta" && tag.Value == "True");
-        Assert.Contains(tableRequest.Tags, tag => tag.Key == "paramore" && tag.Value == "Brighter");
+        await Assert.That(tableRequest.BillingMode).IsEqualTo(BillingMode.PAY_PER_REQUEST);
+        await Assert.That(tableRequest.SSESpecification.Enabled).IsFalse();
+        await Assert.That(tableRequest.SSESpecification.Enabled).IsFalse();
+        await Assert.That(tableRequest.Tags).Contains(tag => tag.Key == "beta" && tag.Value == "True");
+        await Assert.That(tableRequest.Tags).Contains(tag => tag.Key == "paramore" && tag.Value == "Brighter");
     }
 
     [DynamoDBTable("MyEntity")]

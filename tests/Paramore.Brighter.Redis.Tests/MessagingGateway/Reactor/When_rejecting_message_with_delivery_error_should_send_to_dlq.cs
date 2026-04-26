@@ -25,13 +25,11 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Redis;
-using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Reactor;
 
-[Collection("Redis Shared Pool")]
-[Trait("Category", "Redis")]
-[Trait("Fragile", "CI")]
+[Category("Redis")]
+[Property("Fragile", "CI")]
 public class RedisMessageConsumerDeliveryErrorDlqTests : IDisposable
 {
     private readonly RedisMessageProducer _messageProducer;
@@ -61,36 +59,34 @@ public class RedisMessageConsumerDeliveryErrorDlqTests : IDisposable
             new MessageBody("test content"));
     }
 
-    [Fact]
-    public void When_rejecting_message_with_delivery_error_should_send_to_dlq()
+    [Test]
+    public async Task When_rejecting_message_with_delivery_error_should_send_to_dlq()
     {
         //Arrange - subscribe then send
-        _consumer.Receive(TimeSpan.FromMilliseconds(1000));
-        _dlqConsumer.Receive(TimeSpan.FromMilliseconds(1000)); 
-        _messageProducer.Send(_message);
-        var receivedMessage = _consumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
+        await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+        await _dlqConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)); 
+        await _messageProducer.SendAsync(_message);
+        var receivedMessage = (await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();
 
         //Act
         var originalTopic = receivedMessage.Header.Topic.Value;
-        _consumer.Reject(receivedMessage,
+        await _consumer.RejectAsync(receivedMessage,
             new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
 
         //Assert - message should appear on DLQ
-        var dlqMessage = _dlqConsumer.Receive(TimeSpan.FromMilliseconds(3000)).Single();
+        var dlqMessage = (await _dlqConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(3000))).Single();
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
-        Assert.Equal(_message.Body.Value, dlqMessage.Body.Value);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(dlqMessage.Body.Value).IsEqualTo(_message.Body.Value);
 
         // Verify rejection metadata
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalTopic"));
-        Assert.Equal(originalTopic, dlqMessage.Header.Bag["originalTopic"].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionReason"));
-        Assert.Equal(RejectionReason.DeliveryError.ToString(),
-            dlqMessage.Header.Bag["rejectionReason"].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp"));
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalMessageType"));
-        Assert.Equal(MessageType.MT_COMMAND.ToString(),
-            dlqMessage.Header.Bag["originalMessageType"].ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalTopic")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["originalTopic"].ToString()).IsEqualTo(originalTopic);
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionReason")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.DeliveryError.ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalMessageType")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["originalMessageType"].ToString()).IsEqualTo(MessageType.MT_COMMAND.ToString());
     }
 
     public void Dispose()
@@ -102,3 +98,4 @@ public class RedisMessageConsumerDeliveryErrorDlqTests : IDisposable
         _messageProducer.Dispose();
     }
 }
+

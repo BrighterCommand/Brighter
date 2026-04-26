@@ -23,8 +23,6 @@ THE SOFTWARE. */
 
 using System.Threading.Tasks;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -34,8 +32,8 @@ public class SpyCommandProcessorDepositTests
     private readonly MyCommand _command1 = new() { Value = "first" };
     private readonly MyCommand _command2 = new() { Value = "second" };
 
-    [Fact]
-    public void Should_return_id_from_deposit_post()
+    [Test]
+    public async Task Should_return_id_from_deposit_post()
     {
         // Arrange - command has a known Id
 
@@ -43,11 +41,11 @@ public class SpyCommandProcessorDepositTests
         var returnedId = _spy.DepositPost(_command1);
 
         // Assert
-        returnedId.ShouldBe(_command1.Id);
+        await Assert.That(returnedId).IsEqualTo(_command1.Id);
     }
 
-    [Fact]
-    public void Should_track_deposited_request_by_id()
+    [Test]
+    public async Task Should_track_deposited_request_by_id()
     {
         // Arrange
         var id = _spy.DepositPost(_command1);
@@ -56,41 +54,41 @@ public class SpyCommandProcessorDepositTests
         var depositedRequest = _spy.DepositedRequests[id];
 
         // Assert
-        depositedRequest.ShouldBe(_command1);
+        await Assert.That(depositedRequest).IsEqualTo(_command1);
     }
 
-    [Fact]
-    public void Should_track_multiple_deposits_independently()
+    [Test]
+    public async Task Should_track_multiple_deposits_independently()
     {
         // Arrange & Act
         var id1 = _spy.DepositPost(_command1);
         var id2 = _spy.DepositPost(_command2);
 
         // Assert
-        _spy.DepositedRequests[id1].ShouldBe(_command1);
-        _spy.DepositedRequests[id2].ShouldBe(_command2);
-        _spy.DepositedRequests.Count.ShouldBe(2);
+        await Assert.That(_spy.DepositedRequests[id1]).IsEqualTo(_command1);
+        await Assert.That(_spy.DepositedRequests[id2]).IsEqualTo(_command2);
+        await Assert.That(_spy.DepositedRequests.Count).IsEqualTo(2);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_track_async_deposits()
     {
         // Arrange & Act
         var id = await _spy.DepositPostAsync(_command1);
 
         // Assert
-        _spy.DepositedRequests[id].ShouldBe(_command1);
+        await Assert.That(_spy.DepositedRequests[id]).IsEqualTo(_command1);
     }
 
-    [Fact]
-    public void Should_not_add_deposited_requests_to_observation_queue()
+    [Test]
+    public Task Should_not_add_deposited_requests_to_observation_queue()
     {
         // Arrange & Act
         _spy.DepositPost(_command1);
 
         // Assert - DepositPost should NOT add to observation queue (that's ClearOutbox's job)
-        var observeAction = () => _spy.Observe<MyCommand>();
-        observeAction.ShouldThrow<System.InvalidOperationException>();
+        Assert.ThrowsExactly<InvalidOperationException>(() => _spy.Observe<MyCommand>());
+        return Task.CompletedTask;
     }
 
     private sealed class MyCommand : Command

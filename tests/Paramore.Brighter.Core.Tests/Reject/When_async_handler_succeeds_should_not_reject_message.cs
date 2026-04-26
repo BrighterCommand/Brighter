@@ -19,16 +19,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Reject.TestDoubles;
 using Paramore.Brighter.Reject.Handlers;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Reject
 {
@@ -36,13 +33,11 @@ namespace Paramore.Brighter.Core.Tests.Reject
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _command = new();
-
         public When_async_handler_succeeds_should_not_reject_message()
         {
             //Arrange
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MySucceedingRejectHandlerAsync>();
-
             var handlerFactory = new SimpleHandlerFactoryAsync(type =>
             {
                 if (type == typeof(MySucceedingRejectHandlerAsync))
@@ -51,28 +46,21 @@ namespace Paramore.Brighter.Core.Tests.Reject
                     return new RejectMessageOnErrorHandlerAsync<MyCommand>();
                 throw new ArgumentOutOfRangeException(nameof(type), type.Name, null);
             });
-
             MySucceedingRejectHandlerAsync.HandlerCalled = false;
-
-            _commandProcessor = new CommandProcessor(
-                registry,
-                handlerFactory,
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry(),
-                new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory()
-            );
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
-        [Fact]
+        [Test]
         public async Task It_should_complete_without_throwing()
         {
             //Act
-            var exception = await Record.ExceptionAsync(() => _commandProcessor.SendAsync(_command));
+            Exception? exception = null;
+            try { await _commandProcessor.SendAsync(_command); }
+            catch (Exception e) { exception = e; }
 
             //Assert
-            Assert.Null(exception); // No exception thrown
-            Assert.True(MySucceedingRejectHandlerAsync.HandlerCalled); // Handler was invoked
+            await Assert.That(exception).IsNull(); // No exception thrown
+            await Assert.That(MySucceedingRejectHandlerAsync.HandlerCalled).IsTrue(); // Handler was invoked
         }
     }
 }

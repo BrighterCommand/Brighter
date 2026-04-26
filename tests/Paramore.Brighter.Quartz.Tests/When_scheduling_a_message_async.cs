@@ -1,4 +1,4 @@
-﻿using System.Collections.Specialized;
+using System.Collections.Specialized;
 using System.Text.Json;
 using System.Transactions;
 using Paramore.Brighter;
@@ -14,23 +14,30 @@ using Quartz;
 
 namespace ParamoreBrighter.Quartz.Tests;
 
-[Collection("Scheduler")]
+// Scheduler tests rely on timing; serialize to avoid CI CPU starvation (equivalent to xUnit [Collection("Scheduler")])
+[NotInParallel("QuartzScheduler")]
 public class QuartzSchedulerMessageAsyncTests
 {
-    private readonly QuartzSchedulerFactory _scheduler;
-    private readonly IAmACommandProcessor _processor;
+    private QuartzSchedulerFactory _scheduler;
+    private IScheduler _quartzScheduler;
+    private IAmACommandProcessor _processor;
     private readonly InMemoryOutbox _outbox;
     private readonly InternalBus _internalBus = new();
 
     private readonly RoutingKey _routingKey;
     private readonly TimeProvider _timeProvider;
+    private readonly ISchedulerFactory _schedulerFactory;
+    private readonly SubscriberRegistry _subscriberRegistry;
+    private readonly SimpleHandlerFactoryAsync _handlerFactory;
+    private readonly PolicyRegistry _policyRegistry;
+    private readonly OutboxProducerMediator<Message, CommittableTransaction> _outboxBus;
 
     public QuartzSchedulerMessageAsyncTests()
     {
         _routingKey = new RoutingKey($"Test-{Guid.NewGuid():N}");
         _timeProvider = TimeProvider.System;
 
-        var handlerFactory = new SimpleHandlerFactoryAsync(
+        _handlerFactory = new SimpleHandlerFactoryAsync(
             type =>
             {
                 if (type == typeof(MyEventHandlerAsync))
@@ -41,11 +48,11 @@ public class QuartzSchedulerMessageAsyncTests
                 return new FireSchedulerMessageHandler(_processor!);
             });
 
-        var subscriberRegistry = new SubscriberRegistry();
-        subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
-        subscriberRegistry.RegisterAsync<FireSchedulerMessage, FireSchedulerMessageHandler>();
+        _subscriberRegistry = new SubscriberRegistry();
+        _subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
+        _subscriberRegistry.RegisterAsync<FireSchedulerMessage, FireSchedulerMessageHandler>();
 
-        var policyRegistry = new PolicyRegistry
+        _policyRegistry = new PolicyRegistry
         {
             [CommandProcessor.RETRYPOLICYASYNC] = Policy.Handle<Exception>().RetryAsync(),
             [CommandProcessor.CIRCUITBREAKERASYNC] =
@@ -66,9 +73,9 @@ public class QuartzSchedulerMessageAsyncTests
         var trace = new BrighterTracer(_timeProvider);
         _outbox = new InMemoryOutbox(_timeProvider) { Tracer = trace };
 
-        var outboxBus = new OutboxProducerMediator<Message, CommittableTransaction>(
+        _outboxBus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -77,30 +84,38 @@ public class QuartzSchedulerMessageAsyncTests
             _outbox
         );
 
-        var schedulerFactory = SchedulerBuilder.Create(new NameValueCollection())
+        _schedulerFactory = SchedulerBuilder.Create(new NameValueCollection
+            {
+                ["quartz.scheduler.instanceName"] = $"QuartzScheduler-{Guid.NewGuid():N}",
+                ["quartz.scheduler.instanceId"] = Guid.NewGuid().ToString("N"),
+            })
             .UseDefaultThreadPool(x => x.MaxConcurrency = 5)
             .UseJobFactory<BrighterResolver>()
             .Build();
+    }
 
-        var scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
-        scheduler.Start().GetAwaiter().GetResult();
+    [Before(Test)]
+    public async Task Setup()
+    {
+        _quartzScheduler = await _schedulerFactory.GetScheduler();
+        await _quartzScheduler.Start();
 
-        _scheduler = new QuartzSchedulerFactory(scheduler);
+        _scheduler = new QuartzSchedulerFactory(_quartzScheduler);
 
         _processor = new CommandProcessor(
-            subscriberRegistry,
-            handlerFactory,
+            _subscriberRegistry,
+            _handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry,
+            _policyRegistry,
             new ResiliencePipelineRegistry<string>(),
-            outboxBus,
+            _outboxBus,
             _scheduler
         );
 
-        BrighterResolver.Processor = _processor;
+        _quartzScheduler.Context.Put(BrighterResolver.ProcessorContextKey, _processor);
     }
 
-    [Fact]
+    [Test]
     public async Task When_scheduler_a_message_with_a_datetimeoffset_async()
     {
         var req = new MyEvent();
@@ -113,18 +128,18 @@ public class QuartzSchedulerMessageAsyncTests
         var id = await scheduler.ScheduleAsync(message,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
+        await Assert.That((id)?.Any()).IsTrue();
 
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        await Assert.That(_internalBus.Stream(_routingKey) ?? []).IsEmpty();
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        Assert.Equivalent(message, await _outbox.GetAsync(message.Id, new RequestContext()));
+        await Assert.That(await _outbox.GetAsync(message.Id, new RequestContext())).IsEquivalentTo(message);
 
-        Assert.NotEmpty(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).IsNotEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task When_scheduler_a_message_with_a_timespan_async()
     {
         var req = new MyEvent();
@@ -136,18 +151,17 @@ public class QuartzSchedulerMessageAsyncTests
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, TimeSpan.FromSeconds(1));
 
-        Assert.True((id)?.Any());
+        await Assert.That((id)?.Any()).IsTrue();
 
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        await Assert.That(_internalBus.Stream(_routingKey) ?? []).IsEmpty();
 
-        await Task.Delay(TimeSpan.FromSeconds(2));
+        await Assert.That(() => _internalBus.Stream(_routingKey).Any())
+            .Eventually(s => s.IsTrue(), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(250));
 
-        Assert.NotEmpty(_internalBus.Stream(_routingKey));
-
-        Assert.Equivalent(message, await _outbox.GetAsync(req.Id, new RequestContext()));
+        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsEquivalentTo(message);
     }
 
-    [Fact]
+    [Test]
     public async Task When_reschedule_a_message_with_a_datetimeoffset_async()
     {
         var req = new MyEvent();
@@ -159,21 +173,20 @@ public class QuartzSchedulerMessageAsyncTests
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        await Assert.That((id)?.Any()).IsTrue();
+        await Assert.That(_internalBus.Stream(_routingKey) ?? []).IsEmpty();
 
         await scheduler.ReSchedulerAsync(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));
 
         await Task.Delay(TimeSpan.FromSeconds(2));
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        await Assert.That(_internalBus.Stream(_routingKey) ?? []).IsEmpty();
 
-        await Task.Delay(TimeSpan.FromSeconds(4));
-
-        Assert.NotEmpty(_internalBus.Stream(_routingKey));
-        Assert.Equivalent(message, await _outbox.GetAsync(req.Id, new RequestContext()));
+        await Assert.That(() => _internalBus.Stream(_routingKey).Any())
+            .Eventually(s => s.IsTrue(), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(250));
+        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsEquivalentTo(message);
     }
 
-    [Fact]
+    [Test]
     public async Task When_reschedule_a_message_with_a_timespan_async()
     {
         var req = new MyEvent();
@@ -185,21 +198,21 @@ public class QuartzSchedulerMessageAsyncTests
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, TimeSpan.FromHours(1));
 
-        Assert.True((id)?.Any());
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        await Assert.That((id)?.Any()).IsTrue();
+        await Assert.That(_internalBus.Stream(_routingKey) ?? []).IsEmpty();
 
         await scheduler.ReSchedulerAsync(id, TimeSpan.FromSeconds(5));
 
         await Task.Delay(TimeSpan.FromSeconds(2));
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        await Assert.That(_internalBus.Stream(_routingKey) ?? []).IsEmpty();
 
-        await Task.Delay(TimeSpan.FromSeconds(4));
-        Assert.NotEmpty(_internalBus.Stream(_routingKey));
+        await Assert.That(() => _internalBus.Stream(_routingKey).Any())
+            .Eventually(s => s.IsTrue(), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(250));
 
-        Assert.NotEqual(Message.Empty, await _outbox.GetAsync(req.Id, new RequestContext()));
+        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsNotEqualTo(Message.Empty);
     }
 
-    [Fact]
+    [Test]
     public async Task When_cancel_scheduler_message_with_a_datetimeoffset_async()
     {
         var req = new MyEvent();
@@ -211,7 +224,7 @@ public class QuartzSchedulerMessageAsyncTests
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.True((id)?.Any());
+        await Assert.That((id)?.Any()).IsTrue();
 
         await scheduler.CancelAsync(id);
 
@@ -220,22 +233,22 @@ public class QuartzSchedulerMessageAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
     }
 
 
-    [Fact]
+    [Test]
     public async Task When_cancel_scheduler_request_with_a_timespan_async()
     {
         var req = new MyEvent();
@@ -247,7 +260,7 @@ public class QuartzSchedulerMessageAsyncTests
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, TimeSpan.FromHours(1));
 
-        Assert.True((id)?.Any());
+        await Assert.That((id)?.Any()).IsTrue();
 
         await scheduler.CancelAsync(id);
 
@@ -256,17 +269,23 @@ public class QuartzSchedulerMessageAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
+    }
+
+    [After(Test)]
+    public async Task Cleanup()
+    {
+        await _quartzScheduler.Shutdown(waitForJobsToComplete: true);
     }
 }

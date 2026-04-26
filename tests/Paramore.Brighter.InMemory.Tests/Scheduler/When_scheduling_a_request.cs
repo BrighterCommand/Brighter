@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Transactions;
@@ -10,12 +10,10 @@ using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Scheduler;
 
-[Trait("Category", "InMemory")]
-[Collection("CommandProcess")]
+[Category("InMemory")]
 public class InMemorySchedulerRequestTests
 {
     private readonly InMemorySchedulerFactory _scheduler;
@@ -90,327 +88,327 @@ public class InMemorySchedulerRequestTests
 
     #region Scheduler
 
-    [Fact]
-    public void When_scheduler_send_request_with_a_datetimeoffset()
+    [Test]
+    public async Task When_scheduler_send_request_with_a_datetimeoffset()
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Send,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
-        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).ContainsKey(nameof(MyEventHandler));
 
         var expected = Message.Empty;
-        var actual =  _outbox.Get(req.Id, new RequestContext());
+        var actual =  await _outbox.GetAsync(req.Id, new RequestContext());
         
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
     }
 
-    [Fact]
-    public void When_scheduler_send_request_with_a_timespan()
+    [Test]
+    public async Task When_scheduler_send_request_with_a_timespan()
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Send, TimeSpan.FromSeconds(1));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
-        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).ContainsKey(nameof(MyEventHandler));
 
         var expected = Message.Empty;
-        var actual =  _outbox.Get(req.Id, new RequestContext());
+        var actual =  await _outbox.GetAsync(req.Id, new RequestContext());
         
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
     }
 
-    [Fact]
-    public void When_scheduler_publish_request_with_a_datetimeoffset()
+    [Test]
+    public async Task When_scheduler_publish_request_with_a_datetimeoffset()
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Publish,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
-        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).ContainsKey(nameof(MyEventHandler));
 
         var expected = Message.Empty;
-        var actual =  _outbox.Get(req.Id, new RequestContext());
+        var actual =  await _outbox.GetAsync(req.Id, new RequestContext());
         
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
     }
 
-    [Fact]
-    public void When_scheduler_publish_request_with_a_timespan()
+    [Test]
+    public async Task When_scheduler_publish_request_with_a_timespan()
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Publish, TimeSpan.FromSeconds(1));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
-        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).ContainsKey(nameof(MyEventHandler));
 
         var expected = Message.Empty;
-        var actual =  _outbox.Get(req.Id, new RequestContext());
+        var actual =  await _outbox.GetAsync(req.Id, new RequestContext());
         
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
     }
 
-    [Fact]
-    public void When_scheduler_post_request_with_a_datetimeoffset()
+    [Test]
+    public async Task When_scheduler_post_request_with_a_datetimeoffset()
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Post,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
-        Assert.Empty(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).IsEmpty();
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
-        Assert.NotEqual(Message.Empty,_outbox.Get(req.Id, new RequestContext()));
+        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsNotEqualTo(Message.Empty);
 
-        Assert.NotEmpty(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).IsNotEmpty();
     }
 
-    [Fact]
-    public void When_scheduler_post_request_with_a_timespan()
+    [Test]
+    public async Task When_scheduler_post_request_with_a_timespan()
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Post, TimeSpan.FromSeconds(1));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
-        Assert.Empty(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).IsEmpty();
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
-        Assert.NotEmpty(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).IsNotEmpty();
 
-        Assert.NotEqual(Message.Empty,_outbox.Get(req.Id, new RequestContext()));
+        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsNotEqualTo(Message.Empty);
     }
 
     #endregion
 
     #region Rescheduler
 
-    [Theory]
-    [InlineData(RequestSchedulerType.Send)]
-    [InlineData(RequestSchedulerType.Publish)]
-    public void When_reschedule_request_with_a_datetimeoffset(RequestSchedulerType type)
+    [Test]
+    [Arguments(RequestSchedulerType.Send)]
+    [Arguments(RequestSchedulerType.Publish)]
+    public async Task When_reschedule_request_with_a_datetimeoffset(RequestSchedulerType type)
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, type, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
         scheduler.ReScheduler(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromHours(1)));
 
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
         _timeProvider.Advance(TimeSpan.FromHours(2));
-        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).ContainsKey(nameof(MyEventHandler));
 
         var expected = Message.Empty;
-        var actual =  _outbox.Get(req.Id, new RequestContext());
+        var actual =  await _outbox.GetAsync(req.Id, new RequestContext());
         
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
     }
 
-    [Theory]
-    [InlineData(RequestSchedulerType.Send)]
-    [InlineData(RequestSchedulerType.Publish)]
-    public void When_reschedule_send_request_with_a_timespan(RequestSchedulerType type)
+    [Test]
+    [Arguments(RequestSchedulerType.Send)]
+    [Arguments(RequestSchedulerType.Publish)]
+    public async Task When_reschedule_send_request_with_a_timespan(RequestSchedulerType type)
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, type, TimeSpan.FromHours(1));
 
-        Assert.NotEqual(0, id.Length);
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(id.Length).IsNotEqualTo(0);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
         scheduler.ReScheduler(id, TimeSpan.FromHours(1));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
         _timeProvider.Advance(TimeSpan.FromHours(2));
-        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).ContainsKey(nameof(MyEventHandler));
 
         var expected = Message.Empty;
-        var actual =  _outbox.Get(req.Id, new RequestContext());
+        var actual =  await _outbox.GetAsync(req.Id, new RequestContext());
         
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
     }
 
     #endregion
 
     #region Cancel
 
-    [Theory]
-    [InlineData(RequestSchedulerType.Send)]
-    [InlineData(RequestSchedulerType.Post)]
-    [InlineData(RequestSchedulerType.Publish)]
-    public void When_cancel_scheduler_request_with_a_datetimeoffset(RequestSchedulerType type)
+    [Test]
+    [Arguments(RequestSchedulerType.Send)]
+    [Arguments(RequestSchedulerType.Post)]
+    [Arguments(RequestSchedulerType.Publish)]
+    public async Task When_cancel_scheduler_request_with_a_datetimeoffset(RequestSchedulerType type)
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, type,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
 
         scheduler.Cancel(id);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
         var expected = Message.Empty;
-        var actual =  _outbox.Get(req.Id, new RequestContext());
+        var actual =  await _outbox.GetAsync(req.Id, new RequestContext());
         
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
     }
 
-    [Theory]
-    [InlineData(RequestSchedulerType.Send)]
-    [InlineData(RequestSchedulerType.Post)]
-    [InlineData(RequestSchedulerType.Publish)]
-    public void When_cancel_scheduler_request_with_a_timespan(RequestSchedulerType type)
+    [Test]
+    [Arguments(RequestSchedulerType.Send)]
+    [Arguments(RequestSchedulerType.Post)]
+    [Arguments(RequestSchedulerType.Publish)]
+    public async Task When_cancel_scheduler_request_with_a_timespan(RequestSchedulerType type)
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, type, TimeSpan.FromHours(1));
 
-        Assert.NotEqual(0, id.Length);
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(id.Length).IsNotEqualTo(0);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
         scheduler.Cancel(id);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
+        await Assert.That(_receivedMessages).DoesNotContainKey(nameof(MyEventHandler));
 
         var expected = Message.Empty;
-        var actual =  _outbox.Get(req.Id, new RequestContext());
+        var actual =  await _outbox.GetAsync(req.Id, new RequestContext());
         
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
     }
 
     #endregion

@@ -1,4 +1,4 @@
-﻿using System.Net.Mime;
+using System.Net.Mime;
 using Paramore.Brighter.AWSScheduler.V4.Tests.Helpers;
 using Paramore.Brighter.AWSScheduler.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.AWS.V4;
@@ -6,48 +6,53 @@ using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
 namespace Paramore.Brighter.AWSScheduler.V4.Tests.Scheduler.Messages.Sqs;
 
-[Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
-[Collection("Scheduler SQS")]
+[Property("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
 public class SqsSchedulingAsyncMessageTest : IAsyncDisposable
 {
     private readonly ContentType _contentType = new(MediaTypeNames.Text.Plain);
     private const int BufferSize = 3;
-    private readonly SqsMessageProducer _messageProducer;
-    private readonly SqsMessageConsumer _consumer;
+    private SqsMessageProducer _messageProducer;
+    private SqsMessageConsumer _consumer;
     private readonly string _queueName;
     private readonly ChannelFactory _channelFactory;
-    private readonly IAmAMessageSchedulerFactory _factory;
+    private IAmAMessageSchedulerFactory _factory;
+    private readonly AWSMessagingGatewayConnection _awsConnection;
 
     public SqsSchedulingAsyncMessageTest()
     {
-        var awsConnection = GatewayFactory.CreateFactory();
+        _awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
-        var subscriptionName = $"Buffered-Scheduler-Async-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        _channelFactory = new ChannelFactory(_awsConnection);
         _queueName = $"Buffered-Scheduler-Async-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+    }
+
+    [Before(Test)]
+    public async Task Setup()
+    {
+        var subscriptionName = $"Buffered-Scheduler-Async-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_queueName);
 
-        var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
+        var channel = await _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(_queueName),
             channelType: ChannelType.PointToPoint, routingKey: routingKey, bufferSize: BufferSize, makeChannels: OnMissingChannel.Create,
-            queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }))).GetAwaiter().GetResult();
+            queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } })));
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
-        _messageProducer = new SqsMessageProducer(awsConnection,
+        _consumer = new SqsMessageConsumer(_awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
+        _messageProducer = new SqsMessageProducer(_awsConnection,
             new SqsPublication { MakeChannels = OnMissingChannel.Create, QueueAttributes = new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }) });
 
-        _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
+        _factory = new AwsSchedulerFactory(_awsConnection, $"brighter-scheduler-{Guid.NewGuid():N}")
         {
             UseMessageTopicAsTarget = true
         };
     }
 
-    [Fact]
+    [Test]
     public async Task When_Scheduling_A_Sqs_Message_Async()
     {
         var routingKey = new RoutingKey(_queueName);
@@ -66,12 +71,12 @@ public class SqsSchedulingAsyncMessageTest : IAsyncDisposable
         while (stopAt > DateTimeOffset.UtcNow)
         {
             var messages = await _consumer.ReceiveAsync(TimeSpan.FromMinutes(1));
-            Assert.Single(messages);
+            await Assert.That(messages).HasSingleItem();
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
-                Assert.Equal((string?)message.Body.Value, (string?)messages[0].Body.Value);
-                Assert.Equivalent(message.Header, messages[0].Header);
+                await Assert.That((string?)messages[0].Body.Value).IsEqualTo((string?)message.Body.Value);
+                await Assert.That(messages[0].Header).IsEquivalentTo(message.Header);
                 await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }

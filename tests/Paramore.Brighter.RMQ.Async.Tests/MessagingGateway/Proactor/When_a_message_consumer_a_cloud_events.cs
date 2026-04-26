@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
+[Category("RMQ")]
 public class RMQBufferedConsumerCloudEventsTestsAsync : IAsyncDisposable 
 {
     private readonly IAmAMessageProducerAsync _messageProducer;
@@ -31,7 +30,7 @@ public class RMQBufferedConsumerCloudEventsTestsAsync : IAsyncDisposable
             .GetResult();
     }
 
-    [Fact]
+    [Test]
     public async Task When_uses_cloud_events_async()
     {
         //Post one more than batch size messages
@@ -52,13 +51,13 @@ public class RMQBufferedConsumerCloudEventsTestsAsync : IAsyncDisposable
         var messages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
         //We should only have three messages
-        Assert.Single(messages);
+        await Assert.That(messages).HasSingleItem();
 
-        Assert.Equal(messageOne.Header.MessageId, messages[0].Header.MessageId);
-        Assert.Equal(messageOne.Header.Subject, messages[0].Header.Subject);
-        Assert.Equal(messageOne.Header.Type, messages[0].Header.Type);
-        Assert.Equal(messageOne.Header.Source, messages[0].Header.Source);
-        Assert.Equal(messageOne.Header.DataSchema, messages[0].Header.DataSchema);
+        await Assert.That(messages[0].Header.MessageId).IsEqualTo(messageOne.Header.MessageId);
+        await Assert.That(messages[0].Header.Subject).IsEqualTo(messageOne.Header.Subject);
+        await Assert.That(messages[0].Header.Type).IsEqualTo(messageOne.Header.Type);
+        await Assert.That(messages[0].Header.Source).IsEqualTo(messageOne.Header.Source);
+        await Assert.That(messages[0].Header.DataSchema).IsEqualTo(messageOne.Header.DataSchema);
     }
 
     public async ValueTask DisposeAsync()

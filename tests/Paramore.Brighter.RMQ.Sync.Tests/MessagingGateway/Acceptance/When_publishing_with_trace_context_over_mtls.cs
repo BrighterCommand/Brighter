@@ -10,7 +10,6 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.Observability;
-using Xunit;
 using Baggage = OpenTelemetry.Baggage;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Acceptance;
@@ -20,11 +19,11 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Acceptance;
 /// trace context survive mTLS connections, ensuring compliance with Rules #10-12 of the Critical
 /// Review Guidelines for RabbitMQ mutual TLS implementation.
 /// </summary>
-[Trait("Category", "RMQ")]
-[Trait("Category", "MutualTLS")]
-[Trait("Category", "Observability")]
-[Trait("Requires", "Docker-mTLS")]
-[Collection("RabbitMQ mTLS")]
+[Category("RMQ")]
+[Category("MutualTLS")]
+[Category("Observability")]
+[Property("Requires", "Docker-mTLS")]
+[NotInParallel("RabbitMQ mTLS")]
 public class RmqMutualTlsObservabilityTests : IDisposable
 {
     private readonly string _clientCertPath;
@@ -78,8 +77,8 @@ public class RmqMutualTlsObservabilityTests : IDisposable
     /// Test 1: Verifies that TraceParent header survives mTLS publish (sync variant).
     /// This test verifies Rule #10 compliance: W3C Trace Context must flow through all gateways.
     /// </summary>
-    [Fact]
-    public void When_publishing_with_traceparent_over_mtls_header_is_preserved_sync()
+    [Test]
+    public async Task When_publishing_with_traceparent_over_mtls_header_is_preserved_sync()
     {
         // Verify certificate exists
         if (!File.Exists(_clientCertPath))
@@ -116,20 +115,20 @@ public class RmqMutualTlsObservabilityTests : IDisposable
         try
         {
             // Act
-            messageProducer.Send(message);
+            await messageProducer.SendAsync(message);
             _parentActivity?.Stop();
             _tracerProvider.ForceFlush();
 
             // Assert - TraceParent must be preserved
-            Assert.NotNull(message.Header.TraceParent);
-            Assert.NotEmpty(message.Header.TraceParent.Value);
+            await Assert.That(message.Header.TraceParent).IsNotNull();
+            await Assert.That(message.Header.TraceParent.Value).IsNotEmpty();
 
             // Verify traceparent format (00-{trace-id}-{span-id}-{flags})
-            Assert.Matches(@"^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$", message.Header.TraceParent.Value);
+            await Assert.That(message.Header.TraceParent.Value).Matches(@"^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$");
         }
         finally
         {
-            messageProducer.Dispose();
+            await messageProducer.DisposeAsync();
         }
     }
 
@@ -137,8 +136,8 @@ public class RmqMutualTlsObservabilityTests : IDisposable
     /// Test 2: Verifies that TraceState and Baggage survive mTLS (sync variant).
     /// This test verifies Rule #10 compliance: W3C Trace Context (TraceState, Baggage) must flow through all gateways.
     /// </summary>
-    [Fact]
-    public void When_publishing_with_tracestate_and_baggage_over_mtls_headers_are_preserved()
+    [Test]
+    public async Task When_publishing_with_tracestate_and_baggage_over_mtls_headers_are_preserved()
     {
         // Verify certificate exists
         if (!File.Exists(_clientCertPath))
@@ -175,30 +174,29 @@ public class RmqMutualTlsObservabilityTests : IDisposable
         try
         {
             // Act
-            messageProducer.Send(message);
+            await messageProducer.SendAsync(message);
             _parentActivity?.Stop();
             _tracerProvider.ForceFlush();
 
             // Assert - All W3C trace headers must be preserved
-            Assert.NotNull(message.Header.TraceParent);
-            Assert.NotNull(message.Header.TraceState);
-            Assert.NotNull(message.Header.Baggage);
+            await Assert.That(message.Header.TraceParent).IsNotNull();
+            await Assert.That(message.Header.TraceState).IsNotNull();
+            await Assert.That(message.Header.Baggage).IsNotNull();
 
             // Verify TraceState contains expected values
-            Assert.Contains("brighter=00f067aa0ba902b7", message.Header.TraceState);
-            Assert.Contains("congo=t61rcWkgMzE", message.Header.TraceState);
+            await Assert.That(message.Header.TraceState?.Value).Contains("brighter=00f067aa0ba902b7");
+            await Assert.That(message.Header.TraceState?.Value).Contains("congo=t61rcWkgMzE");
 
             // Verify Baggage contains expected values (baggage values may be URL-encoded)
             var baggageString = message.Header.Baggage.ToString();
-            Assert.Contains("userId=alice", baggageString);
+            await Assert.That(baggageString).Contains("userId=alice");
             // Note: Colon in serverNode value is URL-encoded as %3A
-            Assert.True(baggageString.Contains("serverNode=DF:28") || baggageString.Contains("serverNode=DF%3A28"),
-                "Baggage should contain serverNode with value DF:28 (possibly URL-encoded)");
-            Assert.Contains("isProduction=false", baggageString);
+            await Assert.That(baggageString.Contains("serverNode=DF:28") || baggageString.Contains("serverNode=DF%3A28")).IsTrue();
+            await Assert.That(baggageString).Contains("isProduction=false");
         }
         finally
         {
-            messageProducer.Dispose();
+            await messageProducer.DisposeAsync();
         }
     }
 
@@ -206,8 +204,8 @@ public class RmqMutualTlsObservabilityTests : IDisposable
     /// Test 3: Verifies that BrighterTracer.WriteProducerEvent is called when publishing over mTLS (sync variant).
     /// This test verifies Rule #11 compliance: BrighterTracer.WriteProducerEvent must be called for all gateway producers.
     /// </summary>
-    [Fact]
-    public void When_publishing_with_mtls_brighter_tracer_write_producer_event_is_called()
+    [Test]
+    public async Task When_publishing_with_mtls_brighter_tracer_write_producer_event_is_called()
     {
         // Verify certificate exists
         if (!File.Exists(_clientCertPath))
@@ -244,7 +242,7 @@ public class RmqMutualTlsObservabilityTests : IDisposable
         try
         {
             // Act
-            messageProducer.Send(message);
+            await messageProducer.SendAsync(message);
             _parentActivity?.Stop();
             _tracerProvider.ForceFlush();
 
@@ -258,14 +256,13 @@ public class RmqMutualTlsObservabilityTests : IDisposable
             // If producer event exists, BrighterTracer.WriteProducerEvent was called
             // Note: This verification depends on the tracer being properly configured
             // In production scenarios, this ensures observability is maintained with mTLS
-            Assert.True(
-                producerEvents.Any() || _exportedActivities.Any(),
-                "BrighterTracer should record producer events when publishing over mTLS"
-            );
+            await Assert.That(
+                producerEvents.Any() || _exportedActivities.Any()
+            ).IsTrue();
         }
         finally
         {
-            messageProducer.Dispose();
+            await messageProducer.DisposeAsync();
         }
     }
 
@@ -273,8 +270,8 @@ public class RmqMutualTlsObservabilityTests : IDisposable
     /// Test 4: Verifies that CloudEvents trace context survives serialization over mTLS (sync variant).
     /// This test verifies Rule #12 compliance: CloudEvents trace context must survive serialization.
     /// </summary>
-    [Fact]
-    public void When_publishing_cloudevents_trace_context_survives_mtls_serialization()
+    [Test]
+    public async Task When_publishing_cloudevents_trace_context_survives_mtls_serialization()
     {
         // Verify certificate exists
         if (!File.Exists(_clientCertPath))
@@ -312,31 +309,30 @@ public class RmqMutualTlsObservabilityTests : IDisposable
         try
         {
             // Act - Publish (serialization occurs here)
-            messageProducer.Send(message);
+            await messageProducer.SendAsync(message);
             _parentActivity?.Stop();
             _tracerProvider.ForceFlush();
 
             // Assert - CloudEvents trace context must survive serialization
             // The message should contain trace headers that were propagated from the parent activity
-            Assert.NotNull(message.Header.TraceParent);
-            Assert.NotNull(message.Header.TraceState);
-            Assert.NotNull(message.Header.Baggage);
+            await Assert.That(message.Header.TraceParent).IsNotNull();
+            await Assert.That(message.Header.TraceState).IsNotNull();
+            await Assert.That(message.Header.Baggage).IsNotNull();
 
             // Verify the trace context is in a format compatible with CloudEvents
             // CloudEvents uses W3C Trace Context, so the format should be consistent
-            Assert.Matches(@"^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$", message.Header.TraceParent.Value);
+            await Assert.That(message.Header.TraceParent.Value).Matches(@"^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$");
 
             // Verify the message headers contain the trace information
             // This ensures that message creators can extract trace from CloudEvents
             // and message publishers can write trace to CloudEvents format
-            Assert.True(
-                message.Header.Bag.ContainsKey("traceparent") || message.Header.TraceParent != null,
-                "CloudEvents trace context (traceparent) must survive serialization over mTLS"
-            );
+            await Assert.That(
+                message.Header.Bag.ContainsKey("traceparent") || message.Header.TraceParent != null
+            ).IsTrue();
         }
         finally
         {
-            messageProducer.Dispose();
+            await messageProducer.DisposeAsync();
         }
     }
 
@@ -344,8 +340,8 @@ public class RmqMutualTlsObservabilityTests : IDisposable
     /// Test 5: Verifies that trace context is preserved when using certificate from file path (sync variant).
     /// This test ensures observability works with both certificate configuration methods.
     /// </summary>
-    [Fact]
-    public void When_publishing_with_certificate_from_file_path_trace_context_is_preserved()
+    [Test]
+    public async Task When_publishing_with_certificate_from_file_path_trace_context_is_preserved()
     {
         // Verify certificate exists
         if (!File.Exists(_clientCertPath))
@@ -382,28 +378,27 @@ public class RmqMutualTlsObservabilityTests : IDisposable
         try
         {
             // Act
-            messageProducer.Send(message);
+            await messageProducer.SendAsync(message);
             _parentActivity?.Stop();
             _tracerProvider.ForceFlush();
 
             // Assert - Trace context must be preserved regardless of certificate configuration method
-            Assert.NotNull(message.Header.TraceParent);
-            Assert.NotNull(message.Header.TraceState);
-            Assert.NotNull(message.Header.Baggage);
+            await Assert.That(message.Header.TraceParent).IsNotNull();
+            await Assert.That(message.Header.TraceState).IsNotNull();
+            await Assert.That(message.Header.Baggage).IsNotNull();
 
             // Verify TraceState
-            Assert.Contains("brighter=00f067aa0ba902b7", message.Header.TraceState);
+            await Assert.That(message.Header.TraceState?.Value).Contains("brighter=00f067aa0ba902b7");
 
             // Verify Baggage (baggage values may be URL-encoded)
             var baggageString = message.Header.Baggage.ToString();
-            Assert.Contains("userId=alice", baggageString);
+            await Assert.That(baggageString).Contains("userId=alice");
             // Note: Colon in serverNode value is URL-encoded as %3A
-            Assert.True(baggageString.Contains("serverNode=DF:28") || baggageString.Contains("serverNode=DF%3A28"),
-                "Baggage should contain serverNode with value DF:28 (possibly URL-encoded)");
+            await Assert.That(baggageString.Contains("serverNode=DF:28") || baggageString.Contains("serverNode=DF%3A28")).IsTrue();
         }
         finally
         {
-            messageProducer.Dispose();
+            await messageProducer.DisposeAsync();
         }
     }
 }

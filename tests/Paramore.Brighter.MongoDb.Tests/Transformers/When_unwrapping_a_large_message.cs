@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -7,11 +7,10 @@ using Paramore.Brighter.MongoDb.Tests.Helpers;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Paramore.Brighter.Transformers.MongoGridFS;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDb.Tests.Transformers;
 
-[Trait("Category", "MongoDb")]
+[Category("MongoDb")]
 public class LargeMessagePayloadUnwrapTests
 {
     private readonly TransformPipelineBuilder _pipelineBuilder;
@@ -20,7 +19,6 @@ public class LargeMessagePayloadUnwrapTests
     public LargeMessagePayloadUnwrapTests()
     {
         //arrange
-        TransformPipelineBuilder.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
@@ -39,8 +37,8 @@ public class LargeMessagePayloadUnwrapTests
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
 
-    [Fact]
-    public void When_unwrapping_a_large_message()
+    [Test]
+    public async Task When_unwrapping_a_large_message()
     {
         //store our luggage and get the claim check
         var contents = DataGenerator.CreateString(6000);
@@ -50,10 +48,10 @@ public class LargeMessagePayloadUnwrapTests
 
         var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
-        writer.Write(commandAsJson);
-        writer.Flush();
+        await writer.WriteAsync(commandAsJson);
+        await writer.FlushAsync();
         stream.Position = 0;
-        var id = _luggageStore.Store(stream);
+        var id = await _luggageStore.StoreAsync(stream);
 
         //pretend we ran through the claim check
         myCommand.Value = $"Claim Check {id}";
@@ -75,7 +73,7 @@ public class LargeMessagePayloadUnwrapTests
 
         //assert
         //contents should be from storage
-        Assert.Equal(contents, transformedMessage.Value);
-        Assert.False(_luggageStore.HasClaim(id));
+        await Assert.That(transformedMessage.Value).IsEqualTo(contents);
+        await Assert.That(await _luggageStore.HasClaimAsync(id)).IsFalse();
     }
 }

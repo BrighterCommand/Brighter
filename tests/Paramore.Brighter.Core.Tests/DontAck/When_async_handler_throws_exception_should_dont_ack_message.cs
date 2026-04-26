@@ -19,9 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Actions;
@@ -29,21 +27,18 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.DontAck.TestDoubles;
 using Paramore.Brighter.DontAck.Handlers;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.DontAck
 {
-    public class When_async_handler_throws_exception_should_dont_ack_message : IDisposable
+    public class When_async_handler_throws_exception_should_dont_ack_message
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _command = new();
-
         public When_async_handler_throws_exception_should_dont_ack_message()
         {
             //Arrange
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyFailingDontAckHandlerAsync>();
-
             var handlerFactory = new SimpleHandlerFactoryAsync(type =>
             {
                 if (type == typeof(MyFailingDontAckHandlerAsync))
@@ -52,32 +47,23 @@ namespace Paramore.Brighter.Core.Tests.DontAck
                     return new DontAckOnErrorHandlerAsync<MyCommand>();
                 throw new ArgumentOutOfRangeException(nameof(type), type.Name, null);
             });
-
             MyFailingDontAckHandlerAsync.HandlerCalled = false;
-
-            _commandProcessor = new CommandProcessor(
-                registry,
-                handlerFactory,
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry(),
-                new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory()
-            );
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
         }
 
-        [Fact]
+        [Test]
         public async Task It_should_throw_DontAckAction_with_original_exception()
         {
             //Act
-            var exception = await Assert.ThrowsAsync<DontAckAction>(() => _commandProcessor.SendAsync(_command));
-
+            var exception = await Assert.That(() => _commandProcessor.SendAsync(_command)).ThrowsExactly<DontAckAction>();
             //Assert
-            Assert.True(MyFailingDontAckHandlerAsync.HandlerCalled); // Handler was invoked
-            Assert.Equal(MyFailingDontAckHandlerAsync.EXCEPTION_MESSAGE, exception.Message); // Preserves original message
-            Assert.IsType<InvalidOperationException>(exception.InnerException); // Preserves original exception type
-            Assert.Equal(MyFailingDontAckHandlerAsync.EXCEPTION_MESSAGE, exception.InnerException.Message); // Inner has same message
+            await Assert.That(MyFailingDontAckHandlerAsync.HandlerCalled).IsTrue(); // Handler was invoked
+            await Assert.That(exception.Message).IsEqualTo(MyFailingDontAckHandlerAsync.EXCEPTION_MESSAGE); // Preserves original message
+            await Assert.That(exception.InnerException).IsTypeOf<InvalidOperationException>(); // Preserves original exception type
+            await Assert.That(exception.InnerException.Message).IsEqualTo(MyFailingDontAckHandlerAsync.EXCEPTION_MESSAGE); // Inner has same message
         }
 
+        [After(Test)]
         public void Dispose()
         {
             CommandProcessor.ClearServiceBus();

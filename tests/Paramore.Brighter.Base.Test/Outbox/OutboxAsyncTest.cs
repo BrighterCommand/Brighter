@@ -1,25 +1,26 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Outbox;
 
-public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime 
+public abstract class OutboxAsyncTest<TTransaction>  
 {
     protected abstract IAmAnOutboxAsync<Message, TTransaction> Outbox { get; }
 
     protected List<Message> CreatedMessages { get; } = [];
     
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]    
+    public async Task Setup()
     {
         await BeforeEachTestAsync();
     }
 
-    public async Task DisposeAsync()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
         await AfterEachTestAsync();
     }
@@ -34,11 +35,6 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         return Task.CompletedTask;
     }
     
-    public void Dispose()
-    {
-        AfterEachTestAsync().GetAwaiter().GetResult();
-    }
-
     protected virtual async Task AfterEachTestAsync()
     {
         await DeleteStoreAsync();
@@ -89,7 +85,7 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         return message;
     }
 
-    [Fact]
+    [Test]
     public async Task When_Deleting_One_Message_It_Should_Be_Removed_From_Outbox()
     {
         // Arrange
@@ -110,12 +106,12 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
             .OutstandingMessagesAsync(TimeSpan.Zero, context))
             .ToArray();
         
-        Assert.DoesNotContain(firstMessage.Id, messages.Select(x => x.Id));
-        Assert.Contains(secondMessage.Id, messages.Select(x => x.Id));
-        Assert.Contains(thirdMessage.Id, messages.Select(x => x.Id));
+        await Assert.That(messages.Select(x => x.Id)).DoesNotContain(firstMessage.Id);
+        await Assert.That(messages.Select(x => x.Id)).Contains(secondMessage.Id);
+        await Assert.That(messages.Select(x => x.Id)).Contains(thirdMessage.Id);
     }
     
-    [Fact]
+    [Test]
     public async Task When_Deleting_Multiple_Messages_They_Should_Be_Removed_From_Outbox()
     {
         // Arrange
@@ -136,12 +132,12 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
             .OutstandingMessagesAsync(TimeSpan.Zero, context))
             .ToArray();
         
-        Assert.DoesNotContain(firstMessage.Id, messages.Select(x => x.Header.MessageId));
-        Assert.DoesNotContain(secondMessage.Id, messages.Select(x => x.Header.MessageId));
-        Assert.DoesNotContain(thirdMessage.Id, messages.Select(x => x.Header.MessageId));
+        await Assert.That(messages.Select(x => x.Header.MessageId)).DoesNotContain(firstMessage.Id);
+        await Assert.That(messages.Select(x => x.Header.MessageId)).DoesNotContain(secondMessage.Id);
+        await Assert.That(messages.Select(x => x.Header.MessageId)).DoesNotContain(thirdMessage.Id);
     }
 
-    [Fact]
+    [Test]
     public async Task When_Retrieving_All_Messages_They_Should_Include_Dispatched_And_Undispatched()
     {
         // Arrange
@@ -158,13 +154,13 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         var messages = (await GetAllMessagesAsync()).ToArray();
 
         // Assert
-        Assert.True(messages.Length >= 3, "Expecting at least 3 messages");
-        Assert.Contains(earliest.Id, messages.Select(x => x.Id));
-        Assert.Contains(dispatched.Id, messages.Select(x => x.Id));
-        Assert.Contains(undispatched.Id, messages.Select(x => x.Id));
+        await Assert.That(messages.Length >= 3).IsTrue();
+        await Assert.That(messages.Select(x => x.Id)).Contains(earliest.Id);
+        await Assert.That(messages.Select(x => x.Id)).Contains(dispatched.Id);
+        await Assert.That(messages.Select(x => x.Id)).Contains(undispatched.Id);
     }
     
-    [Fact]
+    [Test]
     public async Task When_Retrieving_Messages_By_Ids_It_Should_Return_Only_Requested_Messages()
     {
         // Arrange
@@ -183,13 +179,13 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
             .ToArray();
 
         // Assert
-        Assert.Equal(2, messages.Length);
-        Assert.Contains(earliest.Id, messages.Select(x => x.Id));
-        Assert.DoesNotContain(dispatched.Id, messages.Select(x => x.Id));
-        Assert.Contains(undispatched.Id, messages.Select(x => x.Id));
+        await Assert.That(messages.Length).IsEqualTo(2);
+        await Assert.That(messages.Select(x => x.Id)).Contains(earliest.Id);
+        await Assert.That(messages.Select(x => x.Id)).DoesNotContain(dispatched.Id);
+        await Assert.That(messages.Select(x => x.Id)).Contains(undispatched.Id);
     }
     
-    [Fact]
+    [Test]
     public async Task When_Retrieving_A_Message_By_Id_It_Should_Return_The_Correct_Message()
     {
         // Arrange
@@ -206,11 +202,11 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         var message = await Outbox.GetAsync(dispatched.Id, context);
 
         // Assert
-        Assert.NotNull(message);
-        Assert.Equal(dispatched.Id, message.Id);
+        await Assert.That(message).IsNotNull();
+        await Assert.That(message.Id).IsEqualTo(dispatched.Id);
     }
 
-    [Fact]
+    [Test]
     public async Task When_Retrieving_Dispatched_Messages_It_Should_Filter_By_Age()
     {
         // Arrange
@@ -229,23 +225,23 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         var messagesOver4Hours = (await Outbox.DispatchedMessagesAsync(TimeSpan.FromHours(4), context)).ToArray();
         
         // Assert
-        Assert.True(allDispatched.Length >= 2, $"Expecting at least 2 messages, but it got {allDispatched.Length}");
-        Assert.Contains(earliest.Id, allDispatched.Select(x => x.Id));
-        Assert.Contains(dispatched.Id, allDispatched.Select(x => x.Id));
-        Assert.DoesNotContain(undispatched.Id, allDispatched.Select(x => x.Id));
+        await Assert.That(allDispatched.Length >= 2).IsTrue();
+        await Assert.That(allDispatched.Select(x => x.Id)).Contains(earliest.Id);
+        await Assert.That(allDispatched.Select(x => x.Id)).Contains(dispatched.Id);
+        await Assert.That(allDispatched.Select(x => x.Id)).DoesNotContain(undispatched.Id);
         
-        Assert.True(messagesOverAnHour.Length >= 1, "Expecting at least 1 message");
-        Assert.Contains(earliest.Id, messagesOverAnHour.Select(x => x.Id));
-        Assert.DoesNotContain(dispatched.Id, messagesOverAnHour.Select(x => x.Id));
-        Assert.DoesNotContain(undispatched.Id, messagesOverAnHour.Select(x => x.Id));
+        await Assert.That(messagesOverAnHour.Length >= 1).IsTrue();
+        await Assert.That(messagesOverAnHour.Select(x => x.Id)).Contains(earliest.Id);
+        await Assert.That(messagesOverAnHour.Select(x => x.Id)).DoesNotContain(dispatched.Id);
+        await Assert.That(messagesOverAnHour.Select(x => x.Id)).DoesNotContain(undispatched.Id);
         
-        Assert.DoesNotContain(earliest.Id, messagesOver4Hours.Select(x => x.Id));
-        Assert.DoesNotContain(dispatched.Id, messagesOver4Hours.Select(x => x.Id));
-        Assert.DoesNotContain(undispatched.Id, messagesOver4Hours.Select(x => x.Id));
+        await Assert.That(messagesOver4Hours.Select(x => x.Id)).DoesNotContain(earliest.Id);
+        await Assert.That(messagesOver4Hours.Select(x => x.Id)).DoesNotContain(dispatched.Id);
+        await Assert.That(messagesOver4Hours.Select(x => x.Id)).DoesNotContain(undispatched.Id);
     }
 
 
-    [Fact]
+    [Test]
     public async Task When_Retrieving_Outstanding_Messages_It_Should_Filter_By_Age()
     {
         // Arrange
@@ -265,22 +261,22 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         var messagesOver4Hours = (await Outbox.OutstandingMessagesAsync(TimeSpan.FromHours(4), context)).ToArray();
         
         // Assert
-        Assert.True(allUndispatched.Length >= 2, "Expecting at least 2 messages");
-        Assert.Contains(earliest.Id, allUndispatched.Select(x => x.Id));
-        Assert.DoesNotContain(dispatched.Id, allUndispatched.Select(x => x.Id));
-        Assert.Contains(undispatched.Id, allUndispatched.Select(x => x.Id));
+        await Assert.That(allUndispatched.Length >= 2).IsTrue();
+        await Assert.That(allUndispatched.Select(x => x.Id)).Contains(earliest.Id);
+        await Assert.That(allUndispatched.Select(x => x.Id)).DoesNotContain(dispatched.Id);
+        await Assert.That(allUndispatched.Select(x => x.Id)).Contains(undispatched.Id);
         
-        Assert.True(allUndispatched.Length >= 1, "Expecting at least 1 message");
-        Assert.Contains(earliest.Id, messagesOverAnHour.Select(x => x.Id));
-        Assert.DoesNotContain(dispatched.Id, messagesOverAnHour.Select(x => x.Id));
-        Assert.DoesNotContain(undispatched.Id, messagesOverAnHour.Select(x => x.Id));
+        await Assert.That(allUndispatched.Length >= 1).IsTrue();
+        await Assert.That(messagesOverAnHour.Select(x => x.Id)).Contains(earliest.Id);
+        await Assert.That(messagesOverAnHour.Select(x => x.Id)).DoesNotContain(dispatched.Id);
+        await Assert.That(messagesOverAnHour.Select(x => x.Id)).DoesNotContain(undispatched.Id);
         
-        Assert.DoesNotContain(earliest.Id, messagesOver4Hours.Select(x => x.Id));
-        Assert.DoesNotContain(dispatched.Id, messagesOver4Hours.Select(x => x.Id));
-        Assert.DoesNotContain(undispatched.Id, messagesOver4Hours.Select(x => x.Id));
+        await Assert.That(messagesOver4Hours.Select(x => x.Id)).DoesNotContain(earliest.Id);
+        await Assert.That(messagesOver4Hours.Select(x => x.Id)).DoesNotContain(dispatched.Id);
+        await Assert.That(messagesOver4Hours.Select(x => x.Id)).DoesNotContain(undispatched.Id);
     }
 
-    [Fact]
+    [Test]
     public async Task When_Retrieving_A_Non_Existent_Message_It_Should_Return_Empty_Message()
     {
         // Arrange
@@ -290,10 +286,10 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         var message = await Outbox.GetAsync(Id.Random(), context);
         
         // Assert
-        Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
-    [Fact]
+    [Test]
     public async Task When_Adding_A_Duplicate_Message_It_Should_Not_Throw()
     {
         // Arrange
@@ -306,10 +302,10 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         
         // Assert
         var storedMessage = await Outbox.GetAsync(message.Id, context);
-        Assert.Equal(message.Id, storedMessage.Id);
+        await Assert.That(storedMessage.Id).IsEqualTo(message.Id);
     }
 
-    [Fact]
+    [Test]
     public async Task When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties()
     {
         // Arrange
@@ -321,41 +317,41 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         var storedMessage = await Outbox.GetAsync(message.Id, context);
         
         // Assert
-        Assert.Equal(message.Body.Value, storedMessage.Body.Value);
+        await Assert.That(storedMessage.Body.Value).IsEqualTo(message.Body.Value);
         
         //should read the header from the sql outbox
-        Assert.Equal(message.Header.Topic, storedMessage.Header.Topic);
-        Assert.Equal(message.Header.MessageType, storedMessage.Header.MessageType);
-        Assert.Equal(message.Header.TimeStamp, storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(0, storedMessage.Header.HandledCount); // -- should be zero when read from outbox
-        Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
-        Assert.Equal(message.Header.CorrelationId, storedMessage.Header.CorrelationId);
-        Assert.Equal(message.Header.ReplyTo, storedMessage.Header.ReplyTo);
-        Assert.StartsWith(message.Header.ContentType.ToString(), storedMessage.Header.ContentType.ToString());
-        Assert.Equal(message.Header.PartitionKey, storedMessage.Header.PartitionKey); 
+        await Assert.That(storedMessage.Header.Topic).IsEqualTo(message.Header.Topic);
+        await Assert.That(storedMessage.Header.MessageType).IsEqualTo(message.Header.MessageType);
+        await Assert.That(storedMessage.Header.TimeStamp).IsEqualTo(message.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(storedMessage.Header.HandledCount).IsEqualTo(0); // -- should be zero when read from outbox
+        await Assert.That(storedMessage.Header.Delayed).IsEqualTo(TimeSpan.Zero); // -- should be zero when read from outbox
+        await Assert.That(storedMessage.Header.CorrelationId).IsEqualTo(message.Header.CorrelationId);
+        await Assert.That(storedMessage.Header.ReplyTo).IsEqualTo(message.Header.ReplyTo);
+        await Assert.That(storedMessage.Header.ContentType.ToString()).StartsWith(message.Header.ContentType.ToString());
+        await Assert.That(storedMessage.Header.PartitionKey).IsEqualTo(message.Header.PartitionKey);
             
         //Bag serialization
-        Assert.Equal(message.Header.Bag.Count,  storedMessage.Header.Bag.Count);
+        await Assert.That(storedMessage.Header.Bag.Count).IsEqualTo(message.Header.Bag.Count);
         foreach (var (key, val) in message.Header.Bag)
         {
-            Assert.Contains(key, storedMessage.Header.Bag);
-            Assert.Equal(val,  storedMessage.Header.Bag[key].ToString());
+            await Assert.That(storedMessage.Header.Bag).ContainsKey(key);
+            await Assert.That(storedMessage.Header.Bag[key].ToString()).IsEqualTo(val.ToString());
         }
             
         //Asserts for workflow properties
-        Assert.Equal(message.Header.WorkflowId, storedMessage.Header.WorkflowId);
-        Assert.Equal(message.Header.JobId, storedMessage.Header.JobId);
+        await Assert.That(storedMessage.Header.WorkflowId).IsEqualTo(message.Header.WorkflowId);
+        await Assert.That(storedMessage.Header.JobId).IsEqualTo(message.Header.JobId);
 
         // new fields assertions
-        Assert.Equal(message.Header.Source,       storedMessage.Header.Source);
-        Assert.Equal(message.Header.Type,         storedMessage.Header.Type);
-        Assert.Equal(message.Header.DataSchema,   storedMessage.Header.DataSchema);
-        Assert.Equal(message.Header.Subject,      storedMessage.Header.Subject);
-        Assert.Equal(message.Header.TraceParent,  storedMessage.Header.TraceParent);
-        Assert.Equal(message.Header.TraceState,   storedMessage.Header.TraceState);        
+        await Assert.That(storedMessage.Header.Source).IsEqualTo(message.Header.Source);
+        await Assert.That(storedMessage.Header.Type).IsEqualTo(message.Header.Type);
+        await Assert.That(storedMessage.Header.DataSchema).IsEqualTo(message.Header.DataSchema);
+        await Assert.That(storedMessage.Header.Subject).IsEqualTo(message.Header.Subject);
+        await Assert.That(storedMessage.Header.TraceParent).IsEqualTo(message.Header.TraceParent);
+        await Assert.That(storedMessage.Header.TraceState).IsEqualTo(message.Header.TraceState);
     }
     
-    [Fact]
+    [Test]
     public virtual async Task When_Adding_A_Message_Within_Transaction_It_Should_Be_Stored_After_Commit()
     {
         // Arrange
@@ -373,42 +369,43 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         var storedMessage = await Outbox.GetAsync(message.Id, context);
         
         // Assert
-        Assert.Equal(message.Header.MessageType, storedMessage.Header.MessageType);
-        Assert.Equal(message.Body.Value, storedMessage.Body.Value);
+        await Assert.That(storedMessage.Header.MessageType).IsEqualTo(message.Header.MessageType);
+        await Assert.That(storedMessage.Body.Value).IsEqualTo(message.Body.Value);
         
         //should read the header from the sql outbox
-        Assert.Equal(message.Header.Topic, storedMessage.Header.Topic);
-        Assert.Equal(message.Header.MessageType, storedMessage.Header.MessageType);
-        Assert.Equal(message.Header.TimeStamp, storedMessage.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(0, storedMessage.Header.HandledCount); // -- should be zero when read from outbox
-        Assert.Equal(TimeSpan.Zero, storedMessage.Header.Delayed); // -- should be zero when read from outbox
-        Assert.Equal(message.Header.CorrelationId, storedMessage.Header.CorrelationId);
-        Assert.Equal(message.Header.ReplyTo, storedMessage.Header.ReplyTo);
-        Assert.StartsWith(message.Header.ContentType.ToString(), storedMessage.Header.ContentType.ToString());
-        Assert.Equal(message.Header.PartitionKey, storedMessage.Header.PartitionKey); 
+        await Assert.That(storedMessage.Header.Topic).IsEqualTo(message.Header.Topic);
+        await Assert.That(storedMessage.Header.MessageType).IsEqualTo(message.Header.MessageType);
+        await Assert.That(storedMessage.Header.TimeStamp).IsEqualTo(message.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(storedMessage.Header.HandledCount).IsEqualTo(0); // -- should be zero when read from outbox
+        await Assert.That(storedMessage.Header.Delayed).IsEqualTo(TimeSpan.Zero); // -- should be zero when read from outbox
+        await Assert.That(storedMessage.Header.CorrelationId).IsEqualTo(message.Header.CorrelationId);
+        await Assert.That(storedMessage.Header.ReplyTo).IsEqualTo(message.Header.ReplyTo);
+        await Assert.That(storedMessage.Header.ContentType.ToString()).StartsWith(message.Header.ContentType.ToString());
+        await Assert.That(storedMessage.Header.PartitionKey).IsEqualTo(message.Header.PartitionKey);
             
         //Bag serialization
-        Assert.Equal(message.Header.Bag.Count,  storedMessage.Header.Bag.Count);
+        await Assert.That(storedMessage.Header.Bag.Count).IsEqualTo(message.Header.Bag.Count);
         foreach (var (key, val) in message.Header.Bag)
         {
-            Assert.Contains(key, storedMessage.Header.Bag);
-            Assert.Equal(val,  storedMessage.Header.Bag[key].ToString());
+            await Assert.That(storedMessage.Header.Bag).ContainsKey(key);
+            await Assert.That(storedMessage.Header.Bag[key].ToString()).IsEqualTo(val.ToString());
         }
             
         //Asserts for workflow properties
-        Assert.Equal(message.Header.WorkflowId, storedMessage.Header.WorkflowId);
-        Assert.Equal(message.Header.JobId, storedMessage.Header.JobId);
+        await Assert.That(storedMessage.Header.WorkflowId).IsEqualTo(message.Header.WorkflowId);
+        await Assert.That(storedMessage.Header.JobId).IsEqualTo(message.Header.JobId);
+
 
         // new fields assertions
-        Assert.Equal(message.Header.Source,       storedMessage.Header.Source);
-        Assert.Equal(message.Header.Type,         storedMessage.Header.Type);
-        Assert.Equal(message.Header.DataSchema,   storedMessage.Header.DataSchema);
-        Assert.Equal(message.Header.Subject,      storedMessage.Header.Subject);
-        Assert.Equal(message.Header.TraceParent,  storedMessage.Header.TraceParent);
-        Assert.Equal(message.Header.TraceState,   storedMessage.Header.TraceState);        
+        await Assert.That(storedMessage.Header.Source).IsEqualTo(message.Header.Source);
+        await Assert.That(storedMessage.Header.Type).IsEqualTo(message.Header.Type);
+        await Assert.That(storedMessage.Header.DataSchema).IsEqualTo(message.Header.DataSchema);
+        await Assert.That(storedMessage.Header.Subject).IsEqualTo(message.Header.Subject);
+        await Assert.That(storedMessage.Header.TraceParent).IsEqualTo(message.Header.TraceParent);
+        await Assert.That(storedMessage.Header.TraceState).IsEqualTo(message.Header.TraceState);
     }
     
-     [Fact]
+     [Test]
     public virtual async Task When_Adding_A_Message_Within_Transaction_And_Rollback_It_Should_Not_Be_Stored()
     {
         // Arrange
@@ -424,6 +421,6 @@ public abstract class OutboxAsyncTest<TTransaction> : IAsyncLifetime
         var storedMessage = await Outbox.GetAsync(message.Id, context);
         
         // Assert
-        Assert.Equal(MessageType.MT_NONE, storedMessage.Header.MessageType);
+        await Assert.That(storedMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 }

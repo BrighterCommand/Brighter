@@ -29,14 +29,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ServiceProviderLambdaTests
 {
-    [Fact]
-    public void AddBrighter_WithServiceProviderFunc_ResolvesServicesCorrectly()
+    [Test]
+    public async Task AddBrighter_WithServiceProviderFunc_ResolvesServicesCorrectly()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -52,12 +51,12 @@ public class ServiceProviderLambdaTests
         var options = provider.GetRequiredService<IBrighterOptions>();
 
         // Assert
-        Assert.NotNull(options);
-        Assert.IsType<InMemoryRequestContextFactory>(options.RequestContextFactory);
+        await Assert.That(options).IsNotNull();
+        await Assert.That(options.RequestContextFactory).IsTypeOf<InMemoryRequestContextFactory>();
     }
 
-    [Fact]
-    public void AddBrighter_SupportsPostConfigure_ForTestOverrides()
+    [Test]
+    public async Task AddBrighter_SupportsPostConfigure_ForTestOverrides()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -79,12 +78,12 @@ public class ServiceProviderLambdaTests
         var options = provider.GetRequiredService<IBrighterOptions>();
 
         // Assert - PostConfigure should have applied
-        Assert.Same(customFactory, options.RequestContextFactory);
-        Assert.Equal(ServiceLifetime.Scoped, options.HandlerLifetime);
+        await Assert.That(options.RequestContextFactory).IsSameReferenceAs(customFactory);
+        await Assert.That(options.HandlerLifetime).IsEqualTo(ServiceLifetime.Scoped);
     }
 
-    [Fact]
-    public void AddProducers_WithServiceProviderFunc_DefersConfiguration()
+    [Test]
+    public async Task AddProducers_WithServiceProviderFunc_DefersConfiguration()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -102,12 +101,12 @@ public class ServiceProviderLambdaTests
         var config = provider.GetService<IAmProducersConfiguration>();
 
         // Assert
-        Assert.NotNull(config);
-        Assert.Same(producerRegistry, config.ProducerRegistry);
+        await Assert.That(config).IsNotNull();
+        await Assert.That(config.ProducerRegistry).IsSameReferenceAs(producerRegistry);
     }
 
-    [Fact]
-    public void AddConsumers_WithServiceProviderFunc_ResolvesServicesCorrectly()
+    [Test]
+    public async Task AddConsumers_WithServiceProviderFunc_ResolvesServicesCorrectly()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -125,12 +124,12 @@ public class ServiceProviderLambdaTests
         var options = provider.GetService<IAmConsumerOptions>();
 
         // Assert
-        Assert.NotNull(options);
-        Assert.Same(channelFactory, options.DefaultChannelFactory);
+        await Assert.That(options).IsNotNull();
+        await Assert.That(options.DefaultChannelFactory).IsSameReferenceAs(channelFactory);
     }
 
-    [Fact]
-    public void AddBrighter_WithActionOverload_StillWorks()
+    [Test]
+    public async Task AddBrighter_WithActionOverload_StillWorks()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -145,11 +144,11 @@ public class ServiceProviderLambdaTests
         var options = provider.GetRequiredService<IBrighterOptions>();
 
         // Assert
-        Assert.Equal(ServiceLifetime.Scoped, options.HandlerLifetime);
+        await Assert.That(options.HandlerLifetime).IsEqualTo(ServiceLifetime.Scoped);
     }
 
-    [Fact]
-    public void AddBrighter_WithNoConfiguration_UsesDefaults()
+    [Test]
+    public async Task AddBrighter_WithNoConfiguration_UsesDefaults()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -161,6 +160,6 @@ public class ServiceProviderLambdaTests
         var options = provider.GetRequiredService<IBrighterOptions>();
 
         // Assert
-        Assert.Equal(ServiceLifetime.Transient, options.HandlerLifetime);
+        await Assert.That(options.HandlerLifetime).IsEqualTo(ServiceLifetime.Transient);
     }
 }

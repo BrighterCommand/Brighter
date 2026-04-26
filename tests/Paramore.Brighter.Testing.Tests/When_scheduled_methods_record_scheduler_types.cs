@@ -25,8 +25,6 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -49,32 +47,32 @@ public class SpyCommandProcessorScheduledSendTests
         _sendDelayId = _spy.Send(delay, command);
     }
 
-    [Fact]
-    public void Then_should_record_scheduler_type_for_send_at()
+    [Test]
+    public async Task Then_should_record_scheduler_type_for_send_at()
     {
         //Assert
-        _spy.Commands[0].ShouldBe(CommandType.Scheduler);
+        await Assert.That(_spy.Commands[0]).IsEqualTo(CommandType.Scheduler);
     }
 
-    [Fact]
-    public void Then_should_record_scheduler_type_for_send_delay()
+    [Test]
+    public async Task Then_should_record_scheduler_type_for_send_delay()
     {
         //Assert
-        _spy.Commands[1].ShouldBe(CommandType.Scheduler);
+        await Assert.That(_spy.Commands[1]).IsEqualTo(CommandType.Scheduler);
     }
 
-    [Fact]
-    public void Then_send_at_should_return_scheduler_id()
+    [Test]
+    public async Task Then_send_at_should_return_scheduler_id()
     {
         //Assert
-        _sendAtId.ShouldNotBeNullOrEmpty();
+        await Assert.That(string.IsNullOrEmpty(_sendAtId)).IsFalse();
     }
 
-    [Fact]
-    public void Then_send_delay_should_return_scheduler_id()
+    [Test]
+    public async Task Then_send_delay_should_return_scheduler_id()
     {
         //Assert
-        _sendDelayId.ShouldNotBeNullOrEmpty();
+        await Assert.That(string.IsNullOrEmpty(_sendDelayId)).IsFalse();
     }
 
     private sealed class TestCommand() : Command(Id.Random());
@@ -99,32 +97,32 @@ public class SpyCommandProcessorScheduledPublishTests
         _publishDelayId = _spy.Publish(delay, @event);
     }
 
-    [Fact]
-    public void Then_should_record_scheduler_type_for_publish_at()
+    [Test]
+    public async Task Then_should_record_scheduler_type_for_publish_at()
     {
         //Assert
-        _spy.Commands[0].ShouldBe(CommandType.Scheduler);
+        await Assert.That(_spy.Commands[0]).IsEqualTo(CommandType.Scheduler);
     }
 
-    [Fact]
-    public void Then_should_record_scheduler_type_for_publish_delay()
+    [Test]
+    public async Task Then_should_record_scheduler_type_for_publish_delay()
     {
         //Assert
-        _spy.Commands[1].ShouldBe(CommandType.Scheduler);
+        await Assert.That(_spy.Commands[1]).IsEqualTo(CommandType.Scheduler);
     }
 
-    [Fact]
-    public void Then_publish_at_should_return_scheduler_id()
+    [Test]
+    public async Task Then_publish_at_should_return_scheduler_id()
     {
         //Assert
-        _publishAtId.ShouldNotBeNullOrEmpty();
+        await Assert.That(string.IsNullOrEmpty(_publishAtId)).IsFalse();
     }
 
-    [Fact]
-    public void Then_publish_delay_should_return_scheduler_id()
+    [Test]
+    public async Task Then_publish_delay_should_return_scheduler_id()
     {
         //Assert
-        _publishDelayId.ShouldNotBeNullOrEmpty();
+        await Assert.That(string.IsNullOrEmpty(_publishDelayId)).IsFalse();
     }
 
     private sealed class TestEvent() : Event(Id.Random());
@@ -149,32 +147,32 @@ public class SpyCommandProcessorScheduledPostTests
         _postDelayId = _spy.Post(delay, command);
     }
 
-    [Fact]
-    public void Then_should_record_scheduler_type_for_post_at()
+    [Test]
+    public async Task Then_should_record_scheduler_type_for_post_at()
     {
         //Assert
-        _spy.Commands[0].ShouldBe(CommandType.Scheduler);
+        await Assert.That(_spy.Commands[0]).IsEqualTo(CommandType.Scheduler);
     }
 
-    [Fact]
-    public void Then_should_record_scheduler_type_for_post_delay()
+    [Test]
+    public async Task Then_should_record_scheduler_type_for_post_delay()
     {
         //Assert
-        _spy.Commands[1].ShouldBe(CommandType.Scheduler);
+        await Assert.That(_spy.Commands[1]).IsEqualTo(CommandType.Scheduler);
     }
 
-    [Fact]
-    public void Then_post_at_should_return_scheduler_id()
+    [Test]
+    public async Task Then_post_at_should_return_scheduler_id()
     {
         //Assert
-        _postAtId.ShouldNotBeNullOrEmpty();
+        await Assert.That(string.IsNullOrEmpty(_postAtId)).IsFalse();
     }
 
-    [Fact]
-    public void Then_post_delay_should_return_scheduler_id()
+    [Test]
+    public async Task Then_post_delay_should_return_scheduler_id()
     {
         //Assert
-        _postDelayId.ShouldNotBeNullOrEmpty();
+        await Assert.That(string.IsNullOrEmpty(_postDelayId)).IsFalse();
     }
 
     private sealed class TestCommand() : Command(Id.Random());
@@ -183,63 +181,68 @@ public class SpyCommandProcessorScheduledPostTests
 public class SpyCommandProcessorScheduledAsyncTests
 {
     private readonly SpyCommandProcessor _spy;
-    private readonly string _sendAsyncAtId;
-    private readonly string _publishAsyncDelayId;
-    private readonly string _postAsyncAtId;
+    private string _sendAsyncAtId;
+    private string _publishAsyncDelayId;
+    private string _postAsyncAtId;
 
     public SpyCommandProcessorScheduledAsyncTests()
     {
         //Arrange
         _spy = new SpyCommandProcessor();
+    }
+
+    [Before(Test)]
+    public async Task Setup()
+    {
         var command = new TestCommand();
         var @event = new TestEvent();
         var at = DateTimeOffset.UtcNow.AddMinutes(5);
         var delay = TimeSpan.FromMinutes(10);
 
         //Act
-        _sendAsyncAtId = _spy.SendAsync(at, command).GetAwaiter().GetResult();
-        _publishAsyncDelayId = _spy.PublishAsync(delay, @event).GetAwaiter().GetResult();
-        _postAsyncAtId = _spy.PostAsync(at, command).GetAwaiter().GetResult();
+        _sendAsyncAtId = await _spy.SendAsync(at, command);
+        _publishAsyncDelayId = await _spy.PublishAsync(delay, @event);
+        _postAsyncAtId = await _spy.PostAsync(at, command);
     }
 
-    [Fact]
-    public void Then_should_record_scheduler_async_for_send()
+    [Test]
+    public async Task Then_should_record_scheduler_async_for_send()
     {
         //Assert
-        _spy.Commands[0].ShouldBe(CommandType.SchedulerAsync);
+        await Assert.That(_spy.Commands[0]).IsEqualTo(CommandType.SchedulerAsync);
     }
 
-    [Fact]
-    public void Then_should_record_scheduler_async_for_publish()
+    [Test]
+    public async Task Then_should_record_scheduler_async_for_publish()
     {
         //Assert
-        _spy.Commands[1].ShouldBe(CommandType.SchedulerAsync);
+        await Assert.That(_spy.Commands[1]).IsEqualTo(CommandType.SchedulerAsync);
     }
 
-    [Fact]
-    public void Then_should_record_scheduler_async_for_post()
+    [Test]
+    public async Task Then_should_record_scheduler_async_for_post()
     {
         //Assert
-        _spy.Commands[2].ShouldBe(CommandType.SchedulerAsync);
+        await Assert.That(_spy.Commands[2]).IsEqualTo(CommandType.SchedulerAsync);
     }
 
-    [Fact]
-    public void Then_async_scheduled_methods_should_return_ids()
+    [Test]
+    public async Task Then_async_scheduled_methods_should_return_ids()
     {
         //Assert
-        _sendAsyncAtId.ShouldNotBeNullOrEmpty();
-        _publishAsyncDelayId.ShouldNotBeNullOrEmpty();
-        _postAsyncAtId.ShouldNotBeNullOrEmpty();
+        await Assert.That(string.IsNullOrEmpty(_sendAsyncAtId)).IsFalse();
+        await Assert.That(string.IsNullOrEmpty(_publishAsyncDelayId)).IsFalse();
+        await Assert.That(string.IsNullOrEmpty(_postAsyncAtId)).IsFalse();
     }
 
-    [Fact]
-    public void Then_should_record_requests_in_recorded_calls()
+    [Test]
+    public async Task Then_should_record_requests_in_recorded_calls()
     {
         //Assert
-        _spy.RecordedCalls.Count.ShouldBe(3);
-        _spy.RecordedCalls[0].Request.ShouldBeOfType<TestCommand>();
-        _spy.RecordedCalls[1].Request.ShouldBeOfType<TestEvent>();
-        _spy.RecordedCalls[2].Request.ShouldBeOfType<TestCommand>();
+        await Assert.That(_spy.RecordedCalls.Count).IsEqualTo(3);
+        await Assert.That(_spy.RecordedCalls[0].Request).IsTypeOf<TestCommand>();
+        await Assert.That(_spy.RecordedCalls[1].Request).IsTypeOf<TestEvent>();
+        await Assert.That(_spy.RecordedCalls[2].Request).IsTypeOf<TestCommand>();
     }
 
     private sealed class TestCommand() : Command(Id.Random());

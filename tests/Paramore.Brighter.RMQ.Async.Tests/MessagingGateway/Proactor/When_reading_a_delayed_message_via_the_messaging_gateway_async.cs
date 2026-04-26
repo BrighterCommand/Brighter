@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,12 +27,11 @@ using System.Linq;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
-public class RmqMessageProducerDelayedMessageTestsAsync : IDisposable, IAsyncDisposable
+[Category("RMQ")]
+public class RmqMessageProducerDelayedMessageTestsAsync : IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _messageProducer;
     private readonly IAmAMessageConsumerAsync _messageConsumer;
@@ -67,39 +66,39 @@ public class RmqMessageProducerDelayedMessageTestsAsync : IDisposable, IAsyncDis
             .GetResult();
     }
 
-    [Fact]
+    [Test]
     public async Task When_reading_a_delayed_message_via_the_messaging_gateway()
     {
         await _messageProducer.SendWithDelayAsync(_message, TimeSpan.FromMilliseconds(3000));
 
         var immediateResult = (await _messageConsumer.ReceiveAsync(TimeSpan.Zero)).First();
         var deliveredWithoutWait = immediateResult.Header.MessageType == MessageType.MT_NONE;
-        Assert.Equal(0, immediateResult.Header.HandledCount);
-        Assert.Equal(TimeSpan.Zero, immediateResult.Header.Delayed);
+        await Assert.That(immediateResult.Header.HandledCount).IsEqualTo(0);
+        await Assert.That(immediateResult.Header.Delayed).IsEqualTo(TimeSpan.Zero);
 
         //_should_have_not_been_able_get_message_before_delay
-        Assert.True(deliveredWithoutWait);
+        await Assert.That(deliveredWithoutWait).IsTrue();
             
         var delayedResult = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First();
 
         //_should_send_a_message_via_rmq_with_the_matching_body
-        Assert.Equal(_message.Body.Value, delayedResult.Body.Value);
-        Assert.Equal(MessageType.MT_COMMAND, delayedResult.Header.MessageType);
-        Assert.Equal(0, delayedResult.Header.HandledCount);
-        Assert.Equal(TimeSpan.FromMilliseconds(3000), delayedResult.Header.Delayed);
+        await Assert.That(delayedResult.Body.Value).IsEqualTo(_message.Body.Value);
+        await Assert.That(delayedResult.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(delayedResult.Header.HandledCount).IsEqualTo(0);
+        await Assert.That(delayedResult.Header.Delayed).IsEqualTo(TimeSpan.FromMilliseconds(3000));
 
         await _messageConsumer.AcknowledgeAsync(delayedResult);
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeing_a_failed_message_with_delay()
     {
         //send & receive a message
         await _messageProducer.SendAsync(_message);
         var message = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
-        Assert.Equal(0, message.Header.HandledCount);
-        Assert.Equal(TimeSpan.FromMilliseconds(0), message.Header.Delayed);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(message.Header.HandledCount).IsEqualTo(0);
+        await Assert.That(message.Header.Delayed).IsEqualTo(TimeSpan.FromMilliseconds(0));
 
         await _messageConsumer.AcknowledgeAsync(message);
 
@@ -109,13 +108,14 @@ public class RmqMessageProducerDelayedMessageTestsAsync : IDisposable, IAsyncDis
 
         //receive and assert
         var message2 = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000))).Single();
-        Assert.Equal(MessageType.MT_COMMAND, message2.Header.MessageType);
-        Assert.Equal(1, message2.Header.HandledCount);
+        await Assert.That(message2.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(message2.Header.HandledCount).IsEqualTo(1);
 
         await _messageConsumer.AcknowledgeAsync(message2);
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         ((IAmAMessageConsumerSync)_messageConsumer).Dispose();
         ((IAmAMessageProducerSync)_messageProducer).Dispose();

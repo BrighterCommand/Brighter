@@ -1,24 +1,24 @@
-﻿using System.Net.Mime;
+using System.Net.Mime;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RocketMQ")]
+[Category("RocketMQ")]
 public class MessageProducerSendAsyncTests  : IAsyncDisposable 
 {
-    private readonly Message _message;
-    private readonly IAmAChannelAsync _channel;
-    private readonly IAmAMessageProducerAsync _messageProducer;
-    private readonly MyCommand _myCommand;
-    private readonly Id _correlationId;
-    private readonly RoutingKey _replyTo;
+    private Message _message;
+    private IAmAChannelAsync _channel;
+    private IAmAMessageProducerAsync _messageProducer;
+    private MyCommand _myCommand;
+    private Id _correlationId;
+    private RoutingKey _replyTo;
 
-    public MessageProducerSendAsyncTests()
+    [Before(Test)]
+    public async Task Setup()
     {
         _myCommand = new MyCommand { Value = "Test" };
         _correlationId = Id.Random();
@@ -43,14 +43,14 @@ public class MessageProducerSendAsyncTests  : IAsyncDisposable
 
         var connection = GatewayFactory.CreateConnection();
         var channelFactory = new RocketMqChannelFactory(new RocketMessageConsumerFactory(connection));
-        _channel = channelFactory.CreateAsyncChannel(mqSubscription);
+        _channel = await channelFactory.CreateAsyncChannelAsync(mqSubscription);
         _messageProducer = new RocketMqMessageProducer(
-            connection, 
-            GatewayFactory.CreateProducer(connection, publication).GetAwaiter().GetResult(),
+            connection,
+            await GatewayFactory.CreateProducer(connection, publication),
             publication);
     }
 
-    [Fact]
+    [Test]
     public async Task When_posting_a_message_via_the_producer_async()
     {
         // arrange
@@ -67,21 +67,21 @@ public class MessageProducerSendAsyncTests  : IAsyncDisposable
         await _channel.AcknowledgeAsync(message);
 
         // should_send_the_message_to_aws_sqs
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
 
-        Assert.Equal(_myCommand.Id, message.Id);
-        Assert.False(message.Redelivered);
-        Assert.Equal(_myCommand.Id, message.Header.MessageId);
-        Assert.Contains(_messageProducer.Publication.Topic!.Value, message.Header.Topic.Value);
-        Assert.Equal(_correlationId, message.Header.CorrelationId);
-        Assert.Equal(_replyTo, message.Header.ReplyTo);
-        Assert.Equal(0, message.Header.HandledCount);
-        Assert.Equal(_message.Header.Subject, message.Header.Subject);
+        await Assert.That(message.Id).IsEqualTo(_myCommand.Id);
+        await Assert.That(message.Redelivered).IsFalse();
+        await Assert.That(message.Header.MessageId).IsEqualTo(_myCommand.Id);
+        await Assert.That(message.Header.Topic.Value).Contains(_messageProducer.Publication.Topic!.Value);
+        await Assert.That(message.Header.CorrelationId).IsEqualTo(_correlationId);
+        await Assert.That(message.Header.ReplyTo).IsEqualTo(_replyTo);
+        await Assert.That(message.Header.HandledCount).IsEqualTo(0);
+        await Assert.That(message.Header.Subject).IsEqualTo(_message.Header.Subject);
         // allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-        Assert.True((message.Header.TimeStamp) > (RoundToSeconds(DateTime.UtcNow.AddMinutes(-1))));
-        Assert.Equal(TimeSpan.Zero, message.Header.Delayed);
+        await Assert.That((message.Header.TimeStamp) > (RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)))).IsTrue();
+        await Assert.That(message.Header.Delayed).IsEqualTo(TimeSpan.Zero);
         // {"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
-        Assert.Equal(_message.Body.Value, message.Body.Value);
+        await Assert.That(message.Body.Value).IsEqualTo(_message.Body.Value);
     }
     
     public async ValueTask DisposeAsync()

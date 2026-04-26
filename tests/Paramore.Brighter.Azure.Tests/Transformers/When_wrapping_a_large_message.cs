@@ -1,4 +1,4 @@
-﻿using Azure.Identity;
+using Azure.Identity;
 using Azure.Storage.Blobs;
 using Paramore.Brighter.Azure.Tests.Helpers;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
@@ -22,7 +22,6 @@ public class LargeMessagePayloadWrapTests : IDisposable
     public LargeMessagePayloadWrapTests()
     {
         //arrange
-        TransformPipelineBuilder.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
@@ -48,23 +47,23 @@ public class LargeMessagePayloadWrapTests : IDisposable
     }
     
     [Test]
-    public void When_wrapping_a_large_message()
+    public async Task When_wrapping_a_large_message()
     {
-        _luggageStore.EnsureStoreExists();
+        await _luggageStore.EnsureStoreExistsAsync();
         
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
         var message = _transformPipeline.Wrap(_myCommand, new RequestContext(), _publication);
 
         //assert
-        Assert.That(message.Header.DataRef, Is.Not.Null);
-        Assert.That(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
-        Assert.That(message.Header.DataRef, Is.EqualTo((string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK]));
+        await Assert.That(message.Header.DataRef).IsNotNull();
+        await Assert.That(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK)).IsTrue();
+        await Assert.That(message.Header.DataRef).IsEqualTo((string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK]);
         
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
-        Assert.Equals($"Claim Check {_id}", message.Body.Value);
+        await Assert.That(message.Body.Value).IsEqualTo($"Claim Check {_id}");
 
-        Assert.That(_luggageStore.HasClaim(_id));
+        await Assert.That(_luggageStore.HasClaim(_id)).IsTrue();
     }
     
     public void Dispose()

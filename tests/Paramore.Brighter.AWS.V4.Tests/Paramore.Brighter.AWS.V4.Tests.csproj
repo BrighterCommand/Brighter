@@ -1,30 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
     <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="coverlet.collector">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="GitHubActionsTestLogger">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="System.Text.Json" />
-    <PackageReference Include="xunit" />
-    <PackageReference Include="Xunit.SkippableFact" />
-    <PackageReference Include="xunit.runner.visualstudio">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Polly.Extensions.Http" />
+    <PackageReference Include="TUnit" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageScheduler.AWS.V4\Paramore.Brighter.MessageScheduler.AWS.V4.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AWSSQS.V4\Paramore.Brighter.MessagingGateway.AWSSQS.V4.csproj" />
@@ -32,5 +16,4 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.Transformers.AWS.V4\Paramore.Brighter.Transformers.AWS.V4.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
-
 </Project>

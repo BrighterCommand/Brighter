@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
@@ -63,33 +62,33 @@ public class AsyncInMemoryConsumerMissingSchedulerTests
         _consumer.Receive();
     }
 
-    [Fact]
-    public void Should_throw_configuration_exception_on_delayed_requeue()
+    [Test]
+    public async Task Should_throw_configuration_exception_on_delayed_requeue()
     {
         // Act & Assert - requeue with delay should throw when no scheduler configured
-        var exception = Assert.Throws<ConfigurationException>(
+        var exception = Assert.ThrowsExactly<ConfigurationException>(
             () => _consumer.Requeue(_message, TimeSpan.FromSeconds(30)));
 
-        Assert.Contains("no scheduler is configured", exception.Message);
+        await Assert.That(exception.Message).Contains("no scheduler is configured");
     }
 
-    [Fact]
-    public void Should_succeed_when_requeue_has_no_delay()
+    [Test]
+    public async Task Should_succeed_when_requeue_has_no_delay()
     {
         // Act - requeue without delay should still work (no scheduler needed)
-        var result = _consumer.Requeue(_message);
+        var result = await _consumer.RequeueAsync(_message);
 
         // Assert
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
     }
 
-    [Fact]
-    public void Should_succeed_when_requeue_has_zero_delay()
+    [Test]
+    public async Task Should_succeed_when_requeue_has_zero_delay()
     {
         // Act - requeue with zero delay should still work (no scheduler needed)
-        var result = _consumer.Requeue(_message, TimeSpan.Zero);
+        var result = await _consumer.RequeueAsync(_message, TimeSpan.Zero);
 
         // Assert
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
     }
 }

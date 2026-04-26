@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -11,11 +11,11 @@ using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transformers.AWS;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Transformers;
 
-[Trait("Category", "AWS")]
+[Category("AWS")]
+[Property("Fragile", "CI")]
 public class LargeMessagePaylodUnwrapTests : IAsyncDisposable 
 {
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
@@ -26,7 +26,6 @@ public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
     public LargeMessagePaylodUnwrapTests()
     {
         //arrange
-        TransformPipelineBuilder.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
             null,
@@ -58,7 +57,7 @@ public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
     }
 
-    [Fact]
+    [Test]
     public async Task When_unwrapping_a_large_message()
     {
         //arrange
@@ -97,8 +96,8 @@ public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
 
         //assert
         //contents should be from storage
-        Assert.Equal(contents, transformedMessage.Value);
-        Assert.False((await _luggageStore.HasClaimAsync(id)));
+        await Assert.That(transformedMessage.Value).IsEqualTo(contents);
+        await Assert.That((await _luggageStore.HasClaimAsync(id))).IsFalse();
     }
 
     public async ValueTask DisposeAsync()

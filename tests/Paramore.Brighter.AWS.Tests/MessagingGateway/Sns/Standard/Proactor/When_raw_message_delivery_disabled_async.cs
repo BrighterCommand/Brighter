@@ -5,13 +5,12 @@ using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
-[Trait("Category", "AWS")]
-public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
+[Category("AWS")]
+public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
@@ -49,7 +48,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             });
     }
 
-    [Fact]
+    [Test]
     public async Task When_raw_message_delivery_disabled_async()
     {
         // Arrange
@@ -74,21 +73,22 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         await _channel.AcknowledgeAsync(messageReceived);
 
         // Assert
-        Assert.Equal(messageToSend.Id, messageReceived.Id);
-        Assert.Equal(messageToSend.Header.Topic, messageReceived.Header.Topic);
-        Assert.Equal(messageToSend.Header.MessageType, messageReceived.Header.MessageType);
-        Assert.Equal(messageToSend.Header.CorrelationId, messageReceived.Header.CorrelationId);
-        Assert.Equal(messageToSend.Header.ReplyTo, messageReceived.Header.ReplyTo);
-        Assert.Equal(messageToSend.Header.ContentType, messageReceived.Header.ContentType);
-        Assert.Contains(customHeaderItem.Key, messageReceived.Header.Bag);
-        Assert.Equal(customHeaderItem.Value, messageReceived.Header.Bag[customHeaderItem.Key]);
-        Assert.Equal(messageToSend.Body.Value, messageReceived.Body.Value);
+        await Assert.That(messageReceived.Id).IsEqualTo(messageToSend.Id);
+        await Assert.That(messageReceived.Header.Topic).IsEqualTo(messageToSend.Header.Topic);
+        await Assert.That(messageReceived.Header.MessageType).IsEqualTo(messageToSend.Header.MessageType);
+        await Assert.That(messageReceived.Header.CorrelationId).IsEqualTo(messageToSend.Header.CorrelationId);
+        await Assert.That(messageReceived.Header.ReplyTo).IsEqualTo(messageToSend.Header.ReplyTo);
+        await Assert.That(messageReceived.Header.ContentType).IsEqualTo(messageToSend.Header.ContentType);
+        await Assert.That(messageReceived.Header.Bag).ContainsKey(customHeaderItem.Key);
+        await Assert.That(messageReceived.Header.Bag[customHeaderItem.Key]).IsEqualTo(customHeaderItem.Value);
+        await Assert.That(messageReceived.Body.Value).IsEqualTo(messageToSend.Body.Value);
     }
         
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait(); 
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync(); 
+        await _channelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

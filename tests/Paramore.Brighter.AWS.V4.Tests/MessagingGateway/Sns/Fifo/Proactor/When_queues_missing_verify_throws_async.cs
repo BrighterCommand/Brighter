@@ -4,19 +4,19 @@ using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
-[Trait("Category", "AWS")]
+[Category("AWS")]
 public class AwsValidateQueuesTestsAsync : IAsyncDisposable
 {
-    private readonly AWSMessagingGatewayConnection _awsConnection;
-    private readonly SqsSubscription<MyCommand> _subscription;
+    private AWSMessagingGatewayConnection _awsConnection;
+    private SqsSubscription<MyCommand> _subscription;
     private ChannelFactory? _channelFactory;
 
-    public AwsValidateQueuesTestsAsync()
+    [Before(Test)]
+    public async Task Setup()
     {
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -41,10 +41,10 @@ public class AwsValidateQueuesTestsAsync : IAsyncDisposable
             {
                 MakeChannels = OnMissingChannel.Create, TopicAttributes = topicAttributes
             });
-        producer.ConfirmTopicExistsAsync(topicName).Wait();
+        await producer.ConfirmTopicExistsAsync(topicName);
     }
 
-    [Fact]
+    [Test]
     public async Task When_queues_missing_verify_throws_async()
     {
         // We have no queues so we should throw

@@ -6,13 +6,12 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
-[Trait("Category", "AWS")]
-public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
+[Category("AWS")]
+public class SqsMessageProducerSendAsyncTests : IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelAsync _channel;
@@ -72,7 +71,7 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
             });
     }
 
-    [Fact]
+    [Test]
     public async Task When_posting_a_message_via_the_producer_async()
     {
         // arrange
@@ -87,34 +86,35 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         await _channel.AcknowledgeAsync(message);
 
         // should_send_the_message_to_aws_sqs
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
 
-        Assert.Equal(_myCommand.Id, message.Id);
-        Assert.False(message.Redelivered);
-        Assert.Equal(_myCommand.Id, message.Header.MessageId);
-        Assert.Contains(_topicName, message.Header.Topic.Value);
-        Assert.Equal(_correlationId, message.Header.CorrelationId);
-        Assert.Equal(_replyTo, message.Header.ReplyTo);
-        Assert.Equal(_contentType, message.Header.ContentType);
-        Assert.Equal(0, message.Header.HandledCount);
-        Assert.Equal(_message.Header.Subject, message.Header.Subject);
+        await Assert.That(message.Id).IsEqualTo(_myCommand.Id);
+        await Assert.That(message.Redelivered).IsFalse();
+        await Assert.That(message.Header.MessageId).IsEqualTo(_myCommand.Id);
+        await Assert.That(message.Header.Topic.Value).Contains(_topicName);
+        await Assert.That(message.Header.CorrelationId).IsEqualTo(_correlationId);
+        await Assert.That(message.Header.ReplyTo).IsEqualTo(_replyTo);
+        await Assert.That(message.Header.ContentType).IsEqualTo(_contentType);
+        await Assert.That(message.Header.HandledCount).IsEqualTo(0);
+        await Assert.That(message.Header.Subject).IsEqualTo(_message.Header.Subject);
         // allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-        Assert.True((message.Header.TimeStamp) > (RoundToSeconds(DateTime.UtcNow.AddMinutes(-1))));
-        Assert.Equal(TimeSpan.Zero, message.Header.Delayed);
+        await Assert.That((message.Header.TimeStamp) > (RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)))).IsTrue();
+        await Assert.That(message.Header.Delayed).IsEqualTo(TimeSpan.Zero);
         // {"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
-        Assert.Equal(_message.Body.Value, message.Body.Value);
+        await Assert.That(message.Body.Value).IsEqualTo(_message.Body.Value);
 
-        Assert.Equal(_messageGroupId, message.Header.PartitionKey);
-        Assert.Contains(HeaderNames.DeduplicationId, message.Header.Bag);
-        Assert.Equal(_deduplicationId, message.Header.Bag[HeaderNames.DeduplicationId]);
+        await Assert.That(message.Header.PartitionKey).IsEqualTo(_messageGroupId);
+        await Assert.That(message.Header.Bag).ContainsKey(HeaderNames.DeduplicationId);
+        await Assert.That(message.Header.Bag[HeaderNames.DeduplicationId]).IsEqualTo(_deduplicationId);
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         //Clean up resources that we have created
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
-        _messageProducer.Dispose();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
+        await _messageProducer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()

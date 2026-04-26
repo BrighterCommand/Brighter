@@ -7,13 +7,13 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
-[Trait("Category", "AWS")]
-public class AwsValidateInfrastructureTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class AwsValidateInfrastructureTests : IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerSync _consumer;
@@ -73,11 +73,11 @@ public class AwsValidateInfrastructureTests : IDisposable, IAsyncDisposable
         _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_infrastructure_exists_can_verify()
     {
         //arrange
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
 
         await Task.Delay(1000);
 
@@ -85,19 +85,20 @@ public class AwsValidateInfrastructureTests : IDisposable, IAsyncDisposable
 
         //Assert
         var message = messages.First();
-        Assert.Equal(_myCommand.Id, message.Id);
+        await Assert.That(message.Id).IsEqualTo(_myCommand.Id);
 
         //clear the queue
         _consumer.Acknowledge(message);
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         //Clean up resources that we have created
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
         _consumer.Dispose();
-        _messageProducer.Dispose();
+        await _messageProducer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()

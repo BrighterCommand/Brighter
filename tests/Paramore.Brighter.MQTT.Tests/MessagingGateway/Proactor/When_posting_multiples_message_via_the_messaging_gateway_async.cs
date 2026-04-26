@@ -1,15 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 {
-    [Trait("Category", "MQTT")]
-    [Collection("MQTT")]
+    [Category("MQTT")]
     public class MqttMessageProducerSendMessageTestsAsync : MqttTestClassBase<MqttMessageProducerSendMessageTestsAsync>
     {
         private const string ClientId = "BrighterIntegrationTests-Produce";
@@ -24,12 +21,12 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
         /// and test output helper. It leverages the base class <see cref="MqttTestClassBase{T}"/> to initialize the necessary 
         /// MQTT configurations and logging mechanisms.
         /// </remarks>
-        public MqttMessageProducerSendMessageTestsAsync(ITestOutputHelper testOutputHelper)
-        : base(ClientId, TopicPrefix, testOutputHelper)
+        public MqttMessageProducerSendMessageTestsAsync()
+        : base(ClientId, TopicPrefix)
         {
         }
 
-        [Fact]
+        [Test]
         public async Task When_posting_multiples_message_via_the_messaging_gateway_async()
         {
             const int messageCount = 1000;
@@ -65,9 +62,10 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
                 retries++;
             }
 
-            Assert.NotEmpty(receivedMessages);
-            Assert.Equal(messageCount, receivedMessages.Count);
-            Assert.Equal(sentMessages, receivedMessages);
+            await Assert.That(receivedMessages).IsNotEmpty();
+            await Assert.That(receivedMessages.Count).IsEqualTo(messageCount);
+            await Assert.That(receivedMessages).IsEqualTo(sentMessages);
         }
     }
 }
+

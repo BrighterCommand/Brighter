@@ -19,20 +19,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class PipelineValidationResultTests
 {
-    [Fact]
-    public void When_no_errors_only_warnings_should_be_valid()
+    [Test]
+    public async Task When_no_errors_only_warnings_should_be_valid()
     {
         // Arrange
         var warnings = new List<ValidationError>
@@ -40,18 +36,16 @@ public class PipelineValidationResultTests
             new(ValidationSeverity.Warning, "Handler 'OrderHandler'", "Backstop after resilience pipeline")
         };
         var errors = new List<ValidationError>();
-
         // Act
         var result = new PipelineValidationResult(errors, warnings);
-
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
-        Assert.Single(result.Warnings);
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Errors).IsEmpty();
+        await Assert.That(result.Warnings).HasSingleItem();
     }
 
-    [Fact]
-    public void When_errors_present_should_not_be_valid()
+    [Test]
+    public async Task When_errors_present_should_not_be_valid()
     {
         // Arrange
         var errors = new List<ValidationError>
@@ -59,17 +53,15 @@ public class PipelineValidationResultTests
             new(ValidationSeverity.Error, "Handler 'OrderHandler'", "Handler type is not public")
         };
         var warnings = new List<ValidationError>();
-
         // Act
         var result = new PipelineValidationResult(errors, warnings);
-
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Single(result.Errors);
+        await Assert.That(result.IsValid).IsFalse();
+        await Assert.That(result.Errors).HasSingleItem();
     }
 
-    [Fact]
-    public void When_has_errors_ThrowIfInvalid_should_throw_PipelineValidationException()
+    [Test]
+    public async Task When_has_errors_ThrowIfInvalid_should_throw_PipelineValidationException()
     {
         // Arrange
         var errors = new List<ValidationError>
@@ -79,62 +71,45 @@ public class PipelineValidationResultTests
         };
         var warnings = new List<ValidationError>();
         var result = new PipelineValidationResult(errors, warnings);
-
         // Act
-        var exception = Assert.Throws<PipelineValidationException>(() => result.ThrowIfInvalid());
-
+        var exception = await Assert.That(() => result.ThrowIfInvalid()).ThrowsExactly<PipelineValidationException>();
         // Assert — exception is a ConfigurationException
-        Assert.IsAssignableFrom<ConfigurationException>(exception);
-
+        await Assert.That(exception).IsAssignableTo<ConfigurationException>();
         // Assert — exception carries the validation result
-        Assert.Same(result, exception.ValidationResult);
-
+        await Assert.That(exception.ValidationResult).IsSameReferenceAs(result);
         // Assert — message lists all errors with source context
-        Assert.Contains("[Handler 'OrderHandler']", exception.Message);
-        Assert.Contains("Handler type is not public", exception.Message);
-        Assert.Contains("[Producer 'OrderCreated']", exception.Message);
-        Assert.Contains("RequestType not set", exception.Message);
-        Assert.Contains("2 error(s)", exception.Message);
+        await Assert.That(exception.Message).Contains("[Handler 'OrderHandler']");
+        await Assert.That(exception.Message).Contains("Handler type is not public");
+        await Assert.That(exception.Message).Contains("[Producer 'OrderCreated']");
+        await Assert.That(exception.Message).Contains("RequestType not set");
+        await Assert.That(exception.Message).Contains("2 error(s)");
     }
 
-    [Fact]
-    public void When_valid_ThrowIfInvalid_should_not_throw()
+    [Test]
+    public async Task When_valid_ThrowIfInvalid_should_not_throw()
     {
         // Arrange
-        var result = new PipelineValidationResult(
-            new List<ValidationError>(),
-            new List<ValidationError> { new(ValidationSeverity.Warning, "X", "minor") });
-
+        var result = new PipelineValidationResult(new List<ValidationError>(), new List<ValidationError> { new(ValidationSeverity.Warning, "X", "minor") });
         // Act & Assert — no exception
         result.ThrowIfInvalid();
     }
 
-    [Fact]
-    public void When_combining_results_should_merge_errors_and_warnings()
+    [Test]
+    public async Task When_combining_results_should_merge_errors_and_warnings()
     {
         // Arrange
-        var result1 = new PipelineValidationResult(
-            new List<ValidationError> { new(ValidationSeverity.Error, "A", "error from A") },
-            new List<ValidationError> { new(ValidationSeverity.Warning, "A", "warning from A") });
-
-        var result2 = new PipelineValidationResult(
-            new List<ValidationError> { new(ValidationSeverity.Error, "B", "error from B") },
-            new List<ValidationError>());
-
-        var result3 = new PipelineValidationResult(
-            new List<ValidationError>(),
-            new List<ValidationError> { new(ValidationSeverity.Warning, "C", "warning from C") });
-
+        var result1 = new PipelineValidationResult(new List<ValidationError> { new(ValidationSeverity.Error, "A", "error from A") }, new List<ValidationError> { new(ValidationSeverity.Warning, "A", "warning from A") });
+        var result2 = new PipelineValidationResult(new List<ValidationError> { new(ValidationSeverity.Error, "B", "error from B") }, new List<ValidationError>());
+        var result3 = new PipelineValidationResult(new List<ValidationError>(), new List<ValidationError> { new(ValidationSeverity.Warning, "C", "warning from C") });
         // Act
         var combined = PipelineValidationResult.Combine(result1, result2, result3);
-
         // Assert
-        Assert.False(combined.IsValid);
-        Assert.Equal(2, combined.Errors.Count);
-        Assert.Equal(2, combined.Warnings.Count);
-        Assert.Contains(combined.Errors, e => e.Source == "A");
-        Assert.Contains(combined.Errors, e => e.Source == "B");
-        Assert.Contains(combined.Warnings, e => e.Source == "A");
-        Assert.Contains(combined.Warnings, e => e.Source == "C");
+        await Assert.That(combined.IsValid).IsFalse();
+        await Assert.That(combined.Errors.Count).IsEqualTo(2);
+        await Assert.That(combined.Warnings.Count).IsEqualTo(2);
+        await Assert.That(combined.Errors).Contains(e => e.Source == "A");
+        await Assert.That(combined.Errors).Contains(e => e.Source == "B");
+        await Assert.That(combined.Warnings).Contains(e => e.Source == "A");
+        await Assert.That(combined.Warnings).Contains(e => e.Source == "C");
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
@@ -6,7 +6,7 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Proactor;
 
-[Trait("Category", "GCP")]
+[Category("GCP")]
 public class ValidateQueuesTestsAsync : IDisposable
 {
     private readonly GcpPubSubSubscription<MyCommand> _pubSubSubscription;
@@ -28,16 +28,16 @@ public class ValidateQueuesTestsAsync : IDisposable
         );
     }
 
-    [Fact]
+    [Test]
     public async Task When_topic_missing_verify_throws_async()
     {
         // We have no topic so we should throw
         // We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = GatewayFactory.CreateChannelFactory();
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _channelFactory.CreateAsyncChannelAsync(_pubSubSubscription));
+        await Assert.That(() => _channelFactory.CreateAsyncChannelAsync(_pubSubSubscription)).ThrowsExactly<InvalidOperationException>();
     }
     
-    [Fact]
+    [Test]
     public async Task When_subscription_missing_verify_throws_async()
     {
         // We have no topic so we should throw
@@ -49,7 +49,7 @@ public class ValidateQueuesTestsAsync : IDisposable
             Name = _pubSubSubscription.RoutingKey, 
             ProjectId = GatewayFactory.GetProjectId()
         }, OnMissingChannel.Create);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _channelFactory.CreateAsyncChannelAsync(_pubSubSubscription));
+        await Assert.That(() => _channelFactory.CreateAsyncChannelAsync(_pubSubSubscription)).ThrowsExactly<InvalidOperationException>();
     }
 
     public void Dispose()

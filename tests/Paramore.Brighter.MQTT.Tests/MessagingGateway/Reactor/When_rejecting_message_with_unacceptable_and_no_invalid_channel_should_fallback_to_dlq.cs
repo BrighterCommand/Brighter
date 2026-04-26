@@ -29,29 +29,29 @@ using System.Threading.Tasks;
 using MQTTnet;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "MQTT")]
-[Collection("MQTT")]
+[Category("MQTT")]
 public class MqttMessageConsumerRejectUnacceptableFallbackToDlqTests : IDisposable
 {
     private const string SOURCE_TOPIC_PREFIX = "BrighterTests/FallbackSource";
     private const string DLQ_TOPIC_PREFIX = "BrighterTests/FallbackDlq";
 
-    private readonly MqttTestServer? _mqttTestServer;
+    private MqttTestServer? _mqttTestServer;
     private readonly MqttMessageProducer _sourceProducer;
     private readonly MqttMessageConsumer _sourceConsumer;
     private readonly MqttMessageConsumer _dlqConsumer;
+    private readonly MqttFactory _mqttFactory;
+    private readonly int _serverPort;
 
-    public MqttMessageConsumerRejectUnacceptableFallbackToDlqTests(ITestOutputHelper outputHelper)
+    public MqttMessageConsumerRejectUnacceptableFallbackToDlqTests()
     {
         var mqttFactory = new MqttFactory();
         int serverPort = MqttTestServer.GetRandomServerPort();
 
-        _mqttTestServer = MqttTestServer.CreateTestMqttServer(mqttFactory, true, serverPort: serverPort);
+        _mqttFactory = mqttFactory;
+        _serverPort = serverPort;
 
         //Arrange — source producer
         var producerConfig = new MqttMessagingGatewayProducerConfiguration
@@ -88,7 +88,13 @@ public class MqttMessageConsumerRejectUnacceptableFallbackToDlqTests : IDisposab
         _dlqConsumer = new MqttMessageConsumer(dlqConsumerConfig);
     }
 
-    [Fact]
+    [Before(HookType.Test)]
+    public async Task Setup()
+    {
+        _mqttTestServer = await MqttTestServer.CreateTestMqttServer(_mqttFactory, true, serverPort: _serverPort);
+    }
+
+    [Test]
     public async Task When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
     {
         //Arrange
@@ -103,7 +109,7 @@ public class MqttMessageConsumerRejectUnacceptableFallbackToDlqTests : IDisposab
         await Task.Delay(500);
 
         var received = ((IAmAMessageConsumerSync)_sourceConsumer).Receive(TimeSpan.FromSeconds(2));
-        Assert.NotEmpty(received);
+        await Assert.That(received).IsNotEmpty();
         var sourceMessage = received.First(m => m.Header.MessageType != MessageType.MT_NONE);
 
         //Act — reject with Unacceptable (no invalid channel configured, should fallback to DLQ)
@@ -113,16 +119,16 @@ public class MqttMessageConsumerRejectUnacceptableFallbackToDlqTests : IDisposab
         );
 
         //Assert — reject returns true
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         //Assert — DLQ consumer receives the message (fallback)
         await Task.Delay(500);
         var dlqMessages = ((IAmAMessageConsumerSync)_dlqConsumer).Receive(TimeSpan.FromSeconds(2));
-        Assert.NotEmpty(dlqMessages);
+        await Assert.That(dlqMessages).IsNotEmpty();
         var dlqMessage = dlqMessages.First(m => m.Header.MessageType != MessageType.MT_NONE);
 
-        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
-        Assert.Equal("Unacceptable", dlqMessage.Header.Bag["rejectionReason"]!.ToString());
+        await Assert.That(dlqMessage.Body.Value).IsEqualTo(message.Body.Value);
+        await Assert.That(dlqMessage.Header.Bag["rejectionReason"]!.ToString()).IsEqualTo("Unacceptable");
     }
 
     public void Dispose()
@@ -133,3 +139,4 @@ public class MqttMessageConsumerRejectUnacceptableFallbackToDlqTests : IDisposab
         _mqttTestServer?.Dispose();
     }
 }
+

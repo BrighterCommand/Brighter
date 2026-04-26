@@ -1,16 +1,15 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.InMemory.Tests.Data;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Inbox
 {
-    [Trait("Category", "InMemory")]
+    [Category("InMemory")]
     public class InboxEntryTimeToLiveTests
     {
-        [Fact]
+        [Test]
         public async Task When_expiring_a_cache_entry_no_longer_there()
         {
             //Arrange
@@ -47,11 +46,11 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var afterExpiryExists = await inbox.ExistsAsync<SimpleCommand>(command.Id, contextKey, null);
             
             //Assert
-            Assert.NotNull(foundCommand);
-            Assert.False(afterExpiryExists);
+            await Assert.That(foundCommand).IsNotNull();
+            await Assert.That(afterExpiryExists).IsFalse();
         }
 
-        [Fact]
+        [Test]
         public async Task When_expiring_some_but_not_all()
         {
             //Arrange
@@ -93,7 +92,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             }
             
             //Assert
-            Assert.Equal(3, inbox.EntryCount);
+            await Assert.That(inbox.EntryCount).IsEqualTo(3);
 
         }
     }

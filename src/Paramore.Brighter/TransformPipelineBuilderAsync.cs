@@ -53,12 +53,13 @@ namespace Paramore.Brighter
         private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
         private readonly InstrumentationOptions _instrumentationOptions;
 
-        //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
-            new ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>>();
+        //GLOBAL cache of message mapper transform attributes — derived from reflection so immutable post-startup.
+        //Values are materialized into IReadOnlyList<> so concurrent reads are thread-safe.
+        private static readonly ConcurrentDictionary<string, IReadOnlyList<WrapWithAttribute>> s_wrapTransformsMemento =
+            new ConcurrentDictionary<string, IReadOnlyList<WrapWithAttribute>>();
 
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento =
-            new ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>>();
+        private static readonly ConcurrentDictionary<string, IReadOnlyList<UnwrapWithAttribute>> s_unWrapTransformsMemento =
+            new ConcurrentDictionary<string, IReadOnlyList<UnwrapWithAttribute>>();
 
         /// <summary>
         /// Creates an instance of a transform pipeline builder.
@@ -183,6 +184,9 @@ namespace Paramore.Brighter
             return transforms;
         }
 
+        /// <summary>
+        /// Clears any cached async transform pipeline definitions.
+        /// </summary>
         public static void ClearPipelineCache()
         {
             s_wrapTransformsMemento.Clear();
@@ -196,20 +200,38 @@ namespace Paramore.Brighter
             return messageMapper;
         }
 
-        private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
+        private IReadOnlyList<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType().Name;
-            return s_wrapTransformsMemento.GetOrAdd(key, s => FindMapToMessage(messageMapper)
-                .GetOtherWrapsInPipeline()
-                .OrderByDescending(attribute => attribute.Step));
+            if (!s_wrapTransformsMemento.TryGetValue(key, out IReadOnlyList<WrapWithAttribute>? transformAttributes))
+            {
+                transformAttributes = FindMapToMessage(messageMapper)
+                    .GetOtherWrapsInPipeline()
+                    .OrderByDescending(attribute => attribute.Step)
+                    .ToList()
+                    .AsReadOnly();
+
+                s_wrapTransformsMemento.TryAdd(key, transformAttributes);
+            }
+
+            return transformAttributes;
         }
 
-        private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
+        private IReadOnlyList<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType().Name;
-            return s_unWrapTransformsMemento.GetOrAdd(key, s => FindMapToRequest(messageMapper)
-                .GetOtherUnwrapsInPipeline()
-                .OrderByDescending(attribute => attribute.Step));
+            if (!s_unWrapTransformsMemento.TryGetValue(key, out IReadOnlyList<UnwrapWithAttribute>? transformAttributes))
+            {
+                transformAttributes = FindMapToRequest(messageMapper)
+                    .GetOtherUnwrapsInPipeline()
+                    .OrderByDescending(attribute => attribute.Step)
+                    .ToList()
+                    .AsReadOnly();
+
+                s_unWrapTransformsMemento.TryAdd(key, transformAttributes);
+            }
+
+            return transformAttributes;
         }
 
         private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapperAsync<TRequest> messageMapper) where TRequest : class, IRequest

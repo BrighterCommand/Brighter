@@ -19,9 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -30,53 +28,39 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.FeatureSwitch.Handlers;
 using Paramore.Brighter.Observability;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 {
-    [Collection("CommandProcessor")]
-    public class CommandProcessorWithFeatureSwitchOffDontAckInPipelineTests : IDisposable
+    [NotInParallel("CommandProcessor")]
+    public class CommandProcessorWithFeatureSwitchOffDontAckInPipelineTests
     {
         private readonly MyCommand _myCommand = new();
         private readonly CommandProcessor _commandProcessor;
-
         public CommandProcessorWithFeatureSwitchOffDontAckInPipelineTests()
         {
             //Arrange
             SubscriberRegistry registry = new();
             registry.Register<MyCommand, MyFeatureSwitchedOffDontAckHandler>();
-
             var container = new ServiceCollection();
             container.AddSingleton<MyFeatureSwitchedOffDontAckHandler>();
             container.AddTransient<FeatureSwitchHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
-
             ServiceProviderHandlerFactory handlerFactory = new(container.BuildServiceProvider());
-
             MyFeatureSwitchedOffDontAckHandler.CommandReceived = false;
-
-            _commandProcessor = CommandProcessorBuilder
-                .StartNew()
-                .Handlers(new HandlerConfiguration(registry, handlerFactory))
-                .DefaultResilience()
-                .NoExternalBus()
-                .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
-                .RequestContextFactory(new InMemoryRequestContextFactory())
-                .RequestSchedulerFactory(new InMemorySchedulerFactory())
-                .Build();
+            _commandProcessor = CommandProcessorBuilder.StartNew().Handlers(new HandlerConfiguration(registry, handlerFactory)).DefaultResilience().NoExternalBus().ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All).RequestContextFactory(new InMemoryRequestContextFactory()).RequestSchedulerFactory(new InMemorySchedulerFactory()).Build();
         }
 
-        [Fact]
-        public void When_Sending_A_Command_To_The_Processor_When_A_Feature_Switch_Is_Off_With_DontAck()
+        [Test]
+        public async Task When_Sending_A_Command_To_The_Processor_When_A_Feature_Switch_Is_Off_With_DontAck()
         {
             //Act
-            var exception = Assert.Throws<DontAckAction>(() => _commandProcessor.Send(_myCommand));
-
+            var exception = await Assert.That(() => _commandProcessor.Send(_myCommand)).ThrowsExactly<DontAckAction>();
             //Assert
-            Assert.False(MyFeatureSwitchedOffDontAckHandler.DidReceive()); // Target handler was NOT called
-            Assert.Contains(nameof(MyFeatureSwitchedOffDontAckHandler), exception.Message); // Message contains the handler type name
+            await Assert.That(MyFeatureSwitchedOffDontAckHandler.DidReceive()).IsFalse(); // Target handler was NOT called
+            await Assert.That(exception.Message).Contains(nameof(MyFeatureSwitchedOffDontAckHandler)); // Message contains the handler type name
         }
 
+        [After(Test)]
         public void Dispose()
         {
             CommandProcessor.ClearServiceBus();

@@ -1,4 +1,4 @@
-﻿using System.Net.Mime;
+using System.Net.Mime;
 using System.Text.Json;
 using Paramore.Brighter.AWSScheduler.Tests.Helpers;
 using Paramore.Brighter.AWSScheduler.Tests.TestDoubles;
@@ -8,9 +8,8 @@ using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace Paramore.Brighter.AWSScheduler.Tests.Scheduler.Messages.Sqs;
 
-[Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
-[Collection("Scheduler SQS")]
-public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
+[Property("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
+public class SqsSchedulingMessageViaFireSchedulerTest
 {
     private readonly ContentType _contentType = new (MediaTypeNames.Text.Plain); 
     private const int BufferSize = 3;
@@ -43,7 +42,7 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
         _messageProducer = new SqsMessageProducer(awsConnection,
             new SqsPublication { MakeChannels = OnMissingChannel.Create, QueueAttributes = new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }) });
 
-        _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
+        _factory = new AwsSchedulerFactory(awsConnection, $"brighter-scheduler-{Guid.NewGuid():N}")
         {
             UseMessageTopicAsTarget = false, 
             MakeRole = OnMissingRole.Create,
@@ -51,8 +50,8 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
         };
     }
 
-    [Fact]
-    public void When_Scheduling_A_Sqs_Message_Via_FireScheduler()
+    [Test]
+    public async Task When_Scheduling_A_Sqs_Message_Via_FireScheduler()
     {
         var routingKey = new RoutingKey(_queueName);
         var message = new Message(
@@ -69,19 +68,19 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
         var stopAt = DateTimeOffset.UtcNow.AddMinutes(2);
         while (stopAt > DateTimeOffset.UtcNow)
         {
-            var messages = _consumer.Receive(TimeSpan.FromMinutes(1));
-            Assert.Single(messages);
+            var messages = await _consumer.ReceiveAsync(TimeSpan.FromMinutes(1));
+            await Assert.That(messages).HasSingleItem();
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
-                Assert.Equal(MessageType.MT_COMMAND, messages[0].Header.MessageType);
-                Assert.True(Enumerable.Any<char>(messages[0].Body.Value));
+                await Assert.That(messages[0].Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+                await Assert.That(Enumerable.Any<char>(messages[0].Body.Value)).IsTrue();
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
-                Assert.NotNull((object?)m);
-                Assert.Equivalent(message, m.Message);
-                Assert.False((bool)m.Async);
-                _consumer.Acknowledge(messages[0]);
+                await Assert.That((object?)m).IsNotNull();
+                await Assert.That(m.Message).IsEquivalentTo(message);
+                await Assert.That((bool)m.Async).IsFalse();
+                await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }
 
@@ -91,10 +90,13 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
         Assert.Fail("The message wasn't fired");
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteQueueAsync().GetAwaiter().GetResult();
-        _messageProducer.Dispose();
-        _consumer.Dispose();
+        await _channelFactory.DeleteQueueAsync();
+        await _messageProducer.DisposeAsync();
+        await _consumer.DisposeAsync();
     }
 }
+
+

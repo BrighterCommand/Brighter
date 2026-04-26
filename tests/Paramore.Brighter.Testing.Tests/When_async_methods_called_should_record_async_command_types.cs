@@ -22,8 +22,6 @@ THE SOFTWARE. */
 #endregion
 
 using System.Threading.Tasks;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -31,54 +29,54 @@ public class SpyCommandProcessorRecordTests
 {
     private readonly SpyCommandProcessor _spy = new();
 
-    [Fact]
+    [Test]
     public async Task Then_send_async_should_record_send_async()
     {
         //Act
         await _spy.SendAsync(new TestCommand());
 
         //Assert
-        _spy.Commands.ShouldContain(CommandType.SendAsync);
+        await Assert.That(_spy.Commands).Contains(CommandType.SendAsync);
     }
 
-    [Fact]
+    [Test]
     public async Task Then_publish_async_should_record_publish_async()
     {
         //Act
         await _spy.PublishAsync(new TestEvent());
 
         //Assert
-        _spy.Commands.ShouldContain(CommandType.PublishAsync);
+        await Assert.That(_spy.Commands).Contains(CommandType.PublishAsync);
     }
 
-    [Fact]
+    [Test]
     public async Task Then_post_async_should_record_post_async()
     {
         //Act
         await _spy.PostAsync(new TestCommand());
 
         //Assert
-        _spy.Commands.ShouldContain(CommandType.PostAsync);
+        await Assert.That(_spy.Commands).Contains(CommandType.PostAsync);
     }
 
-    [Fact]
+    [Test]
     public async Task Then_deposit_post_async_should_record_deposit_async()
     {
         //Act
         await _spy.DepositPostAsync(new TestCommand());
 
         //Assert
-        _spy.Commands.ShouldContain(CommandType.DepositAsync);
+        await Assert.That(_spy.Commands).Contains(CommandType.DepositAsync);
     }
 
-    [Fact]
+    [Test]
     public async Task Then_clear_outbox_async_should_record_clear_async()
     {
         //Act
         await _spy.ClearOutboxAsync([Id.Random()]);
 
         //Assert
-        _spy.Commands.ShouldContain(CommandType.ClearAsync);
+        await Assert.That(_spy.Commands).Contains(CommandType.ClearAsync);
     }
 
     private sealed class TestCommand() : Command(Id.Random());

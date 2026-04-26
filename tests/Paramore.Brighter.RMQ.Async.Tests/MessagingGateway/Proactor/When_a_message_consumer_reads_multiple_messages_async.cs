@@ -1,15 +1,14 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
-public class RMQBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
+[Category("RMQ")]
+public class RMQBufferedConsumerTestsAsync : IAsyncDisposable
 {
-    private readonly IAmAMessageProducerAsync _messageProducer;
-    private readonly IAmAMessageConsumerAsync _messageConsumer;
+    private IAmAMessageProducerAsync _messageProducer;
+    private IAmAMessageConsumerAsync _messageConsumer;
     private readonly ChannelName _channelName = new(Guid.NewGuid().ToString());
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
     private const int BatchSize = 3;
@@ -24,12 +23,22 @@ public class RMQBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
 
         _messageProducer = new RmqMessageProducer(rmqConnection);
         _messageConsumer = new RmqMessageConsumer(connection:rmqConnection, queueName:_channelName, routingKey:_routingKey, isDurable:false, highAvailability:false, batchSize:BatchSize);
-
-        //create the queue, so that we can receive messages posted to it
-        new QueueFactory(rmqConnection, _channelName, new RoutingKeys(_routingKey)).CreateAsync().GetAwaiter().GetResult();
     }
 
-    [Fact]
+    [Before(Test)]
+    public async Task Setup()
+    {
+        var rmqConnection = new RmqMessagingGatewayConnection
+        {
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            Exchange = new Exchange("paramore.brighter.exchange")
+        };
+
+        //create the queue, so that we can receive messages posted to it
+        await new QueueFactory(rmqConnection, _channelName, new RoutingKeys(_routingKey)).CreateAsync();
+    }
+
+    [Test]
     public async Task When_a_message_consumer_reads_multiple_messages()
     {
         //Post one more than batch size messages
@@ -49,7 +58,7 @@ public class RMQBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         var messages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
         //We should only have three messages
-        Assert.Equal(3, messages.Length);
+        await Assert.That(messages.Length).IsEqualTo(3);
 
         //ack those to remove from the queue
         foreach (var message in messages)
@@ -64,12 +73,13 @@ public class RMQBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         messages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(500));
 
         //This time, just the one message
-        Assert.Equal(1, messages.Length);
+        await Assert.That(messages.Length).IsEqualTo(1);
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _messageConsumer.PurgeAsync().GetAwaiter().GetResult();
+        await _messageConsumer.PurgeAsync();
         ((IAmAMessageProducerSync)_messageProducer).Dispose();
         ((IAmAMessageProducerSync)_messageProducer).Dispose();
     }

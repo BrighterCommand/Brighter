@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
@@ -64,65 +63,35 @@ public class InMemoryConsumerRequeueWithDelayProducerTests
         _consumer.Receive();
     }
 
-    [Fact]
-    public void Should_use_scheduler_when_requeuing_with_delay()
+    [Test]
+    public async Task Should_use_scheduler_when_requeuing_with_delay()
     {
         // Act
-        _consumer.Requeue(_message, _delay);
+        await _consumer.RequeueAsync(_message, _delay);
 
         // Assert
-        Assert.True(_scheduler.ScheduleCalled, "Scheduler.Schedule should have been called via producer");
+        await Assert.That(_scheduler.ScheduleCalled).IsTrue();
     }
 
-    [Fact]
-    public void Should_not_have_message_immediately_available_on_bus()
+    [Test]
+    public async Task Should_not_have_message_immediately_available_on_bus()
     {
         // Act
-        _consumer.Requeue(_message, _delay);
+        await _consumer.RequeueAsync(_message, _delay);
 
         // Assert - message should not be immediately available (scheduler holds it)
         var messagesOnBus = _bus.Stream(_routingKey);
-        Assert.Empty(messagesOnBus);
+        await Assert.That(messagesOnBus).IsEmpty();
     }
 
-    [Fact]
-    public void Should_remove_message_from_locked_messages()
+    [Test]
+    public async Task Should_remove_message_from_locked_messages()
     {
         // Act
-        var result = _consumer.Requeue(_message, _delay);
+        var result = await _consumer.RequeueAsync(_message, _delay);
 
         // Assert
-        Assert.True(result, "Requeue should return true");
+        await Assert.That(result).IsTrue();
     }
 
-    /// <summary>
-    /// A spy scheduler that records calls to Schedule for verification.
-    /// </summary>
-    private sealed class SpyScheduler : IAmAMessageSchedulerSync
-    {
-        public bool ScheduleCalled { get; private set; }
-        public Message? ScheduledMessage { get; private set; }
-        public TimeSpan? ScheduledDelay { get; private set; }
-
-        public string Schedule(Message message, DateTimeOffset at)
-        {
-            ScheduleCalled = true;
-            ScheduledMessage = message;
-            return Guid.NewGuid().ToString();
-        }
-
-        public string Schedule(Message message, TimeSpan delay)
-        {
-            ScheduleCalled = true;
-            ScheduledMessage = message;
-            ScheduledDelay = delay;
-            return Guid.NewGuid().ToString();
-        }
-
-        public bool ReScheduler(string schedulerId, DateTimeOffset at) => true;
-
-        public bool ReScheduler(string schedulerId, TimeSpan delay) => true;
-
-        public void Cancel(string id) { }
-    }
 }

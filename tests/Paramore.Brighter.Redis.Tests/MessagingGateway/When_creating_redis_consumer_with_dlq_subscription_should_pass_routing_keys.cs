@@ -26,7 +26,6 @@ using System;
 using System.Reflection;
 using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.Redis.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 
@@ -42,8 +41,8 @@ public class RedisMessageConsumerFactoryDlqTests : IDisposable
         _factory = new RedisMessageConsumerFactory(configuration);
     }
 
-    [Fact]
-    public void When_creating_redis_consumer_with_dlq_subscription_should_pass_routing_keys()
+    [Test]
+    public async Task When_creating_redis_consumer_with_dlq_subscription_should_pass_routing_keys()
     {
         //Arrange
         var dlqRoutingKey = new RoutingKey("orders-dlq");
@@ -61,7 +60,7 @@ public class RedisMessageConsumerFactoryDlqTests : IDisposable
         _consumer = _factory.Create(subscription);
 
         //Assert - verify the factory passed routing keys to the consumer
-        Assert.NotNull(_consumer);
+        await Assert.That(_consumer).IsNotNull();
 
         var consumerType = _consumer.GetType();
         var dlqField = consumerType.GetField("_deadLetterRoutingKey",
@@ -69,17 +68,17 @@ public class RedisMessageConsumerFactoryDlqTests : IDisposable
         var invalidField = consumerType.GetField("_invalidMessageRoutingKey",
             BindingFlags.NonPublic | BindingFlags.Instance);
 
-        Assert.NotNull(dlqField);
-        Assert.NotNull(invalidField);
+        await Assert.That(dlqField).IsNotNull();
+        await Assert.That(invalidField).IsNotNull();
 
         var actualDlq = dlqField.GetValue(_consumer) as RoutingKey;
         var actualInvalid = invalidField.GetValue(_consumer) as RoutingKey;
 
-        Assert.NotNull(actualDlq);
-        Assert.Equal("orders-dlq", actualDlq.Value);
+        await Assert.That(actualDlq).IsNotNull();
+        await Assert.That(actualDlq.Value).IsEqualTo("orders-dlq");
 
-        Assert.NotNull(actualInvalid);
-        Assert.Equal("orders-invalid", actualInvalid.Value);
+        await Assert.That(actualInvalid).IsNotNull();
+        await Assert.That(actualInvalid.Value).IsEqualTo("orders-invalid");
     }
 
     public void Dispose()

@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         private void LogCommand(MyCommand request)
         {
             _command = request;
-            receivedMessages.Add(nameof(MyCommandHandlerAsync), request.Id);
+            receivedMessages[nameof(MyCommandHandlerAsync)] = request.Id;
         }
     }
 }

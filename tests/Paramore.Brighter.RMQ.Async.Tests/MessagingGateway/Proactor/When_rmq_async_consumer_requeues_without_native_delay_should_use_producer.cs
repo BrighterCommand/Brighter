@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +27,6 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
@@ -37,7 +36,7 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 /// with Task.Delay. This ensures the pump thread is freed immediately while the scheduler handles
 /// the delayed redelivery.
 /// </summary>
-[Trait("Category", "RMQ")]
+[Category("RMQ")]
 public class RmqMesageConsumerDelayTestsAsync : IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _messageProducer;
@@ -78,13 +77,13 @@ public class RmqMesageConsumerDelayTestsAsync : IAsyncDisposable
             .GetResult();
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeuing_with_delay_should_not_block_pump()
     {
         // Arrange - send and receive a message
         await _messageProducer.SendAsync(_message);
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // Act - requeue with a significant delay (5 seconds)
         var stopwatch = Stopwatch.StartNew();
@@ -92,15 +91,14 @@ public class RmqMesageConsumerDelayTestsAsync : IAsyncDisposable
         stopwatch.Stop();
 
         // Assert - requeue should return true
-        Assert.True(result, "Requeue should succeed");
+        await Assert.That(result).IsTrue();
 
         // Assert - requeue should complete quickly, proving Task.Delay is NOT used to block the pump
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2),
-            $"Requeue should not block with Task.Delay; took {stopwatch.Elapsed.TotalSeconds:F1}s");
+        await Assert.That(stopwatch.Elapsed < TimeSpan.FromSeconds(2)).IsTrue();
 
         // Assert - message should be available on the queue (published via producer through exchange)
         var requeued = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
-        Assert.Equal(_message.Body.Value, requeued.Body.Value);
+        await Assert.That(requeued.Body.Value).IsEqualTo(_message.Body.Value);
     }
 
     public async ValueTask DisposeAsync()

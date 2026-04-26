@@ -19,34 +19,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class PipelineDiagnosticWriterPublicationDetailTests
 {
-    [Fact]
-    public void When_diagnostic_writer_describes_should_log_publication_detail_at_debug()
+    [Test]
+    public async Task When_diagnostic_writer_describes_should_log_publication_detail_at_debug()
     {
         // Arrange — one publication with a custom mapper that has a wrap transform
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicSyncHandler));
         var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
-        PipelineBuilder<IRequest>.ClearPipelineCache();
-
-        var mapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory(_ => null!),
-            new SimpleMessageMapperFactoryAsync(_ => null!));
+        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null!), new SimpleMessageMapperFactoryAsync(_ => null!));
         mapperRegistry.Register<MyDescribableCommand, MyDescribableCommandMessageMapper>();
-        TransformPipelineBuilder.ClearPipelineCache();
-
         var publications = new[]
         {
             new Publication
@@ -55,30 +45,19 @@ public class PipelineDiagnosticWriterPublicationDetailTests
                 RequestType = typeof(MyDescribableCommand)
             }
         };
-
         var logger = new SpyLogger();
-        var writer = new PipelineDiagnosticWriter(
-            logger, pipelineBuilder, mapperRegistry: mapperRegistry, publications: publications);
-
+        var writer = new PipelineDiagnosticWriter(logger, pipelineBuilder, mapperRegistry: mapperRegistry, publications: publications);
         // Act
         writer.Describe();
-
         // Assert — Debug messages contain publication section and detail
         var debugMessages = logger.DebugEntries.Select(e => e.Message).ToList();
-
         // Section header
-        Assert.Contains(debugMessages, m => m.Contains("Publications"));
-
+        await Assert.That(debugMessages).Contains(m => m.Contains("Publications"));
         // Publication topic and request type
-        Assert.Contains(debugMessages, m =>
-            m.Contains("MyDescribableCommand") && m.Contains("order.created"));
-
+        await Assert.That(debugMessages).Contains(m => m.Contains("MyDescribableCommand") && m.Contains("order.created"));
         // Mapper type with custom/default indicator
-        Assert.Contains(debugMessages, m =>
-            m.Contains("MyDescribableCommandMessageMapper") && m.Contains("custom"));
-
+        await Assert.That(debugMessages).Contains(m => m.Contains("MyDescribableCommandMessageMapper") && m.Contains("custom"));
         // Transform step from the mapper's [MyDescribableWrapWith(0)]
-        Assert.Contains(debugMessages, m =>
-            m.Contains("MyDescribableWrapWith"));
+        await Assert.That(debugMessages).Contains(m => m.Contains("MyDescribableWrapWith"));
     }
 }

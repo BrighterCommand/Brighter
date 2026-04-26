@@ -4,10 +4,8 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 
-public class MyOtherCommandHandlerAsync(IAmACommandProcessor commandProcessor) : RequestHandlerAsync<MyOtherCommand>
+internal class MyOtherCommandHandlerAsync(IAmACommandProcessor commandProcessor, WorkflowExecutionLog executionLog) : RequestHandlerAsync<MyOtherCommand>
 {
-    public static List<MyOtherCommand> ReceivedCommands { get; set; } = [];
-
     public override async Task<MyOtherCommand> HandleAsync(MyOtherCommand command, CancellationToken cancellationToken = default)
     {
         LogCommand(command);
@@ -17,7 +15,7 @@ public class MyOtherCommandHandlerAsync(IAmACommandProcessor commandProcessor) :
     
     private void LogCommand(MyOtherCommand request)
     {
-        ReceivedCommands.Add(request);
+        executionLog.OtherCommands.Add(request);
     }
 
 }
