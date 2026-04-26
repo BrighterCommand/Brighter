@@ -91,10 +91,10 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         );
 
         var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
-            null
+            null,
+            new SimpleMessageMapperFactoryAsync(_ => new MyDeferredCommandMessageMapperAsync())
         );
-        messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
+        messageMapperRegistry.RegisterAsync<MyDeferredCommand, MyDeferredCommandMessageMapperAsync>();
 
         _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyDeferredCommand), 
             messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
@@ -126,7 +126,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    [Fact(Skip = "DLQ redelivery test is flaky")]
+    [Fact]
     public async Task When_throwing_defer_action_respect_redrive_async()
     {
         await _sender.SendAsync(_message);

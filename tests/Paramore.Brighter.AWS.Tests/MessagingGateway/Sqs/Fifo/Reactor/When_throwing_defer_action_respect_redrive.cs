@@ -77,14 +77,14 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(_awsConnection);
         _channel = _channelFactory.CreateSyncChannel(_subscription);
 
-        IHandleRequestsAsync<MyDeferredCommand> handler = new MyDeferredCommandHandlerAsync();
+        IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();
 
         var subscriberRegistry = new SubscriberRegistry();
-        subscriberRegistry.RegisterAsync<MyDeferredCommand, MyDeferredCommandHandlerAsync>();
+        subscriberRegistry.Register<MyDeferredCommand, MyDeferredCommandHandler>();
 
         IAmACommandProcessor commandProcessor = new CommandProcessor(
             subscriberRegistry: subscriberRegistry,
-            handlerFactory: new QuickHandlerFactoryAsync(() => handler),
+            handlerFactory: new QuickHandlerFactory(() => handler),
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry(),
             resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
@@ -125,7 +125,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    [Fact(Skip = "DLQ redelivery test is flaky")]
+    [Fact]
     public void When_throwing_defer_action_respect_redrive_async()
     {
         _sender.Send(_message);

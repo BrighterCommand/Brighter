@@ -54,7 +54,7 @@ namespace GreetingsSender
 
             if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
             {
-                var serviceURL = "http://localhost:4566/"; // Environment.GetEnvironmentVariable("AWS_SERVICE_URL");
+                var serviceURL = Environment.GetEnvironmentVariable("AWS_SERVICE_URL");
                 var region = string.IsNullOrWhiteSpace(serviceURL) ? RegionEndpoint.EUWest1 : RegionEndpoint.USEast1;
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, region, cfg =>
                 {

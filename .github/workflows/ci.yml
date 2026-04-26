@@ -451,11 +451,17 @@ jobs:
 
     services:
       moto:
-        image: motoserver/moto:latest
+        image: motoserver/moto:5.1.22
         ports:
           - 4566:4566
         env:
           MOTO_PORT: "4566"
+        options: >-
+          --health-cmd "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:4566/moto-api/\").read()'"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+          --health-start-period 5s
 
     steps:
       - uses: actions/checkout@v6

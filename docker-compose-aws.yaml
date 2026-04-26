@@ -1,7 +1,13 @@
 services:
   moto:
-    image: motoserver/moto:latest
+    image: motoserver/moto:5.1.22
     ports:
       - "4566:4566" # Moto Gateway (same port as former LocalStack for compatibility)
     environment:
       - "MOTO_PORT=4566"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4566/moto-api/').read()"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
