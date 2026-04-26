@@ -14,6 +14,7 @@ public class MediatorParallelSplitFlowTests
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
+    private readonly InMemoryJobChannel<WorkflowTestData> _channel;
     private readonly Job<WorkflowTestData> _job;
     private bool _firstBranchFinished;
     private bool _secondBranchFinished;
@@ -65,14 +66,14 @@ public class MediatorParallelSplitFlowTests
         _job.InitSteps(parallelSplit);
         
         InMemoryStateStoreAsync store = new();
-        InMemoryJobChannel<WorkflowTestData> channel = new();
-        
+        _channel = new InMemoryJobChannel<WorkflowTestData>();
+
         _scheduler = new Scheduler<WorkflowTestData>(
-            channel,
+            _channel,
             store
         );
-        
-        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor, _scheduler);
+
+        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
     }
     
     [Fact]
@@ -81,23 +82,29 @@ public class MediatorParallelSplitFlowTests
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         
         await _scheduler.ScheduleAsync(_job);
-        
-        var ct = new CancellationTokenSource();
-        ct.CancelAfter( TimeSpan.FromSeconds(3) );
 
+        var ct = new CancellationTokenSource();
+        ct.CancelAfter(TimeSpan.FromSeconds(3));
+
+        Task runnerTask = Task.CompletedTask;
         try
         {
-            _runner.RunAsync(ct.Token);
+            runnerTask = _runner.RunAsync(ct.Token);
+            await Task.Delay(TimeSpan.FromMilliseconds(200), ct.Token);
         }
-        catch (Exception e)
+        catch (OperationCanceledException e)
         {
             _testOutputHelper.WriteLine(e.ToString());
         }
-        
+
         Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "Test");
         Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "TestTwo");
         Assert.True(_firstBranchFinished);
         Assert.True(_secondBranchFinished);
         Assert.Equal(JobState.Done, _job.State);
+
+        ct.Cancel();
+        try { await runnerTask; }
+        catch (OperationCanceledException) { }
     }
 }
