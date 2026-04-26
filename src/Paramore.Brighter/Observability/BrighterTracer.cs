@@ -620,9 +620,11 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="span">The span to end</param>
     public void EndSpan(Activity? span)
     {
-        if (span?.Status == ActivityStatusCode.Unset)
+        if (span is null) return;
+        if (span.Status == ActivityStatusCode.Unset)
             span.SetStatus(ActivityStatusCode.Ok);
-        span?.Dispose();
+        span.SetEndTime(_timeProvider.GetUtcNow().UtcDateTime);
+        span.Dispose();
     }
 
     /// <summary>
