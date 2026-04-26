@@ -306,8 +306,18 @@ namespace Paramore.Brighter.ServiceActivator
 
             Log.DispatcherStarting(s_logger);
 
-            if (!TryOpenConsumers(startup))
-                return;
+            try
+            {
+                OpenConsumers();
+                State = DispatcherState.DS_RUNNING;
+                startup.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                Log.ErrorOnConsumer(s_logger, ex);
+                startup.TrySetException(ex);
+                throw;
+            }
 
             Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
 
@@ -317,26 +327,13 @@ namespace Paramore.Brighter.ServiceActivator
             Log.DispatcherStopped(s_logger);
         }
 
-        private bool TryOpenConsumers(TaskCompletionSource<bool> startup)
+        private void OpenConsumers()
         {
-            try
+            foreach (var consumer in Consumers)
             {
-                foreach (var consumer in Consumers.OfType<Consumer>())
-                {
-                    consumer.Open();
-                    if (consumer.Job is not null)
-                        _tasks.TryAdd(consumer.JobId, consumer.Job);
-                }
-
-                State = DispatcherState.DS_RUNNING;
-                startup.TrySetResult(true);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Log.ErrorOnConsumer(s_logger, ex);
-                startup.TrySetException(ex);
-                throw;
+                consumer.Open();
+                if (consumer.Job is not null)
+                    _tasks.TryAdd(consumer.JobId, consumer.Job);
             }
         }
 
