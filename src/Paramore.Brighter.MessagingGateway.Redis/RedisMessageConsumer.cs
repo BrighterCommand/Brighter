@@ -720,7 +720,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             var msg = string.Empty;
             string? latestId = null;
-            Console.WriteLine($"[RDX] consumer ReadMessageAsync BLPOP queue='{_queueName}' topic='{Topic}' timeout={timeOut.TotalMilliseconds}ms tid={Environment.CurrentManagedThreadId} pool={Pool.Value.GetHashCode()}");
+            var preBlpop = await client.GetAllItemsFromListAsync(_queueName);
+            Console.WriteLine($"[RDX] consumer ReadMessageAsync BLPOP queue='{_queueName}' topic='{Topic}' timeout={timeOut.TotalMilliseconds}ms tid={Environment.CurrentManagedThreadId} pool={Pool.Value.GetHashCode()} clientHash={client.GetHashCode()} pre-BLPOP-list=[{string.Join(",", preBlpop)}]");
             try
             {
                 // Give the server-side BLPOP timeout a chance to fire first; if the client cancels first
