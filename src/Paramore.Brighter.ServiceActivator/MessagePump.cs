@@ -207,28 +207,28 @@ namespace Paramore.Brighter.ServiceActivator
         // Pump-internal helpers for the receive span. Live here (not on BrighterTracer) to avoid growing the public API.
         // The receive span is started before the broker call so its Duration covers broker latency, then enriched with
         // message-derived tags once the message arrives.
-        internal static Activity? CreateReceiveSpan(IAmABrighterTracer? tracer, RoutingKey topic, MessagingSystem messagingSystem, InstrumentationOptions options, TimeProvider timeProvider)
+        private protected Activity? CreateReceiveSpan(RoutingKey topic, MessagingSystem messagingSystem)
         {
-            if (tracer is null) return null;
+            if (Tracer is null) return null;
 
             var operation = MessagePumpSpanOperation.Receive;
             var tags = new ActivityTagsCollection();
-            if (options != InstrumentationOptions.None)
+            if (InstrumentationOptions != InstrumentationOptions.None)
                 tags.Add(BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain);
-            if (options.HasFlag(InstrumentationOptions.RequestInformation))
+            if (InstrumentationOptions.HasFlag(InstrumentationOptions.RequestInformation))
                 tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
-            if (options.HasFlag(InstrumentationOptions.Messaging))
+            if (InstrumentationOptions.HasFlag(InstrumentationOptions.Messaging))
             {
                 tags.Add(BrighterSemanticConventions.MessagingDestination, topic);
                 tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
                 tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
             }
 
-            var activity = tracer.ActivitySource.StartActivity(
+            var activity = Tracer.ActivitySource.StartActivity(
                 name: $"{topic} {operation.ToSpanName()}",
                 kind: ActivityKind.Consumer,
                 tags: tags,
-                startTime: timeProvider.GetUtcNow());
+                startTime: PumpTimeProvider.GetUtcNow());
 
             if (activity is not null)
                 Activity.Current = activity;
@@ -236,11 +236,11 @@ namespace Paramore.Brighter.ServiceActivator
             return activity;
         }
 
-        internal static void EnrichReceiveSpan(Activity? span, Message message, InstrumentationOptions options)
+        private protected void EnrichReceiveSpan(Activity? span, Message message)
         {
             if (span is null) return;
 
-            if (options.HasFlag(InstrumentationOptions.RequestInformation))
+            if (InstrumentationOptions.HasFlag(InstrumentationOptions.RequestInformation))
             {
                 span.AddTag(BrighterSemanticConventions.CeType, message.Header.Type.Value);
                 span.AddTag(BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo?.Value);
@@ -251,7 +251,7 @@ namespace Paramore.Brighter.ServiceActivator
                 span.AddTag(BrighterSemanticConventions.CeSubject, message.Header.Subject);
             }
 
-            if (options.HasFlag(InstrumentationOptions.Messaging))
+            if (InstrumentationOptions.HasFlag(InstrumentationOptions.Messaging))
             {
                 span.AddTag(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
                 span.AddTag(BrighterSemanticConventions.MessageId, message.Id.Value);
@@ -261,7 +261,7 @@ namespace Paramore.Brighter.ServiceActivator
                 span.AddTag(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
             }
 
-            if (options.HasFlag(InstrumentationOptions.RequestBody))
+            if (InstrumentationOptions.HasFlag(InstrumentationOptions.RequestBody))
                 span.AddTag(BrighterSemanticConventions.MessageBody, message.Body.Value);
 
             // Propagate the producer's tracestate and baggage onto the consumer side. Done here (not in CreateReceiveSpan) because

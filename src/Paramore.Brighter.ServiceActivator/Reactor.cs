@@ -114,9 +114,9 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     try
                     {
-                        receiveSpan = CreateReceiveSpan(Tracer, Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions, PumpTimeProvider);
+                        receiveSpan = CreateReceiveSpan(Channel.RoutingKey, MessagingSystem.InternalBus);
                         message = Channel.Receive(TimeOut);
-                        EnrichReceiveSpan(receiveSpan, message, InstrumentationOptions);
+                        EnrichReceiveSpan(receiveSpan, message);
                     }
                     catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
                     {
