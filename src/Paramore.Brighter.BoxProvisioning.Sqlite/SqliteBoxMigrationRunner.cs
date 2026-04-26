@@ -48,11 +48,21 @@ public class SqliteBoxMigrationRunner(
         if (tableState is not { TableExists: true, HistoryExists: false })
             return;
 
-        foreach (var migration in migrations)
+        using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+        try
         {
-            if (migration.Version > tableState.CurrentVersion) break;
+            foreach (var migration in migrations)
+            {
+                if (migration.Version > tableState.CurrentVersion) break;
 
-            await InsertHistoryRowAsync(connection, tableName, migration, cancellationToken);
+                await InsertHistoryRowAsync(connection, transaction, tableName, migration, cancellationToken);
+            }
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            try { await transaction.RollbackAsync(cancellationToken); } catch { /* connection may already be closed */ }
+            throw;
         }
     }
 
@@ -69,16 +79,27 @@ public class SqliteBoxMigrationRunner(
             if (await IsMigrationAppliedAsync(connection, tableName, migration.Version, cancellationToken))
                 continue;
 
-            await ExecuteMigrationAsync(connection, migration, cancellationToken);
-            await InsertHistoryRowAsync(connection, tableName, migration, cancellationToken);
+            using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                await ExecuteMigrationAsync(connection, transaction, migration, cancellationToken);
+                await InsertHistoryRowAsync(connection, transaction, tableName, migration, cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                try { await transaction.RollbackAsync(cancellationToken); } catch { /* connection may already be closed */ }
+                throw;
+            }
         }
     }
 
     private static async Task ExecuteMigrationAsync(
-        SqliteConnection connection, IAmABoxMigration migration,
-        CancellationToken cancellationToken)
+        SqliteConnection connection, SqliteTransaction transaction,
+        IAmABoxMigration migration, CancellationToken cancellationToken)
     {
         using var ddlCommand = connection.CreateCommand();
+        ddlCommand.Transaction = transaction;
         ddlCommand.CommandText = migration.UpScript;
         await ddlCommand.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -114,10 +135,11 @@ WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @Version";
     }
 
     private static async Task InsertHistoryRowAsync(
-        SqliteConnection connection, string tableName,
-        IAmABoxMigration migration, CancellationToken cancellationToken)
+        SqliteConnection connection, SqliteTransaction transaction,
+        string tableName, IAmABoxMigration migration, CancellationToken cancellationToken)
     {
         using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = $@"
 INSERT INTO [{MIGRATION_HISTORY_TABLE}] ([MigrationVersion], [BoxTableName], [Description])
 VALUES (@Version, @BoxTableName, @Description)";

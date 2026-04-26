@@ -9,11 +9,10 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// <summary>
 /// Provisions a PostgreSQL outbox table.
 /// </summary>
-public class PostgreSqlOutboxProvisioner : IAmABoxProvisioner
+public class PostgreSqlOutboxProvisioner(
+    IAmARelationalDatabaseConfiguration configuration,
+    IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
-    private readonly IAmARelationalDatabaseConfiguration _configuration;
-    private readonly IAmABoxMigrationRunner _migrationRunner;
-
     private static readonly HashSet<string> V1Columns = new(StringComparer.Ordinal)
     {
         "id", "messageid", "topic", "messagetype", "timestamp", "correlationid",
@@ -24,18 +23,10 @@ public class PostgreSqlOutboxProvisioner : IAmABoxProvisioner
 
     public BoxType BoxType => BoxType.Outbox;
 
-    public PostgreSqlOutboxProvisioner(
-        IAmARelationalDatabaseConfiguration configuration,
-        IAmABoxMigrationRunner migrationRunner)
-    {
-        _configuration = configuration;
-        _migrationRunner = migrationRunner;
-    }
-
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
-        var migrations = PostgreSqlOutboxMigrations.All(_configuration);
+        var migrations = PostgreSqlOutboxMigrations.All(configuration);
         var tableState = await DetectTableStateAsync(cancellationToken);
 
         if (tableState.TableExists)
@@ -43,9 +34,9 @@ public class PostgreSqlOutboxProvisioner : IAmABoxProvisioner
             await ValidatePayloadModeAsync(cancellationToken);
         }
 
-        await _migrationRunner.MigrateAsync(
-            _configuration.OutBoxTableName,
-            _configuration.SchemaName,
+        await migrationRunner.MigrateAsync(
+            configuration.OutBoxTableName,
+            configuration.SchemaName,
             migrations,
             tableState,
             cancellationToken);
@@ -53,40 +44,40 @@ public class PostgreSqlOutboxProvisioner : IAmABoxProvisioner
 
     private async Task<BoxTableState> DetectTableStateAsync(CancellationToken cancellationToken)
     {
-        var schemaName = _configuration.SchemaName ?? "public";
+        var schemaName = configuration.SchemaName ?? "public";
 
-        using var connection = new NpgsqlConnection(_configuration.ConnectionString);
+        using var connection = new NpgsqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         var tableExists = await PostgreSqlBoxDetectionHelpers.DoesTableExistAsync(
-            connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+            connection, configuration.OutBoxTableName, schemaName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         var historyExists = await PostgreSqlBoxDetectionHelpers.DoesHistoryExistAsync(
-            connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+            connection, configuration.OutBoxTableName, schemaName, cancellationToken);
         if (!historyExists)
         {
             var detectedVersion = await DetectCurrentVersionAsync(
-                connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+                connection, configuration.OutBoxTableName, schemaName, cancellationToken);
             return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
         }
 
         var maxVersion = await PostgreSqlBoxDetectionHelpers.GetMaxVersionAsync(
-            connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+            connection, configuration.OutBoxTableName, schemaName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
     private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
     {
-        var schemaName = _configuration.SchemaName ?? "public";
+        var schemaName = configuration.SchemaName ?? "public";
 
-        using var connection = new NpgsqlConnection(_configuration.ConnectionString);
+        using var connection = new NpgsqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         await PostgreSqlPayloadModeValidator.ValidateAsync(
-            connection, _configuration.OutBoxTableName, schemaName,
-            "body", _configuration.BinaryMessagePayload, cancellationToken);
+            connection, configuration.OutBoxTableName, schemaName,
+            "body", configuration.BinaryMessagePayload, cancellationToken);
     }
 
     private static async Task<int> DetectCurrentVersionAsync(

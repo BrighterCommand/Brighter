@@ -341,3 +341,6 @@ tests/certs/
 # Ralph loop
 RALPH_STOP
 ralph.log
+
+# Claude Code per-session scratch state (CLAUDE.md-sanctioned local file)
+PROMPT.md

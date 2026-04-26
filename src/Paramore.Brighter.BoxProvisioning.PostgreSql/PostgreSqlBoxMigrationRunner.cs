@@ -10,21 +10,12 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// Runs box migrations against a PostgreSQL database. Uses pg_try_advisory_lock
 /// for concurrency control with a retry loop bounded by MigrationLockTimeout.
 /// </summary>
-public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
+public class PostgreSqlBoxMigrationRunner(
+    IAmARelationalDatabaseConfiguration configuration,
+    TimeSpan lockTimeout) : IAmABoxMigrationRunner
 {
-    private readonly IAmARelationalDatabaseConfiguration _configuration;
-    private readonly TimeSpan _lockTimeout;
-
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
     private const int BRIGHTER_LOCK_NAMESPACE = 74726;
-
-    public PostgreSqlBoxMigrationRunner(
-        IAmARelationalDatabaseConfiguration configuration,
-        TimeSpan lockTimeout)
-    {
-        _configuration = configuration;
-        _lockTimeout = lockTimeout;
-    }
 
     /// <inheritdoc />
     public async Task MigrateAsync(
@@ -36,7 +27,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
     {
         var effectiveSchema = schemaName ?? "public";
 
-        using var connection = new NpgsqlConnection(_configuration.ConnectionString);
+        using var connection = new NpgsqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         await AcquireLockAsync(connection, tableName, cancellationToken);
@@ -82,7 +73,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
         CancellationToken cancellationToken)
     {
         var lockKey = $"BrighterMigration_{tableName}";
-        var deadline = DateTime.UtcNow.Add(_lockTimeout);
+        var deadline = DateTime.UtcNow.Add(lockTimeout);
         var delayMs = 100;
 
         while (true)
@@ -98,7 +89,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
             if (DateTime.UtcNow >= deadline)
             {
                 throw new TimeoutException(
-                    $"Could not acquire migration lock for '{tableName}' within {_lockTimeout.TotalSeconds}s.");
+                    $"Could not acquire migration lock for '{tableName}' within {lockTimeout.TotalSeconds}s.");
             }
 
             await Task.Delay(delayMs, cancellationToken);

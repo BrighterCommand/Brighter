@@ -5,10 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Paramore.Brighter.BoxProvisioning.MySql;
 
 /// <summary>
-/// Extension methods for registering MySQL box provisioners.
+/// Extension methods for registering MySQL box provisioners with <see cref="BoxProvisioningOptions"/>.
 /// </summary>
 public static class MySqlBoxProvisioningExtensions
 {
+    /// <summary>
+    /// Register MySQL outbox provisioning with an explicit configuration.
+    /// </summary>
     public static BoxProvisioningOptions AddMySqlOutbox(
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
@@ -23,6 +26,9 @@ public static class MySqlBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register MySQL outbox provisioning with a connection name resolved from IConfiguration at runtime.
+    /// </summary>
     public static BoxProvisioningOptions AddMySqlOutbox(
         this BoxProvisioningOptions options,
         string connectionName,
@@ -51,6 +57,9 @@ public static class MySqlBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register MySQL inbox provisioning with an explicit configuration.
+    /// </summary>
     public static BoxProvisioningOptions AddMySqlInbox(
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
@@ -65,6 +74,9 @@ public static class MySqlBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register MySQL inbox provisioning with a connection name resolved from IConfiguration at runtime.
+    /// </summary>
     public static BoxProvisioningOptions AddMySqlInbox(
         this BoxProvisioningOptions options,
         string connectionName,

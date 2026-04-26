@@ -10,20 +10,11 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// Runs box migrations against a MSSQL database. Uses sp_getapplock for
 /// concurrency control and a single transaction for all-or-nothing semantics.
 /// </summary>
-public class MsSqlBoxMigrationRunner : IAmABoxMigrationRunner
+public class MsSqlBoxMigrationRunner(
+    IAmARelationalDatabaseConfiguration configuration,
+    TimeSpan lockTimeout) : IAmABoxMigrationRunner
 {
-    private readonly IAmARelationalDatabaseConfiguration _configuration;
-    private readonly TimeSpan _lockTimeout;
-
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
-
-    public MsSqlBoxMigrationRunner(
-        IAmARelationalDatabaseConfiguration configuration,
-        TimeSpan lockTimeout)
-    {
-        _configuration = configuration;
-        _lockTimeout = lockTimeout;
-    }
 
     /// <inheritdoc />
     public async Task MigrateAsync(
@@ -35,7 +26,7 @@ public class MsSqlBoxMigrationRunner : IAmABoxMigrationRunner
     {
         var effectiveSchema = schemaName ?? "dbo";
 
-        using var connection = new SqlConnection(_configuration.ConnectionString);
+        using var connection = new SqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
 #if NETFRAMEWORK
@@ -94,6 +85,13 @@ public class MsSqlBoxMigrationRunner : IAmABoxMigrationRunner
         string tableName, CancellationToken cancellationToken)
     {
         var lockResource = $"BrighterMigration_{tableName}";
+        if (lockResource.Length > 255)
+        {
+            throw new ArgumentException(
+                $"sp_getapplock resource name '{lockResource}' exceeds the 255-character limit " +
+                $"(table name is {tableName.Length} chars). Use a shorter box table name.",
+                nameof(tableName));
+        }
 
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -106,14 +104,14 @@ public class MsSqlBoxMigrationRunner : IAmABoxMigrationRunner
             "@LockOwner = 'Transaction'; " +
             "SELECT @result;";
         command.Parameters.AddWithValue("@lockResourceName", lockResource);
-        command.Parameters.AddWithValue("@lockTimeoutMs", (int)_lockTimeout.TotalMilliseconds);
+        command.Parameters.AddWithValue("@lockTimeoutMs", (int)lockTimeout.TotalMilliseconds);
 
         var result = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
 
         if (result < 0)
         {
             throw new TimeoutException(
-                $"Could not acquire migration lock for '{tableName}' within {_lockTimeout.TotalSeconds}s. " +
+                $"Could not acquire migration lock for '{tableName}' within {lockTimeout.TotalSeconds}s. " +
                 $"sp_getapplock returned {result}.");
         }
     }

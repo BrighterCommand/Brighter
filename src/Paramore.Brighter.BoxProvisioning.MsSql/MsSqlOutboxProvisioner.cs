@@ -10,11 +10,10 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// Provisions a MSSQL outbox table. Creates the table if it doesn't exist,
 /// detects existing tables, and applies migrations.
 /// </summary>
-public class MsSqlOutboxProvisioner : IAmABoxProvisioner
+public class MsSqlOutboxProvisioner(
+    IAmARelationalDatabaseConfiguration configuration,
+    IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
-    private readonly IAmARelationalDatabaseConfiguration _configuration;
-    private readonly IAmABoxMigrationRunner _migrationRunner;
-
     private static readonly HashSet<string> V1Columns = new(StringComparer.OrdinalIgnoreCase)
     {
         "Id", "MessageId", "Topic", "MessageType", "Timestamp", "CorrelationId",
@@ -25,18 +24,10 @@ public class MsSqlOutboxProvisioner : IAmABoxProvisioner
 
     public BoxType BoxType => BoxType.Outbox;
 
-    public MsSqlOutboxProvisioner(
-        IAmARelationalDatabaseConfiguration configuration,
-        IAmABoxMigrationRunner migrationRunner)
-    {
-        _configuration = configuration;
-        _migrationRunner = migrationRunner;
-    }
-
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
-        var migrations = MsSqlOutboxMigrations.All(_configuration);
+        var migrations = MsSqlOutboxMigrations.All(configuration);
         var tableState = await DetectTableStateAsync(cancellationToken);
 
         if (tableState.TableExists)
@@ -44,9 +35,9 @@ public class MsSqlOutboxProvisioner : IAmABoxProvisioner
             await ValidatePayloadModeAsync(cancellationToken);
         }
 
-        await _migrationRunner.MigrateAsync(
-            _configuration.OutBoxTableName,
-            _configuration.SchemaName,
+        await migrationRunner.MigrateAsync(
+            configuration.OutBoxTableName,
+            configuration.SchemaName,
             migrations,
             tableState,
             cancellationToken);
@@ -54,40 +45,40 @@ public class MsSqlOutboxProvisioner : IAmABoxProvisioner
 
     private async Task<BoxTableState> DetectTableStateAsync(CancellationToken cancellationToken)
     {
-        var schemaName = _configuration.SchemaName ?? "dbo";
+        var schemaName = configuration.SchemaName ?? "dbo";
 
-        using var connection = new SqlConnection(_configuration.ConnectionString);
+        using var connection = new SqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         var tableExists = await MsSqlBoxDetectionHelpers.DoesTableExistAsync(
-            connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+            connection, configuration.OutBoxTableName, schemaName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         var historyExists = await MsSqlBoxDetectionHelpers.DoesHistoryExistAsync(
-            connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+            connection, configuration.OutBoxTableName, schemaName, cancellationToken);
         if (!historyExists)
         {
             var detectedVersion = await DetectCurrentVersionAsync(
-                connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+                connection, configuration.OutBoxTableName, schemaName, cancellationToken);
             return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
         }
 
         var maxVersion = await MsSqlBoxDetectionHelpers.GetMaxVersionAsync(
-            connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+            connection, configuration.OutBoxTableName, schemaName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
     private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
     {
-        var schemaName = _configuration.SchemaName ?? "dbo";
+        var schemaName = configuration.SchemaName ?? "dbo";
 
-        using var connection = new SqlConnection(_configuration.ConnectionString);
+        using var connection = new SqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         await MsSqlPayloadModeValidator.ValidateAsync(
-            connection, _configuration.OutBoxTableName, schemaName,
-            "Body", _configuration.BinaryMessagePayload, cancellationToken);
+            connection, configuration.OutBoxTableName, schemaName,
+            "Body", configuration.BinaryMessagePayload, cancellationToken);
     }
 
     private static async Task<int> DetectCurrentVersionAsync(

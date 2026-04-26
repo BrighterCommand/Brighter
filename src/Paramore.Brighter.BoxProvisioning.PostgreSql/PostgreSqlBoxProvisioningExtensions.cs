@@ -5,10 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
 /// <summary>
-/// Extension methods for registering PostgreSQL box provisioners.
+/// Extension methods for registering PostgreSQL box provisioners with <see cref="BoxProvisioningOptions"/>.
 /// </summary>
 public static class PostgreSqlBoxProvisioningExtensions
 {
+    /// <summary>
+    /// Register PostgreSQL outbox provisioning with an explicit configuration.
+    /// </summary>
     public static BoxProvisioningOptions AddPostgreSqlOutbox(
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
@@ -23,6 +26,9 @@ public static class PostgreSqlBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register PostgreSQL outbox provisioning with a connection name resolved from IConfiguration at runtime.
+    /// </summary>
     public static BoxProvisioningOptions AddPostgreSqlOutbox(
         this BoxProvisioningOptions options,
         string connectionName,
@@ -51,6 +57,9 @@ public static class PostgreSqlBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register PostgreSQL inbox provisioning with an explicit configuration.
+    /// </summary>
     public static BoxProvisioningOptions AddPostgreSqlInbox(
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
@@ -65,6 +74,9 @@ public static class PostgreSqlBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register PostgreSQL inbox provisioning with a connection name resolved from IConfiguration at runtime.
+    /// </summary>
     public static BoxProvisioningOptions AddPostgreSqlInbox(
         this BoxProvisioningOptions options,
         string connectionName,

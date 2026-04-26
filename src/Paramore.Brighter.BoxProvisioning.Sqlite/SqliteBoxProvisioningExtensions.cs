@@ -5,10 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 
 /// <summary>
-/// Extension methods for registering SQLite box provisioners.
+/// Extension methods for registering SQLite box provisioners with <see cref="BoxProvisioningOptions"/>.
 /// </summary>
 public static class SqliteBoxProvisioningExtensions
 {
+    /// <summary>
+    /// Register SQLite outbox provisioning with an explicit configuration.
+    /// </summary>
     public static BoxProvisioningOptions AddSqliteOutbox(
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
@@ -22,6 +25,9 @@ public static class SqliteBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register SQLite outbox provisioning with a connection name resolved from IConfiguration at runtime.
+    /// </summary>
     public static BoxProvisioningOptions AddSqliteOutbox(
         this BoxProvisioningOptions options,
         string connectionName,
@@ -47,6 +53,9 @@ public static class SqliteBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register SQLite inbox provisioning with an explicit configuration.
+    /// </summary>
     public static BoxProvisioningOptions AddSqliteInbox(
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
@@ -60,6 +69,9 @@ public static class SqliteBoxProvisioningExtensions
         return options;
     }
 
+    /// <summary>
+    /// Register SQLite inbox provisioning with a connection name resolved from IConfiguration at runtime.
+    /// </summary>
     public static BoxProvisioningOptions AddSqliteInbox(
         this BoxProvisioningOptions options,
         string connectionName,
