@@ -230,6 +230,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 //First add to the queue itself
                 await client.AddItemToListAsync(queue, nextMsgId.ToString(), cancellationToken);
+                var contents = await client.GetAllItemsFromListAsync(queue, cancellationToken);
+                Console.WriteLine($"[RDX] producer post-RPUSH '{nextMsgId}' to queue='{queue}' contents=[{string.Join(",", contents)}] clientHash={client.GetHashCode()}");
             }
             return queues;
         }
