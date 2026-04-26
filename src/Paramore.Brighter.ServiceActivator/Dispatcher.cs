@@ -287,84 +287,107 @@ namespace Paramore.Brighter.ServiceActivator
             // late-opened performer leaks and End() hangs forever in Task.WaitAny.
             var startup = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            _controlTask = Task.Factory.StartNew(() =>
-            {
-                if (State != DispatcherState.DS_AWAITING && State != DispatcherState.DS_STOPPED)
-                {
-                    startup.TrySetResult(true);
-                    return;
-                }
-
-                Log.DispatcherStarting(s_logger);
-
-                Consumer[] consumers;
-                try
-                {
-                    consumers = Consumers.OfType<Consumer>().ToArray();
-                    foreach (var consumer in consumers)
-                    {
-                        consumer.Open();
-                        if (consumer.Job is not null)
-                            _tasks.TryAdd(consumer.JobId, consumer.Job);
-                    }
-
-                    State = DispatcherState.DS_RUNNING;
-                    startup.TrySetResult(true);
-                }
-                catch (Exception ex)
-                {
-                    Log.ErrorOnConsumer(s_logger, ex);
-                    startup.TrySetException(ex);
-                    throw;
-                }
-
-                Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
-
-                while (!_tasks.IsEmpty)
-                {
-                    try
-                    {
-                        var runningTasks = _tasks.Values.ToArray();
-                        var index = Task.WaitAny(runningTasks);
-                        var stoppingConsumer = runningTasks[index];
-                        Log.PerformerStopped(s_logger, stoppingConsumer.Status);
-
-                        var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
-                        if (consumer != null)
-                        {
-                            Log.RemovingConsumer(s_logger, consumer.Name);
-
-                            if (_consumers.TryRemove(consumer.Name, out consumer))
-                            {
-                                consumer.Dispose();
-                            }
-                        }
-
-                        if (_tasks.TryRemove(stoppingConsumer.Id, out var removedTask))
-                        {
-                            removedTask?.Dispose();
-                        }
-
-                        stoppingConsumer.Dispose();
-                    }
-                    catch (AggregateException ae)
-                    {
-                        ae.Handle(ex =>
-                        {
-                            Log.ErrorOnConsumer(s_logger, ex);
-                            return true;
-                        });
-                    }
-                }
-
-                State = DispatcherState.DS_STOPPED;
-                Log.DispatcherStopped(s_logger);
-            },
-            CancellationToken.None,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default);
+            _controlTask = Task.Factory.StartNew(
+                () => RunControlLoop(startup),
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
 
             startup.Task.GetAwaiter().GetResult();
+        }
+
+        private void RunControlLoop(TaskCompletionSource<bool> startup)
+        {
+            if (State != DispatcherState.DS_AWAITING && State != DispatcherState.DS_STOPPED)
+            {
+                startup.TrySetResult(true);
+                return;
+            }
+
+            Log.DispatcherStarting(s_logger);
+
+            if (!TryOpenConsumers(startup))
+                return;
+
+            Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
+
+            WaitForPerformersToStop();
+
+            State = DispatcherState.DS_STOPPED;
+            Log.DispatcherStopped(s_logger);
+        }
+
+        private bool TryOpenConsumers(TaskCompletionSource<bool> startup)
+        {
+            try
+            {
+                foreach (var consumer in Consumers.OfType<Consumer>())
+                {
+                    consumer.Open();
+                    if (consumer.Job is not null)
+                        _tasks.TryAdd(consumer.JobId, consumer.Job);
+                }
+
+                State = DispatcherState.DS_RUNNING;
+                startup.TrySetResult(true);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.ErrorOnConsumer(s_logger, ex);
+                startup.TrySetException(ex);
+                throw;
+            }
+        }
+
+        private void WaitForPerformersToStop()
+        {
+            while (!_tasks.IsEmpty)
+            {
+                try
+                {
+                    HandleNextStoppedPerformer();
+                }
+                catch (AggregateException ae)
+                {
+                    ae.Handle(ex =>
+                    {
+                        Log.ErrorOnConsumer(s_logger, ex);
+                        return true;
+                    });
+                }
+            }
+        }
+
+        private void HandleNextStoppedPerformer()
+        {
+            var runningTasks = _tasks.Values.ToArray();
+            var index = Task.WaitAny(runningTasks);
+            var stoppingConsumer = runningTasks[index];
+            Log.PerformerStopped(s_logger, stoppingConsumer.Status);
+
+            RemoveConsumerForTask(stoppingConsumer);
+
+            if (_tasks.TryRemove(stoppingConsumer.Id, out var removedTask))
+            {
+                removedTask?.Dispose();
+            }
+
+            stoppingConsumer.Dispose();
+        }
+
+        private void RemoveConsumerForTask(Task stoppingConsumer)
+        {
+            var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
+            if (consumer is null)
+                return;
+
+            Log.RemovingConsumer(s_logger, consumer.Name);
+
+            if (_consumers.TryRemove(consumer.Name, out consumer))
+            {
+                consumer.Dispose();
+            }
         }
 
         private IEnumerable<Consumer> CreateConsumers(IEnumerable<Subscription> subscriptions)
