@@ -102,9 +102,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             var timeLeft = timeout.Value.TotalMilliseconds;
             while (!rc.IsDataValid && timeLeft > 0)
             {
-                Task.Delay(RetryDelay)
-                    .GetAwaiter()
-                    .GetResult();
+                Thread.Sleep(RetryDelay);
                 timeLeft -= RetryDelay;
                 rc = TryReceive(topic);
             }
