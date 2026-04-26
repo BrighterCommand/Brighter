@@ -55,12 +55,12 @@ public class PostgreSqlInboxProvisioner : IAmABoxProvisioner
         using var connection = new NpgsqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        var tableExists = await PostgreSqlOutboxProvisioner.DoesTableExistAsync(
+        var tableExists = await PostgreSqlBoxDetectionHelpers.DoesTableExistAsync(
             connection, _configuration.InBoxTableName, schemaName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        var historyExists = await PostgreSqlOutboxProvisioner.DoesHistoryExistAsync(
+        var historyExists = await PostgreSqlBoxDetectionHelpers.DoesHistoryExistAsync(
             connection, _configuration.InBoxTableName, schemaName, cancellationToken);
         if (!historyExists)
         {
@@ -69,7 +69,7 @@ public class PostgreSqlInboxProvisioner : IAmABoxProvisioner
             return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
         }
 
-        var maxVersion = await PostgreSqlOutboxProvisioner.GetMaxVersionAsync(
+        var maxVersion = await PostgreSqlBoxDetectionHelpers.GetMaxVersionAsync(
             connection, _configuration.InBoxTableName, schemaName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
@@ -90,7 +90,7 @@ public class PostgreSqlInboxProvisioner : IAmABoxProvisioner
         NpgsqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        var actualColumns = await PostgreSqlOutboxProvisioner.GetTableColumnsAsync(
+        var actualColumns = await PostgreSqlBoxDetectionHelpers.GetTableColumnsAsync(
             connection, tableName, schemaName, cancellationToken);
         if (actualColumns.IsSupersetOf(V1Columns)) return 1;
         return 0;

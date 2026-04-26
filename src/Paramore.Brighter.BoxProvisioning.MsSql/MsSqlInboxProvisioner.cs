@@ -56,12 +56,12 @@ public class MsSqlInboxProvisioner : IAmABoxProvisioner
         using var connection = new SqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        var tableExists = await MsSqlOutboxProvisioner.DoesTableExistAsync(
+        var tableExists = await MsSqlBoxDetectionHelpers.DoesTableExistAsync(
             connection, _configuration.InBoxTableName, schemaName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        var historyExists = await MsSqlOutboxProvisioner.DoesHistoryExistAsync(
+        var historyExists = await MsSqlBoxDetectionHelpers.DoesHistoryExistAsync(
             connection, _configuration.InBoxTableName, schemaName, cancellationToken);
         if (!historyExists)
         {
@@ -70,7 +70,7 @@ public class MsSqlInboxProvisioner : IAmABoxProvisioner
             return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
         }
 
-        var maxVersion = await MsSqlOutboxProvisioner.GetMaxVersionAsync(
+        var maxVersion = await MsSqlBoxDetectionHelpers.GetMaxVersionAsync(
             connection, _configuration.InBoxTableName, schemaName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
@@ -91,7 +91,7 @@ public class MsSqlInboxProvisioner : IAmABoxProvisioner
         SqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        var actualColumns = await MsSqlOutboxProvisioner.GetTableColumnsAsync(
+        var actualColumns = await MsSqlBoxDetectionHelpers.GetTableColumnsAsync(
             connection, tableName, schemaName, cancellationToken);
         if (actualColumns.IsSupersetOf(V1Columns)) return 1;
         return 0;

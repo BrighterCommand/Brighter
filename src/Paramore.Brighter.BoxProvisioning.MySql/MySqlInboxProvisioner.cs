@@ -46,12 +46,12 @@ public class MySqlInboxProvisioner(
         using var connection = new MySqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        var tableExists = await MySqlOutboxProvisioner.DoesTableExistAsync(
+        var tableExists = await MySqlBoxDetectionHelpers.DoesTableExistAsync(
             connection, configuration.InBoxTableName, schemaName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        var historyExists = await MySqlOutboxProvisioner.DoesHistoryExistAsync(
+        var historyExists = await MySqlBoxDetectionHelpers.DoesHistoryExistAsync(
             connection, configuration.InBoxTableName, schemaName, cancellationToken);
 
         if (!historyExists)
@@ -61,7 +61,7 @@ public class MySqlInboxProvisioner(
             return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
         }
 
-        var maxVersion = await MySqlOutboxProvisioner.GetMaxVersionAsync(
+        var maxVersion = await MySqlBoxDetectionHelpers.GetMaxVersionAsync(
             connection, configuration.InBoxTableName, schemaName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
@@ -82,7 +82,7 @@ public class MySqlInboxProvisioner(
         MySqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        var actualColumns = await MySqlOutboxProvisioner.GetTableColumnsAsync(
+        var actualColumns = await MySqlBoxDetectionHelpers.GetTableColumnsAsync(
             connection, tableName, schemaName, cancellationToken);
         if (actualColumns.IsSupersetOf(V1Columns)) return 1;
         return 0;

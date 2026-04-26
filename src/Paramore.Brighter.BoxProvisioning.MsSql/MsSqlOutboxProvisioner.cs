@@ -15,7 +15,7 @@ public class MsSqlOutboxProvisioner : IAmABoxProvisioner
     private readonly IAmARelationalDatabaseConfiguration _configuration;
     private readonly IAmABoxMigrationRunner _migrationRunner;
 
-    internal static readonly HashSet<string> V1Columns = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> V1Columns = new(StringComparer.OrdinalIgnoreCase)
     {
         "Id", "MessageId", "Topic", "MessageType", "Timestamp", "CorrelationId",
         "ReplyTo", "ContentType", "PartitionKey", "WorkflowId", "JobId", "Dispatched",
@@ -59,18 +59,22 @@ public class MsSqlOutboxProvisioner : IAmABoxProvisioner
         using var connection = new SqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        var tableExists = await DoesTableExistAsync(connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+        var tableExists = await MsSqlBoxDetectionHelpers.DoesTableExistAsync(
+            connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        var historyExists = await DoesHistoryExistAsync(connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+        var historyExists = await MsSqlBoxDetectionHelpers.DoesHistoryExistAsync(
+            connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
         if (!historyExists)
         {
-            var detectedVersion = await DetectCurrentVersionAsync(connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+            var detectedVersion = await DetectCurrentVersionAsync(
+                connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
             return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
         }
 
-        var maxVersion = await GetMaxVersionAsync(connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
+        var maxVersion = await MsSqlBoxDetectionHelpers.GetMaxVersionAsync(
+            connection, _configuration.OutBoxTableName, schemaName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
@@ -86,82 +90,13 @@ public class MsSqlOutboxProvisioner : IAmABoxProvisioner
             "Body", _configuration.BinaryMessagePayload, cancellationToken);
     }
 
-    internal static async Task<bool> DoesTableExistAsync(
+    private static async Task<int> DetectCurrentVersionAsync(
         SqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT COUNT(1) FROM sys.tables t
-INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
-WHERE t.name = @TableName AND s.name = @SchemaName";
-        command.Parameters.AddWithValue("@TableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-
-        var count = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
-        return count > 0;
-    }
-
-    internal static async Task<bool> DoesHistoryExistAsync(
-        SqlConnection connection, string tableName, string schemaName,
-        CancellationToken cancellationToken)
-    {
-        // Check if history table exists
-        var historyTableExists = await DoesTableExistAsync(connection, "__BrighterMigrationHistory", "dbo", cancellationToken);
-        if (!historyTableExists)
-            return false;
-
-        using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT COUNT(1) FROM [__BrighterMigrationHistory]
-WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-
-        var count = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
-        return count > 0;
-    }
-
-    internal static async Task<int> DetectCurrentVersionAsync(
-        SqlConnection connection, string tableName, string schemaName,
-        CancellationToken cancellationToken)
-    {
-        var actualColumns = await GetTableColumnsAsync(connection, tableName, schemaName, cancellationToken);
+        var actualColumns = await MsSqlBoxDetectionHelpers.GetTableColumnsAsync(
+            connection, tableName, schemaName, cancellationToken);
         if (actualColumns.IsSupersetOf(V1Columns)) return 1;
         return 0;
-    }
-
-    internal static async Task<int> GetMaxVersionAsync(
-        SqlConnection connection, string tableName, string schemaName,
-        CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT ISNULL(MAX([MigrationVersion]), 0) FROM [__BrighterMigrationHistory]
-WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-
-        return (int)(await command.ExecuteScalarAsync(cancellationToken))!;
-    }
-
-    internal static async Task<HashSet<string>> GetTableColumnsAsync(
-        SqlConnection connection, string tableName, string schemaName,
-        CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = @TableName AND TABLE_SCHEMA = @SchemaName";
-        command.Parameters.AddWithValue("@TableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-
-        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            columns.Add(reader.GetString(0));
-        }
-        return columns;
     }
 }

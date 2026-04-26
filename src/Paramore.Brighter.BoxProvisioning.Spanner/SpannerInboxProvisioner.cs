@@ -44,12 +44,12 @@ public class SpannerInboxProvisioner(
         using var connection = SpannerConnectionHelper.CreateConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        var tableExists = await SpannerOutboxProvisioner.DoesTableExistAsync(
+        var tableExists = await SpannerBoxDetectionHelpers.DoesTableExistAsync(
             connection, configuration.InBoxTableName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        var historyExists = await SpannerOutboxProvisioner.DoesHistoryExistAsync(
+        var historyExists = await SpannerBoxDetectionHelpers.DoesHistoryExistAsync(
             connection, configuration.InBoxTableName, cancellationToken);
 
         if (!historyExists)
@@ -59,7 +59,7 @@ public class SpannerInboxProvisioner(
             return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
         }
 
-        var maxVersion = await SpannerOutboxProvisioner.GetMaxVersionAsync(
+        var maxVersion = await SpannerBoxDetectionHelpers.GetMaxVersionAsync(
             connection, configuration.InBoxTableName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
@@ -78,7 +78,7 @@ public class SpannerInboxProvisioner(
         SpannerConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
-        var actualColumns = await SpannerOutboxProvisioner.GetTableColumnsAsync(
+        var actualColumns = await SpannerBoxDetectionHelpers.GetTableColumnsAsync(
             connection, tableName, cancellationToken);
         if (actualColumns.IsSupersetOf(V1Columns)) return 1;
         return 0;

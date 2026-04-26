@@ -44,12 +44,12 @@ public class SqliteInboxProvisioner(
         using var connection = new SqliteConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        var tableExists = await SqliteOutboxProvisioner.DoesTableExistAsync(
+        var tableExists = await SqliteBoxDetectionHelpers.DoesTableExistAsync(
             connection, configuration.InBoxTableName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        var historyExists = await SqliteOutboxProvisioner.DoesHistoryExistAsync(
+        var historyExists = await SqliteBoxDetectionHelpers.DoesHistoryExistAsync(
             connection, configuration.InBoxTableName, cancellationToken);
 
         if (!historyExists)
@@ -59,7 +59,7 @@ public class SqliteInboxProvisioner(
             return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
         }
 
-        var maxVersion = await SqliteOutboxProvisioner.GetMaxVersionAsync(
+        var maxVersion = await SqliteBoxDetectionHelpers.GetMaxVersionAsync(
             connection, configuration.InBoxTableName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
@@ -74,11 +74,11 @@ public class SqliteInboxProvisioner(
             "CommandBody", configuration.BinaryMessagePayload, cancellationToken);
     }
 
-    internal static async Task<int> DetectCurrentVersionAsync(
+    private static async Task<int> DetectCurrentVersionAsync(
         SqliteConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
-        var actualColumns = await SqliteOutboxProvisioner.GetTableColumnsAsync(
+        var actualColumns = await SqliteBoxDetectionHelpers.GetTableColumnsAsync(
             connection, tableName, cancellationToken);
         if (actualColumns.IsSupersetOf(V1Columns)) return 1;
         return 0;
