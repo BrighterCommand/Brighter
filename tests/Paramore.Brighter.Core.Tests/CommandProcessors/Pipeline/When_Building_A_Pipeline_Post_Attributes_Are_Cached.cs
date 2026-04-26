@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,9 +30,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
 
-            var handlerName = nameof(MyPreAndPostDecoratedHandler);
-            Assert.True(PostAttributesCacheContains(handlerName),
-                "s_postAttributesMemento should contain an entry for the handler after the sync pipeline is built");
+            Assert.Contains(nameof(MyPreAndPostDecoratedHandler), GetPostAttributesCacheKeys());
         }
 
         [Fact]
@@ -53,12 +52,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             pipelineBuilder.BuildAsync(new MyCommand(), new RequestContext(), false).First();
 
-            var handlerName = nameof(MyPreAndPostDecoratedHandlerAsync);
-            Assert.True(PostAttributesCacheContains(handlerName),
-                "s_postAttributesMemento should contain an entry for the handler after the async pipeline is built");
+            Assert.Contains(nameof(MyPreAndPostDecoratedHandlerAsync), GetPostAttributesCacheKeys());
         }
 
-        private static bool PostAttributesCacheContains(string handlerName)
+        private static IEnumerable<string> GetPostAttributesCacheKeys()
         {
             var field = typeof(PipelineBuilder<MyCommand>).GetField(
                 "s_postAttributesMemento",
@@ -66,7 +63,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             Assert.NotNull(field);
 
             var cache = (IDictionary)field!.GetValue(null)!;
-            return cache.Contains(handlerName);
+            return cache.Keys.Cast<string>();
         }
     }
 }
