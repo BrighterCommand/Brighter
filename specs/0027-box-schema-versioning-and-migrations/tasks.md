@@ -33,11 +33,13 @@ Spec 0023 findings closed out as side-effects:
 
 ## Phase 0: Shared groundwork
 
+> **⚠ Single-commit constraint (Phase 0)**: Tasks **0.1, 0.2, 0.3, and 0.3a MUST land as a single commit**. The interface extension in 0.1 is source-breaking, so committing 0.1 alone leaves the build red across every consuming project; committing 0.3 without 0.3a leaves the test suite red. Task **0.4 may follow as a separate commit** — its drift-detection infrastructure (`DdlColumnExtractor` + per-backend test) compiles and runs independently of 0.1/0.2/0.3/0.3a. Per ADR 0057 line 367 ("Shared groundwork (one commit)").
+
 ### Task 0.1: Extend `IAmABoxMigration` with logical-column, source-reference, and SQLite idempotency members
 
 - [ ] **IMPLEMENT: Add `LogicalColumns`, `SourceReference`, `IdempotencyCheckSql` to `IAmABoxMigration`**
   - File: `src/Paramore.Brighter.BoxProvisioning/IAmABoxMigration.cs`
-  - Add `IReadOnlySet<string> LogicalColumns { get; }` as required member (source-breaking — acknowledged in ADR 0057 "Consequences → Negative")
+  - Add `ISet<string> LogicalColumns { get; }` as required member (source-breaking — acknowledged in ADR 0057 "Consequences → Negative"). **Use `ISet<string>` not `IReadOnlySet<string>`**: `IReadOnlySet<T>` is .NET 5+ and unavailable on `netstandard2.0` (per requirements C-5); `ISet<string>` provides the `Contains`/`IsSupersetOf` semantics detection needs, with read-only-by-convention enforcement (implementations populate once and never mutate)
   - Add `string? SourceReference { get; }` as required nullable member
   - Add `string? IdempotencyCheckSql { get; }` as required nullable member (null on MSSQL/Postgres/MySQL; non-null on SQLite V2+)
   - XML-doc each member describing its role per ADR 0057 §4
@@ -79,17 +81,18 @@ Spec 0023 findings closed out as side-effects:
 
 - [ ] **IMPLEMENT: Retarget existing fresh-install / bootstrap / idempotent / concurrent tests to `V_latest`**
   - Existing tests (written against the single-V1 model of spec 0023) hard-code SQL predicates like `[MigrationVersion] = 1` and C# assertions of the same shape. Once Phase 1–5 ships, fresh install stamps `V_latest` (outbox = 7, inbox = 2 for relational; same for Spanner) — these assertions will fail without update.
+  - **Selection criterion**: every test file containing a hard-coded `MigrationVersion = 1` assertion (SQL predicate, parameterised SQL, or C# `Assert`) — confirmed at task-execution time by `grep -rn 'MigrationVersion.*=.*1\|MigrationVersion.*1' tests/Paramore.Brighter.*Tests/BoxProvisioning/`. The 23 files enumerated below are the current matches; if grep surfaces additional files at task-execution time, add them to the retarget set.
   - Files to update (23 files confirmed by grep — do all in one commit to keep Phase 0 green-build):
     - **MSSQL** (6): `When_mssql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`, `When_mssql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap.cs`, `When_mssql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent.cs`, `When_multiple_mssql_provisioners_run_concurrently_they_should_not_corrupt_state.cs`, `When_mssql_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table.cs`, `When_mssql_inbox_provisioner_finds_existing_table_without_history_it_should_bootstrap.cs`
-    - **PostgreSQL** (6): analogous files under `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
+    - **PostgreSQL** (6): `When_postgresql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`, `When_postgresql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap.cs`, `When_postgresql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent.cs`, `When_multiple_postgresql_provisioners_run_concurrently_they_should_not_corrupt_state.cs`, `When_postgresql_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table.cs`, `When_postgresql_inbox_provisioner_finds_existing_table_without_history_it_should_bootstrap.cs`
     - **MySQL** (4): `When_mysql_outbox_provisioner_runs_on_fresh_database_*`, `When_mysql_outbox_provisioner_finds_existing_table_without_history_*`, `When_multiple_mysql_provisioners_run_concurrently_*`, `When_mysql_inbox_provisioner_runs_it_should_create_table_or_bootstrap_existing.cs`
-    - **SQLite** (3): analogous outbox + combined-inbox files under `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
-    - **Spanner** (4): all four under `tests/Paramore.Brighter.Gcp.Tests/Spanner/BoxProvisioning/`
+    - **SQLite** (3): `When_sqlite_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`, `When_sqlite_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap.cs`, `When_sqlite_inbox_provisioner_runs_it_should_create_table_or_bootstrap_existing.cs`
+    - **Spanner** (4): `When_spanner_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`, `When_spanner_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap.cs`, `When_spanner_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table.cs`, `When_spanner_inbox_provisioner_finds_existing_table_without_history_it_should_bootstrap.cs`
   - Replace `[MigrationVersion] = 1` SQL predicates with `[MigrationVersion] = @ExpectedVersion` and parameterise on a constant `V_LATEST_OUTBOX = 7` / `V_LATEST_INBOX = 2` imported from a shared `ExpectedMigrationVersions.cs` helper in each test project's `BoxProvisioning/` directory.
   - For bootstrap tests that also happen to seed a V7-shaped table: change the assertion to expect a synthetic row at `V_LATEST` + no additional rows (fresh-install path — detection returns `V_LATEST` and runner stamps directly).
   - For concurrent tests: assert `COUNT(*) = 1` for the history row at `V_LATEST` instead of at `V=1`.
   - No new tests — this task retargets existing tests; Phase 1–5 bootstrap-at-V_k and fresh-install tests add the new behavioural coverage.
-  - **Dependency**: must land with or immediately after Task 0.3 to keep CI green.
+  - **Dependency**: subject to the Phase-0 single-commit constraint at the top of this phase — Tasks 0.1 / 0.2 / 0.3 / 0.3a all land in the same commit. Splitting 0.3 from 0.3a leaves the test suite red.
 
 ### Task 0.4: Add drift-detection test infrastructure
 
@@ -108,6 +111,7 @@ Spec 0023 findings closed out as side-effects:
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Add test-project helper `DdlColumnExtractor` in `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/Drift/DdlColumnExtractor.cs`
+    - Define a co-located test-project enum `public enum QuoteStyle { MsSql, Postgres, MySql, Sqlite }` (also in `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/Drift/QuoteStyle.cs`) — values are referenced by name from per-backend drift tests in 1.1 / 2.1 / 3.1 / 4.1
     - Regex-based extraction per backend quote style — parses the `(...)` body of `CREATE TABLE ...`, splits on top-level commas, extracts the first quoted identifier on each column-declaration line, filters out lines beginning with `CONSTRAINT` / `PRIMARY KEY` / `FOREIGN KEY` / `UNIQUE` / `INDEX`
     - Inline `COLLATE <name>` clauses are harmless because the extractor only reads the first quoted identifier on the line — but document this explicitly in a code comment
     - Returns `HashSet<string>` with the backend-appropriate comparer (Ordinal for Postgres, OrdinalIgnoreCase otherwise)
@@ -188,20 +192,25 @@ Spec 0023 findings closed out as side-effects:
   - **USE COMMAND**: `/test-first when mssql runner fresh path acquires lock it should re-check table existence before creating`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating.cs`
-  - Test should verify:
-    - Given a `BoxTableState { TableExists=false }` passed to `MigrateAsync` but the table actually exists at SQL time (simulates race — seed the table directly before calling `MigrateAsync`)
+  - Test should verify (TOCTOU symptom only — bootstrap end-state is verified by Tasks 1.5 / 1.6):
+    - Given a `BoxTableState { TableExists=false }` passed to `MigrateAsync`, but seed a V_latest-shape outbox table (V7 columns present, no `__BrighterMigrationHistory` row) directly before calling `MigrateAsync` — simulates the race where `DetectTableStateAsync` ran before another instance created the table
     - When `MigrateAsync` runs
-    - Then no `CREATE TABLE` duplicate-object exception is thrown — runner falls through to bootstrap and stamps history
-    - Exactly one history row per migration is inserted
+    - Then **no `CREATE TABLE` duplicate-object exception is thrown** — TOCTOU re-check sees `tableExistsNow=true && historyExistsNow=false` and falls through to bootstrap instead of attempting CREATE TABLE on an existing table
+    - Then **at least one history row is inserted** (existence proves the bootstrap branch executed; the specific Version values and synthetic-row description are concerns of Tasks 1.5 / 1.6, not 1.4)
+    - Then **the seeded table data is preserved** (no DROP/recreate happened — fresh path was correctly aborted)
+    - Note: this test is deliberately permissive about the exact bootstrap output. It catches the bug "fresh path didn't TOCTOU re-check and tried to CREATE TABLE on an existing table"; it does NOT verify what bootstrap detection returns or which migrations apply — those are downstream concerns
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - In `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlBoxMigrationRunner.cs` `MigrateAsync`:
       - After `AcquireLockAsync`, re-run `DoesTableExistAsync` and `DoesHistoryExistAsync`
       - Branch on `(!tableExistsNow)` → fresh path: execute V1 UpScript, insert single history at V_latest
-      - Branch on `(tableExistsNow && !historyExistsNow)` → bootstrap path: invoke detection (with discriminator gate from Task 1.5), stamp synthetic history at detected V, run migrations V+1..V_latest
+      - Branch on `(tableExistsNow && !historyExistsNow)` → bootstrap path: invoke `MsSqlBoxDetectionHelpers.DetectCurrentVersionAsync(...)` (the helper introduced by Task 1.5 — same method the provisioner uses pre-lock; see ADR §3 "Detection helper ownership"); apply discriminator gate from Task 1.5; stamp synthetic history at detected V; run migrations V+1..V_latest
       - Branch on `(tableExistsNow && historyExistsNow)` → normal path: read `MAX(V)` from history, run migrations above MAX
       - All three paths share the single transaction and `sp_getapplock` from current code
+    - **Detection ownership**: after Task 1.5 moves detection into `MsSqlBoxDetectionHelpers`, the runner calls the helper for re-detection under the lock; it does not inline detection logic. The runner does not trust `tableState.CurrentVersion` from the pre-lock pass — the bootstrap path re-detects every time
     - The runner no longer trusts `tableState` blindly — it re-reads under the lock
+  - **Test/impl scope note**: this task's test exercises only the fresh-path TOCTOU symptom (the most subtle race). The bootstrap-path branching is exercised by Task 1.5 (discriminator gate) and Tasks 1.6/1.7 (bootstrap-at-V_k); the normal-path branching is exercised by Task 1.9 (spec-0023-era transition). Implementation must satisfy all three paths but each is test-driven by a downstream task. This pattern repeats in 2.4 / 3.4 / 4.4
+  - **Pairing constraint**: the runner's bootstrap branch invokes `MsSqlBoxDetectionHelpers.DetectCurrentVersionAsync`, which **does not exist until Task 1.5 implements it**. Therefore Tasks 1.4 and 1.5 land in the **same commit** — write 1.4's test, write 1.5's test, then implement the runner branching (1.4) + the helper method (1.5) together so both test suites compile and turn green simultaneously. The same pairing applies to 2.4↔2.5, 3.4↔3.5, 4.4↔4.5
 
 ### Task 1.5: MSSQL discriminator-gated detection returns `-1`, `0`, or `V>=1`
 
@@ -211,7 +220,7 @@ Spec 0023 findings closed out as side-effects:
   - Test file: `When_mssql_outbox_detects_table_missing_headerbag_discriminator_it_should_return_negative_one.cs`
   - Test should verify:
     - Given a table that exists but has no `HeaderBag` column (e.g. a two-column `CommandId, Timestamp` foreign table)
-    - When `MsSqlOutboxProvisioner.DetectCurrentVersionAsync` is called
+    - When `MsSqlBoxDetectionHelpers.DetectCurrentVersionAsync` is called for outbox
     - Then it returns `-1`
     - When `ProvisionAsync` runs against such a table, it throws `ConfigurationException` with message containing "not a Brighter outbox" and the discriminator column name
     - Add analogous test for inbox discriminator (`CommandBody`) absent → `-1`
@@ -219,14 +228,15 @@ Spec 0023 findings closed out as side-effects:
     - Add test: a V3-shaped outbox table (has HeaderBag + CorrelationId + ReplyTo + ContentType + baseline but no PartitionKey) → returns `3`
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Rewrite `MsSqlOutboxProvisioner.DetectCurrentVersionAsync` per ADR §2 algorithm:
-      - `if (!actualColumns.Contains("HeaderBag")) return -1;`
+    - **Move and rewrite** `DetectCurrentVersionAsync` from `MsSqlOutboxProvisioner` and `MsSqlInboxProvisioner` into `MsSqlBoxDetectionHelpers` as two new static methods (`DetectOutboxVersionAsync` and `DetectInboxVersionAsync`, or a single overloaded method taking the discriminator as a parameter). Detection becomes the single source of version-from-columns logic, callable by both the provisioner (pre-lock) and the runner (post-lock TOCTOU re-detection per Task 1.4 / ADR §3)
+    - Method signature: `static Task<int> DetectCurrentVersionAsync(SqlConnection conn, SqlTransaction? txn, string tableName, string? schemaName, IReadOnlyList<IAmABoxMigration> migrations, string discriminatorColumn, CancellationToken ct)`
+    - Algorithm per ADR §2:
+      - `if (!actualColumns.Contains(discriminatorColumn)) return -1;`
       - Walk `migrations` top-down; return highest `V` where `actualColumns.IsSupersetOf(migration.LogicalColumns)`
       - Return `0` if discriminator present but no version matched
-    - Pass migrations list into the detection method (change signature to accept `IReadOnlyList<IAmABoxMigration>` instead of the static `V1Columns` set)
-    - Delete `MsSqlOutboxProvisioner.V1Columns` static set (no longer used)
-    - Do the same for `MsSqlInboxProvisioner` with `"CommandBody"` discriminator
-    - In the runner's bootstrap path (Task 1.4), branch on detection return: `-1`/`0` → throw `ConfigurationException`; `>=1` → proceed
+    - Update `MsSqlOutboxProvisioner.DetectTableStateAsync` and `MsSqlInboxProvisioner.DetectTableStateAsync` to call the helper instead of holding their own private detection method; pass `"HeaderBag"` (outbox) or `"CommandBody"` (inbox) as discriminator
+    - Delete the now-private `MsSqlOutboxProvisioner.V1Columns` / equivalent static sets (no longer used)
+    - In the runner's bootstrap path (Task 1.4), invoke `MsSqlBoxDetectionHelpers.DetectCurrentVersionAsync` directly under the lock; branch on return: `-1`/`0` → throw `ConfigurationException`; `>=1` → proceed
 
 ### Task 1.6: MSSQL bootstrap-at-V_k end-to-end per outbox version
 
@@ -235,12 +245,12 @@ Spec 0023 findings closed out as side-effects:
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7_with_history_advanced.cs`
   - Test should verify (use Theory / parameterised test; one inline data row per version):
-    - For k ∈ {1, 3, 5, 7}: seed a table hand-rolled with the V_k column set (no history row). Run provisioner. Assert:
+    - **Bootstrap-at-V_k** (this task only): for k ∈ {1, 3, 5, 7}, seed a table hand-rolled with the V_k column set (no history row). Run provisioner. Assert:
       - Table now has the full V7 column set
-      - History has one synthetic row at V_k (description starts with `bootstrap:`) + one row per applied migration V_{k+1}..V7
-      - For k=7: only the synthetic bootstrap row — no ALTERs applied
+      - History has one synthetic row at V_k (description starts with `bootstrap: detected at V{k}`) + one row per applied migration V_{k+1}..V7
+      - For k=7: only the synthetic bootstrap row at V7 (description `bootstrap: detected at V7`) — no ALTERs applied
       - Data in seeded rows survives
-    - Fresh-install case (table absent): provisioner creates V7 table, single history row at V7 with description starting with `fresh install`
+    - **Fresh-install case** is NOT covered here; it is verified by the existing fresh-install test (`When_mssql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table.cs`) after Task 0.3a retargets it to V_latest with description starting `fresh install at V_latest`. Two semantically distinct paths (bootstrap-with-seeded-data vs fresh-install-without-table) must not be bundled into the same Theory
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Seed helper: `MsSqlOutboxLegacySeeder.SeedAtV(k, connection)` — raw `CREATE TABLE` scripts for each historical version (k=1..7) in `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/Legacy/MsSqlOutboxLegacySeeder.cs`
@@ -409,8 +419,9 @@ Spec 0023 findings closed out as side-effects:
     - Inbox: foreign table without `commandbody` → -1; valid V1 inbox → 1 (detection must work with 1-entry migration list)
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Rewrite `PostgreSqlOutboxProvisioner.DetectCurrentVersionAsync` + `PostgreSqlInboxProvisioner.DetectCurrentVersionAsync` per ADR §2 (lowercase discriminator: `"headerbag"` / `"commandbody"`)
+    - **Move and rewrite** detection from `PostgreSqlOutboxProvisioner` / `PostgreSqlInboxProvisioner` into `PostgreSqlBoxDetectionHelpers.DetectCurrentVersionAsync` per ADR §2 (lowercase discriminator: `"headerbag"` / `"commandbody"`); same single-source-of-truth pattern as Task 1.5
     - Walk migrations top-down; return highest match
+    - Provisioner's `DetectTableStateAsync` calls the helper; runner re-invokes the helper under `pg_try_advisory_lock` per Task 2.4
     - Delete any static V1Columns field; accept migrations list as parameter
 
 ### Task 2.6: Postgres bootstrap-at-V_k test
@@ -539,8 +550,9 @@ Spec 0023 findings closed out as side-effects:
   - Test should verify: same matrix as Task 1.5 (outbox + inbox; -1 / 0 / V≥1 cases) — MySQL-specific
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Rewrite `MySqlOutboxProvisioner.DetectCurrentVersionAsync` + `MySqlInboxProvisioner.DetectCurrentVersionAsync`
+    - **Move and rewrite** detection from `MySqlOutboxProvisioner` / `MySqlInboxProvisioner` into `MySqlBoxDetectionHelpers.DetectCurrentVersionAsync` (same pattern as Task 1.5 / 2.5)
     - Use case-insensitive comparison (MySQL default collation)
+    - Provisioner's `DetectTableStateAsync` calls the helper; runner re-invokes under `GET_LOCK` per Task 3.4
 
 ### Task 3.6: MySQL bootstrap-at-V_k test
 
@@ -552,6 +564,24 @@ Spec 0023 findings closed out as side-effects:
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - `MySqlOutboxLegacySeeder.SeedAtV(k, connection)` in `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/Legacy/`
+
+### Task 3.6a: MySQL inbox bootstrap V1 → V2
+
+- [ ] **TEST + IMPLEMENT: MySQL inbox bootstrap upgrades pre-V2 tables to V2**
+  - **USE COMMAND**: `/test-first when mysql inbox table is bootstrapped at v1 it should upgrade to v2`
+  - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
+  - Test file: `When_mysql_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v2.cs`
+  - Test should verify:
+    - Seed a V1 MySQL inbox (no `ContextKey` column, no history row)
+    - Run provisioner
+    - Assert V2 shape, synthetic history at V1 + applied row at V2
+    - Seeded rows survive (NULL `ContextKey` on existing rows)
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - Add `MySqlInboxLegacySeeder.SeedAtV1(connection)` in `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/Legacy/`
+    - V2 UpScript (information_schema + prepared-statement ContextKey ADD from Task 3.3) executes; history rows inserted via per-migration implicit-commit model (ADR §5a)
+    - Mirrors Task 1.7 (MSSQL) and Task 4.7 (SQLite) — single-instance bootstrap, AC-2 case
+  - Closes AC-2 for MySQL
 
 ### Task 3.7: MySQL concurrent-bootstrap race test (outbox + inbox)
 
@@ -641,9 +671,10 @@ Spec 0023 findings closed out as side-effects:
     - Modify `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteBoxMigrationRunner.cs` `MigrateAsync`:
       - Replace `BEGIN DEFERRED` (or current default) with `BEGIN IMMEDIATE TRANSACTION`
       - Wrap acquire in a retry loop on `SQLITE_BUSY` — exponential backoff up to `_lockTimeout`
-      - Three-path branching per ADR §3 (fresh / bootstrap / normal)
+      - Three-path branching per ADR §3 (fresh / bootstrap / normal); call `SqliteBoxDetectionHelpers.DetectCurrentVersionAsync` for re-detection in the bootstrap path (per ADR §3 "Detection helper ownership")
       - TOCTOU re-check of table / history existence after lock acquired
       - For V2..V7: execute `IdempotencyCheckSql` first; if scalar > 0 skip `UpScript` (still insert history row)
+  - **Test/impl scope note**: this task's test exercises only `SQLITE_BUSY` retry under contention — the most SQLite-specific concern. The other implementation behaviors are test-driven by downstream tasks: bootstrap-path branching by Tasks 4.5/4.6/4.7; TOCTOU re-check by Task 4.8 (concurrent bootstrap); `IdempotencyCheckSql` skip path by Task 4.9 (spec-0023-era transition where every column is already present); whole-chain rollback by Task 4.8a. Implementation must satisfy all of these but each is verified by a dedicated downstream test — same pattern as Task 1.4 / 2.4 / 3.4
 
 ### Task 4.5: SQLite discriminator-gated detection
 
@@ -654,9 +685,10 @@ Spec 0023 findings closed out as side-effects:
   - Test should verify: same matrix as Task 1.5, SQLite-specific
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Rewrite `SqliteOutboxProvisioner.DetectCurrentVersionAsync` / `SqliteInboxProvisioner.DetectCurrentVersionAsync`
+    - **Move and rewrite** detection from `SqliteOutboxProvisioner` / `SqliteInboxProvisioner` into `SqliteBoxDetectionHelpers.DetectCurrentVersionAsync` (same pattern as Task 1.5 / 2.5 / 3.5)
     - Use `pragma_table_info(tableName)` to enumerate columns
     - Case-insensitive comparer (`StringComparer.OrdinalIgnoreCase`)
+    - Provisioner's `DetectTableStateAsync` calls the helper; runner re-invokes under `BEGIN IMMEDIATE` per Task 4.4
 
 ### Task 4.6: SQLite outbox bootstrap-at-V_k
 
@@ -874,8 +906,8 @@ Spec 0023 findings closed out as side-effects:
 ## Acceptance checklist (maps to requirements.md AC-*)
 
 - [ ] **AC-1** outbox upgrade (V1..V6 → V7): covered by 1.6, 2.6, 3.6, 4.6
-- [ ] **AC-2** inbox upgrade (V1 → V2): covered by 1.7 (MSSQL), inbox arm of 4.7 (SQLite), 3.x (MySQL — add inline arm to 3.6 or dedicated follow-up); Postgres inbox is V1-only (ADR §1) so no upgrade applies
-- [ ] **AC-3** fresh install produces V_latest + single history row: covered by 1.6 / 2.6 / 3.6 / 4.6 fresh-install arm + 5.1; retargeted existing tests from Task 0.3a also verify
+- [ ] **AC-2** inbox upgrade (V1 → V2): covered by 1.7 (MSSQL), 3.6a (MySQL), 4.7 (SQLite); Postgres inbox is V1-only (ADR §1) so no upgrade applies
+- [ ] **AC-3** fresh install produces V_latest + single history row: covered by **Task 0.3a** retargets of `When_*_runs_on_fresh_database_*` tests for MSSQL/PostgreSQL/MySQL/SQLite (relational backends) + **Task 5.1** for Spanner. Bootstrap-at-V_k tests (1.6/2.6/3.6/4.6) do **not** cover fresh install — they were narrowed in F10 to focus on legacy-table upgrade only
 - [ ] **AC-4** no-op re-run (idempotency): covered by existing `When_*_runs_on_already_provisioned_database_it_should_be_idempotent` tests after Task 0.3a retargets them to `V_latest`, plus SQLite idempotency verified implicitly by the AC-6 arm in Task 4.9
 - [ ] **AC-5 / AC-18** concurrent bootstrap (outbox + inbox): covered by 1.8, 2.7, 3.7, 4.8 — each now includes both outbox and inbox arms
 - [ ] **AC-6 / AC-19** spec-0023-era transition: covered by 1.9, 2.8, 3.8, 4.9
@@ -887,8 +919,8 @@ Spec 0023 findings closed out as side-effects:
 - [ ] **AC-12** migration SourceReference populated: verified by 1.2, 1.3, 2.2, 2.3, 3.2, 3.3, 4.2, 4.3
 - [ ] **AC-13** ADR 0057 created and accepted: done (pre-tasks)
 - [ ] **AC-14** `.agent_instructions/box_provisioning.md` rule added: Task 7.1
-- [ ] **AC-15** per-backend fresh-install test asserts V_latest + history row: covered in each backend's Phase bootstrap task + Task 0.3a retargets the existing tests
-- [ ] **AC-16** per-backend bootstrap-at-V_k tests (k ∈ {1,3,5,7} outbox; k ∈ {1,2} inbox): 1.6/1.7, 2.6, 3.6, 4.6/4.7
+- [ ] **AC-15** per-backend fresh-install test asserts V_latest + history row: covered exclusively by **Task 0.3a** retargeting the existing `When_*_runs_on_fresh_database_*` tests for relational backends + **Task 5.1** for Spanner. Bootstrap-at-V_k tests (1.6/2.6/3.6/4.6) do not cover fresh install
+- [ ] **AC-16** per-backend bootstrap-at-V_k tests (k ∈ {1,3,5,7} outbox; k ∈ {1,2} inbox): 1.6/1.7, 2.6, 3.6/3.6a, 4.6/4.7
 - [ ] **AC-17** per-backend idempotency test: existing `When_*_runs_on_already_provisioned_database_it_should_be_idempotent` tests (retargeted in Task 0.3a) + 4.9 IdempotencyCheckSql path
 - [ ] **NFR-3** migration completes within `MigrationLockTimeout` (30s): verified by Task 1.8b (MSSQL reference, tight 5s bound)
 - [ ] **ADR §5a** whole-chain rollback on mid-chain failure: verified by Task 1.8a (MSSQL), Task 2.7a (Postgres), Task 4.8a (SQLite); MySQL's per-migration-commit recovery verified by Task 3.4

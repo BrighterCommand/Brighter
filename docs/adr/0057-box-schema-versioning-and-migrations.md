@@ -110,14 +110,23 @@ Detection distinguishes three outcomes via return value:
 - `V ≥ 1` — highest version whose logical column set is a subset of actual columns
 
 ```csharp
-public async Task<int> DetectCurrentVersionAsync(..., CancellationToken ct)
+// Lives in *BoxDetectionHelpers as a static method (per Phase 1.5 / 2.5 / 3.5 / 4.5).
+// Backend-specific connection / transaction types vary; signature shown here is illustrative.
+public static async Task<int> DetectCurrentVersionAsync(
+    DbConnection connection,
+    DbTransaction? txn,
+    string tableName,
+    string? schemaName,
+    IReadOnlyList<IAmABoxMigration> migrations,
+    string discriminatorColumn,
+    CancellationToken ct)
 {
-    var actualColumns = await GetTableColumnsAsync(...);  // HashSet<string> with backend-specific comparer
-    if (!actualColumns.Contains(_discriminator))
+    var actualColumns = await GetTableColumnsAsync(connection, txn, tableName, schemaName, ct);  // HashSet<string> with backend-specific comparer
+    if (!actualColumns.Contains(discriminatorColumn))
         return -1;  // not a Brighter table — bail out
-    for (var version = _migrations.Count; version >= 1; version--)
+    for (var version = migrations.Count; version >= 1; version--)
     {
-        if (actualColumns.IsSupersetOf(_migrations[version - 1].LogicalColumns))
+        if (actualColumns.IsSupersetOf(migrations[version - 1].LogicalColumns))
             return version;
     }
     return 0;  // has discriminator but no version matched — unknown / corrupt
@@ -172,10 +181,10 @@ The bootstrap-path error message branches on this: `-1` → "Table *{name}* exis
 **Bootstrap path** (`TableExists && !HistoryExists`):
 - Acquire advisory lock
 - Re-check history existence under the lock (addresses spec 0023 R2 TOCTOU)
-- Invoke `DetectCurrentVersionAsync` with the discriminator gate
-- If `V == -1`: throw `ConfigurationException("Table exists but is not a Brighter box; check configured table name")` — operator pointed at the wrong table
-- If `V == 0`: throw `ConfigurationException("Table appears to be a Brighter box but does not match any known schema version; manual inspection required")` — Brighter-shaped but corrupt
-- If `V >= 1`: insert synthetic history `(SchemaName, BoxTableName, V, "bootstrap: detected at V{V}")`
+- Re-invoke detection under the lock by calling the per-backend `*BoxDetectionHelpers.DetectCurrentVersionAsync(connection, txn, tableName, schemaName, migrations, discriminator, ct)` static helper. Spec 0027 introduces this method as part of Phase 1.5 / 2.5 / 3.5 / 4.5 — moving detection out of `*OutboxProvisioner` / `*InboxProvisioner` into the existing `*BoxDetectionHelpers` static classes (which currently host only the schema-introspection primitives `DoesTableExistAsync` / `DoesHistoryExistAsync` / `GetMaxVersionAsync` / `GetTableColumnsAsync` from commit `4db713c8`). After this move, both the provisioner (pre-lock, populating `BoxTableState.CurrentVersion`) and the runner (post-lock, TOCTOU re-detection) invoke the same helper — single source of detection truth. The runner does not trust `state.CurrentVersion` from the pre-lock pass; it re-reads
+- If re-detected `V == -1`: throw `ConfigurationException("Table exists but is not a Brighter box; check configured table name")` — operator pointed at the wrong table
+- If re-detected `V == 0`: throw `ConfigurationException("Table appears to be a Brighter box but does not match any known schema version; manual inspection required")` — Brighter-shaped but corrupt
+- If re-detected `V >= 1`: insert synthetic history `(SchemaName, BoxTableName, V, "bootstrap: detected at V{V}")`
 - Run migrations `V+1..V_latest` (each UpScript is idempotent per §5)
 - Release lock
 
@@ -197,7 +206,7 @@ public interface IAmABoxMigration
     int Version { get; }
     string Description { get; }
     string UpScript { get; }                       // unchanged — a single SQL statement (or batch for backends that support it)
-    IReadOnlySet<string> LogicalColumns { get; }   // NEW (required)
+    ISet<string> LogicalColumns { get; }           // NEW (required) — ISet (not IReadOnlySet) because IReadOnlySet<T> is not available on netstandard2.0; contract is read-only-by-convention (implementations populate once and never mutate)
     string? SourceReference { get; }               // NEW (nullable) — e.g. "3c30343fa / #1401"
     string? IdempotencyCheckSql { get; }           // NEW (nullable) — scalar-returning SQL; >0 means skip UpScript
 }
@@ -206,7 +215,7 @@ public record BoxMigration(
     int Version,
     string Description,
     string UpScript,
-    IReadOnlySet<string> LogicalColumns,
+    ISet<string> LogicalColumns,
     string? SourceReference = null,
     string? IdempotencyCheckSql = null
 ) : IAmABoxMigration;
@@ -300,7 +309,9 @@ No `IAmABoxMigration` list is exposed by Spanner. The provisioner holds its own 
 │  holds: runner: IAmABoxMigrationRunner                        │
 │                                                                │
 │  ProvisionAsync:                                              │
-│   1. DetectTableStateAsync (includes discriminator check)     │
+│   1. DetectTableStateAsync — calls *BoxDetectionHelpers       │
+│      .DetectCurrentVersionAsync (pre-lock pass, populates     │
+│      BoxTableState.CurrentVersion)                            │
 │   2. runner.MigrateAsync(table, schema, migrations, state, ct)│
 │      — runner branches on state.TableExists/HistoryExists    │
 └───────────────────┬───────────────────────────────────────────┘
@@ -311,15 +322,19 @@ No `IAmABoxMigration` list is exposed by Spanner. The provisioner holds its own 
 │  (same signature as spec 0023; branching logic internal)      │
 │                                                                │
 │  Acquire advisory lock (backend-specific);                    │
-│  TOCTOU re-check table / history existence;                   │
+│  TOCTOU re-check table / history existence under the lock;    │
 │                                                                │
-│  if !state.TableExists:                                       │
+│  if !tableExistsNow:                                          │
 │      execute V1.UpScript (full CREATE TABLE from builder)     │
 │      insert history row at V_latest                           │
 │                                                                │
-│  elif !state.HistoryExists:                                   │
-│      insert synthetic history at state.CurrentVersion         │
-│      foreach M in migrations where M.Version > CurrentVersion:│
+│  elif !historyExistsNow:                                      │
+│      // re-detect under the lock — TOCTOU defence:            │
+│      v = *BoxDetectionHelpers.DetectCurrentVersionAsync(      │
+│             conn, txn, table, schema, migrations, discrim)    │
+│      if v == -1 or 0: throw ConfigurationException            │
+│      insert synthetic history at v                            │
+│      foreach M in migrations where M.Version > v:             │
 │          apply M.UpScript (idempotent per §5)                 │
 │          insert history row at M.Version                      │
 │                                                                │
@@ -334,13 +349,16 @@ No `IAmABoxMigration` list is exposed by Spanner. The provisioner holds its own 
 └───────────────────────────────────────────────────────────────┘
 ```
 
+**Detection helper ownership**: per-backend `*BoxDetectionHelpers` static classes (`MsSqlBoxDetectionHelpers`, `PostgreSqlBoxDetectionHelpers`, `MySqlBoxDetectionHelpers`, `SqliteBoxDetectionHelpers`, `SpannerBoxDetectionHelpers`) are the single source of detection logic. Today they host only schema-introspection primitives (`DoesTableExistAsync`, `DoesHistoryExistAsync`, `GetMaxVersionAsync`, `GetTableColumnsAsync` — extracted in commit `4db713c8`). Spec 0027 Tasks 1.5 / 2.5 / 3.5 / 4.5 add `DetectCurrentVersionAsync` to each, **moving** the existing private detection methods from `*OutboxProvisioner` / `*InboxProvisioner` into the helpers. After the move, the provisioner calls the helper pre-lock to populate `BoxTableState`; the runner calls the same helper post-lock for TOCTOU-safe re-detection in the bootstrap path. No detection logic is duplicated between layers.
+
 ### Key components
 
 - **`IAmABoxMigration`** (existing, **extended**): gains `LogicalColumns` (required), `SourceReference` (nullable), and `IdempotencyCheckSql` (nullable — used by SQLite only). Source-breaking.
 - **`BoxMigration`** (existing, **extended**): positional record adds three parameters matching the interface additions.
 - **`IAmABoxMigrationRunner`** (existing, unchanged signature): implementations gain three-path branching inside `MigrateAsync`; no new methods.
 - **`*OutboxMigrations` / `*InboxMigrations`** (existing, **expanded**): per-backend static classes return `V1..V_latest` lists via `All(config)` factory.
-- **`*OutboxProvisioner` / `*InboxProvisioner`** (existing, **modified**): `DetectCurrentVersionAsync` walks the migration list with a discriminator gate instead of matching a single `V1Columns` HashSet.
+- **`*OutboxProvisioner` / `*InboxProvisioner`** (existing, **simplified**): `DetectTableStateAsync` now delegates to `*BoxDetectionHelpers.DetectCurrentVersionAsync` (added in Phase 1.5/2.5/3.5/4.5); the previously-private detection methods and `V1Columns` static sets are deleted from the provisioners. Detection logic no longer lives in the provisioner.
+- **`*BoxDetectionHelpers`** (existing, **extended**): per-backend static classes (`MsSqlBoxDetectionHelpers`, `PostgreSqlBoxDetectionHelpers`, `MySqlBoxDetectionHelpers`, `SqliteBoxDetectionHelpers`, `SpannerBoxDetectionHelpers`) currently host only schema-introspection primitives (`DoesTableExistAsync`, `DoesHistoryExistAsync`, `GetMaxVersionAsync`, `GetTableColumnsAsync`). Spec 0027 adds a new `DetectCurrentVersionAsync(connection, txn, tableName, schemaName, migrations, discriminatorColumn, ct)` static method to each, walking the migration list top-down with a discriminator gate per §2. This is the **single source of detection truth** — invoked by both the provisioner (pre-lock) and the runner (post-lock TOCTOU re-check).
 - **`SpannerBoxMigrationRunner`** (existing, **reworked**): fresh-only strategy; no migration list; adds `IsMigrationAppliedAsync` gate on history INSERT (addresses spec 0023 R4).
 
 ### Technology choices
