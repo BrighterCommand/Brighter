@@ -78,6 +78,13 @@ namespace Paramore.Brighter.ServiceActivator
 
         public int JobId { get; set; }
 
+        // Guards Open/Shut transitions and the _shutRequested intent so that a Shut() arriving
+        // before Open() is honored when Open() runs (the consumer stays Shut and no performer is
+        // started). Without this, a racing Shut on a not-yet-Open consumer would silently no-op
+        // and the late-opened performer would leak — see Dispatcher.Start() and issue #4075.
+        private readonly object _stateLock = new();
+        private bool _shutRequested;
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Consumer"/> class.
@@ -99,9 +106,14 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         public void Open()
         {
-            State = ConsumerState.Open;
-            Job = Performer.Run();
-            JobId = Job.Id;
+            lock (_stateLock)
+            {
+                if (_shutRequested)
+                    return;
+                State = ConsumerState.Open;
+                Job = Performer.Run();
+                JobId = Job.Id;
+            }
         }
 
         /// <summary>
@@ -110,8 +122,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="topic">The topic we post the quit message to, in order to shut the perfomer</param>
         public void Shut(RoutingKey topic)
         {
-            if (State == ConsumerState.Open)
+            lock (_stateLock)
             {
+                _shutRequested = true;
+                if (State != ConsumerState.Open)
+                    return;
                 Performer.Stop(topic);
                 State = ConsumerState.Shut;
             }

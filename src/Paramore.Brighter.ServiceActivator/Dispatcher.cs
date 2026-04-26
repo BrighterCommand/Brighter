@@ -282,68 +282,95 @@ namespace Paramore.Brighter.ServiceActivator
 
         private void Start()
         {
+            // Signals when every consumer has been opened. We block the caller of Start()
+            // on this so that Receive()/Open() cannot return until each performer is Open
+            // and registered. Without this, a Shut()/End() racing in immediately after
+            // Receive() returns would no-op against still-Shut consumers (Consumer.Shut
+            // only acts when State == Open) and the late opens would leak as orphaned
+            // performers, hanging End() in Task.WaitAny. (issue #4075)
+            var startup = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
             _controlTask = Task.Factory.StartNew(() =>
             {
-                if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
+                if (State != DispatcherState.DS_AWAITING && State != DispatcherState.DS_STOPPED)
                 {
-                    Log.DispatcherStarting(s_logger);
-                    State = DispatcherState.DS_RUNNING;
+                    startup.TrySetResult(true);
+                    return;
+                }
 
-                    var consumers = Consumers.ToArray();
-                    consumers.Each(consumer => consumer.Open());
-                    consumers.Each(consumer => _tasks.TryAdd(consumer.JobId, consumer.Job!));
+                Log.DispatcherStarting(s_logger);
 
-                    Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
-
-                    while (_tasks.Any())
+                Consumer[] consumers;
+                try
+                {
+                    consumers = Consumers.OfType<Consumer>().ToArray();
+                    foreach (var consumer in consumers)
                     {
-                        try
-                        {
-                            var runningTasks = _tasks.Values.ToArray();
-                            var index = Task.WaitAny(runningTasks);
-                            var stoppingConsumer = runningTasks[index];
-                            Log.PerformerStopped(s_logger, stoppingConsumer.Status);
-
-                            var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
-                            if (consumer != null)
-                            {
-                                Log.RemovingConsumer(s_logger, consumer.Name);
-
-                                if (_consumers.TryRemove(consumer.Name, out consumer))
-                                {
-                                    consumer.Dispose();
-                                }
-                            }
-
-                            if (_tasks.TryRemove(stoppingConsumer.Id, out var removedTask))
-                            {
-                                removedTask?.Dispose();
-                            }
-
-                            stoppingConsumer.Dispose();
-                        }
-                        catch (AggregateException ae)
-                        {
-                            ae.Handle(ex =>
-                            {
-                                Log.ErrorOnConsumer(s_logger, ex);
-                                return true;
-                            });
-                        }
+                        consumer.Open();
+                        if (consumer.Job is not null)
+                            _tasks.TryAdd(consumer.JobId, consumer.Job);
                     }
 
-                    State = DispatcherState.DS_STOPPED;
-                    Log.DispatcherStopped(s_logger);
+                    // Publish DS_RUNNING only after every consumer is Open. The TCS below
+                    // provides the happens-before edge: callers waiting on startup.Task
+                    // will observe both the state flip and the consumer opens.
+                    State = DispatcherState.DS_RUNNING;
+                    startup.TrySetResult(true);
                 }
+                catch (Exception ex)
+                {
+                    Log.ErrorOnConsumer(s_logger, ex);
+                    startup.TrySetException(ex);
+                    throw;
+                }
+
+                Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
+
+                while (!_tasks.IsEmpty)
+                {
+                    try
+                    {
+                        var runningTasks = _tasks.Values.ToArray();
+                        var index = Task.WaitAny(runningTasks);
+                        var stoppingConsumer = runningTasks[index];
+                        Log.PerformerStopped(s_logger, stoppingConsumer.Status);
+
+                        var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
+                        if (consumer != null)
+                        {
+                            Log.RemovingConsumer(s_logger, consumer.Name);
+
+                            if (_consumers.TryRemove(consumer.Name, out consumer))
+                            {
+                                consumer.Dispose();
+                            }
+                        }
+
+                        if (_tasks.TryRemove(stoppingConsumer.Id, out var removedTask))
+                        {
+                            removedTask?.Dispose();
+                        }
+
+                        stoppingConsumer.Dispose();
+                    }
+                    catch (AggregateException ae)
+                    {
+                        ae.Handle(ex =>
+                        {
+                            Log.ErrorOnConsumer(s_logger, ex);
+                            return true;
+                        });
+                    }
+                }
+
+                State = DispatcherState.DS_STOPPED;
+                Log.DispatcherStopped(s_logger);
             },
             CancellationToken.None,
             TaskCreationOptions.LongRunning,
             TaskScheduler.Default);
 
-            while (State != DispatcherState.DS_RUNNING)
-            {
-                Thread.Sleep(100); //Block main Dispatcher thread whilst control plane starts
-            }
+            startup.Task.GetAwaiter().GetResult();
         }
 
         private IEnumerable<Consumer> CreateConsumers(IEnumerable<Subscription> subscriptions)
