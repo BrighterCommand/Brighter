@@ -6,7 +6,7 @@ services:
     environment:
       - "MOTO_PORT=4566"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4566/moto-api/').read()"]
+      test: ["CMD", "curl", "-sf", "http://localhost:4566/moto-api/"]
       interval: 5s
       timeout: 3s
       retries: 10

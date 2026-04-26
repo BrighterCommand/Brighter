@@ -457,7 +457,7 @@ jobs:
         env:
           MOTO_PORT: "4566"
         options: >-
-          --health-cmd "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:4566/moto-api/\").read()'"
+          --health-cmd "curl -sf http://localhost:4566/moto-api/"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
@@ -483,8 +483,8 @@ jobs:
             Linux-nuget-
       - name: AWS Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   aws-ci:
     runs-on: ubuntu-latest

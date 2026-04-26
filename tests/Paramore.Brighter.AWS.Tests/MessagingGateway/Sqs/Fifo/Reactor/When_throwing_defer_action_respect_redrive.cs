@@ -104,7 +104,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         };
     }
 
-    public int GetDLQCountAsync(string queueName)
+    public int GetDLQCount(string queueName)
     {
         using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
         var queueUrlResponse = sqsClient.GetQueueUrlAsync(queueName.ToValidSQSQueueName(true)).GetAwaiter().GetResult();
@@ -140,7 +140,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 
         Task.Delay(5000).GetAwaiter().GetResult();
 
-        var dlqCount = GetDLQCountAsync(_dlqChannelName);
+        var dlqCount = GetDLQCount(_dlqChannelName);
         Assert.Equal(1, dlqCount);
     }
 
