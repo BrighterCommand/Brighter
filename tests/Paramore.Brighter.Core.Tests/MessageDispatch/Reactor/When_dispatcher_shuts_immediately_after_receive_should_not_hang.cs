@@ -11,15 +11,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
-    // Regression for issue #4075:
-    //   Dispatcher.Start() flips State = DS_RUNNING BEFORE consumers are opened, so Receive()
-    //   can return while some consumers are still in ConsumerState.Shut. A Shut()/End() that
-    //   races into that window is a no-op for those consumers (Consumer.Shut only acts when
-    //   State == Open). The control task subsequently opens them, and they run forever
-    //   without a quit message — End() then hangs in Task.WaitAny.
-    //
-    // Invariant: Receive() must not return until every consumer is Open. After that, an
-    // immediate Shut + End must complete in bounded time.
+    // Regression for #4075: Receive() must not return until every consumer is Open,
+    // so an immediately-following Shut()/End() always reaches a running performer.
     public class DispatcherShutImmediatelyAfterReceiveTests
     {
         private const string ChannelName = "fakeChannel";

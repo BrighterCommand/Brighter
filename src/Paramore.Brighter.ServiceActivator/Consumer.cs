@@ -78,10 +78,8 @@ namespace Paramore.Brighter.ServiceActivator
 
         public int JobId { get; set; }
 
-        // Guards Open/Shut transitions and the _shutRequested intent so that a Shut() arriving
-        // before Open() is honored when Open() runs (the consumer stays Shut and no performer is
-        // started). Without this, a racing Shut on a not-yet-Open consumer would silently no-op
-        // and the late-opened performer would leak — see Dispatcher.Start() and issue #4075.
+        // A Shut() arriving before Open() must keep the consumer Shut, otherwise the
+        // late-opened performer leaks with no way to receive a quit message.
         private readonly object _stateLock = new();
         private bool _shutRequested;
 

@@ -282,12 +282,9 @@ namespace Paramore.Brighter.ServiceActivator
 
         private void Start()
         {
-            // Signals when every consumer has been opened. We block the caller of Start()
-            // on this so that Receive()/Open() cannot return until each performer is Open
-            // and registered. Without this, a Shut()/End() racing in immediately after
-            // Receive() returns would no-op against still-Shut consumers (Consumer.Shut
-            // only acts when State == Open) and the late opens would leak as orphaned
-            // performers, hanging End() in Task.WaitAny. (issue #4075)
+            // Block Start() callers until every consumer is Open. A Shut()/End() racing in
+            // immediately after Receive() returns must not see a still-Shut consumer, or the
+            // late-opened performer leaks and End() hangs forever in Task.WaitAny.
             var startup = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             _controlTask = Task.Factory.StartNew(() =>
@@ -311,9 +308,6 @@ namespace Paramore.Brighter.ServiceActivator
                             _tasks.TryAdd(consumer.JobId, consumer.Job);
                     }
 
-                    // Publish DS_RUNNING only after every consumer is Open. The TCS below
-                    // provides the happens-before edge: callers waiting on startup.Task
-                    // will observe both the state flip and the consumer opens.
                     State = DispatcherState.DS_RUNNING;
                     startup.TrySetResult(true);
                 }
