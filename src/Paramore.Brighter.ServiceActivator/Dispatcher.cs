@@ -27,6 +27,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
@@ -339,9 +340,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             while (State != DispatcherState.DS_RUNNING)
             {
-                Task.Delay(100)
-                    .GetAwaiter()
-                    .GetResult(); //Block main Dispatcher thread whilst control plane starts
+                Thread.Sleep(100); //Block main Dispatcher thread whilst control plane starts
             }
         }
 
