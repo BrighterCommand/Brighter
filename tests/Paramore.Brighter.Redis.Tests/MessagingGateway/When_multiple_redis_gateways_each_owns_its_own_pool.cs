@@ -46,15 +46,20 @@ public class When_multiple_redis_gateways_each_owns_its_own_pool
     }
 
     [Fact]
-    public void Disposing_one_gateway_should_not_affect_a_sibling_pool_reference()
+    public void Disposing_one_gateway_should_not_replace_a_siblings_underlying_pool()
     {
         using var first = new TestRedisGateway(s_configuration, new RoutingKey("topic-a"));
         using var second = new TestRedisGateway(s_configuration, new RoutingKey("topic-b"));
 
-        var siblingPoolBeforeDispose = second.ExposedPool;
+        // Materialise the Lazy on both — RedisManagerPool's constructor does not open a connection,
+        // so this works without a live broker.
+        var firstUnderlying = first.ExposedPool.Value;
+        var secondUnderlying = second.ExposedPool.Value;
+
+        Assert.NotSame(firstUnderlying, secondUnderlying);
 
         first.Dispose();
 
-        Assert.Same(siblingPoolBeforeDispose, second.ExposedPool);
+        Assert.Same(secondUnderlying, second.ExposedPool.Value);
     }
 }

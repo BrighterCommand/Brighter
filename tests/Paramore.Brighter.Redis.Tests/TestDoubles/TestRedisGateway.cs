@@ -18,7 +18,7 @@ public class TestRedisGateway : RedisMessageGateway, IDisposable
 
     public new TimeSpan MessageTimeToLive => base.MessageTimeToLive;
 
-    public object ExposedPool => Pool;
+    public Lazy<RedisManagerPool> ExposedPool => Pool;
 
     public void Dispose()
     {
