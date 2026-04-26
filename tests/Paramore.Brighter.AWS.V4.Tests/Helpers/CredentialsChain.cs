@@ -27,7 +27,7 @@ public static class CredentialsChain
         return (new EnvironmentVariablesAWSCredentials(), new EnvironmentVariableAWSRegion().Region);
     }
 
-    public static string GetBucketAddressTemple()
+    public static string GetBucketAddressTemplate()
     {
         var serviceUrl = Environment.GetEnvironmentVariable("AWS_SERVICE_URL");
         if (!string.IsNullOrEmpty(serviceUrl) && Uri.TryCreate(serviceUrl, UriKind.Absolute, out var uri))

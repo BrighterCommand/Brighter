@@ -35,7 +35,7 @@ public class S3LuggageStoreExistsTests
         var luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), bucketName)
         {
             HttpClientFactory = _httpClientFactory,
-            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
         });
@@ -50,7 +50,7 @@ public class S3LuggageStoreExistsTests
         {
             Strategy = StorageStrategy.Validate,
             HttpClientFactory = _httpClientFactory, 
-            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
         });
 
@@ -73,7 +73,7 @@ public class S3LuggageStoreExistsTests
                      {
                          Strategy = StorageStrategy.Validate,
                          HttpClientFactory = _httpClientFactory,
-                         BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+                         BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
                          ACLs = S3CannedACL.Private,
                          Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
                      });

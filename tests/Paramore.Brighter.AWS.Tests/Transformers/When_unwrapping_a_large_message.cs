@@ -45,7 +45,7 @@ public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
         _luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
         {
             HttpClientFactory = httpClientFactory,
-            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }]
         });

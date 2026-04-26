@@ -126,7 +126,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
     }
 
     [Fact]
-    public void When_throwing_defer_action_respect_redrive_async()
+    public void When_throwing_defer_action_respect_redrive()
     {
         _sender.Send(_message);
 

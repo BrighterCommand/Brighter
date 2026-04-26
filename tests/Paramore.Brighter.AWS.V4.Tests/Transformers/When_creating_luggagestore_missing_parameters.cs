@@ -79,7 +79,7 @@ public class S3LuggageUploadMissingParametersTests
             var store = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
             {
                 HttpClientFactory = _httpClientFactory,
-                BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple() 
+                BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate() 
             });
             await store.EnsureStoreExistsAsync();
         });
