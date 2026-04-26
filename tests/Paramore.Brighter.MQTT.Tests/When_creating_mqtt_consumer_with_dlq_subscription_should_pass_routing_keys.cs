@@ -63,9 +63,9 @@ public class MqttMessageConsumerFactoryDlqTests : IDisposable
     }
 
     [Before(HookType.Test)]
-    public async Task Setup()
+    public void Setup()
     {
-        _mqttTestServer = await MqttTestServer.CreateTestMqttServer(_mqttFactory, true, serverPort: _serverPort);
+        _mqttTestServer = MqttTestServer.CreateTestMqttServer(_mqttFactory, true, serverPort: _serverPort);
     }
 
     [Test]
