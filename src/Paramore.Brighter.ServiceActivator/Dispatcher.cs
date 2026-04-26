@@ -282,67 +282,108 @@ namespace Paramore.Brighter.ServiceActivator
 
         private void Start()
         {
-            _controlTask = Task.Factory.StartNew(() =>
+            // Block Start() callers until every consumer is Open. A Shut()/End() racing in
+            // immediately after Receive() returns must not see a still-Shut consumer, or the
+            // late-opened performer leaks and End() hangs forever in Task.WaitAny.
+            var startup = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            _controlTask = Task.Factory.StartNew(
+                () => RunControlLoop(startup),
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
+
+            startup.Task.GetAwaiter().GetResult();
+        }
+
+        private void RunControlLoop(TaskCompletionSource<bool> startup)
+        {
+            if (State != DispatcherState.DS_AWAITING && State != DispatcherState.DS_STOPPED)
             {
-                if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
+                startup.TrySetResult(true);
+                return;
+            }
+
+            Log.DispatcherStarting(s_logger);
+
+            try
+            {
+                OpenConsumers();
+                State = DispatcherState.DS_RUNNING;
+                startup.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                Log.ErrorOnConsumer(s_logger, ex);
+                startup.TrySetException(ex);
+                throw;
+            }
+
+            Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
+
+            WaitForPerformersToStop();
+
+            State = DispatcherState.DS_STOPPED;
+            Log.DispatcherStopped(s_logger);
+        }
+
+        private void OpenConsumers()
+        {
+            foreach (var consumer in Consumers)
+            {
+                consumer.Open();
+                if (consumer.Job is not null)
+                    _tasks.TryAdd(consumer.JobId, consumer.Job);
+            }
+        }
+
+        private void WaitForPerformersToStop()
+        {
+            while (!_tasks.IsEmpty)
+            {
+                try
                 {
-                    Log.DispatcherStarting(s_logger);
-                    State = DispatcherState.DS_RUNNING;
-
-                    var consumers = Consumers.ToArray();
-                    consumers.Each(consumer => consumer.Open());
-                    consumers.Each(consumer => _tasks.TryAdd(consumer.JobId, consumer.Job!));
-
-                    Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
-
-                    while (_tasks.Any())
-                    {
-                        try
-                        {
-                            var runningTasks = _tasks.Values.ToArray();
-                            var index = Task.WaitAny(runningTasks);
-                            var stoppingConsumer = runningTasks[index];
-                            Log.PerformerStopped(s_logger, stoppingConsumer.Status);
-
-                            var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
-                            if (consumer != null)
-                            {
-                                Log.RemovingConsumer(s_logger, consumer.Name);
-
-                                if (_consumers.TryRemove(consumer.Name, out consumer))
-                                {
-                                    consumer.Dispose();
-                                }
-                            }
-
-                            if (_tasks.TryRemove(stoppingConsumer.Id, out var removedTask))
-                            {
-                                removedTask?.Dispose();
-                            }
-
-                            stoppingConsumer.Dispose();
-                        }
-                        catch (AggregateException ae)
-                        {
-                            ae.Handle(ex =>
-                            {
-                                Log.ErrorOnConsumer(s_logger, ex);
-                                return true;
-                            });
-                        }
-                    }
-
-                    State = DispatcherState.DS_STOPPED;
-                    Log.DispatcherStopped(s_logger);
+                    HandleNextStoppedPerformer();
                 }
-            },
-            CancellationToken.None,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default);
+                catch (AggregateException ae)
+                {
+                    ae.Handle(ex =>
+                    {
+                        Log.ErrorOnConsumer(s_logger, ex);
+                        return true;
+                    });
+                }
+            }
+        }
 
-            while (State != DispatcherState.DS_RUNNING)
+        private void HandleNextStoppedPerformer()
+        {
+            var runningTasks = _tasks.Values.ToArray();
+            var index = Task.WaitAny(runningTasks);
+            var stoppingConsumer = runningTasks[index];
+            Log.PerformerStopped(s_logger, stoppingConsumer.Status);
+
+            RemoveConsumerForTask(stoppingConsumer);
+
+            if (_tasks.TryRemove(stoppingConsumer.Id, out var removedTask))
             {
-                Thread.Sleep(100); //Block main Dispatcher thread whilst control plane starts
+                removedTask?.Dispose();
+            }
+
+            stoppingConsumer.Dispose();
+        }
+
+        private void RemoveConsumerForTask(Task stoppingConsumer)
+        {
+            var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
+            if (consumer is null)
+                return;
+
+            Log.RemovingConsumer(s_logger, consumer.Name);
+
+            if (_consumers.TryRemove(consumer.Name, out consumer))
+            {
+                consumer.Dispose();
             }
         }
 

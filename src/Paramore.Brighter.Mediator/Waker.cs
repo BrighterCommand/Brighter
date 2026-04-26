@@ -58,25 +58,19 @@ public class Waker<TData>
     /// This will periodically wake up and trigger due jobs in the scheduler.
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A task that represents the asynchronous run operation.</returns>
-    public void RunAsync(CancellationToken cancellationToken = default(CancellationToken))
+    /// <returns>A task that completes when the wake loop exits (via cancellation).</returns>
+    public async Task RunAsync(CancellationToken cancellationToken = default(CancellationToken))
     {
         s_logger.LogInformation("Starting waker {WakerName}", _wakerName);
-        
-        var task = Task.Factory.StartNew(async () =>
+
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            await Wake(cancellationToken);
-
-            if (cancellationToken.IsCancellationRequested)
-                cancellationToken.ThrowIfCancellationRequested();
-
-        }, cancellationToken, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
-        
-        Task.WaitAll([task], cancellationToken);
-        
-        s_logger.LogInformation("Finished waker {WakerName}", _wakerName);
+            await Task.Run(() => Wake(cancellationToken), cancellationToken);
+        }
+        finally
+        {
+            s_logger.LogInformation("Finished waker {WakerName}", _wakerName);
+        }
     }
 
     private async Task Wake(CancellationToken cancellationToken = default(CancellationToken))

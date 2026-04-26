@@ -4,6 +4,8 @@ about: Create a report about something that is not working
 labels: 'bug'
 ---
 
+> 📖 **Before filing a bug**, please check the [documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation/) to see if your issue is covered.
+
 ### Describe the bug
 A clear and concise description of what the bug is.
 

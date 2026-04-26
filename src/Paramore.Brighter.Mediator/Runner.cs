@@ -64,23 +64,19 @@ public class Runner<TData>
     /// Runs the job processing loop.
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    public void RunAsync(CancellationToken cancellationToken = default(CancellationToken))
+    /// <returns>A task that completes when the job processing loop exits (via cancellation or channel closure).</returns>
+    public async Task RunAsync(CancellationToken cancellationToken = default(CancellationToken))
     {
         s_logger.LogInformation("Starting runner {RunnerName}", _runnerName);
-        
-        var task = Task.Factory.StartNew(async () =>
+
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            await ProcessJobs(cancellationToken);
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-        }, cancellationToken, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
-        
-        Task.WaitAll([task], cancellationToken);
-        
-        s_logger.LogInformation("Finished runner {RunnerName}", _runnerName);
+            await Task.Run(() => ProcessJobs(cancellationToken), cancellationToken);
+        }
+        finally
+        {
+            s_logger.LogInformation("Finished runner {RunnerName}", _runnerName);
+        }
     }
 
     private async Task Execute(Job<TData>? job, CancellationToken cancellationToken = default(CancellationToken))
