@@ -272,6 +272,7 @@ Create `Paramore.Brighter.BoxProvisioning.MsSql` as the first backend implementa
     - `MsSqlBoxMigrationRunner` acquires `sp_getapplock` with resource `BrighterMigration_{tableName}` in Exclusive mode
     - Lock is held for the entire migration run within the transaction
     - Second instance blocks until lock is released, then finds no pending migrations
+  - **Timing-sensitivity caveat (reviewer note, post-implementation)**: This test is **integration-smoke-only** — it asserts that two `Task.WhenAll`-launched provisioners reach a *consistent* end state (one table, one history row). It does **not** prove the advisory lock actually serialised the two operations under contention; on a fast CI host where one task finishes before the other starts its DDL, the second instance simply takes the "history exists" path and the test passes without ever exercising the lock-blocking branch. A stronger version would inject a controllable delay (e.g. an `IMigrationDelayProbe` seam) between the lock acquisition and the first DDL statement so the test can deterministically force overlap. That hook is **not** added in spec 0023; the consistency-only assertion is accepted because (a) the lock code path itself is exercised by every fresh-install test, and (b) spec 0027's concurrent-bootstrap tests (tasks 1.8 / 2.7 / 3.7 / 4.8) cover the contended-path scenarios more thoroughly. Future work tracked in spec 0027 if the smoke-only coverage proves insufficient.
 
 ---
 
