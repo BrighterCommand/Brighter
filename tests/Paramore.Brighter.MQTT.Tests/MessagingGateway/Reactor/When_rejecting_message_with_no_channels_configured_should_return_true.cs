@@ -51,6 +51,9 @@ public class MqttMessageConsumerRejectNoChannelsTests : IDisposable
         _mqttFactory = mqttFactory;
         _serverPort = serverPort;
 
+        // Server must be running before producer/consumer ctors connect.
+        _mqttTestServer = MqttTestServer.CreateTestMqttServer(mqttFactory, true, serverPort: serverPort);
+
         //Arrange — source producer
         var producerConfig = new MqttMessagingGatewayProducerConfiguration
         {
@@ -71,12 +74,6 @@ public class MqttMessageConsumerRejectNoChannelsTests : IDisposable
             ClientID = "BrighterTests-NoChannels-Consumer"
         };
         _sourceConsumer = new MqttMessageConsumer(consumerConfig);
-    }
-
-    [Before(HookType.Test)]
-    public async Task Setup()
-    {
-        _mqttTestServer = await MqttTestServer.CreateTestMqttServer(_mqttFactory, true, serverPort: _serverPort);
     }
 
     [Test]

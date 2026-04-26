@@ -51,6 +51,11 @@ public class MqttConsumerProducerConfigAndDisposeTests : IDisposable
         _serverPort = serverPort;
         string topicPrefix = "BrighterIntegrationTests/SchedulerDisposeTests";
 
+        // Server must be running before producer/consumer ctors connect.
+        _mqttTestServer = MqttTestServer.CreateTestMqttServer(
+            new MqttFactory(), true, null,
+            IPAddress.Any, serverPort, null, "MqttConsumerProducerConfigAndDisposeTests");
+
         var producerConfig = new MqttMessagingGatewayProducerConfiguration
         {
             Hostname = IPAddress.Loopback.ToString(),
@@ -72,14 +77,6 @@ public class MqttConsumerProducerConfigAndDisposeTests : IDisposable
 
         // Create consumer WITH scheduler - this is the constructor parameter being tested
         _consumer = new MqttMessageConsumer(consumerConfig, _scheduler);
-    }
-
-    [Before(HookType.Test)]
-    public async Task Setup()
-    {
-        _mqttTestServer = await MqttTestServer.CreateTestMqttServer(
-            new MqttFactory(), true, null,
-            IPAddress.Any, _serverPort, null, "MqttConsumerProducerConfigAndDisposeTests");
     }
 
     [Test]

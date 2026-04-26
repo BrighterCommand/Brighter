@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server
 
         public string HostName => MqttServerOptions.DefaultEndpointOptions.BoundInterNetworkAddress.ToString();
 
-        public static async Task<MqttTestServer?> CreateTestMqttServer(MqttFactory mqttFactory, bool startService = true, ILogger? logger = null, IPAddress? serverIPAddress = null, int? serverPort = null, MqttServerOptions? mqttServerOptions = null, [CallerMemberName] string? testMethodName = null)
+        public static MqttTestServer? CreateTestMqttServer(MqttFactory mqttFactory, bool startService = true, ILogger? logger = null, IPAddress? serverIPAddress = null, int? serverPort = null, MqttServerOptions? mqttServerOptions = null, [CallerMemberName] string? testMethodName = null)
         {
             ArgumentNullException.ThrowIfNull(mqttFactory);
 
@@ -74,7 +74,10 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server
             {
                 if (startService)
                 {
-                    await testMqttServer.MqttServer.StartAsync();
+                    // Block synchronously so the server is up before the test's
+                    // MQTT producer/consumer constructors attempt to connect — those
+                    // connect eagerly in their ctor and have no retry-after-server-start.
+                    testMqttServer.MqttServer.StartAsync().GetAwaiter().GetResult();
                 }
             }
             catch (Exception ex)

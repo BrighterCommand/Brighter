@@ -66,10 +66,10 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
         }
 
         [Before(HookType.Test)]
-        public virtual async Task SetupMqttServer()
+        public virtual void SetupMqttServer()
         {
             // Server must be running before MqttMessagePublisher's constructor connects.
-            MqttTestServer = await Helpers.Server.MqttTestServer.CreateTestMqttServer(
+            MqttTestServer = Helpers.Server.MqttTestServer.CreateTestMqttServer(
                 s_mqttFactory, true, ApplicationLogging.CreateLogger<T>(), _serverIPAddress, _serverPort, null, TestDisplayName);
 
             var mqttProducerConfig = new MqttMessagingGatewayProducerConfiguration
