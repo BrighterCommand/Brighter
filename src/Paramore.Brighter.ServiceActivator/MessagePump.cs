@@ -24,8 +24,11 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
@@ -68,6 +71,8 @@ namespace Paramore.Brighter.ServiceActivator
     public abstract partial class MessagePump
     {
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump>();
+
+        protected const string NoMessageReceivedDescription = "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout";
 
         protected readonly IAmACommandProcessor CommandProcessor;
         protected readonly IAmARequestContextFactory RequestContextFactory;
@@ -197,6 +202,77 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 Log.MessageMismatchEvent(s_logger, request.Id, MessageType.MT_EVENT);
             }
+        }
+
+        // Pump-internal helpers for the receive span. Live here (not on BrighterTracer) to avoid growing the public API.
+        // The receive span is started before the broker call so its Duration covers broker latency, then enriched with
+        // message-derived tags once the message arrives.
+        internal static Activity? CreateReceiveSpan(IAmABrighterTracer? tracer, RoutingKey topic, MessagingSystem messagingSystem, InstrumentationOptions options, TimeProvider timeProvider)
+        {
+            if (tracer is null) return null;
+
+            var operation = MessagePumpSpanOperation.Receive;
+            var tags = new ActivityTagsCollection();
+            if (options != InstrumentationOptions.None)
+                tags.Add(BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain);
+            if (options.HasFlag(InstrumentationOptions.RequestInformation))
+                tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+            if (options.HasFlag(InstrumentationOptions.Messaging))
+            {
+                tags.Add(BrighterSemanticConventions.MessagingDestination, topic);
+                tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
+                tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
+            }
+
+            var activity = tracer.ActivitySource.StartActivity(
+                name: $"{topic} {operation.ToSpanName()}",
+                kind: ActivityKind.Consumer,
+                tags: tags,
+                startTime: timeProvider.GetUtcNow());
+
+            if (activity is not null)
+                Activity.Current = activity;
+
+            return activity;
+        }
+
+        internal static void EnrichReceiveSpan(Activity? span, Message message, InstrumentationOptions options)
+        {
+            if (span is null) return;
+
+            if (options.HasFlag(InstrumentationOptions.RequestInformation))
+            {
+                span.AddTag(BrighterSemanticConventions.CeType, message.Header.Type.Value);
+                span.AddTag(BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo?.Value);
+                span.AddTag(BrighterSemanticConventions.HandledCount, message.Header.HandledCount);
+                span.AddTag(BrighterSemanticConventions.CeMessageId, message.Id.Value);
+                span.AddTag(BrighterSemanticConventions.CeSource, message.Header.Source);
+                span.AddTag(BrighterSemanticConventions.CeVersion, "1.0");
+                span.AddTag(BrighterSemanticConventions.CeSubject, message.Header.Subject);
+            }
+
+            if (options.HasFlag(InstrumentationOptions.Messaging))
+            {
+                span.AddTag(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
+                span.AddTag(BrighterSemanticConventions.MessageId, message.Id.Value);
+                span.AddTag(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+                span.AddTag(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+                span.AddTag(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+                span.AddTag(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
+            }
+
+            if (options.HasFlag(InstrumentationOptions.RequestBody))
+                span.AddTag(BrighterSemanticConventions.MessageBody, message.Body.Value);
+
+            // Propagate the producer's tracestate and baggage onto the consumer side. Done here (not in CreateReceiveSpan) because
+            // these values come from the message and aren't known until the broker call returns. Mirrors what CreateSpan(Process, ...)
+            // already does for serviceable messages — needed here so MT_UNACCEPTABLE rejections still carry the producer trace context.
+            if (!string.IsNullOrEmpty(message.Header.TraceState?.Value))
+                span.TraceStateString = message.Header.TraceState!.Value;
+
+            if (!string.IsNullOrEmpty(message.Header.CorrelationId))
+                message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);
+            OpenTelemetry.Baggage.SetBaggage(message.Header.Baggage);
         }
 
         private static partial class Log
