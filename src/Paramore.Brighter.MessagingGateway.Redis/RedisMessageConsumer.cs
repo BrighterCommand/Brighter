@@ -279,10 +279,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             Log.RetrievingNextMessage(s_logger, _queueName, Topic);
 
+            Console.WriteLine($"[RDX] consumer ReceiveAsync entry queue='{_queueName}' topic='{Topic}' inflight=[{string.Join(",", _inflight.Keys)}] tid={Environment.CurrentManagedThreadId}");
             if (_inflight.Any())
             {
                 Log.UnackedMessageInFlight(s_logger, _queueName);
-                throw new ChannelFailureException($"Unacked message still in flight with id: {_inflight.Keys.First()}");   
+                Console.WriteLine($"[RDX] consumer THROW ChannelFailureException unacked id='{_inflight.Keys.First()}' queue='{_queueName}'");
+                throw new ChannelFailureException($"Unacked message still in flight with id: {_inflight.Keys.First()}");
             }
 
             timeOut ??= TimeSpan.FromSeconds(1);
@@ -295,13 +297,17 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 await EnsureConnectionAsync(client);
                 (string? msgId, string rawMsg) redisMessage = await ReadMessageAsync(client, timeOut.Value);
                 if (redisMessage.msgId == null || string.IsNullOrEmpty(redisMessage.rawMsg))
+                {
+                    Console.WriteLine($"[RDX] consumer ReceiveAsync RETURN empty queue='{_queueName}' msgIdNull={redisMessage.msgId == null} rawMsgEmpty={string.IsNullOrEmpty(redisMessage.rawMsg)}");
                     return [];
-                
+                }
+
                 var message = RedisMessageCreator.CreateMessage(redisMessage.rawMsg);
 
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
                 {
                     _inflight.Add(message.Id, redisMessage.msgId);
+                    Console.WriteLine($"[RDX] consumer ADD inflight messageId='{message.Id}' redisMsgId='{redisMessage.msgId}' queue='{_queueName}'");
                 }
 
                 return [message];
@@ -533,17 +539,20 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             if (client == null)
                 throw new ChannelFailureException("RedisMessagingGateway: No Redis client available");
 
+            Console.WriteLine($"[RDX] consumer RequeueAsync entry messageId='{message.Id}' queue='{_queueName}' inflight=[{string.Join(",", _inflight.Keys)}]");
             if (_inflight.TryGetValue(message.Id, out string? msgId))
             {
                 await client.AddItemToListAsync(_queueName, msgId, cancellationToken);
                 var redisMsg = CreateRedisMessage(message);
                 await StoreMessageAsync(client, redisMsg, long.Parse(msgId));
                 _inflight.Remove(message.Id);
+                Console.WriteLine($"[RDX] consumer RequeueAsync OK removed messageId='{message.Id}' redisMsgId='{msgId}'");
                 return true;
             }
             else
             {
                 Log.MessageNotFoundInFlight(s_logger, message.Id);
+                Console.WriteLine($"[RDX] consumer RequeueAsync NOT_FOUND messageId='{message.Id}' inflight=[{string.Join(",", _inflight.Keys)}]");
                 return false;
             }
         }
@@ -683,8 +692,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             Log.CreatingQueue(s_logger, _queueName);
             //what is the queue list key
             var key = Topic + "." + QUEUES;
-            //subscribe us 
+            //subscribe us
             await client.AddItemToSetAsync(key, _queueName);
+            Console.WriteLine($"[RDX] consumer EnsureConnectionAsync SADD key='{key}' queue='{_queueName}' tid={Environment.CurrentManagedThreadId} pool={Pool.Value.GetHashCode()}");
+            var members = await client.GetAllItemsFromSetAsync(key);
+            Console.WriteLine($"[RDX] consumer post-SADD set='{key}' members=[{string.Join(",", members)}]");
         }
 
         private (string? msgId, string rawMsg) ReadMessage(IRedisClient client, TimeSpan timeOut)
@@ -708,28 +720,33 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             var msg = string.Empty;
             string? latestId = null;
+            Console.WriteLine($"[RDX] consumer ReadMessageAsync BLPOP queue='{_queueName}' topic='{Topic}' timeout={timeOut.TotalMilliseconds}ms tid={Environment.CurrentManagedThreadId} pool={Pool.Value.GetHashCode()}");
             try
             {
                 // Give the server-side BLPOP timeout a chance to fire first; if the client cancels first
                 // a freshly-pushed item can be delivered to the lingering BLPOP and lost.
                 using var cts = new CancellationTokenSource(timeOut + TimeSpan.FromSeconds(1));
                 latestId = await client.BlockingRemoveStartFromListAsync(_queueName, timeOut, cts.Token);
+                Console.WriteLine($"[RDX] consumer BLPOP returned id='{latestId ?? "<null>"}' queue='{_queueName}'");
                 if (latestId != null)
                 {
                     var key = Topic + "." + latestId;
-                    msg = await client.GetValueAsync(key);
+                    msg = await client.GetValueAsync(key) ?? string.Empty;
+                    Console.WriteLine($"[RDX] consumer GET key='{key}' rawMsgLen={msg.Length}");
                     Log.ReceivedMessageFromQueue(s_logger, _queueName, Topic, JsonSerializer.Serialize(msg, JsonSerialisationOptions.Options));
                 }
             }
             catch (OperationCanceledException)
             {
+                Console.WriteLine($"[RDX] consumer BLPOP cancelled queue='{_queueName}'");
                 Log.TimeoutWithoutReceivingMessage(s_logger, _queueName, Topic);
             }
             catch (RedisException re) when (re.InnerException is OperationCanceledException)
             {
+                Console.WriteLine($"[RDX] consumer BLPOP redis-ex (cancelled) queue='{_queueName}' ex={re.Message}");
                 Log.TimeoutWithoutReceivingMessage(s_logger, _queueName, Topic);
             }
-            
+
             return (latestId, msg);
         }
 
