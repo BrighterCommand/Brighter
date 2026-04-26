@@ -281,11 +281,10 @@ namespace Paramore.Brighter
                         .Where(attribute => attribute.Timing == HandlerTiming.Before)
                         .OrderByDescending(attribute => attribute.Step);
 
-                AddGlobalInboxAttributes(ref preAttributes, implicitHandler);
-
                 s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
-
             }
+
+            AddGlobalInboxAttributes(ref preAttributes, implicitHandler);
 
             var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext, instanceScope);
 
@@ -323,11 +322,10 @@ namespace Paramore.Brighter
                         .Where(attribute => attribute.Timing == HandlerTiming.Before)
                         .OrderByDescending(attribute => attribute.Step);
 
-                AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
-
                 s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
-
             }
+
+            AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
 
             var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, instanceScope, continueOnCapturedContext);
 
@@ -348,14 +346,12 @@ namespace Paramore.Brighter
         private void AddGlobalInboxAttributes(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandler<TRequest> implicitHandler)
         {
             if (
-                _inboxConfiguration == null 
+                _inboxConfiguration == null
                 || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
                 || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
             )
                 return;
 
-            if (_inboxConfiguration is null)
-                throw new ArgumentException("Inbox Configuration must be provided");
             if (_inboxConfiguration.Context is null)
                 throw new ArgumentException("Inbox Configuration must be set");
             var useInboxAttribute = new UseInboxAttribute(
@@ -364,22 +360,18 @@ namespace Paramore.Brighter
                 onceOnly: _inboxConfiguration.OnceOnly,
                 timing: HandlerTiming.Before,
                 onceOnlyAction: _inboxConfiguration.ActionOnExists);
-            
+
              PushOntoAttributeList(ref preAttributes, useInboxAttribute);
         }
 
-
         private void AddGlobalInboxAttributesAsync(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAsync<TRequest> implicitHandler)
         {
-            if (_inboxConfiguration == null 
+            if (_inboxConfiguration == null
                 || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
                 || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
-     
             )
                 return;
 
-            if (_inboxConfiguration is null)
-                throw new ArgumentException("Inbox Configuration must be provided");
             if (_inboxConfiguration.Context is null)
                 throw new ArgumentException("Inbox Configuration must be set");
             var useInboxAttribute = new UseInboxAsyncAttribute(
@@ -442,14 +434,21 @@ namespace Paramore.Brighter
         private static void PushOntoAttributeList(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAttribute requestHandlerAttribute)
         {
             var attributeList = new List<RequestHandlerAttribute>();
-
-            attributeList.Add(requestHandlerAttribute);
+            var minStep = int.MaxValue;
 
             preAttributes.Each(handler =>
             {
-                handler.Step++;
+                if (handler.Step < minStep)
+                    minStep = handler.Step;
                 attributeList.Add(handler);
             });
+
+            // Ensure the new attribute has a lower step than all existing attributes
+            // so it is processed last in the descending iteration (outermost in the pipeline).
+            // Note: requestHandlerAttribute must be a freshly created instance on every call —
+            // callers must not cache or reuse it, as we mutate its Step here.
+            requestHandlerAttribute.Step = minStep == int.MaxValue ? 0 : minStep - 1;
+            attributeList.Add(requestHandlerAttribute);
 
             preAttributes = attributeList.OrderByDescending(handler => handler.Step);
         }
