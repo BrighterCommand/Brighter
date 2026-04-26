@@ -52,16 +52,11 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
         ValidateMillisecondsTimeout(timeout.Value);
         
         var topic = new RoutingKey(message.Header.Topic);
-        
-        if (!_messages.TryGetValue(topic, out var blockingCollection))
-        {
-            blockingCollection = boundedCapacity > 0 ? 
-                new BlockingCollection<Message>(boundedCapacity) : new BlockingCollection<Message>();
-            
-            if (!_messages.TryAdd(topic, blockingCollection) && !_messages.ContainsKey(topic))
-                throw new InvalidOperationException("Failed to add topic to the bus");
-        }
-        
+
+        var blockingCollection = _messages.GetOrAdd(topic, _ => boundedCapacity > 0
+            ? new BlockingCollection<Message>(boundedCapacity)
+            : new BlockingCollection<Message>());
+
         if (!blockingCollection.TryAdd(message, Convert.ToInt32(timeout.Value.TotalMilliseconds), CancellationToken.None))
             throw new InvalidOperationException("Failed to add message to the bus");
     }
