@@ -10,6 +10,7 @@
 - Per-backend docker images: tests live under `tests/Paramore.Brighter.{Backend}.Tests/BoxProvisioning/` and run against the docker-compose databases started by `dockercompose.*.yml`.
 - File/test names follow the project GWT convention: `When_{condition}_should_{behavior}.cs`.
 - Each TEST + IMPLEMENT task is a single combined unit — do **not** split into separate test/implement tasks.
+- **Drift-test plumbing** (Tasks 1.1 / 2.1 / 3.1 / 4.1): the shared `DdlColumnExtractor` + `QuoteStyle` types live in the dedicated `tests/Paramore.Brighter.BoxProvisioning.Tests/` project (Task 0.4). Before writing any per-backend drift test, add `<ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />` to the per-backend test project's csproj (one-time setup per backend) and `using Paramore.Brighter.BoxProvisioning.Tests.Drift;` to the test file.
 
 ## Risk-mitigating task ordering
 
@@ -127,6 +128,7 @@ Spec 0023 findings closed out as side-effects:
 
 - [ ] **TEST + IMPLEMENT: MSSQL outbox builder column set equals V_latest migration LogicalColumns union housekeeping**
   - **USE COMMAND**: `/test-first when mssql outbox builder is compared to v7 migration columns it should have identical expected column set`
+  - **Project setup (first MSSQL drift task only)**: add `<ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />` to `tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj` to gain access to `DdlColumnExtractor` + `QuoteStyle`.
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_outbox_builder_is_compared_to_v7_migration_columns_it_should_have_identical_expected_column_set.cs`
   - Test should verify:
@@ -349,6 +351,7 @@ Spec 0023 findings closed out as side-effects:
 
 - [ ] **TEST + IMPLEMENT: Postgres outbox + inbox builders match V_latest migration LogicalColumns**
   - **USE COMMAND**: `/test-first when postgres outbox and inbox builders are compared to latest migration columns they should have identical expected column sets`
+  - **Project setup (first Postgres drift task only)**: add `<ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />` to `tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj` to gain access to `DdlColumnExtractor` + `QuoteStyle`.
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgres_outbox_and_inbox_builders_are_compared_to_latest_migration_columns_they_should_have_identical_expected_column_sets.cs`
   - Test should verify:
@@ -483,6 +486,7 @@ Spec 0023 findings closed out as side-effects:
 
 - [ ] **TEST + IMPLEMENT: MySQL outbox + inbox builders match V_latest migration LogicalColumns**
   - **USE COMMAND**: `/test-first when mysql outbox and inbox builders are compared to latest migration columns they should have identical expected column sets`
+  - **Project setup (first MySQL drift task only)**: add `<ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />` to `tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj` to gain access to `DdlColumnExtractor` + `QuoteStyle`.
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
   - Test file: `When_mysql_outbox_and_inbox_builders_are_compared_to_latest_migration_columns_they_should_have_identical_expected_column_sets.cs`
   - Test should verify:
@@ -616,6 +620,7 @@ Spec 0023 findings closed out as side-effects:
 
 - [ ] **TEST + IMPLEMENT: SQLite outbox + inbox builders match V_latest migration LogicalColumns**
   - **USE COMMAND**: `/test-first when sqlite outbox and inbox builders are compared to latest migration columns they should have identical expected column sets`
+  - **Project setup (first SQLite drift task only)**: add `<ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />` to `tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj` to gain access to `DdlColumnExtractor` + `QuoteStyle`.
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_sqlite_outbox_and_inbox_builders_are_compared_to_latest_migration_columns_they_should_have_identical_expected_column_sets.cs`
   - Test should verify:
