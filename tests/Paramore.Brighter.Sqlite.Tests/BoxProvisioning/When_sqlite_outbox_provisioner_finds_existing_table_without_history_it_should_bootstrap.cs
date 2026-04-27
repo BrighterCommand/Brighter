@@ -50,8 +50,9 @@ public class When_sqlite_outbox_provisioner_finds_existing_table_without_history
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM [__BrighterMigrationHistory]
-WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = 1";
+WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
+        historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = Convert.ToInt64(await historyCheck.ExecuteScalarAsync());
         Assert.Equal(1, historyCount);
     }

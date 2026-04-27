@@ -22,7 +22,11 @@ public static class MsSqlInboxMigrations
                 Description: "Create inbox table",
                 UpScript: SqlInboxBuilder.GetDDL(
                     config.InBoxTableName,
-                    config.BinaryMessagePayload))
+                    config.BinaryMessagePayload),
+                LogicalColumns: new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+                {
+                    "CommandId", "CommandType", "CommandBody", "Timestamp"
+                })
         ];
     }
 }

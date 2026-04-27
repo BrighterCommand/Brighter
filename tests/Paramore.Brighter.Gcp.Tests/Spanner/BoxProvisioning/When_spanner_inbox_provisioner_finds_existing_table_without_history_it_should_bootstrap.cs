@@ -48,8 +48,12 @@ public class When_spanner_inbox_provisioner_finds_existing_table_without_history
 
         using var historyCheck = connection.CreateSelectCommand(
             @"SELECT COUNT(1) FROM `BrighterMigrationHistory`
-WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = 1",
-            new SpannerParameterCollection { { "BoxTableName", SpannerDbType.String, _tableName } });
+WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
+            new SpannerParameterCollection
+            {
+                { "BoxTableName", SpannerDbType.String, _tableName },
+                { "ExpectedVersion", SpannerDbType.Int64, (long)ExpectedMigrationVersions.InboxLatest }
+            });
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
         Assert.Equal(1, historyCount);
     }

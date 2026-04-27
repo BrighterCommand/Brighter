@@ -15,7 +15,11 @@ public static class SpannerInboxMigrations
             new BoxMigration(
                 Version: 1,
                 Description: "Create inbox table",
-                UpScript: SpannerInboxBuilder.GetDDL(config.InBoxTableName))
+                UpScript: SpannerInboxBuilder.GetDDL(config.InBoxTableName),
+                // TODO(spec-0027 Phase 5): file deleted — runner no longer uses migration list.
+                // Empty-set bridge keeps the build green between Phase 0 (interface extension) and
+                // Phase 5 (Spanner degenerate runner rework, which deletes this file entirely).
+                LogicalColumns: new HashSet<string>())
         ];
     }
 }

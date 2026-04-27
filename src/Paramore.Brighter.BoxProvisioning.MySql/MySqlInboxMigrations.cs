@@ -17,7 +17,11 @@ public static class MySqlInboxMigrations
                 Description: "Create inbox table",
                 UpScript: MySqlInboxBuilder.GetDDL(
                     config.InBoxTableName,
-                    config.BinaryMessagePayload))
+                    config.BinaryMessagePayload),
+                LogicalColumns: new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+                {
+                    "CommandId", "CommandType", "CommandBody", "Timestamp"
+                })
         ];
     }
 }

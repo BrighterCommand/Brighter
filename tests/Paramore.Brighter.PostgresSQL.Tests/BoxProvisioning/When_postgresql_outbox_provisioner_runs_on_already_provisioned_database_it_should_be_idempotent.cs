@@ -40,8 +40,9 @@ public class When_postgresql_outbox_provisioner_runs_on_already_provisioned_data
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM ""__BrighterMigrationHistory""
-WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public' AND ""MigrationVersion"" = 1";
+WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public' AND ""MigrationVersion"" = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
+        historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
         Assert.Equal(1, historyCount);
     }

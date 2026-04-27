@@ -17,7 +17,11 @@ public static class SpannerOutboxMigrations
                 Description: "Create outbox table",
                 UpScript: SpannerOutboxBuilder.GetDDL(
                     config.OutBoxTableName,
-                    config.BinaryMessagePayload))
+                    config.BinaryMessagePayload),
+                // TODO(spec-0027 Phase 5): file deleted — runner no longer uses migration list.
+                // Empty-set bridge keeps the build green between Phase 0 (interface extension) and
+                // Phase 5 (Spanner degenerate runner rework, which deletes this file entirely).
+                LogicalColumns: new HashSet<string>())
         ];
     }
 }

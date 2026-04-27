@@ -17,7 +17,11 @@ public static class PostgreSqlOutboxMigrations
                 Description: "Create outbox table",
                 UpScript: PostgreSqlOutboxBuilder.GetDDL(
                     config.OutBoxTableName,
-                    config.BinaryMessagePayload))
+                    config.BinaryMessagePayload),
+                LogicalColumns: new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+                {
+                    "MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body"
+                })
         ];
     }
 }

@@ -50,8 +50,9 @@ public class When_mssql_inbox_provisioner_finds_existing_table_without_history_i
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM [__BrighterMigrationHistory]
-WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = 'dbo' AND [MigrationVersion] = 1";
+WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = 'dbo' AND [MigrationVersion] = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
+        historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
         var historyCount = (int)historyCheck.ExecuteScalar()!;
         Assert.Equal(1, historyCount);
 

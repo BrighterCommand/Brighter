@@ -47,8 +47,9 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @TableName)";
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM `__BrighterMigrationHistory`
-WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = 1";
+WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _freshTableName);
+        historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
         Assert.Equal(1, historyCount);
     }
@@ -78,12 +79,13 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = 1";
         using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        // History should have synthetic version-1 row
+        // History should have a synthetic row at the latest inbox version
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM `__BrighterMigrationHistory`
-WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = 1";
+WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _existingTableName);
+        historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
         Assert.Equal(1, historyCount);
     }

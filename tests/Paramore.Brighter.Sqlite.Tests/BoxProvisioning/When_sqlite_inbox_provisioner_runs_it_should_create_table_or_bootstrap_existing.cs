@@ -45,8 +45,9 @@ public class InboxProvisionerTests : IAsyncLifetime
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM [__BrighterMigrationHistory]
-WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = 1";
+WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _freshTableName);
+        historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
         var historyCount = Convert.ToInt64(await historyCheck.ExecuteScalarAsync());
         Assert.Equal(1, historyCount);
     }
@@ -83,8 +84,9 @@ WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = 1";
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM [__BrighterMigrationHistory]
-WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = 1";
+WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _existingTableName);
+        historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
         var historyCount = Convert.ToInt64(await historyCheck.ExecuteScalarAsync());
         Assert.Equal(1, historyCount);
     }

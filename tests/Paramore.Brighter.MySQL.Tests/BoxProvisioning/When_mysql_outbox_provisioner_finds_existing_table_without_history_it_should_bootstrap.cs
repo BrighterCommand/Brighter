@@ -46,8 +46,9 @@ public class When_mysql_outbox_provisioner_finds_existing_table_without_history_
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM `__BrighterMigrationHistory`
-WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = 1";
+WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
+        historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
         Assert.Equal(1, historyCount);
     }

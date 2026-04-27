@@ -47,12 +47,13 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @TableName)";
         var tableExists = Convert.ToBoolean(await tableCheck.ExecuteScalarAsync());
         Assert.True(tableExists);
 
-        // Verify exactly one version-1 row in migration history
+        // Verify exactly one row at the latest outbox version in migration history
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
 SELECT COUNT(1) FROM `__BrighterMigrationHistory`
-WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = 1";
+WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
+        historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
         Assert.Equal(1, historyCount);
     }

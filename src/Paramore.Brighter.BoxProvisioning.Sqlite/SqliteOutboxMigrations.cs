@@ -17,7 +17,11 @@ public static class SqliteOutboxMigrations
                 Description: "Create outbox table",
                 UpScript: SqliteOutboxBuilder.GetDDL(
                     config.OutBoxTableName,
-                    config.BinaryMessagePayload))
+                    config.BinaryMessagePayload),
+                LogicalColumns: new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+                {
+                    "MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body"
+                })
         ];
     }
 }

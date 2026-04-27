@@ -37,7 +37,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 0.1: Extend `IAmABoxMigration` with logical-column, source-reference, and SQLite idempotency members
 
-- [ ] **IMPLEMENT: Add `LogicalColumns`, `SourceReference`, `IdempotencyCheckSql` to `IAmABoxMigration`**
+- [x] **IMPLEMENT: Add `LogicalColumns`, `SourceReference`, `IdempotencyCheckSql` to `IAmABoxMigration`**
   - File: `src/Paramore.Brighter.BoxProvisioning/IAmABoxMigration.cs`
   - Add `ISet<string> LogicalColumns { get; }` as required member (source-breaking — acknowledged in ADR 0057 "Consequences → Negative"). **Use `ISet<string>` not `IReadOnlySet<string>`**: `IReadOnlySet<T>` is .NET 5+ and unavailable on `netstandard2.0` (per requirements C-5); `ISet<string>` provides the `Contains`/`IsSupersetOf` semantics detection needs, with read-only-by-convention enforcement (implementations populate once and never mutate)
   - Add `string? SourceReference { get; }` as required nullable member
@@ -48,7 +48,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 0.2: Extend `BoxMigration` record with the three new parameters
 
-- [ ] **IMPLEMENT: Add `LogicalColumns`, `SourceReference`, `IdempotencyCheckSql` to `BoxMigration` record**
+- [x] **IMPLEMENT: Add `LogicalColumns`, `SourceReference`, `IdempotencyCheckSql` to `BoxMigration` record**
   - File: `src/Paramore.Brighter.BoxProvisioning/BoxMigration.cs`
   - Append three new positional parameters to the record, matching the interface order from Task 0.1
   - `SourceReference` and `IdempotencyCheckSql` default to `null`; `LogicalColumns` has no default (required)
@@ -57,7 +57,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 0.3: Update existing V1 call sites to supply new parameters
 
-- [ ] **IMPLEMENT: Update each `*OutboxMigrations.All` / `*InboxMigrations.All` V1 entry with the new parameters**
+- [x] **IMPLEMENT: Update each `*OutboxMigrations.All` / `*InboxMigrations.All` V1 entry with the new parameters**
   - Files affected (four relational backends × two box types + Spanner × two box types = 10 files):
     - `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlOutboxMigrations.cs`
     - `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlInboxMigrations.cs`
@@ -79,7 +79,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 0.3a: Update existing hard-coded `MigrationVersion = 1` assertions to `V_latest`
 
-- [ ] **IMPLEMENT: Retarget existing fresh-install / bootstrap / idempotent / concurrent tests to `V_latest`**
+- [x] **IMPLEMENT: Retarget existing fresh-install / bootstrap / idempotent / concurrent tests to `V_latest`**
   - Existing tests (written against the single-V1 model of spec 0023) hard-code SQL predicates like `[MigrationVersion] = 1` and C# assertions of the same shape. Once Phase 1–5 ships, fresh install stamps `V_latest` (outbox = 7, inbox = 2 for relational; same for Spanner) — these assertions will fail without update.
   - **Selection criterion**: every test file containing a hard-coded `MigrationVersion = 1` assertion (SQL predicate, parameterised SQL, or C# `Assert`) — confirmed at task-execution time by `grep -rn 'MigrationVersion.*=.*1\|MigrationVersion.*1' tests/Paramore.Brighter.*Tests/BoxProvisioning/`. The 23 files enumerated below are the current matches; if grep surfaces additional files at task-execution time, add them to the retarget set.
   - Files to update (23 files confirmed by grep — do all in one commit to keep Phase 0 green-build):
