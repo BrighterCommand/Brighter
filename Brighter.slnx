@@ -191,6 +191,7 @@
     <Project Path="tests/Paramore.Brighter.Azure.Tests/Paramore.Brighter.Azure.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Base.Test/Paramore.Brighter.Base.Test.csproj" />
+    <Project Path="tests/Paramore.Brighter.BoxProvisioning.Tests/Paramore.Brighter.BoxProvisioning.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj" />

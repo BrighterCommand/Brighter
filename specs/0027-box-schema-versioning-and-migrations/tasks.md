@@ -96,10 +96,12 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 0.4: Add drift-detection test infrastructure
 
-- [ ] **TEST + IMPLEMENT: Builder DDL column-set extraction helper for drift detection**
+- [x] **TEST + IMPLEMENT: Builder DDL column-set extraction helper for drift detection**
   - **USE COMMAND**: `/test-first when builder ddl is parsed by GetExpectedColumns it should return the actual column names`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/`
+  - **Project**: new `tests/Paramore.Brighter.BoxProvisioning.Tests/` project (separate from `Paramore.Brighter.Core.Tests` so Core stays free of backend-specific DDL grammar knowledge; per-backend drift test projects in Phases 1–4 add a `ProjectReference` to it). Registered in `Brighter.slnx` between `Base.Test` and `Core.Tests`.
+  - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests/Drift/`
   - Test file: `When_builder_ddl_is_parsed_by_get_expected_columns_it_should_return_actual_column_names.cs`
+  - Test class: `DdlColumnExtractorTests` (per testing.md the `When_…` convention is for method names and file names only — class names use `[Behavior]Tests`)
   - Test should verify:
     - Given a known inline `CREATE TABLE` string with 6 columns including quoted identifiers (MSSQL `[col]`, Postgres lowercase, MySQL backtick, SQLite bracket)
     - **SQLite inline `COLLATE NOCASE` after the type specifier is handled** — e.g. `[MessageId] TEXT NOT NULL COLLATE NOCASE,` — the extractor returns `MessageId`, not `MessageId COLLATE NOCASE` or any truncation
@@ -110,12 +112,12 @@ Spec 0023 findings closed out as side-effects:
     - Verify for each backend's quote style
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Add test-project helper `DdlColumnExtractor` in `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/Drift/DdlColumnExtractor.cs`
-    - Define a co-located test-project enum `public enum QuoteStyle { MsSql, Postgres, MySql, Sqlite }` (also in `tests/Paramore.Brighter.Core.Tests/BoxProvisioning/Drift/QuoteStyle.cs`) — values are referenced by name from per-backend drift tests in 1.1 / 2.1 / 3.1 / 4.1
+    - Add test-project helper `DdlColumnExtractor` in `tests/Paramore.Brighter.BoxProvisioning.Tests/Drift/DdlColumnExtractor.cs`
+    - Define a co-located test-project enum `public enum QuoteStyle { MsSql, Postgres, MySql, Sqlite }` (also in `tests/Paramore.Brighter.BoxProvisioning.Tests/Drift/QuoteStyle.cs`) — values are referenced by name from per-backend drift tests in 1.1 / 2.1 / 3.1 / 4.1
     - Regex-based extraction per backend quote style — parses the `(...)` body of `CREATE TABLE ...`, splits on top-level commas, extracts the first quoted identifier on each column-declaration line, filters out lines beginning with `CONSTRAINT` / `PRIMARY KEY` / `FOREIGN KEY` / `UNIQUE` / `INDEX`
     - Inline `COLLATE <name>` clauses are harmless because the extractor only reads the first quoted identifier on the line — but document this explicitly in a code comment
     - Returns `HashSet<string>` with the backend-appropriate comparer (Ordinal for Postgres, OrdinalIgnoreCase otherwise)
-    - This helper is consumed by all per-backend drift tests in phases 1–4
+    - This helper is consumed by all per-backend drift tests in phases 1–4 — those test projects must add `<ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />` so they can use `DdlColumnExtractor` and `QuoteStyle`
 
 ---
 
