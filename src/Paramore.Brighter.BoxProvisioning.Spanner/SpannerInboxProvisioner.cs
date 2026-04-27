@@ -34,6 +34,7 @@ public class SpannerInboxProvisioner(
         await migrationRunner.MigrateAsync(
             configuration.InBoxTableName,
             configuration.SchemaName,
+            BoxType.Inbox,
             migrations,
             tableState,
             cancellationToken);

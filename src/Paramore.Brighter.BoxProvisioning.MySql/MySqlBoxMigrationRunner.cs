@@ -20,10 +20,12 @@ public class MySqlBoxMigrationRunner(
     public async Task MigrateAsync(
         string tableName,
         string? schemaName,
+        BoxType boxType,
         IReadOnlyList<IAmABoxMigration> migrations,
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
+        _ = boxType; // TODO(spec 0027 phase 3): three-path branching with discriminator gate
         var effectiveSchema = schemaName ?? DatabaseName();
 
         using var connection = new MySqlConnection(configuration.ConnectionString);

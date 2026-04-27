@@ -19,10 +19,12 @@ public class SqliteBoxMigrationRunner(
     public async Task MigrateAsync(
         string tableName,
         string? schemaName,
+        BoxType boxType,
         IReadOnlyList<IAmABoxMigration> migrations,
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
+        _ = boxType; // TODO(spec 0027 phase 4): three-path branching with discriminator gate
         using var connection = new SqliteConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 

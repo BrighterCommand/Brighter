@@ -24,10 +24,12 @@ public class SpannerBoxMigrationRunner(
     public async Task MigrateAsync(
         string tableName,
         string? schemaName,
+        BoxType boxType,
         IReadOnlyList<IAmABoxMigration> migrations,
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
+        _ = boxType; // TODO(spec 0027 phase 5): degenerate Spanner runner with discriminator gate
         using var connection = SpannerConnectionHelper.CreateConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 

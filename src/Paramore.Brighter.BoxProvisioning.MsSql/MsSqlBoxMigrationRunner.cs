@@ -1,3 +1,26 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -7,8 +30,11 @@ using Microsoft.Data.SqlClient;
 namespace Paramore.Brighter.BoxProvisioning.MsSql;
 
 /// <summary>
-/// Runs box migrations against a MSSQL database. Uses sp_getapplock for
-/// concurrency control and a single transaction for all-or-nothing semantics.
+/// Runs box migrations against a MSSQL database. Uses sp_getapplock for concurrency control
+/// and a single transaction for all-or-nothing semantics. After acquiring the lock the runner
+/// re-reads box-table state under the lock and dispatches into one of three paths
+/// (fresh / bootstrap / normal) per ADR 0057 §3 — the caller's <see cref="BoxTableState"/>
+/// is treated as a stale hint to defeat TOCTOU races.
 /// </summary>
 public class MsSqlBoxMigrationRunner(
     IAmARelationalDatabaseConfiguration configuration,
@@ -20,6 +46,7 @@ public class MsSqlBoxMigrationRunner(
     public async Task MigrateAsync(
         string tableName,
         string? schemaName,
+        BoxType boxType,
         IReadOnlyList<IAmABoxMigration> migrations,
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
@@ -40,31 +67,25 @@ public class MsSqlBoxMigrationRunner(
             await AcquireLockAsync(connection, transaction, tableName, cancellationToken);
             await EnsureHistoryTableAsync(connection, transaction, cancellationToken);
 
-            if (tableState is { TableExists: true, HistoryExists: false })
+            var tableExistsNow = await MsSqlBoxDetectionHelpers.DoesTableExistAsync(
+                connection, tableName, effectiveSchema, cancellationToken, transaction);
+            var historyExistsNow = tableExistsNow && await MsSqlBoxDetectionHelpers.DoesHistoryExistAsync(
+                connection, tableName, effectiveSchema, cancellationToken, transaction);
+
+            if (!tableExistsNow)
             {
-                await InsertSyntheticHistoryAsync(
-                    connection, transaction, effectiveSchema, tableName,
-                    migrations, tableState.CurrentVersion, cancellationToken);
+                await RunFreshPathAsync(
+                    connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
             }
-
-            foreach (var migration in migrations)
+            else if (!historyExistsNow)
             {
-                if (migration.Version <= tableState.CurrentVersion)
-                    continue;
-
-                if (await IsMigrationAppliedAsync(
-                        connection, transaction, effectiveSchema, tableName,
-                        migration.Version, cancellationToken))
-                    continue;
-
-                using var ddlCommand = connection.CreateCommand();
-                ddlCommand.Transaction = transaction;
-                ddlCommand.CommandText = migration.UpScript;
-                await ddlCommand.ExecuteNonQueryAsync(cancellationToken);
-
-                await InsertHistoryRowAsync(
-                    connection, transaction, effectiveSchema, tableName,
-                    migration, cancellationToken);
+                await RunBootstrapPathAsync(
+                    connection, transaction, effectiveSchema, tableName, boxType, migrations, cancellationToken);
+            }
+            else
+            {
+                await RunNormalPathAsync(
+                    connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
             }
 
             transaction.Commit();
@@ -77,6 +98,90 @@ public class MsSqlBoxMigrationRunner(
         finally
         {
             transaction.Dispose();
+        }
+    }
+
+    private async Task RunFreshPathAsync(
+        SqlConnection connection, SqlTransaction transaction,
+        string schemaName, string tableName,
+        IReadOnlyList<IAmABoxMigration> migrations,
+        CancellationToken cancellationToken)
+    {
+        if (migrations.Count == 0) return;
+
+        // V1's UpScript IS the live builder DDL (V_latest-shape per ADR §3 fresh-install fast
+        // path). We stamp directly at V_latest with a "fresh install" marker — V2..V_latest
+        // ALTERs would be no-ops on the V_latest-shape table, so we skip them.
+        await ExecuteUpScriptAsync(connection, transaction, migrations[0], cancellationToken);
+
+        var latest = migrations[migrations.Count - 1];
+        await InsertHistoryRowAsync(
+            connection, transaction, schemaName, tableName,
+            latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
+    }
+
+    private async Task RunBootstrapPathAsync(
+        SqlConnection connection, SqlTransaction transaction,
+        string schemaName, string tableName,
+        BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
+        CancellationToken cancellationToken)
+    {
+        var detected = await MsSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            connection, tableName, schemaName, boxType, migrations, cancellationToken, transaction);
+
+        if (detected == -1)
+        {
+            var discriminator = MsSqlBoxDetectionHelpers.DiscriminatorFor(boxType);
+            throw new ConfigurationException(
+                $"Table '{schemaName}.{tableName}' is not a Brighter {boxType.ToString().ToLowerInvariant()}: " +
+                $"missing discriminator column '{discriminator}'.");
+        }
+
+        if (detected == 0)
+        {
+            throw new ConfigurationException(
+                $"Table '{schemaName}.{tableName}' does not match any known schema version. " +
+                $"Cannot bootstrap a Brighter {boxType.ToString().ToLowerInvariant()} from an unrecognised column set.");
+        }
+
+        await InsertHistoryRowAsync(
+            connection, transaction, schemaName, tableName,
+            detected, $"bootstrap: detected at V{detected}", cancellationToken);
+
+        for (var i = 0; i < migrations.Count; i++)
+        {
+            var migration = migrations[i];
+            if (migration.Version <= detected) continue;
+
+            await ExecuteUpScriptAsync(connection, transaction, migration, cancellationToken);
+            await InsertHistoryRowAsync(
+                connection, transaction, schemaName, tableName,
+                migration.Version, migration.Description, cancellationToken);
+        }
+    }
+
+    private async Task RunNormalPathAsync(
+        SqlConnection connection, SqlTransaction transaction,
+        string schemaName, string tableName,
+        IReadOnlyList<IAmABoxMigration> migrations,
+        CancellationToken cancellationToken)
+    {
+        var maxVersion = await MsSqlBoxDetectionHelpers.GetMaxVersionAsync(
+            connection, tableName, schemaName, cancellationToken, transaction);
+
+        foreach (var migration in migrations)
+        {
+            if (migration.Version <= maxVersion) continue;
+
+            if (await IsMigrationAppliedAsync(
+                    connection, transaction, schemaName, tableName,
+                    migration.Version, cancellationToken))
+                continue;
+
+            await ExecuteUpScriptAsync(connection, transaction, migration, cancellationToken);
+            await InsertHistoryRowAsync(
+                connection, transaction, schemaName, tableName,
+                migration.Version, migration.Description, cancellationToken);
         }
     }
 
@@ -138,20 +243,14 @@ END";
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task InsertSyntheticHistoryAsync(
+    private static async Task ExecuteUpScriptAsync(
         SqlConnection connection, SqlTransaction transaction,
-        string schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations,
-        int currentVersion, CancellationToken cancellationToken)
+        IAmABoxMigration migration, CancellationToken cancellationToken)
     {
-        foreach (var migration in migrations)
-        {
-            if (migration.Version > currentVersion) break;
-
-            await InsertHistoryRowAsync(
-                connection, transaction, schemaName, tableName,
-                migration, cancellationToken);
-        }
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = migration.UpScript;
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static async Task<bool> IsMigrationAppliedAsync(
@@ -175,17 +274,17 @@ WHERE [SchemaName] = @SchemaName AND [BoxTableName] = @BoxTableName AND [Migrati
     private static async Task InsertHistoryRowAsync(
         SqlConnection connection, SqlTransaction transaction,
         string schemaName, string tableName,
-        IAmABoxMigration migration, CancellationToken cancellationToken)
+        int version, string description, CancellationToken cancellationToken)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
 INSERT INTO [{MIGRATION_HISTORY_TABLE}] ([MigrationVersion], [SchemaName], [BoxTableName], [Description])
 VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
-        command.Parameters.AddWithValue("@Version", migration.Version);
+        command.Parameters.AddWithValue("@Version", version);
         command.Parameters.AddWithValue("@SchemaName", schemaName);
         command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@Description", migration.Description);
+        command.Parameters.AddWithValue("@Description", description);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }

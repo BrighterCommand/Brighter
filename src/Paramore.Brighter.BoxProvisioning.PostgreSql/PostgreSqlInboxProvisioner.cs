@@ -34,6 +34,7 @@ public class PostgreSqlInboxProvisioner(
         await migrationRunner.MigrateAsync(
             configuration.InBoxTableName,
             configuration.SchemaName,
+            BoxType.Inbox,
             migrations,
             tableState,
             cancellationToken);

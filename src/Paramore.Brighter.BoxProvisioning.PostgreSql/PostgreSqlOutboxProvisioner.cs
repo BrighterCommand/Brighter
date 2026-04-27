@@ -37,6 +37,7 @@ public class PostgreSqlOutboxProvisioner(
         await migrationRunner.MigrateAsync(
             configuration.OutBoxTableName,
             configuration.SchemaName,
+            BoxType.Outbox,
             migrations,
             tableState,
             cancellationToken);

@@ -21,10 +21,12 @@ public class PostgreSqlBoxMigrationRunner(
     public async Task MigrateAsync(
         string tableName,
         string? schemaName,
+        BoxType boxType,
         IReadOnlyList<IAmABoxMigration> migrations,
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
+        _ = boxType; // TODO(spec 0027 phase 2): three-path branching with discriminator gate
         var effectiveSchema = schemaName ?? "public";
 
         using var connection = new NpgsqlConnection(configuration.ConnectionString);
