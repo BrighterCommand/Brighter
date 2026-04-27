@@ -298,12 +298,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     return [];
                 
                 var message = RedisMessageCreator.CreateMessage(redisMessage.rawMsg);
-                
+
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
                 {
                     _inflight.Add(message.Id, redisMessage.msgId);
                 }
-                
+
                 return [message];
             }
             catch (TimeoutException te)
@@ -710,7 +710,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             string? latestId = null;
             try
             {
-                using var cts = new CancellationTokenSource(timeOut);
+                // Give the server-side BLPOP timeout a chance to fire first; if the client cancels first
+                // a freshly-pushed item can be delivered to the lingering BLPOP and lost.
+                using var cts = new CancellationTokenSource(timeOut + TimeSpan.FromSeconds(1));
                 latestId = await client.BlockingRemoveStartFromListAsync(_queueName, timeOut, cts.Token);
                 if (latestId != null)
                 {

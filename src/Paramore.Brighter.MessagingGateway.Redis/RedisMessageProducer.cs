@@ -194,7 +194,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
             BrighterTracer.WriteProducerEvent(Span, "redis", message, instrumentation);
             Log.PreparingToSend(s_logger);
-  
+
             var redisMessage = CreateRedisMessage(message);
 
             Log.PublishingMessage(s_logger, message.Header.Topic, message.Id.ToString(), message.Body.Value);
