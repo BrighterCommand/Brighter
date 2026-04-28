@@ -126,7 +126,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 1.1: Drift test — MSSQL outbox builder matches V_latest migration list
 
-- [ ] **TEST + IMPLEMENT: MSSQL outbox builder column set equals V_latest migration LogicalColumns union housekeeping**
+- [x] **TEST + IMPLEMENT: MSSQL outbox builder column set equals V_latest migration LogicalColumns union housekeeping**
   - **USE COMMAND**: `/test-first when mssql outbox builder is compared to v7 migration columns it should have identical expected column set`
   - **Project setup (first MSSQL drift task only)**: add `<ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />` to `tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj` to gain access to `DdlColumnExtractor` + `QuoteStyle`.
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
@@ -144,7 +144,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 1.2: MSSQL outbox migrations V1..V7
 
-- [ ] **TEST + IMPLEMENT: MSSQL outbox V1..V7 migrations each carry LogicalColumns matching the archaeology**
+- [x] **TEST + IMPLEMENT: MSSQL outbox V1..V7 migrations each carry LogicalColumns matching the archaeology**
   - **USE COMMAND**: `/test-first when mssql outbox migrations are listed it should return v1 through v7 with correct logical columns`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_outbox_migrations_are_listed_it_should_return_v1_through_v7_with_correct_logical_columns.cs`
@@ -172,7 +172,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 1.3: MSSQL inbox migrations V1..V2
 
-- [ ] **TEST + IMPLEMENT: MSSQL inbox V1..V2 migrations with ContextKey as V2**
+- [x] **TEST + IMPLEMENT: MSSQL inbox V1..V2 migrations with ContextKey as V2**
   - **USE COMMAND**: `/test-first when mssql inbox migrations are listed it should return v1 and v2 with contextkey added in v2`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_contextkey_added_in_v2.cs`
@@ -192,7 +192,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 1.4: MSSQL runner three-path branching with discriminator gate
 
-- [ ] **TEST + IMPLEMENT: MSSQL runner fresh path re-checks table existence under the advisory lock**
+- [x] **TEST + IMPLEMENT: MSSQL runner fresh path re-checks table existence under the advisory lock**
   - **USE COMMAND**: `/test-first when mssql runner fresh path acquires lock it should re-check table existence before creating`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating.cs`
@@ -218,7 +218,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 1.5: MSSQL discriminator-gated detection returns `-1`, `0`, or `V>=1`
 
-- [ ] **TEST + IMPLEMENT: MSSQL outbox detection returns -1 when HeaderBag column is absent**
+- [x] **TEST + IMPLEMENT: MSSQL outbox detection returns -1 when HeaderBag column is absent**
   - **USE COMMAND**: `/test-first when mssql outbox detects table missing headerbag discriminator it should return negative one`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_outbox_detects_table_missing_headerbag_discriminator_it_should_return_negative_one.cs`
@@ -244,7 +244,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 1.6: MSSQL bootstrap-at-V_k end-to-end per outbox version
 
-- [ ] **TEST + IMPLEMENT: MSSQL outbox bootstrap upgrades pre-V7 tables to V7**
+- [x] **TEST + IMPLEMENT: MSSQL outbox bootstrap upgrades pre-V7 tables to V7**
   - **USE COMMAND**: `/test-first when mssql outbox table is bootstrapped at v_k it should upgrade to v7 with history advanced`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7_with_history_advanced.cs`
@@ -263,7 +263,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 1.7: MSSQL inbox bootstrap test
 
-- [ ] **TEST + IMPLEMENT: MSSQL inbox bootstrap upgrades pre-V2 tables to V2**
+- [x] **TEST + IMPLEMENT: MSSQL inbox bootstrap upgrades pre-V2 tables to V2**
   - **USE COMMAND**: `/test-first when mssql inbox table is bootstrapped at v1 it should upgrade to v2`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v2.cs`
@@ -279,7 +279,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 1.8: MSSQL concurrent-bootstrap race test (outbox + inbox)
 
-- [ ] **TEST + IMPLEMENT: Two MSSQL provisioners racing on a legacy table produce exactly one synthetic history row for both outbox and inbox**
+- [x] **TEST + IMPLEMENT: Two MSSQL provisioners racing on a legacy table produce exactly one synthetic history row for both outbox and inbox**
   - **USE COMMAND**: `/test-first when two mssql provisioners race on legacy table they should produce exactly one synthetic history row for outbox and inbox`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_two_mssql_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_history_row.cs`
@@ -295,7 +295,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 1.8a: MSSQL whole-chain rollback on mid-chain failure
 
-- [ ] **TEST + IMPLEMENT: MSSQL runner rolls back ALL migrations and history rows on mid-chain failure**
+- [x] **TEST + IMPLEMENT: MSSQL runner rolls back ALL migrations and history rows on mid-chain failure**
   - **USE COMMAND**: `/test-first when mssql runner fails mid chain it should roll back all migrations and history rows atomically`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically.cs`
@@ -313,7 +313,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 1.8b: MSSQL bootstrap V1→V7 completes within NFR-3 timing budget
 
-- [ ] **TEST + IMPLEMENT: MSSQL V1→V7 bootstrap completes within MigrationLockTimeout (NFR-3)**
+- [x] **TEST + IMPLEMENT: MSSQL V1→V7 bootstrap completes within MigrationLockTimeout (NFR-3)**
   - **USE COMMAND**: `/test-first when mssql bootstraps legacy v1 outbox to v7 it should complete within migration lock timeout`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_bootstraps_legacy_v1_outbox_to_v7_it_should_complete_within_migration_lock_timeout.cs`
@@ -329,7 +329,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 1.9: MSSQL spec-0023-era transition test (AC-6)
 
-- [ ] **TEST + IMPLEMENT: MSSQL table with existing V1-marked history transitions cleanly to V7**
+- [x] **TEST + IMPLEMENT: MSSQL table with existing V1-marked history transitions cleanly to V7**
   - **USE COMMAND**: `/test-first when mssql table has spec 0023 era history at v1 it should transition cleanly to v7`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/`
   - Test file: `When_mssql_table_has_spec_0023_era_history_at_v1_it_should_transition_cleanly_to_v7.cs`
@@ -349,7 +349,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 2.1: Drift tests — Postgres outbox V7 and inbox V1
 
-- [ ] **TEST + IMPLEMENT: Postgres outbox + inbox builders match V_latest migration LogicalColumns**
+- [x] **TEST + IMPLEMENT: Postgres outbox + inbox builders match V_latest migration LogicalColumns**
   - **USE COMMAND**: `/test-first when postgres outbox and inbox builders are compared to latest migration columns they should have identical expected column sets`
   - **Project setup (first Postgres drift task only)**: add `<ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />` to `tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj` to gain access to `DdlColumnExtractor` + `QuoteStyle`.
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
@@ -366,7 +366,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 2.2: Postgres outbox migrations V1..V7
 
-- [ ] **TEST + IMPLEMENT: Postgres outbox V1..V7 migrations with IF NOT EXISTS ALTER pattern**
+- [x] **TEST + IMPLEMENT: Postgres outbox V1..V7 migrations with IF NOT EXISTS ALTER pattern**
   - **USE COMMAND**: `/test-first when postgres outbox migrations are listed it should return v1 through v7 with lowercase logical columns and if not exists pattern`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgres_outbox_migrations_are_listed_it_should_return_v1_through_v7_with_lowercase_logical_columns_and_if_not_exists_pattern.cs`
@@ -384,7 +384,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 2.3: Postgres inbox migrations V1-only
 
-- [ ] **TEST + IMPLEMENT: Postgres inbox migrations list has only V1 (no V2 ContextKey migration)**
+- [x] **TEST + IMPLEMENT: Postgres inbox migrations list has only V1 (no V2 ContextKey migration)**
   - **USE COMMAND**: `/test-first when postgres inbox migrations are listed it should return only v1 with contextkey and composite pk as baseline`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgres_inbox_migrations_are_listed_it_should_return_only_v1_with_contextkey_and_composite_pk_as_baseline.cs`
@@ -400,7 +400,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 2.4: Postgres runner three-path branching
 
-- [ ] **TEST + IMPLEMENT: Postgres runner fresh path re-checks table existence under pg_try_advisory_lock**
+- [x] **TEST + IMPLEMENT: Postgres runner fresh path re-checks table existence under pg_try_advisory_lock**
   - **USE COMMAND**: `/test-first when postgres runner fresh path acquires advisory lock it should re-check table existence before creating`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgres_runner_fresh_path_acquires_advisory_lock_it_should_re_check_table_existence_before_creating.cs`
@@ -415,7 +415,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 2.5: Postgres discriminator-gated detection
 
-- [ ] **TEST + IMPLEMENT: Postgres outbox/inbox detection uses HeaderBag/CommandBody discriminator**
+- [x] **TEST + IMPLEMENT: Postgres outbox/inbox detection uses HeaderBag/CommandBody discriminator**
   - **USE COMMAND**: `/test-first when postgres outbox detects table missing headerbag it should return negative one and inbox should handle single version list`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgres_outbox_detects_table_missing_headerbag_it_should_return_negative_one_and_inbox_should_handle_single_version_list.cs`
@@ -431,7 +431,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 2.6: Postgres bootstrap-at-V_k test
 
-- [ ] **TEST + IMPLEMENT: Postgres outbox bootstrap upgrades pre-V7 tables to V7**
+- [x] **TEST + IMPLEMENT: Postgres outbox bootstrap upgrades pre-V7 tables to V7**
   - **USE COMMAND**: `/test-first when postgres outbox table is bootstrapped at v_k it should upgrade to v7`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgres_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7.cs`
@@ -443,7 +443,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 2.7: Postgres concurrent-bootstrap race test (outbox + inbox)
 
-- [ ] **TEST + IMPLEMENT: Two Postgres provisioners racing produce exactly one synthetic history row for outbox and inbox**
+- [x] **TEST + IMPLEMENT: Two Postgres provisioners racing produce exactly one synthetic history row for outbox and inbox**
   - **USE COMMAND**: `/test-first when two postgres provisioners race on legacy table they should produce exactly one synthetic history row for outbox and inbox`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_two_postgres_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_history_row.cs`
@@ -924,10 +924,10 @@ Spec 0023 findings closed out as side-effects:
 - [ ] **AC-10** all 4 backends have V1..V2 inbox (Postgres V1 only): verified by 1.3, 2.3, 3.3, 4.3
 - [ ] **AC-11** backend-specific housekeeping preserved: verified by drift tests 1.1, 2.1, 3.1, 4.1
 - [ ] **AC-12** migration SourceReference populated: verified by 1.2, 1.3, 2.2, 2.3, 3.2, 3.3, 4.2, 4.3
-- [ ] **AC-13** ADR 0057 created and accepted: done (pre-tasks)
+- [x] **AC-13** ADR 0057 created and accepted: done (pre-tasks)
 - [ ] **AC-14** `.agent_instructions/box_provisioning.md` rule added: Task 7.1
 - [ ] **AC-15** per-backend fresh-install test asserts V_latest + history row: covered exclusively by **Task 0.3a** retargeting the existing `When_*_runs_on_fresh_database_*` tests for relational backends + **Task 5.1** for Spanner. Bootstrap-at-V_k tests (1.6/2.6/3.6/4.6) do not cover fresh install
 - [ ] **AC-16** per-backend bootstrap-at-V_k tests (k ∈ {1,3,5,7} outbox; k ∈ {1,2} inbox): 1.6/1.7, 2.6, 3.6/3.6a, 4.6/4.7
 - [ ] **AC-17** per-backend idempotency test: existing `When_*_runs_on_already_provisioned_database_it_should_be_idempotent` tests (retargeted in Task 0.3a) + 4.9 IdempotencyCheckSql path
-- [ ] **NFR-3** migration completes within `MigrationLockTimeout` (30s): verified by Task 1.8b (MSSQL reference, tight 5s bound)
+- [x] **NFR-3** migration completes within `MigrationLockTimeout` (30s): verified by Task 1.8b (MSSQL reference, tight 5s bound)
 - [ ] **ADR §5a** whole-chain rollback on mid-chain failure: verified by Task 1.8a (MSSQL), Task 2.7a (Postgres), Task 4.8a (SQLite); MySQL's per-migration-commit recovery verified by Task 3.4
