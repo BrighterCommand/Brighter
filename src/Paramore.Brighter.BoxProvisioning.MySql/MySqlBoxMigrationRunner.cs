@@ -28,7 +28,7 @@ public class MySqlBoxMigrationRunner(
         _ = boxType; // TODO(spec 0027 phase 3): three-path branching with discriminator gate
         var effectiveSchema = schemaName ?? DatabaseName();
 
-        using var connection = new MySqlConnection(configuration.ConnectionString);
+        using var connection = new MySqlConnection(EnsureAllowUserVariables(configuration.ConnectionString));
         await connection.OpenAsync(cancellationToken);
 
         await AcquireLockAsync(connection, tableName, cancellationToken);
@@ -173,5 +173,23 @@ VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
     {
         var builder = new MySqlConnectionStringBuilder(configuration.ConnectionString);
         return builder.Database;
+    }
+
+    /// <summary>
+    /// Ensures the connection string sets <c>AllowUserVariables=true</c>. The V2..V7 outbox/inbox
+    /// migrations (per ADR 0057 §5) use the MySQL <c>information_schema.columns</c> +
+    /// prepared-statement idempotency pattern, which depends on session-scoped user variables
+    /// (<c>SET @q = ...; PREPARE stmt FROM @q;</c>). MySqlConnector treats <c>@variable</c> tokens
+    /// as parameter markers by default and rejects them; this flag flips that behaviour so the
+    /// prepared-statement form executes correctly. Transparent to caller-supplied connection
+    /// strings — adds the flag if missing, preserves it if already set.
+    /// </summary>
+    private static string EnsureAllowUserVariables(string connectionString)
+    {
+        var builder = new MySqlConnectionStringBuilder(connectionString)
+        {
+            AllowUserVariables = true
+        };
+        return builder.ConnectionString;
     }
 }

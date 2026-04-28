@@ -499,7 +499,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 3.2: MySQL outbox migrations V1..V7
 
-- [ ] **TEST + IMPLEMENT: MySQL outbox V1..V7 with information_schema prepared-statement pattern**
+- [x] **TEST + IMPLEMENT: MySQL outbox V1..V7 with information_schema prepared-statement pattern**
   - **USE COMMAND**: `/test-first when mysql outbox migrations are listed it should return v1 through v7 with information schema prepared statement pattern`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
   - Test file: `When_mysql_outbox_migrations_are_listed_it_should_return_v1_through_v7_with_information_schema_prepared_statement_pattern.cs`
