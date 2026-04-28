@@ -469,7 +469,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 2.8: Postgres spec-0023-era transition test (AC-6)
 
-- [ ] **TEST + IMPLEMENT: Postgres table with existing V1-marked history transitions cleanly**
+- [x] **TEST + IMPLEMENT: Postgres table with existing V1-marked history transitions cleanly**
   - **USE COMMAND**: `/test-first when postgres table has spec 0023 era history at v1 it should transition cleanly to v7`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgres_table_has_spec_0023_era_history_at_v1_it_should_transition_cleanly_to_v7.cs`
