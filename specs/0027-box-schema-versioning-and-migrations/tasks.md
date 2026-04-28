@@ -517,7 +517,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 3.3: MySQL inbox migrations V1..V2
 
-- [ ] **TEST + IMPLEMENT: MySQL inbox V1..V2 with ContextKey added in V2 via information_schema pattern**
+- [x] **TEST + IMPLEMENT: MySQL inbox V1..V2 with ContextKey added in V2 via information_schema pattern**
   - **USE COMMAND**: `/test-first when mysql inbox migrations are listed it should return v1 and v2 with contextkey added in v2`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
   - Test file: `When_mysql_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_contextkey_added_in_v2.cs`
