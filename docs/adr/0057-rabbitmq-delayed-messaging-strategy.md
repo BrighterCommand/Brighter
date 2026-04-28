@@ -65,7 +65,7 @@ Combine **Option B** (route delay through `IAmAMessageScheduler`) with **Option 
 
    **Recommended: (a).** Silent behaviour changes inside a major are exactly what `[Obsolete]` is meant to avoid; the warning gives users an explicit prompt to remove the flag, after which they get the new path on their schedule.
 3. **Keep the plugin path operational** against RMQ 4.2 + plugin v4.2.0-rc.1 for users who haven't yet migrated. PR #4104 already adopts this pinning.
-4. **Write a migration guide** in the user-facing RabbitMQ configuration documentation (location to be confirmed during implementation — Brighter's RMQ guide may live in a sibling docs repository rather than this one; check ADR 0043 / 0054 cross-link patterns for precedent). Include: how to register a scheduler; the precedence rule from step 2; a note that `InMemoryScheduler` is **not durable and not safe for production delayed messaging** (use TickerQ for in-process production, Hangfire/Quartz for distributed); a comparison table of scheduler backends (polling interval, persistence, distributed vs in-process).
+4. **Update the user-facing RabbitMQ documentation** in the [`BrighterCommand/Docs`](https://github.com/BrighterCommand/Docs) sibling repository — primarily [`contents/RabbitMQConfiguration.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/RabbitMQConfiguration.md), with cross-links to [`contents/BrighterSchedulerSupport.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/BrighterSchedulerSupport.md) and the per-scheduler pages already there ([`TickerQScheduler.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/TickerQScheduler.md), [`HangfireScheduler.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/HangfireScheduler.md), [`QuartzScheduler.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/QuartzScheduler.md), [`InMemoryScheduler.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/InMemoryScheduler.md), [`AwsScheduler.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/AwsScheduler.md), [`AzureScheduler.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/AzureScheduler.md), [`CustomScheduler.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/CustomScheduler.md)). The migration section should add: how to register a scheduler for RMQ delay; the precedence rule from step 2; an explicit caveat that `InMemoryScheduler` is **not durable and not safe for production delayed messaging** (use TickerQ for in-process production, Hangfire/Quartz for distributed); a comparison table of scheduler backends (polling interval, persistence, distributed vs in-process). Lands as a separate PR against `BrighterCommand/Docs`.
 
 ### Phase 2 — Next major (target version: TBD on acceptance)
 
@@ -75,7 +75,7 @@ Combine **Option B** (route delay through `IAmAMessageScheduler`) with **Option 
 
 ### Tanzu RabbitMQ support
 
-For users on Tanzu, document how to declare `x-queue-type: delayed` queues and rely on Tanzu's `rabbitmq_delayed_queue` plugin. No code change is required: Tanzu accepts the same `x-delay` header Brighter already emits, so Brighter's wire format is forward-compatible. Documentation will live alongside the migration guide added in Phase 1, step 4.
+For users on Tanzu, document how to declare `x-queue-type: delayed` queues and rely on Tanzu's `rabbitmq_delayed_queue` plugin. No code change is required: Tanzu accepts the same `x-delay` header Brighter already emits, so Brighter's wire format is forward-compatible. Documentation lands in [`BrighterCommand/Docs/contents/RabbitMQConfiguration.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/RabbitMQConfiguration.md) alongside the migration guide added in Phase 1, step 4.
 
 ### Responsibilities
 
@@ -174,3 +174,6 @@ Tanzu RabbitMQ ships a closed-source replacement: a queue type `x-queue-type: de
   - Async producer: [`src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageProducer.cs`](../../src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageProducer.cs#L168)
   - Sync producer: [`src/Paramore.Brighter.MessagingGateway.RMQ.Sync/RmqMessageProducer.cs`](../../src/Paramore.Brighter.MessagingGateway.RMQ.Sync/RmqMessageProducer.cs#L155)
   - Async consumer requeue: [`src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs`](../../src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs#L419)
+- User-facing documentation (sibling repo [`BrighterCommand/Docs`](https://github.com/BrighterCommand/Docs)):
+  - [`contents/RabbitMQConfiguration.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/RabbitMQConfiguration.md) — primary target for the migration guide
+  - [`contents/BrighterSchedulerSupport.md`](https://github.com/BrighterCommand/Docs/blob/master/contents/BrighterSchedulerSupport.md) — scheduler overview to cross-link from the migration guide
