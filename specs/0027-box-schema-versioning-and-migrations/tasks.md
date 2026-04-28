@@ -484,7 +484,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 3.1: Drift test — MySQL outbox V7 and inbox V2
 
-- [ ] **TEST + IMPLEMENT: MySQL outbox + inbox builders match V_latest migration LogicalColumns**
+- [x] **TEST + IMPLEMENT: MySQL outbox + inbox builders match V_latest migration LogicalColumns**
   - **USE COMMAND**: `/test-first when mysql outbox and inbox builders are compared to latest migration columns they should have identical expected column sets`
   - **Project setup (first MySQL drift task only)**: add `<ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />` to `tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj` to gain access to `DdlColumnExtractor` + `QuoteStyle`.
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`

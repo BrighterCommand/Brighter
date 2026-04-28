@@ -30,6 +30,7 @@
       <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.MySql\Paramore.Brighter.BoxProvisioning.MySql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.MySql\Paramore.Brighter.Outbox.MySql.csproj" />
       <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
+      <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />
     </ItemGroup>
 
 </Project>
