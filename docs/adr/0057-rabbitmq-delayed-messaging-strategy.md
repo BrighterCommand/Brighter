@@ -53,10 +53,19 @@ Combine **Option B** (route delay through `IAmAMessageScheduler`) with **Option 
 
 ### Phase 1 — Current major (target version: TBD on acceptance)
 
-1. **Mark `Exchange.SupportDelay` `[Obsolete]`** with text along the lines of: `"Configure an IAmAMessageScheduler instead — the rabbitmq_delayed_message_exchange plugin is archived upstream and incompatible with RabbitMQ 4.3+. See ADR 0057."`
-2. **Document the runtime precedence rule** explicitly. When both `Scheduler` is registered *and* `Exchange.SupportDelay = true`, the **scheduler wins** — this is how the existing producer code already behaves (see code in §Constraints), but the rule has not been documented externally and must be made explicit so users migrating in either direction know what to expect. Surface the rule in the `[Obsolete]` message text and in the migration guide.
+1. **Mark `Exchange.SupportDelay` `[Obsolete]`** on every public surface that exposes it: the `RmqMessagingGatewayConnection.Exchange` property, the `Exchange` constructor parameter, and the `Exchange(name, type, ..., supportDelay: true)` constructor overload. `[Obsolete]` text along the lines of: `"Configure an IAmAMessageScheduler instead — the rabbitmq_delayed_message_exchange plugin is archived upstream and incompatible with RabbitMQ 4.3+. See ADR 0057."`
+2. **Pick and document the runtime precedence rule.** The current code in `RmqMessageProducer` reads:
+   ```csharp
+   if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null) { /* plugin path */ }
+   else if (...) { /* scheduler path */ }
+   ```
+   So today, **the plugin wins whenever `SupportDelay = true`**, regardless of whether a scheduler is also registered. The scheduler path activates only when `SupportDelay = false` AND a scheduler is registered AND `delay != TimeSpan.Zero`. Phase 1 must make a decision and document it:
+    - **(a) Keep current behaviour** — plugin wins when `SupportDelay = true`. `[Obsolete]` is a signal only; users must remove `SupportDelay = true` to activate the scheduler. Phase 1 is documentation-only.
+    - **(b) Flip the precedence** — when `Scheduler` is registered, scheduler wins even if `SupportDelay = true`. This is a silent behaviour change for users who set both, but smoothes the migration. Phase 1 includes a one-line condition change.
+
+   **Recommended: (a).** Silent behaviour changes inside a major are exactly what `[Obsolete]` is meant to avoid; the warning gives users an explicit prompt to remove the flag, after which they get the new path on their schedule.
 3. **Keep the plugin path operational** against RMQ 4.2 + plugin v4.2.0-rc.1 for users who haven't yet migrated. PR #4104 already adopts this pinning.
-4. **Write a migration guide** in the user-facing RabbitMQ configuration documentation (location to be confirmed during implementation — `docs/transports/` in this repo, or the public docs site, depending on where Brighter's RMQ guide currently lives). Include: how to register a scheduler, the precedence rule, and a comparison table of scheduler backends to help users pick (in-process vs distributed; polling interval; persistence).
+4. **Write a migration guide** in the user-facing RabbitMQ configuration documentation (location to be confirmed during implementation — Brighter's RMQ guide may live in a sibling docs repository rather than this one; check ADR 0043 / 0054 cross-link patterns for precedent). Include: how to register a scheduler; the precedence rule from step 2; a note that `InMemoryScheduler` is **not durable and not safe for production delayed messaging** (use TickerQ for in-process production, Hangfire/Quartz for distributed); a comparison table of scheduler backends (polling interval, persistence, distributed vs in-process).
 
 ### Phase 2 — Next major (target version: TBD on acceptance)
 
@@ -104,11 +113,11 @@ This consolidation matches the long-standing principle in Brighter's design guid
 **Risk**: A user has built around the broker-side queue visibility for delayed messages.
 - **Mitigation**: Document the visibility shift in the migration guide; for users on Tanzu, point them at the documented Tanzu configuration.
 
-**Risk**: Scheduler choice paralysis — users don't know which of six to pick.
-- **Mitigation**: Add a comparison table to the RMQ docs (in-process vs distributed, polling interval, persistence backend). Recommend TickerQ for in-process, Hangfire or Quartz for distributed deployments.
+**Risk**: Scheduler choice paralysis — users don't know which of six to pick, and `InMemoryScheduler` looks attractive because it needs no extra infrastructure.
+- **Mitigation**: Add a comparison table to the RMQ docs (in-process vs distributed, polling interval, persistence backend). Call out explicitly that `InMemoryScheduler` is non-durable and not appropriate for production delayed messaging — its delays are lost on process restart. Recommend TickerQ for in-process production, Hangfire or Quartz for distributed deployments.
 
-**Risk**: The Phase 1 fallback ordering — scheduler wins when both a scheduler and `SupportDelay = true` are configured — is current runtime behaviour but has never been documented. Users who configured both could be surprised when their scheduler unexpectedly runs.
-- **Mitigation**: Phase 1 step 2 makes this rule explicit in the migration guide and `[Obsolete]` message. The behaviour itself does not change — only the documentation.
+**Risk**: Users who configured both `SupportDelay = true` and a scheduler may misunderstand which path runs today. Current code takes the **plugin path** in that case (see §Decision/Phase 1 step 2); the scheduler activates only after the user removes `SupportDelay = true`.
+- **Mitigation**: Under recommended sub-option (a) the runtime behaviour is unchanged — only the documentation is new. The `[Obsolete]` warning surfaces in the IDE the moment users open the file, prompting them to remove the flag at their pace.
 
 ## Alternatives Considered
 
