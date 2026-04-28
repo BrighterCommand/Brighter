@@ -24,15 +24,25 @@ The terminal working combination — RMQ 4.2 + plugin v4.2.0-rc.1 — is being a
 
 ### Constraints
 
-- **Existing role available.** `IAmAMessageScheduler` is already a role in Brighter, with six production implementations: `Paramore.Brighter.MessageScheduler.{Aws, AWS.V4, Azure, Hangfire, Quartz, TickerQ}`, plus an `InMemoryScheduler`. Other transports without native broker-side delay (notably AWS classic where applicable) already use this role.
-- **Partial fallback already wired.** [`RmqMessageConsumer.RequeueAsync`](../../src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs#L419) routes through the scheduler when `DelaySupported = false`:
+- **Existing role available.** `IAmAMessageScheduler` is already a role in Brighter, with six production implementations: `Paramore.Brighter.MessageScheduler.{Aws, AWS.V4, Azure, Hangfire, Quartz, TickerQ}`, plus an `InMemoryScheduler`. Other transports without native broker-side delay already use this role.
+- **Fallback already wired in both transports and on both surfaces.** Whenever a scheduler is registered and `DelaySupported = false`, both producers and the requeue path route through `IAmAMessageScheduler` today. Identical branching exists in [`RmqMessageProducer.SendWithDelayAsync`](../../src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageProducer.cs#L168) (Async), [`RmqMessageProducer.SendWithDelay`](../../src/Paramore.Brighter.MessagingGateway.RMQ.Sync/RmqMessageProducer.cs#L155) (Sync), and [`RmqMessageConsumer.RequeueAsync`](../../src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs#L419):
   ```csharp
-  if (DelaySupported || timeout <= TimeSpan.Zero)
-      await rmqMessagePublisher.RequeueMessageAsync(message, _queueName, timeout.Value, cancellationToken);
+  if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
+  {
+      // plugin path: publish to the x-delayed-message exchange
+  }
+  else if (useSchedulerAsync)
+  {
+      var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+      await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+  }
   else
-      await _requeueProducer!.SendWithDelayAsync(message, timeout, cancellationToken);
+  {
+      var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+      schedulerSync.Schedule(message, delay.Value);
+  }
   ```
-  The `SendWithDelay` producer surface, used directly by callers (not just by requeue), does **not** yet have an equivalent fallback.
+  Runtime work for Option B is therefore essentially complete; what remains is signalling (deprecation), documentation, and eventual removal.
 - **OSS users must keep working.** Brighter cannot mandate Tanzu RabbitMQ — its OSS user base is significant and would be excluded by a commercial-only path.
 - **Migration window required.** Existing users with `Exchange.SupportDelay = true` should not break at the next minor release. A deprecation warning before removal is required.
 - **Wire format compatibility.** RabbitMQ's various delay implementations (community plugin, Tanzu plugin) all accept the `x-delay` header Brighter already emits. Decisions about *where* the delay is enforced are independent of *how* the message is shaped on the wire.
@@ -41,32 +51,32 @@ The terminal working combination — RMQ 4.2 + plugin v4.2.0-rc.1 — is being a
 
 Combine **Option B** (route delay through `IAmAMessageScheduler`) with **Option E** (deprecate `Exchange.SupportDelay` and remove next major), with **Option D** (Tanzu) documented as a supported configuration for paying users.
 
-### Phase 1 — Current major
+### Phase 1 — Current major (target version: TBD on acceptance)
 
-1. Mark `Exchange.SupportDelay` `[Obsolete("Configure an IAmAMessageScheduler instead — the rabbitmq_delayed_message_exchange plugin is archived upstream and incompatible with RabbitMQ 4.3+. See ADR 0057.")]`.
-2. Extend the producer's `SendWithDelay` path to use `IAmAMessageScheduler` when one is registered, falling through to the plugin path only when no scheduler is registered and `SupportDelay = true` (preserves current behaviour for users who haven't migrated).
-3. Keep the plugin path operational against RMQ 4.2 + plugin v4.2.0-rc.1 (PR #4104 already adopts this pinning).
-4. Add a migration guide section to [`docs/contents/RabbitMQConfiguration.md`](../contents/RabbitMQConfiguration.md) showing how to register a scheduler and remove `SupportDelay`.
+1. **Mark `Exchange.SupportDelay` `[Obsolete]`** with text along the lines of: `"Configure an IAmAMessageScheduler instead — the rabbitmq_delayed_message_exchange plugin is archived upstream and incompatible with RabbitMQ 4.3+. See ADR 0057."`
+2. **Document the runtime precedence rule** explicitly. When both `Scheduler` is registered *and* `Exchange.SupportDelay = true`, the **scheduler wins** — this is how the existing producer code already behaves (see code in §Constraints), but the rule has not been documented externally and must be made explicit so users migrating in either direction know what to expect. Surface the rule in the `[Obsolete]` message text and in the migration guide.
+3. **Keep the plugin path operational** against RMQ 4.2 + plugin v4.2.0-rc.1 for users who haven't yet migrated. PR #4104 already adopts this pinning.
+4. **Write a migration guide** in the user-facing RabbitMQ configuration documentation (location to be confirmed during implementation — `docs/transports/` in this repo, or the public docs site, depending on where Brighter's RMQ guide currently lives). Include: how to register a scheduler, the precedence rule, and a comparison table of scheduler backends to help users pick (in-process vs distributed; polling interval; persistence).
 
-### Phase 2 — Next major
+### Phase 2 — Next major (target version: TBD on acceptance)
 
-1. Remove the plugin-aware code paths in `ExchangeConfigurationHelper`, the `x-delay` exchange declaration, and the `DelaySupported` branch in `RmqMessageConsumer.RequeueAsync`.
-2. Make `IAmAMessageScheduler` registration mandatory for any caller of `SendWithDelay` or `RequeueAsync(timeout: nonzero)` on RMQ. Throw a `ConfigurationException` at startup if delay is used without a registered scheduler.
-3. Stop bundling the delay plugin in the CI test image; pin to plain `rabbitmq:management`.
+1. **Remove the plugin-aware code paths** in `ExchangeConfigurationHelper`, the `x-delay` exchange declaration, and the `DelaySupported` branch in both producers and `RmqMessageConsumer.RequeueAsync`.
+2. **Make `IAmAMessageScheduler` registration mandatory** for any caller of `SendWithDelay` or `RequeueAsync(timeout: nonzero)` on RMQ. Throw a `ConfigurationException` at startup if delay is used without a registered scheduler.
+3. **Stop bundling the delay plugin** in the CI test image; pin to plain `rabbitmq:management`.
 
 ### Tanzu RabbitMQ support
 
-For users on Tanzu, document — in [`docs/contents/RabbitMQConfiguration.md`](../contents/RabbitMQConfiguration.md) — how to declare `x-queue-type: delayed` queues and rely on Tanzu's `rabbitmq_delayed_queue` plugin. No code change is required: Tanzu accepts the same `x-delay` header Brighter already emits, so Brighter's wire format is forward-compatible.
+For users on Tanzu, document how to declare `x-queue-type: delayed` queues and rely on Tanzu's `rabbitmq_delayed_queue` plugin. No code change is required: Tanzu accepts the same `x-delay` header Brighter already emits, so Brighter's wire format is forward-compatible. Documentation will live alongside the migration guide added in Phase 1, step 4.
 
 ### Responsibilities
 
-Following Responsibility-Driven Design (per [.agent_instructions/design_principles.md](../../.agent_instructions/design_principles.md)):
+Following Responsibility-Driven Design:
 
 - **Knowing the delay value** — the `Message` and its routing slip carry the requested delay. Unchanged.
-- **Deciding where to enforce delay** — currently split between `Exchange.SupportDelay` (broker enforces) and the absence of that flag (scheduler enforces, in the requeue path only). After Phase 2, this responsibility consolidates into a single *coordinator* role: the producer asks "is a scheduler registered?" and there is exactly one path.
+- **Deciding where to enforce delay** — currently split between `Exchange.SupportDelay` (broker enforces) and the absence of that flag (scheduler enforces). After Phase 2, this responsibility consolidates into a single *coordinator* role: the producer asks "is a scheduler registered?" and there is exactly one path.
 - **Doing the delay** — currently a *service-provider* role split between RabbitMQ-via-plugin (broker side) and `IAmAMessageScheduler` (Brighter side). After Phase 2, only the latter remains.
 
-This consolidation matches the design-principles guidance: "There should be one — and preferably only one — obvious way to do it."
+This consolidation matches the long-standing principle in Brighter's design guidelines: "There should be one — and preferably only one — obvious way to do it."
 
 ## Consequences
 
@@ -97,8 +107,8 @@ This consolidation matches the design-principles guidance: "There should be one 
 **Risk**: Scheduler choice paralysis — users don't know which of six to pick.
 - **Mitigation**: Add a comparison table to the RMQ docs (in-process vs distributed, polling interval, persistence backend). Recommend TickerQ for in-process, Hangfire or Quartz for distributed deployments.
 
-**Risk**: The Phase 1 fallback ordering (scheduler-if-registered, else plugin) introduces ambiguity for users who have *both* a scheduler and `SupportDelay = true`.
-- **Mitigation**: Document explicitly that registering a scheduler takes precedence; emit an `[Obsolete]` warning that says exactly this; surface it in `[Obsolete]` message text.
+**Risk**: The Phase 1 fallback ordering — scheduler wins when both a scheduler and `SupportDelay = true` are configured — is current runtime behaviour but has never been documented. Users who configured both could be surprised when their scheduler unexpectedly runs.
+- **Mitigation**: Phase 1 step 2 makes this rule explicit in the migration guide and `[Obsolete]` message. The behaviour itself does not change — only the documentation.
 
 ## Alternatives Considered
 
@@ -151,5 +161,7 @@ Tanzu RabbitMQ ships a closed-source replacement: a queue type `x-queue-type: de
 - TTL + DLX official docs: <https://www.rabbitmq.com/docs/ttl>, <https://www.rabbitmq.com/docs/dlx>
 - Tanzu delayed queues: <https://techdocs.broadcom.com/us/en/vmware-tanzu/data-solutions/tanzu-rabbitmq-ova/4-2/tanzu-rabbitmq-ova-virtual-machine/site-delayed-queues.html>
 - Brighter scheduler interface: [`src/Paramore.Brighter/IAmAMessageScheduler.cs`](../../src/Paramore.Brighter/IAmAMessageScheduler.cs)
-- Existing fallback site: [`src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs`](../../src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs) (the `else` branch in `RequeueAsync`)
-- Design principles applied: [.agent_instructions/design_principles.md](../../.agent_instructions/design_principles.md) (Responsibility-Driven Design — knowing/doing/deciding)
+- Existing fallback sites:
+  - Async producer: [`src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageProducer.cs`](../../src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageProducer.cs#L168)
+  - Sync producer: [`src/Paramore.Brighter.MessagingGateway.RMQ.Sync/RmqMessageProducer.cs`](../../src/Paramore.Brighter.MessagingGateway.RMQ.Sync/RmqMessageProducer.cs#L155)
+  - Async consumer requeue: [`src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs`](../../src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessageConsumer.cs#L419)
