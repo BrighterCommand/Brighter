@@ -1,5 +1,26 @@
-using System;
-using System.Collections.Generic;
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -7,27 +28,22 @@ using Npgsql;
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
 /// <summary>
-/// Provisions a PostgreSQL outbox table.
+/// Provisions a PostgreSQL outbox table. Performs a pre-lock detection pass to gate payload-mode
+/// validation, then delegates to <see cref="IAmABoxMigrationRunner"/> which re-detects state
+/// under <c>pg_try_advisory_lock</c> and dispatches into fresh / bootstrap / normal paths
+/// per ADR 0057 §3.
 /// </summary>
 public class PostgreSqlOutboxProvisioner(
     IAmARelationalDatabaseConfiguration configuration,
     IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
-    private static readonly HashSet<string> V1Columns = new(StringComparer.Ordinal)
-    {
-        "id", "messageid", "topic", "messagetype", "timestamp", "correlationid",
-        "replyto", "contenttype", "partitionkey", "workflowid", "jobid", "dispatched",
-        "headerbag", "body", "source", "type", "dataschema", "subject",
-        "traceparent", "tracestate", "baggage", "dataref", "specversion"
-    };
-
     public BoxType BoxType => BoxType.Outbox;
 
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
         var migrations = PostgreSqlOutboxMigrations.All(configuration);
-        var tableState = await DetectTableStateAsync(cancellationToken);
+        var tableState = await DetectTableStateAsync(migrations, cancellationToken);
 
         if (tableState.TableExists)
         {
@@ -43,11 +59,13 @@ public class PostgreSqlOutboxProvisioner(
             cancellationToken);
     }
 
-    private async Task<BoxTableState> DetectTableStateAsync(CancellationToken cancellationToken)
+    private async Task<BoxTableState> DetectTableStateAsync(
+        System.Collections.Generic.IReadOnlyList<IAmABoxMigration> migrations,
+        CancellationToken cancellationToken)
     {
         var schemaName = configuration.SchemaName ?? "public";
 
-        using var connection = new NpgsqlConnection(configuration.ConnectionString);
+        await using var connection = new NpgsqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         var tableExists = await PostgreSqlBoxDetectionHelpers.DoesTableExistAsync(
@@ -59,9 +77,15 @@ public class PostgreSqlOutboxProvisioner(
             connection, configuration.OutBoxTableName, schemaName, cancellationToken);
         if (!historyExists)
         {
-            var detectedVersion = await DetectCurrentVersionAsync(
-                connection, configuration.OutBoxTableName, schemaName, cancellationToken);
-            return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
+            // Pre-lock detection is a hint for the caller; the runner re-detects under the lock.
+            // Negative or zero return values are not gated here — the runner is the single source
+            // of truth for discriminator violations and unknown-schema rejections.
+            var detectedVersion = await PostgreSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+                connection, configuration.OutBoxTableName, schemaName,
+                BoxType.Outbox, migrations, cancellationToken);
+            return new BoxTableState(
+                TableExists: true, HistoryExists: false,
+                CurrentVersion: detectedVersion < 0 ? 0 : detectedVersion);
         }
 
         var maxVersion = await PostgreSqlBoxDetectionHelpers.GetMaxVersionAsync(
@@ -73,21 +97,11 @@ public class PostgreSqlOutboxProvisioner(
     {
         var schemaName = configuration.SchemaName ?? "public";
 
-        using var connection = new NpgsqlConnection(configuration.ConnectionString);
+        await using var connection = new NpgsqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         await PostgreSqlPayloadModeValidator.ValidateAsync(
             connection, configuration.OutBoxTableName, schemaName,
             "body", configuration.BinaryMessagePayload, cancellationToken);
-    }
-
-    private static async Task<int> DetectCurrentVersionAsync(
-        NpgsqlConnection connection, string tableName, string schemaName,
-        CancellationToken cancellationToken)
-    {
-        var actualColumns = await PostgreSqlBoxDetectionHelpers.GetTableColumnsAsync(
-            connection, tableName, schemaName, cancellationToken);
-        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
-        return 0;
     }
 }
