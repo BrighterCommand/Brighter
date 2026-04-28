@@ -31,5 +31,6 @@
       <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.Postgres\Paramore.Brighter.MessagingGateway.Postgres.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.PostgreSql\Paramore.Brighter.Outbox.PostgreSql.csproj" />
       <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
+      <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />
     </ItemGroup>
 </Project>
