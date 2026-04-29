@@ -61,7 +61,7 @@ public class SqsMessageProducerResourcesAreTaggedAsyncTests : IAsyncDisposable
     [Test]
     public async Task When_posting_a_message_resources_are_tagged_async()
     {
-        Skip.If(
+        Skip.When(
             !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_SERVICE_URL")),
             "SQS tag verification fails against Moto; runs against real AWS.");
 

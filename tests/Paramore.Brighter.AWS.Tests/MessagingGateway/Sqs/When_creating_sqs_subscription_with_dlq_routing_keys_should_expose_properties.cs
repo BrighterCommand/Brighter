@@ -26,7 +26,7 @@ using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class SqsSubscriptionDlqRoutingKeyTests
 {
     [Test]

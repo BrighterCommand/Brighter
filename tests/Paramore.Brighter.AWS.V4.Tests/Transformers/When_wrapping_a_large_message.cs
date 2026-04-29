@@ -13,7 +13,7 @@ using Paramore.Brighter.Transforms.Transformers;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class LargeMessagePayloadWrapTests : IAsyncDisposable 
 {
     private string? _id;

@@ -68,7 +68,7 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable
     public async Task When_posting_a_message_via_the_producer_async(bool fairQueue)
     {
         // TODO: remove once Moto pin in #4096 is bumped to 5.1.23+
-        Skip.If(fairQueue && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_SERVICE_URL")),
+        Skip.When(fairQueue && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_SERVICE_URL")),
             "SQS fair queues require Moto >= 5.1.23; pinned image is 5.1.22. Runs against real AWS.");
 
         // arrange

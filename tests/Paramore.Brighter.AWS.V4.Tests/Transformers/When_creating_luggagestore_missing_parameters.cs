@@ -7,7 +7,7 @@ using Paramore.Brighter.Transformers.AWS.V4;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class S3LuggageUploadMissingParametersTests
 {
     private readonly IHttpClientFactory _httpClientFactory;

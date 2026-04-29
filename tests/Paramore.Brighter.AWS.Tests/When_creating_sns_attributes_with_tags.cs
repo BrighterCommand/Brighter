@@ -4,7 +4,7 @@ using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace Paramore.Brighter.AWS.Tests;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class When_creating_sns_attributes_with_tags
 {
     [Test]
