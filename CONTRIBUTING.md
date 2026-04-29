@@ -418,7 +418,7 @@ If you're only working on a specific area, use the individual compose files:
 | Redis | `docker-compose-redis.yaml` | Testing Redis messaging gateway |
 | MQTT | `docker-compose-mqtt.yaml` | Testing MQTT messaging gateway |
 | RocketMQ | `docker-compose-rocketmq.yaml` | Testing RocketMQ messaging gateway |
-| LocalStack | `docker-compose-localstack.yaml` | Testing AWS services locally |
+| Moto (AWS) | `docker-compose-aws.yaml` | Testing AWS services locally |
 | Jaeger | `docker-compose-jaeger.yaml` | Testing distributed tracing |
 | Prometheus | `docker-compose-prometheus.yaml` | Testing metrics collection |
 

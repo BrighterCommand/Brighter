@@ -146,7 +146,9 @@ public class RocketMqMessageProducer(
         }
         
         foreach (var (key, val) in message.Header.Bag
-                     .Where(x => x.Key != HeaderNames.Keys && x.Key != HeaderNames.Tag))
+                     .Where(x => x.Key != HeaderNames.Keys
+                                 && x.Key != HeaderNames.Tag
+                                 && !MessageHeader.IsLocalHeader(x.Key)))
         {
             builder.AddProperty(key, val.ToString());
         }

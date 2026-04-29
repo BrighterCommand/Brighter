@@ -18,7 +18,7 @@ if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var cr
     var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.USEast1,
         cfg =>
         {
-            var serviceURL = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+            var serviceURL = Environment.GetEnvironmentVariable("AWS_SERVICE_URL");
             if (!string.IsNullOrWhiteSpace(serviceURL))
             {
                 cfg.ServiceURL = serviceURL;

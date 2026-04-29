@@ -442,20 +442,26 @@ jobs:
           dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
           dotnet test ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
-  localstack-ci:
+  aws-mock-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: build
     env:
-      LOCALSTACK_SERVICE_URL: http://localhost.localstack.cloud:4566
+      AWS_SERVICE_URL: http://localhost:4566
 
-    services: 
-      localstack: 
-        image: localstack/localstack    
+    services:
+      moto:
+        image: motoserver/moto:5.1.22
         ports:
           - 4566:4566
-        env: 
-          SERVICES: s3,sqs,sns,sts,dynamodb,iam,scheduler
+        env:
+          MOTO_PORT: "4566"
+        options: >-
+          --health-cmd "curl -sf http://localhost:4566/moto-api/"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+          --health-start-period 5s
 
     steps:
       - uses: actions/checkout@v6
@@ -477,8 +483,8 @@ jobs:
             Linux-nuget-
       - name: AWS Tests
         run: |
-          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+          dotnet test ./tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   aws-ci:
     runs-on: ubuntu-latest

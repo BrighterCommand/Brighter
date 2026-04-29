@@ -16,7 +16,6 @@ using Amazon.SimpleNotificationService.Model;
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _sender;

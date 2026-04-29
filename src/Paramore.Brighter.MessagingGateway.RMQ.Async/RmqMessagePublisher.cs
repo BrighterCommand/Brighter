@@ -228,7 +228,7 @@ internal sealed partial class RmqMessagePublisher
     {
         message.Header.Bag.Each(header =>
         {
-            if (!_headersToReset.Contains(header.Key))
+            if (!_headersToReset.Contains(header.Key) && !MessageHeader.IsLocalHeader(header.Key))
             {
                 headers[header.Key] = header.Value;
             }

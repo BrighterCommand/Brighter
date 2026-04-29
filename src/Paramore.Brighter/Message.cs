@@ -51,6 +51,14 @@ namespace Paramore.Brighter
         public const string RejectionReasonHeaderName = "RejectionReason";
 
         /// <summary>
+        /// Bag key (not a typed header property — lives in <see cref="MessageHeader.Bag"/>)
+        /// carrying the publication topic when the message mapper overrides <see cref="MessageHeader.Topic"/>
+        /// (e.g. for Reply messages whose topic is the reply address).
+        /// Read by the outbox dispatcher so it can still locate the registered producer.
+        /// </summary>
+        public const string ProducerTopicHeaderName = "paramore.brighter.ProducerTopic";
+
+        /// <summary>
         /// Gets the header.
         /// </summary>
         /// <value>The header.</value>

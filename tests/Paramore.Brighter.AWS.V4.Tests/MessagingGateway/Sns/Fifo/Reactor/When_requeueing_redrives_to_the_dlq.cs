@@ -15,7 +15,6 @@ using System.Collections.Generic;
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _sender;

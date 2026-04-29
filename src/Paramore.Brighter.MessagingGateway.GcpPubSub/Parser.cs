@@ -349,7 +349,7 @@ internal static class Parser
 
         message.Header.Bag.Each(header =>
         {
-            if (!headers.ContainsKey(header.Key))
+            if (!headers.ContainsKey(header.Key) && !MessageHeader.IsLocalHeader(header.Key))
             {
                 headers.Add(header.Key, header.Value.ToString()!);
             }

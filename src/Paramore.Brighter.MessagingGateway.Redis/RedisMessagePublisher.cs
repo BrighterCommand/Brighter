@@ -131,7 +131,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private static void WriteMessageBag(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            var flatBag = JsonSerializer.Serialize(messageHeader.Bag, JsonSerialisationOptions.Options);
+            var flatBag = JsonSerializer.Serialize(messageHeader.BagWithoutLocalHeaders(), JsonSerialisationOptions.Options);
             headers.Add(HeaderNames.BAG, flatBag);
         }
 

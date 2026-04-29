@@ -11,7 +11,7 @@ public static class CredentialsChain
 {
     public static (AWSCredentials credentials, RegionEndpoint region) GetAwsCredentials()
     {
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL")))
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_SERVICE_URL")))
         {
             return (new BasicAWSCredentials("test", "test"), RegionEndpoint.USEast1);
         }
@@ -28,10 +28,10 @@ public static class CredentialsChain
         return (new EnvironmentVariablesAWSCredentials(), new EnvironmentVariableAWSRegion().Region);
     }
 
-    public static string GetBucketAddressTemple()
+    public static string GetBucketAddressTemplate()
     {
-        var localStack = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
-        if (!string.IsNullOrEmpty(localStack) && Uri.TryCreate(localStack, UriKind.Absolute, out var uri))
+        var serviceUrl = Environment.GetEnvironmentVariable("AWS_SERVICE_URL");
+        if (!string.IsNullOrEmpty(serviceUrl) && Uri.TryCreate(serviceUrl, UriKind.Absolute, out var uri))
         {
             return $"http://{{BucketName}}.s3.{{BucketRegion}}.{uri.Authority}";
         }
