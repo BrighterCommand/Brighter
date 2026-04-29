@@ -1,0 +1,31 @@
+name: AWS Test Resource Cleanup
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  schedule:
+    # Safety net: run every 6 hours to catch any orphaned resources
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-west-2
+      AWS_DEFAULT_OUTPUT: json
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Wait for tag propagation
+        run: sleep 15
+
+      - name: Cleanup orphaned test resources
+        run: |
+          chmod +x ./clean_failed_tests_aws_assets.sh
+          ./clean_failed_tests_aws_assets.sh

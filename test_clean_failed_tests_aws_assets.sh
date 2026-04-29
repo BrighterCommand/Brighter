@@ -14,6 +14,8 @@ TAGGED_QUEUE_URL=""
 UNTAGGED_QUEUE_URL=""
 TAGGED_TOPIC_ARN=""
 UNTAGGED_TOPIC_ARN=""
+TAGGED_SCHEDULE_GROUP=""
+TAGGED_SCHEDULE_NAME=""
 
 cleanup_test_resources() {
     echo ""
@@ -22,6 +24,12 @@ cleanup_test_resources() {
     [[ -n "$UNTAGGED_TOPIC_ARN" ]] && aws sns delete-topic --topic-arn "$UNTAGGED_TOPIC_ARN" 2>/dev/null || true
     [[ -n "$TAGGED_QUEUE_URL" ]] && aws sqs delete-queue --queue-url "$TAGGED_QUEUE_URL" 2>/dev/null || true
     [[ -n "$TAGGED_TOPIC_ARN" ]] && aws sns delete-topic --topic-arn "$TAGGED_TOPIC_ARN" 2>/dev/null || true
+    if [[ -n "$TAGGED_SCHEDULE_NAME" && -n "$TAGGED_SCHEDULE_GROUP" ]]; then
+        aws scheduler delete-schedule --name "$TAGGED_SCHEDULE_NAME" --group-name "$TAGGED_SCHEDULE_GROUP" 2>/dev/null || true
+    fi
+    if [[ -n "$TAGGED_SCHEDULE_GROUP" ]]; then
+        aws scheduler delete-schedule-group --name "$TAGGED_SCHEDULE_GROUP" 2>/dev/null || true
+    fi
     echo "  Cleaned up test fixtures"
 }
 trap cleanup_test_resources EXIT
@@ -109,8 +117,26 @@ SUBSCRIPTION_ARN=$(aws sns subscribe \
     --query 'SubscriptionArn' --output text)
 echo "  Created subscription: $SUBSCRIPTION_ARN"
 
+# Tagged EventBridge Scheduler group with a schedule
+TAGGED_SCHEDULE_GROUP="$PREFIX-tagged-group"
+aws scheduler create-schedule-group \
+    --name "$TAGGED_SCHEDULE_GROUP" \
+    --tags Key=Environment,Value=Test Key=Source,Value=Brighter 2>&1
+echo "  Created tagged schedule group: $TAGGED_SCHEDULE_GROUP"
+
+TAGGED_SCHEDULE_NAME="$PREFIX-tagged-schedule"
+aws scheduler create-schedule \
+    --name "$TAGGED_SCHEDULE_NAME" \
+    --group-name "$TAGGED_SCHEDULE_GROUP" \
+    --schedule-expression "at(2099-01-01T00:00:00)" \
+    --schedule-expression-timezone "UTC" \
+    --flexible-time-window '{"Mode":"OFF"}' \
+    --target '{"Arn":"arn:aws:sqs:us-west-2:000000000000:fake-queue","RoleArn":"arn:aws:iam::000000000000:role/fake-role","Input":"test"}' \
+    --action-after-completion DELETE 2>&1
+echo "  Created tagged schedule: $TAGGED_SCHEDULE_NAME"
+
 # Allow time for tag propagation — the Resource Groups Tagging API is eventually consistent
-sleep 5
+sleep 15
 
 # --- Test 1: --dry-run lists tagged resources without deleting ---
 echo ""
@@ -123,6 +149,7 @@ assert_eq "0" "$DRY_RUN_EXIT" "dry-run exits with 0"
 assert_contains "$DRY_RUN_OUTPUT" "DRY RUN" "output indicates dry-run mode"
 assert_contains "$DRY_RUN_OUTPUT" "$TAGGED_QUEUE" "output lists tagged queue"
 assert_contains "$DRY_RUN_OUTPUT" "$TAGGED_TOPIC" "output lists tagged topic"
+assert_contains "$DRY_RUN_OUTPUT" "$TAGGED_SCHEDULE_GROUP" "output lists tagged schedule group"
 
 # Tagged queue must still exist after dry-run
 QUEUE_CHECK=$(aws sqs get-queue-url --queue-name "$TAGGED_QUEUE" --query 'QueueUrl' --output text 2>/dev/null || echo "")
@@ -163,7 +190,7 @@ echo ""
 echo "=== Test 4: tagged resources were deleted ==="
 
 # Allow time for eventual consistency — SQS/SNS deletions may take a few seconds to propagate
-sleep 5
+sleep 10
 
 TAGGED_QUEUE_CHECK=$(aws sqs get-queue-url --queue-name "$TAGGED_QUEUE" 2>&1 || true)
 assert_contains "$TAGGED_QUEUE_CHECK" "NonExistentQueue|does not exist" "tagged queue was deleted"
@@ -180,6 +207,13 @@ assert_not_empty "$UNTAGGED_QUEUE_CHECK" "untagged queue was NOT deleted"
 
 UNTAGGED_TOPIC_CHECK=$(aws sns get-topic-attributes --topic-arn "$UNTAGGED_TOPIC_ARN" --query 'Attributes.TopicArn' --output text 2>/dev/null || echo "")
 assert_not_empty "$UNTAGGED_TOPIC_CHECK" "untagged topic was NOT deleted"
+
+# --- Test 6: tagged schedule group and schedules were deleted ---
+echo ""
+echo "=== Test 6: tagged schedule group was deleted ==="
+
+SCHEDULE_GROUP_CHECK=$(aws scheduler get-schedule-group --name "$TAGGED_SCHEDULE_GROUP" 2>&1 || true)
+assert_contains "$SCHEDULE_GROUP_CHECK" "ResourceNotFoundException|not found|Not Found" "tagged schedule group was deleted"
 
 # Teardown is handled by the EXIT trap defined at the top of the script.
 
