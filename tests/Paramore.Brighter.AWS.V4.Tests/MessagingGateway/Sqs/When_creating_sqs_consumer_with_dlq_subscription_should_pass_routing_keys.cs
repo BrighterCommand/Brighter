@@ -30,7 +30,7 @@ using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class SqsMessageConsumerFactoryDlqTests : IDisposable
 {
     private readonly SqsMessageConsumerFactory _factory;

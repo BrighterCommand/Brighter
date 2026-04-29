@@ -15,7 +15,7 @@ using Policy = Polly.Policy;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class S3LuggageUploadTests
 {
     private readonly IHttpClientFactory _httpClientFactory;
