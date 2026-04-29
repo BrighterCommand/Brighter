@@ -16,11 +16,11 @@ if [[ "${1:-}" == "--dry-run" ]]; then
 fi
 
 # --- Helper: delete all schedules in a given group ---
-# Uses --no-paginate to ensure all schedules are returned (not just first page of 100).
+# AWS CLI v2 auto-paginates by default, so all schedules are returned across pages.
 delete_schedules_in_group() {
     local group_name="$1"
     local schedules
-    schedules=$(aws scheduler list-schedules --group-name "$group_name" --no-paginate \
+    schedules=$(aws scheduler list-schedules --group-name "$group_name" \
         --query 'Schedules[*].Name' --output text 2>&1 || echo "")
     for sched_name in $schedules; do
         [[ -z "$sched_name" || "$sched_name" == "None" ]] && continue
@@ -176,10 +176,11 @@ if [[ ${#SCHEDULE_GROUPS[@]} -gt 0 ]]; then
 fi
 
 # --- Also clean up Brighter-tagged schedule groups (Source=Brighter) not caught above ---
-# The AwsSchedulerFactory tags groups with Source=Brighter but tests may not add Environment=Test.
+# The AwsSchedulerFactory tags groups with Source=Brighter. We require both Source=Brighter
+# AND Environment=Test to avoid accidentally deleting non-test resources in shared accounts.
 echo "Checking for Brighter-tagged schedule groups ..."
 BRIGHTER_GROUPS=$(aws resourcegroupstaggingapi get-resources \
-    --tag-filters Key=Source,Values=Brighter \
+    --tag-filters Key=Source,Values=Brighter Key=Environment,Values=Test \
     --resource-type-filters scheduler:schedule-group \
     --query 'ResourceTagMappingList[*].ResourceARN' \
     --output text 2>&1 || echo "")

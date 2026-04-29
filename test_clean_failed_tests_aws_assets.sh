@@ -16,6 +16,7 @@ TAGGED_TOPIC_ARN=""
 UNTAGGED_TOPIC_ARN=""
 TAGGED_SCHEDULE_GROUP=""
 TAGGED_SCHEDULE_NAME=""
+UNTAGGED_SCHEDULE_GROUP=""
 
 cleanup_test_resources() {
     echo ""
@@ -29,6 +30,9 @@ cleanup_test_resources() {
     fi
     if [[ -n "$TAGGED_SCHEDULE_GROUP" ]]; then
         aws scheduler delete-schedule-group --name "$TAGGED_SCHEDULE_GROUP" 2>/dev/null || true
+    fi
+    if [[ -n "$UNTAGGED_SCHEDULE_GROUP" ]]; then
+        aws scheduler delete-schedule-group --name "$UNTAGGED_SCHEDULE_GROUP" 2>/dev/null || true
     fi
     echo "  Cleaned up test fixtures"
 }
@@ -126,15 +130,24 @@ aws scheduler create-schedule-group \
 echo "  Created tagged schedule group: $TAGGED_SCHEDULE_GROUP"
 
 TAGGED_SCHEDULE_NAME="$PREFIX-tagged-schedule"
-aws scheduler create-schedule \
+if ! aws scheduler create-schedule \
     --name "$TAGGED_SCHEDULE_NAME" \
     --group-name "$TAGGED_SCHEDULE_GROUP" \
     --schedule-expression "at(2099-01-01T00:00:00)" \
     --schedule-expression-timezone "UTC" \
     --flexible-time-window '{"Mode":"OFF"}' \
     --target "{\"Arn\":\"arn:aws:sqs:us-west-2:${ACCOUNT_ID}:fake-queue\",\"RoleArn\":\"arn:aws:iam::${ACCOUNT_ID}:role/fake-role\",\"Input\":\"test\"}" \
-    --action-after-completion DELETE 2>&1
+    --action-after-completion DELETE 2>&1; then
+    echo "  WARNING: Failed to create schedule (target ARN validation). Schedule group tests may be incomplete."
+    TAGGED_SCHEDULE_NAME=""
+fi
 echo "  Created tagged schedule: $TAGGED_SCHEDULE_NAME"
+
+# Untagged EventBridge Scheduler group (should NOT be deleted)
+UNTAGGED_SCHEDULE_GROUP="$PREFIX-untagged-group"
+aws scheduler create-schedule-group \
+    --name "$UNTAGGED_SCHEDULE_GROUP" 2>&1
+echo "  Created untagged schedule group: $UNTAGGED_SCHEDULE_GROUP"
 
 # Allow time for tag propagation — the Resource Groups Tagging API is eventually consistent
 sleep 15
@@ -215,6 +228,13 @@ echo "=== Test 6: tagged schedule group was deleted ==="
 
 SCHEDULE_GROUP_CHECK=$(aws scheduler get-schedule-group --name "$TAGGED_SCHEDULE_GROUP" 2>&1 || true)
 assert_contains "$SCHEDULE_GROUP_CHECK" "ResourceNotFoundException|not found|Not Found" "tagged schedule group was deleted"
+
+# --- Test 7: untagged schedule group was NOT deleted ---
+echo ""
+echo "=== Test 7: untagged schedule group was NOT deleted ==="
+
+UNTAGGED_GROUP_CHECK=$(aws scheduler get-schedule-group --name "$UNTAGGED_SCHEDULE_GROUP" --query 'Name' --output text 2>/dev/null || echo "")
+assert_not_empty "$UNTAGGED_GROUP_CHECK" "untagged schedule group was NOT deleted"
 
 # Teardown is handled by the EXIT trap defined at the top of the script.
 
