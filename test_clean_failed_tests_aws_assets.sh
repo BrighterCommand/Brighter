@@ -73,7 +73,8 @@ assert_not_empty() {
 
 # --- Setup: create tagged and untagged resources ---
 PREFIX="cleanup-test-$(date +%s)"
-echo "=== Setup: creating test resources (prefix: $PREFIX) ==="
+ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
+echo "=== Setup: creating test resources (prefix: $PREFIX, account: $ACCOUNT_ID) ==="
 
 # Tagged SQS queue
 TAGGED_QUEUE="$PREFIX-tagged-queue"
@@ -131,7 +132,7 @@ aws scheduler create-schedule \
     --schedule-expression "at(2099-01-01T00:00:00)" \
     --schedule-expression-timezone "UTC" \
     --flexible-time-window '{"Mode":"OFF"}' \
-    --target '{"Arn":"arn:aws:sqs:us-west-2:000000000000:fake-queue","RoleArn":"arn:aws:iam::000000000000:role/fake-role","Input":"test"}' \
+    --target "{\"Arn\":\"arn:aws:sqs:us-west-2:${ACCOUNT_ID}:fake-queue\",\"RoleArn\":\"arn:aws:iam::${ACCOUNT_ID}:role/fake-role\",\"Input\":\"test\"}" \
     --action-after-completion DELETE 2>&1
 echo "  Created tagged schedule: $TAGGED_SCHEDULE_NAME"
 

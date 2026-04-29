@@ -9,6 +9,9 @@ on:
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
@@ -23,6 +26,9 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Wait for tag propagation
+        # The AWS Resource Groups Tagging API is eventually consistent.
+        # Resources created shortly before CI completes may not yet be discoverable by tag.
+        # 15 seconds provides sufficient margin based on observed propagation times.
         run: sleep 15
 
       - name: Cleanup orphaned test resources

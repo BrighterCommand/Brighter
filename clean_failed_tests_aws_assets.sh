@@ -15,6 +15,25 @@ if [[ "${1:-}" == "--dry-run" ]]; then
     echo "[DRY RUN] No resources will be deleted"
 fi
 
+# --- Helper: delete all schedules in a given group ---
+# Uses --no-paginate to ensure all schedules are returned (not just first page of 100).
+delete_schedules_in_group() {
+    local group_name="$1"
+    local schedules
+    schedules=$(aws scheduler list-schedules --group-name "$group_name" --no-paginate \
+        --query 'Schedules[*].Name' --output text 2>&1 || echo "")
+    for sched_name in $schedules; do
+        [[ -z "$sched_name" || "$sched_name" == "None" ]] && continue
+        if $DRY_RUN; then
+            echo "    [DRY RUN] Would delete schedule: $sched_name (group: $group_name)"
+        else
+            echo "    Deleting schedule: $sched_name (group: $group_name)"
+            aws scheduler delete-schedule --name "$sched_name" --group-name "$group_name" 2>&1 \
+                || echo "      WARNING: failed to delete schedule $sched_name"
+        fi
+    done
+}
+
 # --- Discover tagged resources via Resource Groups Tagging API ---
 # Note: AWS CLI v2 auto-paginates by default. The --query/--output flags are applied
 # after all pages are aggregated, so this handles >100 resources without manual pagination.
@@ -136,40 +155,19 @@ if [[ ${#SCHEDULE_GROUPS[@]} -gt 0 ]]; then
         # Extract group name from ARN (last segment after schedule-group/)
         GROUP_NAME="${arn##*/}"
 
-        # Skip the 'default' group — it cannot be deleted
+        # Skip the 'default' group — it cannot be deleted, but we clean its schedules
         if [[ "$GROUP_NAME" == "default" ]]; then
             echo "  Cleaning schedules in default group (group itself cannot be deleted)"
-            SCHEDULES=$(aws scheduler list-schedules --group-name "$GROUP_NAME" \
-                --query 'Schedules[*].Name' --output text 2>&1 || echo "")
-            if $DRY_RUN; then
-                for sched_name in $SCHEDULES; do
-                    [[ -z "$sched_name" || "$sched_name" == "None" ]] && continue
-                    echo "    [DRY RUN] Would delete schedule: $sched_name (group: $GROUP_NAME)"
-                done
-            else
-                for sched_name in $SCHEDULES; do
-                    [[ -z "$sched_name" || "$sched_name" == "None" ]] && continue
-                    echo "    Deleting schedule: $sched_name (group: $GROUP_NAME)"
-                    aws scheduler delete-schedule --name "$sched_name" --group-name "$GROUP_NAME" 2>&1 \
-                        || echo "      WARNING: failed to delete schedule $sched_name"
-                done
-            fi
+            delete_schedules_in_group "$GROUP_NAME"
             continue
         fi
+
+        echo "  Processing schedule group: $GROUP_NAME"
+        delete_schedules_in_group "$GROUP_NAME"
 
         if $DRY_RUN; then
             echo "  [DRY RUN] Would delete schedule group: $GROUP_NAME"
         else
-            # Delete all schedules in the group first
-            SCHEDULES=$(aws scheduler list-schedules --group-name "$GROUP_NAME" \
-                --query 'Schedules[*].Name' --output text 2>&1 || echo "")
-            for sched_name in $SCHEDULES; do
-                [[ -z "$sched_name" || "$sched_name" == "None" ]] && continue
-                echo "    Deleting schedule: $sched_name (group: $GROUP_NAME)"
-                aws scheduler delete-schedule --name "$sched_name" --group-name "$GROUP_NAME" 2>&1 \
-                    || echo "      WARNING: failed to delete schedule $sched_name"
-            done
-
             echo "  Deleting schedule group: $GROUP_NAME"
             aws scheduler delete-schedule-group --name "$GROUP_NAME" 2>&1 \
                 || echo "    WARNING: failed to delete schedule group $GROUP_NAME"
@@ -196,18 +194,12 @@ if [[ -n "$BRIGHTER_GROUPS" && "$BRIGHTER_GROUPS" != "None" ]]; then
             continue
         fi
 
+        echo "  Processing Brighter schedule group: $GROUP_NAME"
+        delete_schedules_in_group "$GROUP_NAME"
+
         if $DRY_RUN; then
             echo "  [DRY RUN] Would delete Brighter schedule group: $GROUP_NAME"
         else
-            SCHEDULES=$(aws scheduler list-schedules --group-name "$GROUP_NAME" \
-                --query 'Schedules[*].Name' --output text 2>&1 || echo "")
-            for sched_name in $SCHEDULES; do
-                [[ -z "$sched_name" || "$sched_name" == "None" ]] && continue
-                echo "    Deleting schedule: $sched_name (group: $GROUP_NAME)"
-                aws scheduler delete-schedule --name "$sched_name" --group-name "$GROUP_NAME" 2>&1 \
-                    || echo "      WARNING: failed to delete schedule $sched_name"
-            done
-
             echo "  Deleting Brighter schedule group: $GROUP_NAME"
             aws scheduler delete-schedule-group --name "$GROUP_NAME" 2>&1 \
                 || echo "    WARNING: failed to delete schedule group $GROUP_NAME"
