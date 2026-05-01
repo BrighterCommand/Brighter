@@ -9,7 +9,7 @@
 > Dependencies: None. This is the foundation — all subsequent tasks depend on it.
 > Regression check: After each TEST+IMPLEMENT task in this phase, run `dotnet test tests/Paramore.Brighter.Core.Tests/` to confirm no regressions.
 
-- [ ] **TIDY: Add System.Memory package reference to netstandard2.0 projects**
+- [x] **TIDY: Add System.Memory package reference to netstandard2.0 projects**
   - Add `<PackageReference Include="System.Memory" />` to `Directory.Packages.props` and to `Paramore.Brighter.csproj` conditionally for `netstandard2.0`
   - Verify the solution still builds for all target frameworks
   - No behavioral change — structural only
