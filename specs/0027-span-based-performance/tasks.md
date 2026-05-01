@@ -14,9 +14,9 @@
   - Verify the solution still builds for all target frameworks
   - No behavioral change — structural only
 
-- [ ] **TEST + IMPLEMENT: MessageBody constructed from ReadOnlyMemory\<byte\> does not copy**
+- [x] **TEST + IMPLEMENT: MessageBody constructed from ReadOnlyMemory\<byte\> does not copy**
   - **USE COMMAND**: `/test-first when constructing MessageBody from ReadOnlyMemory should not allocate a new byte array`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBody` (new directory — create it)
+  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBodyTests` (new directory — create it)
   - Test file: `When_Constructing_MessageBody_From_ReadOnlyMemory_Should_Not_Copy.cs`
   - Test should verify:
     - Constructing `MessageBody(new ReadOnlyMemory<byte>(bytes))` stores the memory without copying
@@ -33,7 +33,7 @@
 
 - [ ] **TEST + IMPLEMENT: MessageBody.Value caches its string representation**
   - **USE COMMAND**: `/test-first when accessing MessageBody Value multiple times should return cached string`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBody`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBodyTests`
   - Test file: `When_Accessing_MessageBody_Value_Multiple_Times_Should_Cache.cs`
   - Test should verify:
     - First access to `Value` returns the correct string for UTF8, ASCII, and Base64 encodings
@@ -47,7 +47,7 @@
 
 - [ ] **TEST + IMPLEMENT: MessageBody.Equals compares without allocating byte arrays**
   - **USE COMMAND**: `/test-first when comparing two MessageBody instances for equality should not allocate byte arrays`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBody`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBodyTests`
   - Test file: `When_Comparing_MessageBody_Equality_Should_Use_Span.cs`
   - Test should verify:
     - Two `MessageBody` instances with identical bytes are equal
@@ -97,7 +97,7 @@
 
 - [ ] **TEST + IMPLEMENT: ReadOnlyMemoryStream adapter wraps ReadOnlyMemory\<byte\> as a readable stream**
   - **USE COMMAND**: `/test-first when reading from ReadOnlyMemoryStream should return data from the underlying ReadOnlyMemory`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBody` (new directory — create if not yet done)
+  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBodyTests` (new directory — create if not yet done)
   - Test file: `When_Reading_From_ReadOnlyMemoryStream_Should_Return_Memory_Data.cs`
   - Test should verify:
     - `Read()` returns the correct bytes from the underlying `ReadOnlyMemory<byte>`
@@ -152,7 +152,7 @@
 
 - [ ] **TEST + IMPLEMENT: CharacterEncoding lookup uses case-insensitive comparison without allocation**
   - **USE COMMAND**: `/test-first when converting string to CharacterEncoding should not allocate via ToLowerInvariant`
-  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBody`
+  - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBodyTests`
   - Test file: `When_Converting_String_To_CharacterEncoding_Should_Be_Case_Insensitive.cs`
   - Test should verify:
     - `"utf-8"`, `"UTF-8"`, `"Utf-8"` all return `CharacterEncoding.UTF8`

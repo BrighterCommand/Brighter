@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -37,10 +36,20 @@ namespace Paramore.Brighter
     /// </summary>
     public class MessageBody : IEquatable<MessageBody>
     {
+        private ReadOnlyMemory<byte> _memory;
+
         /// <summary>
         /// The message body as a byte array.
+        /// Returns a copy of the internal memory for backward compatibility.
+        /// Prefer <see cref="Memory"/> to avoid the copy.
         /// </summary>
-        public byte[] Bytes { get; private set; }
+        public byte[] Bytes => _memory.ToArray();
+
+        /// <summary>
+        /// The message body as a <see cref="ReadOnlyMemory{T}"/> of <see cref="byte"/>.
+        /// Zero-copy access to the body content.
+        /// </summary>
+        public ReadOnlyMemory<byte> Memory => _memory;
 
         /// <summary>
         /// The type of message encoded into Bytes.  A hint for deserialization that 
@@ -68,11 +77,23 @@ namespace Paramore.Brighter
                 {
                     case CharacterEncoding.Base64:
                     case CharacterEncoding.Raw:
-                        return Convert.ToBase64String(Bytes);
+#if NETSTANDARD2_0
+                        return Convert.ToBase64String(_memory.ToArray());
+#else
+                        return Convert.ToBase64String(_memory.Span);
+#endif
                     case CharacterEncoding.UTF8:
-                        return Encoding.UTF8.GetString(Bytes);
+#if NETSTANDARD2_0
+                        return Encoding.UTF8.GetString(_memory.ToArray());
+#else
+                        return Encoding.UTF8.GetString(_memory.Span);
+#endif
                     case CharacterEncoding.ASCII:
-                        return Encoding.ASCII.GetString(Bytes);
+#if NETSTANDARD2_0
+                        return Encoding.ASCII.GetString(_memory.ToArray());
+#else
+                        return Encoding.ASCII.GetString(_memory.Span);
+#endif
                     default:
                         throw new InvalidCastException(
                             $"Message Body with {CharacterEncoding} is not available");
@@ -103,17 +124,17 @@ namespace Paramore.Brighter
 
             if (body == null)
             {
-                Bytes = Array.Empty<byte>();
+                _memory = ReadOnlyMemory<byte>.Empty;
                 return;
             }
-            
-            Bytes = (CharacterEncoding switch
+
+            _memory = CharacterEncoding switch
             {
                 CharacterEncoding.Base64 => Convert.FromBase64String(body),
                 CharacterEncoding.UTF8 => Encoding.UTF8.GetBytes(body),
                 CharacterEncoding.ASCII => Encoding.ASCII.GetBytes(body),
-                _ => Bytes
-            })!;
+                _ => ReadOnlyMemory<byte>.Empty
+            };
         }
 
 
@@ -138,11 +159,11 @@ namespace Paramore.Brighter
             
             if (bytes is null)
             {
-                Bytes = [];
+                _memory = ReadOnlyMemory<byte>.Empty;
                 return;
             }
-            
-            Bytes = bytes;
+
+            _memory = bytes;
         }
 
         /// <summary>
@@ -162,7 +183,7 @@ namespace Paramore.Brighter
             ContentType = contentType ?? new ContentType(MediaTypeNames.Application.Json);
             SetCharacterEncoding(ContentType, characterEncoding);
 #endif
-            Bytes = body.ToArray();
+            _memory = body;
             CharacterEncoding = characterEncoding;
         }
 
@@ -177,9 +198,18 @@ namespace Paramore.Brighter
         {
             return characterEncoding switch
             {
-                CharacterEncoding.Base64 => Convert.ToBase64String(Bytes),
-                CharacterEncoding.UTF8 => Encoding.UTF8.GetString(Bytes),
-                CharacterEncoding.ASCII => Encoding.ASCII.GetString(Bytes),
+#if NETSTANDARD2_0
+                CharacterEncoding.Base64 => Convert.ToBase64String(_memory.ToArray()),
+#else
+                CharacterEncoding.Base64 => Convert.ToBase64String(_memory.Span),
+#endif
+#if NETSTANDARD2_0
+                CharacterEncoding.UTF8 => Encoding.UTF8.GetString(_memory.ToArray()),
+                CharacterEncoding.ASCII => Encoding.ASCII.GetString(_memory.ToArray()),
+#else
+                CharacterEncoding.UTF8 => Encoding.UTF8.GetString(_memory.Span),
+                CharacterEncoding.ASCII => Encoding.ASCII.GetString(_memory.Span),
+#endif
                 _ => throw new InvalidOperationException($"Message Body with {CharacterEncoding} is not available")
             };
         }
@@ -192,8 +222,8 @@ namespace Paramore.Brighter
         public bool Equals(MessageBody? other)
         {
             if (other is null) return false;
-            var bodyEqual = Bytes.SequenceEqual(other.Bytes);
-            var sameContentType = ContentType is null || ContentType.Equals(other.ContentType); 
+            var bodyEqual = _memory.Span.SequenceEqual(other._memory.Span);
+            var sameContentType = ContentType is null || ContentType.Equals(other.ContentType);
             return bodyEqual && sameContentType ;
         }
 
@@ -216,7 +246,10 @@ namespace Paramore.Brighter
         /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
         public override int GetHashCode()
         {
-            return (Bytes is not null ? Bytes.GetHashCode() : 0);
+            var hash = new HashCode();
+            foreach (var b in _memory.Span)
+                hash.Add(b);
+            return hash.ToHashCode();
         }
 
         /// <summary>
