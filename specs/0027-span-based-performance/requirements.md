@@ -27,7 +27,7 @@ Adopt `Span<T>`, `ReadOnlySpan<T>`, `Memory<T>`, and `ReadOnlyMemory<T>` across 
 - **FR-5**: JSON deserialization in message mappers should operate on `ReadOnlySpan<byte>` or `byte[]` directly rather than converting to `string` first via `MessageBody.Value`.
 - **FR-6**: `CompressPayloadTransformer` should reduce `MemoryStream` allocations by using pooled buffers or `RecyclableMemoryStream` where beneficial.
 - **FR-7**: `ClaimCheckTransformer` and `InMemoryStorageProvider` should reduce `StreamWriter`/`StreamReader` allocations.
-- **FR-8**: Character encoding extensions should provide `Span<T>`-based overloads for encoding lookups.
+- **FR-8**: Character encoding extensions should eliminate the `ToLowerInvariant()` allocation in `ToCharacterEncoding()` by using case-insensitive comparison. `ReadOnlySpan<char>` overloads may be added later if call sites arise that have spans without owning strings.
 - **FR-9**: Transport-specific message producers and consumers (RMQ, Kafka, SQS, Azure Service Bus, Redis, etc.) should be reviewed for unnecessary `byte[]`/`string` allocations in their serialization and deserialization paths and updated to use `Span<T>`/`Memory<T>` where beneficial.
 
 ### Non-functional Requirements
