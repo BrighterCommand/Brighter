@@ -31,7 +31,7 @@
     - Update the `ReadOnlyMemory<byte>` constructor to store memory directly (remove `.ToArray()` at line 165)
     - Update `byte[]` and `string` constructors to wrap their data in `ReadOnlyMemory<byte>`
 
-- [ ] **TEST + IMPLEMENT: MessageBody.Value caches its string representation**
+- [x] **TEST + IMPLEMENT: MessageBody.Value caches its string representation**
   - **USE COMMAND**: `/test-first when accessing MessageBody Value multiple times should return cached string`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBodyTests`
   - Test file: `When_Accessing_MessageBody_Value_Multiple_Times_Should_Cache.cs`

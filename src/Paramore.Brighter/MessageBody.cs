@@ -26,6 +26,7 @@ using System;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading;
 using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
@@ -37,6 +38,7 @@ namespace Paramore.Brighter
     public class MessageBody : IEquatable<MessageBody>
     {
         private ReadOnlyMemory<byte> _memory;
+        private string? _cachedValue;
 
         /// <summary>
         /// The message body as a byte array.
@@ -73,31 +75,28 @@ namespace Paramore.Brighter
         {
             get
             {
-                switch (CharacterEncoding)
+                var cached = Volatile.Read(ref _cachedValue);
+                if (cached is not null) return cached;
+
+                var result = CharacterEncoding switch
                 {
-                    case CharacterEncoding.Base64:
-                    case CharacterEncoding.Raw:
 #if NETSTANDARD2_0
-                        return Convert.ToBase64String(_memory.ToArray());
+                    CharacterEncoding.Base64 => Convert.ToBase64String(_memory.ToArray()),
+                    CharacterEncoding.Raw => Convert.ToBase64String(_memory.ToArray()),
+                    CharacterEncoding.UTF8 => Encoding.UTF8.GetString(_memory.ToArray()),
+                    CharacterEncoding.ASCII => Encoding.ASCII.GetString(_memory.ToArray()),
 #else
-                        return Convert.ToBase64String(_memory.Span);
+                    CharacterEncoding.Base64 => Convert.ToBase64String(_memory.Span),
+                    CharacterEncoding.Raw => Convert.ToBase64String(_memory.Span),
+                    CharacterEncoding.UTF8 => Encoding.UTF8.GetString(_memory.Span),
+                    CharacterEncoding.ASCII => Encoding.ASCII.GetString(_memory.Span),
 #endif
-                    case CharacterEncoding.UTF8:
-#if NETSTANDARD2_0
-                        return Encoding.UTF8.GetString(_memory.ToArray());
-#else
-                        return Encoding.UTF8.GetString(_memory.Span);
-#endif
-                    case CharacterEncoding.ASCII:
-#if NETSTANDARD2_0
-                        return Encoding.ASCII.GetString(_memory.ToArray());
-#else
-                        return Encoding.ASCII.GetString(_memory.Span);
-#endif
-                    default:
-                        throw new InvalidCastException(
-                            $"Message Body with {CharacterEncoding} is not available");
-                }
+                    _ => throw new InvalidCastException(
+                        $"Message Body with {CharacterEncoding} is not available")
+                };
+
+                Volatile.Write(ref _cachedValue, result);
+                return result;
             }
         }
 
