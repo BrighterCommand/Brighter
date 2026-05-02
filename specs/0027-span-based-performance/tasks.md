@@ -150,7 +150,7 @@
     - On retrieve, read the stream into a `byte[]` and construct `MessageBody(byte[])` instead of `StreamReader.ReadToEnd()` → `MessageBody(string)`
     - In `InMemoryStorageProvider`, store `ReadOnlyMemory<byte>` internally instead of `string`
 
-- [ ] **TEST + IMPLEMENT: CharacterEncoding lookup uses case-insensitive comparison without allocation**
+- [x] **TEST + IMPLEMENT: CharacterEncoding lookup uses case-insensitive comparison without allocation**
   - **USE COMMAND**: `/test-first when converting string to CharacterEncoding should not allocate via ToLowerInvariant`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBodyTests`
   - Test file: `When_Converting_String_To_CharacterEncoding_Should_Be_Case_Insensitive.cs`
