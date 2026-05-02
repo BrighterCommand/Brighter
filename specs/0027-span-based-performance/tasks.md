@@ -95,7 +95,7 @@
 > Dependencies: Phase 1 (MessageBody `Memory` property must exist).
 > Regression check: After each task, run `dotnet test tests/Paramore.Brighter.Core.Tests/` to confirm no regressions.
 
-- [ ] **TEST + IMPLEMENT: ReadOnlyMemoryStream adapter wraps ReadOnlyMemory\<byte\> as a readable stream**
+- [x] **TEST + IMPLEMENT: ReadOnlyMemoryStream adapter wraps ReadOnlyMemory\<byte\> as a readable stream**
   - **USE COMMAND**: `/test-first when reading from ReadOnlyMemoryStream should return data from the underlying ReadOnlyMemory`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBodyTests` (new directory — create if not yet done)
   - Test file: `When_Reading_From_ReadOnlyMemoryStream_Should_Return_Memory_Data.cs`
