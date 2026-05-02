@@ -35,7 +35,7 @@ namespace Paramore.Brighter;
 /// This avoids allocating a <see cref="MemoryStream"/> and copying data when a stream interface
 /// is required over existing <see cref="ReadOnlyMemory{T}"/> content (e.g. for compression).
 /// </remarks>
-public sealed class ReadOnlyMemoryStream : Stream
+internal sealed class ReadOnlyMemoryStream : Stream
 {
     private readonly ReadOnlyMemory<byte> _memory;
     private int _position;

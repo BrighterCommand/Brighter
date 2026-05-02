@@ -25,5 +25,5 @@
   <ItemGroup>
     <Folder Include="NJsonConverters\" />
   </ItemGroup>
-  
+
 </Project>

@@ -110,6 +110,7 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
     /// <returns>The message, with 'luggage' swapped out if over the threshold</returns>
     public async Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken = default)
     {
+        // Compares actual stored byte count; see ADR 0057 for threshold semantics change
         if (message.Body.Memory.Length < _thresholdInBytes)
         {
             return message;
@@ -175,6 +176,7 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
     /// <returns>The message, with 'luggage' swapped out if over the threshold</returns>
     public Message Wrap(Message message, Publication publication)
     {
+        // Compares actual stored byte count; see ADR 0057 for threshold semantics change
         if (message.Body.Memory.Length < _thresholdInBytes)
         {
             return message;

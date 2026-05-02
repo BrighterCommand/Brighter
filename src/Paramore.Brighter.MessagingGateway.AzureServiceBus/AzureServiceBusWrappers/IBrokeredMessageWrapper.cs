@@ -16,7 +16,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <summary>
         /// Message Body as <see cref="ReadOnlyMemory{T}"/> of <see cref="byte"/> for zero-copy access.
         /// </summary>
-        ReadOnlyMemory<byte> MessageBodyMemory => (MessageBodyValue ?? Array.Empty<byte>()).AsMemory();
+        ReadOnlyMemory<byte> MessageBodyMemory { get; }
 
         /// <summary>
         /// Application Properties

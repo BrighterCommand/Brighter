@@ -39,11 +39,12 @@ namespace Paramore.Brighter
     {
         private readonly ReadOnlyMemory<byte> _memory;
         private string? _cachedValue;
+        private int _cachedHashCode;
+        private bool _hashCodeComputed;
 
         /// <summary>
         /// The message body as a byte array.
-        /// Returns a copy of the internal memory for backward compatibility.
-        /// Prefer <see cref="Memory"/> to avoid the copy.
+        /// Allocates a new array on every call. Prefer <see cref="Memory"/> for zero-copy access.
         /// </summary>
         public byte[] Bytes => _memory.ToArray();
 
@@ -245,10 +246,15 @@ namespace Paramore.Brighter
         /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
         public override int GetHashCode()
         {
+            if (Volatile.Read(ref _hashCodeComputed)) return _cachedHashCode;
+
             var hash = new HashCode();
             foreach (var b in _memory.Span)
                 hash.Add(b);
-            return hash.ToHashCode();
+            var result = hash.ToHashCode();
+            Volatile.Write(ref _cachedHashCode, result);
+            Volatile.Write(ref _hashCodeComputed, true);
+            return result;
         }
 
         /// <summary>

@@ -61,7 +61,11 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
         var bodyMemory = azureServiceBusMessage.MessageBodyMemory;
 
+#if NETSTANDARD2_0
+        Log.ReceivedMessage(s_logger, _topic, subscription.Name, System.Text.Encoding.UTF8.GetString(bodyMemory.ToArray()));
+#else
         Log.ReceivedMessage(s_logger, _topic, subscription.Name, System.Text.Encoding.UTF8.GetString(bodyMemory.Span));
+#endif
             
         //TODO: Switch these to use the option type HeaderResult<T> for consistency with the rest of the codebase.
         MessageType messageType = GetMessageType(azureServiceBusMessage);
