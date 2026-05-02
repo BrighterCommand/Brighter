@@ -113,7 +113,7 @@
     - Override `Read`, `ReadAsync`, `Length`, `Position`, `CanRead` (true), `CanSeek` (true), `CanWrite` (false)
     - Throw `NotSupportedException` from `Write`/`SetLength`
 
-- [ ] **TEST + IMPLEMENT: CompressPayloadTransformer uses Memory property instead of Bytes**
+- [x] **TEST + IMPLEMENT: CompressPayloadTransformer uses Memory property instead of Bytes**
   - **USE COMMAND**: `/test-first when compressing a message should use Memory property to avoid byte array copies`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Compression`
   - Test file: `When_Compressing_A_Message_Should_Use_Memory_Property.cs`
