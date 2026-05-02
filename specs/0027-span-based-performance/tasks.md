@@ -197,7 +197,7 @@
 
 > Dependencies: Phase 1 (MessageBody refactor).
 
-- [ ] **TEST + IMPLEMENT: Kafka header encoding uses UTF-8 consistently for produce and consume**
+- [x] **TEST + IMPLEMENT: Kafka header encoding uses UTF-8 consistently for produce and consume**
   - **USE COMMAND**: `/test-first when producing and consuming Kafka headers should use UTF8 encoding consistently`
   - Test location: `tests/Paramore.Brighter.Kafka.Tests`
   - Test file: `When_Producing_And_Consuming_Headers_Should_Use_Utf8_Consistently.cs`
