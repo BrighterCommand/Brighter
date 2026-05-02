@@ -78,7 +78,7 @@
     - In `JsonMessageMapper.MapToMessage()`: replace `JsonSerializer.Serialize()` with `JsonSerializer.SerializeToUtf8Bytes()` and construct `MessageBody(byte[])` directly
     - In `JsonMessageMapper.MapToRequest()`: replace `message.Body.Value` with `JsonSerializer.Deserialize<T>(message.Body.Memory.Span)`
 
-- [ ] **TEST + IMPLEMENT: CloudEventJsonMessageMapper serialises directly to UTF-8 bytes**
+- [x] **TEST + IMPLEMENT: CloudEventJsonMessageMapper serialises directly to UTF-8 bytes**
   - **USE COMMAND**: `/test-first when mapping a cloud event request to message should serialize directly to UTF8 bytes`
   - Test location: `tests/Paramore.Brighter.Core.Tests/CloudEvents`
   - Test file: `When_Mapping_CloudEvent_To_Message_Should_Serialize_To_Utf8_Bytes.cs`
