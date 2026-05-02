@@ -10,25 +10,40 @@
 ## Completed Tasks
 
 ### Phase 1: Core — MessageBody Refactor (FR-1, FR-2, FR-3) ✅ COMPLETE
-- [x] TIDY: Add System.Memory package reference (commit `8b4a86856`)
-- [x] TEST+IMPLEMENT: MessageBody from ReadOnlyMemory does not copy (commit `df7350057`)
-- [x] TEST+IMPLEMENT: MessageBody.Value caches string representation (commit `ae3e3f0c8`)
-- [x] TEST+IMPLEMENT: MessageBody.Equals compares without allocating byte arrays (test locks in existing span-based behavior)
+### Phase 2: Core — JSON Message Mappers (FR-4, FR-5) ✅ COMPLETE
+### Phase 3: Core — CompressPayloadTransformer (FR-6) ✅ COMPLETE
+### Phase 4: Core — ClaimCheck and CharacterEncoding (FR-7, FR-8) ✅ COMPLETE
+### Phase 5: Transport — RMQ (FR-9) ✅ COMPLETE (already working via Phase 1)
+### Phase 6: Transport — Kafka (FR-9) ✅ COMPLETE
+### Phase 7: Transport — Azure Service Bus (FR-9) ✅ COMPLETE
+
+## Remaining Tasks
+
+### Phase 8: Benchmarks (NFR-3) — NOT STARTED
+- [ ] SETUP: Create BenchmarkDotNet project for allocation measurement
+
+### Phase 9: Final Regression Verification — PARTIALLY DONE
+- [x] Core tests: 720 passed (net9.0 + net10.0)
+- [ ] RMQ Async tests (requires running RabbitMQ)
+- [ ] RMQ Sync tests (requires running RabbitMQ)
+- [ ] Kafka tests (requires running Kafka)
+- [ ] Azure Service Bus tests (requires running ASB)
 
 ## Next Action
 
-Start **Phase 2: Core — JSON Message Mappers (FR-4, FR-5)**.
-
-Run `/test-first when mapping a request to message should serialize directly to UTF8 bytes without intermediate string`
-
-Then continue with the remaining Phase 2 task and onward per `specs/0027-span-based-performance/tasks.md`.
+Phase 8: Create BenchmarkDotNet project, or Phase 9: run integration tests if infrastructure available.
 
 ## Key Implementation Details
 
-- `MessageBody` internal storage is now `ReadOnlyMemory<byte> _memory`
+- `MessageBody` internal storage: `ReadOnlyMemory<byte> _memory`
 - `Memory` property: zero-copy access
 - `Bytes` property: backward-compat, returns `_memory.ToArray()` (copies)
 - `Value` property: cached via `Volatile.Read`/`Volatile.Write` on `_cachedValue`
-- `Equals`: uses `_memory.Span.SequenceEqual()`
-- `GetHashCode`: hashes from `_memory.Span`
-- `#if NETSTANDARD2_0` guards needed for `Encoding.GetString(ReadOnlySpan<byte>)` and `Convert.ToBase64String(ReadOnlySpan<byte>)` which are not available on netstandard2.0
+- `Equals`/`GetHashCode`: span-based
+- `ReadOnlyMemoryStream`: zero-copy Stream adapter over ReadOnlyMemory<byte>
+- `JsonMessageMapper`/`CloudEventJsonMessageMapper`: `SerializeToUtf8Bytes` + `Deserialize(Memory.Span)`
+- `CompressPayloadTransformer`: `ReadOnlyMemoryStream` input, `TryGetBuffer` output, span lead-byte checks
+- `ClaimCheckTransformer`: `ReadOnlyMemoryStream` wrap, byte reads unwrap
+- `CharacterEncodingExtensions.ToCharacterEncoding`: `OrdinalIgnoreCase` (no allocation)
+- Kafka `StringTools`: UTF-8 instead of ASCII
+- ASB: `MessageBodyMemory` property + `Encoding.UTF8` instead of `Encoding.Default`
