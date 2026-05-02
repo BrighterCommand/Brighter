@@ -168,7 +168,7 @@
 > Dependencies: Phase 1 (MessageBody `ReadOnlyMemory<byte>` constructor no longer copies).
 > Note: There are two `RmqMessageCreator` implementations — one in `RMQ.Async` and one in `RMQ.Sync`. Both must be updated.
 
-- [ ] **TEST + IMPLEMENT: RMQ Async message body flows through from AMQP without byte array copy**
+- [x] **TEST + IMPLEMENT: RMQ Async message body flows through from AMQP without byte array copy** (already working via Phase 1 — fromQueue.Body is ReadOnlyMemory<byte> passed directly to MessageBody)
   - **USE COMMAND**: `/test-first when creating a Brighter message from an AMQP delivery should pass ReadOnlyMemory body without copying`
   - Test location: `tests/Paramore.Brighter.RMQ.Async.Tests`
   - Test file: `When_Creating_Message_From_AMQP_Should_Pass_Memory_Without_Copy.cs`
@@ -183,7 +183,7 @@
     - If any intermediate `.ToArray()` calls exist in the RMQ Async path, remove them
     - On `net8.0`+, replace `Encoding.UTF8.GetString(byte[])` header calls with `Encoding.UTF8.GetString(ReadOnlySpan<byte>)` where the value is parsed immediately (timestamps, integers), using `#if` conditional compilation. On `netstandard2.0`, retain `GetString(byte[])`
 
-- [ ] **TEST + IMPLEMENT: RMQ Sync message body flows through from AMQP without byte array copy**
+- [x] **TEST + IMPLEMENT: RMQ Sync message body flows through from AMQP without byte array copy** (already working via Phase 1 — same as Async)
   - **USE COMMAND**: `/test-first when creating a Brighter message from an AMQP delivery in sync mode should pass ReadOnlyMemory body without copying`
   - Test location: `tests/Paramore.Brighter.RMQ.Sync.Tests`
   - Test file: `When_Creating_Message_From_AMQP_Should_Pass_Memory_Without_Copy.cs`
