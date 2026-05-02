@@ -64,7 +64,7 @@
 > Dependencies: Phase 1 (MessageBody refactor must be complete).
 > Regression check: After each task, run `dotnet test tests/Paramore.Brighter.Core.Tests/` to confirm no regressions.
 
-- [ ] **TEST + IMPLEMENT: JsonMessageMapper serialises directly to UTF-8 bytes**
+- [x] **TEST + IMPLEMENT: JsonMessageMapper serialises directly to UTF-8 bytes**
   - **USE COMMAND**: `/test-first when mapping a request to message should serialize directly to UTF8 bytes without intermediate string`
   - Test location: `tests/Paramore.Brighter.Core.Tests/JsonMapper`
   - Test file: `When_Mapping_Request_To_Message_Should_Serialize_To_Utf8_Bytes.cs`
