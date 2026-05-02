@@ -135,7 +135,7 @@
 > Dependencies: Phase 1 (MessageBody `Memory` property), Phase 3 (ReadOnlyMemoryStream adapter).
 > Regression check: After each task, run `dotnet test tests/Paramore.Brighter.Core.Tests/` to confirm no regressions.
 
-- [ ] **TEST + IMPLEMENT: ClaimCheckTransformer stores and retrieves without StreamWriter/StreamReader**
+- [x] **TEST + IMPLEMENT: ClaimCheckTransformer stores and retrieves without StreamWriter/StreamReader**
   - **USE COMMAND**: `/test-first when wrapping a large message for claim check should store body without StreamWriter allocation`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Claims`
   - Test file: `When_Wrapping_A_Large_Message_Should_Store_Without_StreamWriter.cs`
