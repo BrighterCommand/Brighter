@@ -19,26 +19,25 @@
 
 Core regression: 720/720 tests pass on both net9.0 and net10.0.
 
-## Next Action: Phase 8 — Benchmarks (NFR-3)
+### Phase 8: Benchmarks (NFR-3) ✅ COMPLETE
 
-Create a BenchmarkDotNet project to measure the allocation reduction achieved by the Span<T> changes.
+Benchmark results (Apple M1 Pro, .NET 10.0.0, BenchmarkDotNet v0.14.0):
 
-### What to do
+| Method | PayloadSize | Mean | Allocated |
+|---|---|---|---|
+| MapToMessage | 1,000 | 567 ns | 2.67 KB |
+| MapToMessage_ThenCompress | 1,000 | 6,049 ns | 4.03 KB |
+| FullRoundTrip | 1,000 | 8,056 ns | 8.38 KB |
+| MapToMessage | 10,000 | 1,928 ns | 11.46 KB |
+| MapToMessage_ThenCompress | 10,000 | 10,117 ns | 12.82 KB |
+| FullRoundTrip | 10,000 | 17,347 ns | 43.54 KB |
+| MapToMessage | 100,000 | 25,413 ns | 99.38 KB |
+| MapToMessage_ThenCompress | 100,000 | 67,286 ns | 100.74 KB |
+| FullRoundTrip | 100,000 | 132,871 ns | 395.26 KB |
 
-1. Create `benchmarks/Paramore.Brighter.Benchmarks/` as a console app (BenchmarkDotNet requires this)
-2. Add `BenchmarkDotNet` package reference to `Directory.Packages.props`
-3. Create `MessageRoundTripBenchmark.cs` with `[MemoryDiagnoser]`
-4. Benchmark the full round-trip pipeline:
-   - `JsonMessageMapper.MapToMessage` (serialize to UTF-8 bytes)
-   - `CompressPayloadTransformer.Wrap` (compress using Memory)
-   - `CompressPayloadTransformer.Unwrap` (decompress)
-   - `JsonMessageMapper.MapToRequest` (deserialize from Memory.Span)
-5. Run with `dotnet run -c Release` to produce allocation metrics
-6. The benchmark results document the allocation reduction (AC-6)
+## Next Action: Phase 9 — Final Regression Verification
 
-### After Phase 8
-
-Phase 9: Final regression verification across transport test suites (requires running RabbitMQ, Kafka, Azure Service Bus infrastructure).
+Run the full regression suite across core and transport tests (requires running RabbitMQ, Kafka, Azure Service Bus infrastructure).
 
 ## Key Implementation Details
 

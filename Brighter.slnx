@@ -310,4 +310,7 @@
   <Project Path="src/Paramore.Brighter.Transformers.MassTransit/Paramore.Brighter.Transformers.MassTransit.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.MongoGridFS/Paramore.Brighter.Transformers.MongoGridFS.csproj" />
   <Project Path="src/Paramore.Brighter/Paramore.Brighter.csproj" />
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Paramore.Brighter.Benchmarks/Paramore.Brighter.Benchmarks.csproj" />
+  </Folder>
 </Solution>
