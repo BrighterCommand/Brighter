@@ -215,7 +215,7 @@
 
 > Dependencies: Phase 1 (MessageBody refactor).
 
-- [ ] **TEST + IMPLEMENT: Azure Service Bus message body uses BinaryData.ToMemory instead of ToArray**
+- [x] **TEST + IMPLEMENT: Azure Service Bus message body uses BinaryData.ToMemory instead of ToArray**
   - **USE COMMAND**: `/test-first when creating a Brighter message from Azure Service Bus should use ToMemory for zero-copy body`
   - Test location: `tests/Paramore.Brighter.AzureServiceBus.Tests`
   - Test file: `When_Creating_Message_From_ServiceBus_Should_Use_Memory.cs`
@@ -230,7 +230,7 @@
     - Override in `BrokeredMessageWrapper` to return `_brokeredMessage.Body.ToMemory()`
     - Update test doubles (`FakeServiceBusReceiverWrapper`, `BrokeredMessage`) to implement new property
 
-- [ ] **TEST + IMPLEMENT: Azure Service Bus message creator uses UTF-8 encoding instead of Encoding.Default**
+- [x] **TEST + IMPLEMENT: Azure Service Bus message creator uses UTF-8 encoding instead of Encoding.Default**
   - **USE COMMAND**: `/test-first when creating a Brighter message from Azure Service Bus should use UTF8 not Encoding.Default`
   - Test location: `tests/Paramore.Brighter.AzureServiceBus.Tests`
   - Test file: `When_Creating_Message_Should_Use_Utf8_Encoding.cs`

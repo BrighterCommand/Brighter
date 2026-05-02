@@ -59,9 +59,9 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
             Log.NullMessageBodyReceived(s_logger, _topic, subscription.Name);
         }
 
-        var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? []);
+        var bodyMemory = azureServiceBusMessage.MessageBodyMemory;
 
-        Log.ReceivedMessage(s_logger, _topic, subscription.Name, messageBody);
+        Log.ReceivedMessage(s_logger, _topic, subscription.Name, System.Text.Encoding.UTF8.GetString(bodyMemory.Span));
             
         //TODO: Switch these to use the option type HeaderResult<T> for consistency with the rest of the codebase.
         MessageType messageType = GetMessageType(azureServiceBusMessage);
@@ -109,7 +109,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
             headers.Bag.Add(property.Key, property.Value);
         }
             
-        var message = new Message(headers, new MessageBody(messageBody));
+        var message = new Message(headers, new MessageBody(bodyMemory));
         return message;
     }
 
