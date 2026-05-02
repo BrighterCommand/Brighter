@@ -45,7 +45,7 @@
     - In `Value` getter, check `Volatile.Read(ref _cachedValue)` first; if non-null, return it
     - Otherwise compute, store via `Volatile.Write(ref _cachedValue, result)`, and return
 
-- [ ] **TEST + IMPLEMENT: MessageBody.Equals compares without allocating byte arrays**
+- [x] **TEST + IMPLEMENT: MessageBody.Equals compares without allocating byte arrays**
   - **USE COMMAND**: `/test-first when comparing two MessageBody instances for equality should not allocate byte arrays`
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessageBodyTests`
   - Test file: `When_Comparing_MessageBody_Equality_Should_Use_Span.cs`
