@@ -17,21 +17,28 @@
 ### Phase 6: Transport — Kafka (FR-9) ✅ COMPLETE
 ### Phase 7: Transport — Azure Service Bus (FR-9) ✅ COMPLETE
 
-## Remaining Tasks
+Core regression: 720/720 tests pass on both net9.0 and net10.0.
 
-### Phase 8: Benchmarks (NFR-3) — NOT STARTED
-- [ ] SETUP: Create BenchmarkDotNet project for allocation measurement
+## Next Action: Phase 8 — Benchmarks (NFR-3)
 
-### Phase 9: Final Regression Verification — PARTIALLY DONE
-- [x] Core tests: 720 passed (net9.0 + net10.0)
-- [ ] RMQ Async tests (requires running RabbitMQ)
-- [ ] RMQ Sync tests (requires running RabbitMQ)
-- [ ] Kafka tests (requires running Kafka)
-- [ ] Azure Service Bus tests (requires running ASB)
+Create a BenchmarkDotNet project to measure the allocation reduction achieved by the Span<T> changes.
 
-## Next Action
+### What to do
 
-Phase 8: Create BenchmarkDotNet project, or Phase 9: run integration tests if infrastructure available.
+1. Create `benchmarks/Paramore.Brighter.Benchmarks/` as a console app (BenchmarkDotNet requires this)
+2. Add `BenchmarkDotNet` package reference to `Directory.Packages.props`
+3. Create `MessageRoundTripBenchmark.cs` with `[MemoryDiagnoser]`
+4. Benchmark the full round-trip pipeline:
+   - `JsonMessageMapper.MapToMessage` (serialize to UTF-8 bytes)
+   - `CompressPayloadTransformer.Wrap` (compress using Memory)
+   - `CompressPayloadTransformer.Unwrap` (decompress)
+   - `JsonMessageMapper.MapToRequest` (deserialize from Memory.Span)
+5. Run with `dotnet run -c Release` to produce allocation metrics
+6. The benchmark results document the allocation reduction (AC-6)
+
+### After Phase 8
+
+Phase 9: Final regression verification across transport test suites (requires running RabbitMQ, Kafka, Azure Service Bus infrastructure).
 
 ## Key Implementation Details
 
@@ -47,3 +54,4 @@ Phase 8: Create BenchmarkDotNet project, or Phase 9: run integration tests if in
 - `CharacterEncodingExtensions.ToCharacterEncoding`: `OrdinalIgnoreCase` (no allocation)
 - Kafka `StringTools`: UTF-8 instead of ASCII
 - ASB: `MessageBodyMemory` property + `Encoding.UTF8` instead of `Encoding.Default`
+- `#if NETSTANDARD2_0` guards needed for `Encoding.GetString(ReadOnlySpan<byte>)`, `Convert.ToBase64String(ReadOnlySpan<byte>)`, and `BitConverter.ToUInt16(ReadOnlySpan<byte>)` which are not available on netstandard2.0
