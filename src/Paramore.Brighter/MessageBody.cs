@@ -37,7 +37,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class MessageBody : IEquatable<MessageBody>
     {
-        private ReadOnlyMemory<byte> _memory;
+        private readonly ReadOnlyMemory<byte> _memory;
         private string? _cachedValue;
 
         /// <summary>

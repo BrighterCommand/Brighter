@@ -195,7 +195,12 @@ The work is ordered so that each phase builds on the previous:
 - `MessageBody.Value` caching eliminates redundant string conversions when accessed multiple times.
 - Transport bodies flow through without copying when using the new `Memory` property.
 - Fixes the Azure Service Bus `Encoding.Default` bug and the Kafka ASCII/UTF-8 encoding mismatch.
-- No breaking changes to the public API — existing callers work unchanged.
+- No breaking changes to the public API surface — existing callers compile unchanged.
+
+### Behavioral Changes (release notes)
+
+- **`ClaimCheckTransformer` threshold semantics**: The threshold comparison changed from `Encoding.Unicode.GetByteCount(message.Body.Value)` (UTF-16 byte count of the decoded string) to `message.Body.Memory.Length` (actual stored byte count). The new behavior is more correct (compares like-for-like bytes), but callers who tuned `ThresholdInBytes` based on the old UTF-16 semantics may see different claim-check behavior. For ASCII content the UTF-16 count was ~2x the UTF-8 count, so bodies that previously exceeded the threshold may now fall below it. Adjust threshold values if needed.
+- **Kafka `StringTools` encoding**: Changed from `Encoding.ASCII` to `Encoding.UTF8`. For ASCII-only header values (the common case) the wire format is identical. Non-ASCII characters in Kafka headers will now be encoded correctly as UTF-8 instead of being replaced with `?`. During a rolling deployment, ensure all producers and consumers are updated together if non-ASCII header values are in use.
 - `netstandard2.0` support is maintained via the `System.Memory` polyfill.
 
 ### Negative

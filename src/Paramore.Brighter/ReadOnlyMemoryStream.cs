@@ -66,7 +66,12 @@ public sealed class ReadOnlyMemoryStream : Stream
     public override long Position
     {
         get => _position;
-        set => _position = (int)value;
+        set
+        {
+            if (value < 0 || value > _memory.Length)
+                throw new ArgumentOutOfRangeException(nameof(value));
+            _position = (int)value;
+        }
     }
 
     /// <inheritdoc />
@@ -84,13 +89,18 @@ public sealed class ReadOnlyMemoryStream : Stream
     /// <inheritdoc />
     public override long Seek(long offset, SeekOrigin origin)
     {
-        _position = origin switch
+        var newPosition = origin switch
         {
             SeekOrigin.Begin => (int)offset,
             SeekOrigin.Current => _position + (int)offset,
             SeekOrigin.End => _memory.Length + (int)offset,
             _ => throw new ArgumentOutOfRangeException(nameof(origin))
         };
+
+        if (newPosition < 0 || newPosition > _memory.Length)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+
+        _position = newPosition;
         return _position;
     }
 
