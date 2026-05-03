@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using MySqlConnector;
@@ -13,18 +11,13 @@ public class MySqlInboxProvisioner(
     IAmARelationalDatabaseConfiguration configuration,
     IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
-    private static readonly HashSet<string> V1Columns = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "CommandId", "CommandType", "CommandBody", "Timestamp", "ContextKey"
-    };
-
     public BoxType BoxType => BoxType.Inbox;
 
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
         var migrations = MySqlInboxMigrations.All(configuration);
-        var tableState = await DetectTableStateAsync(cancellationToken);
+        var tableState = await DetectTableStateAsync(migrations, cancellationToken);
 
         if (tableState.TableExists)
         {
@@ -40,7 +33,9 @@ public class MySqlInboxProvisioner(
             cancellationToken);
     }
 
-    private async Task<BoxTableState> DetectTableStateAsync(CancellationToken cancellationToken)
+    private async Task<BoxTableState> DetectTableStateAsync(
+        System.Collections.Generic.IReadOnlyList<IAmABoxMigration> migrations,
+        CancellationToken cancellationToken)
     {
         var schemaName = configuration.SchemaName ?? DatabaseName();
 
@@ -57,8 +52,9 @@ public class MySqlInboxProvisioner(
 
         if (!historyExists)
         {
-            var detectedVersion = await DetectCurrentVersionAsync(
-                connection, configuration.InBoxTableName, schemaName, cancellationToken);
+            var detectedVersion = await MySqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+                connection, configuration.InBoxTableName, schemaName,
+                BoxType.Inbox, migrations, cancellationToken);
             return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
         }
 
@@ -77,16 +73,6 @@ public class MySqlInboxProvisioner(
         await MySqlPayloadModeValidator.ValidateAsync(
             connection, configuration.InBoxTableName, schemaName,
             "CommandBody", configuration.BinaryMessagePayload, cancellationToken);
-    }
-
-    private static async Task<int> DetectCurrentVersionAsync(
-        MySqlConnection connection, string tableName, string schemaName,
-        CancellationToken cancellationToken)
-    {
-        var actualColumns = await MySqlBoxDetectionHelpers.GetTableColumnsAsync(
-            connection, tableName, schemaName, cancellationToken);
-        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
-        return 0;
     }
 
     private string DatabaseName()

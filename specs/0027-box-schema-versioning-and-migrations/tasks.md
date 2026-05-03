@@ -530,7 +530,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 3.4: MySQL runner three-path branching with per-migration commit
 
-- [ ] **TEST + IMPLEMENT: MySQL runner resumes from MAX(V) after mid-chain failure**
+- [x] **TEST + IMPLEMENT: MySQL runner resumes from MAX(V) after mid-chain failure**
   - **USE COMMAND**: `/test-first when mysql runner fails mid chain it should resume from max applied version on next invocation`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
   - Test file: `When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied_version_on_next_invocation.cs`
@@ -549,7 +549,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 3.5: MySQL discriminator-gated detection
 
-- [ ] **TEST + IMPLEMENT: MySQL outbox/inbox detection uses HeaderBag/CommandBody discriminator**
+- [x] **TEST + IMPLEMENT: MySQL outbox/inbox detection uses HeaderBag/CommandBody discriminator**
   - **USE COMMAND**: `/test-first when mysql outbox or inbox detects missing discriminator column it should return negative one`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
   - Test file: `When_mysql_outbox_or_inbox_detects_missing_discriminator_column_it_should_return_negative_one.cs`

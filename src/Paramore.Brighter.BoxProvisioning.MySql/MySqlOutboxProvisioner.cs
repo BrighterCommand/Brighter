@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using MySqlConnector;
@@ -13,22 +11,13 @@ public class MySqlOutboxProvisioner(
     IAmARelationalDatabaseConfiguration configuration,
     IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
-    private static readonly HashSet<string> V1Columns = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "MessageId", "Topic", "MessageType", "Timestamp", "CorrelationId",
-        "ReplyTo", "ContentType", "PartitionKey", "WorkflowId", "JobId", "Dispatched",
-        "HeaderBag", "Body", "Source", "Type", "DataSchema", "Subject",
-        "TraceParent", "TraceState", "Baggage", "DataRef", "SpecVersion",
-        "Created", "CreatedID"
-    };
-
     public BoxType BoxType => BoxType.Outbox;
 
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
         var migrations = MySqlOutboxMigrations.All(configuration);
-        var tableState = await DetectTableStateAsync(cancellationToken);
+        var tableState = await DetectTableStateAsync(migrations, cancellationToken);
 
         if (tableState.TableExists)
         {
@@ -44,7 +33,9 @@ public class MySqlOutboxProvisioner(
             cancellationToken);
     }
 
-    private async Task<BoxTableState> DetectTableStateAsync(CancellationToken cancellationToken)
+    private async Task<BoxTableState> DetectTableStateAsync(
+        System.Collections.Generic.IReadOnlyList<IAmABoxMigration> migrations,
+        CancellationToken cancellationToken)
     {
         var schemaName = configuration.SchemaName ?? DatabaseName();
 
@@ -61,8 +52,9 @@ public class MySqlOutboxProvisioner(
 
         if (!historyExists)
         {
-            var detectedVersion = await DetectCurrentVersionAsync(
-                connection, configuration.OutBoxTableName, schemaName, cancellationToken);
+            var detectedVersion = await MySqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+                connection, configuration.OutBoxTableName, schemaName,
+                BoxType.Outbox, migrations, cancellationToken);
             return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
         }
 
@@ -81,16 +73,6 @@ public class MySqlOutboxProvisioner(
         await MySqlPayloadModeValidator.ValidateAsync(
             connection, configuration.OutBoxTableName, schemaName,
             "Body", configuration.BinaryMessagePayload, cancellationToken);
-    }
-
-    private static async Task<int> DetectCurrentVersionAsync(
-        MySqlConnection connection, string tableName, string schemaName,
-        CancellationToken cancellationToken)
-    {
-        var actualColumns = await MySqlBoxDetectionHelpers.GetTableColumnsAsync(
-            connection, tableName, schemaName, cancellationToken);
-        if (actualColumns.IsSupersetOf(V1Columns)) return 1;
-        return 0;
     }
 
     private string DatabaseName()
