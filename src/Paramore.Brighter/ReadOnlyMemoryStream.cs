@@ -113,7 +113,9 @@ internal sealed class ReadOnlyMemoryStream : Stream
         return Task.FromResult(Read(buffer, offset, count));
     }
 
-#if !NETSTANDARD2_0
+#if NETSTANDARD2_0
+    // Stream.ReadAsync(Memory<byte>) override not available on netstandard2.0
+#else
     /// <inheritdoc />
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {

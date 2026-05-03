@@ -81,17 +81,10 @@ namespace Paramore.Brighter
 
                 var result = CharacterEncoding switch
                 {
-#if NETSTANDARD2_0
-                    CharacterEncoding.Base64 => Convert.ToBase64String(_memory.ToArray()),
-                    CharacterEncoding.Raw => Convert.ToBase64String(_memory.ToArray()),
-                    CharacterEncoding.UTF8 => Encoding.UTF8.GetString(_memory.ToArray()),
-                    CharacterEncoding.ASCII => Encoding.ASCII.GetString(_memory.ToArray()),
-#else
-                    CharacterEncoding.Base64 => Convert.ToBase64String(_memory.Span),
-                    CharacterEncoding.Raw => Convert.ToBase64String(_memory.Span),
-                    CharacterEncoding.UTF8 => Encoding.UTF8.GetString(_memory.Span),
-                    CharacterEncoding.ASCII => Encoding.ASCII.GetString(_memory.Span),
-#endif
+                    CharacterEncoding.Base64 => ToBase64(),
+                    CharacterEncoding.Raw => ToBase64(),
+                    CharacterEncoding.UTF8 => DecodeString(Encoding.UTF8),
+                    CharacterEncoding.ASCII => DecodeString(Encoding.ASCII),
                     _ => throw new InvalidCastException(
                         $"Message Body with {CharacterEncoding} is not available")
                 };
@@ -198,18 +191,9 @@ namespace Paramore.Brighter
         {
             return characterEncoding switch
             {
-#if NETSTANDARD2_0
-                CharacterEncoding.Base64 => Convert.ToBase64String(_memory.ToArray()),
-#else
-                CharacterEncoding.Base64 => Convert.ToBase64String(_memory.Span),
-#endif
-#if NETSTANDARD2_0
-                CharacterEncoding.UTF8 => Encoding.UTF8.GetString(_memory.ToArray()),
-                CharacterEncoding.ASCII => Encoding.ASCII.GetString(_memory.ToArray()),
-#else
-                CharacterEncoding.UTF8 => Encoding.UTF8.GetString(_memory.Span),
-                CharacterEncoding.ASCII => Encoding.ASCII.GetString(_memory.Span),
-#endif
+                CharacterEncoding.Base64 => ToBase64(),
+                CharacterEncoding.UTF8 => DecodeString(Encoding.UTF8),
+                CharacterEncoding.ASCII => DecodeString(Encoding.ASCII),
                 _ => throw new InvalidOperationException($"Message Body with {CharacterEncoding} is not available")
             };
         }
@@ -249,7 +233,7 @@ namespace Paramore.Brighter
             if (Volatile.Read(ref _hashCodeComputed)) return _cachedHashCode;
 
             var hash = new HashCode();
-#if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER // AddBytes requires .NET 6+, not just non-netstandard2.0
             hash.AddBytes(_memory.Span);
 #else
             foreach (var b in _memory.Span)
@@ -289,5 +273,13 @@ namespace Paramore.Brighter
             if (contentType is not null && characterEncodingString is not null)
                 contentType.CharSet = characterEncodingString;
         }
+
+#if NETSTANDARD2_0
+        private string ToBase64() => Convert.ToBase64String(_memory.ToArray());
+        private string DecodeString(Encoding encoding) => encoding.GetString(_memory.ToArray());
+#else
+        private string ToBase64() => Convert.ToBase64String(_memory.Span);
+        private string DecodeString(Encoding encoding) => encoding.GetString(_memory.Span);
+#endif
     }
 }
