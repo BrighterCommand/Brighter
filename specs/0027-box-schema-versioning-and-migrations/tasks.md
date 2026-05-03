@@ -651,7 +651,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 4.3: SQLite inbox migrations V1..V2
 
-- [ ] **TEST + IMPLEMENT: SQLite inbox V1..V2 with IdempotencyCheckSql for ContextKey**
+- [x] **TEST + IMPLEMENT: SQLite inbox V1..V2 with IdempotencyCheckSql for ContextKey**
   - **USE COMMAND**: `/test-first when sqlite inbox migrations are listed it should return v1 and v2 with idempotency check sql for contextkey`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_sqlite_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_idempotency_check_sql_for_contextkey.cs`
