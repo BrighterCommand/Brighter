@@ -239,6 +239,7 @@ namespace Paramore.Brighter
             foreach (var b in _memory.Span)
                 hash.Add(b);
 #endif
+            hash.Add(ContentType?.ToString());
             var result = hash.ToHashCode();
             Volatile.Write(ref _cachedHashCode, result);
             Volatile.Write(ref _hashCodeComputed, true);
