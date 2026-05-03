@@ -737,7 +737,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 4.8a: SQLite whole-chain rollback on mid-chain failure
 
-- [ ] **TEST + IMPLEMENT: SQLite runner rolls back all migrations and history rows on mid-chain failure**
+- [x] **TEST + IMPLEMENT: SQLite runner rolls back all migrations and history rows on mid-chain failure**
   - **USE COMMAND**: `/test-first when sqlite runner fails mid chain it should roll back all migrations and history rows atomically`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_sqlite_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically.cs`
