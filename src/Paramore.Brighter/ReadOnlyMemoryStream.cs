@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter;
 
@@ -103,6 +105,27 @@ internal sealed class ReadOnlyMemoryStream : Stream
         _position = newPosition;
         return _position;
     }
+
+    /// <inheritdoc />
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(Read(buffer, offset, count));
+    }
+
+#if !NETSTANDARD2_0
+    /// <inheritdoc />
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var remaining = _memory.Length - _position;
+        if (remaining <= 0) return new ValueTask<int>(0);
+        var bytesToRead = Math.Min(buffer.Length, remaining);
+        _memory.Span.Slice(_position, bytesToRead).CopyTo(buffer.Span);
+        _position += bytesToRead;
+        return new ValueTask<int>(bytesToRead);
+    }
+#endif
 
     /// <inheritdoc />
     /// <exception cref="NotSupportedException">Always thrown. This stream is read-only.</exception>

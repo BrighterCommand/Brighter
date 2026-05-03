@@ -249,8 +249,12 @@ namespace Paramore.Brighter
             if (Volatile.Read(ref _hashCodeComputed)) return _cachedHashCode;
 
             var hash = new HashCode();
+#if NET6_0_OR_GREATER
+            hash.AddBytes(_memory.Span);
+#else
             foreach (var b in _memory.Span)
                 hash.Add(b);
+#endif
             var result = hash.ToHashCode();
             Volatile.Write(ref _cachedHashCode, result);
             Volatile.Write(ref _hashCodeComputed, true);
