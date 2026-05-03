@@ -17,8 +17,12 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 /// Per ADR 0057 §6 the Spanner runner is degenerate (fresh-only) — no V_k chain.
 /// On a fresh install it executes the current builder DDL and stamps history at
 /// <see cref="VLatestOutbox"/> / <see cref="VLatestInbox"/> (chosen by <see cref="BoxType"/>)
-/// under an <c>IsMigrationAppliedAsync</c> gate. Existing-table paths are reworked in
-/// later spec 0027 phase 5 tasks.
+/// under an <c>IsMigrationAppliedAsync</c> gate. On an existing table without history,
+/// the bootstrap path verifies the discriminator column (<c>HeaderBag</c> for outbox /
+/// <c>CommandBody</c> for inbox) is present — absence throws <see cref="ConfigurationException"/>;
+/// presence stamps history at <c>V_latest</c> with the ADR §6 description, asserting the
+/// "no known legacy installations" assumption (A-2). Existing-table-with-history paths
+/// are reworked in spec 0027 task 5.3.
 /// </remarks>
 public class SpannerBoxMigrationRunner(
     IAmARelationalDatabaseConfiguration configuration) : IAmABoxMigrationRunner
@@ -30,6 +34,9 @@ public class SpannerBoxMigrationRunner(
 
     internal const int VLatestOutbox = 7;
     internal const int VLatestInbox = 2;
+
+    private const string BootstrapDescription =
+        "bootstrap: spanner-assumed-current (no known legacy installations, A-2)";
 
     /// <inheritdoc />
     public async Task MigrateAsync(
@@ -53,7 +60,12 @@ public class SpannerBoxMigrationRunner(
             return;
         }
 
-        await BootstrapExistingTableAsync(connection, tableName, migrations, tableState, cancellationToken);
+        if (!tableState.HistoryExists)
+        {
+            await BootstrapExistingTableAsync(connection, tableName, boxType, vLatest, cancellationToken);
+            return;
+        }
+
         await ApplyPendingMigrationsAsync(connection, tableName, migrations, tableState, cancellationToken);
     }
 
@@ -82,20 +94,25 @@ public class SpannerBoxMigrationRunner(
     }
 
     private static async Task BootstrapExistingTableAsync(
-        SpannerConnection connection, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, BoxTableState tableState,
+        SpannerConnection connection, string tableName, BoxType boxType, int vLatest,
         CancellationToken cancellationToken)
     {
-        if (tableState is not { TableExists: true, HistoryExists: false })
+        var columns = await SpannerBoxDetectionHelpers.GetTableColumnsAsync(
+            connection, tableName, cancellationToken);
+
+        var discriminator = SpannerBoxDetectionHelpers.DiscriminatorFor(boxType);
+        if (!columns.Contains(discriminator))
+        {
+            throw new ConfigurationException(
+                $"Table '{tableName}' is not a Brighter {boxType.ToString().ToLowerInvariant()}: " +
+                $"missing discriminator column '{discriminator}'.");
+        }
+
+        if (await IsMigrationAppliedAsync(connection, tableName, vLatest, cancellationToken))
             return;
 
-        foreach (var migration in migrations)
-        {
-            if (migration.Version > tableState.CurrentVersion) break;
-
-            await InsertHistoryRowAsync(
-                connection, tableName, migration.Version, migration.Description, cancellationToken);
-        }
+        await InsertHistoryRowAsync(
+            connection, tableName, vLatest, BootstrapDescription, cancellationToken);
     }
 
     private static async Task ApplyPendingMigrationsAsync(

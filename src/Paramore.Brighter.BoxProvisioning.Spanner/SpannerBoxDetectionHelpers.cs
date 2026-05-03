@@ -66,4 +66,11 @@ WHERE `BoxTableName` = @BoxTableName",
         }
         return columns;
     }
+
+    public static string DiscriminatorFor(BoxType boxType) => boxType switch
+    {
+        BoxType.Outbox => "HeaderBag",
+        BoxType.Inbox => "CommandBody",
+        _ => throw new ArgumentOutOfRangeException(nameof(boxType), boxType, "Unsupported box type")
+    };
 }

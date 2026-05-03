@@ -783,7 +783,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 5.2: Spanner existing-table-without-history path gated by discriminator
 
-- [ ] **TEST + IMPLEMENT: Spanner existing table without history throws when discriminator absent, stamps V_latest when present**
+- [x] **TEST + IMPLEMENT: Spanner existing table without history throws when discriminator absent, stamps V_latest when present**
   - **USE COMMAND**: `/test-first when spanner existing table has no history it should throw if discriminator absent and stamp v_latest if present`
   - Test location: `tests/Paramore.Brighter.Gcp.Tests/Spanner/BoxProvisioning/`
   - Test file: `When_spanner_existing_table_has_no_history_it_should_throw_if_discriminator_absent_and_stamp_v_latest_if_present.cs`
