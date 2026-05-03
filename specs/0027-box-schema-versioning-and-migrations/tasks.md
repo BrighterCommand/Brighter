@@ -699,7 +699,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 4.6: SQLite outbox bootstrap-at-V_k
 
-- [ ] **TEST + IMPLEMENT: SQLite outbox bootstrap upgrades pre-V7 tables to V7**
+- [x] **TEST + IMPLEMENT: SQLite outbox bootstrap upgrades pre-V7 tables to V7**
   - **USE COMMAND**: `/test-first when sqlite outbox table is bootstrapped at v_k it should upgrade to v7`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_sqlite_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7.cs`
