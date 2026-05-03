@@ -664,7 +664,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 4.4: SQLite runner three-path branching with BEGIN IMMEDIATE and SQLITE_BUSY retry
 
-- [ ] **TEST + IMPLEMENT: SQLite runner uses BEGIN IMMEDIATE and retries SQLITE_BUSY with backoff**
+- [x] **TEST + IMPLEMENT: SQLite runner uses BEGIN IMMEDIATE and retries SQLITE_BUSY with backoff**
   - **USE COMMAND**: `/test-first when sqlite runner contends with concurrent writer it should retry sqlite busy with backoff and succeed`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_sqlite_runner_contends_with_concurrent_writer_it_should_retry_sqlite_busy_with_backoff_and_succeed.cs`
