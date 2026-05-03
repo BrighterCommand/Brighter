@@ -723,7 +723,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 4.8: SQLite concurrent-bootstrap race test (outbox + inbox)
 
-- [ ] **TEST + IMPLEMENT: Two SQLite provisioners racing produce exactly one synthetic history row for outbox and inbox**
+- [x] **TEST + IMPLEMENT: Two SQLite provisioners racing produce exactly one synthetic history row for outbox and inbox**
   - **USE COMMAND**: `/test-first when two sqlite provisioners race on legacy table they should produce exactly one synthetic history row for outbox and inbox`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_two_sqlite_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_history_row.cs`
