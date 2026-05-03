@@ -634,7 +634,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 4.2: SQLite outbox migrations V1..V7 with IdempotencyCheckSql
 
-- [ ] **TEST + IMPLEMENT: SQLite outbox V1..V7 use IdempotencyCheckSql and plain ALTER UpScripts**
+- [x] **TEST + IMPLEMENT: SQLite outbox V1..V7 use IdempotencyCheckSql and plain ALTER UpScripts**
   - **USE COMMAND**: `/test-first when sqlite outbox migrations are listed it should return v1 through v7 with idempotency check sql and plain alter upscripts`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_sqlite_outbox_migrations_are_listed_it_should_return_v1_through_v7_with_idempotency_check_sql_and_plain_alter_upscripts.cs`
