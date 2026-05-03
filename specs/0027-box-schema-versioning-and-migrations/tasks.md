@@ -749,7 +749,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 4.9: SQLite spec-0023-era transition test (AC-6)
 
-- [ ] **TEST + IMPLEMENT: SQLite table with existing V1-marked history transitions cleanly to V7**
+- [x] **TEST + IMPLEMENT: SQLite table with existing V1-marked history transitions cleanly to V7**
   - **USE COMMAND**: `/test-first when sqlite table has spec 0023 era history at v1 it should transition cleanly to v7`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_sqlite_table_has_spec_0023_era_history_at_v1_it_should_transition_cleanly_to_v7.cs`
