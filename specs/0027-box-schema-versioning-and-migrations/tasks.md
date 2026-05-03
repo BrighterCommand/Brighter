@@ -685,7 +685,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 4.5: SQLite discriminator-gated detection
 
-- [ ] **TEST + IMPLEMENT: SQLite outbox/inbox detection uses HeaderBag/CommandBody discriminator**
+- [x] **TEST + IMPLEMENT: SQLite outbox/inbox detection uses HeaderBag/CommandBody discriminator**
   - **USE COMMAND**: `/test-first when sqlite outbox or inbox detects missing discriminator column it should return negative one`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_sqlite_outbox_or_inbox_detects_missing_discriminator_column_it_should_return_negative_one.cs`
