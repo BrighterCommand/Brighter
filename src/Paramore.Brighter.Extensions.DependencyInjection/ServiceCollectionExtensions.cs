@@ -763,11 +763,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static IBrighterBuilder ConfigureJsonSerialisation(this IBrighterBuilder brighterBuilder,
             Action<JsonSerializerOptions> configure)
         {
-            var options = new JsonSerializerOptions();
-
-            configure.Invoke(options);
-
-            JsonSerialisationOptions.Options = options;
+            configure.Invoke(JsonSerialisationOptions.Options);
 
             return brighterBuilder;
         }
