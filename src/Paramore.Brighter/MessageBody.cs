@@ -160,9 +160,8 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
-        /// TODO: We don't support the range of options on Span on netstandard2.0 that let's us  flow through a ReadOnlyMemory
-        /// for serialization so we allocate here as well as in PullConsumer when we probably don't need this allocation.
+        /// Initializes a new instance of the <see cref="MessageBody"/> class using a <see cref="ReadOnlyMemory{T}"/> of <see cref="byte"/>.
+        /// Zero-copy: the memory is stored directly without allocation.
         /// </summary>
         /// <param name="body">The <see cref="ReadOnlyMemory{T}"/> of <see cref="byte"/> containing the body of the message.</param>
         /// <param name="contentType">The <see cref="ContentType"/> of the body.</param>
