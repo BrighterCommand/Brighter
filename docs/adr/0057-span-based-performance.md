@@ -201,7 +201,13 @@ The work is ordered so that each phase builds on the previous:
 
 - **`ClaimCheckTransformer` threshold semantics**: The threshold comparison changed from `Encoding.Unicode.GetByteCount(message.Body.Value)` (UTF-16 byte count of the decoded string) to `message.Body.Memory.Length` (actual stored byte count). The new behavior is more correct (compares like-for-like bytes), but callers who tuned `ThresholdInBytes` based on the old UTF-16 semantics may see different claim-check behavior. For ASCII content the UTF-16 count was ~2x the UTF-8 count, so bodies that previously exceeded the threshold may now fall below it. Adjust threshold values if needed.
 - **Kafka `StringTools` encoding**: Changed from `Encoding.ASCII` to `Encoding.UTF8`. For ASCII-only header values (the common case) the wire format is identical. Non-ASCII characters in Kafka headers will now be encoded correctly as UTF-8 instead of being replaced with `?`. During a rolling deployment, ensure all producers and consumers are updated together if non-ASCII header values are in use.
+- **`IBrokeredMessageWrapper.MessageBodyMemory`**: Added as a new abstract property without a default interface implementation. Default interface members are not supported on `netstandard2.0`, which is a target for the ASB package. External implementors of `IBrokeredMessageWrapper` will need to add the property when upgrading. This is an accepted semver-breaking change for this release.
 - `netstandard2.0` support is maintained via the `System.Memory` polyfill.
+
+### Design Trade-offs (accepted)
+
+- **`TryGetBuffer` vs `ToArray` in transformers**: `MemoryStream.TryGetBuffer` returns an `ArraySegment` that correctly covers only the written bytes via `Offset` and `Count`. The underlying array may be over-allocated due to `MemoryStream`'s doubling growth policy, but the `ReadOnlyMemory<byte>` slice is precise. The trade-off is a potentially larger backing array kept alive vs an additional copy via `ToArray()`. For typical message sizes this is negligible; the zero-copy path is preferred.
+- **`ReadOnlyMemoryStream` is `internal` with no direct tests**: This class is an implementation detail exercised indirectly through `CompressPayloadTransformer` and `ClaimCheckTransformer` tests. Per the project's testing policy, internal classes should not have direct unit tests — they are covered by the behavior that led to their creation. Exploratory tests were used during development and deleted once the class was made internal.
 
 ### Negative
 
