@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,13 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 /// Spanner handles DDL concurrency internally — no advisory lock is needed.
 /// "Already exists" errors on DDL are caught for crash safety.
 /// </summary>
+/// <remarks>
+/// Per ADR 0057 §6 the Spanner runner is degenerate (fresh-only) — no V_k chain.
+/// On a fresh install it executes the current builder DDL and stamps history at
+/// <see cref="VLatestOutbox"/> / <see cref="VLatestInbox"/> (chosen by <see cref="BoxType"/>)
+/// under an <c>IsMigrationAppliedAsync</c> gate. Existing-table paths are reworked in
+/// later spec 0027 phase 5 tasks.
+/// </remarks>
 public class SpannerBoxMigrationRunner(
     IAmARelationalDatabaseConfiguration configuration) : IAmABoxMigrationRunner
 {
@@ -19,6 +27,9 @@ public class SpannerBoxMigrationRunner(
     // so this backend uses `BrighterMigrationHistory` while other backends use
     // `__BrighterMigrationHistory`.
     internal const string MigrationHistoryTable = "BrighterMigrationHistory";
+
+    internal const int VLatestOutbox = 7;
+    internal const int VLatestInbox = 2;
 
     /// <inheritdoc />
     public async Task MigrateAsync(
@@ -29,13 +40,45 @@ public class SpannerBoxMigrationRunner(
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
-        _ = boxType; // TODO(spec 0027 phase 5): degenerate Spanner runner with discriminator gate
         using var connection = SpannerConnectionHelper.CreateConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         await EnsureHistoryTableAsync(connection, cancellationToken);
+
+        var vLatest = LatestVersionFor(boxType);
+
+        if (!tableState.TableExists)
+        {
+            await FreshInstallAsync(connection, tableName, migrations, vLatest, cancellationToken);
+            return;
+        }
+
         await BootstrapExistingTableAsync(connection, tableName, migrations, tableState, cancellationToken);
         await ApplyPendingMigrationsAsync(connection, tableName, migrations, tableState, cancellationToken);
+    }
+
+    private static int LatestVersionFor(BoxType boxType) => boxType switch
+    {
+        BoxType.Outbox => VLatestOutbox,
+        BoxType.Inbox => VLatestInbox,
+        _ => throw new ArgumentOutOfRangeException(nameof(boxType), boxType, "Unsupported box type")
+    };
+
+    private static async Task FreshInstallAsync(
+        SpannerConnection connection, string tableName,
+        IReadOnlyList<IAmABoxMigration> migrations, int vLatest,
+        CancellationToken cancellationToken)
+    {
+        // Phase-0.3 bridge: V1.UpScript holds the current builder DDL. Task 5.3 deletes
+        // the migrations bridge entirely and reads the DDL from configuration directly.
+        var builderDdl = migrations[0].UpScript;
+        await ExecuteDdlSafeAsync(connection, builderDdl, cancellationToken);
+
+        if (await IsMigrationAppliedAsync(connection, tableName, vLatest, cancellationToken))
+            return;
+
+        await InsertHistoryRowAsync(
+            connection, tableName, vLatest, $"fresh install at V{vLatest}", cancellationToken);
     }
 
     private static async Task BootstrapExistingTableAsync(
@@ -50,7 +93,8 @@ public class SpannerBoxMigrationRunner(
         {
             if (migration.Version > tableState.CurrentVersion) break;
 
-            await InsertHistoryRowAsync(connection, tableName, migration, cancellationToken);
+            await InsertHistoryRowAsync(
+                connection, tableName, migration.Version, migration.Description, cancellationToken);
         }
     }
 
@@ -68,7 +112,8 @@ public class SpannerBoxMigrationRunner(
                 continue;
 
             await ExecuteDdlSafeAsync(connection, migration.UpScript, cancellationToken);
-            await InsertHistoryRowAsync(connection, tableName, migration, cancellationToken);
+            await InsertHistoryRowAsync(
+                connection, tableName, migration.Version, migration.Description, cancellationToken);
         }
     }
 
@@ -121,15 +166,16 @@ public class SpannerBoxMigrationRunner(
 
     private static async Task InsertHistoryRowAsync(
         SpannerConnection connection, string tableName,
-        IAmABoxMigration migration, CancellationToken cancellationToken)
+        int version, string description,
+        CancellationToken cancellationToken)
     {
         using var command = connection.CreateInsertCommand(
             MigrationHistoryTable,
             new SpannerParameterCollection
             {
-                { "MigrationVersion", SpannerDbType.Int64, migration.Version },
+                { "MigrationVersion", SpannerDbType.Int64, version },
                 { "BoxTableName", SpannerDbType.String, tableName },
-                { "Description", SpannerDbType.String, migration.Description },
+                { "Description", SpannerDbType.String, description },
                 { "AppliedAt", SpannerDbType.Timestamp, SpannerParameter.CommitTimestamp }
             });
 

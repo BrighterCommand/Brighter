@@ -765,7 +765,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 5.1: Spanner fresh-install path stamps V_latest with IsMigrationAppliedAsync gate
 
-- [ ] **TEST + IMPLEMENT: Spanner fresh-install path creates table and stamps V_latest idempotently**
+- [x] **TEST + IMPLEMENT: Spanner fresh-install path creates table and stamps V_latest idempotently**
   - **USE COMMAND**: `/test-first when spanner fresh install runs it should create table and stamp v_latest and skip duplicate history insert`
   - Test location: `tests/Paramore.Brighter.Gcp.Tests/Spanner/BoxProvisioning/`
   - Test file: `When_spanner_fresh_install_runs_it_should_create_table_and_stamp_v_latest_and_skip_duplicate_history_insert.cs`
