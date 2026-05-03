@@ -618,7 +618,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 4.1: Drift test — SQLite outbox V7 and inbox V2
 
-- [ ] **TEST + IMPLEMENT: SQLite outbox + inbox builders match V_latest migration LogicalColumns**
+- [x] **TEST + IMPLEMENT: SQLite outbox + inbox builders match V_latest migration LogicalColumns**
   - **USE COMMAND**: `/test-first when sqlite outbox and inbox builders are compared to latest migration columns they should have identical expected column sets`
   - **Project setup (first SQLite drift task only)**: add `<ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />` to `tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj` to gain access to `DdlColumnExtractor` + `QuoteStyle`.
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
