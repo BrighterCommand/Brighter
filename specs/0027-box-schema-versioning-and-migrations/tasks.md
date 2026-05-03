@@ -912,22 +912,22 @@ Spec 0023 findings closed out as side-effects:
 
 ## Acceptance checklist (maps to requirements.md AC-*)
 
-- [ ] **AC-1** outbox upgrade (V1..V6 → V7): covered by 1.6, 2.6, 3.6, 4.6
-- [ ] **AC-2** inbox upgrade (V1 → V2): covered by 1.7 (MSSQL), 3.6a (MySQL), 4.7 (SQLite); Postgres inbox is V1-only (ADR §1) so no upgrade applies
+- [x] **AC-1** outbox upgrade (V1..V6 → V7): covered by 1.6, 2.6, 3.6, 4.6
+- [x] **AC-2** inbox upgrade (V1 → V2): covered by 1.7 (MSSQL), 3.6a (MySQL), 4.7 (SQLite); Postgres inbox is V1-only (ADR §1) so no upgrade applies
 - [ ] **AC-3** fresh install produces V_latest + single history row: covered by **Task 0.3a** retargets of `When_*_runs_on_fresh_database_*` tests for MSSQL/PostgreSQL/MySQL/SQLite (relational backends) + **Task 5.1** for Spanner. Bootstrap-at-V_k tests (1.6/2.6/3.6/4.6) do **not** cover fresh install — they were narrowed in F10 to focus on legacy-table upgrade only
-- [ ] **AC-4** no-op re-run (idempotency): covered by existing `When_*_runs_on_already_provisioned_database_it_should_be_idempotent` tests after Task 0.3a retargets them to `V_latest`, plus SQLite idempotency verified implicitly by the AC-6 arm in Task 4.9
-- [ ] **AC-5 / AC-18** concurrent bootstrap (outbox + inbox): covered by 1.8, 2.7, 3.7, 4.8 — each now includes both outbox and inbox arms
-- [ ] **AC-6 / AC-19** spec-0023-era transition: covered by 1.9, 2.8, 3.8, 4.9
+- [x] **AC-4** no-op re-run (idempotency): covered by existing `When_*_runs_on_already_provisioned_database_it_should_be_idempotent` tests after Task 0.3a retargets them to `V_latest`, plus SQLite idempotency verified implicitly by the AC-6 arm in Task 4.9
+- [x] **AC-5 / AC-18** concurrent bootstrap (outbox + inbox): covered by 1.8, 2.7, 3.7, 4.8 — each now includes both outbox and inbox arms
+- [x] **AC-6 / AC-19** spec-0023-era transition: covered by 1.9, 2.8, 3.8, 4.9
 - [ ] **AC-7** Spanner fresh-only: covered by 5.1, 5.2
 - [ ] **AC-8** Spanner with history: covered by 5.3
-- [ ] **AC-9** all 4 backends have V1..V7 outbox: verified by 1.2, 2.2, 3.2, 4.2
-- [ ] **AC-10** all 4 backends have V1..V2 inbox (Postgres V1 only): verified by 1.3, 2.3, 3.3, 4.3
-- [ ] **AC-11** backend-specific housekeeping preserved: verified by drift tests 1.1, 2.1, 3.1, 4.1
-- [ ] **AC-12** migration SourceReference populated: verified by 1.2, 1.3, 2.2, 2.3, 3.2, 3.3, 4.2, 4.3
+- [x] **AC-9** all 4 backends have V1..V7 outbox: verified by 1.2, 2.2, 3.2, 4.2
+- [x] **AC-10** all 4 backends have V1..V2 inbox (Postgres V1 only): verified by 1.3, 2.3, 3.3, 4.3
+- [x] **AC-11** backend-specific housekeeping preserved: verified by drift tests 1.1, 2.1, 3.1, 4.1
+- [x] **AC-12** migration SourceReference populated: verified by 1.2, 1.3, 2.2, 2.3, 3.2, 3.3, 4.2, 4.3
 - [x] **AC-13** ADR 0057 created and accepted: done (pre-tasks)
 - [ ] **AC-14** `.agent_instructions/box_provisioning.md` rule added: Task 7.1
 - [ ] **AC-15** per-backend fresh-install test asserts V_latest + history row: covered exclusively by **Task 0.3a** retargeting the existing `When_*_runs_on_fresh_database_*` tests for relational backends + **Task 5.1** for Spanner. Bootstrap-at-V_k tests (1.6/2.6/3.6/4.6) do not cover fresh install
-- [ ] **AC-16** per-backend bootstrap-at-V_k tests (k ∈ {1,3,5,7} outbox; k ∈ {1,2} inbox): 1.6/1.7, 2.6, 3.6/3.6a, 4.6/4.7
-- [ ] **AC-17** per-backend idempotency test: existing `When_*_runs_on_already_provisioned_database_it_should_be_idempotent` tests (retargeted in Task 0.3a) + 4.9 IdempotencyCheckSql path
+- [x] **AC-16** per-backend bootstrap-at-V_k tests (k ∈ {1,3,5,7} outbox; k ∈ {1,2} inbox): 1.6/1.7, 2.6, 3.6/3.6a, 4.6/4.7
+- [x] **AC-17** per-backend idempotency test: existing `When_*_runs_on_already_provisioned_database_it_should_be_idempotent` tests (retargeted in Task 0.3a) + 4.9 IdempotencyCheckSql path
 - [x] **NFR-3** migration completes within `MigrationLockTimeout` (30s): verified by Task 1.8b (MSSQL reference, tight 5s bound)
-- [ ] **ADR §5a** whole-chain rollback on mid-chain failure: verified by Task 1.8a (MSSQL), Task 2.7a (Postgres), Task 4.8a (SQLite); MySQL's per-migration-commit recovery verified by Task 3.4
+- [x] **ADR §5a** whole-chain rollback on mid-chain failure: verified by Task 1.8a (MSSQL), Task 2.7a (Postgres), Task 4.8a (SQLite); MySQL's per-migration-commit recovery verified by Task 3.4
