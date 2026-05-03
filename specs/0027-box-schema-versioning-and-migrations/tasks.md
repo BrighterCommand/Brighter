@@ -562,7 +562,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 3.6: MySQL bootstrap-at-V_k test
 
-- [ ] **TEST + IMPLEMENT: MySQL outbox bootstrap upgrades pre-V7 tables to V7**
+- [x] **TEST + IMPLEMENT: MySQL outbox bootstrap upgrades pre-V7 tables to V7**
   - **USE COMMAND**: `/test-first when mysql outbox table is bootstrapped at v_k it should upgrade to v7`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
   - Test file: `When_mysql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7.cs`
