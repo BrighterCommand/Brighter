@@ -573,7 +573,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 3.6a: MySQL inbox bootstrap V1 → V2
 
-- [ ] **TEST + IMPLEMENT: MySQL inbox bootstrap upgrades pre-V2 tables to V2**
+- [x] **TEST + IMPLEMENT: MySQL inbox bootstrap upgrades pre-V2 tables to V2**
   - **USE COMMAND**: `/test-first when mysql inbox table is bootstrapped at v1 it should upgrade to v2`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
   - Test file: `When_mysql_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v2.cs`
