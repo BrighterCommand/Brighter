@@ -16,6 +16,24 @@ The `IAmABoxMigration` interface (and the `BoxMigration` record) gain three new 
 
 External implementors of `IAmABoxMigration` will fail to compile until they add the new members. The change is source-breaking by design: `Paramore.Brighter` targets `netstandard2.0`, which does not support default interface members, so the spec-0023 pattern of adding required surface as a plain abstract member (e.g. `SchemaName`) is reused here. See ADR 0057 "Consequences → Negative" for the rationale.
 
+#### Source-breaking change: `UseBoxProvisioning` overload consolidation
+
+The `BrighterBuilderBoxProvisioningExtensions.UseBoxProvisioning` extension previously exposed two overlapping ways to set the migration lock timeout: a `TimeSpan? migrationLockTimeout` parameter on the extension method, and `BoxProvisioningOptions.MigrationLockTimeout` assignable from the configure delegate. The dual surface had a real ordering bug — the parameter was applied to options before the configure delegate ran, so a delegate that called `AddMsSqlOutbox(...)` and then assigned `opts.MigrationLockTimeout` would silently lose the assignment, because backend extensions capture the timeout at registration time.
+
+The fix removes the parameter. Callers set the timeout exclusively through `BoxProvisioningOptions.MigrationLockTimeout` inside the configure delegate, and must do so **before** invoking any backend `AddXxxOutbox`/`AddXxxInbox` method. Existing callers that did not pass `migrationLockTimeout` (the typical case — all in-tree call sites and samples used the default) require no change.
+
+```csharp
+// Before
+builder.UseBoxProvisioning(opts => opts.AddMsSqlOutbox(config), TimeSpan.FromMinutes(2));
+
+// After
+builder.UseBoxProvisioning(opts =>
+{
+    opts.MigrationLockTimeout = TimeSpan.FromMinutes(2);
+    opts.AddMsSqlOutbox(config);
+});
+```
+
 #### Behaviour notes
 
 * Spec-0023-era `__BrighterMigrationHistory` rows at `MigrationVersion = 1` are still valid. The runner's normal path resumes from `MAX(V)`, the `IsMigrationAppliedAsync` gate skips the V1 row, and V2..V_latest are applied as ALTERs against the existing table. The original V1 description is preserved verbatim.
