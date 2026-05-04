@@ -861,7 +861,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 6.4: Spanner outbox payload-mode-mismatch test
 
-- [ ] **TEST + IMPLEMENT: Spanner provisioner detects payload-mode mismatch via SpannerPayloadModeValidator**
+- [x] **TEST + IMPLEMENT: Spanner provisioner detects payload-mode mismatch via SpannerPayloadModeValidator**
   - **USE COMMAND**: `/test-first when spanner provisioner runs against existing outbox with mismatched payload mode it should throw configuration exception`
   - Test location: `tests/Paramore.Brighter.Gcp.Tests/Spanner/BoxProvisioning/`
   - Test file: `When_spanner_provisioner_runs_against_existing_outbox_with_mismatched_payload_mode_it_should_throw_configuration_exception.cs`
