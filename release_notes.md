@@ -2,6 +2,28 @@
 
 ## Master
 
+### Box Schema Versioning and Migrations (spec 0027)
+
+Brighter's box-provisioning system now ships a versioned migration chain for the Outbox and Inbox tables. New deployments install at `V_latest` directly; deployments installed under spec 0023 (which only had a `V=1` history row) are recognised by the runner and advance to `V_latest` without re-running DDL — the existing `V=1` row is preserved verbatim and the V2..V_latest rows are appended. Deployments with pre-spec-0023 (legacy) tables are bootstrapped via column introspection, gated by a `HeaderBag`/`CommandBody` discriminator, then upgraded to `V_latest` under the existing per-backend migration lock.
+
+#### Source-breaking change: `IAmABoxMigration`
+
+The `IAmABoxMigration` interface (and the `BoxMigration` record) gain three new required members:
+
+* **`IReadOnlyCollection<string> LogicalColumns`** — the cumulative column set the table has after this migration applies. Used by drift detection (the build fails if a column lands on the builder DDL without a matching migration entry) and by version inference for legacy tables (the runner walks the `LogicalColumns` chain to determine which migration to bootstrap from).
+* **`string? SourceReference`** — the commit SHA (and PR number where available) that introduced the column. Required from V2 onwards; V1 stays `null`.
+* **`string? IdempotencyCheckSql`** — used **only by SQLite**, whose grammar lacks `ALTER TABLE ADD COLUMN IF NOT EXISTS`. The SQLite runner evaluates this scalar as an existence probe and skips `UpScript` when the probe returns `> 0` (still inserting the history row). MSSQL / PostgreSQL / MySQL bake the existence check into the `UpScript` itself and leave `IdempotencyCheckSql` `null`.
+
+External implementors of `IAmABoxMigration` will fail to compile until they add the new members. The change is source-breaking by design: `Paramore.Brighter` targets `netstandard2.0`, which does not support default interface members, so the spec-0023 pattern of adding required surface as a plain abstract member (e.g. `SchemaName`) is reused here. See ADR 0057 "Consequences → Negative" for the rationale.
+
+#### Behaviour notes
+
+* Spec-0023-era `__BrighterMigrationHistory` rows at `MigrationVersion = 1` are still valid. The runner's normal path resumes from `MAX(V)`, the `IsMigrationAppliedAsync` gate skips the V1 row, and V2..V_latest are applied as ALTERs against the existing table. The original V1 description is preserved verbatim.
+* `IAmABoxMigrationRunner.MigrateAsync` now takes a `BoxType boxType` argument so the runner can pick the correct discriminator (`HeaderBag` for outbox, `CommandBody` for inbox) when bootstrapping pre-spec-0023 tables. External callers must add the new argument on recompile.
+* Spanner remains a degenerate runner: fresh installs stamp `V_latest` and existing tables either no-op (`MAX(V) == V_latest`), bootstrap to `V_latest` via the discriminator gate (no history row yet), or throw `ConfigurationException` (`MAX(V) != V_latest`, manual recovery required). See ADR 0057 §6.
+
+See [ADR 0057](docs/adr/0057-box-schema-versioning-and-migrations.md) and [spec 0027](specs/0027-box-schema-versioning-and-migrations/) for full details.
+
 ## Release 10.0.0
 
 With V10 we have made a number of significant changes to Brighter. There are breaking changes that you will need to be aware of. However, most of the changes required are straightforward to make. A summary of the most important changes:
