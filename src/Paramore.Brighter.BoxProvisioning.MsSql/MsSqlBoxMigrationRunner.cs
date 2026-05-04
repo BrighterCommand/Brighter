@@ -41,6 +41,10 @@ public class MsSqlBoxMigrationRunner(
     TimeSpan lockTimeout) : IAmABoxMigrationRunner
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
+    // The history table is global — one row per (SchemaName, BoxTableName, MigrationVersion)
+    // tracking migrations across every box-table schema. It always lives in [dbo] regardless of
+    // the connection's default schema or the configured box schema.
+    private const string HISTORY_TABLE_SCHEMA = "dbo";
 
     /// <inheritdoc />
     public async Task MigrateAsync(
@@ -227,10 +231,16 @@ public class MsSqlBoxMigrationRunner(
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
+        // Filter sys.tables by both name AND schema_id — without the schema_id filter the
+        // existence check misfires when any other schema happens to contain a table by that name,
+        // skipping the [dbo] create and breaking subsequent INSERT/SELECT statements.
         command.CommandText = $@"
-IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = '{MIGRATION_HISTORY_TABLE}')
+IF NOT EXISTS (
+    SELECT 1 FROM sys.tables
+    WHERE name = '{MIGRATION_HISTORY_TABLE}' AND schema_id = SCHEMA_ID('{HISTORY_TABLE_SCHEMA}')
+)
 BEGIN
-    CREATE TABLE [{MIGRATION_HISTORY_TABLE}] (
+    CREATE TABLE [{HISTORY_TABLE_SCHEMA}].[{MIGRATION_HISTORY_TABLE}] (
         [MigrationVersion] INT NOT NULL,
         [SchemaName] VARCHAR(256) NOT NULL DEFAULT 'dbo',
         [BoxTableName] VARCHAR(256) NOT NULL,
@@ -261,7 +271,7 @@ END";
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
-SELECT COUNT(1) FROM [{MIGRATION_HISTORY_TABLE}]
+SELECT COUNT(1) FROM [{HISTORY_TABLE_SCHEMA}].[{MIGRATION_HISTORY_TABLE}]
 WHERE [SchemaName] = @SchemaName AND [BoxTableName] = @BoxTableName AND [MigrationVersion] = @Version";
         command.Parameters.AddWithValue("@SchemaName", schemaName);
         command.Parameters.AddWithValue("@BoxTableName", tableName);
@@ -279,7 +289,7 @@ WHERE [SchemaName] = @SchemaName AND [BoxTableName] = @BoxTableName AND [Migrati
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
-INSERT INTO [{MIGRATION_HISTORY_TABLE}] ([MigrationVersion], [SchemaName], [BoxTableName], [Description])
+INSERT INTO [{HISTORY_TABLE_SCHEMA}].[{MIGRATION_HISTORY_TABLE}] ([MigrationVersion], [SchemaName], [BoxTableName], [Description])
 VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
         command.Parameters.AddWithValue("@Version", version);
         command.Parameters.AddWithValue("@SchemaName", schemaName);
