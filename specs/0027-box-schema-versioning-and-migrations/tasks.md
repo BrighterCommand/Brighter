@@ -839,7 +839,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 6.2: MySQL outbox payload-mode-mismatch test
 
-- [ ] **TEST + IMPLEMENT: MySQL provisioner detects binary-vs-text Body mode mismatch**
+- [x] **TEST + IMPLEMENT: MySQL provisioner detects binary-vs-text Body mode mismatch**
   - **USE COMMAND**: `/test-first when mysql provisioner runs against existing outbox with mismatched payload mode it should throw configuration exception`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`
   - Test file: `When_mysql_provisioner_runs_against_existing_outbox_with_mismatched_payload_mode_it_should_throw_configuration_exception.cs`
