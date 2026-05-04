@@ -46,6 +46,11 @@ public class MsSqlBoxMigrationRunner(
     // the connection's default schema or the configured box schema.
     private const string HISTORY_TABLE_SCHEMA = "dbo";
 
+    // sp_getapplock takes @LockTimeout as a SQL Server INT (milliseconds), so any TimeSpan
+    // exceeding ~24.85 days silently overflows on cast and may produce -1 — which sp_getapplock
+    // interprets as "wait indefinitely". Validate at construction to fail fast.
+    private readonly TimeSpan _lockTimeout = ValidateLockTimeout(lockTimeout);
+
     /// <inheritdoc />
     public async Task MigrateAsync(
         string tableName,
@@ -213,16 +218,36 @@ public class MsSqlBoxMigrationRunner(
             "@LockOwner = 'Transaction'; " +
             "SELECT @result;";
         command.Parameters.AddWithValue("@lockResourceName", lockResource);
-        command.Parameters.AddWithValue("@lockTimeoutMs", (int)lockTimeout.TotalMilliseconds);
+        command.Parameters.AddWithValue("@lockTimeoutMs", (int)_lockTimeout.TotalMilliseconds);
 
         var result = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
 
         if (result < 0)
         {
             throw new TimeoutException(
-                $"Could not acquire migration lock for '{tableName}' within {lockTimeout.TotalSeconds}s. " +
+                $"Could not acquire migration lock for '{tableName}' within {_lockTimeout.TotalSeconds}s. " +
                 $"sp_getapplock returned {result}.");
         }
+    }
+
+    private static TimeSpan ValidateLockTimeout(TimeSpan lockTimeout)
+    {
+        if (lockTimeout < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(lockTimeout), lockTimeout,
+                "Migration lock timeout must be non-negative.");
+        }
+
+        if (lockTimeout.TotalMilliseconds > int.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(lockTimeout), lockTimeout,
+                $"Migration lock timeout must not exceed {TimeSpan.FromMilliseconds(int.MaxValue)} " +
+                $"(int.MaxValue ms ≈ 24.85 days). sp_getapplock would silently overflow on cast.");
+        }
+
+        return lockTimeout;
     }
 
     private static async Task EnsureHistoryTableAsync(
