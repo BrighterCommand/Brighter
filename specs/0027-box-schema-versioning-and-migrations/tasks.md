@@ -931,3 +931,40 @@ Spec 0023 findings closed out as side-effects:
 - [x] **AC-17** per-backend idempotency test: existing `When_*_runs_on_already_provisioned_database_it_should_be_idempotent` tests (retargeted in Task 0.3a) + 4.9 IdempotencyCheckSql path
 - [x] **NFR-3** migration completes within `MigrationLockTimeout` (30s): verified by Task 1.8b (MSSQL reference, tight 5s bound)
 - [x] **ADR §5a** whole-chain rollback on mid-chain failure: verified by Task 1.8a (MSSQL), Task 2.7a (Postgres), Task 4.8a (SQLite); MySQL's per-migration-commit recovery verified by Task 3.4
+
+---
+
+## Phase 8: Boy Scout follow-ups from PR #4039 reviews (post-Phase-7)
+
+A re-read of all prior Claude code reviews on PR #4039 after Phase 7 closed surfaced **12 issues still live** against `f7d6e7a55`. Most older review findings already closed by Phases 2–6 work (R1/R2/R4/R5); these 12 remain. **Decision: apply the Boy Scout rule** — fix all in this PR rather than deferring.
+
+Each item: TDD `When_..._should_...` test first (RED), then implementation (GREEN), then commit. Source-breaking items (F, G) roll into the existing Breaking Change PR + `release_notes.md` alongside the spec 0027 source-break section. Spanner runner is exempt from H/I/L because it ignores the migrations parameter per ADR 0057 §6 (degenerate runner).
+
+**Order of operations**: Tier 1 first (correctness bugs that hit production), then tier 2 (consolidate breaking-change story), then tiers 3–5.
+
+### Tier 1 — correctness (✅ all closed)
+
+- [x] **Item A** — MySQL `GET_LOCK` 64-char length guard. Extract `MySqlMigrationLockName.For(string tableName)` helper; ≤46-char names keep historical `BrighterMigration_<name>` form (preserves interlock with running deployments); >46-char names get SHA-256 hashed suffix → 64 chars exactly, collision-resistant. Both call sites in `MySqlBoxMigrationRunner` (Acquire + Release) delegate. Closes review #46 M1 / #45 M1. Commit `d71162ed0`.
+- [x] **Item B** — MSSQL `EnsureHistoryTableAsync` `schema_id` filter. Filter `sys.tables WHERE name = '__BrighterMigrationHistory' AND schema_id = SCHEMA_ID('dbo')` and schema-qualify every history-table reference (CREATE / SELECT / INSERT) in `MsSqlBoxMigrationRunner` + `MsSqlBoxDetectionHelpers`. New `HISTORY_TABLE_SCHEMA = "dbo"` const. Closes review #46 M3 / #39 B4 / #42 #6. Commit `7c6b32fe8`.
+- [x] **Item C** — Postgres history-table schema-qualification. Same shape as B for Postgres: every reference → `"public"."__BrighterMigrationHistory"` so `search_path` can't scatter rows across schemas. New `HISTORY_TABLE_SCHEMA = "public"` const. Closes review #46 N3. Commit `950a12b3f`.
+- [x] **Item E** — `sp_getapplock` `(int)TotalMilliseconds` overflow + negative guard. New static `ValidateLockTimeout(TimeSpan)` called from a primary-ctor field initializer; rejects negative spans and spans whose `TotalMilliseconds` exceeds `int.MaxValue` (~24.85 days) with `ArgumentOutOfRangeException`. `AcquireLockAsync` reads `_lockTimeout`. Closes review #47 #2. Commit `be910cf16`.
+
+### Tier 2 — public API source-break (1/2)
+
+- [x] **Item F** — `IAmABoxMigration.LogicalColumns` (and `BoxMigration.LogicalColumns`) `ISet<string>` → `IReadOnlyCollection<string>`. Public surface no longer exposes Add/Remove/Clear. All 7 backend `Cumulative(int)` helpers also switched return type — `ISet<string>` is NOT assignable to `IReadOnlyCollection<T>` (because `ICollection<T>` doesn't inherit from `IReadOnlyCollection<T>`); bodies unchanged because `HashSet<T>` IS `IReadOnlyCollection<T>`. Internal `HashSet` with backend-appropriate `StringComparer` (Ordinal vs OrdinalIgnoreCase per ADR 0057 §1) preserved. `release_notes.md` was already forward-written documenting `IReadOnlyCollection<string>`, so the implementation simply caught up. Closes review #46 M5. Commit `b8a629dc3`.
+- [ ] **Item G** — Consolidate dual migration-lock-timeout API on `BrighterBuilderBoxProvisioningExtensions.cs:25` (parameter + delegate; pick one). Source-breaking; add to `release_notes.md` as it lands. Closes review #47 #6 / #37 #5.
+
+### Tier 3 — defensive (0/2)
+
+- [ ] **Item H** — Fresh path asserts `migrations[0].Version == 1` (4 backends; Spanner exempt). Misconfigured list would silently install a non-V1 schema. Closes review #46 N1.
+- [ ] **Item I** — Validate migrations list is monotonic ascending with no gaps/duplicates (4 backends; Spanner exempt). Closes review #46 N2.
+
+### Tier 4 — diagnostics (0/2)
+
+- [ ] **Item D** — `pg_advisory_unlock` log warning when result is `false` (caller didn't hold the lock). Currently silently discarded at `PostgreSqlBoxMigrationRunner.cs:239`. Closes review #46 M2 / #45 M2.
+- [ ] **Item K** — Hosted service log includes box table name. `BoxProvisioningHostedService.cs:34,38,42,48` lifecycle logs omit table name; harder to diagnose multi-box hosts. Closes review #46 / #41 #6.
+
+### Tier 5 — cleanup (0/2)
+
+- [ ] **Item J** — Remove `Console.WriteLine` in samples `SchemaCreation.cs:93,130,142` (added by PR commit `a6ed373e2`). Switch to logger or remove. Closes review #47 #10.
+- [ ] **Item L** — Remove redundant `IsMigrationAppliedAsync` in normal path (4 backends; Spanner exempt). Normal path resumes from `MAX(V)+1` so each candidate is by construction not yet applied. Drop the redundant check (or document and keep as defence-in-depth). Closes review #47 #5.
