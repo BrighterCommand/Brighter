@@ -824,7 +824,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 6.1: Postgres inbox + outbox payload-mode-mismatch tests
 
-- [ ] **TEST + IMPLEMENT: Postgres provisioners detect payload-mode mismatch against existing table**
+- [x] **TEST + IMPLEMENT: Postgres provisioners detect payload-mode mismatch against existing table**
   - **USE COMMAND**: `/test-first when postgres provisioner runs against existing table with mismatched payload mode it should throw configuration exception`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/`
   - Test file: `When_postgres_provisioner_runs_against_existing_table_with_mismatched_payload_mode_it_should_throw_configuration_exception.cs`
