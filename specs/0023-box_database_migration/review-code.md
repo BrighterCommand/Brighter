@@ -5,9 +5,11 @@
 **Base**: master (88ad8729)
 **HEAD**: bae956c3d
 **Threshold**: 60
-**Verdict**: NEEDS WORK
+**Verdict**: NEEDS WORK (at review date)
 
 7 findings at or above threshold 60. Address these before opening PR.
+
+> **Resolution status (2026-05-04)**: All blocking findings (≥60) are now closed. R1 was rerouted to spec 0027 (the version-per-schema-change migration chain). R2, R4, R5 are closed by spec 0027 Phases 1–4 / 5 / 6 respectively — see the inline resolution notes on each finding below. R3 closed by `297ca030f`; R6 closed by `0088abe54`; R7 (branch hygiene) resolved.
 
 ## Findings
 
@@ -32,7 +34,17 @@ This contradicts ADR 0053 §7 which states: "The safe fallback is version 1, whi
 
 ---
 
-### 2. Bootstrap path has a TOCTOU race across all backends — concurrent instances will crash on PK violation (Score: 78)
+### 2. Bootstrap path has a TOCTOU race across all backends — concurrent instances will crash on PK violation (Score: 78) — **CLOSED by spec 0027**
+
+> **Resolution (2026-05-04)**: Closed by spec 0027 — see ADR 0057 §3 "TOCTOU re-check under lock" and the per-backend runner rewrites in [`specs/0027-box-schema-versioning-and-migrations/tasks.md`](../0027-box-schema-versioning-and-migrations/tasks.md):
+> - **MSSQL** Tasks 1.4 + 1.5 (commit `705e8946a`) — runner re-reads `tableExistsNow`/`historyExistsNow` inside the `sp_getapplock @LockOwner='Transaction'` transaction; three-path branching (fresh / bootstrap / normal); concurrent-bootstrap test in Task 1.8 (`2376998a8`) covers outbox + inbox.
+> - **PostgreSQL** Tasks 2.4 + 2.5 (commit `888897981`) — single `NpgsqlTransaction` wraps the TOCTOU re-check + DDL chain under `pg_try_advisory_lock`; concurrent-bootstrap test in Task 2.7 (`dd836c6bd`).
+> - **MySQL** Tasks 3.4 + 3.5 (commit `76f9bd6a9`) — TOCTOU re-check under `GET_LOCK` session-scoped lock; per-DDL implicit commit + history-table PK enforces the single-synthetic-row invariant; concurrent-bootstrap test in Task 3.7 (`6bc55a8c4`).
+> - **SQLite** Task 4.4 (commit `97e6b400b`) — runner sets `PRAGMA busy_timeout = 0` and serialises via explicit `BEGIN IMMEDIATE` with bounded SQLITE_BUSY retry; concurrent-bootstrap test in Task 4.8 (`08a2f9176`).
+>
+> Each runner now invokes `IsMigrationAppliedAsync` (or its idempotency-check equivalent on SQLite) before inserting any history row, removing the unguarded synthetic-row INSERT that the original race exploited. The history-table PK on `(SchemaName, BoxTableName, MigrationVersion)` is the final backstop.
+
+
 
 In every provisioner, `DetectTableStateAsync` opens its own connection and runs outside any advisory lock (e.g. `MsSqlOutboxProvisioner.cs:55-75`, `MySqlOutboxProvisioner.cs:46-67`, `PostgreSqlOutboxProvisioner.cs:54-74`, etc.). Only afterward does the runner acquire the lock (MSSQL `sp_getapplock`, PostgreSQL `pg_try_advisory_lock`, MySQL `GET_LOCK`).
 
@@ -84,7 +96,11 @@ Neither the ADR, the requirements, nor `tasks.md` have been updated to reflect t
 
 ---
 
-### 4. Spanner runner has no concurrency protection for the history INSERT (Score: 70)
+### 4. Spanner runner has no concurrency protection for the history INSERT (Score: 70) — **CLOSED by spec 0027**
+
+> **Resolution (2026-05-04)**: Closed by spec 0027 Task 5.1 (commit `06d35740d`). The Spanner runner now gates the history INSERT through `IsMigrationAppliedAsync(vLatest)` on the fresh-install path, then through the same gate on the existing-table-without-history bootstrap path (Task 5.2, commit `e61cde3c9`). Two concurrent instances racing on a fresh install therefore land at most one synthetic V_latest history row regardless of which sequence wins; the loser's `IsMigrationAppliedAsync` returns true and the INSERT is skipped. See ADR 0057 §6 (Spanner degenerate runner contract) and [`specs/0027-box-schema-versioning-and-migrations/tasks.md`](../0027-box-schema-versioning-and-migrations/tasks.md) Tasks 5.1–5.3. Spanner BoxProvisioning suite is 14/14 GREEN against the cloud-spanner emulator on net9.0 + net10.0.
+
+
 
 `SpannerBoxMigrationRunner` (src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerBoxMigrationRunner.cs:24-37) applies no lock and no catch for already-inserted history rows. The comment at line 13 claims "Spanner handles DDL concurrency internally — no advisory lock is needed", but while that covers DDL serialization for `CreateDdlCommand`, it does NOT protect the read-write INSERT into `BrighterMigrationHistory`. `ExecuteDdlSafeAsync` catches `AlreadyExists`/`FailedPrecondition` only for DDL; the history INSERT at line 124-134 will fail with a primary-key violation (`BoxTableName, MigrationVersion` is the PK per EnsureHistoryTableAsync line 98) if two instances race.
 
@@ -98,7 +114,17 @@ No concurrency test exists for Spanner — the Spanner test collection `SpannerB
 
 ---
 
-### 5. Missing payload-mode-mismatch integration tests for four of five backends (Score: 68)
+### 5. Missing payload-mode-mismatch integration tests for four of five backends (Score: 68) — **CLOSED by spec 0027**
+
+> **Resolution (2026-05-04)**: Closed by spec 0027 Phase 6 — one payload-mode-mismatch integration test per remaining backend, mirroring the MSSQL pattern (`When_mssql_outbox_provisioner_detects_payload_mode_mismatch_it_should_throw.cs`):
+> - **PostgreSQL** Task 6.1 — commit `26aea6aab`
+> - **MySQL** Task 6.2 — commit `a063c3111`
+> - **SQLite** Task 6.3 — commit `a4dbe725c`
+> - **Spanner** Task 6.4 — commit `1307ecbda`
+>
+> Each test seeds a table at one payload mode (text or binary), constructs a provisioner configured for the opposite mode, and asserts `ConfigurationException` propagates from the per-backend `*PayloadModeValidator` through `ProvisionAsync()`. No production changes were required — the validators were already in place from spec 0023 and the provisioners already invoke `ValidatePayloadModeAsync` whenever `tableState.TableExists` is true. See [`specs/0027-box-schema-versioning-and-migrations/tasks.md`](../0027-box-schema-versioning-and-migrations/tasks.md) Phase 6.
+
+
 
 Task 2.5 (MSSQL outbox) and 2.6 (MSSQL inbox) are the only payload-mode validation tests. The ADR §6 mandates payload mode validation as a separate step for all relational backends, and the code has `PostgreSqlPayloadModeValidator`, `MySqlPayloadModeValidator`, `SqlitePayloadModeValidator`, `SpannerPayloadModeValidator` — but no integration test exercises any of them.
 
