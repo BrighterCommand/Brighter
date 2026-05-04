@@ -188,7 +188,7 @@ public class MySqlBoxMigrationRunner(
         MySqlConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
-        var lockName = $"BrighterMigration_{tableName}";
+        var lockName = MySqlMigrationLockName.For(tableName);
         var timeoutSeconds = (int)lockTimeout.TotalSeconds;
 
         using var command = connection.CreateCommand();
@@ -208,7 +208,7 @@ public class MySqlBoxMigrationRunner(
         MySqlConnection connection, string tableName,
         CancellationToken cancellationToken)
     {
-        var lockName = $"BrighterMigration_{tableName}";
+        var lockName = MySqlMigrationLockName.For(tableName);
 
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT RELEASE_LOCK(@LockName)";
