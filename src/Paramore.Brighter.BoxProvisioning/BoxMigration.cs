@@ -26,6 +26,6 @@ public record BoxMigration(
     int Version,
     string Description,
     string UpScript,
-    ISet<string> LogicalColumns,
+    IReadOnlyCollection<string> LogicalColumns,
     string? SourceReference = null,
     string? IdempotencyCheckSql = null) : IAmABoxMigration;

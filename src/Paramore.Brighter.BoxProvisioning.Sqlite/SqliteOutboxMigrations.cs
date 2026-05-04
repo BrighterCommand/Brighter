@@ -127,7 +127,7 @@ public static class SqliteOutboxMigrations
         ];
     }
 
-    private static ISet<string> Cumulative(int upToVersion)
+    private static IReadOnlyCollection<string> Cumulative(int upToVersion)
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (upToVersion >= 1) { set.UnionWith(s_v1Columns); }

@@ -22,10 +22,11 @@ public interface IAmABoxMigration
     /// <c>V_latest..V1</c> and return the first version whose <see cref="LogicalColumns"/> is a
     /// subset of the columns observed on an existing table (column-name-superset match).
     /// <para>
-    /// Implementations should populate this set once at construction and never mutate it.
-    /// <see cref="ISet{T}"/> is used (rather than <c>IReadOnlySet{T}</c>) because
-    /// <c>IReadOnlySet{T}</c> is unavailable on <c>netstandard2.0</c>; the read-only-by-convention
-    /// invariant is enforced at the implementation level.
+    /// Exposed as <see cref="IReadOnlyCollection{T}"/> so the public surface is immutable;
+    /// implementations typically back this with a <see cref="HashSet{T}"/> using the
+    /// backend-appropriate <see cref="StringComparer"/> (Ordinal vs OrdinalIgnoreCase per
+    /// ADR 0057 §1) populated once at construction. <c>IReadOnlySet{T}</c> would be a tighter
+    /// fit but is unavailable on <c>netstandard2.0</c>.
     /// </para>
     /// <para>
     /// Excludes backend-specific housekeeping columns (e.g. MSSQL <c>Id</c> identity PK,
@@ -33,7 +34,7 @@ public interface IAmABoxMigration
     /// each backend's V1 DDL and do not participate in logical version numbering.
     /// </para>
     /// </summary>
-    ISet<string> LogicalColumns { get; }
+    IReadOnlyCollection<string> LogicalColumns { get; }
 
     /// <summary>
     /// Optional reference identifying the commit and/or PR in which the schema change documented
