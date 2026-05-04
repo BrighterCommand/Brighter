@@ -79,7 +79,7 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
         command.CommandText = @"
-SELECT COUNT(1) FROM ""__BrighterMigrationHistory""
+SELECT COUNT(1) FROM ""public"".""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName);
@@ -100,7 +100,7 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
         command.CommandText = @"
-SELECT COALESCE(MAX(""MigrationVersion""), 0) FROM ""__BrighterMigrationHistory""
+SELECT COALESCE(MAX(""MigrationVersion""), 0) FROM ""public"".""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName);

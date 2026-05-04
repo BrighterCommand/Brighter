@@ -42,6 +42,12 @@ public class PostgreSqlBoxMigrationRunner(
     TimeSpan lockTimeout) : IAmABoxMigrationRunner
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
+    // The history table is global — one row per (SchemaName, BoxTableName, MigrationVersion)
+    // tracking migrations across every box-table schema. It always lives in "public" regardless
+    // of the connection's search_path or the configured box schema; without explicit
+    // qualification an unqualified CREATE/SELECT/INSERT would land in whichever schema appears
+    // first on search_path, scattering history rows across the cluster.
+    private const string HISTORY_TABLE_SCHEMA = "public";
     private const int BRIGHTER_LOCK_NAMESPACE = 74726;
 
     /// <inheritdoc />
@@ -246,7 +252,7 @@ public class PostgreSqlBoxMigrationRunner(
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
-CREATE TABLE IF NOT EXISTS ""{MIGRATION_HISTORY_TABLE}"" (
+CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE}"" (
     ""MigrationVersion"" INT NOT NULL,
     ""SchemaName"" VARCHAR(256) NOT NULL DEFAULT 'public',
     ""BoxTableName"" VARCHAR(256) NOT NULL,
@@ -275,7 +281,7 @@ CREATE TABLE IF NOT EXISTS ""{MIGRATION_HISTORY_TABLE}"" (
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
-SELECT COUNT(1) FROM ""{MIGRATION_HISTORY_TABLE}""
+SELECT COUNT(1) FROM ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE}""
 WHERE ""SchemaName"" = @SchemaName AND ""BoxTableName"" = @BoxTableName AND ""MigrationVersion"" = @Version";
         command.Parameters.AddWithValue("@SchemaName", schemaName);
         command.Parameters.AddWithValue("@BoxTableName", tableName);
@@ -293,7 +299,7 @@ WHERE ""SchemaName"" = @SchemaName AND ""BoxTableName"" = @BoxTableName AND ""Mi
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
-INSERT INTO ""{MIGRATION_HISTORY_TABLE}"" (""MigrationVersion"", ""SchemaName"", ""BoxTableName"", ""Description"")
+INSERT INTO ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE}"" (""MigrationVersion"", ""SchemaName"", ""BoxTableName"", ""Description"")
 VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
         command.Parameters.AddWithValue("@Version", version);
         command.Parameters.AddWithValue("@SchemaName", schemaName);
