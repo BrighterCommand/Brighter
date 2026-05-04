@@ -27,7 +27,6 @@ public class SpannerOutboxProvisioner(
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
-        var migrations = SpannerOutboxMigrations.All(configuration);
         var tableState = await DetectTableStateAsync(cancellationToken);
 
         if (tableState.TableExists)
@@ -35,11 +34,14 @@ public class SpannerOutboxProvisioner(
             await ValidatePayloadModeAsync(cancellationToken);
         }
 
+        // Per ADR 0057 §6 the Spanner runner is degenerate (fresh-only), so it
+        // ignores the migrations parameter; pass an empty list to satisfy the
+        // IAmABoxMigrationRunner contract.
         await migrationRunner.MigrateAsync(
             configuration.OutBoxTableName,
             configuration.SchemaName,
             BoxType.Outbox,
-            migrations,
+            Array.Empty<IAmABoxMigration>(),
             tableState,
             cancellationToken);
     }

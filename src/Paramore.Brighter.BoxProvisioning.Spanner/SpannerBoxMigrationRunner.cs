@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
 using Grpc.Core;
+using Paramore.Brighter.Inbox.Spanner;
+using Paramore.Brighter.Outbox.Spanner;
 
 namespace Paramore.Brighter.BoxProvisioning.Spanner;
 
@@ -14,15 +16,14 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 /// "Already exists" errors on DDL are caught for crash safety.
 /// </summary>
 /// <remarks>
-/// Per ADR 0057 §6 the Spanner runner is degenerate (fresh-only) — no V_k chain.
-/// On a fresh install it executes the current builder DDL and stamps history at
-/// <see cref="VLatestOutbox"/> / <see cref="VLatestInbox"/> (chosen by <see cref="BoxType"/>)
-/// under an <c>IsMigrationAppliedAsync</c> gate. On an existing table without history,
-/// the bootstrap path verifies the discriminator column (<c>HeaderBag</c> for outbox /
-/// <c>CommandBody</c> for inbox) is present — absence throws <see cref="ConfigurationException"/>;
-/// presence stamps history at <c>V_latest</c> with the ADR §6 description, asserting the
-/// "no known legacy installations" assumption (A-2). Existing-table-with-history paths
-/// are reworked in spec 0027 task 5.3.
+/// Per ADR 0057 §6 the Spanner runner is degenerate (fresh-only) — no V_k chain,
+/// so the <c>migrations</c> parameter on <see cref="MigrateAsync"/> is ignored.
+/// Three paths:
+/// <list type="bullet">
+///   <item><description>Fresh install: executes the live builder DDL and stamps history at <c>V_latest</c> under an <c>IsMigrationAppliedAsync</c> gate.</description></item>
+///   <item><description>Existing table without history (bootstrap): verifies the discriminator column (<c>HeaderBag</c> for outbox / <c>CommandBody</c> for inbox); absence throws <see cref="ConfigurationException"/>; presence stamps <c>V_latest</c> with the ADR §6 "no known legacy installations" description (A-2).</description></item>
+///   <item><description>Existing table with history (normal): compares <c>MAX(V)</c> to <c>V_latest</c>; equality is a no-op; <c>MAX(V) &gt; V_latest</c> throws <see cref="ConfigurationException"/>; <c>MAX(V) &lt; V_latest</c> is undefined per ADR §6 (manual recovery required) and throws the same out-of-sync error.</description></item>
+/// </list>
 /// </remarks>
 public class SpannerBoxMigrationRunner(
     IAmARelationalDatabaseConfiguration configuration) : IAmABoxMigrationRunner
@@ -56,7 +57,7 @@ public class SpannerBoxMigrationRunner(
 
         if (!tableState.TableExists)
         {
-            await FreshInstallAsync(connection, tableName, migrations, vLatest, cancellationToken);
+            await FreshInstallAsync(connection, tableName, boxType, vLatest, cancellationToken);
             return;
         }
 
@@ -66,7 +67,7 @@ public class SpannerBoxMigrationRunner(
             return;
         }
 
-        await ApplyPendingMigrationsAsync(connection, tableName, migrations, tableState, cancellationToken);
+        RunNormalPath(tableName, vLatest, tableState.CurrentVersion);
     }
 
     private static int LatestVersionFor(BoxType boxType) => boxType switch
@@ -76,14 +77,11 @@ public class SpannerBoxMigrationRunner(
         _ => throw new ArgumentOutOfRangeException(nameof(boxType), boxType, "Unsupported box type")
     };
 
-    private static async Task FreshInstallAsync(
-        SpannerConnection connection, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, int vLatest,
+    private async Task FreshInstallAsync(
+        SpannerConnection connection, string tableName, BoxType boxType, int vLatest,
         CancellationToken cancellationToken)
     {
-        // Phase-0.3 bridge: V1.UpScript holds the current builder DDL. Task 5.3 deletes
-        // the migrations bridge entirely and reads the DDL from configuration directly.
-        var builderDdl = migrations[0].UpScript;
+        var builderDdl = BuildBoxDdl(boxType, tableName);
         await ExecuteDdlSafeAsync(connection, builderDdl, cancellationToken);
 
         if (await IsMigrationAppliedAsync(connection, tableName, vLatest, cancellationToken))
@@ -92,6 +90,13 @@ public class SpannerBoxMigrationRunner(
         await InsertHistoryRowAsync(
             connection, tableName, vLatest, $"fresh install at V{vLatest}", cancellationToken);
     }
+
+    private string BuildBoxDdl(BoxType boxType, string tableName) => boxType switch
+    {
+        BoxType.Outbox => SpannerOutboxBuilder.GetDDL(tableName, configuration.BinaryMessagePayload),
+        BoxType.Inbox => SpannerInboxBuilder.GetDDL(tableName),
+        _ => throw new ArgumentOutOfRangeException(nameof(boxType), boxType, "Unsupported box type")
+    };
 
     private static async Task BootstrapExistingTableAsync(
         SpannerConnection connection, string tableName, BoxType boxType, int vLatest,
@@ -115,23 +120,14 @@ public class SpannerBoxMigrationRunner(
             connection, tableName, vLatest, BootstrapDescription, cancellationToken);
     }
 
-    private static async Task ApplyPendingMigrationsAsync(
-        SpannerConnection connection, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, BoxTableState tableState,
-        CancellationToken cancellationToken)
+    private static void RunNormalPath(string tableName, int vLatest, int currentVersion)
     {
-        foreach (var migration in migrations)
-        {
-            if (migration.Version <= tableState.CurrentVersion)
-                continue;
+        if (currentVersion == vLatest) return;
 
-            if (await IsMigrationAppliedAsync(connection, tableName, migration.Version, cancellationToken))
-                continue;
-
-            await ExecuteDdlSafeAsync(connection, migration.UpScript, cancellationToken);
-            await InsertHistoryRowAsync(
-                connection, tableName, migration.Version, migration.Description, cancellationToken);
-        }
+        throw new ConfigurationException(
+            $"Migration list out of sync for table '{tableName}': " +
+            $"installed V={currentVersion}, expected V={vLatest}. " +
+            "Manual recovery required per ADR 0057 §6.");
     }
 
     private static async Task ExecuteDdlSafeAsync(

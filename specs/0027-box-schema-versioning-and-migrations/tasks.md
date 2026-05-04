@@ -800,7 +800,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 5.3: Spanner existing-table-with-history is a no-op or throws on version mismatch
 
-- [ ] **TEST + IMPLEMENT: Spanner existing table with history is no-op at V_latest and throws on out-of-sync version**
+- [x] **TEST + IMPLEMENT: Spanner existing table with history is no-op at V_latest and throws on out-of-sync version**
   - **USE COMMAND**: `/test-first when spanner existing table has history it should no-op at v_latest and throw on out of sync installed version`
   - Test location: `tests/Paramore.Brighter.Gcp.Tests/Spanner/BoxProvisioning/`
   - Test file: `When_spanner_existing_table_has_history_it_should_no_op_at_v_latest_and_throw_on_out_of_sync_installed_version.cs`
