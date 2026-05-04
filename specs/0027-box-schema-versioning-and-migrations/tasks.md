@@ -849,7 +849,7 @@ Spec 0023 findings closed out as side-effects:
 
 ### Task 6.3: SQLite outbox payload-mode-mismatch test
 
-- [ ] **TEST + IMPLEMENT: SQLite provisioner detects binary-vs-text Body mode mismatch via SqlitePayloadModeValidator**
+- [x] **TEST + IMPLEMENT: SQLite provisioner detects binary-vs-text Body mode mismatch via SqlitePayloadModeValidator**
   - **USE COMMAND**: `/test-first when sqlite provisioner runs against existing outbox with mismatched payload mode it should throw configuration exception`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/`
   - Test file: `When_sqlite_provisioner_runs_against_existing_outbox_with_mismatched_payload_mode_it_should_throw_configuration_exception.cs`
