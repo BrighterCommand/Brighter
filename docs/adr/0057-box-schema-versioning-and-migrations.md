@@ -284,6 +284,43 @@ The runner's transactional model is per-backend:
 - `ConfigurationException` — bootstrap detection returned `-1` (not a Brighter box) or `0` (unknown schema); or a backend/version mismatch (Spanner)
 - Backend-native exceptions — rethrown. The provisioner's `BoxProvisioningHostedService` re-raises as `ConfigurationException` to fail host startup (per spec 0023)
 
+### 5b. Advisory-lock abstraction (per-backend)
+
+The advisory-lock primitive that wraps the runner's chain (§3, §5a) is exposed to the runner through a per-backend `I*AdvisoryLock` interface, with a default implementation that ships in the same package. The abstraction is genuinely substitutable — adopted post-hoc to (a) close the diagnostic gaps surfaced in PR #4039 reviews ([review #46 M2 / #45 M2] for Postgres; symmetric gaps in MySQL and MSSQL once examined) and (b) make the lock collaborator testable without `InternalsVisibleTo`, `protected virtual` test seams, or global state swaps. Operators with custom connection-pool sharing or external lock-key derivation (Vault, KMS, etc.) can supply their own implementation.
+
+**Interface shape per backend**:
+
+| Backend | Interface | Acquire | Release | Diagnostic value |
+|---------|-----------|---------|---------|------------------|
+| PostgreSQL | `IPostgreSqlAdvisoryLock` | `Task AcquireAsync(NpgsqlConnection, string lockKey, TimeSpan timeout, CT)` — throws `TimeoutException` on deadline | `Task<bool> ReleaseAsync(NpgsqlConnection, string lockKey, CT)` — bool result of `pg_advisory_unlock` | `false` from release = calling session did not hold the lock; runner emits `ILogger.LogWarning` (does not throw — the chain has already committed) |
+| MySQL | `IMySqlAdvisoryLock` | `Task AcquireAsync(MySqlConnection, string lockKey, TimeSpan timeout, CT)` — throws `TimeoutException` on deadline | `Task<bool?> ReleaseAsync(MySqlConnection, string lockKey, CT)` — `1` (true) released by us; `0` (false) held by another session; `NULL` did not exist | All non-`true` outcomes are anomalies (we just acquired it); runner logs warning naming both result code and lock key. Lock-name derivation lives in the existing `MySqlMigrationLockName.For(tableName)` static helper (Boy Scout Item A) — the abstraction owns only the SQL |
+| MSSQL | `IMsSqlAdvisoryLock` | `Task AcquireAsync(SqlConnection, SqlTransaction, string lockResource, TimeSpan timeout, CT)` — throws specific exception types per `sp_getapplock` return code (see below) | (none — lock is `@LockOwner = 'Transaction'`, released by the wrapping transaction's commit/rollback) | Return-code distinction is the diagnostic: `-1` `TimeoutException`, `-2` `OperationCanceledException`, `-3` `MigrationLockDeadlockException` (new), `-999` `ArgumentException`. Today's runner collapses all `< 0` into `TimeoutException`, losing the deadlock and parameter-validation signals |
+
+**Why each shape differs**:
+
+- Postgres and MySQL use **session-scoped** locks (`pg_try_advisory_lock` / `GET_LOCK`) released by an explicit unlock call. The runner holds the lock outside the transaction (so the lock survives the transaction commit) and releases in `finally`. The abstraction therefore exposes both `AcquireAsync` and `ReleaseAsync`. The release call has a meaningful return value worth logging.
+- MSSQL's `sp_getapplock` is invoked with `@LockOwner = 'Transaction'` so the lock is **transaction-scoped** — `transaction.Commit()` / `Rollback()` releases it implicitly, and there is no `sp_releaseapplock` call to make. The abstraction is acquire-only. The diagnostic value sits in distinguishing the `sp_getapplock` return codes, which today are all collapsed.
+- SQLite is **exempt** from the abstraction — it has no advisory lock; serialization is provided by `BEGIN IMMEDIATE`'s writer slot (per §5 table). The runner's existing `BeginImmediateWithRetryAsync` handles `SQLITE_BUSY` retry directly; introducing an `ISqliteAdvisoryLock` would invent a primitive that does not exist in the database.
+- Spanner is **exempt** — degenerate runner per §6, no concurrency primitive of its own.
+
+**Constructor injection (additive)**: each runner ctor gains two optional parameters — `I*AdvisoryLock? advisoryLock = null` (default: `new *AdvisoryLock()`) and `ILogger? logger = null` (default: `ApplicationLogging.CreateLogger<*BoxMigrationRunner>()`). Both are non-breaking additions; existing call sites continue to compile and run with default behaviour. The DI extensions (`UseBoxProvisioning`) do not register the abstractions — operators wanting custom impls construct the runner explicitly. This matches the existing wiring approach for `IAmABoxMigrationRunner` itself.
+
+**What does not absorb into the abstraction**:
+
+- The lock-key / lock-resource derivation (e.g. MySQL's 64-char `MySqlMigrationLockName.For` from Item A) stays as a separate helper. Different backends derive keys differently (Postgres: `BrighterMigration_<table>` then `hashtext(...)`; MySQL: 64-char-safe transformation; MSSQL: 255-char raw resource name); folding them into the lock interface would force a common naming abstraction that has no operational benefit.
+- `BRIGHTER_LOCK_NAMESPACE = 74726` (Postgres-only constant for the two-arg `pg_try_advisory_lock(int4, int4)` form) moves into the default `PostgreSqlAdvisoryLock` impl.
+- Item E's `ValidateLockTimeout` overflow guard (rejects timeouts whose `TotalMilliseconds > int.MaxValue`, ~24.85 days) absorbs into `MsSqlAdvisoryLock`'s acquire path — that is the only place the cast happens.
+
+**Cross-backend symmetry not pursued**: SQLite has no native advisory lock; we do not invent one. The MSSQL acquire-only shape vs the PG/MySQL acquire-and-release shape is dictated by the underlying primitive's lifetime model — not a code-style choice we can normalise away.
+
+**Design alternatives rejected** (during 2026-05-05 design review of Boy Scout Item D):
+
+- *Public static helper* (mirroring `MySqlMigrationLockName.For` from Item A) — handles only the diagnostic formatting; does not solve the underlying "lock collaborator is not substitutable" testability gap, and creates a public surface whose only purpose is testability.
+- *`protected virtual ExecuteUnlockAsync` test seam* — adds a public-API extension point whose primary motivation is testing, which is exactly the implementation-detail coupling we want to avoid.
+- *`InternalsVisibleTo` to the test assembly* — repository policy prohibits coupling tests to internal APIs.
+
+The abstraction approach is heavier than any of these but produces no test-only artifacts and unlocks a long-standing gap (the lock-acquisition retry/backoff behaviour becomes unit-testable for the first time — fakes can simulate N transient failures before success, exercising the deadline math).
+
 ### 6. Spanner: degenerate fresh-only runner
 
 Spanner has zero known production deployments (confirmed in spec 0023 review; reaffirmed in spec 0027 requirements A-2). Writing a migration chain for Spanner is work that benefits no one today.
