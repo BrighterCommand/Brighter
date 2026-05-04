@@ -61,6 +61,12 @@ public class MySqlBoxMigrationRunner(
         _ = tableState; // Stale hint — runner re-detects under the GET_LOCK session.
         var effectiveSchema = schemaName ?? DatabaseName();
 
+        // Reject duplicate / gap / out-of-order versions before opening a connection. Validation
+        // sits at MigrateAsync entry (rather than inside one of the path branches) so the rule
+        // applies uniformly across fresh / bootstrap / normal paths — a malformed list corrupts
+        // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
+        ValidateMigrationsMonotonic(effectiveSchema, tableName, migrations);
+
         using var connection = new MySqlConnection(EnsureAllowUserVariables(configuration.ConnectionString));
         await connection.OpenAsync(cancellationToken);
 
@@ -287,6 +293,22 @@ VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
     /// prepared-statement form executes correctly. Transparent to caller-supplied connection
     /// strings — adds the flag if missing, preserves it if already set.
     /// </summary>
+    private static void ValidateMigrationsMonotonic(
+        string schemaName, string tableName, IReadOnlyList<IAmABoxMigration> migrations)
+    {
+        for (var i = 1; i < migrations.Count; i++)
+        {
+            var prev = migrations[i - 1].Version;
+            var curr = migrations[i].Version;
+            if (curr != prev + 1)
+            {
+                throw new ConfigurationException(
+                    $"Migration list for '{schemaName}.{tableName}' is not contiguous and ascending: " +
+                    $"V{prev} followed by V{curr} (expected V{prev + 1}).");
+            }
+        }
+    }
+
     private static string EnsureAllowUserVariables(string connectionString)
     {
         var builder = new MySqlConnectionStringBuilder(connectionString)

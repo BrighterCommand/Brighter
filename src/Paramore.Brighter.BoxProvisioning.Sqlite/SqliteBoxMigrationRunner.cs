@@ -98,6 +98,12 @@ public class SqliteBoxMigrationRunner(
         _ = schemaName; // SQLite has no schema concept in this context.
         _ = tableState; // Stale hint — runner re-detects under the BEGIN IMMEDIATE transaction.
 
+        // Reject duplicate / gap / out-of-order versions before opening a connection. Validation
+        // sits at MigrateAsync entry (rather than inside one of the path branches) so the rule
+        // applies uniformly across fresh / bootstrap / normal paths — a malformed list corrupts
+        // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
+        ValidateMigrationsMonotonic(tableName, migrations);
+
         using var connection = new SqliteConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
@@ -310,6 +316,22 @@ public class SqliteBoxMigrationRunner(
                 await Task.Delay(delay, cancellationToken);
                 backoff = backoff.Add(backoff);
                 if (backoff > s_maxBackoff) backoff = s_maxBackoff;
+            }
+        }
+    }
+
+    private static void ValidateMigrationsMonotonic(
+        string tableName, IReadOnlyList<IAmABoxMigration> migrations)
+    {
+        for (var i = 1; i < migrations.Count; i++)
+        {
+            var prev = migrations[i - 1].Version;
+            var curr = migrations[i].Version;
+            if (curr != prev + 1)
+            {
+                throw new ConfigurationException(
+                    $"Migration list for '{tableName}' is not contiguous and ascending: " +
+                    $"V{prev} followed by V{curr} (expected V{prev + 1}).");
             }
         }
     }
