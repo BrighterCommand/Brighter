@@ -104,8 +104,15 @@ public class MySqlBoxMigrationRunner(
         if (migrations.Count == 0) return;
 
         // V1's UpScript IS the live builder DDL (V_latest-shape per ADR §3 fresh-install fast
-        // path). We stamp directly at V_latest with a "fresh install" marker — V2..V_latest
-        // ALTERs would be no-ops on the V_latest-shape table, so we skip them.
+        // path). A list whose first entry is anything other than V1 would silently install the
+        // wrong schema, so reject it before any DDL fires.
+        if (migrations[0].Version != 1)
+            throw new ConfigurationException(
+                $"Cannot install '{schemaName}.{tableName}' from a fresh state: " +
+                $"the first migration must be V1, but the supplied migrations list starts at V{migrations[0].Version}.");
+
+        // We stamp directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs
+        // would be no-ops on the V_latest-shape table, so we skip them.
         await ExecuteUpScriptAsync(connection, migrations[0], cancellationToken);
 
         var latest = migrations[migrations.Count - 1];
