@@ -914,12 +914,12 @@ Spec 0023 findings closed out as side-effects:
 
 - [x] **AC-1** outbox upgrade (V1..V6 → V7): covered by 1.6, 2.6, 3.6, 4.6
 - [x] **AC-2** inbox upgrade (V1 → V2): covered by 1.7 (MSSQL), 3.6a (MySQL), 4.7 (SQLite); Postgres inbox is V1-only (ADR §1) so no upgrade applies
-- [ ] **AC-3** fresh install produces V_latest + single history row: covered by **Task 0.3a** retargets of `When_*_runs_on_fresh_database_*` tests for MSSQL/PostgreSQL/MySQL/SQLite (relational backends) + **Task 5.1** for Spanner. Bootstrap-at-V_k tests (1.6/2.6/3.6/4.6) do **not** cover fresh install — they were narrowed in F10 to focus on legacy-table upgrade only
+- [x] **AC-3** fresh install produces V_latest + single history row: covered by **Task 0.3a** retargets of `When_*_runs_on_fresh_database_*` tests for MSSQL/PostgreSQL/MySQL/SQLite (relational backends) + **Task 5.1** for Spanner. Bootstrap-at-V_k tests (1.6/2.6/3.6/4.6) do **not** cover fresh install — they were narrowed in F10 to focus on legacy-table upgrade only
 - [x] **AC-4** no-op re-run (idempotency): covered by existing `When_*_runs_on_already_provisioned_database_it_should_be_idempotent` tests after Task 0.3a retargets them to `V_latest`, plus SQLite idempotency verified implicitly by the AC-6 arm in Task 4.9
 - [x] **AC-5 / AC-18** concurrent bootstrap (outbox + inbox): covered by 1.8, 2.7, 3.7, 4.8 — each now includes both outbox and inbox arms
 - [x] **AC-6 / AC-19** spec-0023-era transition: covered by 1.9, 2.8, 3.8, 4.9
-- [ ] **AC-7** Spanner fresh-only: covered by 5.1, 5.2
-- [ ] **AC-8** Spanner with history: covered by 5.3
+- [x] **AC-7** Spanner fresh-only: covered by 5.1, 5.2
+- [x] **AC-8** Spanner with history: covered by 5.3
 - [x] **AC-9** all 4 backends have V1..V7 outbox: verified by 1.2, 2.2, 3.2, 4.2
 - [x] **AC-10** all 4 backends have V1..V2 inbox (Postgres V1 only): verified by 1.3, 2.3, 3.3, 4.3
 - [x] **AC-11** backend-specific housekeeping preserved: verified by drift tests 1.1, 2.1, 3.1, 4.1
