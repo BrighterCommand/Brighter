@@ -52,6 +52,27 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
+        // sp_getapplock takes @LockTimeout as a SQL Server INT (milliseconds). A negative
+        // TimeSpan has no meaningful interpretation for an exclusive application lock, and a
+        // value whose TotalMilliseconds exceeds int.MaxValue (~24.85 days) silently overflows
+        // on cast and may produce -1 — which sp_getapplock interprets as "wait indefinitely".
+        // Validate up front so the failure mode is an actionable ArgumentOutOfRangeException
+        // rather than a deadlocked deployment.
+        if (timeout < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(timeout), timeout,
+                "Migration lock timeout must be non-negative.");
+        }
+
+        if (timeout.TotalMilliseconds > int.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(timeout), timeout,
+                $"Migration lock timeout must not exceed {TimeSpan.FromMilliseconds(int.MaxValue)} " +
+                $"(int.MaxValue ms ≈ 24.85 days). sp_getapplock would silently overflow on cast.");
+        }
+
         // SQL Server limits @Resource to 255 characters. Reject longer resources up front
         // so the failure mode is an actionable ArgumentException rather than an opaque
         // sp_getapplock -999 (parameter validation) at runtime.

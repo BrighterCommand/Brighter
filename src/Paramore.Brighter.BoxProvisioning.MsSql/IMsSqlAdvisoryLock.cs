@@ -79,6 +79,10 @@ public interface IMsSqlAdvisoryLock
     /// <exception cref="ArgumentException">Thrown when <c>sp_getapplock</c> returns
     /// <c>-999</c> (parameter validation / call error) or when
     /// <paramref name="lockResource"/> exceeds the 255-character SQL Server limit.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="timeout"/>
+    /// is negative or when its <c>TotalMilliseconds</c> exceeds <c>int.MaxValue</c>
+    /// (~24.85 days) — <c>sp_getapplock</c>'s INT <c>@LockTimeout</c> argument would
+    /// silently overflow on cast.</exception>
     Task AcquireAsync(
         SqlConnection connection,
         SqlTransaction transaction,

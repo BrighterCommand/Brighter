@@ -51,10 +51,10 @@ public class MsSqlBoxMigrationRunner(
     // the connection's default schema or the configured box schema.
     private const string HISTORY_TABLE_SCHEMA = "dbo";
 
-    // sp_getapplock takes @LockTimeout as a SQL Server INT (milliseconds), so any TimeSpan
-    // exceeding ~24.85 days silently overflows on cast and may produce -1 — which sp_getapplock
-    // interprets as "wait indefinitely". Validate at construction to fail fast.
-    private readonly TimeSpan _lockTimeout = ValidateLockTimeout(lockTimeout);
+    // Lock-timeout validation lives inside MsSqlAdvisoryLock.AcquireAsync (per ADR 0057 §5b)
+    // so any caller of the abstraction is protected. A bad timeout surfaces as
+    // ArgumentOutOfRangeException on first MigrateAsync call rather than at construction.
+    private readonly TimeSpan _lockTimeout = lockTimeout;
     private readonly IMsSqlAdvisoryLock _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
     private readonly ILogger _logger = logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>();
 
@@ -215,26 +215,6 @@ public class MsSqlBoxMigrationRunner(
                 connection, transaction, schemaName, tableName,
                 migration.Version, migration.Description, cancellationToken);
         }
-    }
-
-    private static TimeSpan ValidateLockTimeout(TimeSpan lockTimeout)
-    {
-        if (lockTimeout < TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(lockTimeout), lockTimeout,
-                "Migration lock timeout must be non-negative.");
-        }
-
-        if (lockTimeout.TotalMilliseconds > int.MaxValue)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(lockTimeout), lockTimeout,
-                $"Migration lock timeout must not exceed {TimeSpan.FromMilliseconds(int.MaxValue)} " +
-                $"(int.MaxValue ms ≈ 24.85 days). sp_getapplock would silently overflow on cast.");
-        }
-
-        return lockTimeout;
     }
 
     private static void ValidateMigrationsMonotonic(
