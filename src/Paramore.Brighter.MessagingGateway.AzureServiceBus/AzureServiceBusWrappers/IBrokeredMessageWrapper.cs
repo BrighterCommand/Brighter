@@ -14,6 +14,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         byte[]? MessageBodyValue { get; }
 
         /// <summary>
+        /// Message Body as <see cref="ReadOnlyMemory{T}"/> of <see cref="byte"/> for zero-copy access.
+        /// </summary>
+        ReadOnlyMemory<byte> MessageBodyMemory { get; }
+
+        /// <summary>
         /// Application Properties
         /// </summary>
         IReadOnlyDictionary<string, object> ApplicationProperties { get; }

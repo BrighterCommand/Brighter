@@ -31,6 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs;
 
+[Trait("Category", "AWS")]
 public class SqsMessageConsumerFactoryDlqTests : IDisposable
 {
     private readonly SqsMessageConsumerFactory _factory;

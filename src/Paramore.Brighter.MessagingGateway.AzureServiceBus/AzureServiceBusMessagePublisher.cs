@@ -62,7 +62,9 @@ public class AzureServiceBusMessagePublisher
         if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
             azureServiceBusMessage.SessionId = value.ToString();
 
-        foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
+        foreach (var header in message.Header.Bag.Where(h =>
+                     !ASBConstants.ReservedHeaders.Contains(h.Key)
+                     && !MessageHeader.IsLocalHeader(h.Key)))
         {
             azureServiceBusMessage.ApplicationProperties[header.Key] = header.Value;
         }

@@ -93,6 +93,10 @@ namespace Paramore.Brighter
             if (message.Header.Topic != publication.Topic)
             {
                 Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic);
+                if (publication.Topic is not null)
+                {
+                    message.Header.Bag[Message.ProducerTopicHeaderName] = publication.Topic.Value;
+                }
             }
 
             BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, false, _instrumentationOptions, true);

@@ -113,7 +113,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private void AddUserDefinedBagHeaders(Headers headers, Message message)
         {
             message.Header.Bag
-                .Where(x => !BrighterDefinedHeaders.HeadersToReset.Contains(x.Key))
+                .Where(x => !BrighterDefinedHeaders.HeadersToReset.Contains(x.Key)
+                            && !MessageHeader.IsLocalHeader(x.Key))
                 .Each(header => AddUserDefinedBagHeader(headers, header.Key, header.Value));
         }
 

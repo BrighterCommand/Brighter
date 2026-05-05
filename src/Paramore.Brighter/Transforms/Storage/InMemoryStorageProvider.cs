@@ -40,7 +40,7 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
     private const string ClaimCheckProvider = "in-memory";
     private const string BucketName = "in-memory";
     
-    private readonly ConcurrentDictionary<string, string> _contents = new();
+    private readonly ConcurrentDictionary<string, byte[]> _contents = new();
 
     /// <inheritdoc cref="IAmAStorageProvider.Tracer"/>
     public IAmABrighterTracer? Tracer { get; set; }
@@ -67,26 +67,12 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
     }
 
     /// <inheritdoc />
-    public async Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken = default)
+    public Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Retrieve, ClaimCheckProvider, BucketName, claimCheck));
         try
         {
-            if (!_contents.TryGetValue(claimCheck, out string? value))
-            {
-                throw new ArgumentOutOfRangeException(nameof(claimCheck), claimCheck, "Could not find the claim check in the store");
-            }
-                
-            var stream = new MemoryStream();
-            var writer = new StreamWriter(stream);
-            await writer.WriteAsync(value);
-#if NETSTANDARD
-            await writer.FlushAsync();
-#else
-            await writer.FlushAsync(cancellationToken);
-#endif
-            stream.Position = 0;
-            return stream;
+            return Task.FromResult(Retrieve(claimCheck));
         }
         finally
         {
@@ -115,15 +101,13 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, BucketName, claimCheck, null, stream.Length));
         try
         {
-            var reader = new StreamReader(stream);
-            
-            _contents.TryAdd(claimCheck,
+            using var ms = new MemoryStream();
 #if NETSTANDARD
-            await reader.ReadToEndAsync()
+            await stream.CopyToAsync(ms);
 #else
-            await reader.ReadToEndAsync(cancellationToken)
+            await stream.CopyToAsync(ms, cancellationToken);
 #endif
-                );
+            _contents.TryAdd(claimCheck, ms.ToArray());
             return claimCheck;
         }
         finally
@@ -163,17 +147,12 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Retrieve, ClaimCheckProvider, BucketName, claimCheck));
         try
         {
-            if (!_contents.TryGetValue(claimCheck, out string? value))
+            if (!_contents.TryGetValue(claimCheck, out byte[]? value))
             {
                 throw new ArgumentOutOfRangeException(nameof(claimCheck), claimCheck, "Could not find the claim check in the store");
             }
-                
-            var stream = new MemoryStream();
-            var writer = new StreamWriter(stream);
-            writer.Write(value);
-            writer.Flush();
-            stream.Position = 0;
-            return stream;
+
+            return new MemoryStream(value, writable: false);
         }
         finally
         {
@@ -209,8 +188,9 @@ public class InMemoryStorageProvider : IAmAStorageProvider, IAmAStorageProviderA
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, BucketName, claimCheck, null, stream.Length));
         try
         {
-            var reader = new StreamReader(stream);
-            _contents.TryAdd(claimCheck, reader.ReadToEnd());
+            using var ms = new MemoryStream();
+            stream.CopyTo(ms);
+            _contents.TryAdd(claimCheck, ms.ToArray());
             return claimCheck;
         }
         finally

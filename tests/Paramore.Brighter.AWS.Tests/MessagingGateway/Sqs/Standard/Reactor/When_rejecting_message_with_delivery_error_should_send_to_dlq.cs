@@ -35,7 +35,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SqsMessageConsumerDeliveryErrorDlqTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;

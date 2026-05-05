@@ -297,6 +297,8 @@ namespace Paramore.Brighter
                         .GetOtherHandlersInPipeline()
                         .Where(attribute => attribute.Timing == HandlerTiming.After)
                         .OrderByDescending(attribute => attribute.Step);
+
+                s_postAttributesMemento.TryAdd(implicitHandler.Name.ToString(), postAttributes);
             }
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
@@ -336,6 +338,8 @@ namespace Paramore.Brighter
                         .GetOtherHandlersInPipeline()
                         .Where(attribute => attribute.Timing == HandlerTiming.After)
                         .OrderByDescending(attribute => attribute.Step);
+
+                s_postAttributesMemento.TryAdd(implicitHandler.Name.ToString(), postAttributes);
             }
 
             AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext, instanceScope);

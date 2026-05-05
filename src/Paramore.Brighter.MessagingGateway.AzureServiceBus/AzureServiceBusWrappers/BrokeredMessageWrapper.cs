@@ -15,6 +15,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public byte[] MessageBodyValue => _brokeredMessage.Body.ToArray();
 
+        public ReadOnlyMemory<byte> MessageBodyMemory => _brokeredMessage.Body.ToMemory();
+
         public IReadOnlyDictionary<string, object> ApplicationProperties => _brokeredMessage.ApplicationProperties;
 
         public string LockToken => _brokeredMessage.LockToken;
