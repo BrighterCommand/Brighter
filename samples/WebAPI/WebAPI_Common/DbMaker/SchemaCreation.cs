@@ -26,8 +26,9 @@ public static class SchemaCreation
         if (connectionString == null)
             throw new InvalidOperationException("Could not resolve connection string; did you set a DbType?");
 
-        WaitToConnect(dbType, connectionString);
-        CreateDatabaseIfNotExists(dbType, DbConnectionFactory.GetConnection(dbType, connectionString));
+        ILogger<IHost> logger = services.GetRequiredService<ILogger<IHost>>();
+        WaitToConnect(dbType, connectionString, logger);
+        CreateDatabaseIfNotExists(dbType, DbConnectionFactory.GetConnection(dbType, connectionString), logger);
 
         return webHost;
     }
@@ -53,13 +54,13 @@ public static class SchemaCreation
         return webHost;
     }
 
-    private static void CreateDatabaseIfNotExists(Rdbms rdbms, DbConnection conn)
+    private static void CreateDatabaseIfNotExists(Rdbms rdbms, DbConnection conn, ILogger logger)
     {
-        CreateGreetingsIfNotExists(rdbms, conn);
-        CreateSalutationsIfNotExists(rdbms, conn);
+        CreateGreetingsIfNotExists(rdbms, conn, logger);
+        CreateSalutationsIfNotExists(rdbms, conn, logger);
     }
 
-    private static void CreateGreetingsIfNotExists(Rdbms rdbms, DbConnection conn)
+    private static void CreateGreetingsIfNotExists(Rdbms rdbms, DbConnection conn, ILogger logger)
     {
         //don't use DDL for SQlite
         if (rdbms == Rdbms.Sqlite)
@@ -90,13 +91,13 @@ public static class SchemaCreation
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Issue with creating Greetings tables, {e.Message}");
+            logger.LogError(e, "Issue with creating Greetings database");
             //Rethrow, if we can't create the Outbox, shut down
             throw;
         }
     }
 
-    private static void CreateSalutationsIfNotExists(Rdbms rdbms, DbConnection conn)
+    private static void CreateSalutationsIfNotExists(Rdbms rdbms, DbConnection conn, ILogger logger)
     {
         //don't use DDL for SQlite
         if (rdbms == Rdbms.Sqlite)
@@ -127,20 +128,21 @@ public static class SchemaCreation
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Issue with creating Greetings tables, {e.Message}");
+            logger.LogError(e, "Issue with creating Salutations database");
             //Rethrow, if we can't create the Outbox, shut down
             throw;
         }
     }
 
-    private static void WaitToConnect(Rdbms db, string connectionString)
+    private static void WaitToConnect(Rdbms db, string connectionString, ILogger logger)
     {
         RetryPolicy? policy = Policy.Handle<DbException>().WaitAndRetryForever(
             _ => TimeSpan.FromSeconds(2),
             (exception, _) =>
             {
-                Console.WriteLine(
-                    $"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
+                logger.LogInformation(
+                    "Healthcheck: Waiting for the database {ConnectionString} to come online - {Reason}",
+                    connectionString, exception.Message);
             });
 
         policy.Execute(() =>
