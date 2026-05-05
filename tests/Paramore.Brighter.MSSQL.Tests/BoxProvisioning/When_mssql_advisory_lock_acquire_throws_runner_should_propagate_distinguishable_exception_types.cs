@@ -107,9 +107,11 @@ public class When_mssql_advisory_lock_acquire_throws_runner_should_propagate_dis
             _tableName, schemaName: null, BoxType.Outbox, migrations, freshHint);
 
         //Assert — migration committed normally and the fake observed the acquire under the
-        //         expected lock resource (BrighterMigration_<table> per ADR §5b).
+        //         expected lock resource (BrighterMigration_<schema>.<table> per ADR §5b —
+        //         the schema qualifier prevents same-named tables in different schemas
+        //         sharing a single advisory lock).
         Assert.Equal(1, await GetBoxTableCount());
-        Assert.Equal($"BrighterMigration_{_tableName}", fakeLock.AcquiredResource);
+        Assert.Equal($"BrighterMigration_dbo.{_tableName}", fakeLock.AcquiredResource);
     }
 
     private async Task AssertRunnerPropagatesAcquireException(Exception toThrow)
@@ -135,7 +137,7 @@ public class When_mssql_advisory_lock_acquire_throws_runner_should_propagate_dis
         //Assert — the fake observed the acquire attempt under the expected lock resource
         //         (the resource name itself is part of the abstraction's contract — it must
         //         come from the runner, not the fake).
-        Assert.Equal($"BrighterMigration_{_tableName}", fakeLock.AcquiredResource);
+        Assert.Equal($"BrighterMigration_dbo.{_tableName}", fakeLock.AcquiredResource);
 
         //Assert — no DDL fired: the box table was NOT created. Acquisition is the first action
         //         inside the lock-bearing transaction, so a throw rolls back cleanly.

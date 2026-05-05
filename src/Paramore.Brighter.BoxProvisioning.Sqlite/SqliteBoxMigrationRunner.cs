@@ -59,10 +59,20 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// per-DDL implicit commit). A mid-chain failure rolls everything back, including the
 /// history table itself if <c>EnsureHistoryTableAsync</c> ran inside the same transaction.
 /// </para>
+/// <para>
+/// <strong>WAL journal mode side effect:</strong> when <paramref name="enableWalMode"/> is
+/// <see langword="true"/> (the default for new deployments), the runner issues
+/// <c>PRAGMA journal_mode=WAL</c> at the start of every <see cref="MigrateAsync"/> call.
+/// This pragma is database-file-wide and affects every other connection — a database that
+/// was deliberately configured for DELETE or TRUNCATE journal mode will be silently switched
+/// to WAL. Pass <see langword="false"/> to leave the existing journal mode untouched if the
+/// host application owns that decision.
+/// </para>
 /// </remarks>
 public class SqliteBoxMigrationRunner(
     IAmARelationalDatabaseConfiguration configuration,
-    TimeSpan lockTimeout) : IAmABoxMigrationRunner
+    TimeSpan lockTimeout,
+    bool enableWalMode = true) : IAmABoxMigrationRunner
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
 
@@ -76,10 +86,12 @@ public class SqliteBoxMigrationRunner(
     private static readonly TimeSpan s_maxBackoff = TimeSpan.FromMilliseconds(200);
 
     private readonly TimeSpan _lockTimeout = lockTimeout;
+    private readonly bool _enableWalMode = enableWalMode;
 
     /// <summary>
     /// Convenience constructor using the default <see cref="BoxProvisioningOptions.MigrationLockTimeout"/>
-    /// of 30 seconds. Tests and callers that need a custom timeout should use the two-argument form.
+    /// of 30 seconds and WAL journal mode enabled. Tests and callers that need a custom timeout
+    /// or want to skip the WAL pragma should use the multi-argument form.
     /// </summary>
     public SqliteBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration)
         : this(configuration, TimeSpan.FromSeconds(30))
@@ -108,7 +120,10 @@ public class SqliteBoxMigrationRunner(
         await connection.OpenAsync(cancellationToken);
 
         await SetSqliteBusyTimeoutToZeroAsync(connection, cancellationToken);
-        await EnsureWalModeAsync(connection, cancellationToken);
+        if (_enableWalMode)
+        {
+            await EnsureWalModeAsync(connection, cancellationToken);
+        }
 
         var transaction = await BeginImmediateWithRetryAsync(connection, cancellationToken);
         try

@@ -16,10 +16,13 @@ public static class PostgreSqlBoxProvisioningExtensions
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
     {
-        var lockTimeout = options.MigrationLockTimeout;
+        // MigrationLockTimeout is read inside the registration lambda so it stays late-bound:
+        // the configure delegate may set the timeout AFTER calling Add*Outbox/Add*Inbox and
+        // the change still takes effect (registrations only run once the configure delegate
+        // has fully completed inside UseBoxProvisioning).
         options.Add(services =>
         {
-            var runner = new PostgreSqlBoxMigrationRunner(configuration, lockTimeout);
+            var runner = new PostgreSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
             services.AddSingleton<IAmABoxProvisioner>(
                 new PostgreSqlOutboxProvisioner(configuration, runner));
         });
@@ -36,7 +39,6 @@ public static class PostgreSqlBoxProvisioningExtensions
         string? schemaName = null,
         bool binaryMessagePayload = false)
     {
-        var lockTimeout = options.MigrationLockTimeout;
         options.Add(services =>
         {
             services.AddSingleton<IAmABoxProvisioner>(sp =>
@@ -50,7 +52,7 @@ public static class PostgreSqlBoxProvisioningExtensions
                     outBoxTableName: outboxTableName ?? "Outbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new PostgreSqlBoxMigrationRunner(dbConfig, lockTimeout);
+                var runner = new PostgreSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
                 return new PostgreSqlOutboxProvisioner(dbConfig, runner);
             });
         });
@@ -64,10 +66,9 @@ public static class PostgreSqlBoxProvisioningExtensions
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
     {
-        var lockTimeout = options.MigrationLockTimeout;
         options.Add(services =>
         {
-            var runner = new PostgreSqlBoxMigrationRunner(configuration, lockTimeout);
+            var runner = new PostgreSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
             services.AddSingleton<IAmABoxProvisioner>(
                 new PostgreSqlInboxProvisioner(configuration, runner));
         });
@@ -84,7 +85,6 @@ public static class PostgreSqlBoxProvisioningExtensions
         string? schemaName = null,
         bool binaryMessagePayload = false)
     {
-        var lockTimeout = options.MigrationLockTimeout;
         options.Add(services =>
         {
             services.AddSingleton<IAmABoxProvisioner>(sp =>
@@ -98,7 +98,7 @@ public static class PostgreSqlBoxProvisioningExtensions
                     inboxTableName: inboxTableName ?? "Inbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new PostgreSqlBoxMigrationRunner(dbConfig, lockTimeout);
+                var runner = new PostgreSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
                 return new PostgreSqlInboxProvisioner(dbConfig, runner);
             });
         });

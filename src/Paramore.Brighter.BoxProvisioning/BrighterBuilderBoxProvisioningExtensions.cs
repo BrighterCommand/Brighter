@@ -15,9 +15,9 @@ public static class BrighterBuilderBoxProvisioningExtensions
     /// Register box provisioning. The configure delegate should call backend-specific
     /// extension methods (e.g. <c>AddMsSqlOutbox</c>) to register provisioners. To override the
     /// default migration lock timeout (30 seconds), assign
-    /// <see cref="BoxProvisioningOptions.MigrationLockTimeout"/> inside the delegate BEFORE
-    /// calling any backend <c>AddXxxOutbox</c>/<c>AddXxxInbox</c> method — backend extensions
-    /// capture the timeout at registration time.
+    /// <see cref="BoxProvisioningOptions.MigrationLockTimeout"/> inside the delegate — the
+    /// timeout is read late, when the registrations actually run, so the order of statements
+    /// inside the delegate does not matter.
     /// </summary>
     /// <param name="builder">The Brighter builder.</param>
     /// <param name="configure">A delegate to configure box provisioning options.</param>

@@ -16,10 +16,13 @@ public static class MsSqlBoxProvisioningExtensions
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
     {
-        var lockTimeout = options.MigrationLockTimeout;
+        // MigrationLockTimeout is read inside the registration lambda so it stays late-bound:
+        // the configure delegate may set the timeout AFTER calling Add*Outbox/Add*Inbox and
+        // the change still takes effect (registrations only run once the configure delegate
+        // has fully completed inside UseBoxProvisioning).
         options.Add(services =>
         {
-            var runner = new MsSqlBoxMigrationRunner(configuration, lockTimeout);
+            var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
             services.AddSingleton<IAmABoxProvisioner>(
                 new MsSqlOutboxProvisioner(configuration, runner));
         });
@@ -36,7 +39,6 @@ public static class MsSqlBoxProvisioningExtensions
         string? schemaName = null,
         bool binaryMessagePayload = false)
     {
-        var lockTimeout = options.MigrationLockTimeout;
         options.Add(services =>
         {
             services.AddSingleton<IAmABoxProvisioner>(sp =>
@@ -50,7 +52,7 @@ public static class MsSqlBoxProvisioningExtensions
                     outBoxTableName: outboxTableName ?? "Outbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new MsSqlBoxMigrationRunner(dbConfig, lockTimeout);
+                var runner = new MsSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
                 return new MsSqlOutboxProvisioner(dbConfig, runner);
             });
         });
@@ -64,10 +66,9 @@ public static class MsSqlBoxProvisioningExtensions
         this BoxProvisioningOptions options,
         IAmARelationalDatabaseConfiguration configuration)
     {
-        var lockTimeout = options.MigrationLockTimeout;
         options.Add(services =>
         {
-            var runner = new MsSqlBoxMigrationRunner(configuration, lockTimeout);
+            var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
             services.AddSingleton<IAmABoxProvisioner>(
                 new MsSqlInboxProvisioner(configuration, runner));
         });
@@ -84,7 +85,6 @@ public static class MsSqlBoxProvisioningExtensions
         string? schemaName = null,
         bool binaryMessagePayload = false)
     {
-        var lockTimeout = options.MigrationLockTimeout;
         options.Add(services =>
         {
             services.AddSingleton<IAmABoxProvisioner>(sp =>
@@ -98,7 +98,7 @@ public static class MsSqlBoxProvisioningExtensions
                     inboxTableName: inboxTableName ?? "Inbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new MsSqlBoxMigrationRunner(dbConfig, lockTimeout);
+                var runner = new MsSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
                 return new MsSqlInboxProvisioner(dbConfig, runner);
             });
         });

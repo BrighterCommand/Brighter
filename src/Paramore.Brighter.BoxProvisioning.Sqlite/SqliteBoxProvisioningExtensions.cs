@@ -12,13 +12,23 @@ public static class SqliteBoxProvisioningExtensions
     /// <summary>
     /// Register SQLite outbox provisioning with an explicit configuration.
     /// </summary>
+    /// <param name="options">The provisioning options.</param>
+    /// <param name="configuration">The relational database configuration.</param>
+    /// <param name="enableWalMode">
+    /// When <see langword="true"/> (default) the runner issues
+    /// <c>PRAGMA journal_mode=WAL</c> on each migration call. Set to <see langword="false"/>
+    /// if the host application manages SQLite journal mode itself — the pragma is
+    /// database-file-wide and overrides any DELETE/TRUNCATE choice the host already made.
+    /// </param>
     public static BoxProvisioningOptions AddSqliteOutbox(
         this BoxProvisioningOptions options,
-        IAmARelationalDatabaseConfiguration configuration)
+        IAmARelationalDatabaseConfiguration configuration,
+        bool enableWalMode = true)
     {
         options.Add(services =>
         {
-            var runner = new SqliteBoxMigrationRunner(configuration);
+            var runner = new SqliteBoxMigrationRunner(
+                configuration, options.MigrationLockTimeout, enableWalMode);
             services.AddSingleton<IAmABoxProvisioner>(
                 new SqliteOutboxProvisioner(configuration, runner));
         });
@@ -28,11 +38,17 @@ public static class SqliteBoxProvisioningExtensions
     /// <summary>
     /// Register SQLite outbox provisioning with a connection name resolved from IConfiguration at runtime.
     /// </summary>
+    /// <param name="enableWalMode">
+    /// When <see langword="true"/> (default) the runner issues
+    /// <c>PRAGMA journal_mode=WAL</c> on each migration call. Set to <see langword="false"/>
+    /// if the host application manages SQLite journal mode itself.
+    /// </param>
     public static BoxProvisioningOptions AddSqliteOutbox(
         this BoxProvisioningOptions options,
         string connectionName,
         string? outboxTableName = null,
-        bool binaryMessagePayload = false)
+        bool binaryMessagePayload = false,
+        bool enableWalMode = true)
     {
         options.Add(services =>
         {
@@ -46,7 +62,8 @@ public static class SqliteBoxProvisioningExtensions
                     connectionString,
                     outBoxTableName: outboxTableName ?? "Outbox",
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new SqliteBoxMigrationRunner(dbConfig);
+                var runner = new SqliteBoxMigrationRunner(
+                    dbConfig, options.MigrationLockTimeout, enableWalMode);
                 return new SqliteOutboxProvisioner(dbConfig, runner);
             });
         });
@@ -56,13 +73,20 @@ public static class SqliteBoxProvisioningExtensions
     /// <summary>
     /// Register SQLite inbox provisioning with an explicit configuration.
     /// </summary>
+    /// <param name="enableWalMode">
+    /// When <see langword="true"/> (default) the runner issues
+    /// <c>PRAGMA journal_mode=WAL</c> on each migration call. Set to <see langword="false"/>
+    /// if the host application manages SQLite journal mode itself.
+    /// </param>
     public static BoxProvisioningOptions AddSqliteInbox(
         this BoxProvisioningOptions options,
-        IAmARelationalDatabaseConfiguration configuration)
+        IAmARelationalDatabaseConfiguration configuration,
+        bool enableWalMode = true)
     {
         options.Add(services =>
         {
-            var runner = new SqliteBoxMigrationRunner(configuration);
+            var runner = new SqliteBoxMigrationRunner(
+                configuration, options.MigrationLockTimeout, enableWalMode);
             services.AddSingleton<IAmABoxProvisioner>(
                 new SqliteInboxProvisioner(configuration, runner));
         });
@@ -72,11 +96,17 @@ public static class SqliteBoxProvisioningExtensions
     /// <summary>
     /// Register SQLite inbox provisioning with a connection name resolved from IConfiguration at runtime.
     /// </summary>
+    /// <param name="enableWalMode">
+    /// When <see langword="true"/> (default) the runner issues
+    /// <c>PRAGMA journal_mode=WAL</c> on each migration call. Set to <see langword="false"/>
+    /// if the host application manages SQLite journal mode itself.
+    /// </param>
     public static BoxProvisioningOptions AddSqliteInbox(
         this BoxProvisioningOptions options,
         string connectionName,
         string? inboxTableName = null,
-        bool binaryMessagePayload = false)
+        bool binaryMessagePayload = false,
+        bool enableWalMode = true)
     {
         options.Add(services =>
         {
@@ -90,7 +120,8 @@ public static class SqliteBoxProvisioningExtensions
                     connectionString,
                     inboxTableName: inboxTableName ?? "Inbox",
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new SqliteBoxMigrationRunner(dbConfig);
+                var runner = new SqliteBoxMigrationRunner(
+                    dbConfig, options.MigrationLockTimeout, enableWalMode);
                 return new SqliteInboxProvisioner(dbConfig, runner);
             });
         });

@@ -84,7 +84,10 @@ public class MsSqlBoxMigrationRunner(
         var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
 #endif
 
-        var lockResource = $"BrighterMigration_{tableName}";
+        // Include the schema name so that two same-named tables in different schemas
+        // (e.g. dbo.Outbox and billing.Outbox) acquire distinct advisory locks. Without
+        // the schema qualifier they would share a lock and serialize unnecessarily.
+        var lockResource = $"BrighterMigration_{effectiveSchema}.{tableName}";
 
         try
         {

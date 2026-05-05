@@ -33,6 +33,17 @@ public class SpannerBoxMigrationRunner(
     // `__BrighterMigrationHistory`.
     internal const string MigrationHistoryTable = "BrighterMigrationHistory";
 
+    // IMPORTANT: keep these in sync with the relational chain length —
+    //   VLatestOutbox === MySqlOutboxMigrations.All(...).Count
+    //                 === MsSqlOutboxMigrations.All(...).Count
+    //                 === PostgreSqlOutboxMigrations.All(...).Count
+    //                 === SqliteOutboxMigrations.All(...).Count
+    //   VLatestInbox  === <Backend>InboxMigrations.All(...).Count (across all four relational backends)
+    // Spanner has no V_k chain (ADR 0057 §6 — fresh-install-only), so the latest version is
+    // effectively a stamp on a freshly-built table. When a relational backend advances to
+    // V8/V3 etc., bump these constants so Spanner's history row keeps the same V_latest as
+    // its relational siblings — the per-backend drift tests in
+    // tests/Paramore.Brighter.Spanner.Tests/BoxProvisioning will fail otherwise.
     internal const int VLatestOutbox = 7;
     internal const int VLatestInbox = 2;
 
@@ -48,6 +59,9 @@ public class SpannerBoxMigrationRunner(
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
+        _ = migrations; // Spanner is fresh-install-only — no V_k chain (ADR 0057 §6).
+        _ = schemaName; // Spanner does not use schemas; the configuration's database is implicit.
+
         using var connection = SpannerConnectionHelper.CreateConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 

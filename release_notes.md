@@ -16,21 +16,79 @@ The `IAmABoxMigration` interface (and the `BoxMigration` record) gain three new 
 
 External implementors of `IAmABoxMigration` will fail to compile until they add the new members. The change is source-breaking by design: `Paramore.Brighter` targets `netstandard2.0`, which does not support default interface members, so the spec-0023 pattern of adding required surface as a plain abstract member (e.g. `SchemaName`) is reused here. See ADR 0057 "Consequences → Negative" for the rationale.
 
+```csharp
+// Before
+public class MyMigration : IAmABoxMigration
+{
+    public int Version => 8;
+    public string Description => "Add MyColumn";
+    public string UpScript => "ALTER TABLE Outbox ADD COLUMN MyColumn TEXT NULL";
+}
+
+// After
+public class MyMigration : IAmABoxMigration
+{
+    public int Version => 8;
+    public string Description => "Add MyColumn";
+    public string UpScript => "ALTER TABLE Outbox ADD COLUMN MyColumn TEXT NULL";
+
+    // Cumulative column set after this migration applies. The drift test compares this
+    // to the live builder DDL — adding a column to the builder without listing it here
+    // (or vice versa) fails CI.
+    public IReadOnlyCollection<string> LogicalColumns { get; } =
+        new[] { /* V1..V7 columns */, "MyColumn" };
+
+    // V2+ migrations carry the commit SHA / PR number that introduced the column.
+    public string? SourceReference => "abcd1234 (PR #4xxx)";
+
+    // SQLite-only: existence probe so the runner can skip the ALTER if the column
+    // already lives on the table (legacy bootstrap or a half-applied chain).
+    // Leave null on MSSQL/PostgreSQL/MySQL — those backends use IF NOT EXISTS in UpScript.
+    public string? IdempotencyCheckSql =>
+        "SELECT COUNT(*) FROM pragma_table_info('Outbox') WHERE name = 'MyColumn'";
+}
+```
+
+#### Source-breaking change: `IAmARelationalDatabaseConfiguration.SchemaName`
+
+`IAmARelationalDatabaseConfiguration` gains a new required `string? SchemaName` member used by the box-provisioning runners (and the schema-qualified MSSQL advisory-lock resource — see "Behaviour notes" below). External implementors of the interface will fail to compile until they expose `SchemaName`. The shipped `RelationalDatabaseConfiguration` record in `Paramore.Brighter` already exposes the property and accepts `schemaName:` as an optional named argument, so call sites that use the shipped configuration record require no change.
+
+```csharp
+// Before — custom configuration class only needed to cover the message-payload mode
+public class MyDatabaseConfiguration : IAmARelationalDatabaseConfiguration
+{
+    public string ConnectionString { get; }
+    public string? OutBoxTableName { get; }
+    public string? InboxTableName { get; }
+    public bool BinaryMessagePayload { get; }
+}
+
+// After — must also expose SchemaName (defaulting to null preserves the V9 default of dbo/public)
+public class MyDatabaseConfiguration : IAmARelationalDatabaseConfiguration
+{
+    public string ConnectionString { get; }
+    public string? OutBoxTableName { get; }
+    public string? InboxTableName { get; }
+    public string? SchemaName { get; }
+    public bool BinaryMessagePayload { get; }
+}
+```
+
 #### Source-breaking change: `UseBoxProvisioning` overload consolidation
 
-The `BrighterBuilderBoxProvisioningExtensions.UseBoxProvisioning` extension previously exposed two overlapping ways to set the migration lock timeout: a `TimeSpan? migrationLockTimeout` parameter on the extension method, and `BoxProvisioningOptions.MigrationLockTimeout` assignable from the configure delegate. The dual surface had a real ordering bug — the parameter was applied to options before the configure delegate ran, so a delegate that called `AddMsSqlOutbox(...)` and then assigned `opts.MigrationLockTimeout` would silently lose the assignment, because backend extensions capture the timeout at registration time.
+The `BrighterBuilderBoxProvisioningExtensions.UseBoxProvisioning` extension previously exposed two overlapping ways to set the migration lock timeout: a `TimeSpan? migrationLockTimeout` parameter on the extension method, and `BoxProvisioningOptions.MigrationLockTimeout` assignable from the configure delegate. The dual surface was confusing and the parameter form did not allow backends to read the timeout late.
 
-The fix removes the parameter. Callers set the timeout exclusively through `BoxProvisioningOptions.MigrationLockTimeout` inside the configure delegate, and must do so **before** invoking any backend `AddXxxOutbox`/`AddXxxInbox` method. Existing callers that did not pass `migrationLockTimeout` (the typical case — all in-tree call sites and samples used the default) require no change.
+The fix removes the parameter. Callers set the timeout exclusively through `BoxProvisioningOptions.MigrationLockTimeout` inside the configure delegate. Backend `AddXxxOutbox`/`AddXxxInbox` methods read the option lazily at registration time, so the order of statements inside the configure delegate does not matter. Existing callers that did not pass `migrationLockTimeout` (the typical case — all in-tree call sites and samples used the default) require no change.
 
 ```csharp
 // Before
 builder.UseBoxProvisioning(opts => opts.AddMsSqlOutbox(config), TimeSpan.FromMinutes(2));
 
-// After
+// After — order inside the delegate is free
 builder.UseBoxProvisioning(opts =>
 {
-    opts.MigrationLockTimeout = TimeSpan.FromMinutes(2);
     opts.AddMsSqlOutbox(config);
+    opts.MigrationLockTimeout = TimeSpan.FromMinutes(2);
 });
 ```
 
@@ -47,6 +105,8 @@ The session-level migration-lock collaborator is now substitutable per backend, 
 * Spec-0023-era `__BrighterMigrationHistory` rows at `MigrationVersion = 1` are still valid. The runner's normal path resumes from `MAX(V)`, the `IsMigrationAppliedAsync` gate skips the V1 row, and V2..V_latest are applied as ALTERs against the existing table. The original V1 description is preserved verbatim.
 * `IAmABoxMigrationRunner.MigrateAsync` now takes a `BoxType boxType` argument so the runner can pick the correct discriminator (`HeaderBag` for outbox, `CommandBody` for inbox) when bootstrapping pre-spec-0023 tables. External callers must add the new argument on recompile.
 * Spanner remains a degenerate runner: fresh installs stamp `V_latest` and existing tables either no-op (`MAX(V) == V_latest`), bootstrap to `V_latest` via the discriminator gate (no history row yet), or throw `ConfigurationException` (`MAX(V) != V_latest`, manual recovery required). See ADR 0057 §6.
+* The MSSQL advisory-lock resource is `BrighterMigration_<schema>.<table>` (previously `BrighterMigration_<table>`). Two same-named tables in different schemas (e.g. `dbo.Outbox` and `billing.Outbox`) now acquire distinct `sp_getapplock` resources and migrate in parallel instead of serialising on a shared lock. The resource still stays well under the 255-character `@Resource` limit for any realistic `<schema>.<table>` pair.
+* The SQLite runner emits `PRAGMA journal_mode=WAL` on every migration call by default. WAL is database-file-wide and persistent, so a host application that has deliberately picked DELETE or TRUNCATE journal mode would have its choice silently overridden. Pass `enableWalMode: false` to `AddSqliteOutbox` / `AddSqliteInbox` (or to the `SqliteBoxMigrationRunner` constructor) to skip the pragma and leave the existing journal mode untouched.
 
 See [ADR 0057](docs/adr/0057-box-schema-versioning-and-migrations.md) and [spec 0027](specs/0027-box-schema-versioning-and-migrations/) for full details.
 
