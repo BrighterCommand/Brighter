@@ -24,14 +24,13 @@ THE SOFTWARE. */
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
+using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
 using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
@@ -158,42 +157,4 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @TableName";
         }
     }
 
-    private sealed class FakeMySqlAdvisoryLock(bool? releaseResult) : IMySqlAdvisoryLock
-    {
-        public string? AcquiredKey { get; private set; }
-        public string? ReleasedKey { get; private set; }
-
-        public Task AcquireAsync(
-            MySqlConnection connection, string lockKey,
-            TimeSpan timeout, CancellationToken cancellationToken)
-        {
-            AcquiredKey = lockKey;
-            return Task.CompletedTask;
-        }
-
-        public Task<bool?> ReleaseAsync(
-            MySqlConnection connection, string lockKey,
-            CancellationToken cancellationToken)
-        {
-            ReleasedKey = lockKey;
-            return Task.FromResult(releaseResult);
-        }
-    }
-
-    private sealed class CapturingLogger : ILogger
-    {
-        public List<CapturedEntry> Entries { get; } = new();
-
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        public void Log<TState>(
-            LogLevel logLevel, EventId eventId, TState state,
-            Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            Entries.Add(new CapturedEntry(logLevel, formatter(state, exception), exception));
-        }
-    }
-
-    private sealed record CapturedEntry(LogLevel Level, string Message, Exception? Exception);
 }
