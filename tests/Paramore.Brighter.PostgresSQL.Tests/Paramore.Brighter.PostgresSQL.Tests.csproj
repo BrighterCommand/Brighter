@@ -25,6 +25,12 @@
     </ItemGroup>
 
     <ItemGroup>
+      <None Update="xunit.runner.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.PostgreSql\Paramore.Brighter.BoxProvisioning.PostgreSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Postgres\Paramore.Brighter.Inbox.Postgres.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.PostgresSql\Paramore.Brighter.Locking.PostgresSql.csproj" />
