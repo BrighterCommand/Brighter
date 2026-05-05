@@ -27,6 +27,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs;
 
+[Trait("Category", "AWS")]
 public class SqsSubscriptionDlqRoutingKeyTests
 {
     [Fact]

@@ -13,7 +13,6 @@ using System.Collections.Generic;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("CI", "Fragile")]
 public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;

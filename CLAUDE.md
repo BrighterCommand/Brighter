@@ -24,6 +24,18 @@ When working on implementation tasks in `specs/*/tasks.md`:
 
 **If a task says `/test-first when ...`** - YOU MUST USE THAT COMMAND. Do not write the test file manually.
 
+## Spec Workflow
+
+Follow the structured specification workflow: Requirements → ADR Design → Adversarial Review (multiple rounds) → Task Breakdown → Implementation. Never skip review rounds or assume approval - wait for explicit user approval before proceeding to the next phase.
+
+## Change Scope
+
+Do NOT change defaults or make changes beyond what was explicitly requested. When fixing or modifying code, restrict changes to exactly what the user asked for — no additional "improvements" or default value changes.
+
+## Adversarial Reviews
+
+When conducting adversarial reviews, apply strict judgment criteria. A clear violation should result in FAIL, not NEEDS_ATTENTION. Err on the side of strictness rather than leniency when evaluating against guardrails and principles.
+
 ## Claude Code Skills (Recommended)
 
 Claude Code skills automate common workflows and enforce mandatory engineering practices. **Use these skills proactively** rather than manually following documented procedures:

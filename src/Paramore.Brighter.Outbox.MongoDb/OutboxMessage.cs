@@ -29,7 +29,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
         TimeStamp = message.Header.TimeStamp == DateTimeOffset.MinValue
             ? DateTimeOffset.UtcNow
             : message.Header.TimeStamp;
-        Body = message.Body.Bytes;
+        Body = message.Body.ToByteArray();
         var bodyContentType = message.Body.ContentType is not null ? message.Body.ContentType.ToString() : MediaTypeNames.Text.Plain;
         var headerContentType = message.Header.ContentType.ToString();
         

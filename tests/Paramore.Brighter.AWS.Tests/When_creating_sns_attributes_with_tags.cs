@@ -5,6 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests;
 
+[Trait("Category", "AWS")]
 public class When_creating_sns_attributes_with_tags
 {
     [Fact]

@@ -35,7 +35,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SqsMessageConsumerFifoDeliveryErrorDlqTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;

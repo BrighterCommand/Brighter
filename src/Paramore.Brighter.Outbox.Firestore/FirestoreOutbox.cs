@@ -1178,7 +1178,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                 [nameof(MessageHeader.Source)] = new Value { StringValue = message.Header.Source.ToString() },
                 [nameof(MessageHeader.Topic)] = new Value { StringValue = message.Header.Topic.Value },
                 [nameof(MessageHeader.TimeStamp)] = new Value { TimestampValue = Timestamp.FromDateTimeOffset(message.Header.TimeStamp) },
-                [nameof(Message.Body)] = new Value { BytesValue = ByteString.CopyFrom(message.Body.Bytes) },
+                [nameof(Message.Body)] = new Value { BytesValue = ByteString.CopyFrom(message.Body.Memory.Span) },
                 [nameof(MessageHeader.ContentType)] = new Value { StringValue = message.Header.ContentType.ToString() }
             } 
         };

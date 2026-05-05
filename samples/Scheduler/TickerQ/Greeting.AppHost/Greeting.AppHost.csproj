@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>3a3c00ef-01a0-49f2-9ad2-dbb7edddd60a</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Greeting.Consumer\Greeting.Consumer.csproj" />
+    <ProjectReference Include="..\Greeting.Producer\Greeting.Producer.csproj" />
+  </ItemGroup>
+
+
+</Project>

@@ -17,7 +17,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessagePump _messagePump;
@@ -78,14 +77,14 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(_awsConnection);
         _channel = _channelFactory.CreateSyncChannel(_subscription);
 
-        IHandleRequestsAsync<MyDeferredCommand> handler = new MyDeferredCommandHandlerAsync();
+        IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();
 
         var subscriberRegistry = new SubscriberRegistry();
-        subscriberRegistry.RegisterAsync<MyDeferredCommand, MyDeferredCommandHandlerAsync>();
+        subscriberRegistry.Register<MyDeferredCommand, MyDeferredCommandHandler>();
 
         IAmACommandProcessor commandProcessor = new CommandProcessor(
             subscriberRegistry: subscriberRegistry,
-            handlerFactory: new QuickHandlerFactoryAsync(() => handler),
+            handlerFactory: new QuickHandlerFactory(() => handler),
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry(),
             resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
@@ -105,7 +104,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         };
     }
 
-    public int GetDLQCountAsync(string queueName)
+    public int GetDLQCount(string queueName)
     {
         using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
         var queueUrlResponse = sqsClient.GetQueueUrlAsync(queueName.ToValidSQSQueueName(true)).GetAwaiter().GetResult();
@@ -126,8 +125,8 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    [Fact(Skip = "This test is skipped because running tests of the DLQ is unreliable in the CI environment")]
-    public void When_throwing_defer_action_respect_redrive_async()
+    [Fact]
+    public void When_throwing_defer_action_respect_redrive()
     {
         _sender.Send(_message);
 
@@ -141,7 +140,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 
         Task.Delay(5000).GetAwaiter().GetResult();
 
-        var dlqCount = GetDLQCountAsync(_dlqChannelName);
+        var dlqCount = GetDLQCount(_dlqChannelName);
         Assert.Equal(1, dlqCount);
     }
 

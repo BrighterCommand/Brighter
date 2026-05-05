@@ -13,7 +13,6 @@ using System.Collections.Generic;
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;

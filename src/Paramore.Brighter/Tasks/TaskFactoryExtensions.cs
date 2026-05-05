@@ -1,8 +1,8 @@
 #region Sources
 
-// This class is based on Stephen Cleary's AyncContext in https://github.com/StephenCleary/AsyncEx
-// The original code is licensed under the MIT License (MIT) <a href="https://github.com/StephenCleary/AsyncEx/blob/master/LICENSE>AyncEx license</a>
-// Modifies the original approach in Brighter which only provided a synchronization synchronizationHelper, not a scheduler, and thus would
+// This class is based on Stephen Cleary's AsyncContext in https://github.com/StephenCleary/AsyncEx
+// The original code is licensed under the MIT License (MIT) <a href="https://github.com/StephenCleary/AsyncEx/blob/master/LICENSE>AsyncEx license</a>
+// Modifies the original approach in Brighter which only provided a synchronization context, not a scheduler, and thus would
 // not run continuations on the same thread as the async operation if used with ConfigureAwait(false).
 // This is important for the ServiceActivator, as we want to ensure ordering on a single thread and not use the thread pool.
 
@@ -16,81 +16,91 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Tasks
+namespace Paramore.Brighter.Tasks;
+
+/// <summary>
+/// Extension methods that add <c>Task.Run</c>-style overloads to <see cref="TaskFactory"/>,
+/// honouring the factory's own cancellation token, creation options and scheduler.
+/// </summary>
+public static class TaskFactoryExtensions
 {
     /// <summary>
-    /// Provides extension methods for the TaskFactory class to run tasks with various actions and functions.
+    /// Runs <paramref name="action"/> on the factory's scheduler.
     /// </summary>
-    public static class TaskFactoryExtensions
+    public static Task Run(this TaskFactory @this, Action action)
     {
-        /// <summary>
-        /// Runs a task with the specified action.
-        /// </summary>
-        /// <param name="this">The TaskFactory instance.</param>
-        /// <param name="action">The action to run.</param>
-        /// <returns>A Task that represents the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when the TaskFactory or action is null.</exception>
-        public static Task Run(this TaskFactory @this, Action action)
-        {
-            if (@this == null)
-                throw new ArgumentNullException(nameof(@this));
-            if (action == null)
-                throw new ArgumentNullException(nameof(action));
+#if NET
+        ArgumentNullException.ThrowIfNull(@this);
+        ArgumentNullException.ThrowIfNull(action);
+#else
+        if (@this is null) throw new ArgumentNullException(nameof(@this));
+        if (action is null) throw new ArgumentNullException(nameof(action));
+#endif
 
-            return @this.StartNew(action, @this.CancellationToken, @this.CreationOptions | TaskCreationOptions.DenyChildAttach, @this.Scheduler ?? TaskScheduler.Default);
-        }
+        return @this.StartNew(
+            action,
+            @this.CancellationToken,
+            @this.CreationOptions | TaskCreationOptions.DenyChildAttach,
+            @this.Scheduler ?? TaskScheduler.Default);
+    }
 
-        /// <summary>
-        /// Runs a task with the specified function that returns a result.
-        /// </summary>
-        /// <typeparam name="TResult">The type of the result.</typeparam>
-        /// <param name="this">The TaskFactory instance.</param>
-        /// <param name="action">The function to run.</param>
-        /// <returns>A Task that represents the asynchronous operation and contains the result.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when the TaskFactory or action is null.</exception>
-        public static Task<TResult> Run<TResult>(this TaskFactory @this, Func<TResult> action)
-        {
-            if (@this == null)
-                throw new ArgumentNullException(nameof(@this));
-            if (action == null)
-                throw new ArgumentNullException(nameof(action));
+    /// <summary>
+    /// Runs <paramref name="action"/> on the factory's scheduler and returns its result.
+    /// </summary>
+    public static Task<TResult> Run<TResult>(this TaskFactory @this, Func<TResult> action)
+    {
+#if NET
+        ArgumentNullException.ThrowIfNull(@this);
+        ArgumentNullException.ThrowIfNull(action);
+#else
+        if (@this is null) throw new ArgumentNullException(nameof(@this));
+        if (action is null) throw new ArgumentNullException(nameof(action));
+#endif
 
-            return @this.StartNew(action, @this.CancellationToken, @this.CreationOptions | TaskCreationOptions.DenyChildAttach, @this.Scheduler ?? TaskScheduler.Default);
-        }
+        return @this.StartNew(
+            action,
+            @this.CancellationToken,
+            @this.CreationOptions | TaskCreationOptions.DenyChildAttach,
+            @this.Scheduler ?? TaskScheduler.Default);
+    }
 
-        /// <summary>
-        /// Runs a task with the specified asynchronous function.
-        /// </summary>
-        /// <param name="this">The TaskFactory instance.</param>
-        /// <param name="action">The asynchronous function to run.</param>
-        /// <returns>A Task that represents the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when the TaskFactory or action is null.</exception>
-        public static Task Run(this TaskFactory @this, Func<Task> action)
-        {
-            if (@this == null)
-                throw new ArgumentNullException(nameof(@this));
-            if (action == null)
-                throw new ArgumentNullException(nameof(action));
+    /// <summary>
+    /// Runs the async delegate <paramref name="action"/> on the factory's scheduler.
+    /// </summary>
+    public static Task Run(this TaskFactory @this, Func<Task> action)
+    {
+#if NET
+        ArgumentNullException.ThrowIfNull(@this);
+        ArgumentNullException.ThrowIfNull(action);
+#else
+        if (@this is null) throw new ArgumentNullException(nameof(@this));
+        if (action is null) throw new ArgumentNullException(nameof(action));
+#endif
 
-            return @this.StartNew(action, @this.CancellationToken, @this.CreationOptions | TaskCreationOptions.DenyChildAttach, @this.Scheduler ?? TaskScheduler.Default).Unwrap();
-        }
+        return @this.StartNew(
+            action,
+            @this.CancellationToken,
+            @this.CreationOptions | TaskCreationOptions.DenyChildAttach,
+            @this.Scheduler ?? TaskScheduler.Default).Unwrap();
+    }
 
-        /// <summary>
-        /// Runs a task with the specified asynchronous function that returns a result.
-        /// </summary>
-        /// <typeparam name="TResult">The type of the result.</typeparam>
-        /// <param name="this">The TaskFactory instance.</param>
-        /// <param name="action">The asynchronous function to run.</param>
-        /// <returns>A Task that represents the asynchronous operation and contains the result.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when the TaskFactory or action is null.</exception>
-        public static Task<TResult> Run<TResult>(this TaskFactory @this, Func<Task<TResult>> action)
-        {
-            if (@this == null)
-                throw new ArgumentNullException(nameof(@this));
-            if (action == null)
-                throw new ArgumentNullException(nameof(action));
+    /// <summary>
+    /// Runs the async delegate <paramref name="action"/> on the factory's scheduler and returns its result.
+    /// </summary>
+    public static Task<TResult> Run<TResult>(this TaskFactory @this, Func<Task<TResult>> action)
+    {
+#if NET
+        ArgumentNullException.ThrowIfNull(@this);
+        ArgumentNullException.ThrowIfNull(action);
+#else
+        if (@this is null) throw new ArgumentNullException(nameof(@this));
+        if (action is null) throw new ArgumentNullException(nameof(action));
+#endif
 
-            return @this.StartNew(action, @this.CancellationToken, @this.CreationOptions | TaskCreationOptions.DenyChildAttach, @this.Scheduler ?? TaskScheduler.Default).Unwrap();
-        }
+        return @this.StartNew(
+            action,
+            @this.CancellationToken,
+            @this.CreationOptions | TaskCreationOptions.DenyChildAttach,
+            @this.Scheduler ?? TaskScheduler.Default).Unwrap();
     }
 }

@@ -26,7 +26,6 @@ using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Observability;
@@ -120,7 +119,7 @@ namespace Paramore.Brighter.ServiceActivator
                     Log.BrokenCircuitException(s_logger, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                     var errorSpan = Tracer?.CreateMessagePumpExceptionSpan(ex, Channel.RoutingKey, MessagePumpSpanOperation.Receive, MessagingSystem.InternalBus, InstrumentationOptions);
                     Tracer?.EndSpan(errorSpan);
-                    Task.Delay(ChannelFailureDelay).GetAwaiter().GetResult(); //-- pause pump; blocks consuming thread on empty queue; 
+                    Thread.Sleep(ChannelFailureDelay); //-- pause pump; blocks consuming thread on empty queue;
                     continue;
                 }
                 catch (ChannelFailureException ex)
@@ -128,7 +127,7 @@ namespace Paramore.Brighter.ServiceActivator
                     Log.ChannelFailureException(s_logger, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                     var errorSpan = Tracer?.CreateMessagePumpExceptionSpan(ex, Channel.RoutingKey, MessagePumpSpanOperation.Receive, MessagingSystem.InternalBus, InstrumentationOptions);
                     Tracer?.EndSpan(errorSpan );
-                    Task.Delay(ChannelFailureDelay).GetAwaiter().GetResult(); //-- pause pump; blocks consuming thread on empty queue; 
+                    Thread.Sleep(ChannelFailureDelay); //-- pause pump; blocks consuming thread on empty queue;
                     continue;
                 }
                 catch (Exception ex)
@@ -152,7 +151,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     span?.SetStatus(ActivityStatusCode.Ok);
                     Tracer?.EndSpan(span);
-                    Task.Delay(EmptyChannelDelay).GetAwaiter().GetResult();  //-- pause pump; blocks consuming thread on empty queue; 
+                    Thread.Sleep(EmptyChannelDelay); //-- pause pump; blocks consuming thread on empty queue;
                     continue;
                 }
 

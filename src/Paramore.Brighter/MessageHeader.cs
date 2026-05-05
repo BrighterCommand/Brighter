@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Net.Mime;
+using System.Threading;
 using System.Text.Json.Serialization;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.NJsonConverters;
@@ -87,7 +88,70 @@ namespace Paramore.Brighter
         /// The default Brighter source
         /// </summary>
         public const string DefaultSource = "http://goparamore.io";
-            
+
+        /// <summary>
+        /// Bag keys that are internal to Brighter — set by the framework so a downstream
+        /// component (e.g. the outbox dispatcher) can read them, but not intended to travel
+        /// over the wire. Transports that copy <see cref="Bag"/> into their wire format must
+        /// skip keys for which <see cref="IsLocalHeader"/> returns true: either filter inline
+        /// (see ASB / RMQ / Kafka publishers) or call <see cref="BagWithoutLocalHeaders"/>
+        /// when serialising the bag in one go (see SNS / SQS / Redis publishers).
+        /// </summary>
+        /// <remarks>
+        /// Pre-populated with <see cref="Message.ProducerTopicHeaderName"/>. Use
+        /// <see cref="RegisterLocalHeader"/> from extension code to add additional keys.
+        /// The backing <see cref="HashSet{T}"/> is treated as a copy-on-write snapshot —
+        /// never mutated in place after publication — so reads are lock-free on the
+        /// message hot path; registrations are expected at startup and use a CAS loop
+        /// that allocates a new snapshot.
+        /// </remarks>
+        private static HashSet<string> s_localHeaderNames = new(StringComparer.Ordinal)
+        {
+            Message.ProducerTopicHeaderName
+        };
+
+        /// <summary>
+        /// Returns true when <paramref name="name"/> is a local-only bag key that must
+        /// not travel over the wire.
+        /// </summary>
+        public static bool IsLocalHeader(string name)
+            => Volatile.Read(ref s_localHeaderNames).Contains(name);
+
+        /// <summary>
+        /// Adds <paramref name="name"/> to the set of local bag keys. Idempotent.
+        /// Call once at startup from extension code that introduces a local-only bag key.
+        /// </summary>
+        public static void RegisterLocalHeader(string name)
+        {
+            while (true)
+            {
+                var snapshot = Volatile.Read(ref s_localHeaderNames);
+                if (snapshot.Contains(name))
+                    return;
+                var updated = new HashSet<string>(snapshot, StringComparer.Ordinal) { name };
+                if (ReferenceEquals(Interlocked.CompareExchange(ref s_localHeaderNames, updated, snapshot), snapshot))
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Returns a new dictionary containing every <see cref="Bag"/> entry whose key
+        /// is not a local header (see <see cref="IsLocalHeader"/>). For transports that
+        /// serialise the whole bag in one go (e.g. SNS/SQS/Redis emit it as a single JSON
+        /// property), pass this to the serialiser instead of <see cref="Bag"/> directly.
+        /// </summary>
+        public Dictionary<string, object> BagWithoutLocalHeaders()
+        {
+            var locals = Volatile.Read(ref s_localHeaderNames);
+            var copy = new Dictionary<string, object>(Bag.Count);
+            foreach (var kv in Bag)
+            {
+                if (!locals.Contains(kv.Key))
+                    copy[kv.Key] = kv.Value;
+            }
+            return copy;
+        }
+
         /// <summary>
         /// A property bag that can be used for extended header attributes.
         /// Use camelCase for the key names if you intend to read it yourself, as when converted to and from Json serializers will tend convert the property

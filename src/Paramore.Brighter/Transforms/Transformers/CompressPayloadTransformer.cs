@@ -95,20 +95,20 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
     /// <returns>A message with a compressed body</returns>
     public async Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken = default)
     {
-        var bytes = message.Body.Bytes;
+        var memory = message.Body.Memory;
 
-        if (bytes is null)
+        if (memory.IsEmpty)
         {
             throw new ArgumentException("Cannot transform and empty body");
         }
-            
+
         //don't transform it too small
-        if (bytes.Length < _thresholdInBytes)
+        if (memory.Length < _thresholdInBytes)
         {
             return message;
         }
-            
-        using var input = new MemoryStream(bytes);
+
+        using var input = new ReadOnlyMemoryStream(memory);
         using var output = new MemoryStream();
             
         (Stream compressionStream, string mimeType) = CreateCompressionStream(output);
@@ -125,7 +125,11 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         contentType.CharSet = message.Header.ContentType?.CharSet ?? CharacterEncoding.UTF8.FromCharacterEncoding();
         message.Header.ContentType = contentType;
         message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
-        message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
+
+        if (output.TryGetBuffer(out var buffer))
+            message.Body = new MessageBody(buffer.AsMemory(), contentType, CharacterEncoding.Raw);
+        else
+            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
 
         return message;
     }
@@ -143,10 +147,9 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
             return message;
         }
             
-        var bytes = message.Body.Bytes;
-        using var input = new MemoryStream(bytes);
+        using var input = new ReadOnlyMemoryStream(message.Body.Memory);
         using var output = new MemoryStream();
-            
+
         Stream deCompressionStream = CreateDecompressionStream(input);
 #if NETSTANDARD
             await deCompressionStream.CopyToAsync(output);
@@ -157,7 +160,12 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
 #endif
 
         var contentType = new ContentType((string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER]);
-        message.Body = new MessageBody(output.ToArray(), contentType);
+
+        if (output.TryGetBuffer(out var buffer))
+            message.Body = new MessageBody(buffer.AsMemory(), contentType);
+        else
+            message.Body = new MessageBody(output.ToArray(), contentType);
+
         message.Header.ContentType = contentType;
 
         return message;
@@ -171,19 +179,19 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
     /// <returns>A message with a compressed body</returns>
     public Message Wrap(Message message, Publication publication)
     {
-        var bytes = message.Body.Bytes;
+        var memory = message.Body.Memory;
 
-        if (bytes is null)
+        if (memory.IsEmpty)
         {
             throw new ArgumentException("Cannot transform and empty body");
         }
-            
+
         //don't transform it too small
-        if (bytes.Length < _thresholdInBytes) return message;
-            
-        using var input = new MemoryStream(bytes);
+        if (memory.Length < _thresholdInBytes) return message;
+
+        using var input = new ReadOnlyMemoryStream(memory);
         using var output = new MemoryStream();
-            
+
         (Stream compressionStream, string mimeType) = CreateCompressionStream(output);
         input.CopyTo(compressionStream);
         compressionStream.Close();
@@ -192,7 +200,11 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         var contentType = new ContentType(mimeType);
         message.Header.ContentType = contentType;
         message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
-        message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
+
+        if (output.TryGetBuffer(out var buffer))
+            message.Body = new MessageBody(buffer.AsMemory(), contentType, CharacterEncoding.Raw);
+        else
+            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.Raw);
 
         return message;
     }
@@ -210,17 +222,21 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
             return message;
         }
             
-        var bytes = message.Body.Bytes;
-        using var input = new MemoryStream(bytes);
+        using var input = new ReadOnlyMemoryStream(message.Body.Memory);
         using var output = new MemoryStream();
-            
+
         Stream deCompressionStream = CreateDecompressionStream(input);
         deCompressionStream.CopyTo(output);
         deCompressionStream.Close();
 
         var originalContentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
         var contentType = new ContentType(originalContentType);
-        message.Body = new MessageBody(output.ToArray(), contentType);
+
+        if (output.TryGetBuffer(out var buffer))
+            message.Body = new MessageBody(buffer.AsMemory(), contentType);
+        else
+            message.Body = new MessageBody(output.ToArray(), contentType);
+
         message.Header.ContentType = contentType;
 
         return message;
@@ -248,7 +264,7 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         }
     }
         
-    private Stream CreateDecompressionStream(MemoryStream compressed)
+    private Stream CreateDecompressionStream(Stream compressed)
     {
         switch (_compressionMethod)
         {
@@ -277,14 +293,22 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         {
             return false;
         }
-        
+
+        var span = message.Body.Memory.Span;
         return _compressionMethod switch
         {
+#if NETSTANDARD2_0
             CompressionMethod.GZip => message.Header.ContentType.ToString() == "application/gzip" &&
-                                      message.Body.Bytes.Length >= 2 &&
-                                      BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES,
+                                      span.Length >= 2 &&
+                                      (span[0] | (span[1] << 8)) == GZIP_LEAD_BYTES,
+#else
+            CompressionMethod.GZip => message.Header.ContentType.ToString() == "application/gzip" &&
+                                      span.Length >= 2 &&
+                                      BitConverter.ToUInt16(span) == GZIP_LEAD_BYTES,
+#endif
             CompressionMethod.Zlib => message.Header.ContentType.ToString() == "application/deflate" &&
-                                      message.Body.Bytes[0] == ZLIB_LEAD_BYTE,
+                                      span.Length >= 1 &&
+                                      span[0] == ZLIB_LEAD_BYTE,
             CompressionMethod.Brotli => message.Header.ContentType.ToString() == "application/br",
             _ => false
         };
