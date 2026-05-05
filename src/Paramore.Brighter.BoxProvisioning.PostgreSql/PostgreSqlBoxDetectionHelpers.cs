@@ -84,8 +84,21 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName);
 
-        var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
-        return count > 0;
+        try
+        {
+            var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
+            return count > 0;
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+        {
+            // TOCTOU: another connection dropped __BrighterMigrationHistory between our
+            // existence check and this count query. In production this cannot happen — the
+            // history table is created once and never dropped — but parallel tests do drop
+            // it deliberately, and a "table dropped between two queries" outcome is
+            // semantically equivalent to "no history". Returning false lets the caller fall
+            // through to the runner, which re-creates the history table under its lock.
+            return false;
+        }
     }
 
     /// <summary>
