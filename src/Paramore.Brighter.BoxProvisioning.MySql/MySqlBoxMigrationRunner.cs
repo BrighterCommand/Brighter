@@ -25,16 +25,19 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MySqlConnector;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.BoxProvisioning.MySql;
 
 /// <summary>
-/// Runs box migrations against a MySQL database. Uses session-scoped <c>GET_LOCK</c> for
-/// concurrency control with a configurable timeout. After acquiring the lock the runner re-reads
-/// box-table state under the lock and dispatches into one of three paths (fresh / bootstrap /
-/// normal) per ADR 0057 §3 — the caller's <see cref="BoxTableState"/> is treated as a stale hint
-/// to defeat TOCTOU races.
+/// Runs box migrations against a MySQL database. Uses an injected
+/// <see cref="IMySqlAdvisoryLock"/> (default <see cref="MySqlAdvisoryLock"/>) for
+/// session-scoped concurrency control. After acquiring the lock the runner re-reads
+/// box-table state under the lock and dispatches into one of three paths (fresh /
+/// bootstrap / normal) per ADR 0057 §3 — the caller's <see cref="BoxTableState"/> is
+/// treated as a stale hint to defeat TOCTOU races.
 /// </summary>
 /// <remarks>
 /// Unlike MSSQL/Postgres, MySQL DDL has implicit per-statement commit (ADR 0057 §5a) so the
@@ -43,11 +46,38 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// next invocation" rather than whole-chain rollback. The history table's PK on
 /// <c>(SchemaName, BoxTableName, MigrationVersion)</c> ensures concurrent racers cannot double-stamp.
 /// </remarks>
-public class MySqlBoxMigrationRunner(
-    IAmARelationalDatabaseConfiguration configuration,
-    TimeSpan lockTimeout) : IAmABoxMigrationRunner
+public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
+
+    private readonly IAmARelationalDatabaseConfiguration _configuration;
+    private readonly TimeSpan _lockTimeout;
+    private readonly IMySqlAdvisoryLock _advisoryLock;
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Constructs a runner with the default advisory-lock implementation and the Brighter
+    /// application logger.
+    /// </summary>
+    /// <param name="configuration">Database configuration providing the connection string.</param>
+    /// <param name="lockTimeout">Maximum time to wait while acquiring the migration advisory
+    /// lock before giving up with <see cref="TimeoutException"/>.</param>
+    /// <param name="advisoryLock">Optional advisory-lock collaborator. Defaults to a new
+    /// <see cref="MySqlAdvisoryLock"/> instance — substitutable for tests and for integrators
+    /// per ADR 0057 §5b.</param>
+    /// <param name="logger">Optional logger. Defaults to <c>ApplicationLogging.CreateLogger</c>
+    /// of this runner type.</param>
+    public MySqlBoxMigrationRunner(
+        IAmARelationalDatabaseConfiguration configuration,
+        TimeSpan lockTimeout,
+        IMySqlAdvisoryLock? advisoryLock = null,
+        ILogger? logger = null)
+    {
+        _configuration = configuration;
+        _lockTimeout = lockTimeout;
+        _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
+        _logger = logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>();
+    }
 
     /// <inheritdoc />
     public async Task MigrateAsync(
@@ -67,10 +97,12 @@ public class MySqlBoxMigrationRunner(
         // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
         ValidateMigrationsMonotonic(effectiveSchema, tableName, migrations);
 
-        using var connection = new MySqlConnection(EnsureAllowUserVariables(configuration.ConnectionString));
+        var lockKey = MySqlMigrationLockName.For(tableName);
+
+        using var connection = new MySqlConnection(EnsureAllowUserVariables(_configuration.ConnectionString));
         await connection.OpenAsync(cancellationToken);
 
-        await AcquireLockAsync(connection, tableName, cancellationToken);
+        await _advisoryLock.AcquireAsync(connection, lockKey, _lockTimeout, cancellationToken);
 
         try
         {
@@ -99,7 +131,15 @@ public class MySqlBoxMigrationRunner(
         }
         finally
         {
-            await ReleaseLockAsync(connection, tableName, cancellationToken);
+            var releaseResult = await _advisoryLock.ReleaseAsync(connection, lockKey, cancellationToken);
+            if (releaseResult is not true)
+            {
+                var resultMarker = releaseResult is null ? "NULL" : "0";
+                _logger.LogWarning(
+                    "MySQL advisory lock for migration of '{TableName}' (key '{LockKey}') was not released by this session: RELEASE_LOCK returned {Result} ({ResultMarker} = {ResultMeaning}). This is likely a Brighter defect — please report it.",
+                    tableName, lockKey, resultMarker, resultMarker,
+                    releaseResult is null ? "lock did not exist" : "lock held by another session");
+            }
         }
     }
 
@@ -197,39 +237,6 @@ public class MySqlBoxMigrationRunner(
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private async Task AcquireLockAsync(
-        MySqlConnection connection, string tableName,
-        CancellationToken cancellationToken)
-    {
-        var lockName = MySqlMigrationLockName.For(tableName);
-        var timeoutSeconds = (int)lockTimeout.TotalSeconds;
-
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT GET_LOCK(@LockName, @Timeout)";
-        command.Parameters.AddWithValue("@LockName", lockName);
-        command.Parameters.AddWithValue("@Timeout", timeoutSeconds);
-
-        var result = await command.ExecuteScalarAsync(cancellationToken);
-        if (result == null || Convert.ToInt32(result) != 1)
-        {
-            throw new TimeoutException(
-                $"Could not acquire migration lock for '{tableName}' within {lockTimeout.TotalSeconds}s.");
-        }
-    }
-
-    private static async Task ReleaseLockAsync(
-        MySqlConnection connection, string tableName,
-        CancellationToken cancellationToken)
-    {
-        var lockName = MySqlMigrationLockName.For(tableName);
-
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT RELEASE_LOCK(@LockName)";
-        command.Parameters.AddWithValue("@LockName", lockName);
-
-        await command.ExecuteScalarAsync(cancellationToken);
-    }
-
     private static async Task EnsureHistoryTableAsync(
         MySqlConnection connection, CancellationToken cancellationToken)
     {
@@ -280,7 +287,7 @@ VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
 
     private string DatabaseName()
     {
-        var builder = new MySqlConnectionStringBuilder(configuration.ConnectionString);
+        var builder = new MySqlConnectionStringBuilder(_configuration.ConnectionString);
         return builder.Database;
     }
 

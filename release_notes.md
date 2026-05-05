@@ -36,7 +36,11 @@ builder.UseBoxProvisioning(opts =>
 
 #### Additive: per-backend advisory-lock abstraction
 
-`Paramore.Brighter.BoxProvisioning.PostgreSql` now exposes `IPostgreSqlAdvisoryLock` (with default implementation `PostgreSqlAdvisoryLock`) so the runner's session-level lock collaborator is substitutable for tests and for advanced integrators (custom connection-pool sharing, external lock-key derivation). The interface owns `pg_try_advisory_lock` / `pg_advisory_unlock` SQL; lock-key derivation stays at the runner. `PostgreSqlBoxMigrationRunner` gains two additive optional constructor parameters (`IPostgreSqlAdvisoryLock?` and `Microsoft.Extensions.Logging.ILogger?`); existing two-arg construction continues to work unchanged. The runner now logs a Warning when `pg_advisory_unlock` returns `false` at release time (previously discarded silently). MySQL and MSSQL siblings (`IMySqlAdvisoryLock`, `IMsSqlAdvisoryLock`) ship later in this release. See ADR 0057 §5b.
+The session-level migration-lock collaborator is now substitutable per backend, so tests and advanced integrators (custom connection-pool sharing, external lock-key derivation) can plug in their own implementation. Each runner gains two additive optional constructor parameters (the lock interface plus `Microsoft.Extensions.Logging.ILogger?`); existing two-arg construction continues to work unchanged. Lock-key derivation stays at the runner; the abstraction owns the lock SQL. See ADR 0057 §5b.
+
+* **PostgreSQL**: `IPostgreSqlAdvisoryLock` / `PostgreSqlAdvisoryLock` (in `Paramore.Brighter.BoxProvisioning.PostgreSql`). Owns `pg_try_advisory_lock` / `pg_advisory_unlock`. Runner logs a Warning when `pg_advisory_unlock` returns `false` at release time (previously discarded silently).
+* **MySQL**: `IMySqlAdvisoryLock` / `MySqlAdvisoryLock` (in `Paramore.Brighter.BoxProvisioning.MySql`). Owns `GET_LOCK` / `RELEASE_LOCK`. Release returns `bool?` (`true` released by us, `false` held by another, `null` did not exist); runner logs a Warning on any non-`true` outcome, naming the result code, table name, and lock key. Lock-key derivation continues to flow through the existing public `MySqlMigrationLockName.For` helper.
+* **MSSQL**: sibling `IMsSqlAdvisoryLock` ships later in this release.
 
 #### Behaviour notes
 
