@@ -28,6 +28,12 @@
     </ItemGroup>
 
     <ItemGroup>
+      <None Update="xunit.runner.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.MsSql\Paramore.Brighter.BoxProvisioning.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.MsSql\Paramore.Brighter.Inbox.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.MsSql\Paramore.Brighter.Locking.MsSql.csproj" />
