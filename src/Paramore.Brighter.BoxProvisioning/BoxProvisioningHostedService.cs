@@ -31,21 +31,25 @@ public class BoxProvisioningHostedService : IHostedService
 
         foreach (var provisioner in ordered)
         {
-            _logger.LogInformation("Provisioning {BoxType}...", provisioner.BoxType);
+            _logger.LogInformation(
+                "Provisioning {BoxType} '{BoxTableName}'...",
+                provisioner.BoxType, provisioner.BoxTableName);
             try
             {
                 await provisioner.ProvisionAsync(cancellationToken);
-                _logger.LogInformation("Provisioned {BoxType} successfully", provisioner.BoxType);
+                _logger.LogInformation(
+                    "Provisioned {BoxType} '{BoxTableName}' successfully",
+                    provisioner.BoxType, provisioner.BoxTableName);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Failed to provision {BoxType}. The application cannot start " +
+                    "Failed to provision {BoxType} '{BoxTableName}'. The application cannot start " +
                     "without a valid box table. Check the database connection " +
                     "string and ensure the database is reachable.",
-                    provisioner.BoxType);
+                    provisioner.BoxType, provisioner.BoxTableName);
                 throw new ConfigurationException(
-                    $"Box provisioning failed for {provisioner.BoxType}. " +
+                    $"Box provisioning failed for {provisioner.BoxType} '{provisioner.BoxTableName}'. " +
                     $"See inner exception for details.", ex);
             }
         }

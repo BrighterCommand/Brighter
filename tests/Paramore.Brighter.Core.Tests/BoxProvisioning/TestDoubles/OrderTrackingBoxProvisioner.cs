@@ -10,6 +10,7 @@ internal class OrderTrackingBoxProvisioner : IAmABoxProvisioner
     private readonly List<BoxType> _callOrder;
 
     public BoxType BoxType { get; }
+    public string BoxTableName { get; } = "stub_box";
 
     public OrderTrackingBoxProvisioner(BoxType boxType, List<BoxType> callOrder)
     {

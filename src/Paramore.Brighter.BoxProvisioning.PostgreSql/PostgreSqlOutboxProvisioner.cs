@@ -38,6 +38,7 @@ public class PostgreSqlOutboxProvisioner(
     IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
     public BoxType BoxType => BoxType.Outbox;
+    public string BoxTableName => configuration.OutBoxTableName;
 
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)

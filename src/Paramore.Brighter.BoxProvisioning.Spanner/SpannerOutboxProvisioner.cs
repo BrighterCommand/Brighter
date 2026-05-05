@@ -23,6 +23,7 @@ public class SpannerOutboxProvisioner(
     };
 
     public BoxType BoxType => BoxType.Outbox;
+    public string BoxTableName => configuration.OutBoxTableName;
 
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)

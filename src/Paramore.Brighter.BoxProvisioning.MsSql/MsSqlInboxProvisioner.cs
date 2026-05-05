@@ -37,6 +37,7 @@ public class MsSqlInboxProvisioner(
     IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
 {
     public BoxType BoxType => BoxType.Inbox;
+    public string BoxTableName => configuration.InBoxTableName;
 
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
