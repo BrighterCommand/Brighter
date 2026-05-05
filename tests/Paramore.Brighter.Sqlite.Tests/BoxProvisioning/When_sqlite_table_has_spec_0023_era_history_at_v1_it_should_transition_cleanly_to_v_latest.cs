@@ -65,8 +65,8 @@ public class When_sqlite_table_has_spec_0023_era_history_at_v1_it_should_transit
         Assert.Equal(columnsBefore, await GetTableColumns());
 
         //Assert — V1 row preserved with its original spec-0023-era description (the runner's
-        //IsMigrationAppliedAsync gate sees V1 already in history and skips it entirely);
-        //V2..V7 inserted by the normal path with their per-migration descriptions.
+        //normal-path `migration.Version <= maxVersion` filter sees V1 <= maxVersion=1 and skips
+        //it entirely); V2..V7 inserted by the normal path with their per-migration descriptions.
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest, rowsByVersion.Count);
         Assert.Equal(Spec0023EraDescription, rowsByVersion[1]);

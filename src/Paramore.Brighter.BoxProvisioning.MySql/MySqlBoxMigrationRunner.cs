@@ -217,10 +217,6 @@ public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
         {
             if (migration.Version <= maxVersion) continue;
 
-            if (await IsMigrationAppliedAsync(
-                    connection, schemaName, tableName, migration.Version, cancellationToken))
-                continue;
-
             await ExecuteUpScriptAsync(connection, migration, cancellationToken);
             await InsertHistoryRowAsync(
                 connection, schemaName, tableName,
@@ -251,22 +247,6 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
     PRIMARY KEY (`SchemaName`, `BoxTableName`, `MigrationVersion`)
 ) ENGINE = InnoDB";
         await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    private static async Task<bool> IsMigrationAppliedAsync(
-        MySqlConnection connection, string schemaName, string tableName,
-        int version, CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateCommand();
-        command.CommandText = $@"
-SELECT COUNT(1) FROM `{MIGRATION_HISTORY_TABLE}`
-WHERE `SchemaName` = @SchemaName AND `BoxTableName` = @BoxTableName AND `MigrationVersion` = @Version";
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@Version", version);
-
-        var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
-        return count > 0;
     }
 
     private static async Task InsertHistoryRowAsync(

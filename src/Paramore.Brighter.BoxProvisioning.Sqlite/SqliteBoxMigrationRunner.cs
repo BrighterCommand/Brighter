@@ -223,10 +223,6 @@ public class SqliteBoxMigrationRunner(
         {
             if (migration.Version <= maxVersion) continue;
 
-            if (await IsMigrationAppliedAsync(
-                    connection, transaction, tableName, migration.Version, cancellationToken))
-                continue;
-
             await ApplyOrSkipAsync(connection, transaction, tableName, migration, cancellationToken);
         }
     }
@@ -371,22 +367,6 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
     PRIMARY KEY ([BoxTableName], [MigrationVersion])
 )";
         await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    private static async Task<bool> IsMigrationAppliedAsync(
-        SqliteConnection connection, SqliteTransaction transaction,
-        string tableName, int version, CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = $@"
-SELECT COUNT(1) FROM [{MIGRATION_HISTORY_TABLE}]
-WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @Version";
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@Version", version);
-
-        var count = Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken));
-        return count > 0;
     }
 
     private static async Task InsertHistoryRowAsync(

@@ -205,11 +205,6 @@ public class MsSqlBoxMigrationRunner(
         {
             if (migration.Version <= maxVersion) continue;
 
-            if (await IsMigrationAppliedAsync(
-                    connection, transaction, schemaName, tableName,
-                    migration.Version, cancellationToken))
-                continue;
-
             await ExecuteUpScriptAsync(connection, transaction, migration, cancellationToken);
             await InsertHistoryRowAsync(
                 connection, transaction, schemaName, tableName,
@@ -269,24 +264,6 @@ END";
         command.Transaction = transaction;
         command.CommandText = migration.UpScript;
         await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    private static async Task<bool> IsMigrationAppliedAsync(
-        SqlConnection connection, SqlTransaction transaction,
-        string schemaName, string tableName,
-        int version, CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = $@"
-SELECT COUNT(1) FROM [{HISTORY_TABLE_SCHEMA}].[{MIGRATION_HISTORY_TABLE}]
-WHERE [SchemaName] = @SchemaName AND [BoxTableName] = @BoxTableName AND [MigrationVersion] = @Version";
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@Version", version);
-
-        var count = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
-        return count > 0;
     }
 
     private static async Task InsertHistoryRowAsync(
