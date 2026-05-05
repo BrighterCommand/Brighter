@@ -191,7 +191,7 @@ The bootstrap-path error message branches on this: `-1` → "Table *{name}* exis
 **Normal path** (`TableExists && HistoryExists`):
 - Acquire advisory lock
 - Read `MAX(MigrationVersion)` for `(SchemaName, BoxTableName)`
-- Run migrations above MAX (each UpScript idempotent; `IsMigrationAppliedAsync` check before each as defence-in-depth)
+- Run migrations above MAX (each UpScript idempotent — see §5; the `migration.Version <= maxVersion` filter is the sole gate. With monotonically-ascending contiguous migrations enforced at runner construction, `maxVersion` was just read inside the lock-bearing transaction, and nothing greater than `maxVersion` can be in history, so a per-migration `IsMigrationAppliedAsync` check is redundant and not run)
 - Release lock
 
 **Why V1 does not need to be idempotent**: V1 is the full `CREATE TABLE` from the current builder, and the three-path logic guarantees it runs only when `!TableExists` *and* no concurrent instance has since created it (re-checked under lock). V2+ UpScripts MUST be idempotent per §5 because they may run on any intermediate schema state — including post-bootstrap and post-failed-partial-migration.
@@ -378,7 +378,6 @@ No `IAmABoxMigration` list is exposed by Spanner. The provisioner holds its own 
 │  else:                                                         │
 │      let max = MAX(MigrationVersion) from history             │
 │      foreach M in migrations where M.Version > max:           │
-│          IsMigrationAppliedAsync check                        │
 │          apply M.UpScript                                     │
 │          insert history row at M.Version                      │
 │                                                                │

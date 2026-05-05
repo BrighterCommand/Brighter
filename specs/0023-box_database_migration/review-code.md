@@ -69,7 +69,9 @@ The existing concurrency tests (`When_multiple_mssql_provisioners_run_concurrent
 
 ---
 
-### 3. `SchemaName` added to `IAmARelationalDatabaseConfiguration` as a plain abstract member — not as a default interface member — breaks external implementors (Score: 72)
+### 3. `SchemaName` added to `IAmARelationalDatabaseConfiguration` as a plain abstract member — not as a default interface member — breaks external implementors (Score: 72) — **CLOSED by `297ca030f`**
+
+> **Resolution (2026-05-04)**: Closed by commit `297ca030f`. ADR 0053 §10 and `tasks.md` were updated to document that the default-interface-member approach is not viable on `netstandard2.0` (which Brighter still targets) and the source-breaking consequence of `SchemaName` being a plain abstract member is accepted; `release_notes.md` carries the breaking-change entry. The recommendation's alternative path (a separate optional `IAmASchemaQualifiedConfiguration` interface checked for at runtime) was considered and rejected as accidental complexity for the small number of expected external implementors.
 
 Task 0.1 and ADR 0053 §10 both explicitly require `SchemaName` to be added "as a **default interface member**: `string? SchemaName => null;`" to avoid breaking external implementors. The actual implementation at `src/Paramore.Brighter/IAmARelationalDatabaseConfiguration.cs:45-48` declares it as a plain abstract member:
 
