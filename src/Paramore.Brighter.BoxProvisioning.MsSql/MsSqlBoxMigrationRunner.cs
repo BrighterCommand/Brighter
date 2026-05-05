@@ -26,19 +26,24 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.BoxProvisioning.MsSql;
 
 /// <summary>
-/// Runs box migrations against a MSSQL database. Uses sp_getapplock for concurrency control
-/// and a single transaction for all-or-nothing semantics. After acquiring the lock the runner
-/// re-reads box-table state under the lock and dispatches into one of three paths
+/// Runs box migrations against a MSSQL database. Uses an injected
+/// <see cref="IMsSqlAdvisoryLock"/> (default <see cref="MsSqlAdvisoryLock"/>) for concurrency
+/// control and a single transaction for all-or-nothing semantics. After acquiring the lock
+/// the runner re-reads box-table state under the lock and dispatches into one of three paths
 /// (fresh / bootstrap / normal) per ADR 0057 §3 — the caller's <see cref="BoxTableState"/>
 /// is treated as a stale hint to defeat TOCTOU races.
 /// </summary>
 public class MsSqlBoxMigrationRunner(
     IAmARelationalDatabaseConfiguration configuration,
-    TimeSpan lockTimeout) : IAmABoxMigrationRunner
+    TimeSpan lockTimeout,
+    IMsSqlAdvisoryLock? advisoryLock = null,
+    ILogger? logger = null) : IAmABoxMigrationRunner
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
     // The history table is global — one row per (SchemaName, BoxTableName, MigrationVersion)
@@ -50,6 +55,8 @@ public class MsSqlBoxMigrationRunner(
     // exceeding ~24.85 days silently overflows on cast and may produce -1 — which sp_getapplock
     // interprets as "wait indefinitely". Validate at construction to fail fast.
     private readonly TimeSpan _lockTimeout = ValidateLockTimeout(lockTimeout);
+    private readonly IMsSqlAdvisoryLock _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
+    private readonly ILogger _logger = logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>();
 
     /// <inheritdoc />
     public async Task MigrateAsync(
@@ -77,9 +84,12 @@ public class MsSqlBoxMigrationRunner(
         var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
 #endif
 
+        var lockResource = $"BrighterMigration_{tableName}";
+
         try
         {
-            await AcquireLockAsync(connection, transaction, tableName, cancellationToken);
+            await _advisoryLock.AcquireAsync(
+                connection, transaction, lockResource, _lockTimeout, cancellationToken);
             await EnsureHistoryTableAsync(connection, transaction, cancellationToken);
 
             var tableExistsNow = await MsSqlBoxDetectionHelpers.DoesTableExistAsync(
@@ -204,42 +214,6 @@ public class MsSqlBoxMigrationRunner(
             await InsertHistoryRowAsync(
                 connection, transaction, schemaName, tableName,
                 migration.Version, migration.Description, cancellationToken);
-        }
-    }
-
-    private async Task AcquireLockAsync(
-        SqlConnection connection, SqlTransaction transaction,
-        string tableName, CancellationToken cancellationToken)
-    {
-        var lockResource = $"BrighterMigration_{tableName}";
-        if (lockResource.Length > 255)
-        {
-            throw new ArgumentException(
-                $"sp_getapplock resource name '{lockResource}' exceeds the 255-character limit " +
-                $"(table name is {tableName.Length} chars). Use a shorter box table name.",
-                nameof(tableName));
-        }
-
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText =
-            "DECLARE @result INT; " +
-            "EXEC @result = sp_getapplock " +
-            "@Resource = @lockResourceName, " +
-            "@LockMode = 'Exclusive', " +
-            "@LockTimeout = @lockTimeoutMs, " +
-            "@LockOwner = 'Transaction'; " +
-            "SELECT @result;";
-        command.Parameters.AddWithValue("@lockResourceName", lockResource);
-        command.Parameters.AddWithValue("@lockTimeoutMs", (int)_lockTimeout.TotalMilliseconds);
-
-        var result = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
-
-        if (result < 0)
-        {
-            throw new TimeoutException(
-                $"Could not acquire migration lock for '{tableName}' within {_lockTimeout.TotalSeconds}s. " +
-                $"sp_getapplock returned {result}.");
         }
     }
 
