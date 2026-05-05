@@ -25,21 +25,22 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Npgsql;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
 /// <summary>
-/// Runs box migrations against a PostgreSQL database. Uses <c>pg_try_advisory_lock</c> for
-/// concurrency control with a retry loop bounded by <c>MigrationLockTimeout</c>, and a single
-/// <see cref="NpgsqlTransaction"/> for all-or-nothing semantics. After acquiring the lock the
-/// runner re-reads box-table state under the lock and dispatches into one of three paths
-/// (fresh / bootstrap / normal) per ADR 0057 §3 — the caller's <see cref="BoxTableState"/>
-/// is treated as a stale hint to defeat TOCTOU races.
+/// Runs box migrations against a PostgreSQL database. Uses an injected
+/// <see cref="IPostgreSqlAdvisoryLock"/> (default <see cref="PostgreSqlAdvisoryLock"/>) for
+/// concurrency control and a single <see cref="NpgsqlTransaction"/> for all-or-nothing
+/// semantics. After acquiring the lock the runner re-reads box-table state under the lock
+/// and dispatches into one of three paths (fresh / bootstrap / normal) per ADR 0057 §3 —
+/// the caller's <see cref="BoxTableState"/> is treated as a stale hint to defeat TOCTOU
+/// races.
 /// </summary>
-public class PostgreSqlBoxMigrationRunner(
-    IAmARelationalDatabaseConfiguration configuration,
-    TimeSpan lockTimeout) : IAmABoxMigrationRunner
+public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
     // The history table is global — one row per (SchemaName, BoxTableName, MigrationVersion)
@@ -48,7 +49,35 @@ public class PostgreSqlBoxMigrationRunner(
     // qualification an unqualified CREATE/SELECT/INSERT would land in whichever schema appears
     // first on search_path, scattering history rows across the cluster.
     private const string HISTORY_TABLE_SCHEMA = "public";
-    private const int BRIGHTER_LOCK_NAMESPACE = 74726;
+
+    private readonly IAmARelationalDatabaseConfiguration _configuration;
+    private readonly TimeSpan _lockTimeout;
+    private readonly IPostgreSqlAdvisoryLock _advisoryLock;
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Constructs a runner with the default advisory-lock implementation and the Brighter
+    /// application logger.
+    /// </summary>
+    /// <param name="configuration">Database configuration providing the connection string.</param>
+    /// <param name="lockTimeout">Maximum time to wait while acquiring the migration advisory
+    /// lock before giving up with <see cref="TimeoutException"/>.</param>
+    /// <param name="advisoryLock">Optional advisory-lock collaborator. Defaults to a new
+    /// <see cref="PostgreSqlAdvisoryLock"/> instance — substitutable for tests and for
+    /// integrators with custom lock-key derivation per ADR 0057 §5b.</param>
+    /// <param name="logger">Optional logger. Defaults to <c>ApplicationLogging.CreateLogger</c>
+    /// of this runner type.</param>
+    public PostgreSqlBoxMigrationRunner(
+        IAmARelationalDatabaseConfiguration configuration,
+        TimeSpan lockTimeout,
+        IPostgreSqlAdvisoryLock? advisoryLock = null,
+        ILogger? logger = null)
+    {
+        _configuration = configuration;
+        _lockTimeout = lockTimeout;
+        _advisoryLock = advisoryLock ?? new PostgreSqlAdvisoryLock();
+        _logger = logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>();
+    }
 
     /// <inheritdoc />
     public async Task MigrateAsync(
@@ -68,10 +97,12 @@ public class PostgreSqlBoxMigrationRunner(
         // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
         ValidateMigrationsMonotonic(effectiveSchema, tableName, migrations);
 
-        using var connection = new NpgsqlConnection(configuration.ConnectionString);
+        var lockKey = $"BrighterMigration_{tableName}";
+
+        using var connection = new NpgsqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await AcquireLockAsync(connection, tableName, cancellationToken);
+        await _advisoryLock.AcquireAsync(connection, lockKey, _lockTimeout, cancellationToken);
 
         try
         {
@@ -120,7 +151,13 @@ public class PostgreSqlBoxMigrationRunner(
         }
         finally
         {
-            await ReleaseLockAsync(connection, tableName, cancellationToken);
+            var held = await _advisoryLock.ReleaseAsync(connection, lockKey, cancellationToken);
+            if (!held)
+            {
+                _logger.LogWarning(
+                    "Postgres advisory lock for migration of '{TableName}' (key '{LockKey}') was not held by this session at release; pg_advisory_unlock returned false. This is likely a Brighter defect — please report it.",
+                    tableName, lockKey);
+            }
         }
     }
 
@@ -215,35 +252,6 @@ public class PostgreSqlBoxMigrationRunner(
         }
     }
 
-    private async Task AcquireLockAsync(
-        NpgsqlConnection connection, string tableName,
-        CancellationToken cancellationToken)
-    {
-        var lockKey = $"BrighterMigration_{tableName}";
-        var deadline = DateTime.UtcNow.Add(lockTimeout);
-        var delayMs = 100;
-
-        while (true)
-        {
-            using var command = connection.CreateCommand();
-            command.CommandText = "SELECT pg_try_advisory_lock(@ns, hashtext(@key))";
-            command.Parameters.AddWithValue("@ns", BRIGHTER_LOCK_NAMESPACE);
-            command.Parameters.AddWithValue("@key", lockKey);
-
-            var result = (bool)(await command.ExecuteScalarAsync(cancellationToken))!;
-            if (result) return;
-
-            if (DateTime.UtcNow >= deadline)
-            {
-                throw new TimeoutException(
-                    $"Could not acquire migration lock for '{tableName}' within {lockTimeout.TotalSeconds}s.");
-            }
-
-            await Task.Delay(delayMs, cancellationToken);
-            delayMs = Math.Min(delayMs * 2, 1000);
-        }
-    }
-
     private static void ValidateMigrationsMonotonic(
         string schemaName, string tableName, IReadOnlyList<IAmABoxMigration> migrations)
     {
@@ -258,20 +266,6 @@ public class PostgreSqlBoxMigrationRunner(
                     $"V{prev} followed by V{curr} (expected V{prev + 1}).");
             }
         }
-    }
-
-    private static async Task ReleaseLockAsync(
-        NpgsqlConnection connection, string tableName,
-        CancellationToken cancellationToken)
-    {
-        var lockKey = $"BrighterMigration_{tableName}";
-
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT pg_advisory_unlock(@ns, hashtext(@key))";
-        command.Parameters.AddWithValue("@ns", BRIGHTER_LOCK_NAMESPACE);
-        command.Parameters.AddWithValue("@key", lockKey);
-
-        await command.ExecuteScalarAsync(cancellationToken);
     }
 
     private static async Task EnsureHistoryTableAsync(

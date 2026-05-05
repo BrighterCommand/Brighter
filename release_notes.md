@@ -34,6 +34,10 @@ builder.UseBoxProvisioning(opts =>
 });
 ```
 
+#### Additive: per-backend advisory-lock abstraction
+
+`Paramore.Brighter.BoxProvisioning.PostgreSql` now exposes `IPostgreSqlAdvisoryLock` (with default implementation `PostgreSqlAdvisoryLock`) so the runner's session-level lock collaborator is substitutable for tests and for advanced integrators (custom connection-pool sharing, external lock-key derivation). The interface owns `pg_try_advisory_lock` / `pg_advisory_unlock` SQL; lock-key derivation stays at the runner. `PostgreSqlBoxMigrationRunner` gains two additive optional constructor parameters (`IPostgreSqlAdvisoryLock?` and `Microsoft.Extensions.Logging.ILogger?`); existing two-arg construction continues to work unchanged. The runner now logs a Warning when `pg_advisory_unlock` returns `false` at release time (previously discarded silently). MySQL and MSSQL siblings (`IMySqlAdvisoryLock`, `IMsSqlAdvisoryLock`) ship later in this release. See ADR 0057 §5b.
+
 #### Behaviour notes
 
 * Spec-0023-era `__BrighterMigrationHistory` rows at `MigrationVersion = 1` are still valid. The runner's normal path resumes from `MAX(V)`, the `IsMigrationAppliedAsync` gate skips the V1 row, and V2..V_latest are applied as ALTERs against the existing table. The original V1 description is preserved verbatim.
