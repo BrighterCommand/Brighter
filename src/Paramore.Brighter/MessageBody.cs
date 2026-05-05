@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Net.Mime;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -54,6 +55,23 @@ namespace Paramore.Brighter
         /// Zero-copy access to the body content.
         /// </summary>
         public ReadOnlyMemory<byte> Memory => _memory;
+
+        /// <summary>
+        /// Returns the underlying byte[] without copying when the memory is backed by an array.
+        /// Falls back to allocating a new array when the memory is not array-backed.
+        /// Use this when an API requires byte[] and <see cref="Memory"/> or Span cannot be used.
+        /// </summary>
+        public byte[] ToByteArray()
+        {
+            if (MemoryMarshal.TryGetArray(Memory, out ArraySegment<byte> segment)
+                && segment.Offset == 0
+                && segment.Count == segment.Array!.Length)
+            {
+                return segment.Array;
+            }
+
+            return Memory.ToArray();
+        }
 
         /// <summary>
         /// The type of message encoded into Bytes.  A hint for deserialization that 

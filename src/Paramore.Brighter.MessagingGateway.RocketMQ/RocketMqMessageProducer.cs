@@ -73,7 +73,7 @@ public class RocketMqMessageProducer(
         
         BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RocketMQ, message, instrumentation);
         var builder = new Org.Apache.Rocketmq.Message.Builder()
-            .SetBody(message.Body.Memory.ToArray())
+            .SetBody(message.Body.ToByteArray())
             .SetTopic(mqPublication.Topic!.Value);
 
         builder.AddProperty(HeaderNames.MessageId, message.Id)
