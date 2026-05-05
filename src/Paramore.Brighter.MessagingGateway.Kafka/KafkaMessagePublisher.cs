@@ -71,7 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 Headers = headers,
                 Key = message.Header.PartitionKey,
-                Value = message.Body.Bytes
+                Value = message.Body.Memory.ToArray()
             };
 
             return kafkaMessage;

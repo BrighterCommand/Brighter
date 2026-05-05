@@ -45,8 +45,8 @@ namespace Paramore.Brighter
         /// <summary>
         /// The message body as a byte array.
         /// Allocates a new array on every call. Prefer <see cref="Memory"/> for zero-copy access.
-        /// This property will be marked [Obsolete] in V11 once internal callers are migrated.
         /// </summary>
+        [Obsolete("Use Memory for zero-copy access. This property allocates on every call.")]
         public byte[] Bytes => _memory.ToArray();
 
         /// <summary>

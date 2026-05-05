@@ -93,7 +93,11 @@ public class JustSayingTransform : IAmAMessageTransform, IAmAMessageTransformAsy
     {
         try
         {
-            var node = JsonNode.Parse(message.Body.Bytes, 
+#if NETSTANDARD2_0
+            var node = JsonNode.Parse(message.Body.Memory.ToArray(),
+#else
+            var node = JsonNode.Parse(message.Body.Memory.Span,
+#endif
                 new JsonNodeOptions { PropertyNameCaseInsensitive = !_caseSensitive }, 
                 new JsonDocumentOptions { MaxDepth = 0 });
         

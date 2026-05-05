@@ -212,7 +212,7 @@ The work is ordered so that each phase builds on the previous:
 ### Negative
 
 - `MessageBody` becomes slightly more complex with dual storage (`_memory` + `_cachedValue`) and the backward-compatible `Bytes` property that copies.
-- Callers using `MessageBody.Bytes` still allocate — they need to migrate to `MessageBody.Memory` to get the benefit. This is an incremental migration, not a flag day. There are ~30 internal callers across transports, outboxes, and transformers. Once these are migrated to `Memory`, `Bytes` should be marked `[Obsolete]` (target: V11) to guide external consumers toward the zero-copy API.
+- `MessageBody.Bytes` is now marked `[Obsolete]`. All internal callers (~30 across transports, outboxes, and transformers) have been migrated to use `Memory`, `Memory.ToArray()`, or `Memory.Span` as appropriate. Third-party consumers will receive a compile warning guiding them to use `Memory` instead. The property will be removed in a future major version.
 - `#if NETSTANDARD2_0` conditional compilation increases in some files for the `Span<T>`-based overloads that are not available on `netstandard2.0`.
 - The `System.Memory` polyfill adds a transitive dependency for `netstandard2.0` consumers (though most modern projects already depend on it).
 

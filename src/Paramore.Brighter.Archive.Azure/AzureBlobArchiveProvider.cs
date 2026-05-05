@@ -27,10 +27,10 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
             return;
         }
 
-        if (message.Body.Bytes is null) throw new AggregateException("Messages must have a body to be archived");
+        if (message.Body.Memory.IsEmpty) throw new AggregateException("Messages must have a body to be archived");
 
         var opts = GetUploadOptions(message);
-        blobClient.Upload(BinaryData.FromBytes(message.Body.Bytes), opts);
+        blobClient.Upload(BinaryData.FromBytes(message.Body.Memory), opts);
     }
 
     /// <summary>
@@ -49,10 +49,10 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
             return;
         }
         
-        if (message.Body.Bytes is null) throw new AggregateException("Messages must have a body to be archived");
+        if (message.Body.Memory.IsEmpty) throw new AggregateException("Messages must have a body to be archived");
 
         var opts = GetUploadOptions(message);
-        await blobClient.UploadAsync(BinaryData.FromBytes(message.Body.Bytes), opts, cancellationToken);
+        await blobClient.UploadAsync(BinaryData.FromBytes(message.Body.Memory), opts, cancellationToken);
     }
 
     /// <summary>

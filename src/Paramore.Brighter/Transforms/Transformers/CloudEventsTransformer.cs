@@ -139,7 +139,11 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     {
         try
         {
-            var cloudEvents = JsonSerializer.Deserialize<JsonEvent>(message.Body.Bytes, JsonSerialisationOptions.Options);
+            #if NETSTANDARD2_0
+            var cloudEvents = JsonSerializer.Deserialize<JsonEvent>(message.Body.Memory.ToArray(), JsonSerialisationOptions.Options);
+#else
+            var cloudEvents = JsonSerializer.Deserialize<JsonEvent>(message.Body.Memory.Span, JsonSerialisationOptions.Options);
+#endif
             if (cloudEvents == null)
             {
                 return message;
@@ -228,7 +232,11 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                 else if (contentType.Contains("application/octet-stream"))
                 {
                     // Base64 encode binary data and use data_base64
-                    dataBase64 = Convert.ToBase64String(message.Body.Bytes);
+#if NETSTANDARD2_0
+                    dataBase64 = Convert.ToBase64String(message.Body.Memory.ToArray());
+#else
+                    dataBase64 = Convert.ToBase64String(message.Body.Memory.Span);
+#endif
                 }
                 else
                 {
