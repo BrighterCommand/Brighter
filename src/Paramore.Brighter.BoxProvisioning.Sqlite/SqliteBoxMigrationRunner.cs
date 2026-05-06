@@ -155,7 +155,10 @@ public class SqliteBoxMigrationRunner(
         }
         catch
         {
-            try { await transaction.RollbackAsync(cancellationToken); } catch { /* connection may already be closed */ }
+            // Pass CancellationToken.None: if the caller's token is already signalled (host shutdown
+            // mid-migration), RollbackAsync(cancellationToken) would throw OperationCanceledException
+            // immediately and skip the rollback we are trying to perform.
+            try { await transaction.RollbackAsync(CancellationToken.None); } catch { /* connection may already be closed */ }
             throw;
         }
         finally

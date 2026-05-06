@@ -41,6 +41,13 @@ public class BoxProvisioningHostedService : IHostedService
                     "Provisioned {BoxType} '{BoxTableName}' successfully",
                     provisioner.BoxType, provisioner.BoxTableName);
             }
+            catch (OperationCanceledException)
+            {
+                // Propagate cancellation as-is. Wrapping it in ConfigurationException would
+                // misreport host-shutdown / startup-deadline timeouts as configuration errors —
+                // particularly confusing for k8s readiness-probe diagnostics.
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex,

@@ -137,7 +137,7 @@ public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
                 var resultMarker = releaseResult is null ? "NULL" : "0";
                 _logger.LogWarning(
                     "MySQL advisory lock for migration of '{TableName}' (key '{LockKey}') was not released by this session: RELEASE_LOCK returned {Result} ({ResultMarker} = {ResultMeaning}). This is likely a Brighter defect — please report it.",
-                    tableName, lockKey, resultMarker, resultMarker,
+                    tableName, lockKey, releaseResult, resultMarker,
                     releaseResult is null ? "lock did not exist" : "lock held by another session");
             }
         }
@@ -272,13 +272,10 @@ VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
     }
 
     /// <summary>
-    /// Ensures the connection string sets <c>AllowUserVariables=true</c>. The V2..V7 outbox/inbox
-    /// migrations (per ADR 0057 §5) use the MySQL <c>information_schema.columns</c> +
-    /// prepared-statement idempotency pattern, which depends on session-scoped user variables
-    /// (<c>SET @q = ...; PREPARE stmt FROM @q;</c>). MySqlConnector treats <c>@variable</c> tokens
-    /// as parameter markers by default and rejects them; this flag flips that behaviour so the
-    /// prepared-statement form executes correctly. Transparent to caller-supplied connection
-    /// strings — adds the flag if missing, preserves it if already set.
+    /// Validates that the supplied migration list is contiguous and ascending (V_k+1 follows V_k).
+    /// The V1-start invariant is enforced separately in <see cref="RunFreshPathAsync"/> because the
+    /// bootstrap and normal paths legitimately consume migration lists that begin above V1 (they
+    /// resume from <c>MAX(V)</c> in history rather than installing from scratch).
     /// </summary>
     private static void ValidateMigrationsMonotonic(
         string schemaName, string tableName, IReadOnlyList<IAmABoxMigration> migrations)
@@ -296,6 +293,15 @@ VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
         }
     }
 
+    /// <summary>
+    /// Ensures the connection string sets <c>AllowUserVariables=true</c>. The V2..V7 outbox/inbox
+    /// migrations (per ADR 0057 §5) use the MySQL <c>information_schema.columns</c> +
+    /// prepared-statement idempotency pattern, which depends on session-scoped user variables
+    /// (<c>SET @q = ...; PREPARE stmt FROM @q;</c>). MySqlConnector treats <c>@variable</c> tokens
+    /// as parameter markers by default and rejects them; this flag flips that behaviour so the
+    /// prepared-statement form executes correctly. Transparent to caller-supplied connection
+    /// strings — adds the flag if missing, preserves it if already set.
+    /// </summary>
     private static string EnsureAllowUserVariables(string connectionString)
     {
         var builder = new MySqlConnectionStringBuilder(connectionString)

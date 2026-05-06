@@ -24,6 +24,16 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 ///   <item><description>Existing table without history (bootstrap): verifies the discriminator column (<c>HeaderBag</c> for outbox / <c>CommandBody</c> for inbox); absence throws <see cref="ConfigurationException"/>; presence stamps <c>V_latest</c> with the ADR §6 "no known legacy installations" description (A-2).</description></item>
 ///   <item><description>Existing table with history (normal): compares <c>MAX(V)</c> to <c>V_latest</c>; equality is a no-op; <c>MAX(V) &gt; V_latest</c> throws <see cref="ConfigurationException"/>; <c>MAX(V) &lt; V_latest</c> is undefined per ADR §6 (manual recovery required) and throws the same out-of-sync error.</description></item>
 /// </list>
+/// <para>
+/// TOCTOU strategy: unlike the relational runners (MSSQL/PostgreSQL/MySQL/SQLite) which re-detect
+/// table and history state under an advisory lock, this runner consumes the caller-supplied
+/// <see cref="BoxTableState"/> directly. TOCTOU protection is provided by three Spanner-native
+/// mechanisms: (a) Spanner serializes DDL internally so concurrent <c>CREATE TABLE</c> calls do
+/// not interleave; (b) <c>ExecuteDdlSafeAsync</c> swallows <c>AlreadyExists</c> /
+/// <c>FailedPrecondition</c> on DDL replay (crash safety); (c) the history insert is gated by
+/// <c>IsMigrationAppliedAsync</c> against the PK <c>(BoxTableName, MigrationVersion)</c>, so a
+/// racing process cannot double-stamp. No application-level lock is therefore required.
+/// </para>
 /// </remarks>
 public class SpannerBoxMigrationRunner(
     IAmARelationalDatabaseConfiguration configuration) : IAmABoxMigrationRunner

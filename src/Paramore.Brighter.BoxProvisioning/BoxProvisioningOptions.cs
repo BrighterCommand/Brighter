@@ -17,6 +17,15 @@ public class BoxProvisioningOptions
     /// <summary>
     /// Timeout for acquiring a database-level migration lock. Default: 30 seconds.
     /// </summary>
+    /// <remarks>
+    /// In a rolling deploy with N replicas, contended migrations serialize behind the lock — worst
+    /// case <c>StartAsync</c> blocks for up to <c>MigrationLockTimeout × (N − 1)</c> per replica.
+    /// In Kubernetes this can collide with readiness probes: if
+    /// <c>initialDelaySeconds + (failureThreshold × periodSeconds)</c> is shorter than that
+    /// window, the pod is killed before migrations complete and the deployment churns. Either size
+    /// the probe's tolerance to cover the worst-case window, or shorten this timeout (at the cost
+    /// of more retries on contention).
+    /// </remarks>
     public TimeSpan MigrationLockTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>

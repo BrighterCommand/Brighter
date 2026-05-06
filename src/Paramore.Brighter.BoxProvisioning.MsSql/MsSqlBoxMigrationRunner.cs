@@ -240,10 +240,13 @@ public class MsSqlBoxMigrationRunner(
         // Filter sys.tables by both name AND schema_id — without the schema_id filter the
         // existence check misfires when any other schema happens to contain a table by that name,
         // skipping the [dbo] create and breaking subsequent INSERT/SELECT statements.
+        // The WHERE values are parameterised (matching DoesTableExistAsync); the bracketed
+        // identifiers in the CREATE TABLE body must remain inline because T-SQL DDL does not
+        // accept bind parameters for object names.
         command.CommandText = $@"
 IF NOT EXISTS (
     SELECT 1 FROM sys.tables
-    WHERE name = '{MIGRATION_HISTORY_TABLE}' AND schema_id = SCHEMA_ID('{HISTORY_TABLE_SCHEMA}')
+    WHERE name = @HistoryTableName AND schema_id = SCHEMA_ID(@HistorySchema)
 )
 BEGIN
     CREATE TABLE [{HISTORY_TABLE_SCHEMA}].[{MIGRATION_HISTORY_TABLE}] (
@@ -256,6 +259,8 @@ BEGIN
             PRIMARY KEY ([SchemaName], [BoxTableName], [MigrationVersion])
     );
 END";
+        command.Parameters.AddWithValue("@HistoryTableName", MIGRATION_HISTORY_TABLE);
+        command.Parameters.AddWithValue("@HistorySchema", HISTORY_TABLE_SCHEMA);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
