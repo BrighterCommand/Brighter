@@ -52,6 +52,10 @@ public static class PostgreSqlInboxMigrations
     /// <returns>An ordered list with a single V1 migration.</returns>
     public static IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration config)
     {
+        Identifiers.AssertSafe(
+            config.InBoxTableName,
+            nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
+
         return
         [
             new BoxMigration(

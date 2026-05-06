@@ -71,6 +71,9 @@ public static class PostgreSqlOutboxMigrations
         var schema = config.SchemaName ?? DefaultSchema;
         var table = config.OutBoxTableName;
 
+        Identifiers.AssertSafe(table, nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
+        Identifiers.AssertSafe(schema, nameof(IAmARelationalDatabaseConfiguration.SchemaName));
+
         return
         [
             new BoxMigration(
