@@ -556,7 +556,7 @@ namespace Paramore.Brighter
                     .OrderBy(oe=>oe.Message.Header.TimeStamp)
                     .Where(oe => 
                         oe.TimeFlushed == DateTimeOffset.MinValue 
-                        && oe.WriteTime <= sentBefore.DateTime
+                        && oe.WriteTime <= sentBefore
                         && !trippedTopics.Contains(oe.Message.Header.Topic))
                     .Take(pageSize)
                     .Select(oe => oe.Message).ToArray();
@@ -616,7 +616,7 @@ namespace Paramore.Brighter
                     .OrderBy(oe => oe.Message.Header.TimeStamp)
                     .Where(oe =>
                         oe.TimeFlushed == DateTimeOffset.MinValue
-                        && oe.WriteTime <= sentBefore.DateTime)
+                        && oe.WriteTime <= sentBefore)
                     .Take(maxCount)
                     .Count();
                 return outstandingMessageCount;

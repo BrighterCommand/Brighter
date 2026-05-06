@@ -13,7 +13,10 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         [Fact]
         public async Task When_entry_limit_is_minus_one_no_compaction()
         {
-            //Arrange
+            //Arrange — use a low ExpirationScanInterval so the compaction cooldown doesn't
+            //mask the test. With EntryLimit = -1 the guard returns immediately; without it,
+            //EnforceCapacityLimit would compute upperSize = -1 and (count >= -1) is always
+            //true, so compaction would fire and remove entries.
             const int messageCount = 100;
 
             var timeProvider = new FakeTimeProvider();
@@ -28,35 +31,42 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
 
             var context = new RequestContext();
 
-            //Add many messages — well beyond default 2048 limit
+            //Add messages and mark them dispatched so they would be eligible for compaction
             for (int i = 0; i < messageCount; i++)
             {
-                outbox.Add(new MessageTestDataBuilder(), context);
+                Message msg = new MessageTestDataBuilder();
+                outbox.Add(msg, context);
+                outbox.MarkDispatched(msg.Id, context);
             }
 
-            //Act — no compaction should have occurred
+            //Advance past the compaction cooldown so EnforceCapacityLimit would proceed
+            //if the EntryLimit != -1 guard were absent
+            timeProvider.Advance(TimeSpan.FromMilliseconds(200));
+
+            //Act — trigger EnforceCapacityLimit via another Add
+            outbox.Add(new MessageTestDataBuilder(), context);
+
             await Task.Delay(200); //Give background tasks time to run (if any)
 
-            //Assert — all messages still present (compaction disabled)
-            Assert.Equal(messageCount, outbox.EntryCount);
+            //Assert — all messages still present (compaction disabled by EntryLimit = -1)
+            Assert.Equal(messageCount + 1, outbox.EntryCount);
 
             //Now verify expiry still works for dispatched messages
-            var dispatchedId = Guid.NewGuid().ToString();
-            outbox.Add(new MessageTestDataBuilder().WithId(dispatchedId), context);
-            outbox.MarkDispatched(dispatchedId, context);
-
-            //Advance past TTL and scan interval
             timeProvider.Advance(TimeSpan.FromMilliseconds(1000));
 
             //Trigger expiry via an outbox operation
-            await outbox.GetAsync(dispatchedId, context);
+            await outbox.GetAsync(Guid.NewGuid().ToString(), context);
 
-            await Task.Delay(500); //Give the background expiry sweep time to run
+            //Poll for background expiry sweep to complete
+            var retries = 0;
+            while (outbox.EntryCount > 1 && retries < 20)
+            {
+                await Task.Delay(100);
+                retries++;
+            }
 
-            //Assert — dispatched message expired, but all undispatched messages remain
-            var dispatchedResult = await outbox.GetAsync(dispatchedId, context);
-            Assert.True(dispatchedResult.IsEmpty, "Dispatched message should still be removed by expiry when EntryLimit is -1");
-            Assert.Equal(messageCount, outbox.EntryCount);
+            //Assert — dispatched messages expired, undispatched message remains
+            Assert.Equal(1, outbox.EntryCount);
         }
     }
 }

@@ -323,7 +323,8 @@ This is the correct behaviour because the messages may have been dispatched by a
 ### Negative
 
 - **Breaking change for any external subclass of `InMemoryBox<T>`.** Any third-party code that extends `InMemoryBox<T>` will need to implement both `RemoveExpiredMessages` and `Compact`. This is unlikely to affect anyone in practice, as the class is not designed for external extension, but it is a binary-breaking change.
-- **More configuration surface.** Four new properties on `ProducersConfiguration` add API surface. Mitigated by sensible defaults matching current behaviour.
+- **`InMemoryInbox.Add` now calls `EnforceCapacityLimit()`.** Previously the inbox only performed TTL-based eviction; compaction was never triggered. After this change, an inbox that exceeds `EntryLimit` (default 2048) will compact on the next `Add`, removing the oldest entries by `WriteTime`. Users storing more than 2048 idempotency tokens should either increase `EntryLimit` or set it to `-1` to disable compaction.
+- **More configuration surface.** `DefaultBoxConfiguration` on `ProducersConfiguration` adds API surface. Mitigated by sensible defaults matching current behaviour.
 
 ### Risks and Mitigations
 
