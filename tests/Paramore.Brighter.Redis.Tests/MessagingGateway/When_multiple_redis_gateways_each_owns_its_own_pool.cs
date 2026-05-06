@@ -23,11 +23,10 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.Redis.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 
-[Collection("Redis Shared Pool")]
+[Category("Redis")]
 public class When_multiple_redis_gateways_each_owns_its_own_pool
 {
     private static readonly RedisMessagingGatewayConfiguration s_configuration = new()
@@ -36,12 +35,12 @@ public class When_multiple_redis_gateways_each_owns_its_own_pool
         MaxPoolSize = 10
     };
 
-    [Fact]
-    public void Each_gateway_instance_should_have_a_distinct_pool()
+    [Test]
+    public async Task Each_gateway_instance_should_have_a_distinct_pool()
     {
         using var first = new TestRedisGateway(s_configuration, new RoutingKey("topic-1"));
         using var second = new TestRedisGateway(s_configuration, new RoutingKey("topic-2"));
 
-        Assert.NotSame(first.ExposedPool, second.ExposedPool);
+        await Assert.That(first.ExposedPool).IsNotSameReferenceAs(second.ExposedPool);
     }
 }
