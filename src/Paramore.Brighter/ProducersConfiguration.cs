@@ -275,6 +275,12 @@ namespace Paramore.Brighter
         public Type? TransactionProvider { get; set; }
 
         /// <summary>
+        /// Configuration for the default <see cref="InMemoryOutbox"/> created when no explicit <see cref="IAmAnOutbox"/> is provided.
+        /// Only applies when <see cref="IAmProducersConfiguration.Outbox"/> is null.
+        /// </summary>
+        public InMemoryBoxConfiguration? DefaultBoxConfiguration { get; set; }
+
+        /// <summary>
         /// Do we want to support RPC on an external bus?
         /// </summary>
         public bool UseRpc { get; set; }
