@@ -380,10 +380,11 @@ namespace Paramore.Brighter
             try
             {
                 // Get all the messages being cleared in a batch to keep db operations down
-                Message[] messages = (await _asyncOutbox!.GetAsync(posts, requestContext)).ToArray();
-                if (messages.Length != posts.ToArray().Length)
+                var postArray = posts as Id[] ?? posts.ToArray();
+                Message[] messages = (await _asyncOutbox!.GetAsync(postArray, requestContext)).ToArray();
+                if (messages.Length != postArray.Length)
                 {
-                    var missingMessageIds = posts.Where(id => !messages.Any(m => m.Id == id));
+                    var missingMessageIds = postArray.Where(id => !messages.Any(m => m.Id == id));
                     Log.OutboxMessagesNotFound(s_logger, string.Join(",", missingMessageIds));
                 }
                 BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, true,

@@ -125,7 +125,7 @@ namespace Paramore.Brighter
 
         protected void EnforceCapacityLimit()
         {
-                if (EntryLimit == -1)
+                if (EntryLimit <= 0)
                     return;
 
                 var now = timeProvider.GetUtcNow();
@@ -140,6 +140,8 @@ namespace Paramore.Brighter
                 {
                     int newSize = (int)(upperSize * CompactionPercentage);
                     int entriesToRemove = count - newSize;
+
+                    _lastCompactionAttemptAt = now;
 
                     Task.Factory.StartNew(
                         action: state => RunCompact((int)state!),
@@ -156,7 +158,6 @@ namespace Paramore.Brighter
             {
                 try
                 {
-                    _lastCompactionAttemptAt = timeProvider.GetUtcNow();
                     Compact(entriesToRemove);
                 }
                 finally

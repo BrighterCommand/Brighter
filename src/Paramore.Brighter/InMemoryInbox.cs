@@ -139,15 +139,23 @@ namespace Paramore.Brighter
                 EnforceCapacityLimit();
 
                 string key = InboxItem.CreateKey(command.Id, contextKey);
+                var item = new InboxItem(typeof(T), string.Empty, _timeProvider.GetUtcNow(), contextKey);
                 if (!ExistsInternal<T>(command.Id, contextKey))
                 {
-                    if (!Requests.TryAdd(key, new InboxItem(typeof(T), string.Empty, _timeProvider.GetUtcNow(), contextKey)))
+                    if (!Requests.TryAdd(key, item))
                     {
                         throw new Exception($"Could not add command: {command.Id} to the Inbox");
                     }
                 }
+                else
+                {
+                    if (!Requests.TryGetValue(key, out item))
+                    {
+                        throw new Exception($"Could not find command: {command.Id} in the Inbox");
+                    }
+                }
 
-                Requests[key].RequestBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
+                item.RequestBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             }
             finally
             {
