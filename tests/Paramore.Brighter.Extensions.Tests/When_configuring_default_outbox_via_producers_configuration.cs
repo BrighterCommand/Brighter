@@ -38,10 +38,11 @@ public class DefaultOutboxConfigurationTests
         services.AddBrighter()
             .AddProducers(config =>
             {
-                config.DefaultBoxConfiguration = new InMemoryBoxConfiguration(
-                    EntryLimit: 8192,
-                    EntryTimeToLive: TimeSpan.FromMinutes(10)
-                );
+                config.DefaultBoxConfiguration = new InMemoryBoxConfiguration
+                {
+                    EntryLimit = 8192,
+                    EntryTimeToLive = TimeSpan.FromMinutes(10)
+                };
             });
         var provider = services.BuildServiceProvider();
 
@@ -74,6 +75,6 @@ public class DefaultOutboxConfigurationTests
         Assert.Equal(2048, inMemoryOutbox.EntryLimit);
         Assert.Equal(TimeSpan.FromMinutes(5), inMemoryOutbox.EntryTimeToLive);
         Assert.Equal(TimeSpan.FromMinutes(10), inMemoryOutbox.ExpirationScanInterval);
-        Assert.Equal(0, inMemoryOutbox.CompactionPercentage);
+        Assert.Equal(0.5, inMemoryOutbox.CompactionPercentage);
     }
 }

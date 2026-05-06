@@ -881,6 +881,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return provider.GetRequiredService<IAmAPublicationFinder>();
         }
         
+        /// <summary>
+        /// Creates the default <see cref="InMemoryOutbox"/> when no explicit outbox is provided.
+        /// Configuration is only honoured when <paramref name="busConfiguration"/> is the concrete
+        /// <see cref="ProducersConfiguration"/>; if a caller implements <see cref="IAmProducersConfiguration"/>
+        /// directly, built-in defaults are used.
+        /// </summary>
         private static InMemoryOutbox CreateDefaultOutbox(IAmProducersConfiguration busConfiguration)
         {
             var boxConfig = (busConfiguration as ProducersConfiguration)?.DefaultBoxConfiguration;

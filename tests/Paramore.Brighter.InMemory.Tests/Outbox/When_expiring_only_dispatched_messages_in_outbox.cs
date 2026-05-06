@@ -46,7 +46,13 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Act - trigger expiry via a Get operation
             await outbox.GetAsync(dispatchedMessageId, context);
 
-            await Task.Delay(500); //Give the background expiry sweep time to run
+            //Poll until the background expiry sweep completes
+            var retries = 0;
+            while ((await outbox.GetAsync(dispatchedMessageId, context)).Header.MessageType != MessageType.MT_NONE && retries < 20)
+            {
+                await Task.Delay(100);
+                retries++;
+            }
 
             //Assert - dispatched message should be expired, undispatched should remain
             var dispatchedResult = await outbox.GetAsync(dispatchedMessageId, context);

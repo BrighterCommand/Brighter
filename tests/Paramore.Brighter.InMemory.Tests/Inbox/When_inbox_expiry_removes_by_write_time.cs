@@ -41,7 +41,13 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             //Act — trigger expiry via an inbox operation
             await inbox.ExistsAsync<SimpleCommand>(recentCommand.Id, contextKey, null);
 
-            await Task.Delay(500); //Give the background expiry sweep time to run
+            //Poll until the background expiry sweep completes
+            var retries = 0;
+            while (await inbox.ExistsAsync<SimpleCommand>(oldCommand1.Id, contextKey, null) && retries < 20)
+            {
+                await Task.Delay(100);
+                retries++;
+            }
 
             //Assert — old commands expired by WriteTime, recent command remains
             var oldCommand1Exists = await inbox.ExistsAsync<SimpleCommand>(oldCommand1.Id, contextKey, null);

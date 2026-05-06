@@ -28,6 +28,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Configuration for the default <see cref="InMemoryOutbox"/> created when no explicit outbox is provided.
+    /// Use object-initializer syntax: <c>new InMemoryBoxConfiguration { EntryLimit = 8192 }</c>.
     /// </summary>
     public record InMemoryBoxConfiguration
     {
@@ -47,28 +48,10 @@ namespace Paramore.Brighter
         public TimeSpan ExpirationScanInterval { get; init; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
-        /// Target size as a percentage of <see cref="EntryLimit"/> after compaction. Defaults to 0.
+        /// Target size as a fraction of <see cref="EntryLimit"/> after compaction.
+        /// For example 0.5 means compact down to 50% of the limit. Defaults to 0.5.
+        /// A value of 0 removes all eligible entries on each compaction.
         /// </summary>
-        public double CompactionPercentage { get; init; }
-
-        /// <summary>
-        /// Creates a new <see cref="InMemoryBoxConfiguration"/> with the specified values.
-        /// </summary>
-        public InMemoryBoxConfiguration(
-            int EntryLimit = 2048,
-            TimeSpan? EntryTimeToLive = null,
-            TimeSpan? ExpirationScanInterval = null,
-            double CompactionPercentage = 0)
-        {
-            this.EntryLimit = EntryLimit;
-            this.EntryTimeToLive = EntryTimeToLive ?? TimeSpan.FromMinutes(5);
-            this.ExpirationScanInterval = ExpirationScanInterval ?? TimeSpan.FromMinutes(10);
-            this.CompactionPercentage = CompactionPercentage;
-        }
-
-        /// <summary>
-        /// Creates a new <see cref="InMemoryBoxConfiguration"/> with default values.
-        /// </summary>
-        public InMemoryBoxConfiguration() { }
+        public double CompactionPercentage { get; init; } = 0.5;
     }
 }

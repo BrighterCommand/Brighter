@@ -80,9 +80,11 @@ namespace Paramore.Brighter
         public int EntryLimit { get; set; } = 2048;
 
         /// <summary>
-        /// At what percentage of our size limit should we return, once we hit that limit
+        /// Target size as a fraction of <see cref="EntryLimit"/> after compaction.
+        /// For example 0.5 means compact down to 50% of the limit. Defaults to 0.5.
+        /// A value of 0 removes all eligible entries on each compaction.
         /// </summary>
-        public double CompactionPercentage{ get; set; }
+        public double CompactionPercentage{ get; set; } = 0.5;
 
         public void ClearExpiredMessages()
         {
@@ -92,6 +94,8 @@ namespace Paramore.Brighter
             if (elapsedSinceLastScan < ExpirationScanInterval)
                 return;
 
+            _lastScanAt = now;
+
             //This is expensive, so use a background thread
             Task.Factory.StartNew(
                 action: state => RunRemoveExpiredMessages((DateTimeOffset)state!),
@@ -99,8 +103,6 @@ namespace Paramore.Brighter
                 cancellationToken: CancellationToken.None,
                 creationOptions: TaskCreationOptions.DenyChildAttach,
                 scheduler: TaskScheduler.Default);
-            
-            _lastScanAt = now;
         }
 
         private void RunRemoveExpiredMessages(DateTimeOffset now)
@@ -135,8 +137,8 @@ namespace Paramore.Brighter
 
                 if (count >= upperSize)
                 {
-                    int newSize = (int)(count * CompactionPercentage);
-                    int entriesToRemove = upperSize - newSize;
+                    int newSize = (int)(upperSize * CompactionPercentage);
+                    int entriesToRemove = count - newSize;
 
                     _lastCompactionAttemptAt = now;
 

@@ -291,8 +291,12 @@ namespace Paramore.Brighter
         /// <param name="posts">The ids of the posts that you would like to clear</param>
         /// <param name="requestContext">The request context for the pipeline</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
-        /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
-        /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
+        /// <exception cref="InvalidOperationException">Thrown if there is no outbox defined</exception>
+        /// <remarks>
+        /// If any of the requested message ids are not found in the outbox (for example because compaction has
+        /// already removed them), the missing ids are logged at Error level and the remaining messages are
+        /// dispatched. No exception is thrown for missing messages.
+        /// </remarks>
         public void ClearOutbox(
             Id[] posts,
             RequestContext requestContext,
@@ -312,8 +316,7 @@ namespace Paramore.Brighter
                 if (messages.Length != posts.Length)
                 {
                     var missingMessageIds = posts.Where(id => !messages.Any(m => m.Id == id));
-                    s_logger.LogError("Message(s) with Id(s) {MissingIds} not found in Outbox; dispatching found messages",
-                        string.Join(",", missingMessageIds));
+                    Log.OutboxMessagesNotFound(s_logger, string.Join(",", missingMessageIds));
                 }
                 BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, false,
                         _instrumentationOptions);
@@ -355,7 +358,11 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">Allow cancellation of the operation</param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
-        /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
+        /// <remarks>
+        /// If any of the requested message ids are not found in the outbox (for example because compaction has
+        /// already removed them), the missing ids are logged at Error level and the remaining messages are
+        /// dispatched. No exception is thrown for missing messages.
+        /// </remarks>
         public async Task ClearOutboxAsync(
             IEnumerable<Id> posts,
             RequestContext requestContext,
@@ -377,8 +384,7 @@ namespace Paramore.Brighter
                 if (messages.Length != posts.ToArray().Length)
                 {
                     var missingMessageIds = posts.Where(id => !messages.Any(m => m.Id == id));
-                    s_logger.LogError("Message(s) with Id(s) {MissingIds} not found in Outbox; dispatching found messages",
-                        string.Join(",", missingMessageIds));
+                    Log.OutboxMessagesNotFound(s_logger, string.Join(",", missingMessageIds));
                 }
                 BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, true,
                         _instrumentationOptions);
@@ -1207,6 +1213,9 @@ namespace Paramore.Brighter
             
             [LoggerMessage(LogLevel.Information, "Skipping dispatch of messages as another thread is running")]
             public static partial void SkippingDispatchOfMessages(ILogger logger);
+
+            [LoggerMessage(LogLevel.Error, "Message(s) with Id(s) {MissingIds} not found in Outbox; dispatching found messages")]
+            public static partial void OutboxMessagesNotFound(ILogger logger, string missingIds);
             
             [LoggerMessage(LogLevel.Debug, "Outbox outstanding message count is: {OutstandingMessageCount}")]
             public static partial void OutboxOutstandingMessageCount(ILogger logger, int outstandingMessageCount);

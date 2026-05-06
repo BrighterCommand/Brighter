@@ -141,7 +141,7 @@ namespace Paramore.Brighter
                 string key = InboxItem.CreateKey(command.Id, contextKey);
                 if (!ExistsInternal<T>(command.Id, contextKey))
                 {
-                    if (!Requests.TryAdd(key, new InboxItem(typeof(T), string.Empty, _timeProvider.GetUtcNow().DateTime, contextKey)))
+                    if (!Requests.TryAdd(key, new InboxItem(typeof(T), string.Empty, _timeProvider.GetUtcNow(), contextKey)))
                     {
                         throw new Exception($"Could not add command: {command.Id} to the Inbox");
                     }

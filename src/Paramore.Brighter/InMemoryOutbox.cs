@@ -133,7 +133,7 @@ namespace Paramore.Brighter
                 if (!Requests.ContainsKey(message.Id))
                 {
                     if (!Requests.TryAdd(message.Id,
-                            new OutboxEntry(message) { WriteTime = _timeProvider.GetUtcNow().DateTime }))
+                            new OutboxEntry(message) { WriteTime = _timeProvider.GetUtcNow() }))
                     {
                         throw new Exception($"Could not add message with Id: {message.Id} to outbox");
                     }
@@ -159,9 +159,6 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null
         )
         {
-            ClearExpiredMessages();
-            EnforceCapacityLimit();
-
             foreach (Message message in messages)
             {
                 Add(message, requestContext, outBoxTimeout, transactionProvider);
