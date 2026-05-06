@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 #nullable enable
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
@@ -36,6 +36,7 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -49,11 +50,22 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 {
     private readonly InstrumentationOptions _instrumentationOptions;
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
-    private static readonly SemaphoreSlim s_lock = new(1, 1);
+
+    // Used to bound the active-send wait when the user opts out of confirms (timeout=0).
+    // Active sends in flight at dispose time should not be aborted: outbox would mark them Dispatched
+    // while the broker may not yet have accepted the frame, producing duplicates on the next sweep.
+    private const int DefaultActiveSendsShutdownTimeoutMs = 5000;
 
     private RmqPublication _publication;
-    private readonly ConcurrentDictionary<ulong, string> _pendingConfirmations = new();
+    private readonly Dictionary<ulong, string> _pendingConfirmations = new();
+    private readonly object _stateLock = new();
     private readonly int _waitForConfirmsTimeOutInMilliseconds;
+    private TaskCompletionSource<bool> _activeSendsCompleted = NewCompletedTaskCompletionSource();
+    private TaskCompletionSource<bool> _publisherConfirmationsCompleted = NewCompletedTaskCompletionSource();
+    // Producer disposal has confirmation-specific work, so it has its own guard.
+    // The base guard separately protects channel and pool cleanup after producer shutdown.
+    private int _activeSends;
+    private int _disposed;
 
     /// <summary>
     /// Action taken when a message is published, following receipt of a confirmation from the broker
@@ -135,18 +147,25 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     
     private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useSchedulerAsync, CancellationToken cancellationToken = default)
     {
-        if (Connection.Exchange is null) throw new ConfigurationException("RmqMessageProducer: Exchange is not set");
-        if (Connection.AmpqUri is null) throw new ConfigurationException("RmqMessageProducer: Broker URL is not set");
-        
-        delay ??= TimeSpan.Zero;
+        // BeginSend is intentionally outside the try block; if it rejects a disposed producer, CompleteSend must not run.
+        BeginSend();
+
+        // Tracks the publish sequence we have registered for confirmation. Cleared once the publish succeeds
+        // (broker takes ownership of the ack) or once we have explicitly removed the orphan in the catch path.
+        ulong? pendingDeliveryTag = null;
 
         try
         {
+            if (Connection.Exchange is null) throw new ConfigurationException("RmqMessageProducer: Exchange is not set");
+            if (Connection.AmpqUri is null) throw new ConfigurationException("RmqMessageProducer: Broker URL is not set");
+
+            delay ??= TimeSpan.Zero;
+
             Log.PreparingToSendAsync(s_logger, Connection.Exchange.Name);
-            
-            var channelInitialized = Channel is not null;   
+
+            var channelInitialized = Channel is not null;
             await EnsureBrokerAsync(makeExchange: _publication.MakeChannels, cancellationToken: cancellationToken);
-            
+
             if (Channel is null) throw new ChannelFailureException($"RmqMessageProducer: Channel is not set for {_publication.Topic}");
             if (!channelInitialized)
             {
@@ -154,22 +173,24 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
                 Channel.BasicNacksAsync += OnPublishFailed;
             }
 
-            var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
-
             message.Persist = Connection.PersistMessages;
-            
+
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message, _instrumentationOptions);
 
             Log.PublishingMessageAsync(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                 message.Header.Topic, message.Persist, message.Id, message.Body.Value);
 
-            _pendingConfirmations.TryAdd(await Channel.GetNextPublishSequenceNumberAsync(cancellationToken), message.Id);
-
-            if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
+            if (PublishesOnChannel(delay.Value))
             {
+                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
+                var deliveryTag = await Channel.GetNextPublishSequenceNumberAsync(cancellationToken);
+                AddPendingConfirmation(deliveryTag, message.Id);
+                pendingDeliveryTag = deliveryTag;
                 await rmqMessagePublisher.PublishMessageAsync(message, delay.Value, cancellationToken);
+                // Publish succeeded; the broker now owns the confirmation and will ack/nack via the handler.
+                pendingDeliveryTag = null;
             }
-            else if(useSchedulerAsync)
+            else if (useSchedulerAsync)
             {
                 var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
                 await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
@@ -186,27 +207,277 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
         }
         catch (IOException io)
         {
-            Log.ErrorTalkingToSocketAsync(s_logger, io, Connection.AmpqUri.GetSanitizedUri());
+            Log.ErrorTalkingToSocketAsync(s_logger, io, Connection.AmpqUri!.GetSanitizedUri());
+            ClearPendingConfirmations();
+            // ClearPendingConfirmations removed the orphan; suppress the per-tag cleanup in finally.
+            pendingDeliveryTag = null;
+            // Capture the failed channel before reset; otherwise the detach fires on the recovered channel
+            // and the next send loses confirm tracking.
+            var failedChannel = Channel;
             await ResetConnectionToBrokerAsync(cancellationToken);
-            Channel?.BasicAcksAsync -= OnPublishSucceeded;
-            Channel?.BasicNacksAsync -= OnPublishFailed;
+            if (failedChannel is not null)
+            {
+                failedChannel.BasicAcksAsync -= OnPublishSucceeded;
+                failedChannel.BasicNacksAsync -= OnPublishFailed;
+            }
             throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
+        }
+        finally
+        {
+            // Non-IOException failures (broker timeouts, OperationInterruptedException, cancellation) leave
+            // the registered tag in flight without a corresponding broker ack — remove it so disposal does
+            // not block waiting on a confirmation that will never arrive.
+            if (pendingDeliveryTag.HasValue)
+                RemovePendingConfirmations(pendingDeliveryTag.Value, multiple: false);
+
+            CompleteSend();
         }
     }
 
     public sealed override void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+        WaitForActiveSends();
+        WaitForPendingPublisherConfirmations();
+        DetachPublisherConfirmHandlers();
+
+        var channel = Channel;
+        if (channel is not null)
+        {
+            BrighterAsyncContext.Run(async () =>
+            {
+                await channel.AbortAsync();
+                await channel.DisposeAsync();
+            });
+            // The base dispose still removes the pooled connection; the producer has already disposed the channel.
+            Channel = null;
+        }
+
+        base.Dispose();
+        // Explicit for symmetry with DisposeAsync; base.Dispose() also suppresses, so this is defensive.
+        GC.SuppressFinalize(this);
+    }
+
+    public sealed override async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+        await WaitForActiveSendsAsync();
+        await WaitForPendingPublisherConfirmationsAsync();
+        DetachPublisherConfirmHandlers();
+
+        var channel = Channel;
+        if (channel is not null)
+        {
+            await channel.AbortAsync();
+            await channel.DisposeAsync();
+            // The base async dispose still removes the pooled connection; the producer has already disposed the channel.
+            Channel = null;
+        }
+
+        await base.DisposeAsync();
+        GC.SuppressFinalize(this);
+    }
+
+    private void BeginSend()
+    {
+        lock (_stateLock)
+        {
+            ThrowIfDisposed();
+
+            if (_activeSends == 0)
+                _activeSendsCompleted = NewPendingTaskCompletionSource();
+
+            _activeSends++;
+        }
+    }
+
+    private void CompleteSend()
+    {
+        lock (_stateLock)
+        {
+            _activeSends--;
+
+            if (_activeSends == 0)
+                _activeSendsCompleted.TrySetResult(true);
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (Volatile.Read(ref _disposed) != 0)
+            throw new ObjectDisposedException(nameof(RmqMessageProducer));
+    }
+
+    private void WaitForActiveSends() => BrighterAsyncContext.Run(WaitForActiveSendsAsync);
+
+    private async Task WaitForActiveSendsAsync()
+    {
+        Task activeSendsCompleted;
+
+        lock (_stateLock)
+        {
+            if (_activeSends == 0)
+                return;
+
+            activeSendsCompleted = _activeSendsCompleted.Task;
+        }
+
+        // Always wait for in-flight sends, even when the user opted out of confirm waits (timeout=0).
+        // See DefaultActiveSendsShutdownTimeoutMs comment for rationale.
+        var waitMilliseconds = _waitForConfirmsTimeOutInMilliseconds > 0
+            ? _waitForConfirmsTimeOutInMilliseconds
+            : DefaultActiveSendsShutdownTimeoutMs;
+
+        using var timeoutCancellation = new CancellationTokenSource();
+        var timeout = Task.Delay(TimeSpan.FromMilliseconds(waitMilliseconds), timeoutCancellation.Token);
+        var completed = await Task.WhenAny(activeSendsCompleted, timeout);
+
+        if (completed == activeSendsCompleted)
+        {
+            timeoutCancellation.Cancel();
+            return;
+        }
+
+        int activeSends;
+        lock (_stateLock)
+        {
+            activeSends = _activeSends;
+        }
+
+        if (activeSends == 0)
+            return;
+
+        Log.FailedToAwaitActiveSends(s_logger, activeSends, waitMilliseconds);
+    }
+
+    private void WaitForPendingPublisherConfirmations() => BrighterAsyncContext.Run(WaitForPendingPublisherConfirmationsAsync);
+
+    private async Task WaitForPendingPublisherConfirmationsAsync()
+    {
+        Task publisherConfirmationsCompleted;
+        var waitMilliseconds = _waitForConfirmsTimeOutInMilliseconds;
+
+        // _stateLock protects pending confirmations, not Channel. Disposal has already blocked new sends
+        // and drained active sends, so the producer send path cannot replace Channel while this snapshot is taken.
+        lock (_stateLock)
+        {
+            if (Channel is not { IsOpen: true } || _pendingConfirmations.Count == 0)
+                return;
+
+            if (waitMilliseconds == 0)
+                return;
+
+            publisherConfirmationsCompleted = _publisherConfirmationsCompleted.Task;
+        }
+
+        using var timeoutCancellation = new CancellationTokenSource();
+        var timeout = Task.Delay(TimeSpan.FromMilliseconds(waitMilliseconds), timeoutCancellation.Token);
+        var completed = await Task.WhenAny(publisherConfirmationsCompleted, timeout);
+
+        if (completed == publisherConfirmationsCompleted)
+        {
+            timeoutCancellation.Cancel();
+            return;
+        }
+
+        int pendingConfirmations;
+        lock (_stateLock)
+        {
+            pendingConfirmations = _pendingConfirmations.Count;
+        }
+
+        if (pendingConfirmations == 0)
+            return;
+
+        Log.FailedToAwaitPublisherConfirms(s_logger, pendingConfirmations, waitMilliseconds);
+    }
+
+    private void AddPendingConfirmation(ulong deliveryTag, string messageId)
+    {
+        lock (_stateLock)
+        {
+            if (_pendingConfirmations.Count == 0)
+                _publisherConfirmationsCompleted = NewPendingTaskCompletionSource();
+
+            _pendingConfirmations[deliveryTag] = messageId;
+        }
+    }
+
+    private void ClearPendingConfirmations()
+    {
+        lock (_stateLock)
+        {
+            _pendingConfirmations.Clear();
+            _publisherConfirmationsCompleted.TrySetResult(true);
+        }
+    }
+
+    private bool PublishesOnChannel(TimeSpan delay) => delay == TimeSpan.Zero || DelaySupported || Scheduler == null;
+
+    private IReadOnlyCollection<string> RemovePendingConfirmations(ulong deliveryTag, bool multiple)
+    {
+        lock (_stateLock)
+        {
+            var deliveryTagsToRemove = new List<ulong>();
+
+            foreach (var pendingDeliveryTag in _pendingConfirmations.Keys)
+            {
+                if (IsConfirmedBy(pendingDeliveryTag, deliveryTag, multiple))
+                    deliveryTagsToRemove.Add(pendingDeliveryTag);
+            }
+
+            var messageIds = RemoveConfirmationsLocked(deliveryTagsToRemove);
+
+            if (_pendingConfirmations.Count == 0)
+                _publisherConfirmationsCompleted.TrySetResult(true);
+
+            return messageIds;
+        }
+    }
+
+    private List<string> RemoveConfirmationsLocked(IEnumerable<ulong> deliveryTagsToRemove)
+    {
+        var messageIds = new List<string>();
+
+        foreach (var pendingDeliveryTag in deliveryTagsToRemove)
+        {
+            // Dictionary.Remove(key, out value) is unavailable on netstandard2.0; use the lookup-then-remove pattern.
+            if (_pendingConfirmations.TryGetValue(pendingDeliveryTag, out var messageId))
+            {
+                _pendingConfirmations.Remove(pendingDeliveryTag);
+                messageIds.Add(messageId);
+            }
+        }
+
+        return messageIds;
+    }
+
+    private static bool IsConfirmedBy(ulong pendingDeliveryTag, ulong deliveryTag, bool multiple)
+        => multiple ? pendingDeliveryTag <= deliveryTag : pendingDeliveryTag == deliveryTag;
+
+    private static TaskCompletionSource<bool> NewCompletedTaskCompletionSource()
+    {
+        var taskCompletionSource = NewPendingTaskCompletionSource();
+        taskCompletionSource.SetResult(true);
+        return taskCompletionSource;
+    }
+
+    private static TaskCompletionSource<bool> NewPendingTaskCompletionSource()
+        => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    private void DetachPublisherConfirmHandlers()
+    {
         Channel?.BasicAcksAsync -= OnPublishSucceeded;
         Channel?.BasicNacksAsync -= OnPublishFailed;
-        GC.SuppressFinalize(this);
     }
 
     private Task OnPublishFailed(object sender, BasicNackEventArgs e)
     {
-        if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out var messageId))
+        foreach (var messageId in RemovePendingConfirmations(e.DeliveryTag, e.Multiple))
         {
             OnMessagePublished?.Invoke(false, messageId);
-            _pendingConfirmations.TryRemove(e.DeliveryTag, out _);
             Log.FailedToPublishMessageAsync(s_logger, messageId);
         }
 
@@ -215,10 +486,9 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 
     private Task OnPublishSucceeded(object sender, BasicAckEventArgs e)
     {
-        if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out var messageId))
+        foreach (var messageId in RemovePendingConfirmations(e.DeliveryTag, e.Multiple))
         {
             OnMessagePublished?.Invoke(true, messageId);
-            _pendingConfirmations.TryRemove(e.DeliveryTag, out _);
             Log.PublishedMessage(s_logger, messageId);
         }
 
@@ -241,6 +511,12 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
         
         [LoggerMessage(LogLevel.Debug, "Failed to publish message: {MessageId}")]
         public static partial void FailedToPublishMessageAsync(ILogger logger, string messageId);
+
+        [LoggerMessage(LogLevel.Warning, "Failed to await {PendingCount} publisher confirms after {TimeoutMs}ms when shutting down")]
+        public static partial void FailedToAwaitPublisherConfirms(ILogger logger, int pendingCount, int timeoutMs);
+
+        [LoggerMessage(LogLevel.Warning, "Failed to await {ActiveSendCount} active sends after {TimeoutMs}ms when shutting down")]
+        public static partial void FailedToAwaitActiveSends(ILogger logger, int activeSendCount, int timeoutMs);
 
         [LoggerMessage(LogLevel.Information, "Published message: {MessageId}")]
         public static partial void PublishedMessage(ILogger logger, string messageId);
