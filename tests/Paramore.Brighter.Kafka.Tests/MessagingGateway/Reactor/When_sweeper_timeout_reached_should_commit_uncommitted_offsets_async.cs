@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Rafael Andrade
 
@@ -27,16 +27,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDisposable, IDisposable
+[Category("Kafka")]
+public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
@@ -44,10 +40,9 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
     private readonly string _partitionKey = Guid.NewGuid().ToString();
     private readonly FakeTimeProvider _fakeTimeProvider;
 
-    public WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets(ITestOutputHelper output)
+    public WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets()
     {
         var groupId = Uuid.New().ToString("N");
-        _output = output;
         
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
@@ -93,12 +88,12 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
             .Create(subscription);
     }
 
-    [Fact]
-    public void When_sweeper_timeout_reached_should_commit_uncommitted_offsets()
+    [Test]
+    public async Task When_sweeper_timeout_reached_should_commit_uncommitted_offsets()
     {
         //Arrange
         //allow time for topic to propagate
-        Task.Delay(1000).GetAwaiter().GetResult();
+        await Task.Delay(1000);
         
         var routingKey = new RoutingKey(_topic);
         var producerAsync = _producerRegistry.LookupSyncBy(routingKey);
@@ -119,31 +114,31 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
         ((KafkaMessageProducer)producerAsync).Flush();
 
         //allow messages to propagate on the broker
-        Task.Delay(3000).GetAwaiter().GetResult();
+        await Task.Delay(3000);
 
         var consumedMessages = new List<Message>();
         for (int j = 0; j < 5; j++)
         {
-            consumedMessages.Add(ReadMessage());
+            consumedMessages.Add(await ReadMessage());
         }
 
         //Assert - messages consumed and acknowledged but not yet committed
-        Assert.Equal(5, consumedMessages.Count);
-        Assert.Equal(5, _consumer.StoredOffsets());
+        await Assert.That(consumedMessages.Count).IsEqualTo(5);
+        await Assert.That(_consumer.StoredOffsets()).IsEqualTo(5);
 
         //Act - Advance time beyond the sweeper interval (30 seconds)
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(31));
 
         //Allow the timer callback to execute
-        Task.Delay(2000).GetAwaiter().GetResult();
+        await Task.Delay(2000);
 
         //Assert - Sweeper should have committed the offsets
-        Assert.Equal(0, _consumer.StoredOffsets());
+        await Assert.That(_consumer.StoredOffsets()).IsEqualTo(0);
 
         _consumer.Close();
     }
 
-    private Message ReadMessage()
+    private async Task<Message> ReadMessage()
     {
         Message[] messages = [new Message()];
         int maxTries = 0;
@@ -152,33 +147,34 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
             try
             {
                 maxTries++;
-                Task.Delay(500).GetAwaiter().GetResult(); //Let topic propagate in the broker
-                messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
+                await Task.Delay(500); //Let topic propagate in the broker
+                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {
-                    _consumer.Acknowledge(messages[0]);
+                    await _consumer.AcknowledgeAsync(messages[0]);
                     return messages[0];
                 }
                 
                 //wait before retry
-                Task.Delay(1000).GetAwaiter().GetResult();
+                await Task.Delay(1000);
             }
             catch (ChannelFailureException cfx)
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
-                Task.Delay(1000).GetAwaiter().GetResult();
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
         } while (maxTries <= 10);
 
         return messages[0];
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         _producerRegistry?.Dispose();
-        _consumer.Dispose();
+        await _consumer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -187,3 +183,4 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsets : IAsyncDis
         await _consumer.DisposeAsync();
     }
 }
+

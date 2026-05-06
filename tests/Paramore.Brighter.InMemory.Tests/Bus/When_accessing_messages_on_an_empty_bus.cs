@@ -1,11 +1,10 @@
-﻿using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Bus;
 
 public class InternalBusStreamTests 
 {
-    [Fact]
-    public void When_accessing_messages_on_an_empty_bus()
+    [Test]
+    public async Task When_accessing_messages_on_an_empty_bus()
     {
          //arrange
          //creste an instance of the InternalBus
@@ -17,6 +16,6 @@ public class InternalBusStreamTests
          
         //assert
         //should be empty 
-        Assert.Empty(messages);
+        await Assert.That(messages).IsEmpty();
     }
 }

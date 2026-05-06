@@ -1,16 +1,12 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
-        <IsPackable>false</IsPackable>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <PackageReference Include="xunit" />
-    </ItemGroup>
-  
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>  <ItemGroup>
+    <PackageReference Include="TUnit" />
+  </ItemGroup>
 </Project>

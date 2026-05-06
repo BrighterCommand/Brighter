@@ -6,22 +6,23 @@ using System.Threading.Tasks;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
-[Trait("Category", "AWS")]
-public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class SqsBufferedConsumerTestsAsync : IAsyncDisposable
 {
-    private readonly SqsMessageProducer _messageProducer;
-    private readonly SqsMessageConsumer _consumer;
-    private readonly string _queueName;
-    private readonly ChannelFactory _channelFactory;
+    private SqsMessageProducer _messageProducer;
+    private SqsMessageConsumer _consumer;
+    private string _queueName;
+    private ChannelFactory _channelFactory;
     private readonly ContentType _contentType = new(MediaTypeNames.Text.Plain);
     private const int BufferSize = 3;
     private const int MessageCount = 4;
 
-    public SqsBufferedConsumerTestsAsync()
+    [Before(Test)]
+    public async Task Setup()
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
@@ -38,7 +39,7 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId,
             tags: new Dictionary<string, string> { { "Environment", "Test" } });
         
-        var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
+        var channel = await _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(_queueName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
@@ -46,8 +47,7 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             bufferSize: BufferSize,
             queueAttributes: queueAttributes,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create))
-            .GetAwaiter().GetResult();
+            makeChannels: OnMissingChannel.Create));
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
@@ -57,7 +57,7 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create));
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_message_consumer_reads_multiple_messages_async()
     {
         var routingKey = new RoutingKey(_queueName);
@@ -119,10 +119,10 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             //retrieve  messages
             var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
 
-            Assert.True(messages.Length <= outstandingMessageCount);
+            await Assert.That(messages.Length <= outstandingMessageCount).IsTrue();
 
             //should not receive more than buffer in one hit
-            Assert.True(messages.Length <= BufferSize);
+            await Assert.That(messages.Length <= BufferSize).IsTrue();
 
             var moreMessages = messages.Where(m => m.Header.MessageType == MessageType.MT_COMMAND);
             foreach (var message in moreMessages)
@@ -136,7 +136,7 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             await Task.Delay(1000);
         } while ((iteration <= 5) && (messagesReceivedCount < MessageCount));
 
-        Assert.Equal(4, messagesReceivedCount);
+        await Assert.That(messagesReceivedCount).IsEqualTo(4);
     }
 
     public async ValueTask DisposeAsync()
@@ -146,10 +146,11 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         await _messageProducer.DisposeAsync();
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().GetAwaiter().GetResult();
-        _channelFactory.DeleteQueueAsync().GetAwaiter().GetResult();
-        _messageProducer.DisposeAsync().GetAwaiter().GetResult();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
+        await _messageProducer.DisposeAsync();
     }
 }

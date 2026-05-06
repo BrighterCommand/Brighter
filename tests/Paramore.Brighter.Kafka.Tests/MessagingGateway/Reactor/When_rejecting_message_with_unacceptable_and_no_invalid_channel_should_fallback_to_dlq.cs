@@ -26,25 +26,20 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Category("Kafka")]
 public class KafkaMessageConsumerInvalidMessageFallbackTests : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly string _dlqTopic;
     private readonly KafkaMessageProducer _producer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaMessageConsumerInvalidMessageFallbackTests(ITestOutputHelper output)
+    public KafkaMessageConsumerInvalidMessageFallbackTests()
     {
-        _output = output;
         _dlqTopic = $"{_topic}.dlq";
 
         // Create producer directly for the data topic
@@ -69,7 +64,7 @@ public class KafkaMessageConsumerInvalidMessageFallbackTests : IDisposable
         _producer.Init();
     }
 
-    [Fact]
+    [Test]
     public async Task When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
     {
         //Arrange - let topics propagate in the broker
@@ -85,28 +80,28 @@ public class KafkaMessageConsumerInvalidMessageFallbackTests : IDisposable
             new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
             new MessageBody($"test content for invalid message fallback")
         );
-        _producer.Send(sentMessage);
+        await _producer.SendAsync(sentMessage);
         _producer.Flush();
 
         //Act - consume and reject the message with Unacceptable reason
         Message? receivedMessage;
         using (var consumer = CreateConsumerWithDlqOnly(groupId, dlqRoutingKey))
         {
-            receivedMessage = ConsumeMessage(consumer);
-            Assert.Equal(messageId, receivedMessage.Id);
+            receivedMessage = await ConsumeMessage(consumer);
+            await Assert.That(receivedMessage.Id).IsEqualTo(messageId);
 
-            _output.WriteLine($"About to reject message {messageId} with Unacceptable reason (no invalid channel configured)");
+            Console.WriteLine($"About to reject message {messageId} with Unacceptable reason (no invalid channel configured)");
 
             //reject with Unacceptable reason - should fall back to DLQ since no invalid channel configured
             consumer.Reject(receivedMessage, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message fallback"));
 
-            _output.WriteLine($"Message {messageId} rejected, waiting for DLQ propagation");
+            Console.WriteLine($"Message {messageId} rejected, waiting for DLQ propagation");
 
             //yield to allow DLQ message to be produced and topic to be created
             await Task.Delay(TimeSpan.FromMilliseconds(3000));
         }
 
-        _output.WriteLine("Creating DLQ consumer");
+        Console.WriteLine("Creating DLQ consumer");
 
         //yield to allow DLQ topic to propagate
         await Task.Delay(TimeSpan.FromMilliseconds(1000));
@@ -114,18 +109,18 @@ public class KafkaMessageConsumerInvalidMessageFallbackTests : IDisposable
         //Assert - verify message appears on DLQ (not invalid message channel)
         using (var dlqConsumer = CreateDLQConsumer(groupId))
         {
-            _output.WriteLine("Attempting to consume from DLQ");
-            var dlqMessage = ConsumeMessage(dlqConsumer);
+            Console.WriteLine("Attempting to consume from DLQ");
+            var dlqMessage = await ConsumeMessage(dlqConsumer);
 
-            Assert.NotNull(dlqMessage);
-            Assert.Equal(MessageType.MT_COMMAND, dlqMessage.Header.MessageType);
-            Assert.Equal(receivedMessage.Body.Value, dlqMessage.Body.Value);
+            await Assert.That(dlqMessage).IsNotNull();
+            await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+            await Assert.That(dlqMessage.Body.Value).IsEqualTo(receivedMessage.Body.Value);
 
             //verify rejection metadata was added
-            Assert.True(dlqMessage.Header.Bag.ContainsKey("OriginalTopic"));
-            Assert.Equal(_topic, dlqMessage.Header.Bag["OriginalTopic"]);
-            Assert.True(dlqMessage.Header.Bag.ContainsKey("RejectionReason"));
-            Assert.Equal("Unacceptable", dlqMessage.Header.Bag["RejectionReason"]);
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey("OriginalTopic")).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag["OriginalTopic"]).IsEqualTo(_topic);
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey("RejectionReason")).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag["RejectionReason"]).IsEqualTo("Unacceptable");
         }
     }
 
@@ -175,7 +170,7 @@ public class KafkaMessageConsumerInvalidMessageFallbackTests : IDisposable
             ));
     }
 
-    private Message ConsumeMessage(IAmAMessageConsumerSync consumer)
+    private async Task<Message> ConsumeMessage(IAmAMessageConsumerSync consumer)
     {
         int maxTries = 0;
         do
@@ -192,8 +187,8 @@ public class KafkaMessageConsumerInvalidMessageFallbackTests : IDisposable
             }
             catch (ChannelFailureException cfx)
             {
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
-                Task.Delay(1000).GetAwaiter().GetResult();
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
         } while (maxTries <= 10);
 
@@ -205,3 +200,4 @@ public class KafkaMessageConsumerInvalidMessageFallbackTests : IDisposable
         _producer?.Dispose();
     }
 }
+

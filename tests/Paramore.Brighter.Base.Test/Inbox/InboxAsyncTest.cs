@@ -1,22 +1,23 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.Inbox.Exceptions;
-using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Inbox;
 
-public abstract class InboxAsyncTest : IAsyncLifetime
+public abstract class InboxAsyncTest 
 {
     protected abstract IAmAnInboxAsync Inbox { get; }
     protected List<MyCommand> CreatedCommands { get; } = [];
 
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]
+    public async Task Setup()
     {
         await BeforeEachTestAsync();
     }
 
-    public async Task DisposeAsync()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
         await AfterEachTestAsync();
     }
@@ -50,7 +51,7 @@ public abstract class InboxAsyncTest : IAsyncLifetime
         return command;
     }
 
-    [Fact]
+    [Test]
     public async Task When_Adding_A_Command_To_The_Inbox_It_Can_Be_Retrieved()
     {
         // Arrange
@@ -62,12 +63,12 @@ public abstract class InboxAsyncTest : IAsyncLifetime
         var loadedCommand = await Inbox.GetAsync<MyCommand>(command.Id, contextKey, null);
         
         // Assert
-        Assert.NotNull(loadedCommand);
-        Assert.Equal(command.Value, loadedCommand.Value);
-        Assert.Equal(command.Id, loadedCommand.Id);
+        await Assert.That(loadedCommand).IsNotNull();
+        await Assert.That(loadedCommand.Value).IsEqualTo(command.Value);
+        await Assert.That(loadedCommand.Id).IsEqualTo(command.Id);
     }
     
-    [Fact]
+    [Test]
     public async Task When_Adding_A_Duplicate_Command_With_Same_Context_Key_It_Should_Not_Throw()
     {
         // Arrange
@@ -80,10 +81,10 @@ public abstract class InboxAsyncTest : IAsyncLifetime
         
         // Assert
         var exists = await Inbox.ExistsAsync<MyCommand>(command.Id, contextKey, null);
-        Assert.True(exists, $"A command with '{command.Id.Value}' Id should exists");
+        await Assert.That(exists).IsTrue();
     }
     
-    [Fact]
+    [Test]
     public async Task When_Adding_A_Duplicate_Command_With_Different_Context_Key_It_Should_Not_Throw()
     {
         // Arrange
@@ -96,10 +97,10 @@ public abstract class InboxAsyncTest : IAsyncLifetime
         
         // Assert
         var exists = await Inbox.ExistsAsync<MyCommand>(command.Id, contextKey, null);
-        Assert.True(exists, $"A command with '{command.Id.Value}' Id should exists");
+        await Assert.That(exists).IsTrue();
     }
     
-    [Fact]
+    [Test]
     public async Task When_Getting_A_Non_Existent_Command_It_Should_Throw_RequestNotFoundException()
     {
         // Arrange
@@ -110,7 +111,7 @@ public abstract class InboxAsyncTest : IAsyncLifetime
         await Assert.ThrowsAsync<RequestNotFoundException<MyCommand>>(() => Inbox.GetAsync<MyCommand>(commandId, contextKey, null));
     }
     
-    [Fact]
+    [Test]
     public async Task When_Getting_A_Command_With_Wrong_Context_Key_It_Should_Throw_RequestNotFoundException()
     {
         // Arrange
@@ -121,13 +122,13 @@ public abstract class InboxAsyncTest : IAsyncLifetime
         await Assert.ThrowsAsync<RequestNotFoundException<MyCommand>>(() => Inbox.GetAsync<MyCommand>(command.Id, Uuid.NewAsString(), null));
     }
 
-    [Fact]
+    [Test]
     public async Task When_Checking_If_A_Non_Existent_Command_Exists_It_Should_Return_False()
     {
         // Act
         var exists = await Inbox.ExistsAsync<MyCommand>(Uuid.NewAsString(), Uuid.NewAsString(), null);
         
         // Assert
-        Assert.False(exists, "A command should not exists");
+        await Assert.That(exists).IsFalse();
     }
 }

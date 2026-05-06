@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -11,7 +11,6 @@ using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Sqlite;
 using Paramore.Brighter.Sqlite.EntityFrameworkCore;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -19,22 +18,22 @@ public class DispatcherResolutionScopedDependencyTests
 {
     private IServiceProvider? _provider;
     
-    [Fact]
-    public void ShouldResolveIDispatcherCorrectly()
+    [Test]
+    public async Task ShouldResolveIDispatcherCorrectly()
     {
         Build(new InternalBus());
 
-        Assert.NotNull(_provider);
+        await Assert.That(_provider).IsNotNull();
         //will throw if cannot be found
         _provider.GetRequiredService<IDispatcher>();
     }
 
-    [Fact]
-    public void ShouldResolveIDispatcherCorrectlyWithHost()
+    [Test]
+    public async Task ShouldResolveIDispatcherCorrectlyWithHost()
     {
         BuildHost(new InternalBus());
 
-        Assert.NotNull(_provider);
+        await Assert.That(_provider).IsNotNull();
         //will throw if cannot be found
         _provider.GetRequiredService<IDispatcher>();
     }

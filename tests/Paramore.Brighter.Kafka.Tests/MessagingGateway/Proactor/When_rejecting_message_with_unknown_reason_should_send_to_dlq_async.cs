@@ -26,25 +26,20 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Category("Kafka")]
 public class KafkaMessageConsumerUnknownReasonAsyncTests : IAsyncDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly string _dlqTopic;
     private readonly KafkaMessageProducer _producer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaMessageConsumerUnknownReasonAsyncTests(ITestOutputHelper output)
+    public KafkaMessageConsumerUnknownReasonAsyncTests()
     {
-        _output = output;
         _dlqTopic = $"{_topic}.dlq";
 
         // Create producer directly for the data topic
@@ -69,7 +64,7 @@ public class KafkaMessageConsumerUnknownReasonAsyncTests : IAsyncDisposable
         _producer.Init();
     }
 
-    [Fact]
+    [Test]
     public async Task When_rejecting_message_with_unknown_reason_should_send_to_dlq_async()
     {
         //Arrange - let topics propagate in the broker
@@ -96,20 +91,20 @@ public class KafkaMessageConsumerUnknownReasonAsyncTests : IAsyncDisposable
         await using (var consumer = CreateConsumerAsync(groupId, dlqRoutingKey))
         {
             receivedMessage = await ConsumeMessageAsync(consumer);
-            Assert.Equal(messageId, receivedMessage.Id);
+            await Assert.That(receivedMessage.Id).IsEqualTo(messageId);
 
-            _output.WriteLine($"About to reject message {messageId} with unknown reason (None)");
+            Console.WriteLine($"About to reject message {messageId} with unknown reason (None)");
 
             //reject with None reason - should route to DLQ via default case
             await consumer.RejectAsync(receivedMessage, new MessageRejectionReason(RejectionReason.None, "Test unknown rejection reason async"));
 
-            _output.WriteLine($"Message {messageId} rejected, waiting for DLQ propagation");
+            Console.WriteLine($"Message {messageId} rejected, waiting for DLQ propagation");
 
             //yield to allow DLQ message to be produced and topic to be created
             await Task.Delay(TimeSpan.FromMilliseconds(3000));
         }
 
-        _output.WriteLine("Creating DLQ consumer");
+        Console.WriteLine("Creating DLQ consumer");
 
         //yield to allow DLQ topic to propagate
         await Task.Delay(TimeSpan.FromMilliseconds(1000));
@@ -117,18 +112,18 @@ public class KafkaMessageConsumerUnknownReasonAsyncTests : IAsyncDisposable
         //Assert - verify message appears on DLQ (default routing behavior)
         await using (var dlqConsumer = CreateDLQConsumerAsync(groupId))
         {
-            _output.WriteLine("Attempting to consume from DLQ");
+            Console.WriteLine("Attempting to consume from DLQ");
             var dlqMessage = await ConsumeMessageAsync(dlqConsumer);
 
-            Assert.NotNull(dlqMessage);
-            Assert.Equal(MessageType.MT_COMMAND, dlqMessage.Header.MessageType);
-            Assert.Equal(receivedMessage.Body.Value, dlqMessage.Body.Value);
+            await Assert.That(dlqMessage).IsNotNull();
+            await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+            await Assert.That(dlqMessage.Body.Value).IsEqualTo(receivedMessage.Body.Value);
 
             //verify rejection metadata was added
-            Assert.True(dlqMessage.Header.Bag.ContainsKey("OriginalTopic"));
-            Assert.Equal(_topic, dlqMessage.Header.Bag["OriginalTopic"]);
-            Assert.True(dlqMessage.Header.Bag.ContainsKey("RejectionReason"));
-            Assert.Equal("None", dlqMessage.Header.Bag["RejectionReason"]);
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey("OriginalTopic")).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag["OriginalTopic"]).IsEqualTo(_topic);
+            await Assert.That(dlqMessage.Header.Bag.ContainsKey("RejectionReason")).IsTrue();
+            await Assert.That(dlqMessage.Header.Bag["RejectionReason"]).IsEqualTo("None");
         }
     }
 
@@ -194,7 +189,7 @@ public class KafkaMessageConsumerUnknownReasonAsyncTests : IAsyncDisposable
             }
             catch (ChannelFailureException cfx)
             {
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 await Task.Delay(1000);
             }
         } while (maxTries <= 10);
@@ -204,7 +199,12 @@ public class KafkaMessageConsumerUnknownReasonAsyncTests : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        _producer?.Dispose();
+        if(_producer != null)
+        {
+            await _producer.DisposeAsync();
+        }
+        
         await Task.CompletedTask;
     }
 }
+

@@ -4,12 +4,11 @@ using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
-[Trait("Category", "AWS")]
+[Category("AWS")]
 public class AWSValidateQueuesTestsAsync : IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -31,13 +30,13 @@ public class AWSValidateQueuesTestsAsync : IAsyncDisposable
         _awsConnection = GatewayFactory.CreateFactory();
     }
 
-    [Fact]
+    [Test]
     public async Task When_queues_missing_verify_throws_async()
     {
         // We have no queues so we should throw
         // We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(_awsConnection);
-        await Assert.ThrowsAsync<QueueDoesNotExistException>(() => _channelFactory.CreateAsyncChannelAsync(_subscription));
+        await Assert.That(() => _channelFactory.CreateAsyncChannelAsync(_subscription)).ThrowsExactly<QueueDoesNotExistException>();
     }
 
     public async ValueTask DisposeAsync()

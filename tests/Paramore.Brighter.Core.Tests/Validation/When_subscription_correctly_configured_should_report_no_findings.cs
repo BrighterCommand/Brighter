@@ -19,46 +19,31 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class SubscriptionCorrectlyConfiguredValidationTests
 {
-    [Fact]
-    public void When_subscription_correctly_configured_should_report_no_findings()
+    [Test]
+    public async Task When_subscription_correctly_configured_should_report_no_findings()
     {
         // Arrange — correctly configured: Reactor + sync handler + ICommand type
-        var subscription = new Subscription(
-            subscriptionName: new SubscriptionName("test-sub"),
-            channelName: new ChannelName("test-channel"),
-            routingKey: new RoutingKey("test.routing.key"),
-            requestType: typeof(MyDescribableCommand),
-            messagePumpType: MessagePumpType.Reactor
-        );
-
+        var subscription = new Subscription(subscriptionName: new SubscriptionName("test-sub"), channelName: new ChannelName("test-channel"), routingKey: new RoutingKey("test.routing.key"), requestType: typeof(MyDescribableCommand), messagePumpType: MessagePumpType.Reactor);
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicSyncHandler));
-
         var pumpMatch = ConsumerValidationRules.PumpHandlerMatch(registry);
         var handlerRegistered = ConsumerValidationRules.HandlerRegistered(registry);
         var requestTypeSubtype = ConsumerValidationRules.RequestTypeSubtype();
-
         // Act & Assert — all three rules pass
-        Assert.True(pumpMatch.IsSatisfiedBy(subscription));
-        Assert.Empty(pumpMatch.Accept(new ValidationResultCollector<Subscription>()).ToList());
-
-        Assert.True(handlerRegistered.IsSatisfiedBy(subscription));
-        Assert.Empty(handlerRegistered.Accept(new ValidationResultCollector<Subscription>()).ToList());
-
-        Assert.True(requestTypeSubtype.IsSatisfiedBy(subscription));
-        Assert.Empty(requestTypeSubtype.Accept(new ValidationResultCollector<Subscription>()).ToList());
+        await Assert.That(pumpMatch.IsSatisfiedBy(subscription)).IsTrue();
+        await Assert.That(pumpMatch.Accept(new ValidationResultCollector<Subscription>()).ToList()).IsEmpty();
+        await Assert.That(handlerRegistered.IsSatisfiedBy(subscription)).IsTrue();
+        await Assert.That(handlerRegistered.Accept(new ValidationResultCollector<Subscription>()).ToList()).IsEmpty();
+        await Assert.That(requestTypeSubtype.IsSatisfiedBy(subscription)).IsTrue();
+        await Assert.That(requestTypeSubtype.Accept(new ValidationResultCollector<Subscription>()).ToList()).IsEmpty();
     }
 }

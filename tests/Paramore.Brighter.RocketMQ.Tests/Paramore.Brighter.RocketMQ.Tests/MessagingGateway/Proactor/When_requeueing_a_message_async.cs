@@ -1,23 +1,23 @@
-﻿using System.Net.Mime;
+using System.Net.Mime;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RocketMQ")]
+[Category("RocketMQ")]
 public class MessageProducerRequeueTestsAsync
 {
-    private readonly IAmAMessageProducerAsync _sender;
+    private IAmAMessageProducerAsync _sender;
     private Message? _requeuedMessage;
     private Message? _receivedMessage;
-    private readonly IAmAChannelAsync _channel;
-    private readonly Message _message;
+    private IAmAChannelAsync _channel;
+    private Message _message;
 
-    public MessageProducerRequeueTestsAsync()
+    [Before(Test)]
+    public async Task Setup()
     {
         const string replyTo = "http:\\queueUrl";
         MyCommand myCommand = new() { Value = "Test" };
@@ -45,13 +45,13 @@ public class MessageProducerRequeueTestsAsync
 
         RocketMqChannelFactory channelFactory = new(new RocketMessageConsumerFactory(connection));
         var publication = new RocketMqPublication { Topic = routingKey };
-        _sender = new RocketMqMessageProducer(connection, 
-            GatewayFactory.CreateProducer(connection, publication).GetAwaiter().GetResult(),
+        _sender = new RocketMqMessageProducer(connection,
+            await GatewayFactory.CreateProducer(connection, publication),
             publication);
-        _channel = channelFactory.CreateAsyncChannel(subscription);
+        _channel = await channelFactory.CreateAsyncChannelAsync(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeueing_a_message_async()
     {
         await _channel.PurgeAsync();
@@ -72,6 +72,6 @@ public class MessageProducerRequeueTestsAsync
             break;
         }
 
-        Assert.Equal(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
+        await Assert.That(_requeuedMessage.Body.Value).IsEqualTo(_receivedMessage.Body.Value);
     }
 }

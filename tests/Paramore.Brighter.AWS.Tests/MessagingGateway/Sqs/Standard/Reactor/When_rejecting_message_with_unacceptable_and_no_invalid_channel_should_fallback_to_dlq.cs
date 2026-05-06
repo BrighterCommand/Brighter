@@ -30,12 +30,12 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
-[Trait("Category", "AWS")]
-public class SqsMessageConsumerUnacceptableFallbackToDlqTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class SqsMessageConsumerUnacceptableFallbackToDlqTests : IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelSync _channel;
@@ -96,11 +96,11 @@ public class SqsMessageConsumerUnacceptableFallbackToDlqTests : IDisposable, IAs
         _dlqChannel = _dlqChannelFactory.CreateSyncChannel(dlqSubscription);
     }
 
-    [Fact]
-    public void When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
+    [Test]
+    public async Task When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
     {
         //Arrange
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
         var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
         //Act
@@ -110,29 +110,30 @@ public class SqsMessageConsumerUnacceptableFallbackToDlqTests : IDisposable, IAs
         //Assert - message should fall back to the DLQ since no invalid message queue is configured
         var dlqMessage = _dlqChannel.Receive(TimeSpan.FromMilliseconds(5000));
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
-        Assert.Equal(_message.Body.Value, dlqMessage.Body.Value);
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(dlqMessage.Body.Value).IsEqualTo(_message.Body.Value);
 
         //verify rejection metadata was added (keys are camelCase due to JSON serialization policy)
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalTopic"));
-        Assert.Equal(originalTopic, dlqMessage.Header.Bag["originalTopic"].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionReason"));
-        Assert.Equal(RejectionReason.Unacceptable.ToString(), dlqMessage.Header.Bag["rejectionReason"].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp"));
-        Assert.True(dlqMessage.Header.Bag.ContainsKey("originalMessageType"));
-        Assert.Equal(MessageType.MT_COMMAND.ToString(), dlqMessage.Header.Bag["originalMessageType"].ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalTopic")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["originalTopic"].ToString()).IsEqualTo(originalTopic);
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionReason")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("rejectionTimestamp")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag.ContainsKey("originalMessageType")).IsTrue();
+        await Assert.That(dlqMessage.Header.Bag["originalMessageType"].ToString()).IsEqualTo(MessageType.MT_COMMAND.ToString());
 
         //verify original message is deleted from source queue
         var sourceMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-        Assert.Equal(MessageType.MT_NONE, sourceMessage.Header.MessageType);
+        await Assert.That(sourceMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
-        _dlqChannelFactory.DeleteTopicAsync().Wait();
-        _dlqChannelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
+        await _dlqChannelFactory.DeleteTopicAsync();
+        await _dlqChannelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

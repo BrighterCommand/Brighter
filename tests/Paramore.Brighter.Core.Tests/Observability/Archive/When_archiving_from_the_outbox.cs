@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -12,14 +12,13 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Archive;
-
+[NotInParallel]
 public class ExternalServiceBusArchiveObservabilityTests
 {
     private readonly List<Activity> _exportedActivities = new();
-    private readonly OutboxProducerMediator<Message,CommittableTransaction> _bus;
+    private readonly OutboxProducerMediator<Message, CommittableTransaction> _bus;
     private readonly Publication _publication;
     private readonly FakeTimeProvider _timeProvider;
     private RoutingKey _routingKey = new("MyEvent");
@@ -27,24 +26,14 @@ public class ExternalServiceBusArchiveObservabilityTests
     private readonly TracerProvider _traceProvider;
     private const double TOLERANCE = 0.000000001;
     private readonly BrighterTracer _tracer;
-
     public ExternalServiceBusArchiveObservabilityTests()
     {
         IAmABus internalBus = new InternalBus();
         _timeProvider = new FakeTimeProvider();
         _tracer = new BrighterTracer(_timeProvider);
-
         var builder = Sdk.CreateTracerProviderBuilder();
-
-        _traceProvider = builder
-            .AddSource("Paramore.Brighter.Tests", "Paramore.Brighter")
-            .ConfigureResource(r => r.AddService("in-memory-tracer"))
-            .AddInMemoryExporter(_exportedActivities)
-            .Build();
-
-
+        _traceProvider = builder.AddSource("Paramore.Brighter.Tests", "Paramore.Brighter").ConfigureResource(r => r.AddService("in-memory-tracer")).AddInMemoryExporter(_exportedActivities).Build();
         var type = new CloudEventsType("io.goparamore.brighter.myevent");
-        
         _publication = new Publication
         {
             Source = new Uri("http://localhost"),
@@ -52,124 +41,87 @@ public class ExternalServiceBusArchiveObservabilityTests
             Topic = _routingKey,
             Type = type,
         };
-
         var producer = new InMemoryMessageProducer(internalBus, _publication);
-
-        var producerRegistry =
-            new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> { { new ProducerKey(_routingKey, type), producer } });
-
-        var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-            null);
+        var producerRegistry = new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> { { new ProducerKey(_routingKey, type), producer } });
+        var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()), null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-
-        _outbox = new InMemoryOutbox(_timeProvider) { Tracer = _tracer };
-
-        _bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry,
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
-            messageMapperRegistry,
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            _tracer,
-            new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox,
-            timeProvider:_timeProvider);
+        _outbox = new InMemoryOutbox(_timeProvider)
+        {
+            Tracer = _tracer
+        };
+        _bus = new OutboxProducerMediator<Message, CommittableTransaction>(producerRegistry, new ResiliencePipelineRegistry<string>().AddBrighterDefault(), messageMapperRegistry, new EmptyMessageTransformerFactory(), new EmptyMessageTransformerFactoryAsync(), _tracer, new FindPublicationByPublicationTopicOrRequestType(), _outbox, timeProvider: _timeProvider);
     }
 
-    [Theory]
-    [InlineData(InstrumentationOptions.RequestInformation)]
-    [InlineData(InstrumentationOptions.None)]
-    [InlineData(InstrumentationOptions.All)]
-    public void When_archiving_from_the_outbox(InstrumentationOptions instrumentationOptions)
+    [Test]
+    [Arguments(InstrumentationOptions.RequestInformation)]
+    [Arguments(InstrumentationOptions.None)]
+    [Arguments(InstrumentationOptions.All)]
+    public async Task When_archiving_from_the_outbox(InstrumentationOptions instrumentationOptions)
     {
+        Activity.Current = null;
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
-        
-        var context = new RequestContext { Span = parentActivity };
-
+        var context = new RequestContext
+        {
+            Span = parentActivity
+        };
         //add and clear message
         var myEvent = new MyEvent();
         var myMessage = new MyEventMessageMapper().MapToMessage(myEvent, _publication);
-        _bus.AddToOutbox(myMessage, context); 
+        _bus.AddToOutbox(myMessage, context);
         _bus.ClearOutbox([myMessage.Id], context);
-        
         //we should have an entry in the outbox
-        Assert.Equal(1, _outbox.EntryCount);
-        
+        await Assert.That(_outbox.EntryCount).IsEqualTo(1);
         //allow time to pass
-        _timeProvider.Advance(TimeSpan.FromSeconds(300)); 
-        
+        _timeProvider.Advance(TimeSpan.FromSeconds(300));
         //archive
         var dispatchedSince = TimeSpan.FromSeconds(100);
         var archiveProvider = new InMemoryArchiveProvider();
-
-        var archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, archiveProvider, tracer: _tracer,
-            instrumentationOptions: instrumentationOptions);
-        archiver.Archive(dispatchedSince, context);
-        
+        var archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, archiveProvider, tracer: _tracer, instrumentationOptions: instrumentationOptions);
+        await archiver.ArchiveAsync(dispatchedSince, context);
         //should be no messages in the outbox
-        Assert.Equal(0, _outbox.EntryCount);
-
+        await Assert.That(_outbox.EntryCount).IsEqualTo(0);
         parentActivity?.Stop();
-
         _traceProvider.ForceFlush();
-
         //We should have exported matching activities
-        Assert.Equal(9, _exportedActivities.Count);
-
-        Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
-
+        await Assert.That(_exportedActivities.Count).IsEqualTo(9);
+        await Assert.That(_exportedActivities).Contains(a => a.Source.Name == "Paramore.Brighter");
         //there should be an archive create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ArchiveMessages} {CommandProcessorSpanOperation.Archive.ToSpanName()}");
-        Assert.NotNull(createActivity);
-        Assert.Equal(parentActivity?.Id, createActivity.ParentId);
-
+        await Assert.That(createActivity).IsNotNull();
+        await Assert.That(createActivity.ParentId).IsEqualTo(parentActivity?.Id);
         //check for outstanding messages span
-        var osCheckActivity = _exportedActivities.SingleOrDefault(a =>
-            a.DisplayName == $"{BoxDbOperation.DispatchedMessages.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
-        Assert.NotNull(osCheckActivity);
-        Assert.Equal(createActivity.Id, osCheckActivity?.ParentId);
-
+        var osCheckActivity = _exportedActivities.SingleOrDefault(a => a.DisplayName == $"{BoxDbOperation.DispatchedMessages.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
+        await Assert.That(osCheckActivity).IsNotNull();
+        await Assert.That(osCheckActivity?.ParentId).IsEqualTo(createActivity.Id);
         //check for delete messages span
-        var deleteActivity = _exportedActivities.SingleOrDefault(a =>
-            a.DisplayName == $"{BoxDbOperation.Delete.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
-        Assert.NotNull(deleteActivity);
-        Assert.Equal(createActivity.Id, deleteActivity?.ParentId);
-
+        var deleteActivity = _exportedActivities.SingleOrDefault(a => a.DisplayName == $"{BoxDbOperation.Delete.ToSpanName()} {InMemoryAttributes.OutboxDbName} {InMemoryAttributes.DbTable}");
+        await Assert.That(deleteActivity).IsNotNull();
+        await Assert.That(deleteActivity?.ParentId).IsEqualTo(createActivity.Id);
         //check the tags for the create span
-        if(instrumentationOptions == InstrumentationOptions.None)
-            Assert.Empty(createActivity.Tags);
+        if (instrumentationOptions == InstrumentationOptions.None)
+            await Assert.That(createActivity.Tags).IsEmpty();
         if (instrumentationOptions.HasFlag(InstrumentationOptions.RequestInformation))
         {
-            Assert.Contains(createActivity.TagObjects,
-                t => t.Key == BrighterSemanticConventions.ArchiveAge &&
-                     Math.Abs(Convert.ToDouble(t.Value) - dispatchedSince.TotalMilliseconds) < TOLERANCE);
-            Assert.Contains(createActivity.TagObjects,
-                t => t.Key == BrighterSemanticConventions.Operation &&
-                     (string)t.Value == CommandProcessorSpanOperation.Archive.ToSpanName());
-            Assert.Contains(createActivity.TagObjects,
-                t => t.Key == BrighterSemanticConventions.MessagingOperationType &&
-                     (string)t.Value == CommandProcessorSpanOperation.Archive.ToSpanName());
+            await Assert.That(createActivity.TagObjects).Contains(t => t.Key == BrighterSemanticConventions.ArchiveAge && Math.Abs(Convert.ToDouble(t.Value) - dispatchedSince.TotalMilliseconds) < TOLERANCE);
+            await Assert.That(createActivity.TagObjects).Contains(t => t.Key == BrighterSemanticConventions.Operation && (string)t.Value == CommandProcessorSpanOperation.Archive.ToSpanName());
+            await Assert.That(createActivity.TagObjects).Contains(t => t.Key == BrighterSemanticConventions.MessagingOperationType && (string)t.Value == CommandProcessorSpanOperation.Archive.ToSpanName());
         }
         else
         {
-            Assert.DoesNotContain(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.ArchiveAge);
-            Assert.DoesNotContain(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.Operation);
-            Assert.DoesNotContain(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingOperationName);
+            await Assert.That(createActivity.TagObjects).DoesNotContain(t => t.Key == BrighterSemanticConventions.ArchiveAge);
+            await Assert.That(createActivity.TagObjects).DoesNotContain(t => t.Key == BrighterSemanticConventions.Operation);
+            await Assert.That(createActivity.TagObjects).DoesNotContain(t => t.Key == BrighterSemanticConventions.MessagingOperationName);
         }
 
-
         //check the tags for the outstanding messages span
-        Assert.True(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.DispatchedMessages.ToSpanName()));
-        Assert.True(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable));
-        Assert.True(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()));
-        Assert.True(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName));
-
+        await Assert.That(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.DispatchedMessages.ToSpanName())).IsTrue();
+        await Assert.That(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable)).IsTrue();
+        await Assert.That(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName())).IsTrue();
+        await Assert.That(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName)).IsTrue();
         //check the tags for the delete messages span
-        Assert.True(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.Delete.ToSpanName()));
-        Assert.True(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable));
-        Assert.True(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()));
-        Assert.True(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName));
-        
+        await Assert.That(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == BoxDbOperation.Delete.ToSpanName())).IsTrue();
+        await Assert.That(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable)).IsTrue();
+        await Assert.That(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName())).IsTrue();
+        await Assert.That(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.OutboxDbName)).IsTrue();
     }
 }

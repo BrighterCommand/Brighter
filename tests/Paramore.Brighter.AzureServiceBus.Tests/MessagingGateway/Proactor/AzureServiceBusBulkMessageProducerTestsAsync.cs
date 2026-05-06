@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor;
 
@@ -38,7 +37,7 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
         );
     }
 
-    [Fact]
+    [Test]
     public async Task
         When_the_topic_exists_and_sending_a_batch_with_one_message_it_should_send_the_message_to_the_correct_topicclient()
     {
@@ -61,14 +60,14 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
 
         ServiceBusMessage sentMessage = _topicClient.SentMessages.Single();
 
-        Assert.Equal(messageBody, sentMessage.Body.ToArray());
-        Assert.Equal("MT_EVENT", sentMessage.ApplicationProperties["MessageType"]);
-        Assert.Equal(2, _topicClient.ClosedCount);
+        await Assert.That(sentMessage.Body.ToArray()).IsEqualTo(messageBody);
+        await Assert.That(sentMessage.ApplicationProperties["MessageType"]).IsEqualTo("MT_EVENT");
+        await Assert.That(_topicClient.ClosedCount).IsEqualTo(2);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_sending_a_command_message_type_message_it_should_set_the_correct_messagetype_property(
         bool useQueues)
     {
@@ -92,14 +91,14 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
 
         ServiceBusMessage sentMessage = _topicClient.SentMessages.Single();
 
-        Assert.Equal(messageBody, sentMessage.Body.ToArray());
-        Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
-        Assert.Equal(2, _topicClient.ClosedCount);
+        await Assert.That(sentMessage.Body.ToArray()).IsEqualTo(messageBody);
+        await Assert.That(sentMessage.ApplicationProperties["MessageType"]).IsEqualTo("MT_COMMAND");
+        await Assert.That(_topicClient.ClosedCount).IsEqualTo(2);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task
         When_the_topic_does_not_exist_it_should_be_created_and_the_message_is_sent_to_the_correct_topicclient(
             bool useQueues)
@@ -122,13 +121,13 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
 
         ServiceBusMessage sentMessage = _topicClient.SentMessages.Single();
 
-        Assert.Equal(1, _nameSpaceManagerWrapper.CreateCount);
-        Assert.Equal(messageBody, sentMessage.Body.ToArray());
+        await Assert.That(_nameSpaceManagerWrapper.CreateCount).IsEqualTo(1);
+        await Assert.That(sentMessage.Body.ToArray()).IsEqualTo(messageBody);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_message_batch_is_created_and_an_exception_occurs_close_is_still_called(bool useQueues)
     {
         byte[] messageBody = Encoding.UTF8.GetBytes("A message body");
@@ -158,12 +157,12 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
             // ignored
         }
 
-        Assert.Equal(1, _topicClient.ClosedCount);
+        await Assert.That(_topicClient.ClosedCount).IsEqualTo(1);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
     public async Task When_a_message_batch_is_send_and_an_exception_occurs_close_is_still_called(bool useQueues)
     {
         byte[] messageBody = Encoding.UTF8.GetBytes("A message body");
@@ -192,10 +191,10 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
             // ignored
         }
 
-        Assert.Equal(2, _topicClient.ClosedCount);
+        await Assert.That(_topicClient.ClosedCount).IsEqualTo(2);
     }
 
-    [Fact]
+    [Test]
     public async Task
         When_a_message_batch_is_created_for_a_couple_message_that_exceeds_message_batch_size_a_new_batch_is_created()
     {
@@ -227,14 +226,14 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
         ServiceBusMessage sentMessage1 = _topicClient.SentMessages.Single(x => x.MessageId == message1.Id.Value);
         ServiceBusMessage sentMessage2 = _topicClient.SentMessages.Single(x => x.MessageId == message2.Id.Value);
 
-        Assert.Equal(2, batches.Count());
-        Assert.Equal(message1.Body.Value, sentMessage1.Body.ToString());
-        Assert.Equal("MT_COMMAND", sentMessage1.ApplicationProperties["MessageType"]);
-        Assert.Equal(message2.Body.Value, sentMessage2.Body.ToString());
-        Assert.Equal("MT_COMMAND", sentMessage2.ApplicationProperties["MessageType"]);
+        await Assert.That(batches.Count()).IsEqualTo(2);
+        await Assert.That(sentMessage1.Body.ToString()).IsEqualTo(message1.Body.Value);
+        await Assert.That(sentMessage1.ApplicationProperties["MessageType"]).IsEqualTo("MT_COMMAND");
+        await Assert.That(sentMessage2.Body.ToString()).IsEqualTo(message2.Body.Value);
+        await Assert.That(sentMessage2.ApplicationProperties["MessageType"]).IsEqualTo("MT_COMMAND");
     }
 
-    [Fact]
+    [Test]
     public async Task
         When_a_message_batch_is_created_for_a_single_message_that_exceeds_message_batch_size_a_single_message_batch_is_created()
     {
@@ -254,13 +253,13 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
         ServiceBusMessage sentMessage1 = _topicClient.SentMessages.Single(x => x.MessageId == message1.Id.Value);
         AzureServiceBusSingleMessageBatch? singleMessageBatch = batches.First() as AzureServiceBusSingleMessageBatch;
 
-        Assert.Single(batches);
-        Assert.True(singleMessageBatch is not null);
-        Assert.Equal(message1.Body.Value, sentMessage1.Body.ToString());
-        Assert.Equal("MT_COMMAND", sentMessage1.ApplicationProperties["MessageType"]);
+        await Assert.That(batches).HasSingleItem();
+        await Assert.That(singleMessageBatch is not null).IsTrue();
+        await Assert.That(sentMessage1.Body.ToString()).IsEqualTo(message1.Body.Value);
+        await Assert.That(sentMessage1.ApplicationProperties["MessageType"]).IsEqualTo("MT_COMMAND");
     }
 
-    [Fact]
+    [Test]
     public async Task
         When_a_message_batch_is_created_for_a_few_messages_with_1_that_exceeds_message_batch_size_a_new_batch_is_created()
     {
@@ -296,12 +295,12 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
         ServiceBusMessage sentMessage2 = _topicClient.SentMessages.Single(x => x.MessageId == message2.Id.Value);
         ServiceBusMessage sentMessage3 = _topicClient.SentMessages.Single(x => x.MessageId == message3.Id.Value);
 
-        Assert.Equal(2, batches.Count());
-        Assert.Equal(message1.Body.Value, sentMessage1.Body.ToString());
-        Assert.Equal("MT_COMMAND", sentMessage1.ApplicationProperties["MessageType"]);
-        Assert.Equal(message2.Body.Value, sentMessage2.Body.ToString());
-        Assert.Equal("MT_COMMAND", sentMessage2.ApplicationProperties["MessageType"]);
-        Assert.Equal(message3.Body.Value, sentMessage3.Body.ToString());
-        Assert.Equal("MT_COMMAND", sentMessage3.ApplicationProperties["MessageType"]);
+        await Assert.That(batches.Count()).IsEqualTo(2);
+        await Assert.That(sentMessage1.Body.ToString()).IsEqualTo(message1.Body.Value);
+        await Assert.That(sentMessage1.ApplicationProperties["MessageType"]).IsEqualTo("MT_COMMAND");
+        await Assert.That(sentMessage2.Body.ToString()).IsEqualTo(message2.Body.Value);
+        await Assert.That(sentMessage2.ApplicationProperties["MessageType"]).IsEqualTo("MT_COMMAND");
+        await Assert.That(sentMessage3.Body.ToString()).IsEqualTo(message3.Body.Value);
+        await Assert.That(sentMessage3.ApplicationProperties["MessageType"]).IsEqualTo("MT_COMMAND");
     }
 }

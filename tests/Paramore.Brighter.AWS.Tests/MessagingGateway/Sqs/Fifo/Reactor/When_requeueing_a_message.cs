@@ -6,13 +6,12 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
-[Trait("Category", "AWS")]
-public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+public class SqsMessageProducerRequeueTests : IAsyncDisposable
 {
     private readonly IAmAMessageProducerSync _sender;
     private Message _requeuedMessage;
@@ -63,8 +62,8 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
         _channel = _channelFactory.CreateSyncChannel(subscription);
     }
 
-    [Fact]
-    public void When_requeueing_a_message()
+    [Test]
+    public async Task When_requeueing_a_message()
     {
         _sender.Send(_message);
         _receivedMessage =  _channel.Receive(TimeSpan.FromMilliseconds(5000));
@@ -74,13 +73,14 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
 
         _channel.Acknowledge(_requeuedMessage);
 
-        Assert.Equal(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
+        await Assert.That(_requeuedMessage.Body.Value).IsEqualTo(_receivedMessage.Body.Value);
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

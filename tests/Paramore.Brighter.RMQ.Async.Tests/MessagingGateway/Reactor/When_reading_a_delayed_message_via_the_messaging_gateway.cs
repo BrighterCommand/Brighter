@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,12 +26,10 @@ using System;
 using System.Linq;
 using System.Net.Mime;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RmqMessageProducerDelayedMessageTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -64,39 +62,39 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
             .GetResult();
     }
 
-    [Fact]
-    public void When_reading_a_delayed_message_via_the_messaging_gateway()
+    [Test]
+    public async Task When_reading_a_delayed_message_via_the_messaging_gateway()
     {
         _messageProducer.SendWithDelay(_message, TimeSpan.FromMilliseconds(3000));
 
         var immediateResult = _messageConsumer.Receive(TimeSpan.Zero).First();
         var deliveredWithoutWait = immediateResult.Header.MessageType == MessageType.MT_NONE;
-        Assert.Equal(0, immediateResult.Header.HandledCount);
-        Assert.Equal(TimeSpan.Zero, immediateResult.Header.Delayed);
+        await Assert.That(immediateResult.Header.HandledCount).IsEqualTo(0);
+        await Assert.That(immediateResult.Header.Delayed).IsEqualTo(TimeSpan.Zero);
 
         //_should_have_not_been_able_get_message_before_delay
-        Assert.True(deliveredWithoutWait);
+        await Assert.That(deliveredWithoutWait).IsTrue();
             
         var delayedResult = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
 
         //_should_send_a_message_via_rmq_with_the_matching_body
-        Assert.Equal(_message.Body.Value, delayedResult.Body.Value);
-        Assert.Equal(MessageType.MT_COMMAND, delayedResult.Header.MessageType);
-        Assert.Equal(0, delayedResult.Header.HandledCount);
-        Assert.Equal(TimeSpan.FromMilliseconds(3000), delayedResult.Header.Delayed);
+        await Assert.That(delayedResult.Body.Value).IsEqualTo(_message.Body.Value);
+        await Assert.That(delayedResult.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(delayedResult.Header.HandledCount).IsEqualTo(0);
+        await Assert.That(delayedResult.Header.Delayed).IsEqualTo(TimeSpan.FromMilliseconds(3000));
 
         _messageConsumer.Acknowledge(delayedResult);
     }
 
-    [Fact]
-    public void When_requeing_a_failed_message_with_delay()
+    [Test]
+    public async Task When_requeing_a_failed_message_with_delay()
     {
         //send & receive a message
         _messageProducer.Send(_message);
         var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
-        Assert.Equal(0, message.Header.HandledCount);
-        Assert.Equal(TimeSpan.FromMilliseconds(0), message.Header.Delayed);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(message.Header.HandledCount).IsEqualTo(0);
+        await Assert.That(message.Header.Delayed).IsEqualTo(TimeSpan.FromMilliseconds(0));
 
         _messageConsumer.Acknowledge(message);
 
@@ -106,8 +104,8 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
 
         //receive and assert
         var message2 = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000)).Single();
-        Assert.Equal(MessageType.MT_COMMAND, message2.Header.MessageType);
-        Assert.Equal(1, message2.Header.HandledCount);
+        await Assert.That(message2.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(message2.Header.HandledCount).IsEqualTo(1);
 
         _messageConsumer.Acknowledge(message2);
     }
@@ -118,3 +116,4 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
         _messageProducer.Dispose();
     }
 }
+

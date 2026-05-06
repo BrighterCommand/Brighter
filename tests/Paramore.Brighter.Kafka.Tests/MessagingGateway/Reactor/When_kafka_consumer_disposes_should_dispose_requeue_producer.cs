@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,8 +26,6 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
@@ -35,20 +33,17 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 /// When the Kafka consumer is disposed, it should dispose the lazily-created requeue producer.
 /// If no requeue was ever performed, disposal should succeed without error.
 /// </summary>
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Category("Kafka")]
 public class KafkaConsumerDisposesRequeueProducerTests : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly string _channelName = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly IAmAMessageConsumerSync _consumer;
 
-    public KafkaConsumerDisposesRequeueProducerTests(ITestOutputHelper output)
+    public KafkaConsumerDisposesRequeueProducerTests()
     {
         string groupId = Guid.NewGuid().ToString();
-        _output = output;
 
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
@@ -85,8 +80,8 @@ public class KafkaConsumerDisposesRequeueProducerTests : IDisposable
             ));
     }
 
-    [Fact]
-    public void When_consumer_requeues_then_disposes_should_dispose_producer()
+    [Test]
+    public async Task When_consumer_requeues_then_disposes_should_dispose_producer()
     {
         // Arrange - send a message and receive it to have something to requeue
         var message = new Message(
@@ -97,26 +92,24 @@ public class KafkaConsumerDisposesRequeueProducerTests : IDisposable
         producer.Send(message);
         ((KafkaMessageProducer)producer).Flush();
 
-        var received = GetMessage();
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        var received = await GetMessage();
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // Act - requeue to trigger lazy producer creation, then dispose
         _consumer.Requeue(received);
 
         // Assert - disposing should not throw (producer cleanup succeeds)
-        var exception = Record.Exception(() => _consumer.Dispose());
-        Assert.Null(exception);
+        await Assert.That(() => _consumer.Dispose()).ThrowsNothing();
     }
 
-    [Fact]
-    public void When_consumer_disposes_without_requeue_should_not_throw()
+    [Test]
+    public async Task When_consumer_disposes_without_requeue_should_not_throw()
     {
         // Act + Assert - disposing without ever requeuing should succeed
-        var exception = Record.Exception(() => _consumer.Dispose());
-        Assert.Null(exception);
+        await Assert.That(() => _consumer.Dispose()).ThrowsNothing();
     }
 
-    private Message GetMessage()
+    private async Task<Message> GetMessage()
     {
         Message[] messages = [];
         int maxTries = 0;
@@ -135,8 +128,8 @@ public class KafkaConsumerDisposesRequeueProducerTests : IDisposable
             }
             catch (ChannelFailureException cfx)
             {
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
-                Task.Delay(1000).GetAwaiter().GetResult();
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
         } while (maxTries <= 10);
 
@@ -153,3 +146,4 @@ public class KafkaConsumerDisposesRequeueProducerTests : IDisposable
         try { _consumer?.Dispose(); } catch { /* already disposed */ }
     }
 }
+

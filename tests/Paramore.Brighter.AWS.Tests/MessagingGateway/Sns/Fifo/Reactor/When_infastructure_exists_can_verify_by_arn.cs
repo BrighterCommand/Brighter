@@ -7,21 +7,22 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
-[Trait("Category", "AWS")]
-public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class AwsValidateInfrastructureByArnTests : IAsyncDisposable
 {
-    private readonly Message _message;
-    private readonly IAmAMessageConsumerSync _consumer;
-    private readonly SnsMessageProducer _messageProducer;
-    private readonly ChannelFactory _channelFactory;
-    private readonly MyCommand _myCommand;
+    private Message _message;
+    private IAmAMessageConsumerSync _consumer;
+    private SnsMessageProducer _messageProducer;
+    private ChannelFactory _channelFactory;
+    private MyCommand _myCommand;
 
-    public AwsValidateInfrastructureByArnTests()
+    [Before(Test)]
+    public async Task Setup()
     {
         const string replyTo = "http:\\queueUrl";
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
@@ -38,9 +39,9 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }), 
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: topicAttributes,
-            messagePumpType: MessagePumpType.Reactor, 
+            messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -57,7 +58,7 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
-        var topicArn = FindTopicArn(awsConnection, routingKey.ToValidSNSTopicName(true));
+        var topicArn = await FindTopicArn(awsConnection, routingKey.ToValidSNSTopicName(true));
         var routingKeyArn = new RoutingKey(topicArn);
 
         //Now change the subscription to validate, just check what we made
@@ -78,11 +79,11 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
         _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_infrastructure_exists_can_verify()
     {
         //arrange
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
 
         await Task.Delay(1000);
 
@@ -90,19 +91,20 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
 
         //Assert
         var message = messages.First();
-        Assert.Equal(_myCommand.Id, message.Id);
+        await Assert.That(message.Id).IsEqualTo(_myCommand.Id);
 
         //clear the queue
         _consumer.Acknowledge(message);
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         //Clean up resources that we have created
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
         _consumer.Dispose();
-        _messageProducer.Dispose();
+        await _messageProducer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -113,10 +115,10 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
         await _messageProducer.DisposeAsync();
     }
 
-    private static string FindTopicArn(AWSMessagingGatewayConnection connection, string topicName)
+    private static async Task<string> FindTopicArn(AWSMessagingGatewayConnection connection, string topicName)
     {
         using var snsClient = new AWSClientFactory(connection).CreateSnsClient();
-        var topicResponse = snsClient.FindTopicAsync(topicName).GetAwaiter().GetResult();
+        var topicResponse = await snsClient.FindTopicAsync(topicName);
         return topicResponse.TopicArn;
     }
 }

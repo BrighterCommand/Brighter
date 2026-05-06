@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-public class RmqAssumeExistingInfrastructureTestsAsync : IDisposable, IAsyncDisposable
+public class RmqAssumeExistingInfrastructureTestsAsync : IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _messageProducer;
     private readonly IAmAMessageConsumerAsync _messageConsumer;
@@ -42,7 +41,7 @@ public class RmqAssumeExistingInfrastructureTestsAsync : IDisposable, IAsyncDisp
             .GetResult() ;
     }
         
-    [Fact]
+    [Test]
     public async Task When_infrastructure_exists_can_assume_producer()
     {
         var exceptionThrown = false;
@@ -57,10 +56,11 @@ public class RmqAssumeExistingInfrastructureTestsAsync : IDisposable, IAsyncDisp
             exceptionThrown = true;
         }
 
-        Assert.False(exceptionThrown);
+        await Assert.That(exceptionThrown).IsFalse();
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     { 
         ((IAmAMessageProducerSync)_messageProducer).Dispose(); 
         ((IAmAMessageConsumerSync)_messageConsumer).Dispose();

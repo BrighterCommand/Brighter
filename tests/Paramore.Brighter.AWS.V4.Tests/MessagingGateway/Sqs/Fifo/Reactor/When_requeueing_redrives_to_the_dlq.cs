@@ -9,13 +9,13 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
-[Trait("Category", "AWS")]
-public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class SqsMessageProducerDlqTests : IAsyncDisposable
 {
     private readonly SqsMessageProducer _sender;
     private readonly IAmAChannelSync _channel;
@@ -70,10 +70,10 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         _channel = _channelFactory.CreateSyncChannel(subscription);
     }
 
-    [Fact]
-    public void When_requeueing_redrives_to_the_queue()
+    [Test]
+    public async Task When_requeueing_redrives_to_the_queue()
     {
-        _sender.Send(_message);
+        await _sender.SendAsync(_message);
         var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
         _channel.Requeue(receivedMessage);
 
@@ -87,19 +87,19 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         Task.Delay(5000);
 
         //inspect the dlq
-        Assert.Equal(1, GetDLQCount(_dlqChannelName + ".fifo"));
+        await Assert.That(await GetDLQCount(_dlqChannelName + ".fifo")).IsEqualTo(1);
     }
 
-    private int GetDLQCount(string queueName)
+    private async Task<int> GetDLQCount(string queueName)
     {
         using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
-        var queueUrlResponse = sqsClient.GetQueueUrlAsync(queueName).GetAwaiter().GetResult();
-        var response = sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
+        var queueUrlResponse = await sqsClient.GetQueueUrlAsync(queueName);
+        var response = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
         {
             QueueUrl = queueUrlResponse.QueueUrl,
             WaitTimeSeconds = 5,
             MessageAttributeNames = ["All", "ApproximateReceiveCount"]
-        }).GetAwaiter().GetResult();
+        });
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
@@ -110,10 +110,11 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

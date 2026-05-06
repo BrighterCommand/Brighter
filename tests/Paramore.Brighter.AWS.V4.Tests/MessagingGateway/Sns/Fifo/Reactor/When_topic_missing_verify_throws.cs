@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
-[Trait("Category", "AWS")]
+[Category("AWS")]
 public class AwsValidateMissingTopicTests
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -21,8 +20,8 @@ public class AwsValidateMissingTopicTests
         //Because we don't use channel factory to create the infrastructure -it won't exist
     }
 
-    [Fact]
-    public void When_topic_missing_verify_throws()
+    [Test]
+    public async Task When_topic_missing_verify_throws()
     {
         //arrange
         var producer = new SnsMessageProducer(_awsConnection,
@@ -35,9 +34,12 @@ public class AwsValidateMissingTopicTests
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
 
         //act && assert
-        Assert.Throws<BrokerUnreachableException>(() => producer.Send(new Message(
-            new MessageHeader("", _routingKey, MessageType.MT_EVENT,
-                type: new CloudEventsType("plain/text"), partitionKey: messageGroupId),
-            new MessageBody("Test"))));
+        Assert.ThrowsExactly<BrokerUnreachableException>(() =>
+        {
+            producer.Send(new Message(
+                new MessageHeader("", _routingKey, MessageType.MT_EVENT,
+                    type: new CloudEventsType("plain/text"), partitionKey: messageGroupId),
+                new MessageBody("Test")));
+        });
     }
 }

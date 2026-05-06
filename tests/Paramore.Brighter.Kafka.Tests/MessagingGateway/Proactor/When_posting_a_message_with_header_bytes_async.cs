@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Mime;
@@ -8,30 +8,26 @@ using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, IDisposable
+[Category("Kafka")]
+public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
-    private readonly IAmAProducerRegistry _producerRegistry;
-    private readonly IAmAMessageConsumerAsync _consumer;
+    private IAmAProducerRegistry _producerRegistry;
+    private IAmAMessageConsumerAsync _consumer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
-    private readonly IAsyncSerializer<MyKafkaCommand> _serializer;
-    private readonly IAsyncDeserializer<MyKafkaCommand> _deserializer;
-    private readonly SerializationContext _serializationContext;
+    private IAsyncSerializer<MyKafkaCommand> _serializer;
+    private IAsyncDeserializer<MyKafkaCommand> _deserializer;
+    private SerializationContext _serializationContext;
 
-    public KafkaMessageProducerHeaderBytesSendTestsAsync(ITestOutputHelper output)
+    [Before(Test)]
+    public async Task Setup()
     {
         string groupId = Guid.NewGuid().ToString();
-        _output = output;
-        _producerRegistry = new KafkaProducerRegistryFactory(
+        _producerRegistry = await new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
                 Name = "Kafka Producer Send Test",
@@ -49,7 +45,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).CreateAsync().Result;
+            ]).CreateAsync();
 
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -73,8 +69,8 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
         _serializationContext = new SerializationContext(MessageComponentType.Value, _topic);
     }
 
-    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
-    [Fact]
+    //[Test, Skip("As it has to wait for the messages to flush, only tends to run well in debug")]
+    [Test]
     public async Task When_posting_a_message_via_the_messaging_gateway()
     {
         //Let topic propagate in the broker
@@ -112,19 +108,19 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
 
         var received = await GetMessageAsync();
 
-        Assert.True(received.Body.Bytes.Length > 5);
+        await Assert.That(received.Body.Bytes.Length > 5).IsTrue();
 
         var receivedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(received.Body.Bytes.Skip(1).Take(4).ToArray()));
 
         var receivedCommand =await  _deserializer.DeserializeAsync(received.Body.Bytes, received.Body.Bytes is null, _serializationContext);
 
         //assert
-        Assert.Equal(MessageType.MT_COMMAND, received.Header.MessageType);
-        Assert.Equal(_partitionKey, received.Header.PartitionKey);
-        Assert.Equal(body, received.Body.Bytes);
-        Assert.Equal(schemaId, receivedSchemaId);
-        Assert.Equal(myCommand.Id, receivedCommand.Id);
-        Assert.Equal(myCommand.Value, receivedCommand.Value);
+        await Assert.That(received.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(received.Header.PartitionKey).IsEqualTo(_partitionKey);
+        await Assert.That(received.Body.Bytes).IsEquivalentTo(body);
+        await Assert.That(receivedSchemaId).IsEqualTo(schemaId);
+        await Assert.That(receivedCommand.Id).IsEqualTo(myCommand.Id);
+        await Assert.That(receivedCommand.Value).IsEqualTo(myCommand.Value);
     }
 
     private async Task<Message> GetMessageAsync()
@@ -151,7 +147,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
             catch (ChannelFailureException cfx)
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 await Task.Delay(1000);
             }
 
@@ -163,7 +159,8 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
         return messages[0];
     }
     
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         _producerRegistry?.Dispose();
         ((IAmAMessageConsumerSync)_consumer)?.Dispose();
@@ -175,3 +172,4 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
         await _consumer.DisposeAsync();
     }
 }
+

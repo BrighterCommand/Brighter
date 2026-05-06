@@ -1,29 +1,29 @@
-﻿using Paramore.Brighter.MessagingGateway.RocketMQ;
+using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RocketMQ")]
+[Category("RocketMQ")]
 public class BufferedConsumerTestsAsync : IAsyncDisposable
 {
-    private readonly IAmAMessageProducerAsync _messageProducer;
-    private readonly IAmAMessageConsumerAsync _messageConsumer;
+    private IAmAMessageProducerAsync _messageProducer;
+    private IAmAMessageConsumerAsync _messageConsumer;
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
     private const int BatchSize = 3;
 
-    public BufferedConsumerTestsAsync()
+    [Before(Test)]
+    public async Task Setup()
     {
-        var connection = GatewayFactory.CreateConnection(); 
+        var connection = GatewayFactory.CreateConnection();
         var publication = new RocketMqPublication { Topic = "bt_mc_rmm_async" };
-        var consumer = GatewayFactory.CreateSimpleConsumer(connection, publication).GetAwaiter().GetResult();
-        var producer = GatewayFactory.CreateProducer(connection,  publication).GetAwaiter().GetResult();
+        var consumer = await GatewayFactory.CreateSimpleConsumer(connection, publication);
+        var producer = await GatewayFactory.CreateProducer(connection,  publication);
 
         _messageConsumer  = new RocketMessageConsumer(consumer, BatchSize, TimeSpan.FromSeconds(30));
         _messageProducer = new RocketMqMessageProducer(connection, producer, publication);
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_message_consumer_reads_multiple_messages_async()
     {
         await _messageConsumer.PurgeAsync();
@@ -45,7 +45,7 @@ public class BufferedConsumerTestsAsync : IAsyncDisposable
         var messages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
         //We should only have three messages
-        Assert.Equal(3, messages.Length);
+        await Assert.That(messages.Length).IsEqualTo(3);
 
         //ack those to remove from the queue
         foreach (var message in messages)
@@ -60,7 +60,7 @@ public class BufferedConsumerTestsAsync : IAsyncDisposable
         messages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(500));
 
         //This time, just the one message
-        Assert.Single(messages);
+        await Assert.That(messages).HasSingleItem();
     }
 
     public async ValueTask DisposeAsync()

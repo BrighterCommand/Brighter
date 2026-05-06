@@ -30,12 +30,12 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
-[Trait("Category", "AWS")]
-public class SqsMessageConsumerUnacceptableInvalidChannelTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class SqsMessageConsumerUnacceptableInvalidChannelTests : IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelSync _channel;
@@ -113,11 +113,11 @@ public class SqsMessageConsumerUnacceptableInvalidChannelTests : IDisposable, IA
         _dlqChannel = _dlqChannelFactory.CreateSyncChannel(dlqSubscription);
     }
 
-    [Fact]
-    public void When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel()
+    [Test]
+    public async Task When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel()
     {
         //Arrange
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
         var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
         //Act
@@ -127,35 +127,36 @@ public class SqsMessageConsumerUnacceptableInvalidChannelTests : IDisposable, IA
         //Assert - message should appear on the invalid message queue
         var invalidMessage = _invalidChannel.Receive(TimeSpan.FromMilliseconds(5000));
 
-        Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
-        Assert.Equal(_message.Body.Value, invalidMessage.Body.Value);
+        await Assert.That(invalidMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(invalidMessage.Body.Value).IsEqualTo(_message.Body.Value);
 
         //verify rejection metadata was added (keys are camelCase due to JSON serialization policy)
-        Assert.True(invalidMessage.Header.Bag.ContainsKey("originalTopic"));
-        Assert.Equal(originalTopic, invalidMessage.Header.Bag["originalTopic"].ToString());
-        Assert.True(invalidMessage.Header.Bag.ContainsKey("rejectionReason"));
-        Assert.Equal(RejectionReason.Unacceptable.ToString(), invalidMessage.Header.Bag["rejectionReason"].ToString());
-        Assert.True(invalidMessage.Header.Bag.ContainsKey("rejectionTimestamp"));
-        Assert.True(invalidMessage.Header.Bag.ContainsKey("originalMessageType"));
-        Assert.Equal(MessageType.MT_COMMAND.ToString(), invalidMessage.Header.Bag["originalMessageType"].ToString());
+        await Assert.That(invalidMessage.Header.Bag.ContainsKey("originalTopic")).IsTrue();
+        await Assert.That(invalidMessage.Header.Bag["originalTopic"].ToString()).IsEqualTo(originalTopic);
+        await Assert.That(invalidMessage.Header.Bag.ContainsKey("rejectionReason")).IsTrue();
+        await Assert.That(invalidMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
+        await Assert.That(invalidMessage.Header.Bag.ContainsKey("rejectionTimestamp")).IsTrue();
+        await Assert.That(invalidMessage.Header.Bag.ContainsKey("originalMessageType")).IsTrue();
+        await Assert.That(invalidMessage.Header.Bag["originalMessageType"].ToString()).IsEqualTo(MessageType.MT_COMMAND.ToString());
 
         //verify message did NOT go to the DLQ
         var dlqMessage = _dlqChannel.Receive(TimeSpan.FromMilliseconds(5000));
-        Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
         //verify original message is deleted from source queue
         var sourceMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-        Assert.Equal(MessageType.MT_NONE, sourceMessage.Header.MessageType);
+        await Assert.That(sourceMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
-        _invalidChannelFactory.DeleteTopicAsync().Wait();
-        _invalidChannelFactory.DeleteQueueAsync().Wait();
-        _dlqChannelFactory.DeleteTopicAsync().Wait();
-        _dlqChannelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
+        await _invalidChannelFactory.DeleteTopicAsync();
+        await _invalidChannelFactory.DeleteQueueAsync();
+        await _dlqChannelFactory.DeleteTopicAsync();
+        await _dlqChannelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

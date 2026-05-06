@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using Google.Cloud.PubSub.V1;
@@ -10,8 +10,8 @@ using DeadLetterPolicy = Paramore.Brighter.MessagingGateway.GcpPubSub.DeadLetter
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Reactor;
 
-[Trait("Category", "GCP")]
-[Trait("Fragile", "CI")]
+[Category("GCP")]
+[Property("Fragile", "CI")]
 public class MessageProducerDlqTestsAsync : IDisposable
 {
     private const int MaxDeliveryAttempts = 5;
@@ -68,10 +68,10 @@ public class MessageProducerDlqTestsAsync : IDisposable
         _channel = _channelFactory.CreateSyncChannel(_pubSubSubscription);
     }
 
-    [Fact]
-    public void When_requeueing_redrives_to_the_queue()
+    [Test]
+    public async Task When_requeueing_redrives_to_the_queue()
     {
-        _sender.Send(_message);
+        await _sender.SendAsync(_message);
         for (var i = 0; i <= MaxDeliveryAttempts; i++)
         {
             var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
@@ -84,7 +84,7 @@ public class MessageProducerDlqTestsAsync : IDisposable
         }
         
         var dlqCount = GetDLQCount();
-        Assert.True(dlqCount >= 1);
+        await Assert.That(dlqCount >= 1).IsTrue();
     }
 
     private int GetDLQCount()

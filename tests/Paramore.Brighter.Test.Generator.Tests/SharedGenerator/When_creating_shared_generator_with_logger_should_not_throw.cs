@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.IO;
 using Microsoft.Extensions.Logging;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.SharedGenerator;
 
@@ -19,14 +18,14 @@ public class WhenCreatingSharedGeneratorWithLoggerShouldNotThrow : IDisposable
         _logger = factory.CreateLogger<Generators.SharedGenerator>();
     }
 
-    [Fact]
-    public void When_creating_shared_generator_with_logger_should_not_throw()
+    [Test]
+    public async Task When_creating_shared_generator_with_logger_should_not_throw()
     {
         // Arrange & Act
         var generator = new Generators.SharedGenerator(_logger);
 
         // Assert
-        Assert.NotNull(generator);
+        await Assert.That(generator).IsNotNull();
     }
 
     public void Dispose()

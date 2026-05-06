@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,23 +24,21 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 {
-    [Trait("Category", "MQTT")]
-    [Collection("MQTT")]
+    [Category("MQTT")]
     public class MqttMessageProducerSendMessageTests : MqttTestClassBase<MqttMessageProducerSendMessageTests>
     {
         private const string ClientId = "BrighterIntegrationTests-Produce";
         private const string TopicPrefix = "BrighterIntegrationTests/ProducerTests";
 
-        public MqttMessageProducerSendMessageTests(ITestOutputHelper testOutputHelper)
-            : base(ClientId, TopicPrefix, testOutputHelper)
+        public MqttMessageProducerSendMessageTests()
+            : base(ClientId, TopicPrefix)
         {
         }
 
@@ -72,8 +70,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
         /// </exception>
         protected IAmAMessageConsumerSync MessageConsumerSync => (MessageConsumerAsync as IAmAMessageConsumerSync)!;
 
-        [Fact]
-        public void When_posting_multiples_message_via_the_messaging_gateway_sync()
+        [Test]
+        public async Task When_posting_multiples_message_via_the_messaging_gateway_sync()
         {
             const int messageCount = 1000;
             List<Message> sentMessages = [];
@@ -109,9 +107,13 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
                 retries++;
             }
 
-            Assert.NotEmpty(receivedMessages);
-            Assert.Equal(messageCount, receivedMessages.Count);
-            Assert.Equal(sentMessages, receivedMessages);
+            await Assert.That(receivedMessages).IsNotEmpty();
+            await Assert.That(receivedMessages.Count).IsEqualTo(messageCount);
+            // Compare by Id rather than by Message: TUnit's IsEquivalentTo walks reflection,
+            // and MessageBody.Memory.Span is a ref struct that throws when invoked via Reflection.
+            await Assert.That(receivedMessages.Select(m => m.Id.ToString()).OrderBy(s => s).ToList())
+                .IsEquivalentTo(sentMessages.Select(m => m.Id.ToString()).OrderBy(s => s).ToList());
         }
     }
 }
+

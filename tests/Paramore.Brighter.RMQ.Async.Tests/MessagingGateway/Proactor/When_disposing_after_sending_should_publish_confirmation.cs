@@ -26,12 +26,11 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
-public class RmqMessageProducerDisposeConfirmationTests : IDisposable, IAsyncLifetime
+[Category("RMQ")]
+public class RmqMessageProducerDisposeConfirmationTests : IDisposable
 {
     private readonly Message _message;
     private readonly RmqMessageProducer _messageProducer;
@@ -71,30 +70,24 @@ public class RmqMessageProducerDisposeConfirmationTests : IDisposable, IAsyncLif
         };
     }
 
-    [Fact]
-    public async Task When_disposing_after_sending_should_publish_confirmation()
-    {
-        // Arrange handled by fixture setup.
-
-        // Act
-        _messageProducer.Send(_message);
-        _messageProducer.Dispose();
-
-        // Assert
-        // Dispose waits for confirms; the timeout keeps failures bounded if that contract regresses.
-        Assert.True(await _published.Task.WaitAsync(TimeSpan.FromSeconds(10)));
-    }
-
-    public void Dispose()
-    {
-        // The test disposes explicitly; teardown keeps cleanup idempotent if the test fails first.
-        _messageProducer.Dispose();
-    }
-
-    public async Task InitializeAsync()
+    [Before(Test)]
+    public async Task Setup()
     {
         await new QueueFactory(_rmqConnection, _channelName, _routingKeys).CreateAsync();
     }
 
-    Task IAsyncLifetime.DisposeAsync() => Task.CompletedTask;
+    [Test]
+    public async Task When_disposing_after_sending_should_publish_confirmation()
+    {
+        _messageProducer.Send(_message);
+        _messageProducer.Dispose();
+
+        // Dispose waits for confirms; the timeout keeps failures bounded if that contract regresses.
+        await Assert.That(await _published.Task.WaitAsync(TimeSpan.FromSeconds(10))).IsTrue();
+    }
+
+    public void Dispose()
+    {
+        _messageProducer.Dispose();
+    }
 }

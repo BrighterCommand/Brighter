@@ -26,8 +26,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -55,50 +53,50 @@ public class SpyCommandProcessorTransactionProviderSyncTests
             new[] { _batchCommand1, _batchCommand2 }, transactionProvider);
     }
 
-    [Fact]
-    public void Then_single_deposit_should_record_deposit_type()
+    [Test]
+    public async Task Then_single_deposit_should_record_deposit_type()
     {
         //Assert
-        _spy.Commands[0].ShouldBe(CommandType.Deposit);
+        await Assert.That(_spy.Commands[0]).IsEqualTo(CommandType.Deposit);
     }
 
-    [Fact]
-    public void Then_single_deposit_should_return_request_id()
+    [Test]
+    public async Task Then_single_deposit_should_return_request_id()
     {
         //Assert
-        _singleId.ShouldBe(_singleCommand.Id);
+        await Assert.That(_singleId).IsEqualTo(_singleCommand.Id);
     }
 
-    [Fact]
-    public void Then_single_deposit_should_be_in_deposited_requests()
+    [Test]
+    public async Task Then_single_deposit_should_be_in_deposited_requests()
     {
         //Assert
-        _spy.DepositedRequests[_singleId].ShouldBeSameAs(_singleCommand);
+        await Assert.That(_spy.DepositedRequests[_singleId]).IsSameReferenceAs(_singleCommand);
     }
 
-    [Fact]
-    public void Then_batch_deposit_should_record_deposit_types()
+    [Test]
+    public async Task Then_batch_deposit_should_record_deposit_types()
     {
         //Assert
-        _spy.Commands[1].ShouldBe(CommandType.Deposit);
-        _spy.Commands[2].ShouldBe(CommandType.Deposit);
+        await Assert.That(_spy.Commands[1]).IsEqualTo(CommandType.Deposit);
+        await Assert.That(_spy.Commands[2]).IsEqualTo(CommandType.Deposit);
     }
 
-    [Fact]
-    public void Then_batch_deposit_should_return_ids_for_each_request()
+    [Test]
+    public async Task Then_batch_deposit_should_return_ids_for_each_request()
     {
         //Assert
-        _batchIds.Length.ShouldBe(2);
-        _batchIds[0].ShouldBe(_batchCommand1.Id);
-        _batchIds[1].ShouldBe(_batchCommand2.Id);
+        await Assert.That(_batchIds.Length).IsEqualTo(2);
+        await Assert.That(_batchIds[0]).IsEqualTo(_batchCommand1.Id);
+        await Assert.That(_batchIds[1]).IsEqualTo(_batchCommand2.Id);
     }
 
-    [Fact]
-    public void Then_batch_deposits_should_be_in_deposited_requests()
+    [Test]
+    public async Task Then_batch_deposits_should_be_in_deposited_requests()
     {
         //Assert
-        _spy.DepositedRequests[_batchIds[0]].ShouldBeSameAs(_batchCommand1);
-        _spy.DepositedRequests[_batchIds[1]].ShouldBeSameAs(_batchCommand2);
+        await Assert.That(_spy.DepositedRequests[_batchIds[0]]).IsSameReferenceAs(_batchCommand1);
+        await Assert.That(_spy.DepositedRequests[_batchIds[1]]).IsSameReferenceAs(_batchCommand2);
     }
 
     private sealed class TestCommand() : Command(Id.Random());
@@ -107,8 +105,8 @@ public class SpyCommandProcessorTransactionProviderSyncTests
 public class SpyCommandProcessorTransactionProviderAsyncTests
 {
     private readonly SpyCommandProcessor _spy;
-    private readonly Id _singleId;
-    private readonly Id[] _batchIds;
+    private Id _singleId;
+    private Id[] _batchIds;
     private readonly TestCommand _singleCommand;
     private readonly TestCommand _batchCommand1;
     private readonly TestCommand _batchCommand2;
@@ -120,59 +118,62 @@ public class SpyCommandProcessorTransactionProviderAsyncTests
         _singleCommand = new TestCommand();
         _batchCommand1 = new TestCommand();
         _batchCommand2 = new TestCommand();
+    }
+
+    [Before(Test)]
+    public async Task Setup()
+    {
         var transactionProvider = new StubTransactionProvider();
 
         //Act
-        _singleId = _spy.DepositPostAsync<TestCommand, object>(_singleCommand, transactionProvider)
-            .GetAwaiter().GetResult();
-        _batchIds = _spy.DepositPostAsync<TestCommand, object>(
-            new[] { _batchCommand1, _batchCommand2 }, transactionProvider)
-            .GetAwaiter().GetResult();
+        _singleId = await _spy.DepositPostAsync<TestCommand, object>(_singleCommand, transactionProvider);
+        _batchIds = await _spy.DepositPostAsync<TestCommand, object>(
+            new[] { _batchCommand1, _batchCommand2 }, transactionProvider);
     }
 
-    [Fact]
-    public void Then_single_async_deposit_should_record_deposit_async_type()
+    [Test]
+    public async Task Then_single_async_deposit_should_record_deposit_async_type()
     {
         //Assert
-        _spy.Commands[0].ShouldBe(CommandType.DepositAsync);
+        await Assert.That(_spy.Commands[0]).IsEqualTo(CommandType.DepositAsync);
     }
 
-    [Fact]
-    public void Then_single_async_deposit_should_return_request_id()
+    [Test]
+    public async Task Then_single_async_deposit_should_return_request_id()
     {
         //Assert
-        _singleId.ShouldBe(_singleCommand.Id);
+        await Assert.That(_singleId).IsEqualTo(_singleCommand.Id);
     }
 
-    [Fact]
-    public void Then_single_async_deposit_should_be_in_deposited_requests()
+    [Test]
+    public async Task Then_single_async_deposit_should_be_in_deposited_requests()
     {
         //Assert
-        _spy.DepositedRequests[_singleId].ShouldBeSameAs(_singleCommand);
+        await Assert.That(_spy.DepositedRequests[_singleId]).IsSameReferenceAs(_singleCommand);
     }
 
-    [Fact]
-    public void Then_batch_async_deposit_should_record_deposit_async_types()
+    [Test]
+    public async Task Then_batch_async_deposit_should_record_deposit_async_types()
     {
         //Assert
-        _spy.Commands[1].ShouldBe(CommandType.DepositAsync);
-        _spy.Commands[2].ShouldBe(CommandType.DepositAsync);
+        await Assert.That(_spy.Commands[1]).IsEqualTo(CommandType.DepositAsync);
+        await Assert.That(_spy.Commands[2]).IsEqualTo(CommandType.DepositAsync);
     }
 
-    [Fact]
-    public void Then_batch_async_deposit_should_return_ids_for_each_request()
+    [Test]
+    public async Task Then_batch_async_deposit_should_return_ids_for_each_request()
     {
         //Assert
-        _batchIds.Length.ShouldBe(2);
-        _batchIds[0].ShouldBe(_batchCommand1.Id);
-        _batchIds[1].ShouldBe(_batchCommand2.Id);
+        await Assert.That(_batchIds.Length).IsEqualTo(2);
+        await Assert.That(_batchIds[0]).IsEqualTo(_batchCommand1.Id);
+        await Assert.That(_batchIds[1]).IsEqualTo(_batchCommand2.Id);
     }
 
-    [Fact]
-    public void Then_total_call_count_should_be_three()
+    [Test]
+    public async Task Then_total_call_count_should_be_three()
     {
         //Assert
-        _spy.CallCount(CommandType.DepositAsync).ShouldBe(3);
+        await Assert.That(_spy.CallCount(CommandType.DepositAsync)).IsEqualTo(3);
     }
 
     private sealed class TestCommand() : Command(Id.Random());

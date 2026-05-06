@@ -19,59 +19,48 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class PipelineValidatorErrorAggregationTests
 {
-    [Fact]
-    public void When_all_paths_have_errors_should_collect_errors_from_each()
+    [Test]
+    public async Task When_all_paths_have_errors_should_collect_errors_from_each()
     {
         // Arrange — configure each path with a known error
-
         // Handler path: internal handler triggers HandlerTypeVisibility error
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyInternalHandler));
         var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
-        PipelineBuilder<IRequest>.ClearPipelineCache();
-
         // Producer path: null RequestType triggers PublicationRequestTypeSet error
-        var publications = new[] { new Publication { Topic = new RoutingKey("test.topic"), RequestType = null } };
-
+        var publications = new[]
+        {
+            new Publication
+            {
+                Topic = new RoutingKey("test.topic"),
+                RequestType = null
+            }
+        };
         // Consumer path: no handler for MyBareRequest triggers HandlerRegistered error
         var subscriptions = new[]
         {
-            new Subscription(
-                subscriptionName: new SubscriptionName("bare-sub"),
-                channelName: new ChannelName("bare-channel"),
-                routingKey: new RoutingKey("bare.routing.key"),
-                requestType: typeof(MyBareRequest),
-                messagePumpType: MessagePumpType.Reactor)
+            new Subscription(subscriptionName: new SubscriptionName("bare-sub"), channelName: new ChannelName("bare-channel"), routingKey: new RoutingKey("bare.routing.key"), requestType: typeof(MyBareRequest), messagePumpType: MessagePumpType.Reactor)
         };
-
         var consumerRules = new ISpecification<Subscription>[]
         {
             ConsumerValidationRules.HandlerRegistered(registry)
         };
-
         var validator = new PipelineValidator(pipelineBuilder, publications, subscriptions, consumerRules);
-
         // Act
         var result = validator.Validate();
-
         // Assert — errors from all three paths are present
-        Assert.False(result.IsValid);
-
-        Assert.Contains(result.Errors, e => e.Message.Contains("not public"));
-        Assert.Contains(result.Errors, e => e.Message.Contains("RequestType"));
-        Assert.Contains(result.Errors, e => e.Message.Contains("No handler registered"));
+        await Assert.That(result.IsValid).IsFalse();
+        await Assert.That(result.Errors).Contains(e => e.Message.Contains("not public"));
+        await Assert.That(result.Errors).Contains(e => e.Message.Contains("RequestType"));
+        await Assert.That(result.Errors).Contains(e => e.Message.Contains("No handler registered"));
     }
 }

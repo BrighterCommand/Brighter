@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -8,7 +8,6 @@ using Paramore.Brighter.RocketMQ.Tests.Utils;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessageDispatch;
 
@@ -65,15 +64,15 @@ public class DispatchBuilderTests
             .ConfigureInstrumentation(tracer);
     }
 
-    [Fact]
-    public void When_Building_A_Dispatcher()
+    [Test]
+    public async Task When_Building_A_Dispatcher()
     {
         _dispatcher = _builder.Build();
 
-        Assert.NotNull(_dispatcher);
-        Assert.NotNull(GetConnection("foo"));
-        Assert.NotNull(GetConnection("bar"));
-        Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
+        await Assert.That(_dispatcher).IsNotNull();
+        await Assert.That(GetConnection("foo")).IsNotNull();
+        await Assert.That(GetConnection("bar")).IsNotNull();
+        await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_AWAITING);
             
         Thread.Sleep(1000);
 
@@ -81,11 +80,11 @@ public class DispatchBuilderTests
 
         Thread.Sleep(1000);
 
-        Assert.Equal(DispatcherState.DS_RUNNING, _dispatcher.State);
+        await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_RUNNING);
 
-        _dispatcher.End().GetAwaiter().GetResult();
+        await _dispatcher.End();
             
-        Assert.Equal(DispatcherState.DS_STOPPED, _dispatcher.State);
+        await Assert.That(_dispatcher.State).IsEqualTo(DispatcherState.DS_STOPPED);
     }
     private Subscription? GetConnection(string name)
     {

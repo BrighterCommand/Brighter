@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -36,7 +36,6 @@ using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Scheduler;
 
@@ -44,8 +43,8 @@ namespace Paramore.Brighter.InMemory.Tests.Scheduler;
 /// Tests that the InMemoryScheduler uses atomic operations when replacing timers
 /// for messages with the same scheduler ID, preventing race conditions.
 /// </summary>
-[Trait("Category", "InMemory")]
-[Collection("CommandProcess")]
+[Category("InMemory")]
+[NotInParallel("CommandProcess")]
 public class When_scheduling_message_with_existing_id_should_atomically_replace_timer
 {
     private readonly InMemorySchedulerFactory _schedulerFactory;
@@ -125,7 +124,7 @@ public class When_scheduling_message_with_existing_id_should_atomically_replace_
         );
     }
 
-    [Fact]
+    [Test]
     public async Task When_scheduling_same_id_concurrently_should_not_have_race_condition()
     {
         // Arrange
@@ -160,11 +159,11 @@ public class When_scheduling_message_with_existing_id_should_atomically_replace_
         await Task.WhenAll(tasks);
 
         // Assert - No exceptions should occur during concurrent scheduling
-        Assert.Empty(exceptions);
+        await Assert.That(exceptions).IsEmpty();
     }
 
-    [Fact]
-    public void When_replacing_timer_should_dispose_old_timer_before_creating_new()
+    [Test]
+    public async Task When_replacing_timer_should_dispose_old_timer_before_creating_new()
     {
         // Arrange
         var scheduler = (IAmAMessageSchedulerSync)_schedulerFactory.Create(_processor);
@@ -178,8 +177,8 @@ public class When_scheduling_message_with_existing_id_should_atomically_replace_
         var secondId = scheduler.Schedule(secondMessage, TimeSpan.FromMinutes(5));
 
         // Assert - Both calls return the same scheduler ID
-        Assert.Equal(FixedSchedulerId, firstId);
-        Assert.Equal(FixedSchedulerId, secondId);
+        await Assert.That(firstId).IsEqualTo(FixedSchedulerId);
+        await Assert.That(secondId).IsEqualTo(FixedSchedulerId);
 
         // Advance time past the second delay (5 minutes) but not the first (10 minutes)
         _timeProvider.Advance(TimeSpan.FromMinutes(6));
@@ -187,11 +186,11 @@ public class When_scheduling_message_with_existing_id_should_atomically_replace_
         // The second message should have been delivered (timer was replaced with shorter delay)
         // Only one message should be in the bus (no orphaned timer delivering the first message)
         var messages = _internalBus.Stream(_routingKey);
-        Assert.Single(messages);
+        await Assert.That(messages).HasSingleItem();
     }
 
-    [Fact]
-    public void When_scheduling_same_id_multiple_times_should_only_deliver_last_message()
+    [Test]
+    public async Task When_scheduling_same_id_multiple_times_should_only_deliver_last_message()
     {
         // Arrange
         var scheduler = (IAmAMessageSchedulerSync)_schedulerFactory.Create(_processor);
@@ -209,7 +208,7 @@ public class When_scheduling_message_with_existing_id_should_atomically_replace_
 
         // Assert - Only ONE message should be delivered (no orphaned timers)
         var deliveredMessages = _internalBus.Stream(_routingKey);
-        Assert.Single(deliveredMessages);
+        await Assert.That(deliveredMessages).HasSingleItem();
     }
 
     private Message CreateMessage(int index)

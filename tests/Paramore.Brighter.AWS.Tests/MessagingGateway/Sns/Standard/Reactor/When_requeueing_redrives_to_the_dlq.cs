@@ -10,22 +10,23 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
-[Trait("Category", "AWS")]
-public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class SqsMessageProducerDlqTests : IAsyncDisposable
 {
-    private readonly SnsMessageProducer _sender;
-    private readonly IAmAChannelSync _channel;
-    private readonly ChannelFactory _channelFactory;
-    private readonly Message _message;
-    private readonly AWSMessagingGatewayConnection _awsConnection;
-    private readonly string _dlqChannelName;
+    private SnsMessageProducer _sender;
+    private IAmAChannelSync _channel;
+    private ChannelFactory _channelFactory;
+    private Message _message;
+    private AWSMessagingGatewayConnection _awsConnection;
+    private string _dlqChannelName;
 
-    public SqsMessageProducerDlqTests()
+    [Before(Test)]
+    public async Task Setup()
     {
         MyCommand myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
@@ -59,17 +60,17 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
 
         _sender = new SnsMessageProducer(_awsConnection,  new SnsPublication { MakeChannels = OnMissingChannel.Create });
 
-        _sender.ConfirmTopicExistsAsync(topicName).Wait();
+        await _sender.ConfirmTopicExistsAsync(topicName);
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(_awsConnection);
         _channel = _channelFactory.CreateSyncChannel(subscription);
     }
 
-    [Fact]
-    public void When_requeueing_redrives_to_the_queue()
+    [Test]
+    public async Task When_requeueing_redrives_to_the_queue()
     {
-        _sender.Send(_message);
+        await _sender.SendAsync(_message);
         var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
         _channel.Requeue(receivedMessage);
 
@@ -83,19 +84,19 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         Task.Delay(5000);
 
         //inspect the dlq
-        Assert.Equal(1, GetDLQCount(_dlqChannelName));
+        await Assert.That(await GetDLQCount(_dlqChannelName)).IsEqualTo(1);
     }
 
-    private int GetDLQCount(string queueName)
+    private async Task<int> GetDLQCount(string queueName)
     {
         using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
-        var queueUrlResponse = sqsClient.GetQueueUrlAsync(queueName).GetAwaiter().GetResult();
-        var response = sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
+        var queueUrlResponse = await sqsClient.GetQueueUrlAsync(queueName);
+        var response = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
         {
             QueueUrl = queueUrlResponse.QueueUrl,
             WaitTimeSeconds = 5,
             MessageAttributeNames = new List<string> { "All", "ApproximateReceiveCount" }
-        }).GetAwaiter().GetResult();
+        });
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
@@ -106,10 +107,11 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

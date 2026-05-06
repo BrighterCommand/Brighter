@@ -4,18 +4,18 @@ using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
-[Trait("Category", "AWS")]
-public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
+[Category("AWS")]
+public class AWSAssumeQueuesTestsAsync : IAsyncDisposable
 {
-    private readonly ChannelFactory _channelFactory;
-    private readonly IAmAMessageConsumerAsync _consumer;
+    private ChannelFactory _channelFactory;
+    private IAmAMessageConsumerAsync _consumer;
 
-    public AWSAssumeQueuesTestsAsync()
+    [Before(Test)]
+    public async Task Setup()
     {
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -37,25 +37,26 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
                 MakeChannels = OnMissingChannel.Create
             });
 
-        producer.ConfirmTopicExistsAsync(queueName).Wait();
+        await producer.ConfirmTopicExistsAsync(queueName);
 
         _channelFactory = new ChannelFactory(awsConnection);
-        var channel = _channelFactory.CreateAsyncChannel(subscription);
+        var channel = await _channelFactory.CreateAsyncChannelAsync(subscription);
 
         //We need to create the topic at least, to check the queues
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_queues_missing_assume_throws_async()
     {
         //we will try to get the queue url, and fail because it does not exist
-        await Assert.ThrowsAsync<QueueDoesNotExistException>(() => _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)));
+        await Assert.That(() => _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).ThrowsExactly<QueueDoesNotExistException>();
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait(); 
+        await _channelFactory.DeleteTopicAsync(); 
     }
 
     public async ValueTask DisposeAsync()

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,8 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor;
 
@@ -35,23 +33,22 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor;
 /// via a lazily-created producer. Previously Requeue returned false (not implemented); now it
 /// delegates to the producer so that requeued messages are actually redelivered.
 /// </summary>
-[Trait("Category", "MQTT")]
-[Collection("MQTT")]
+[Category("MQTT")]
 public class MqttConsumerRequeueTests : MqttTestClassBase<MqttConsumerRequeueTests>
 {
     private const string ClientId = "BrighterIntegrationTests-Requeue";
     private const string TopicPrefix = "BrighterIntegrationTests/RequeueTests";
 
-    public MqttConsumerRequeueTests(ITestOutputHelper testOutputHelper)
-        : base(ClientId, TopicPrefix, testOutputHelper)
+    public MqttConsumerRequeueTests()
+        : base(ClientId, TopicPrefix)
     {
     }
 
     private IAmAMessageProducerSync MessageProducerSync => (MessageProducerAsync as IAmAMessageProducerSync)!;
     private IAmAMessageConsumerSync MessageConsumerSync => (MessageConsumerAsync as IAmAMessageConsumerSync)!;
 
-    [Fact]
-    public void When_requeuing_should_publish_message_via_producer()
+    [Test]
+    public async Task When_requeuing_should_publish_message_via_producer()
     {
         // Arrange - send a message and receive it
         var message = new Message(
@@ -66,13 +63,13 @@ public class MqttConsumerRequeueTests : MqttTestClassBase<MqttConsumerRequeueTes
         var result = MessageConsumerSync.Requeue(received);
 
         // Assert - requeue should return true (was returning false)
-        Assert.True(result, "Requeue should succeed by publishing via producer");
+        await Assert.That(result).IsTrue();
 
         // Note: HandledCount is incremented by the message pump, not by the consumer requeue
 
         // Assert - message should be available again on the topic (published via producer)
         var requeued = ReceiveMessage();
-        Assert.Equal(message.Body.Value, requeued.Body.Value);
+        await Assert.That(requeued.Body.Value).IsEqualTo(message.Body.Value);
     }
 
     private Message ReceiveMessage()
@@ -92,3 +89,4 @@ public class MqttConsumerRequeueTests : MqttTestClassBase<MqttConsumerRequeueTes
         throw new Exception($"Failed to receive message after {maxTries} attempts");
     }
 }
+

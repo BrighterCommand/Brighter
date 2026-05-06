@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,11 +25,10 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
+[Category("RMQ")]
 public class RMQMessageGatewayConnectionPoolResetConnectionExists
 {
     private readonly RmqMessageGatewayConnectionPool _connectionPool;
@@ -44,13 +43,13 @@ public class RMQMessageGatewayConnectionPoolResetConnectionExists
         _originalConnection = _connectionPool.GetConnection(connectionFactory);
     }
 
-    [Fact]
+    [Test]
     public async Task When_resetting_a_connection_that_exists()
     {
         var connectionFactory = new ConnectionFactory{HostName = "localhost"};
 
         await _connectionPool.ResetConnectionAsync(connectionFactory);
 
-        Assert.NotSame(_originalConnection, (await _connectionPool.GetConnectionAsync(connectionFactory)));
+        await Assert.That((await _connectionPool.GetConnectionAsync(connectionFactory))).IsNotSameReferenceAs(_originalConnection);
     }
 }

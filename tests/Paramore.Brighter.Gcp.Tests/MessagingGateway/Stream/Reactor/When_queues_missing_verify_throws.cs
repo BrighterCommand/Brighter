@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Reactor;
 
-[Trait("Category", "GCP")]
+[Category("GCP")]
 public class ValidateQueuesTestsAsync : IDisposable
 {
     private readonly GcpMessagingGatewayConnection _connection;
@@ -30,13 +30,13 @@ public class ValidateQueuesTestsAsync : IDisposable
         _connection = GatewayFactory.CreateFactory();
     }
 
-    [Fact]
-    public void When_topic_missing_verify_throws()
+    [Test]
+    public async Task When_topic_missing_verify_throws()
     {
         // We have no topic so we should throw
         // We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = GatewayFactory.CreateChannelFactory();
-        Assert.Throws<InvalidOperationException>(() => _channelFactory.CreateSyncChannel(_pubSubSubscription));
+        await Assert.That(() => _channelFactory.CreateSyncChannel(_pubSubSubscription)).ThrowsExactly<InvalidOperationException>();
     }
     
 

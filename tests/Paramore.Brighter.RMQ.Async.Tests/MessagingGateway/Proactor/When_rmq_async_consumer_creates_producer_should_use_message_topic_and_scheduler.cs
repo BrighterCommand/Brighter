@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +27,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 /// the producer should have the scheduler configured so that delayed sends use the scheduler
 /// rather than falling back to native publish without delay.
 /// </summary>
-[Trait("Category", "RMQ")]
+[Category("RMQ")]
 public class RMQMessageConsumerProducerTopicSchedulerTestsAsync : IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _messageProducer;
@@ -79,44 +78,42 @@ public class RMQMessageConsumerProducerTopicSchedulerTestsAsync : IAsyncDisposab
             .GetResult();
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeuing_with_delay_should_use_scheduler()
     {
         // Arrange - send and receive a message
         await _messageProducer.SendAsync(_message);
         var received = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
-        Assert.NotEmpty(received);
-        Assert.NotEqual(MessageType.MT_NONE, received[0].Header.MessageType);
+        await Assert.That(received).IsNotEmpty();
+        await Assert.That(received[0].Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // Act - requeue with delay
         await _consumer.RequeueAsync(received[0], TimeSpan.FromSeconds(5));
 
         // Assert - scheduler should have been called (proving producer has scheduler configured)
-        Assert.True(_scheduler.ScheduleAsyncCalled,
-            "Scheduler.ScheduleAsync should have been called via the lazily created producer");
-        Assert.Equal(_message.Body.Value, _scheduler.ScheduledMessage?.Body.Value);
+        await Assert.That(_scheduler.ScheduleAsyncCalled).IsTrue();
+        await Assert.That(_scheduler.ScheduledMessage?.Body.Value).IsEqualTo(_message.Body.Value);
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeuing_with_zero_delay_should_not_create_producer()
     {
         // Arrange - send and receive a message
         await _messageProducer.SendAsync(_message);
         var received = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
-        Assert.NotEmpty(received);
-        Assert.NotEqual(MessageType.MT_NONE, received[0].Header.MessageType);
+        await Assert.That(received).IsNotEmpty();
+        await Assert.That(received[0].Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // Act - requeue with zero delay (uses direct requeue, not producer)
         await _consumer.RequeueAsync(received[0], TimeSpan.Zero);
 
         // Assert - scheduler should NOT have been called
-        Assert.False(_scheduler.ScheduleAsyncCalled,
-            "Scheduler should not be called for zero-delay requeue");
+        await Assert.That(_scheduler.ScheduleAsyncCalled).IsFalse();
     }
 
     public async ValueTask DisposeAsync()
     {
-        _consumer.Dispose();
+        await _consumer.DisposeAsync();
         await _messageProducer.DisposeAsync();
     }
 

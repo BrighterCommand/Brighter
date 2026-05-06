@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -9,7 +9,7 @@ using Paramore.Brighter.MessagingGateway.GcpPubSub;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Proactor;
 
-[Trait("Category", "GCP")]
+[Category("GCP")]
 public class MessageProducerRequeueTestsAsync : IDisposable
 {
     private readonly IAmAMessageProducerAsync _sender;
@@ -56,7 +56,7 @@ public class MessageProducerRequeueTestsAsync : IDisposable
         _channel = _channelFactory.CreateAsyncChannel(_pubSubSubscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeueing_a_message_async()
     {
         await _sender.SendAsync(_message);
@@ -67,7 +67,7 @@ public class MessageProducerRequeueTestsAsync : IDisposable
 
         await _channel.AcknowledgeAsync(_requeuedMessage);
 
-        Assert.Equal(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
+        await Assert.That(_requeuedMessage.Body.Value).IsEqualTo(_receivedMessage.Body.Value);
     }
 
     public void Dispose()

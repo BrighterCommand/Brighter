@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Amazon.DynamoDBv2;
@@ -9,14 +9,13 @@ using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Outbox.DynamoDB;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.DynamoDbExtensions;
 
 public class DynamoDbCustomProperties
 {
-    [Fact]
-    public void When_Creating_A_Table_With_Custom_Properties()
+    [Test]
+    public async Task When_Creating_A_Table_With_Custom_Properties()
     {
         //arrange
         var tableRequestFactory = new DynamoDbTableFactory();
@@ -37,8 +36,8 @@ public class DynamoDbCustomProperties
         );
 
         //assert
-        Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "Id" && attr.AttributeType == ScalarAttributeType.S);
-        Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "Amount" && attr.AttributeType == ScalarAttributeType.S);
+        await Assert.That(tableRequest.AttributeDefinitions).Contains(attr => attr.AttributeName == "Id" && attr.AttributeType == ScalarAttributeType.S);
+        await Assert.That(tableRequest.AttributeDefinitions).Contains(attr => attr.AttributeName == "Amount" && attr.AttributeType == ScalarAttributeType.S);
     }
 
     [DynamoDBTable("MyEntity")]

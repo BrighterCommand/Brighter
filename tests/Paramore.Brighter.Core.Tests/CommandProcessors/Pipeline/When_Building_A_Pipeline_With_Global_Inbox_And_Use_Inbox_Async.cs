@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +8,6 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Handlers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
@@ -17,37 +16,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private AsyncPipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
-
-
         public PipelineGlobalInboxWhenUseInboxAsyncTests()
         {
             IAmAnInboxSync inbox = new InMemoryInbox(new FakeTimeProvider());
-            
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCommandInboxedHandlerAsync>();
-            
             var container = new ServiceCollection();
             container.AddTransient<MyCommandInboxedHandlerAsync>();
             container.AddSingleton((IAmAnInboxAsync)inbox);
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
- 
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-
-
- 
             _requestContext = new RequestContext();
-            
-            InboxConfiguration inboxConfiguration = new(
-                scope: InboxScope.All, 
-                onceOnly: true, 
-                actionOnExists: OnceOnlyAction.Throw);
-
+            InboxConfiguration inboxConfiguration = new(scope: InboxScope.All, onceOnly: true, actionOnExists: OnceOnlyAction.Throw);
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, inboxConfiguration);
-            
         }
 
-        [Fact]
+        [Test]
         public async Task When_Building_A_Pipeline_With_Global_Inbox()
         {
             // Settings for InboxConfiguration on MyCommandInboxedHandler
@@ -55,17 +40,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             // Settings for InboxConfiguration as above
             // _inboxConfiguration = new InboxConfiguration(InboxScope.All, context: true, onceOnly: true);
             // so global will not allow repeated requests ans calls, but local should override this and allow
-
-            
             //act
             _chainOfResponsibility = _chainBuilder.BuildAsync(new MyCommand(), _requestContext, false);
-
             var chain = _chainOfResponsibility.First();
             var myCommand = new MyCommand();
-            
             //First pass not impacted by InboxConfiguration Handler
             await chain.HandleAsync(myCommand);
-
             bool noException = true;
             try
             {
@@ -77,15 +57,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             }
 
             //assert
-            Assert.True(noException);
-
+            await Assert.That(noException).IsTrue();
         }
+
         private PipelineTracer TracePipeline(IHandleRequests<MyCommand> firstInPipeline)
         {
             var pipelineTracer = new PipelineTracer();
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
- 
     }
 }

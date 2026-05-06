@@ -1,22 +1,21 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox.Handlers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline;
 
 public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configurations
 {
-    [Fact]
-    public void When_Building_A_Pipeline_With_Inbox_Then_Without_Inbox_No_Leakage()
+    [Test]
+    public async Task When_Building_A_Pipeline_With_Inbox_Then_Without_Inbox_No_Leakage()
     {
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
-        // Step 1: Build a pipeline WITH inbox configuration — populates the static cache
         var inboxRegistry = new SubscriberRegistry();
         inboxRegistry.Register<MyCommand, MyCommandHandler>();
 
@@ -32,9 +31,8 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var withInbox = inboxBuilder.Build(new MyCommand(), new RequestContext());
         var withInboxTrace = TracePipeline(withInbox.First());
-        Assert.Contains("UseInboxHandler`", withInboxTrace);
+        await Assert.That(withInboxTrace).Contains("UseInboxHandler`");
 
-        // Step 2: Build a pipeline WITHOUT inbox configuration — same handler type, sharing the static cache
         var noInboxRegistry = new SubscriberRegistry();
         noInboxRegistry.Register<MyCommand, MyCommandHandler>();
 
@@ -48,15 +46,14 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var withoutInbox = noInboxBuilder.Build(new MyCommand(), new RequestContext());
         var withoutInboxTrace = TracePipeline(withoutInbox.First());
-        Assert.DoesNotContain("UseInboxHandler`", withoutInboxTrace);
+        await Assert.That(withoutInboxTrace).DoesNotContain("UseInboxHandler`");
     }
 
-    [Fact]
-    public void When_Building_A_Pipeline_Without_Inbox_Then_With_Inbox_Still_Gets_Inbox()
+    [Test]
+    public async Task When_Building_A_Pipeline_Without_Inbox_Then_With_Inbox_Still_Gets_Inbox()
     {
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
-        // Step 1: Build a pipeline WITHOUT inbox configuration — primes the static cache
         var noInboxRegistry = new SubscriberRegistry();
         noInboxRegistry.Register<MyCommand, MyCommandHandler>();
 
@@ -70,9 +67,8 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var withoutInbox = noInboxBuilder.Build(new MyCommand(), new RequestContext());
         var withoutInboxTrace = TracePipeline(withoutInbox.First());
-        Assert.DoesNotContain("UseInboxHandler`", withoutInboxTrace);
+        await Assert.That(withoutInboxTrace).DoesNotContain("UseInboxHandler`");
 
-        // Step 2: Build a pipeline WITH inbox configuration — cache already primed without inbox
         var inboxRegistry = new SubscriberRegistry();
         inboxRegistry.Register<MyCommand, MyCommandHandler>();
 
@@ -88,15 +84,14 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var withInbox = inboxBuilder.Build(new MyCommand(), new RequestContext());
         var withInboxTrace = TracePipeline(withInbox.First());
-        Assert.Contains("UseInboxHandler`", withInboxTrace);
+        await Assert.That(withInboxTrace).Contains("UseInboxHandler`");
     }
 
-    [Fact]
-    public void When_Building_An_Async_Pipeline_With_Inbox_Then_Without_Inbox_No_Leakage()
+    [Test]
+    public async Task When_Building_An_Async_Pipeline_With_Inbox_Then_Without_Inbox_No_Leakage()
     {
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
-        // Step 1: Build an async pipeline WITH inbox configuration — populates the static cache
         var inboxRegistry = new SubscriberRegistry();
         inboxRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
@@ -112,9 +107,8 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var withInbox = inboxBuilder.BuildAsync(new MyCommand(), new RequestContext(), false);
         var withInboxTrace = TraceAsyncPipeline(withInbox.First());
-        Assert.Contains("UseInboxHandlerAsync`", withInboxTrace);
+        await Assert.That(withInboxTrace).Contains("UseInboxHandlerAsync`");
 
-        // Step 2: Build an async pipeline WITHOUT inbox configuration — same handler type, sharing the static cache
         var noInboxRegistry = new SubscriberRegistry();
         noInboxRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
@@ -128,15 +122,14 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var withoutInbox = noInboxBuilder.BuildAsync(new MyCommand(), new RequestContext(), false);
         var withoutInboxTrace = TraceAsyncPipeline(withoutInbox.First());
-        Assert.DoesNotContain("UseInboxHandlerAsync`", withoutInboxTrace);
+        await Assert.That(withoutInboxTrace).DoesNotContain("UseInboxHandlerAsync`");
     }
 
-    [Fact]
-    public void When_Building_An_Async_Pipeline_Without_Inbox_Then_With_Inbox_Still_Gets_Inbox()
+    [Test]
+    public async Task When_Building_An_Async_Pipeline_Without_Inbox_Then_With_Inbox_Still_Gets_Inbox()
     {
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
-        // Step 1: Build an async pipeline WITHOUT inbox configuration — primes the static cache
         var noInboxRegistry = new SubscriberRegistry();
         noInboxRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
@@ -150,9 +143,8 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var withoutInbox = noInboxBuilder.BuildAsync(new MyCommand(), new RequestContext(), false);
         var withoutInboxTrace = TraceAsyncPipeline(withoutInbox.First());
-        Assert.DoesNotContain("UseInboxHandlerAsync`", withoutInboxTrace);
+        await Assert.That(withoutInboxTrace).DoesNotContain("UseInboxHandlerAsync`");
 
-        // Step 2: Build an async pipeline WITH inbox configuration — cache already primed without inbox
         var inboxRegistry = new SubscriberRegistry();
         inboxRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
@@ -168,7 +160,7 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var withInbox = inboxBuilder.BuildAsync(new MyCommand(), new RequestContext(), false);
         var withInboxTrace = TraceAsyncPipeline(withInbox.First());
-        Assert.Contains("UseInboxHandlerAsync`", withInboxTrace);
+        await Assert.That(withInboxTrace).Contains("UseInboxHandlerAsync`");
     }
 
     private static string TracePipeline(IHandleRequests<MyCommand> firstInPipeline)

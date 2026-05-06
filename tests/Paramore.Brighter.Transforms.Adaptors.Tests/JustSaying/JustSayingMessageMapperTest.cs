@@ -1,17 +1,16 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transformers.JustSaying;
-using Xunit;
 
 namespace Paramore.Brighter.Transforms.Adaptors.Tests.JustSaying;
 
 public class JustSayingMessageMapperTest
 {
-    [Fact]
-    public void MapToMessage_when_mapping_a_justsaying_command_property_should_not_be_override()
+    [Test]
+    public async Task MapToMessage_when_mapping_a_justsaying_command_property_should_not_be_override()
     {
         var mapper = new JustSayingMessageMapper<SomeJustSayingCommand>();
         var command = new SomeJustSayingCommand
@@ -25,22 +24,22 @@ public class JustSayingMessageMapperTest
             Name = $"Name{Guid.NewGuid().ToString()}",
         };
         
-        var message = mapper.MapToMessage(command, new Publication());
+        var message = await mapper.MapToMessageAsync(command, new Publication());
 
         var obj = JsonSerializer.Deserialize<SomeJustSayingCommand>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(obj);
-        Assert.Equal(command.Id, obj.Id);
-        Assert.Equal(command.Conversation, obj.Conversation);
-        Assert.Equal(command.RaisingComponent, obj.RaisingComponent);
-        Assert.Equal(command.Tenant, obj.Tenant);
-        Assert.Equal(command.Version, obj.Version);
-        Assert.Equal(command.TimeStamp, obj.TimeStamp);
-        Assert.Equal(command.Name, obj.Name);
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        await Assert.That(obj).IsNotNull();
+        await Assert.That(obj.Id).IsEqualTo(command.Id);
+        await Assert.That(obj.Conversation).IsEqualTo(command.Conversation);
+        await Assert.That(obj.RaisingComponent).IsEqualTo(command.RaisingComponent);
+        await Assert.That(obj.Tenant).IsEqualTo(command.Tenant);
+        await Assert.That(obj.Version).IsEqualTo(command.Version);
+        await Assert.That(obj.TimeStamp).IsEqualTo(command.TimeStamp);
+        await Assert.That(obj.Name).IsEqualTo(command.Name);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
     }
     
-    [Fact]
-    public void MapToMessage_when_mapping_a_justsaying_event_property_should_not_be_override()
+    [Test]
+    public async Task MapToMessage_when_mapping_a_justsaying_event_property_should_not_be_override()
     {
         var mapper = new JustSayingMessageMapper<SomeJustSayingEvent>();
         var @event = new SomeJustSayingEvent
@@ -55,23 +54,23 @@ public class JustSayingMessageMapperTest
             SourceIp = IPAddress.Loopback
         };
         
-        var message = mapper.MapToMessage(@event, new Publication());
+        var message = await mapper.MapToMessageAsync(@event, new Publication());
 
         var obj = JsonSerializer.Deserialize<SomeJustSayingCommand>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(obj);
-        Assert.Equal(@event.Id, obj.Id);
-        Assert.Equal(@event.Conversation, obj.Conversation);
-        Assert.Equal(@event.RaisingComponent, obj.RaisingComponent);
-        Assert.Equal(@event.Tenant, obj.Tenant);
-        Assert.Equal(@event.Version, obj.Version);
-        Assert.Equal(@event.TimeStamp, obj.TimeStamp);
-        Assert.Equal(@event.Name, obj.Name);
-        Assert.Equal(IPAddress.Loopback, obj.SourceIp);
-        Assert.Equal(MessageType.MT_EVENT, message.Header.MessageType);
+        await Assert.That(obj).IsNotNull();
+        await Assert.That(obj.Id).IsEqualTo(@event.Id);
+        await Assert.That(obj.Conversation).IsEqualTo(@event.Conversation);
+        await Assert.That(obj.RaisingComponent).IsEqualTo(@event.RaisingComponent);
+        await Assert.That(obj.Tenant).IsEqualTo(@event.Tenant);
+        await Assert.That(obj.Version).IsEqualTo(@event.Version);
+        await Assert.That(obj.TimeStamp).IsEqualTo(@event.TimeStamp);
+        await Assert.That(obj.Name).IsEqualTo(@event.Name);
+        await Assert.That(obj.SourceIp).IsEqualTo(IPAddress.Loopback);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_EVENT);
     }
     
-    [Fact]
-    public void MapToMessage_when_mapping_a_command_property_should_not_be_override()
+    [Test]
+    public async Task MapToMessage_when_mapping_a_command_property_should_not_be_override()
     {
         var mapper = new JustSayingMessageMapper<WithJustSayingProperty>();
         var command = new WithJustSayingProperty
@@ -85,22 +84,22 @@ public class JustSayingMessageMapperTest
             Name = $"Name{Guid.NewGuid().ToString()}",
         };
         
-        var message = mapper.MapToMessage(command, new Publication());
+        var message = await mapper.MapToMessageAsync(command, new Publication());
 
         var obj = JsonSerializer.Deserialize<WithJustSayingProperty>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(obj);
-        Assert.Equal(command.Id, obj.Id);
-        Assert.Equal(command.Conversation, obj.Conversation);
-        Assert.Equal(command.RaisingComponent, obj.RaisingComponent);
-        Assert.Equal(command.Tenant, obj.Tenant);
-        Assert.Equal(command.Version, obj.Version);
-        Assert.Equal(command.TimeStamp, obj.TimeStamp);
-        Assert.Equal(command.Name, obj.Name);
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        await Assert.That(obj).IsNotNull();
+        await Assert.That(obj.Id).IsEqualTo(command.Id);
+        await Assert.That(obj.Conversation).IsEqualTo(command.Conversation);
+        await Assert.That(obj.RaisingComponent).IsEqualTo(command.RaisingComponent);
+        await Assert.That(obj.Tenant).IsEqualTo(command.Tenant);
+        await Assert.That(obj.Version).IsEqualTo(command.Version);
+        await Assert.That(obj.TimeStamp).IsEqualTo(command.TimeStamp);
+        await Assert.That(obj.Name).IsEqualTo(command.Name);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
     }
     
-    [Fact]
-    public void MapToMessage_when_mapping_a_justsaying_command_property_should_set_from_request_context()
+    [Test]
+    public async Task MapToMessage_when_mapping_a_justsaying_command_property_should_set_from_request_context()
     {
         var mapper = new JustSayingMessageMapper<SomeJustSayingCommand>();
         var command = new SomeJustSayingCommand
@@ -125,25 +124,25 @@ public class JustSayingMessageMapperTest
             }
         };
         
-        var message = mapper.MapToMessage(command, new Publication());
-        Assert.Equal(subject, message.Header.Subject);
+        var message = await mapper.MapToMessageAsync(command, new Publication());
+        await Assert.That(message.Header.Subject).IsEqualTo(subject);
 
         var obj = JsonSerializer.Deserialize<SomeJustSayingCommand>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(obj);
-        Assert.False(Id.IsNullOrEmpty(obj.Id));
-        Assert.NotNull(obj.Conversation);
-        Assert.False(Id.IsNullOrEmpty(obj.Conversation));
-        Assert.NotEqual(DateTimeOffset.MinValue, obj.TimeStamp);
+        await Assert.That(obj).IsNotNull();
+        await Assert.That(Id.IsNullOrEmpty(obj.Id)).IsFalse();
+        await Assert.That(obj.Conversation).IsNotNull();
+        await Assert.That(Id.IsNullOrEmpty(obj.Conversation)).IsFalse();
+        await Assert.That(obj.TimeStamp).IsNotEqualTo(DateTimeOffset.MinValue);
         
-        Assert.Equal(raisingComponent, obj.RaisingComponent);
-        Assert.Equal(tenant, obj.Tenant);
-        Assert.Equal(version, obj.Version);
-        Assert.Equal(command.Name, obj.Name);
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        await Assert.That(obj.RaisingComponent).IsEqualTo(raisingComponent);
+        await Assert.That(obj.Tenant).IsEqualTo(tenant);
+        await Assert.That(obj.Version).IsEqualTo(version);
+        await Assert.That(obj.Name).IsEqualTo(command.Name);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
     }
     
-    [Fact]
-    public void MapToMessage_when_mapping_a_request_command_property_should_set_from_request_context()
+    [Test]
+    public async Task MapToMessage_when_mapping_a_request_command_property_should_set_from_request_context()
     {
         var mapper = new JustSayingMessageMapper<WithJustSayingProperty>();
         var command = new WithJustSayingProperty
@@ -168,25 +167,25 @@ public class JustSayingMessageMapperTest
             }
         };
         
-        var message = mapper.MapToMessage(command, new Publication());
-        Assert.Equal(subject, message.Header.Subject);
+        var message = await mapper.MapToMessageAsync(command, new Publication());
+        await Assert.That(message.Header.Subject).IsEqualTo(subject);
 
         var obj = JsonSerializer.Deserialize<WithJustSayingProperty>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(obj);
-        Assert.False(Id.IsNullOrEmpty(obj.Id));
-        Assert.NotNull(obj.Conversation);
-        Assert.NotEmpty(obj.Conversation);
-        Assert.NotEqual(DateTimeOffset.MinValue, obj.TimeStamp);
+        await Assert.That(obj).IsNotNull();
+        await Assert.That(Id.IsNullOrEmpty(obj.Id)).IsFalse();
+        await Assert.That(obj.Conversation).IsNotNull();
+        await Assert.That(obj.Conversation).IsNotEmpty();
+        await Assert.That(obj.TimeStamp).IsNotEqualTo(DateTimeOffset.MinValue);
         
-        Assert.Equal(raisingComponent, obj.RaisingComponent);
-        Assert.Equal(tenant, obj.Tenant);
-        Assert.Equal(version, obj.Version);
-        Assert.Equal(command.Name, obj.Name);
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        await Assert.That(obj.RaisingComponent).IsEqualTo(raisingComponent);
+        await Assert.That(obj.Tenant).IsEqualTo(tenant);
+        await Assert.That(obj.Version).IsEqualTo(version);
+        await Assert.That(obj.Name).IsEqualTo(command.Name);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
     }
     
-    [Fact]
-    public void MapToMessage_when_mapping_a_command_with_partial_justsaying_property_should_set_from_request_context()
+    [Test]
+    public async Task MapToMessage_when_mapping_a_command_with_partial_justsaying_property_should_set_from_request_context()
     {
         var mapper = new JustSayingMessageMapper<WithPartialJustSayingProperty>();
         var command = new WithPartialJustSayingProperty
@@ -211,34 +210,34 @@ public class JustSayingMessageMapperTest
             }
         };
         
-        var message = mapper.MapToMessage(command, new Publication());
-        Assert.Equal(subject, message.Header.Subject);
+        var message = await mapper.MapToMessageAsync(command, new Publication());
+        await Assert.That(message.Header.Subject).IsEqualTo(subject);
 
         var obj = JsonSerializer.Deserialize<WithPartialJustSayingProperty>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(obj);
-        Assert.False(Id.IsNullOrEmpty(obj.Id));
-        Assert.NotEqual(DateTimeOffset.MinValue, obj.TimeStamp);
-        Assert.Equal(tenant, obj.Tenant);
-        Assert.Equal(command.Name, obj.Name);
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        await Assert.That(obj).IsNotNull();
+        await Assert.That(Id.IsNullOrEmpty(obj.Id)).IsFalse();
+        await Assert.That(obj.TimeStamp).IsNotEqualTo(DateTimeOffset.MinValue);
+        await Assert.That(obj.Tenant).IsEqualTo(tenant);
+        await Assert.That(obj.Name).IsEqualTo(command.Name);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
         
         
         var doc = JsonNode.Parse(message.Body.Bytes, new JsonNodeOptions{ PropertyNameCaseInsensitive = true});
-        Assert.NotNull(doc);
+        await Assert.That(doc).IsNotNull();
 
         var nodeConversation = doc[nameof(IJustSayingRequest.Conversation)]?.GetValue<string>();
-        Assert.NotNull(nodeConversation);
-        Assert.NotEmpty(nodeConversation);
+        await Assert.That(nodeConversation).IsNotNull();
+        await Assert.That(nodeConversation).IsNotEmpty();
         
         var nodeRaisingComponent = doc[nameof(IJustSayingRequest.RaisingComponent)]?.GetValue<string>();
-        Assert.Equal(raisingComponent, nodeRaisingComponent);
+        await Assert.That(nodeRaisingComponent).IsEqualTo(raisingComponent);
         
         var nodeVersion = doc[nameof(IJustSayingRequest.Version)]?.GetValue<string>();
-        Assert.Equal(version, nodeVersion);
+        await Assert.That(nodeVersion).IsEqualTo(version);
     }
     
-    [Fact]
-    public void MapToMessage_when_mapping_a_command_with_non_justsaying_property_should_set_from_request_context()
+    [Test]
+    public async Task MapToMessage_when_mapping_a_command_with_non_justsaying_property_should_set_from_request_context()
     {
         var mapper = new JustSayingMessageMapper<NonJustSayingProperty>();
         var command = new NonJustSayingProperty
@@ -263,38 +262,38 @@ public class JustSayingMessageMapperTest
             }
         };
         
-        var message = mapper.MapToMessage(command, new Publication());
-        Assert.Equal(subject, message.Header.Subject);
+        var message = await mapper.MapToMessageAsync(command, new Publication());
+        await Assert.That(message.Header.Subject).IsEqualTo(subject);
 
         var obj = JsonSerializer.Deserialize<NonJustSayingProperty>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(obj);
-        Assert.False(Id.IsNullOrEmpty(obj.Id));
-        Assert.Equal(command.Name, obj.Name);
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        await Assert.That(obj).IsNotNull();
+        await Assert.That(Id.IsNullOrEmpty(obj.Id)).IsFalse();
+        await Assert.That(obj.Name).IsEqualTo(command.Name);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
         
         var doc = JsonNode.Parse(message.Body.Bytes, new JsonNodeOptions{ PropertyNameCaseInsensitive = true});
-        Assert.NotNull(doc);
+        await Assert.That(doc).IsNotNull();
         
         var nodeTimeStamp = doc[nameof(IJustSayingRequest.TimeStamp)]?.GetValue<string>();
-        Assert.NotNull(nodeTimeStamp);
-        Assert.NotEmpty(nodeTimeStamp);
+        await Assert.That(nodeTimeStamp).IsNotNull();
+        await Assert.That(nodeTimeStamp).IsNotEmpty();
 
         var nodeConversation = doc[nameof(IJustSayingRequest.Conversation)]?.GetValue<string>();
-        Assert.NotNull(nodeConversation);
-        Assert.NotEmpty(nodeConversation);
+        await Assert.That(nodeConversation).IsNotNull();
+        await Assert.That(nodeConversation).IsNotEmpty();
         
         var nodeTenant = doc[nameof(IJustSayingRequest.Tenant)]?.GetValue<string>();
-        Assert.Equal(tenant, nodeTenant);
+        await Assert.That(nodeTenant).IsEqualTo(tenant);
         
         var nodeRaisingComponent = doc[nameof(IJustSayingRequest.RaisingComponent)]?.GetValue<string>();
-        Assert.Equal(raisingComponent, nodeRaisingComponent);
+        await Assert.That(nodeRaisingComponent).IsEqualTo(raisingComponent);
         
         var nodeVersion = doc[nameof(IJustSayingRequest.Version)]?.GetValue<string>();
-        Assert.Equal(version, nodeVersion);
+        await Assert.That(nodeVersion).IsEqualTo(version);
     }
     
-    [Fact]
-    public void MapToMessage_when_mapping_a_request_command_property_should_set_from_publication()
+    [Test]
+    public async Task MapToMessage_when_mapping_a_request_command_property_should_set_from_publication()
     {
         var mapper = new JustSayingMessageMapper<WithJustSayingProperty>();
         var command = new WithJustSayingProperty
@@ -306,24 +305,24 @@ public class JustSayingMessageMapperTest
         var subject = $"Subject{Guid.NewGuid().ToString()}";
         var source = new Uri($"Raising{Guid.NewGuid().ToString()}", UriKind.Relative);
 
-        var message = mapper.MapToMessage(command, new Publication
+        var message = await mapper.MapToMessageAsync(command, new Publication
         {
             Subject = subject,
             Source = source
         });
         
-        Assert.Equal(subject, message.Header.Subject);
+        await Assert.That(message.Header.Subject).IsEqualTo(subject);
 
         var obj = JsonSerializer.Deserialize<WithJustSayingProperty>(message.Body.Bytes, JsonSerialisationOptions.Options);
-        Assert.NotNull(obj);
-        Assert.False(Id.IsNullOrEmpty(obj.Id));
-        Assert.NotNull(obj.Conversation);
-        Assert.NotEmpty(obj.Conversation);
-        Assert.NotEqual(DateTimeOffset.MinValue, obj.TimeStamp);
+        await Assert.That(obj).IsNotNull();
+        await Assert.That(Id.IsNullOrEmpty(obj.Id)).IsFalse();
+        await Assert.That(obj.Conversation).IsNotNull();
+        await Assert.That(obj.Conversation).IsNotEmpty();
+        await Assert.That(obj.TimeStamp).IsNotEqualTo(DateTimeOffset.MinValue);
         
-        Assert.Equal(source.ToString(), obj.RaisingComponent);
-        Assert.Equal(command.Name, obj.Name);
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        await Assert.That(obj.RaisingComponent).IsEqualTo(source.ToString());
+        await Assert.That(obj.Name).IsEqualTo(command.Name);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
     }
     
     public class SomeJustSayingCommand : JustSayingCommand

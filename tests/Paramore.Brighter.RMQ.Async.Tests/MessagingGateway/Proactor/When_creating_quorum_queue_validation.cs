@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,15 +26,14 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
+[Category("RMQ")]
 public class RmqMessageConsumerQuorumValidationTests
 {
-    [Fact]
-    public void When_creating_quorum_consumer_without_durability_should_throw()
+    [Test]
+    public async Task When_creating_quorum_consumer_without_durability_should_throw()
     {
         var rmqConnection = new RmqMessagingGatewayConnection
         {
@@ -45,17 +44,17 @@ public class RmqMessageConsumerQuorumValidationTests
         var queueName = new ChannelName(Guid.NewGuid().ToString());
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
 
-        var exception = Assert.Throws<ConfigurationException>(() =>
+        var exception = Assert.ThrowsExactly<ConfigurationException>(() =>
             new RmqMessageConsumer(rmqConnection, queueName, routingKey,
                 isDurable: false, // This should cause the exception
                 highAvailability: false,
                 queueType: QueueType.Quorum));
 
-        Assert.Contains("Quorum queues require durability to be enabled", exception.Message);
+        await Assert.That(exception.Message).Contains("Quorum queues require durability to be enabled");
     }
 
-    [Fact]
-    public void When_creating_quorum_consumer_with_high_availability_should_throw()
+    [Test]
+    public async Task When_creating_quorum_consumer_with_high_availability_should_throw()
     {
         var rmqConnection = new RmqMessagingGatewayConnection
         {
@@ -66,17 +65,17 @@ public class RmqMessageConsumerQuorumValidationTests
         var queueName = new ChannelName(Guid.NewGuid().ToString());
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
 
-        var exception = Assert.Throws<ConfigurationException>(() =>
+        var exception = Assert.ThrowsExactly<ConfigurationException>(() =>
             new RmqMessageConsumer(rmqConnection, queueName, routingKey,
                 isDurable: true,
                 highAvailability: true, // This should cause the exception
                 queueType: QueueType.Quorum));
 
-        Assert.Contains("Quorum queues do not support high availability mirroring", exception.Message);
+        await Assert.That(exception.Message).Contains("Quorum queues do not support high availability mirroring");
     }
 
-    [Fact]
-    public void When_creating_quorum_consumer_with_correct_settings_should_succeed()
+    [Test]
+    public async Task When_creating_quorum_consumer_with_correct_settings_should_succeed()
     {
         var rmqConnection = new RmqMessagingGatewayConnection
         {
@@ -98,10 +97,10 @@ public class RmqMessageConsumerQuorumValidationTests
             .GetAwaiter()
             .GetResult();
 
-        Assert.NotNull(consumer);
+        await Assert.That(consumer).IsNotNull();
     }
 
-    [Fact]
+    [Test]
     public async Task When_creating_classic_consumer_with_default_settings_should_succeed()
     {
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -120,8 +119,8 @@ public class RmqMessageConsumerQuorumValidationTests
             queueType: QueueType.Classic);
         
         var message = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
-        Assert.Equal(MessageType.MT_NONE, message.Single().Header.MessageType);
+        await Assert.That(message.Single().Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
-        Assert.NotNull(consumer);
+        await Assert.That(consumer).IsNotNull();
     }
 }

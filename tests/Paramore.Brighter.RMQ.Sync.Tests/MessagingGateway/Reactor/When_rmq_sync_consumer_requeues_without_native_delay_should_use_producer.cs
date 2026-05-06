@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +27,6 @@ using System.Diagnostics;
 using System.Threading;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
@@ -36,8 +35,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 /// it should delegate to the producer's SendWithDelay instead of blocking the message pump
 /// with Task.Delay().Wait(). This also verifies lazy producer creation and disposal.
 /// </summary>
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RmqSyncConsumerDelayTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _sendProducer;
@@ -76,13 +74,13 @@ public class RmqSyncConsumerDelayTests : IDisposable
             .Create(TimeSpan.FromSeconds(1));
     }
 
-    [Fact]
-    public void When_requeuing_with_delay_should_not_block_pump()
+    [Test]
+    public async Task When_requeuing_with_delay_should_not_block_pump()
     {
         // Arrange - send and receive a message
         _sendProducer.Send(_message);
         var received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         // Act - requeue with a significant delay (5 seconds)
         var stopwatch = Stopwatch.StartNew();
@@ -90,24 +88,23 @@ public class RmqSyncConsumerDelayTests : IDisposable
         stopwatch.Stop();
 
         // Assert - requeue should return true
-        Assert.True(result, "Requeue should succeed");
+        await Assert.That(result).IsTrue();
 
         // Assert - requeue should complete quickly, proving Task.Delay().Wait() is NOT used
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2),
-            $"Requeue should not block with Task.Delay().Wait(); took {stopwatch.Elapsed.TotalSeconds:F1}s");
+        await Assert.That(stopwatch.Elapsed < TimeSpan.FromSeconds(2)).IsTrue();
 
         // Assert - message should be available on the queue (published via producer through exchange)
         var requeued = _channel.Receive(TimeSpan.FromMilliseconds(10000));
-        Assert.Equal(_message.Body.Value, requeued.Body.Value);
+        await Assert.That(requeued.Body.Value).IsEqualTo(_message.Body.Value);
     }
 
-    [Fact]
-    public void When_disposing_should_dispose_lazily_created_producer()
+    [Test]
+    public async Task When_disposing_should_dispose_lazily_created_producer()
     {
         // Arrange - send, receive, and requeue with delay to trigger producer creation
         _sendProducer.Send(_message);
         var received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
         
         //delay before requeue for test connection pool conflicts
         Thread.Sleep(TimeSpan.FromSeconds(2));
@@ -115,12 +112,11 @@ public class RmqSyncConsumerDelayTests : IDisposable
         _channel.Requeue(received, TimeSpan.FromSeconds(5));
 
         // Act & Assert - disposing channel (and its consumer) should not throw
-        var exception = Record.Exception(() => _channel.Dispose());
-        Assert.Null(exception);
+        await Assert.That(() => _channel.Dispose()).ThrowsNothing();
     }
 
-    [Fact]
-    public void When_disposing_without_producer_created_should_not_throw()
+    [Test]
+    public async Task When_disposing_without_producer_created_should_not_throw()
     {
         // Arrange - consumer that never requeued with delay (no producer created)
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -136,8 +132,7 @@ public class RmqSyncConsumerDelayTests : IDisposable
             isDurable: false);
 
         // Act & Assert - should not throw
-        var exception = Record.Exception(() => consumer.Dispose());
-        Assert.Null(exception);
+        await Assert.That(() => consumer.Dispose()).ThrowsNothing();
     }
 
     public void Dispose()
@@ -146,3 +141,4 @@ public class RmqSyncConsumerDelayTests : IDisposable
         _sendProducer.Dispose();
     }
 }
+

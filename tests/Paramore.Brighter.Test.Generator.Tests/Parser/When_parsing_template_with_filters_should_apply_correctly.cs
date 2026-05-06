@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.Parser;
 
@@ -15,7 +14,7 @@ public class WhenParsingTemplateWithFiltersShouldApplyCorrectly : IDisposable
         Directory.CreateDirectory(_testDirectory);
     }
     
-    [Fact]
+    [Test]
     public async Task When_parsing_template_with_filters_should_apply_correctly()
     {
         // Arrange
@@ -33,7 +32,7 @@ public class WhenParsingTemplateWithFiltersShouldApplyCorrectly : IDisposable
 
         // Assert
         var result = await File.ReadAllTextAsync(outputPath);
-        Assert.Equal("TEST", result);
+        await Assert.That(result).IsEqualTo("TEST");
     }
 
     public void Dispose()

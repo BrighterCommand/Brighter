@@ -19,137 +19,109 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class PipelineBuilderDescribeTests
 {
-    [Fact]
-    public void When_describing_sync_handler_should_return_description_with_request_and_handler_types()
+    [Test]
+    public async Task When_describing_sync_handler_should_return_description_with_request_and_handler_types()
     {
         // Arrange
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandler));
-
         var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
-        PipelineBuilder<MyCommand>.ClearPipelineCache();
-
         // Act
         var descriptions = pipelineBuilder.Describe(typeof(MyCommand)).ToList();
-
         // Assert
-        Assert.Single(descriptions);
+        await Assert.That(descriptions).HasSingleItem();
         var description = descriptions[0];
-        Assert.Equal(typeof(MyCommand), description.RequestType);
-        Assert.Equal(typeof(MyPreAndPostDecoratedHandler), description.HandlerType);
-        Assert.False(description.IsAsync);
+        await Assert.That(description.RequestType).IsEqualTo(typeof(MyCommand));
+        await Assert.That(description.HandlerType).IsEqualTo(typeof(MyPreAndPostDecoratedHandler));
+        await Assert.That(description.IsAsync).IsFalse();
     }
 
-    [Fact]
-    public void When_describing_sync_handler_should_list_before_steps_in_step_order()
+    [Test]
+    public async Task When_describing_sync_handler_should_list_before_steps_in_step_order()
     {
         // Arrange — MyPreAndPostDecoratedHandler has [MyPreValidationHandler(2, Before)]
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandler));
-
         var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
-        PipelineBuilder<MyCommand>.ClearPipelineCache();
-
         // Act
         var description = pipelineBuilder.Describe(typeof(MyCommand)).First();
-
         // Assert
-        Assert.Single(description.BeforeSteps);
+        await Assert.That(description.BeforeSteps).HasSingleItem();
         var beforeStep = description.BeforeSteps[0];
-        Assert.Equal(typeof(MyPreValidationHandlerAttribute), beforeStep.AttributeType);
-        Assert.Equal(typeof(MyValidationHandler<>), beforeStep.HandlerType);
-        Assert.Equal(2, beforeStep.Step);
-        Assert.Equal(HandlerTiming.Before, beforeStep.Timing);
+        await Assert.That(beforeStep.AttributeType).IsEqualTo(typeof(MyPreValidationHandlerAttribute));
+        await Assert.That(beforeStep.HandlerType).IsEqualTo(typeof(MyValidationHandler<>));
+        await Assert.That(beforeStep.Step).IsEqualTo(2);
+        await Assert.That(beforeStep.Timing).IsEqualTo(HandlerTiming.Before);
     }
 
-    [Fact]
-    public void When_describing_sync_handler_should_list_after_steps()
+    [Test]
+    public async Task When_describing_sync_handler_should_list_after_steps()
     {
         // Arrange — MyPreAndPostDecoratedHandler has [MyPostLoggingHandler(1, After)]
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandler));
-
         var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
-        PipelineBuilder<MyCommand>.ClearPipelineCache();
-
         // Act
         var description = pipelineBuilder.Describe(typeof(MyCommand)).First();
-
         // Assert
-        Assert.Single(description.AfterSteps);
+        await Assert.That(description.AfterSteps).HasSingleItem();
         var afterStep = description.AfterSteps[0];
-        Assert.Equal(typeof(MyPostLoggingHandlerAttribute), afterStep.AttributeType);
-        Assert.Equal(typeof(MyLoggingHandler<>), afterStep.HandlerType);
-        Assert.Equal(1, afterStep.Step);
-        Assert.Equal(HandlerTiming.After, afterStep.Timing);
+        await Assert.That(afterStep.AttributeType).IsEqualTo(typeof(MyPostLoggingHandlerAttribute));
+        await Assert.That(afterStep.HandlerType).IsEqualTo(typeof(MyLoggingHandler<>));
+        await Assert.That(afterStep.Step).IsEqualTo(1);
+        await Assert.That(afterStep.Timing).IsEqualTo(HandlerTiming.After);
     }
 
-    [Fact]
-    public void When_describing_async_handler_should_set_IsAsync_true()
+    [Test]
+    public async Task When_describing_async_handler_should_set_IsAsync_true()
     {
         // Arrange — MyPreAndPostDecoratedHandlerAsync extends RequestHandlerAsync
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandlerAsync));
-
         var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
-        PipelineBuilder<MyCommand>.ClearPipelineCache();
-
         // Act
         var description = pipelineBuilder.Describe(typeof(MyCommand)).First();
-
         // Assert
-        Assert.True(description.IsAsync);
-        Assert.Equal(typeof(MyPreAndPostDecoratedHandlerAsync), description.HandlerType);
+        await Assert.That(description.IsAsync).IsTrue();
+        await Assert.That(description.HandlerType).IsEqualTo(typeof(MyPreAndPostDecoratedHandlerAsync));
     }
 
-    [Fact]
-    public void When_multiple_handlers_registered_should_produce_multiple_descriptions()
+    [Test]
+    public async Task When_multiple_handlers_registered_should_produce_multiple_descriptions()
     {
         // Arrange — two handler types for the same request type
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandler));
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandlerAsync));
-
         var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
-        PipelineBuilder<MyCommand>.ClearPipelineCache();
-
         // Act
         var descriptions = pipelineBuilder.Describe(typeof(MyCommand)).ToList();
-
         // Assert
-        Assert.Equal(2, descriptions.Count);
-        Assert.Contains(descriptions, d => d.HandlerType == typeof(MyPreAndPostDecoratedHandler));
-        Assert.Contains(descriptions, d => d.HandlerType == typeof(MyPreAndPostDecoratedHandlerAsync));
+        await Assert.That(descriptions.Count).IsEqualTo(2);
+        await Assert.That(descriptions).Contains(d => d.HandlerType == typeof(MyPreAndPostDecoratedHandler));
+        await Assert.That(descriptions).Contains(d => d.HandlerType == typeof(MyPreAndPostDecoratedHandlerAsync));
     }
 
-    [Fact]
-    public void When_parameterless_describe_should_iterate_all_registered_request_types()
+    [Test]
+    public async Task When_parameterless_describe_should_iterate_all_registered_request_types()
     {
         // Arrange — register handlers for MyCommand only
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandler));
-
         var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
-        PipelineBuilder<MyCommand>.ClearPipelineCache();
-
         // Act — parameterless Describe() should find all registered request types
         var descriptions = pipelineBuilder.Describe().ToList();
-
         // Assert
-        Assert.Single(descriptions);
-        Assert.Equal(typeof(MyCommand), descriptions[0].RequestType);
+        await Assert.That(descriptions).HasSingleItem();
+        await Assert.That(descriptions[0].RequestType).IsEqualTo(typeof(MyCommand));
     }
 }

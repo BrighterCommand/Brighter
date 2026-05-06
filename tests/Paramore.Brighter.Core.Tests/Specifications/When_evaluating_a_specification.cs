@@ -1,74 +1,64 @@
-﻿using Paramore.Brighter.Core.Tests.Specifications.TestDoubles;
-using Xunit;
+using Paramore.Brighter.Core.Tests.Specifications.TestDoubles;
 
 namespace Paramore.Brighter.Core.Tests.Specifications;
-
 public class SpecificationTests
 {
-    [Fact]
-    public void When_evaluating_a_specificaion()
+    [Test]
+    public async Task When_evaluating_a_specificaion()
     {
-        var specification = new Specification<SpecificationTestState>(state => state.State == TestState.Done);
-        Assert.True(specification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Done }));
-        Assert.False(specification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Ready }));
+        var specification = new Specification<SpecificationTestState>(state => state.State == SpecificationState.Done);
+        await Assert.That(specification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Done })).IsTrue();
+        await Assert.That(specification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Ready })).IsFalse();
     }
 
-    [Fact]
-    public void When_combining_specifications_with_and()
+    [Test]
+    public async Task When_combining_specifications_with_and()
     {
-        var doneSpecification = new Specification<SpecificationTestState>(state => state.State == TestState.Done);
-        var runningSpecification = new Specification<SpecificationTestState>(state => state.State == TestState.Running);
+        var doneSpecification = new Specification<SpecificationTestState>(state => state.State == SpecificationState.Done);
+        var runningSpecification = new Specification<SpecificationTestState>(state => state.State == SpecificationState.Running);
         var combinedSpecification = doneSpecification.And(runningSpecification);
-
-        Assert.False(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Done }));
-        Assert.False(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Running }));
+        await Assert.That(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Done })).IsFalse();
+        await Assert.That(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Running })).IsFalse();
     }
 
-    [Fact]
-    public void When_combining_specifications_with_or()
+    [Test]
+    public async Task When_combining_specifications_with_or()
     {
-        var doneSpecification = new Specification<SpecificationTestState>(state => state.State == TestState.Done);
-        var runningSpecification = new Specification<SpecificationTestState>(state => state.State == TestState.Running);
+        var doneSpecification = new Specification<SpecificationTestState>(state => state.State == SpecificationState.Done);
+        var runningSpecification = new Specification<SpecificationTestState>(state => state.State == SpecificationState.Running);
         var combinedSpecification = doneSpecification.Or(runningSpecification);
-
-        Assert.True(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Done }));
-        Assert.True(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Running }));
-        Assert.False(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Ready }));
+        await Assert.That(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Done })).IsTrue();
+        await Assert.That(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Running })).IsTrue();
+        await Assert.That(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Ready })).IsFalse();
     }
 
-    [Fact]
-    public void When_negating_a_specification()
+    [Test]
+    public async Task When_negating_a_specification()
     {
-        var doneSpecification = new Specification<SpecificationTestState>(state => state.State == TestState.Done);
+        var doneSpecification = new Specification<SpecificationTestState>(state => state.State == SpecificationState.Done);
         var notDoneSpecification = doneSpecification.Not();
-
-        Assert.False(notDoneSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Done }));
-        Assert.True(notDoneSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Ready }));
+        await Assert.That(notDoneSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Done })).IsFalse();
+        await Assert.That(notDoneSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Ready })).IsTrue();
     }
 
-    [Fact]
-    public void When_combining_specifications_with_and_not()
+    [Test]
+    public async Task When_combining_specifications_with_and_not()
     {
-        var doneSpecification = new Specification<SpecificationTestState>(state => state.State == TestState.Done);
-        var runningSpecification = new Specification<SpecificationTestState>(state => state.State == TestState.Running);
+        var doneSpecification = new Specification<SpecificationTestState>(state => state.State == SpecificationState.Done);
+        var runningSpecification = new Specification<SpecificationTestState>(state => state.State == SpecificationState.Running);
         var combinedSpecification = doneSpecification.AndNot(runningSpecification);
-
-        Assert.True(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Done }));
-        Assert.False(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Running }));
+        await Assert.That(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Done })).IsTrue();
+        await Assert.That(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Running })).IsFalse();
     }
 
-    [Fact]
-    public void When_combining_specifications_with_or_not()
+    [Test]
+    public async Task When_combining_specifications_with_or_not()
     {
-        var doneSpecification = new Specification<SpecificationTestState>(state => state.State == TestState.Done);
-        var runningSpecification = new Specification<SpecificationTestState>(state => state.State == TestState.Running);
+        var doneSpecification = new Specification<SpecificationTestState>(state => state.State == SpecificationState.Done);
+        var runningSpecification = new Specification<SpecificationTestState>(state => state.State == SpecificationState.Running);
         var combinedSpecification = doneSpecification.OrNot(runningSpecification);
-
-        Assert.True(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Done }));
-        Assert.True(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Ready }));
-        Assert.False(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = TestState.Running }));
+        await Assert.That(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Done })).IsTrue();
+        await Assert.That(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Ready })).IsTrue();
+        await Assert.That(combinedSpecification.IsSatisfiedBy(new SpecificationTestState { State = SpecificationState.Running })).IsFalse();
     }
 }
-    
-    
-    

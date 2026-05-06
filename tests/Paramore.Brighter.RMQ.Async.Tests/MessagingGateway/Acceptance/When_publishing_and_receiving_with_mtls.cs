@@ -3,15 +3,14 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Acceptance;
 
 // Acceptance tests verify actual mTLS connections to Docker RabbitMQ
 // These tests run against the actual transport configured in Docker (per ADR #3946)
-[Trait("Category", "RabbitMQ")]
-[Trait("Category", "MutualTLS")]
-[Trait("Requires", "Docker-mTLS")]
+[Category("RabbitMQ")]
+[Category("MutualTLS")]
+[Property("Requires", "Docker-mTLS")]
 public class RmqMutualTlsAcceptanceTests : IDisposable
 {
     private readonly string _clientCertPath;
@@ -35,7 +34,7 @@ public class RmqMutualTlsAcceptanceTests : IDisposable
         // Cleanup if needed
     }
 
-    [Fact]
+    [Test]
     public async Task When_connecting_with_client_certificate_can_publish_message_async()
     {
         // Verify certificate exists
@@ -68,13 +67,13 @@ public class RmqMutualTlsAcceptanceTests : IDisposable
         await producer.SendAsync(message);
 
         // If we reach here, TLS handshake succeeded
-        Assert.True(true);
+        await Assert.That(true).IsTrue();
 
         // Cleanup
         await producer.DisposeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_connecting_with_mtls_can_publish_and_receive_message_async()
     {
         // Verify certificate exists
@@ -100,7 +99,7 @@ public class RmqMutualTlsAcceptanceTests : IDisposable
 
         // Act - Create consumer first to ensure queue exists and is bound
         var consumer = new RmqMessageConsumer(connection, queueName, routingKey, false);
-        consumer.Purge(); // Ensure queue is created and bound before publishing
+        await consumer.PurgeAsync(); // Ensure queue is created and bound before publishing
 
         // Act - Publish
         var producer = new RmqMessageProducer(connection);
@@ -114,10 +113,10 @@ public class RmqMutualTlsAcceptanceTests : IDisposable
         var receivedMessages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(5));
 
         // Assert
-        Assert.NotEmpty(receivedMessages);
+        await Assert.That(receivedMessages).IsNotEmpty();
         var receivedMessage = receivedMessages.First();
-        Assert.Equal(sentMessage.Id, receivedMessage.Id);
-        Assert.Equal(sentMessage.Body.Value, receivedMessage.Body.Value);
+        await Assert.That(receivedMessage.Id).IsEqualTo(sentMessage.Id);
+        await Assert.That(receivedMessage.Body.Value).IsEqualTo(sentMessage.Body.Value);
 
         // Cleanup
         await producer.DisposeAsync();

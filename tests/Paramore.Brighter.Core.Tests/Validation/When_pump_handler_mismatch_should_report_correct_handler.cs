@@ -19,76 +19,52 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Validation;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class PumpHandlerMismatchReportTests
 {
-    [Fact]
-    public void When_reactor_has_both_sync_and_async_handlers_should_name_async_handler()
+    [Test]
+    public async Task When_reactor_has_both_sync_and_async_handlers_should_name_async_handler()
     {
         // Arrange — Reactor subscription with both a sync handler (OK) and async handler (mismatched)
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicSyncHandler));
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicAsyncHandler));
-
-        var subscription = new Subscription(
-            subscriptionName: new SubscriptionName("reactor-sub"),
-            channelName: new ChannelName("test-channel"),
-            routingKey: new RoutingKey("test.routing.key"),
-            requestType: typeof(MyDescribableCommand),
-            messagePumpType: MessagePumpType.Reactor
-        );
-
+        var subscription = new Subscription(subscriptionName: new SubscriptionName("reactor-sub"), channelName: new ChannelName("test-channel"), routingKey: new RoutingKey("test.routing.key"), requestType: typeof(MyDescribableCommand), messagePumpType: MessagePumpType.Reactor);
         var spec = ConsumerValidationRules.PumpHandlerMatch(registry);
-
         // Act
         var satisfied = spec.IsSatisfiedBy(subscription);
         var collector = new ValidationResultCollector<Subscription>();
         var results = spec.Accept(collector).ToList();
-
         // Assert — error should name MyPublicAsyncHandler, not MyPublicSyncHandler
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Contains("MyPublicAsyncHandler", results[0].Error!.Message);
-        Assert.DoesNotContain("MyPublicSyncHandler", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Message).Contains("MyPublicAsyncHandler");
+        await Assert.That(results[0].Error!.Message).DoesNotContain("MyPublicSyncHandler");
     }
 
-    [Fact]
-    public void When_proactor_has_both_async_and_sync_handlers_should_name_sync_handler()
+    [Test]
+    public async Task When_proactor_has_both_async_and_sync_handlers_should_name_sync_handler()
     {
         // Arrange — Proactor subscription with both an async handler (OK) and sync handler (mismatched)
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicAsyncHandler));
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicSyncHandler));
-
-        var subscription = new Subscription(
-            subscriptionName: new SubscriptionName("proactor-sub"),
-            channelName: new ChannelName("test-channel"),
-            routingKey: new RoutingKey("test.routing.key"),
-            requestType: typeof(MyDescribableCommand),
-            messagePumpType: MessagePumpType.Proactor
-        );
-
+        var subscription = new Subscription(subscriptionName: new SubscriptionName("proactor-sub"), channelName: new ChannelName("test-channel"), routingKey: new RoutingKey("test.routing.key"), requestType: typeof(MyDescribableCommand), messagePumpType: MessagePumpType.Proactor);
         var spec = ConsumerValidationRules.PumpHandlerMatch(registry);
-
         // Act
         var satisfied = spec.IsSatisfiedBy(subscription);
         var collector = new ValidationResultCollector<Subscription>();
         var results = spec.Accept(collector).ToList();
-
         // Assert — error should name MyPublicSyncHandler, not MyPublicAsyncHandler
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Contains("MyPublicSyncHandler", results[0].Error!.Message);
-        Assert.DoesNotContain("MyPublicAsyncHandler", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Message).Contains("MyPublicSyncHandler");
+        await Assert.That(results[0].Error!.Message).DoesNotContain("MyPublicAsyncHandler");
     }
 }

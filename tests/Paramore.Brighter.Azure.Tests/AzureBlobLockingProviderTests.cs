@@ -23,8 +23,8 @@ public class AzureBlobLockingProviderTests
         var firstLock = await _blobLocking.ObtainLockAsync(resourceName, CancellationToken.None);
         var secondLock = await _blobLocking.ObtainLockAsync(resourceName, CancellationToken.None); 
             
-        Assert.That(firstLock, Is.Not.Null);
-        Assert.That(secondLock, Is.Null, "A Lock should not be able to be acquired");
+        await Assert.That(firstLock).IsNotNull();
+        await Assert.That(secondLock).IsNull();
     }
     
     [Test]
@@ -37,9 +37,9 @@ public class AzureBlobLockingProviderTests
         var secondLock = await _blobLocking.ObtainLockAsync(resourceName, CancellationToken.None); 
         var thirdLock = await _blobLocking.ObtainLockAsync(resourceName, CancellationToken.None); 
             
-        Assert.That(firstLock, Is.Not.Null);
-        Assert.That(secondLock, Is.Not.Null, "A Lock should be able to be acquired");
-        Assert.That(thirdLock, Is.Null, "A Lock should not be able to be acquired");
+        await Assert.That(firstLock).IsNotNull();
+        await Assert.That(secondLock).IsNotNull();
+        await Assert.That(thirdLock).IsNull();
     }
     
 }

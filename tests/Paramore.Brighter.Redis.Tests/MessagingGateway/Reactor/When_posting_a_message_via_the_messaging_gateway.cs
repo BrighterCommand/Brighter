@@ -1,14 +1,13 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Net.Mime;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Reactor;
 
-[Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
-[Trait("Category", "Redis")]
-public class RedisMessageProducerSendTests : IClassFixture<RedisFixture>
+[Category("Redis")]
+[ClassDataSource<RedisFixture>(Shared = SharedType.PerClass)]
+    public class RedisMessageProducerSendTests 
 {
     private readonly RedisFixture _redisFixture;
     private readonly Message _message;
@@ -67,35 +66,36 @@ public class RedisMessageProducerSendTests : IClassFixture<RedisFixture>
         _message = new Message(header, new MessageBody("test content"));
     }
 
-    [Fact]
-    public void When_posting_a_message_via_the_messaging_gateway()
+    [Test]
+    public async Task When_posting_a_message_via_the_messaging_gateway()
     {
         //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
-        _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000));
+        await _redisFixture.MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
-        _redisFixture.MessageProducer.Send(_message);
-        var sentMessage = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
-        _redisFixture.MessageConsumer.Acknowledge(sentMessage);
+        await _redisFixture.MessageProducer.SendAsync(_message);
+        var sentMessage = (await _redisFixture.MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();
+        await _redisFixture.MessageConsumer.AcknowledgeAsync(sentMessage);
 
         // Assert message body
-        Assert.Equal(_message.Body.Value, sentMessage.Body.Value);
+        await Assert.That(sentMessage.Body.Value).IsEqualTo(_message.Body.Value);
         
         // Assert header properties
-        Assert.Equal(_messageId, sentMessage.Header.MessageId);
-        Assert.Equal(_topic, sentMessage.Header.Topic);
-        Assert.Equal(MessageType.MT_COMMAND, sentMessage.Header.MessageType);
-        Assert.Equal(_timestamp, sentMessage.Header.TimeStamp, TimeSpan.FromSeconds(5));
-        Assert.Equal(_correlationId, sentMessage.Header.CorrelationId);
-        Assert.Equal(_replyTo, sentMessage.Header.ReplyTo);
-        Assert.Equal(MediaTypeNames.Application.Json, sentMessage.Header.ContentType!.ToString());
-        Assert.Equal("custom-value", sentMessage.Header.Bag["custom-header"]);
-        Assert.Equal(_source, sentMessage.Header.Source);
-        Assert.Equal(_type, sentMessage.Header.Type);
-        Assert.Equal(_dataSchema, sentMessage.Header.DataSchema);
-        Assert.Equal(_subject, sentMessage.Header.Subject);
-        Assert.Equal(MessageHeader.DefaultSpecVersion, sentMessage.Header.SpecVersion);
-        Assert.Equal(_traceParent, sentMessage.Header.TraceParent);
-        Assert.Equal(_traceState, sentMessage.Header.TraceState);
-        Assert.Equal(_baggage, sentMessage.Header.Baggage);
+        await Assert.That(sentMessage.Header.MessageId).IsEqualTo(_messageId);
+        await Assert.That(sentMessage.Header.Topic).IsEqualTo(_topic);
+        await Assert.That(sentMessage.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+        await Assert.That(sentMessage.Header.TimeStamp).IsEqualTo(_timestamp).Within(TimeSpan.FromSeconds(5));
+        await Assert.That(sentMessage.Header.CorrelationId).IsEqualTo(_correlationId);
+        await Assert.That(sentMessage.Header.ReplyTo).IsEqualTo(_replyTo);
+        await Assert.That(sentMessage.Header.ContentType!.ToString()).IsEqualTo(MediaTypeNames.Application.Json);
+        await Assert.That(sentMessage.Header.Bag["custom-header"]).IsEqualTo("custom-value");
+        await Assert.That(sentMessage.Header.Source).IsEqualTo(_source);
+        await Assert.That(sentMessage.Header.Type).IsEqualTo(_type);
+        await Assert.That(sentMessage.Header.DataSchema).IsEqualTo(_dataSchema);
+        await Assert.That(sentMessage.Header.Subject).IsEqualTo(_subject);
+        await Assert.That(sentMessage.Header.SpecVersion).IsEqualTo(MessageHeader.DefaultSpecVersion);
+        await Assert.That(sentMessage.Header.TraceParent).IsEqualTo(_traceParent);
+        await Assert.That(sentMessage.Header.TraceState).IsEqualTo(_traceState);
+        await Assert.That(sentMessage.Header.Baggage).IsEqualTo(_baggage);
     }
 }
+

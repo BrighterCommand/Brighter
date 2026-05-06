@@ -19,46 +19,43 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class PipelineValidatorWarningsSeparationTests
 {
-    [Fact]
-    public void When_validator_encounters_warnings_and_errors_should_collect_separately()
+    [Test]
+    public async Task When_validator_encounters_warnings_and_errors_should_collect_separately()
     {
         // Arrange — configure paths that produce both errors and warnings
-
         // Handler path: misordered backstop/resilience triggers a Warning
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyMisorderedBackstopHandler));
         var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
-        PipelineBuilder<IRequest>.ClearPipelineCache();
-
         // Producer path: null RequestType triggers an Error
-        var publications = new[] { new Publication { Topic = new RoutingKey("test.topic"), RequestType = null } };
-
+        var publications = new[]
+        {
+            new Publication
+            {
+                Topic = new RoutingKey("test.topic"),
+                RequestType = null
+            }
+        };
         var validator = new PipelineValidator(pipelineBuilder, publications);
-
         // Act
         var result = validator.Validate();
-
         // Assert — warnings and errors are in separate collections
-        Assert.NotEmpty(result.Errors);
-        Assert.NotEmpty(result.Warnings);
-
-        Assert.All(result.Errors, e => Assert.Equal(ValidationSeverity.Error, e.Severity));
-        Assert.All(result.Warnings, w => Assert.Equal(ValidationSeverity.Warning, w.Severity));
-
+        await Assert.That(result.Errors).IsNotEmpty();
+        await Assert.That(result.Warnings).IsNotEmpty();
+        foreach (var e in result.Errors)
+            await Assert.That(e.Severity).IsEqualTo(ValidationSeverity.Error);
+        foreach (var w in result.Warnings)
+            await Assert.That(w.Severity).IsEqualTo(ValidationSeverity.Warning);
         // Verify no cross-contamination
-        Assert.DoesNotContain(result.Errors, e => e.Severity == ValidationSeverity.Warning);
-        Assert.DoesNotContain(result.Warnings, w => w.Severity == ValidationSeverity.Error);
+        await Assert.That(result.Errors).DoesNotContain(e => e.Severity == ValidationSeverity.Warning);
+        await Assert.That(result.Warnings).DoesNotContain(w => w.Severity == ValidationSeverity.Error);
     }
 }

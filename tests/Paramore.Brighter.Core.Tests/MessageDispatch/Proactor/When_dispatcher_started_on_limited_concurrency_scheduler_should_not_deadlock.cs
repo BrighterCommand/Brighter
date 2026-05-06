@@ -5,18 +5,16 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor;
 
-/// <summary>Regression test for issue #4071: dispatcher must not deadlock on a limited-concurrency TaskScheduler.</summary>
 public class DispatcherOnLimitedConcurrencySchedulerTests
 {
     private const string Topic = "myTopic";
     private const string ChannelName = "myChannel";
 
-    [Fact]
-    public void When_Dispatcher_Started_On_Limited_Concurrency_Scheduler_Should_Not_Deadlock()
+    [Test]
+    public async Task When_Dispatcher_Started_On_Limited_Concurrency_Scheduler_Should_Not_Deadlock()
     {
         var routingKey = new RoutingKey(Topic);
         var bus = new InternalBus();
@@ -50,7 +48,7 @@ public class DispatcherOnLimitedConcurrencySchedulerTests
         for (var i = 0; i < 6; i++)
             channel.Enqueue(message);
 
-        Assert.Equal(DispatcherState.DS_AWAITING, dispatcher.State);
+        await Assert.That(dispatcher.State).IsEqualTo(DispatcherState.DS_AWAITING);
 
         var pair = new ConcurrentExclusiveSchedulerPair();
         var factory = new TaskFactory(pair.ExclusiveScheduler);
@@ -62,7 +60,7 @@ public class DispatcherOnLimitedConcurrencySchedulerTests
         }).Unwrap();
 
         var finishedInTime = completed.Wait(TimeSpan.FromSeconds(30));
-        Assert.True(finishedInTime, "Dispatcher deadlocked when started on a limited-concurrency TaskScheduler");
-        Assert.Equal(DispatcherState.DS_STOPPED, dispatcher.State);
+        await Assert.That(finishedInTime).IsTrue().Because("Dispatcher deadlocked when started on a limited-concurrency TaskScheduler");
+        await Assert.That(dispatcher.State).IsEqualTo(DispatcherState.DS_STOPPED);
     }
 }

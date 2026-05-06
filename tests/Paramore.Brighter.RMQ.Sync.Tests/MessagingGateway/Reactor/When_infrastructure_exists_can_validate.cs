@@ -1,11 +1,9 @@
-﻿using System;
+using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RmqValidateExistingInfrastructureTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -40,8 +38,8 @@ public class RmqValidateExistingInfrastructureTests : IDisposable
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey)).Create(TimeSpan.FromMilliseconds(1000));
     }
         
-    [Fact]
-    public void When_infrastructure_exists_can_validate_producer()
+    [Test]
+    public async Task When_infrastructure_exists_can_validate_producer()
     {
         var exceptionThrown = false;
         try
@@ -55,7 +53,7 @@ public class RmqValidateExistingInfrastructureTests : IDisposable
             exceptionThrown = true;
         }
 
-        Assert.False(exceptionThrown);
+        await Assert.That(exceptionThrown).IsFalse();
     }
 
     public void Dispose()
@@ -64,3 +62,4 @@ public class RmqValidateExistingInfrastructureTests : IDisposable
         _messageConsumer.Dispose();
     }
 }
+

@@ -27,14 +27,13 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ChannelFactorySchedulerTests
 {
-    [Fact]
-    public void Should_set_scheduler_on_channel_factory_that_implements_scheduler_interface()
+    [Test]
+    public async Task Should_set_scheduler_on_channel_factory_that_implements_scheduler_interface()
     {
         // Arrange — configure AddConsumers with an InMemoryChannelFactory (which implements IAmAChannelFactoryWithScheduler)
         var bus = new InternalBus();
@@ -71,13 +70,13 @@ public class ChannelFactorySchedulerTests
         var dispatcher = provider.GetRequiredService<IDispatcher>();
 
         // Assert — the channel factory should now have its Scheduler property set from DI
-        Assert.NotNull(dispatcher);
-        Assert.NotNull(channelFactory.Scheduler);
-        Assert.IsAssignableFrom<IAmAMessageScheduler>(channelFactory.Scheduler);
+        await Assert.That(dispatcher).IsNotNull();
+        await Assert.That(channelFactory.Scheduler).IsNotNull();
+        await Assert.That(channelFactory.Scheduler).IsAssignableTo<IAmAMessageScheduler>();
     }
 
-    [Fact]
-    public void Should_set_custom_scheduler_on_channel_factory_when_UseScheduler_configured()
+    [Test]
+    public async Task Should_set_custom_scheduler_on_channel_factory_when_UseScheduler_configured()
     {
         // Arrange — configure with a custom scheduler factory
         var bus = new InternalBus();
@@ -116,9 +115,9 @@ public class ChannelFactorySchedulerTests
         var dispatcher = provider.GetRequiredService<IDispatcher>();
 
         // Assert — the channel factory should have the custom scheduler set
-        Assert.NotNull(dispatcher);
-        Assert.NotNull(channelFactory.Scheduler);
-        Assert.IsType<StubScheduler>(channelFactory.Scheduler);
+        await Assert.That(dispatcher).IsNotNull();
+        await Assert.That(channelFactory.Scheduler).IsNotNull();
+        await Assert.That(channelFactory.Scheduler).IsTypeOf<StubScheduler>();
     }
 
     private class StubSchedulerFactory : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory

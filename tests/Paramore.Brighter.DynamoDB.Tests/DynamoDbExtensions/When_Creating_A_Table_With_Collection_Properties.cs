@@ -4,14 +4,13 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Outbox.DynamoDB;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 {
     public class DynamoDbCollectionProperties
     {
-        [Fact]
-        public void When_Creating_A_Table_With_Collection_Properties()
+        [Test]
+        public async Task When_Creating_A_Table_With_Collection_Properties()
         {
             //arrange
             var tableRequestFactory = new DynamoDbTableFactory();
@@ -25,12 +24,12 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             );
 
             //assert
-            Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "Id" && attr.AttributeType == ScalarAttributeType.S);
-            Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "StringArray" && attr.AttributeType.Value == "SS");
-            Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "IntArray" && attr.AttributeType.Value == "NS");
-            Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "DoubleArray" && attr.AttributeType.Value == "NS");
-            Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "GenericList" && attr.AttributeType.Value == "L");
-            Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "GenericMap" && attr.AttributeType.Value == "M");
+            await Assert.That(tableRequest.AttributeDefinitions).Contains(attr => attr.AttributeName == "Id" && attr.AttributeType == ScalarAttributeType.S);
+            await Assert.That(tableRequest.AttributeDefinitions).Contains(attr => attr.AttributeName == "StringArray" && attr.AttributeType.Value == "SS");
+            await Assert.That(tableRequest.AttributeDefinitions).Contains(attr => attr.AttributeName == "IntArray" && attr.AttributeType.Value == "NS");
+            await Assert.That(tableRequest.AttributeDefinitions).Contains(attr => attr.AttributeName == "DoubleArray" && attr.AttributeType.Value == "NS");
+            await Assert.That(tableRequest.AttributeDefinitions).Contains(attr => attr.AttributeName == "GenericList" && attr.AttributeType.Value == "L");
+            await Assert.That(tableRequest.AttributeDefinitions).Contains(attr => attr.AttributeName == "GenericMap" && attr.AttributeType.Value == "M");
         }
 
         [DynamoDBTable("MyEntity")]

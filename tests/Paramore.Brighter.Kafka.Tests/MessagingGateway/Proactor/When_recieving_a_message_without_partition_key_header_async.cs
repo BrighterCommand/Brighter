@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -6,26 +6,21 @@ using Confluent.Kafka;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 using Acks = Confluent.Kafka.Acks;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
+[Category("Kafka")]
 public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAMessageConsumerAsync _consumer;
     private readonly IProducer<string, byte[]> _producer;
 
-    public KafkaMessageProducerMissingHeaderTestsAsync(ITestOutputHelper output)
+    public KafkaMessageProducerMissingHeaderTestsAsync()
     {
         string groupId = Guid.NewGuid().ToString();
-        _output = output;
 
         var clientConfig = new ClientConfig
         {
@@ -52,7 +47,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
         _producer = new ProducerBuilder<string, byte[]>(producerConfig)
             .SetErrorHandler((_, error) =>
             {
-                output.WriteLine($"Kafka producer failed with Code: {error.Code}, Reason: { error.Reason}, Fatal: {error.IsFatal}", error.Code, error.Reason, error.IsFatal);
+                Console.WriteLine($"Kafka producer failed with Code: {error.Code}, Reason: { error.Reason}, Fatal: {error.IsFatal}");
             })
             .Build();
 
@@ -69,8 +64,8 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
                     numOfPartitions: 1, replicationFactor: 1, makeChannels: OnMissingChannel.Create));
     }
 
-    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
-    [Fact]
+    //[Test, Skip("As it has to wait for the messages to flush, only tends to run well in debug")]
+    [Test]
     public async Task When_recieving_a_message_without_partition_key_header()
     {
         await Task.Delay(500); //Let topic propagate in the broker
@@ -97,8 +92,8 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
         var receivedMessage = await GetMessageAsync();
 
         //Where we lack a partition key header, assume non-Brighter header and set to message key
-        Assert.Equal(kafkaMessage.Key, receivedMessage.Header.PartitionKey);
-        Assert.Equal(value, receivedMessage.Body.Bytes);
+        await Assert.That(receivedMessage.Header.PartitionKey).IsEqualTo(kafkaMessage.Key);
+        await Assert.That(receivedMessage.Body.Bytes).IsEquivalentTo(value);
     }
 
     private async Task<Message> GetMessageAsync()
@@ -125,7 +120,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
             catch (ChannelFailureException cfx)
             {
                 //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 await Task.Delay(1000);
             }
         } while (maxTries <= 10);
@@ -136,7 +131,8 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
         return messages[0];
     }
     
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         _producer?.Dispose();
         ((IAmAMessageConsumerSync)_consumer)?.Dispose();
@@ -148,3 +144,4 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
         await _consumer.DisposeAsync();
     }
 }
+

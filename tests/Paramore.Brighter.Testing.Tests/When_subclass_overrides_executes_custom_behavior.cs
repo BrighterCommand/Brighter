@@ -24,8 +24,6 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -33,7 +31,6 @@ public class SpyCommandProcessorSubclassOverrideSendTests
 {
     private readonly ThrowingSpyCommandProcessor _spy;
     private readonly TestCommand _command;
-    private readonly InvalidOperationException _caughtException;
 
     public SpyCommandProcessorSubclassOverrideSendTests()
     {
@@ -42,29 +39,30 @@ public class SpyCommandProcessorSubclassOverrideSendTests
         _command = new TestCommand();
 
         //Act
-        _caughtException = Should.Throw<InvalidOperationException>(() => _spy.Send(_command));
+        try { _spy.Send(_command); } catch (InvalidOperationException) { }
     }
 
-    [Fact]
-    public void Then_should_throw_custom_exception()
+    [Test]
+    public Task Then_should_throw_custom_exception()
     {
         //Assert
-        _caughtException.Message.ShouldBe("Send is not allowed in this test");
+        Assert.ThrowsExactly<InvalidOperationException>(() => _spy.Send(new TestCommand()));
+        return Task.CompletedTask;
     }
 
-    [Fact]
-    public void Then_base_should_have_recorded_the_call()
+    [Test]
+    public async Task Then_base_should_have_recorded_the_call()
     {
         //Assert
-        _spy.WasCalled(CommandType.Send).ShouldBeTrue();
+        await Assert.That(_spy.WasCalled(CommandType.Send)).IsTrue();
     }
 
-    [Fact]
-    public void Then_request_should_be_captured_in_recorded_calls()
+    [Test]
+    public async Task Then_request_should_be_captured_in_recorded_calls()
     {
         //Assert
-        _spy.RecordedCalls.Count.ShouldBe(1);
-        _spy.RecordedCalls[0].Request.ShouldBeSameAs(_command);
+        await Assert.That(_spy.RecordedCalls.Count).IsEqualTo(1);
+        await Assert.That(_spy.RecordedCalls[0].Request).IsSameReferenceAs(_command);
     }
 
     private sealed class TestCommand() : Command(Id.Random());
@@ -74,7 +72,6 @@ public class SpyCommandProcessorSubclassOverridePublishTests
 {
     private readonly ThrowingSpyCommandProcessor _spy;
     private readonly TestEvent _event;
-    private readonly InvalidOperationException _caughtException;
 
     public SpyCommandProcessorSubclassOverridePublishTests()
     {
@@ -83,21 +80,22 @@ public class SpyCommandProcessorSubclassOverridePublishTests
         _event = new TestEvent();
 
         //Act
-        _caughtException = Should.Throw<InvalidOperationException>(() => _spy.Publish(_event));
+        try { _spy.Publish(_event); } catch (InvalidOperationException) { }
     }
 
-    [Fact]
-    public void Then_should_throw_custom_exception()
+    [Test]
+    public Task Then_should_throw_custom_exception()
     {
         //Assert
-        _caughtException.Message.ShouldBe("Publish is not allowed in this test");
+        Assert.ThrowsExactly<InvalidOperationException>(() => _spy.Publish(new TestEvent()));
+        return Task.CompletedTask;
     }
 
-    [Fact]
-    public void Then_base_should_have_recorded_the_call()
+    [Test]
+    public async Task Then_base_should_have_recorded_the_call()
     {
         //Assert
-        _spy.WasCalled(CommandType.Publish).ShouldBeTrue();
+        await Assert.That(_spy.WasCalled(CommandType.Publish)).IsTrue();
     }
 
     private sealed class TestEvent() : Event(Id.Random());

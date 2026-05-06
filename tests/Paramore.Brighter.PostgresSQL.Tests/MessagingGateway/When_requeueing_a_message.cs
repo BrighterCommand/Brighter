@@ -1,15 +1,14 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
-[Trait("Category", "PostgresSql")]
+[Category("PostgresSql")]
 public class PostgreSqlMessageConsumerRequeueTests
 {
     private readonly Message _message;
@@ -49,13 +48,13 @@ public class PostgreSqlMessageConsumerRequeueTests
         _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration));
     }
 
-    [Fact]
-    public void When_requeueing_a_message()
+    [Test]
+    public async Task When_requeueing_a_message()
     {
         ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(_message);
         var channel = _channelFactory.CreateSyncChannel(_subscription);
         var message = channel.Receive(TimeSpan.FromMilliseconds(2000));
-        Assert.True(channel.Requeue(message, TimeSpan.FromMilliseconds(100)));
+        await Assert.That(channel.Requeue(message, TimeSpan.FromMilliseconds(100))).IsTrue();
 
         Thread.Sleep(TimeSpan.FromMilliseconds(100));
         
@@ -64,6 +63,6 @@ public class PostgreSqlMessageConsumerRequeueTests
         //clear the queue
         channel.Acknowledge(requeuedMessage);
 
-        Assert.Equal(message.Body.Value, requeuedMessage.Body.Value);
+        await Assert.That(requeuedMessage.Body.Value).IsEqualTo(message.Body.Value);
     }
 }

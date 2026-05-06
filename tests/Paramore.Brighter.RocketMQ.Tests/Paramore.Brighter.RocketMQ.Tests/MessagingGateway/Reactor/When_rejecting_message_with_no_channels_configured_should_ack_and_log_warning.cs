@@ -30,18 +30,18 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RocketMQ")]
+[Category("RocketMQ")]
 public class RocketMqNoChannelsConfiguredTests : IDisposable
 {
-    private readonly RocketMqMessageProducer _producer;
-    private readonly IAmAMessageConsumerSync _consumer;
-    private readonly Message _message;
+    private RocketMqMessageProducer _producer;
+    private IAmAMessageConsumerSync _consumer;
+    private Message _message;
 
-    public RocketMqNoChannelsConfiguredTests()
+    [Before(Test)]
+    public async Task Setup()
     {
         var sourceTopic = new RoutingKey("rmq_dlq_source");
 
@@ -51,7 +51,7 @@ public class RocketMqNoChannelsConfiguredTests : IDisposable
         var publication = new RocketMqPublication { Topic = sourceTopic };
         _producer = new RocketMqMessageProducer(
             connection,
-            GatewayFactory.CreateProducer(connection, publication).GetAwaiter().GetResult(),
+            await GatewayFactory.CreateProducer(connection, publication),
             publication);
 
         // Source topic consumer with NO DLQ or invalid routing keys
@@ -72,12 +72,12 @@ public class RocketMqNoChannelsConfiguredTests : IDisposable
                 (object)new MyCommand { Value = "Test No Channels" }, JsonSerialisationOptions.Options)));
     }
 
-    [Fact]
-    public void When_rejecting_message_with_no_channels_configured_should_ack_and_return_true()
+    [Test]
+    public async Task When_rejecting_message_with_no_channels_configured_should_ack_and_return_true()
     {
         // Arrange - send a message and consume it from the source topic
         _consumer.Purge();
-        _producer.Send(_message);
+        await _producer.SendAsync(_message);
         var receivedMessage = ConsumeMessage(_consumer);
 
         // Act - reject with DeliveryError (no channels configured)
@@ -85,7 +85,7 @@ public class RocketMqNoChannelsConfiguredTests : IDisposable
             new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
 
         // Assert - reject returns true (source Ack'd, breaking requeue loop)
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - consumer can continue to receive subsequent messages (not stuck in requeue loop)
         var followUpMessage = new Message(
@@ -94,10 +94,10 @@ public class RocketMqNoChannelsConfiguredTests : IDisposable
             new MessageBody(JsonSerializer.Serialize(
                 (object)new MyCommand { Value = "Follow-up" }, JsonSerialisationOptions.Options)));
 
-        _producer.Send(followUpMessage);
+        await _producer.SendAsync(followUpMessage);
         var nextMessage = ConsumeMessage(_consumer);
-        Assert.NotEqual(MessageType.MT_NONE, nextMessage.Header.MessageType);
-        Assert.Equal(followUpMessage.Body.Value, nextMessage.Body.Value);
+        await Assert.That(nextMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(nextMessage.Body.Value).IsEqualTo(followUpMessage.Body.Value);
     }
 
     private static Message ConsumeMessage(IAmAMessageConsumerSync consumer)

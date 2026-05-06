@@ -9,22 +9,22 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Reactor;
 
-[Trait("Category", "AWS")]
-public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+public class AwsValidateInfrastructureByArnTests : IAsyncDisposable
 {
-    private readonly Message _message;
-    private readonly IAmAMessageConsumerAsync _consumer;
-    private readonly SnsMessageProducer _messageProducer;
-    private readonly ChannelFactory _channelFactory;
-    private readonly MyCommand _myCommand;
+    private Message _message;
+    private IAmAMessageConsumerAsync _consumer;
+    private SnsMessageProducer _messageProducer;
+    private ChannelFactory _channelFactory;
+    private MyCommand _myCommand;
 
-    public AwsValidateInfrastructureByArnTests()
+    [Before(Test)]
+    public async Task Setup()
     {
         _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
@@ -56,9 +56,9 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
         //This doesn't look that different from our create tests - this is because we create using the channel factory in
         //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
         _channelFactory = new ChannelFactory(awsConnection);
-        var channel = _channelFactory.CreateAsyncChannel(subscription);
+        var channel = await _channelFactory.CreateAsyncChannelAsync(subscription);
 
-        var topicArn = FindTopicArn(awsConnection, routingKey.Value);
+        var topicArn = await FindTopicArn(awsConnection, routingKey.Value);
         var routingKeyArn = new RoutingKey(topicArn);
 
         //Now change the subscription to validate, just check what we made
@@ -79,7 +79,7 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_infrastructure_exists_can_verify()
     {
         //arrange
@@ -91,20 +91,21 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
 
         //Assert
         var message = messages.First();
-        Assert.NotEqual(MessageType.MT_NONE, message.Header.MessageType);
-        Assert.Equal(_myCommand.Id, message.Id);
+        await Assert.That(message.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(message.Id).IsEqualTo(_myCommand.Id);
 
         //clear the queue
         await _consumer.AcknowledgeAsync(message);
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         //Clean up resources that we have created
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
         ((IAmAMessageConsumerSync)_consumer).Dispose();
-        _messageProducer.Dispose();
+        await _messageProducer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -115,10 +116,10 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
         await _messageProducer.DisposeAsync();
     }
 
-    private static string FindTopicArn(AWSMessagingGatewayConnection connection, string topicName)
+    private static async Task<string> FindTopicArn(AWSMessagingGatewayConnection connection, string topicName)
     {
         using var snsClient = new AWSClientFactory(connection).CreateSnsClient();
-        var topicResponse = snsClient.FindTopicAsync(topicName).GetAwaiter().GetResult();
+        var topicResponse = await snsClient.FindTopicAsync(topicName);
         return topicResponse.TopicArn;
     }
 }

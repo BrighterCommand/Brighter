@@ -24,8 +24,6 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -45,41 +43,41 @@ public class SpyCommandProcessorCallTests
         _response = _spy.Call<TestCallRequest, TestResponse>(_request);
     }
 
-    [Fact]
-    public void Then_should_record_call_command_type()
+    [Test]
+    public async Task Then_should_record_call_command_type()
     {
         //Assert
-        _spy.Commands.ShouldContain(CommandType.Call);
+        await Assert.That(_spy.Commands).Contains(CommandType.Call);
     }
 
-    [Fact]
-    public void Then_should_return_null()
+    [Test]
+    public async Task Then_should_return_null()
     {
         //Assert
-        _response.ShouldBeNull();
+        await Assert.That(_response).IsNull();
     }
 
-    [Fact]
-    public void Then_should_capture_request_in_recorded_calls()
+    [Test]
+    public async Task Then_should_capture_request_in_recorded_calls()
     {
         //Assert
-        _spy.RecordedCalls.Count.ShouldBe(1);
-        _spy.RecordedCalls[0].Request.ShouldBeSameAs(_request);
-        _spy.RecordedCalls[0].Type.ShouldBe(CommandType.Call);
+        await Assert.That(_spy.RecordedCalls.Count).IsEqualTo(1);
+        await Assert.That(_spy.RecordedCalls[0].Request).IsSameReferenceAs(_request);
+        await Assert.That(_spy.RecordedCalls[0].Type).IsEqualTo(CommandType.Call);
     }
 
-    [Fact]
-    public void Then_was_called_should_return_true()
+    [Test]
+    public async Task Then_was_called_should_return_true()
     {
         //Assert
-        _spy.WasCalled(CommandType.Call).ShouldBeTrue();
+        await Assert.That(_spy.WasCalled(CommandType.Call)).IsTrue();
     }
 
-    [Fact]
-    public void Then_call_count_should_be_one()
+    [Test]
+    public async Task Then_call_count_should_be_one()
     {
         //Assert
-        _spy.CallCount(CommandType.Call).ShouldBe(1);
+        await Assert.That(_spy.CallCount(CommandType.Call)).IsEqualTo(1);
     }
 
     private sealed class TestCallRequest : ICall

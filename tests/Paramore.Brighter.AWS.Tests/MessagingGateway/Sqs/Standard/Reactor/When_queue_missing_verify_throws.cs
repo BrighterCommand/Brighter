@@ -1,12 +1,11 @@
-﻿using System;
+using System;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Reactor;
 
-[Trait("Category", "AWS")]
+[Category("AWS")]
 public class AwsValidateMissingTopicTests
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -22,8 +21,8 @@ public class AwsValidateMissingTopicTests
         //Because we don't use channel factory to create the infrastructure -it won't exist
     }
 
-    [Fact]
-    public void When_queue_missing_verify_throws()
+    [Test]
+    public async Task When_queue_missing_verify_throws()
     {
         //arrange
         var producer = new SqsMessageProducer(
@@ -31,8 +30,11 @@ public class AwsValidateMissingTopicTests
             new SqsPublication(channelName: new ChannelName(_routingKey), makeChannels: OnMissingChannel.Validate));
 
         //act && assert
-        Assert.Throws<QueueDoesNotExistException>(() => producer.Send(new Message(
-            new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("plain/text")),
-            new MessageBody("Test"))));
+        Assert.ThrowsExactly<QueueDoesNotExistException>(() =>
+        {
+            producer.Send(new Message(
+                new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("plain/text")),
+                new MessageBody("Test")));
+        });
     }
 }

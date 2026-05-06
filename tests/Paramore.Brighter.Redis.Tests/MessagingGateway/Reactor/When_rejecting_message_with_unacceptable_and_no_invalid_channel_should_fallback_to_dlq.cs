@@ -25,13 +25,11 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Redis;
-using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Reactor;
 
-[Collection("Redis Shared Pool")]
-[Trait("Category", "Redis")]
-[Trait("Fragile", "CI")]
+[Category("Redis")]
+[Property("Fragile", "CI")]
 public class RedisMessageConsumerUnacceptableFallbackToDlqTests : IDisposable
 {
     private readonly RedisMessageProducer _messageProducer;
@@ -62,26 +60,25 @@ public class RedisMessageConsumerUnacceptableFallbackToDlqTests : IDisposable
             new MessageBody("test content"));
     }
 
-    [Fact]
-    public void When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
+    [Test]
+    public async Task When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
     {
         //Arrange - subscribe then send
-        _consumer.Receive(TimeSpan.FromMilliseconds(1000));
-        _dlqConsumer.Receive(TimeSpan.FromMilliseconds(1000));
-        _messageProducer.Send(_message);
-        var receivedMessage = _consumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
+        await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+        await _dlqConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+        await _messageProducer.SendAsync(_message);
+        var receivedMessage = (await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();
 
         //Act - reject with Unacceptable, but no invalid channel configured
-        _consumer.Reject(receivedMessage,
+        await _consumer.RejectAsync(receivedMessage,
             new MessageRejectionReason(RejectionReason.Unacceptable, "Bad message format"));
 
         //Assert - message should fall back to DLQ
-        var dlqMessage = _dlqConsumer.Receive(TimeSpan.FromMilliseconds(3000)).Single();
+        var dlqMessage = (await _dlqConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(3000))).Single();
 
-        Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
-        Assert.Equal(_message.Body.Value, dlqMessage.Body.Value);
-        Assert.Equal(RejectionReason.Unacceptable.ToString(),
-            dlqMessage.Header.Bag["rejectionReason"].ToString());
+        await Assert.That(dlqMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(dlqMessage.Body.Value).IsEqualTo(_message.Body.Value);
+        await Assert.That(dlqMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
     }
 
     public void Dispose()
@@ -93,3 +90,4 @@ public class RedisMessageConsumerUnacceptableFallbackToDlqTests : IDisposable
         _messageProducer.Dispose();
     }
 }
+

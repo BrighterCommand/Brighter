@@ -22,22 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using Xunit;
 
-namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway;
-
-/// <summary>
-/// This collection definition forces all RabbitMQ mTLS tests to run sequentially
-/// instead of in parallel. This prevents TLS handshake race conditions that occur
-/// when multiple tests rapidly create and destroy mTLS connections simultaneously.
-///
-/// Without this, tests can fail with "Connection close forced" errors due to
-/// "TLS server: Unexpected Message" alerts from RabbitMQ when connections are
-/// opened too rapidly in parallel.
-/// </summary>
-[CollectionDefinition("RabbitMQ mTLS", DisableParallelization = true)]
-public class RabbitMQMtlsTestCollection
-{
-    // This class is never instantiated. It's just a marker for xUnit to identify
-    // the collection and its parallelization settings.
-}
+// This file previously contained an xUnit [CollectionDefinition] marker class.
+// In TUnit, sequential execution is handled via [NotInParallel("RabbitMQ mTLS")]
+// attributes on the test classes themselves, so this marker class is no longer needed.

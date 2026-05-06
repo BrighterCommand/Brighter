@@ -1,18 +1,18 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Base.Test.Locking;
 
-public abstract class DistributedLockingAsyncTest : IAsyncLifetime
+public abstract class DistributedLockingAsyncTest 
 {
-    public async Task InitializeAsync()
+    [Before(HookType.Test)]    public async Task Setup()
     {
         await BeforeEachTestAsync();
     }
 
-    public async Task DisposeAsync()
+    [After(HookType.Test)]
+    public async Task Cleanup()
     {
         await AfterEachTestAsync();
     }
@@ -32,7 +32,7 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
 
     protected virtual TimeSpan DelayBetweenTryAcquireLockOnSameResource { get; } = TimeSpan.Zero;
     
-    [Fact]
+    [Test]
     public async Task When_Obtaining_A_Lock_On_A_Resource_It_Should_Succeed()
     {
         // Arrange
@@ -43,11 +43,11 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
         var @lock = await provider.ObtainLockAsync(resource, CancellationToken.None);
         
         // Assert
-        Assert.NotNull(@lock);
-        Assert.NotEmpty(@lock);
+        await Assert.That(@lock).IsNotNull();
+        await Assert.That(@lock).IsNotEmpty();
     }
     
-    [Fact]
+    [Test]
     public async Task When_Trying_To_Obtain_Same_Lock_Twice_With_Same_Instance_It_Should_Fail_Second_Time()
     {
         // Arrange
@@ -59,12 +59,12 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
         var lock2 = await provider.ObtainLockAsync(resource, CancellationToken.None);
         
         // Assert
-        Assert.NotNull(lock1);
-        Assert.NotEmpty(lock1);
-        Assert.Null(lock2);
+        await Assert.That(lock1).IsNotNull();
+        await Assert.That(lock1).IsNotEmpty();
+        await Assert.That(lock2).IsNull();
     }
     
-    [Fact]
+    [Test]
     public async Task When_Trying_To_Obtain_Same_Lock_With_Different_Instances_It_Should_Fail_Second_Time()
     {
         // Arrange
@@ -77,12 +77,12 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
         var lock2 = await provider2.ObtainLockAsync(resource, CancellationToken.None);
         
         // Assert
-        Assert.NotNull(lock1);
-        Assert.NotEmpty(lock1);
-        Assert.Null(lock2);
+        await Assert.That(lock1).IsNotNull();
+        await Assert.That(lock1).IsNotEmpty();
+        await Assert.That(lock2).IsNull();
     }
     
-    [Fact]
+    [Test]
     public async Task When_Lock_Is_Released_It_Can_Be_Obtained_Again()
     {
         // Arrange
@@ -94,9 +94,9 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
         var lock2 = await provider.ObtainLockAsync(resource, CancellationToken.None);
         
         // Assert - Initial locks
-        Assert.NotNull(lock1);
-        Assert.NotEmpty(lock1);
-        Assert.Null(lock2);
+        await Assert.That(lock1).IsNotNull();
+        await Assert.That(lock1).IsNotEmpty();
+        await Assert.That(lock2).IsNull();
         
         // Act - Release lock
         await provider.ReleaseLockAsync(resource, lock1, CancellationToken.None);
@@ -108,7 +108,7 @@ public abstract class DistributedLockingAsyncTest : IAsyncLifetime
         
         // Assert - Lock can be obtained again
         var lock3 = await provider.ObtainLockAsync(resource, CancellationToken.None);
-        Assert.NotNull(lock3);
-        Assert.NotEmpty(lock3);
+        await Assert.That(lock3).IsNotNull();
+        await Assert.That(lock3).IsNotEmpty();
     }
 }

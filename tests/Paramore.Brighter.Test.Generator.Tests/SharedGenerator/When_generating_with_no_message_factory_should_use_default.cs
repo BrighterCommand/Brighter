@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.SharedGenerator;
 
@@ -21,7 +20,7 @@ public class WhenGeneratingWithNoMessageFactoryShouldUseDefault : IDisposable
         _logger = factory.CreateLogger<Generators.SharedGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_with_no_message_factory_should_use_default()
     {
         // Arrange
@@ -36,7 +35,7 @@ public class WhenGeneratingWithNoMessageFactoryShouldUseDefault : IDisposable
         await generator.GenerateAsync(configuration);
 
         // Assert
-        Assert.Equal("DefaultMessageFactory", configuration.MessageFactory);
+        await Assert.That(configuration.MessageFactory).IsEqualTo("DefaultMessageFactory");
     }
     
     public void Dispose()

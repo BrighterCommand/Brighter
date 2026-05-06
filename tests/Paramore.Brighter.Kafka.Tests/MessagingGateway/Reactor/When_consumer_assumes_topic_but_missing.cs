@@ -1,24 +1,19 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
+[Category("Kafka")]
 public class KafkaProducerAssumeTests : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString(); 
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaProducerAssumeTests(ITestOutputHelper output)
+    public KafkaProducerAssumeTests()
     {
-        _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
@@ -43,8 +38,8 @@ public class KafkaProducerAssumeTests : IDisposable
 
     //Watch your local Docker container when checking failures for this test, should be 
     //KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
-    [Fact]
-    [Trait("Fragile", "CI")]
+    [Test]
+    [Property("Fragile", "CI")]
     public async Task When_a_consumer_declares_topics()
     {
         //Let topic propogate
@@ -72,7 +67,7 @@ public class KafkaProducerAssumeTests : IDisposable
 
         ((KafkaMessageProducer)producer).Flush();
 
-        Assert.False(messagePublished);
+        await Assert.That(messagePublished).IsFalse();
     }
 
     public void Dispose()
@@ -80,3 +75,4 @@ public class KafkaProducerAssumeTests : IDisposable
         _producerRegistry?.Dispose();
     }
 }
+

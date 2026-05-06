@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
@@ -6,7 +6,7 @@ using Paramore.Brighter.Transformers.Gcp;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
-[Trait("Category", "GCS")]
+[Category("GCS")]
 public class LuggageUploadTests : IDisposable
 {
     private readonly string _bucketName;
@@ -28,7 +28,7 @@ public class LuggageUploadTests : IDisposable
 
     }
     
-    [Fact]
+    [Test]
     public async Task When_uploading_luggage_to_S3()
     {
         //arrange
@@ -47,12 +47,12 @@ public class LuggageUploadTests : IDisposable
 
         //assert
         //do we have a claim?
-        Assert.True(await _luggageStore.HasClaimAsync(claim));
+        await Assert.That(await _luggageStore.HasClaimAsync(claim)).IsTrue();
         
         //check for the contents indicated by the claim id on S3
         var result = await _luggageStore.RetrieveAsync(claim);
         var resultAsString = await new StreamReader(result).ReadToEndAsync();
-        Assert.Equal(testContent, resultAsString);
+        await Assert.That(resultAsString).IsEqualTo(testContent);
 
         await _luggageStore.DeleteAsync(claim);
 
