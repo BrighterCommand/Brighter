@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,37 +56,68 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// Use a timer based outbox archiver as a Hosted Service. Infers the transaction type automatically
         /// from the registered <see cref="IAmABoxTransactionProvider{T}"/>, so no generic type parameter is needed.
         /// </summary>
+        /// <remarks>
+        /// This overload requires that <see cref="IAmABoxTransactionProvider{T}"/> is registered with a concrete
+        /// implementation type (as done by the standard <c>AddProducers</c> overload). If you are using the
+        /// deferred <c>AddProducers(Func&lt;IServiceProvider, ProducersConfiguration&gt;)</c> overload, the
+        /// transaction type cannot be inferred at registration time — use
+        /// <see cref="UseOutboxArchiver{TTransaction}"/> and specify the type explicitly instead.
+        /// </remarks>
         /// <param name="brighterBuilder">The Brighter Builder</param>
         /// <param name="archiveProvider">The archive provider to use for archiving messages</param>
         /// <param name="timedOutboxArchiverOptionsAction">Configuration actions for the Timed outbox Archiver</param>
         /// <returns>The Brighter Builder</returns>
-        /// <exception cref="ConfigurationException">Thrown when no <see cref="IAmABoxTransactionProvider{T}"/> has been registered</exception>
+        /// <exception cref="ConfigurationException">
+        /// Thrown when no resolvable <see cref="IAmABoxTransactionProvider{T}"/> is found, or when multiple
+        /// distinct transaction types are registered.
+        /// </exception>
         public static IBrighterBuilder UseOutboxArchiver(this IBrighterBuilder brighterBuilder,
             IAmAnArchiveProvider archiveProvider,
             Action<TimedOutboxArchiverOptions>? timedOutboxArchiverOptionsAction = null)
         {
             var transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
-            Type? transactionType = null;
+            var transactionTypes = new HashSet<Type>();
 
+            // Primary scan: look for explicitly registered IAmABoxTransactionProvider<T>
             foreach (var descriptor in brighterBuilder.Services)
             {
                 var serviceType = descriptor.ServiceType;
                 if (serviceType.IsGenericType && serviceType.GetGenericTypeDefinition() == transactionProviderInterface)
+                    transactionTypes.Add(serviceType.GetGenericArguments()[0]);
+            }
+
+            // Fallback scan: look for non-generic IAmABoxTransactionProvider with a concrete ImplementationType
+            if (transactionTypes.Count == 0)
+            {
+                foreach (var descriptor in brighterBuilder.Services)
                 {
-                    transactionType = serviceType.GetGenericArguments()[0];
-                    break;
+                    if (descriptor.ServiceType == typeof(IAmABoxTransactionProvider) && descriptor.ImplementationType != null)
+                    {
+                        foreach (var i in descriptor.ImplementationType.GetInterfaces())
+                        {
+                            if (i.IsGenericType && i.GetGenericTypeDefinition() == transactionProviderInterface)
+                                transactionTypes.Add(i.GetGenericArguments()[0]);
+                        }
+                    }
                 }
             }
 
-            if (transactionType == null)
+            if (transactionTypes.Count == 0)
                 throw new ConfigurationException(
-                    $"Unable to register {nameof(UseOutboxArchiver)} - no {transactionProviderInterface.Name} has been registered. Ensure you call AddProducers before {nameof(UseOutboxArchiver)}.");
+                    $"Unable to register {nameof(UseOutboxArchiver)} - no {transactionProviderInterface.Name} could be resolved from the service descriptors. " +
+                    $"If you are using the deferred AddProducers overload, use {nameof(UseOutboxArchiver)}<TTransaction>() and specify the transaction type explicitly.");
+
+            if (transactionTypes.Count > 1)
+                throw new ConfigurationException(
+                    $"Unable to register {nameof(UseOutboxArchiver)} - multiple transaction provider types were found " +
+                    $"({string.Join(", ", transactionTypes.Select(t => t.Name))}). " +
+                    $"Use {nameof(UseOutboxArchiver)}<TTransaction>() and specify the transaction type explicitly.");
 
             var genericMethod = typeof(HostedServiceCollectionExtensions)
                 .GetMethods(BindingFlags.Public | BindingFlags.Static)
                 .Single(m => m.Name == nameof(UseOutboxArchiver) && m.IsGenericMethod);
 
-            genericMethod.MakeGenericMethod(transactionType)
+            genericMethod.MakeGenericMethod(transactionTypes.Single())
                 .Invoke(null, new object?[] { brighterBuilder, archiveProvider, timedOutboxArchiverOptionsAction });
 
             return brighterBuilder;

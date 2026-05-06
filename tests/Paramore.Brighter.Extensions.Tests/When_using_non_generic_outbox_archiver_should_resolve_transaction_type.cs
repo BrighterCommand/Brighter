@@ -56,6 +56,29 @@ public class OutboxArchiverNonGenericRegistrationTests
     }
 
     [Fact]
+    public void When_non_generic_provider_registered_with_concrete_type_should_resolve_transaction_type()
+    {
+        // Arrange — simulates registering IAmABoxTransactionProvider non-generic with a concrete ImplementationType
+        var services = new ServiceCollection();
+        var brighterBuilder = services.AddBrighter();
+
+        services.AddSingleton(typeof(IAmABoxTransactionProvider), typeof(InMemoryTransactionProvider));
+
+        // Act
+        brighterBuilder.UseOutboxArchiver(new NullOutboxArchiveProvider());
+
+        // Assert — fallback scan resolved CommittableTransaction from InMemoryTransactionProvider
+        var archiverDescriptor = services.FirstOrDefault(d =>
+            d.ServiceType == typeof(OutboxArchiver<Message, CommittableTransaction>));
+        Assert.NotNull(archiverDescriptor);
+
+        var hostedServiceDescriptor = services.FirstOrDefault(d =>
+            d.ServiceType == typeof(IHostedService) &&
+            d.ImplementationType == typeof(TimedOutboxArchiver<Message, CommittableTransaction>));
+        Assert.NotNull(hostedServiceDescriptor);
+    }
+
+    [Fact]
     public void When_no_transaction_provider_registered_should_throw_configuration_exception()
     {
         // Arrange
@@ -65,5 +88,33 @@ public class OutboxArchiverNonGenericRegistrationTests
         // Act / Assert — no IAmABoxTransactionProvider<> registered
         Assert.Throws<ConfigurationException>(() =>
             brighterBuilder.UseOutboxArchiver(new NullOutboxArchiveProvider()));
+    }
+
+    [Fact]
+    public void When_multiple_transaction_providers_registered_should_throw_configuration_exception()
+    {
+        // Arrange — two distinct transaction types registered
+        var services = new ServiceCollection();
+        var brighterBuilder = services.AddBrighter();
+
+        services.AddSingleton(typeof(IAmABoxTransactionProvider<CommittableTransaction>), typeof(InMemoryTransactionProvider));
+        services.AddSingleton(typeof(IAmABoxTransactionProvider<object>), typeof(FakeSecondTransactionProvider));
+
+        // Act / Assert — ambiguous; caller must use the generic overload
+        Assert.Throws<ConfigurationException>(() =>
+            brighterBuilder.UseOutboxArchiver(new NullOutboxArchiveProvider()));
+    }
+
+    private class FakeSecondTransactionProvider : IAmABoxTransactionProvider<object>
+    {
+        public void Close() { }
+        public void Commit() { }
+        public System.Threading.Tasks.Task CommitAsync(System.Threading.CancellationToken cancellationToken = default) => System.Threading.Tasks.Task.CompletedTask;
+        public object GetTransaction() => new object();
+        public System.Threading.Tasks.Task<object> GetTransactionAsync(System.Threading.CancellationToken cancellationToken = default) => System.Threading.Tasks.Task.FromResult(new object());
+        public bool HasOpenTransaction => false;
+        public bool IsSharedConnection => false;
+        public void Rollback() { }
+        public System.Threading.Tasks.Task RollbackAsync(System.Threading.CancellationToken cancellationToken = default) => System.Threading.Tasks.Task.CompletedTask;
     }
 }
