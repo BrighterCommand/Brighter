@@ -186,7 +186,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
-            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
             tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
             tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
             tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
@@ -588,7 +588,7 @@ public class BrighterTracer : IAmABrighterTracer
                 tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
                 tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId,
                     message.Header.PartitionKey.Value);
-                tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+                tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
                 tags.Add(BrighterSemanticConventions.MessageHeaders,
                     JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
                 tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
@@ -719,7 +719,7 @@ public class BrighterTracer : IAmABrighterTracer
         {
             tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
             tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
-            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
             tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
         }
@@ -772,7 +772,7 @@ public class BrighterTracer : IAmABrighterTracer
         {
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
             tags.Add(BrighterSemanticConventions.MessagingDestination, message.Header.Topic);
-            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
             tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
             tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header));
@@ -846,7 +846,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessageHeaders,
                 JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
-            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
             tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
         }
         if (instrumentationOptions.HasFlag(InstrumentationOptions.RequestBody))

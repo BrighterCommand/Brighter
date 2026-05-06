@@ -7,13 +7,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         public static byte[] ToByteArray(this string str)
         {
-            return Encoding.ASCII.GetBytes(str);
+            return Encoding.UTF8.GetBytes(str);
         }
 
         public static string FromByteArray(this byte[]? bytes)
         {
             if (bytes is null) return string.Empty;
-            return Encoding.ASCII.GetString(bytes);
+            return Encoding.UTF8.GetString(bytes);
         }
     }
 }
