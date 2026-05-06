@@ -58,6 +58,9 @@ public static class MsSqlInboxMigrations
         var schema = config.SchemaName ?? DefaultSchema;
         var table = config.InBoxTableName;
 
+        Identifiers.AssertSafe(table, nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
+        Identifiers.AssertSafe(schema, nameof(IAmARelationalDatabaseConfiguration.SchemaName));
+
         return
         [
             new BoxMigration(
