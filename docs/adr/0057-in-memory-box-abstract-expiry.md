@@ -62,7 +62,11 @@ private void RunCompact(int entriesToRemove)
 {
     if (Monitor.TryEnter(_cleanupRunningLockObject))
     {
-        try { Compact(entriesToRemove); }
+        try
+        {
+            _lastCompactionAttemptAt = _timeProvider.GetUtcNow();
+            Compact(entriesToRemove);
+        }
         finally { Monitor.Exit(_cleanupRunningLockObject); }
     }
 }
@@ -84,10 +88,9 @@ protected void EnforceCapacityLimit()
     if (EntryCount >= EntryLimit)
     {
         if ((now - _lastCompactionAttemptAt) < ExpirationScanInterval) return;
-        _lastCompactionAttemptAt = now;
 
-        int newSize = (int)(EntryCount * CompactionPercentage);
-        int entriesToRemove = EntryLimit - newSize;
+        int newSize = (int)(EntryLimit * CompactionPercentage);
+        int entriesToRemove = EntryCount - newSize;
         Task.Factory.StartNew(
             state => RunCompact((int)state!), entriesToRemove,
             CancellationToken.None, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
@@ -201,14 +204,14 @@ Collate the related box properties into a single record type, making it clear th
 /// </param>
 /// <param name="CompactionPercentage">
 /// Target size as a fraction of EntryLimit after compaction.
-/// 0.0 = remove as many eligible entries as possible (default).
-/// 0.5 = compact down to 50% of the limit.
+/// 0.0 = remove as many eligible entries as possible.
+/// 0.5 = compact down to 50% of the limit (default).
 /// </param>
 public record InMemoryBoxConfiguration(
     int EntryLimit = 2048,
     TimeSpan? EntryTimeToLive = null,
     TimeSpan? ExpirationScanInterval = null,
-    double CompactionPercentage = 0.0
+    double CompactionPercentage = 0.5
 )
 {
     /// <summary>How long before an entry can be evicted. Defaults to 5 minutes.</summary>
@@ -233,7 +236,7 @@ Add a single property to `ProducersConfiguration` (not the `IAmProducersConfigur
 /// those operations.
 ///
 /// Defaults: EntryLimit = 2048, EntryTimeToLive = 5 min,
-/// ExpirationScanInterval = 10 min, CompactionPercentage = 0.
+/// ExpirationScanInterval = 10 min, CompactionPercentage = 0.5.
 ///
 /// For high-throughput scenarios (RMQ/Kafka with async confirmations), increase
 /// EntryLimit or set it to -1 to disable compaction.

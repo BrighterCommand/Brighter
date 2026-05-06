@@ -54,10 +54,11 @@ namespace Paramore.Brighter
         private readonly object _cleanupRunningLockObject = new object();
 
         /// <summary>
-        /// How long does an entry last in the Outbox before we delete it (defaults to 5 min)
-        /// Think about your typical data volumes over a window of time, they all use memory to store
-        /// But contrast with how long you want to be able to resend due to broker failure for.
-        /// Memory is not reclaimed until an expiration scan
+        /// How long an entry lives before it becomes eligible for expiry removal (defaults to 5 min).
+        /// The reference time depends on the subclass: the outbox measures from dispatch time
+        /// (<see cref="OutboxEntry.TimeFlushed"/>), while the inbox measures from write time.
+        /// Think about your typical data volumes over a window of time, they all use memory to store.
+        /// Memory is not reclaimed until an expiration scan.
         /// </summary>
         public TimeSpan EntryTimeToLive { get; set; } = TimeSpan.FromMinutes(5);
 
@@ -140,8 +141,6 @@ namespace Paramore.Brighter
                     int newSize = (int)(upperSize * CompactionPercentage);
                     int entriesToRemove = count - newSize;
 
-                    _lastCompactionAttemptAt = now;
-
                     Task.Factory.StartNew(
                         action: state => RunCompact((int)state!),
                         state: entriesToRemove,
@@ -157,6 +156,7 @@ namespace Paramore.Brighter
             {
                 try
                 {
+                    _lastCompactionAttemptAt = timeProvider.GetUtcNow();
                     Compact(entriesToRemove);
                 }
                 finally
