@@ -106,6 +106,16 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
 
         try
         {
+            // Run the history-table create OUTSIDE the migration transaction. CREATE TABLE IF
+            // NOT EXISTS is not atomic in the Postgres catalog — the existence check on pg_class
+            // and the type insert into pg_type are separate steps, so two concurrent provisioners
+            // (the per-table advisory lock above does not cover the shared history table) can
+            // both pass the existence check and both try to add the type, with one losing on
+            // pg_type_typname_nsp_index (23505). Inside a transaction that failure poisons the
+            // session (every subsequent statement returns 25P02); pulling it out to autocommit
+            // means only the racing statement fails and we can ignore it.
+            await EnsureHistoryTableAsync(connection, transaction: null, cancellationToken);
+
 #if NETFRAMEWORK
             var transaction = connection.BeginTransaction();
 #else
@@ -114,8 +124,6 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
 
             try
             {
-                await EnsureHistoryTableAsync(connection, transaction, cancellationToken);
-
                 var tableExistsNow = await PostgreSqlBoxDetectionHelpers.DoesTableExistAsync(
                     connection, tableName, effectiveSchema, cancellationToken, transaction);
                 var historyExistsNow = tableExistsNow && await PostgreSqlBoxDetectionHelpers.DoesHistoryExistAsync(
@@ -264,7 +272,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
     }
 
     private static async Task EnsureHistoryTableAsync(
-        NpgsqlConnection connection, NpgsqlTransaction transaction,
+        NpgsqlConnection connection, NpgsqlTransaction? transaction,
         CancellationToken cancellationToken)
     {
         using var command = connection.CreateCommand();
@@ -278,7 +286,24 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
     ""AppliedAt"" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (""SchemaName"", ""BoxTableName"", ""MigrationVersion"")
 )";
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        try
+        {
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (PostgresException ex) when (
+            ex.SqlState == PostgresErrorCodes.UniqueViolation
+            || ex.SqlState == PostgresErrorCodes.DuplicateTable
+            || ex.SqlState == PostgresErrorCodes.DuplicateObject)
+        {
+            // TOCTOU on Postgres catalog: another connection raced our CREATE TABLE IF NOT EXISTS
+            // between the existence check (pg_class) and the type insert (pg_type), or between
+            // the type insert and a duplicate-relation check. The error surfaces as one of:
+            //   23505 (UniqueViolation) on pg_type_typname_nsp_index — most common
+            //   42P07 (DuplicateTable) — relation already exists
+            //   42710 (DuplicateObject) — type/constraint already exists
+            // In every case the history table now exists with the schema we intended to create
+            // (the racing session ran the same DDL), which is the post-condition we wanted.
+        }
     }
 
     private static async Task ExecuteUpScriptAsync(
