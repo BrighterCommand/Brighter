@@ -6,6 +6,6 @@
 
 - [x] Requirements (`requirements.md`)
 - [x] Design (`docs/adr/0057-in-memory-box-abstract-expiry.md`)
-- [ ] Tasks (`tasks.md`)
+- [x] Tasks (`tasks.md`)
 - [ ] Implementation
 - [ ] Review

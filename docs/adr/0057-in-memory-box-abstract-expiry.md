@@ -168,41 +168,106 @@ This fully addresses FR-4: "Undispatched messages must never be removed by expir
 
 `EnforceCapacityLimit()` in the base class gains a guard: if `EntryLimit == -1`, return immediately without compacting. Expiry-based cleanup still runs (controlled by `ExpirationScanInterval` and delegated to the subclass override).
 
-### 5. Configurable InMemoryOutbox via `ProducersConfiguration`
+### 5. Configurable Default Outbox via `ProducersConfiguration`
 
-Add properties to `ProducersConfiguration` only (not the `IAmProducersConfiguration` interface). These properties are only relevant when no explicit outbox is provided, so they do not belong on the interface contract that all producers configurations must implement.
+#### Motivation: Pit of Success
+
+Brighter always has an outbox — even when users call `Post` followed by `ClearOutbox`/`Dispatch` (rather than using a persistent outbox), the framework creates a default `InMemoryOutbox`. Users in high-throughput environments (particularly with RMQ or Kafka, where asynchronous confirmations mean messages linger in the outbox) are stumbling into the 2048-entry default limit without realising it exists. The configuration must be discoverable and self-documenting so that users fall into the pit of success.
+
+#### `InMemoryBoxConfiguration` Record
+
+Collate the related box properties into a single record type, making it clear they belong together and what their defaults mean:
 
 ```csharp
 /// <summary>
-/// The entry limit for the default InMemoryOutbox when no explicit outbox is provided.
-/// -1 disables compaction. Default is 2048.
+/// Configuration for the default in-memory box used when no explicit outbox is provided.
+/// Brighter always requires an outbox — even when using Post with ClearOutbox/Dispatch
+/// rather than a persistent outbox. In those scenarios, an InMemoryOutbox is created
+/// automatically with these settings. For high-throughput environments (especially with
+/// brokers like RMQ or Kafka where asynchronous confirmations keep messages in the outbox
+/// longer), you may need to increase the EntryLimit or set it to -1 to disable compaction.
 /// </summary>
-public int InMemoryOutboxEntryLimit { get; set; } = 2048;
+/// <param name="EntryLimit">
+/// Maximum number of entries before compaction runs. Default is 2048.
+/// Set to -1 to disable compaction entirely (expiry still runs).
+/// </param>
+/// <param name="EntryTimeToLive">
+/// How long after dispatch (for outbox) or after write (for inbox) before an entry
+/// can be evicted by the expiry scan. Default is 5 minutes.
+/// </param>
+/// <param name="ExpirationScanInterval">
+/// Minimum interval between expiry scans. Also used as the cooldown between
+/// compaction attempts. Default is 10 minutes.
+/// </param>
+/// <param name="CompactionPercentage">
+/// Target size as a fraction of EntryLimit after compaction.
+/// 0.0 = remove as many eligible entries as possible (default).
+/// 0.5 = compact down to 50% of the limit.
+/// </param>
+public record InMemoryBoxConfiguration(
+    int EntryLimit = 2048,
+    TimeSpan? EntryTimeToLive = null,
+    TimeSpan? ExpirationScanInterval = null,
+    double CompactionPercentage = 0.0
+)
+{
+    /// <summary>How long before an entry can be evicted. Defaults to 5 minutes.</summary>
+    public TimeSpan EntryTimeToLive { get; init; } = EntryTimeToLive ?? TimeSpan.FromMinutes(5);
 
-/// <summary>
-/// How long after dispatch before an entry can be evicted from the default InMemoryOutbox.
-/// Default is 5 minutes.
-/// </summary>
-public TimeSpan InMemoryOutboxEntryTimeToLive { get; set; } = TimeSpan.FromMinutes(5);
-
-/// <summary>
-/// How frequently the default InMemoryOutbox scans for expired entries.
-/// Default is 10 minutes.
-/// </summary>
-public TimeSpan InMemoryOutboxExpirationScanInterval { get; set; } = TimeSpan.FromMinutes(10);
-
-/// <summary>
-/// Target size as a fraction of EntryLimit after compaction for the default InMemoryOutbox.
-/// Default is 0 (remove as many as possible).
-/// </summary>
-public double InMemoryOutboxCompactionPercentage { get; set; }
+    /// <summary>Minimum interval between scans. Defaults to 10 minutes.</summary>
+    public TimeSpan ExpirationScanInterval { get; init; } = ExpirationScanInterval ?? TimeSpan.FromMinutes(10);
+}
 ```
 
-In `ServiceCollectionExtensions.AddProducers`, when no explicit `Outbox` is provided, apply these properties. There are two `AddProducers` overloads that both create a default outbox:
+Using a record gives us immutability after construction, `with` expression support for overriding individual values, and a compact declaration.
 
-**First overload** (`Action<ProducersConfiguration>`, line ~247): constructs a local `ProducersConfiguration` directly, so the concrete type is available.
+#### Property on `ProducersConfiguration`
 
-**Second overload** (`Func<IServiceProvider, ProducersConfiguration>`, line ~376): the `configure(sp)` call returns a `ProducersConfiguration`, but it is registered as `IAmProducersConfiguration` in DI. The outbox factory lambda at line ~423 resolves `IAmProducersConfiguration`, losing access to the concrete type's new properties. To fix this, the outbox creation in the second overload should cast back to `ProducersConfiguration` (which is safe — the factory at line ~389 always returns a `ProducersConfiguration`). If the cast fails (defensive), fall back to default values.
+Add a single property to `ProducersConfiguration` (not the `IAmProducersConfiguration` interface — this is only relevant when no explicit outbox is provided):
+
+```csharp
+/// <summary>
+/// Configuration for the default InMemoryOutbox that Brighter creates when no explicit
+/// outbox is provided. Brighter always uses an outbox — even for Post with
+/// ClearOutbox/Dispatch workflows — so this controls the in-memory box that backs
+/// those operations.
+///
+/// Defaults: EntryLimit = 2048, EntryTimeToLive = 5 min,
+/// ExpirationScanInterval = 10 min, CompactionPercentage = 0.
+///
+/// For high-throughput scenarios (RMQ/Kafka with async confirmations), increase
+/// EntryLimit or set it to -1 to disable compaction.
+/// </summary>
+public InMemoryBoxConfiguration DefaultBoxConfiguration { get; set; } = new();
+```
+
+Users configure it naturally:
+
+```csharp
+// Increase the limit
+services.AddBrighter()
+    .AddProducers(config =>
+    {
+        config.DefaultBoxConfiguration = new InMemoryBoxConfiguration(EntryLimit: 8192);
+        config.ProducerRegistry = ...;
+    });
+
+// Disable compaction entirely
+services.AddBrighter()
+    .AddProducers(config =>
+    {
+        config.DefaultBoxConfiguration = new InMemoryBoxConfiguration(EntryLimit: -1);
+        config.ProducerRegistry = ...;
+    });
+```
+
+#### Application in `ServiceCollectionExtensions.AddProducers`
+
+There are two `AddProducers` overloads that both create a default outbox:
+
+**First overload** (`Action<ProducersConfiguration>`, line ~247): constructs a local `ProducersConfiguration` directly, so the concrete type and `DefaultBoxConfiguration` are available.
+
+**Second overload** (`Func<IServiceProvider, ProducersConfiguration>`, line ~376): the `configure(sp)` call returns a `ProducersConfiguration`, but it is registered as `IAmProducersConfiguration` in DI. The outbox factory lambda at line ~423 resolves `IAmProducersConfiguration`, losing access to the concrete type. To fix this, the outbox creation in the second overload casts back to `ProducersConfiguration` (which is safe — the factory at line ~389 always returns one). If the cast fails (defensive), fall back to the built-in defaults.
 
 Both overloads use the same `CreateDefaultOutbox` helper:
 
@@ -213,12 +278,12 @@ var outbox = busConfiguration.Outbox ?? CreateDefaultOutbox(busConfiguration);
 static InMemoryOutbox CreateDefaultOutbox(IAmProducersConfiguration config)
 {
     var outbox = new InMemoryOutbox(TimeProvider.System);
-    if (config is ProducersConfiguration producersConfig)
+    if (config is ProducersConfiguration { DefaultBoxConfiguration: var boxConfig })
     {
-        outbox.EntryLimit = producersConfig.InMemoryOutboxEntryLimit;
-        outbox.EntryTimeToLive = producersConfig.InMemoryOutboxEntryTimeToLive;
-        outbox.ExpirationScanInterval = producersConfig.InMemoryOutboxExpirationScanInterval;
-        outbox.CompactionPercentage = producersConfig.InMemoryOutboxCompactionPercentage;
+        outbox.EntryLimit = boxConfig.EntryLimit;
+        outbox.EntryTimeToLive = boxConfig.EntryTimeToLive;
+        outbox.ExpirationScanInterval = boxConfig.ExpirationScanInterval;
+        outbox.CompactionPercentage = boxConfig.CompactionPercentage;
     }
     return outbox;
 }

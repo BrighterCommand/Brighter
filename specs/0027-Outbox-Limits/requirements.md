@@ -22,7 +22,7 @@ Allow users to configure the `InMemoryOutbox` defaults via `ProducersConfigurati
 
 ### Functional Requirements
 
-1. **Configurable entry limit via ProducersConfiguration**: Add properties to `ProducersConfiguration` that allow setting `EntryLimit`, `EntryTimeToLive`, `ExpirationScanInterval`, and `CompactionPercentage` for the default `InMemoryOutbox`.
+1. **Configurable default outbox via ProducersConfiguration**: Add an `InMemoryBoxConfiguration` record to collate `EntryLimit`, `EntryTimeToLive`, `ExpirationScanInterval`, and `CompactionPercentage`. Expose it as `DefaultBoxConfiguration` on `ProducersConfiguration` so users can configure the auto-created `InMemoryOutbox`.
 2. **Support unlimited entries (EntryLimit = -1)**: When `EntryLimit` is set to `-1`, compaction must not run. Expiry-based cleanup should still run.
 3. **Make InMemoryBox abstract**: `InMemoryBox` should become an abstract class with `RemoveExpiredMessages` and `Compact` as abstract methods, forcing each subclass to define its own expiry and compaction strategies.
 4. **Outbox-aware eviction**: `InMemoryOutbox` should override both `RemoveExpiredMessages` and `Compact` to only remove entries where `TimeFlushed` is not `DateTimeOffset.MinValue` (i.e. the message has been dispatched). Undispatched messages must never be removed by either expiry or compaction, regardless of age.
@@ -50,7 +50,7 @@ Allow users to configure the `InMemoryOutbox` defaults via `ProducersConfigurati
 
 ## Acceptance Criteria
 
-1. A user can set `EntryLimit`, `EntryTimeToLive`, `ExpirationScanInterval`, and `CompactionPercentage` on `ProducersConfiguration` and have those values applied to the auto-created `InMemoryOutbox`.
+1. A user can set `DefaultBoxConfiguration` on `ProducersConfiguration` with an `InMemoryBoxConfiguration` record and have those values applied to the auto-created `InMemoryOutbox`.
 2. Setting `EntryLimit = -1` disables compaction; expiry still removes dispatched messages.
 3. `InMemoryOutbox` never removes undispatched messages during expiry scans.
 4. `InMemoryInbox` behaviour is unchanged.
