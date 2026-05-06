@@ -67,6 +67,24 @@ When asked to remember learnings or update guidance:
 - Use `PROMPT.md` (if it exists) for temporary state that should persist across conversations.
 - Only use Claude memory (`MEMORY.md`) for user-specific preferences that don't belong in the project, or for tracking conversation-spanning work state.
 
+## Git Gotcha — `*.sqlite` ignore pattern matches `Paramore.Brighter.*.Sqlite` directories on macOS
+
+`.gitignore` has `*.sqlite` for SQLite database files. On macOS (case-insensitive filesystem with `core.ignoreCase` enabled), this pattern *also* matches any directory whose name ends in `.Sqlite` — including:
+
+- `src/Paramore.Brighter.BoxProvisioning.Sqlite/`
+- `src/Paramore.Brighter.Locking.Sqlite/`
+- `src/Paramore.Brighter.Inbox.Sqlite/`
+- `src/Paramore.Brighter.Outbox.Sqlite/` *(and similar)*
+
+Test directories like `tests/Paramore.Brighter.Sqlite.Tests/` end in `.Tests` and are **not** affected.
+
+**Practical impact**:
+- Modifying *already-tracked* files in those directories — stages normally with `git add`.
+- Adding *new* files in those directories — `git add` reports the parent path as ignored and exits 1. Use `git add -f <path>` for new files in those directories.
+- The `git add` warning aggregates to the parent directory ("paths are ignored by one of your .gitignore files: src/Paramore.Brighter.BoxProvisioning.Sqlite"). If commits fail with this message after a multi-file `git add`, check whether the failing paths are *new* files in a `.Sqlite` directory.
+
+Don't change `.gitignore` to fix this — the pattern is correct for its purpose; the case-insensitive FS quirk is the issue.
+
 ## Detailed Instructions
 For comprehensive guidance on working with this codebase, Claude should read the following files as needed:
 
