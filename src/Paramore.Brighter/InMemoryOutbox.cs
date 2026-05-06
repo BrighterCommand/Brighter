@@ -662,7 +662,8 @@ namespace Paramore.Brighter
         {
             var removalList =
                 Requests
-                    .OrderBy(entry => entry.Value.WriteTime)
+                    .Where(entry => entry.Value.TimeFlushed != DateTimeOffset.MinValue)
+                    .OrderBy(entry => entry.Value.TimeFlushed)
                     .Take(entriesToRemove)
                     .Select(entry => entry.Key);
 
