@@ -374,6 +374,11 @@ public class SqliteBoxMigrationRunner(
         SqliteConnection connection, SqliteTransaction transaction,
         CancellationToken cancellationToken)
     {
+        // No race-handling needed: BEGIN IMMEDIATE above acquires SQLite's database-wide RESERVED
+        // lock, so only one writer can be inside this transaction at a time. Concurrent runners
+        // queue at BeginImmediateWithRetryAsync (with SQLITE_BUSY backoff) rather than racing on
+        // CREATE TABLE — by the time a second writer enters this method, the first has already
+        // committed and IF NOT EXISTS sees the table.
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"

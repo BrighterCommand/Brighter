@@ -261,7 +261,20 @@ BEGIN
 END";
         command.Parameters.AddWithValue("@HistoryTableName", MIGRATION_HISTORY_TABLE);
         command.Parameters.AddWithValue("@HistorySchema", HISTORY_TABLE_SCHEMA);
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        try
+        {
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (SqlException ex) when (ex.Number == 2714)
+        {
+            // TOCTOU on sys.tables: the per-table sp_getapplock above does not cover the shared
+            // __BrighterMigrationHistory, so two concurrent provisioners with different table
+            // names (e.g. outbox + inbox) can both pass the IF NOT EXISTS check and both issue
+            // CREATE TABLE; the loser hits 2714 ("There is already an object named ..."). 2714
+            // is a statement-terminating error with default XACT_ABORT OFF — the transaction is
+            // not doomed, so we can ignore it and continue. The history table now exists with
+            // the schema we intended (the racing session ran the same DDL).
+        }
     }
 
     private static async Task ExecuteUpScriptAsync(

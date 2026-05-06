@@ -236,6 +236,11 @@ public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
     private static async Task EnsureHistoryTableAsync(
         MySqlConnection connection, CancellationToken cancellationToken)
     {
+        // No race-handling needed: MySQL acquires a metadata lock (MDL_EXCLUSIVE) on the table
+        // name for the duration of CREATE TABLE, and the IF NOT EXISTS check is evaluated under
+        // that lock. Concurrent CREATE TABLE IF NOT EXISTS statements serialize via the MDL —
+        // the loser sees the table already exists and emits a warning rather than an error.
+        // (Contrast with Postgres, where the pg_class check and pg_type insert are not atomic.)
         using var command = connection.CreateCommand();
         command.CommandText = $@"
 CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
