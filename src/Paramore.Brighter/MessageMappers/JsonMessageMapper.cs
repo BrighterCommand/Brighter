@@ -55,7 +55,7 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
         var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
         header.Bag = defaultHeaders.Merge(Context.GetHeaders());
 
-        var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
+        var body = new MessageBody(JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);
         return message;
     }
@@ -63,7 +63,7 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
     /// <inheritdoc />
     public TRequest MapToRequest(Message message)
     {
-        var request = JsonSerializer.Deserialize<TRequest>(message.Body.Value, JsonSerialisationOptions.Options);
+        var request = JsonSerializer.Deserialize<TRequest>(message.Body.Memory.Span, JsonSerialisationOptions.Options);
 
         if (request is null)
             throw new ArgumentException($"Unable to deseralise message body for {message.Header.Topic}");

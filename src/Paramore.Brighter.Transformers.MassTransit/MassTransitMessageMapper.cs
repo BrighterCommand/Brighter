@@ -197,8 +197,13 @@ public class MassTransitMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, I
     public virtual TMessage MapToRequest(Message message)
     {
         var envelop =
-            JsonSerializer.Deserialize<MassTransitMessageEnvelop<TMessage>>(message.Body.Bytes,
+#if NETSTANDARD2_0
+            JsonSerializer.Deserialize<MassTransitMessageEnvelop<TMessage>>(message.Body.Memory.ToArray(),
                 JsonSerialisationOptions.Options);
+#else
+            JsonSerializer.Deserialize<MassTransitMessageEnvelop<TMessage>>(message.Body.Memory.Span,
+                JsonSerialisationOptions.Options);
+#endif
         if (envelop == null)
         {
             throw new InvalidOperationException("It's not a MassTransit envelop message");

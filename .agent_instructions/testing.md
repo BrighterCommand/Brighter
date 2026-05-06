@@ -80,6 +80,13 @@ This ensures the mandatory approval step is never skipped and tests are reviewed
 - If you need to inject a dependency for testing (e.g., randomness, I/O), make the interface **public** so it can be injected through the public API.
 - The goal is that tests are coupled to behavior, not implementation. Refactoring internals should never break tests.
 
+## Exploratory Tests for Implementation Details
+
+- You may write tests against a public class to explore and validate an algorithm or implementation detail during development.
+- Once you are confident the detail is correct, make the class `internal` and delete the exploratory tests.
+- The internal class must then be exercised indirectly through tests on the public classes that use it.
+- Do not leave exploratory tests in the codebase — they couple tests to implementation details and prevent refactoring.
+
 ## Test Doubles
 
 - Use fakes or mocks for I/O for testing core libraries such as Paramore.Brighter or Paramore.Brighter.ServiceActivator

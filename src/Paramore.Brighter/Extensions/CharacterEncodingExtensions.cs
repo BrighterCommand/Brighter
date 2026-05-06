@@ -63,13 +63,16 @@ public static class CharacterEncodingExtensions
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
-    public static CharacterEncoding ToCharacterEncoding(this string name) =>
-        name.ToLowerInvariant() switch
-        {
-            "us-ascii" => CharacterEncoding.ASCII,
-            "utf-8" => CharacterEncoding.UTF8,
-            "utf-16" => CharacterEncoding.UTF16,
-            "base64" => CharacterEncoding.Base64,
-            _ => CharacterEncoding.Raw
-        };
+    public static CharacterEncoding ToCharacterEncoding(this string name)
+    {
+        if (string.Equals(name, "us-ascii", System.StringComparison.OrdinalIgnoreCase))
+            return CharacterEncoding.ASCII;
+        if (string.Equals(name, "utf-8", System.StringComparison.OrdinalIgnoreCase))
+            return CharacterEncoding.UTF8;
+        if (string.Equals(name, "utf-16", System.StringComparison.OrdinalIgnoreCase))
+            return CharacterEncoding.UTF16;
+        if (string.Equals(name, "base64", System.StringComparison.OrdinalIgnoreCase))
+            return CharacterEncoding.Base64;
+        return CharacterEncoding.Raw;
+    }
 }
