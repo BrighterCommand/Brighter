@@ -93,7 +93,7 @@ namespace Paramore.Brighter
 
             //This is expensive, so use a background thread
             Task.Factory.StartNew(
-                action: state => RemoveExpiredMessages((DateTimeOffset)state!),
+                action: state => RunRemoveExpiredMessages((DateTimeOffset)state!),
                 state: now,
                 cancellationToken: CancellationToken.None,
                 creationOptions: TaskCreationOptions.DenyChildAttach,
@@ -102,28 +102,32 @@ namespace Paramore.Brighter
             _lastScanAt = now;
         }
 
-        private void RemoveExpiredMessages(DateTimeOffset now)
+        private void RunRemoveExpiredMessages(DateTimeOffset now)
         {
             if (Monitor.TryEnter(_cleanupRunningLockObject))
             {
                 try
                 {
-                    var expiredEntries =
-                        Requests
-                            .Where<KeyValuePair<string, T>>(entry => (now - entry.Value.WriteTime) >= EntryTimeToLive)
-                            .Select(entry => entry.Key);
-
-                    foreach (var key in expiredEntries)
-                    {
-                        //if this fails ignore, killed by something else like compaction
-                        Requests.TryRemove(key, out _);
-                    }
-
+                    RemoveExpiredMessages(now);
                 }
                 finally
                 {
                     Monitor.Exit(_cleanupRunningLockObject);
                 }
+            }
+        }
+
+        protected virtual void RemoveExpiredMessages(DateTimeOffset now)
+        {
+            var expiredEntries =
+                Requests
+                    .Where<KeyValuePair<string, T>>(entry => (now - entry.Value.WriteTime) >= EntryTimeToLive)
+                    .Select(entry => entry.Key);
+
+            foreach (var key in expiredEntries)
+            {
+                //if this fails ignore, killed by something else like compaction
+                Requests.TryRemove(key, out _);
             }
         }
 
@@ -139,7 +143,7 @@ namespace Paramore.Brighter
                     int entriesToRemove = upperSize - newSize;
 
                     Task.Factory.StartNew(
-                        action: state => Compact((int)state!),
+                        action: state => RunCompact((int)state!),
                         state: entriesToRemove,
                         CancellationToken.None,
                         TaskCreationOptions.DenyChildAttach,
@@ -147,30 +151,35 @@ namespace Paramore.Brighter
                 }
         }
         
-        // Compaction algorithm is to sort into date deposited order, with oldest first
-        // Then remove entries until newsize is reached
-        private void Compact(int entriesToRemove)
+        private void RunCompact(int entriesToRemove)
         {
             if (Monitor.TryEnter(_cleanupRunningLockObject))
             {
                 try
                 {
-                    var removalList =
-                        Requests
-                            .OrderBy(entry => entry.Value.WriteTime)
-                            .Take(entriesToRemove)
-                            .Select(entry => entry.Key);
-
-                    foreach (var key in removalList)
-                    {
-                        //ignore errors, likely just something else has cleared it such as TTL eviction
-                        Requests.TryRemove(key, out _);
-                    }
+                    Compact(entriesToRemove);
                 }
                 finally
                 {
                     Monitor.Exit(_cleanupRunningLockObject);
                 }
+            }
+        }
+
+        // Compaction algorithm is to sort into date deposited order, with oldest first
+        // Then remove entries until newsize is reached
+        protected virtual void Compact(int entriesToRemove)
+        {
+            var removalList =
+                Requests
+                    .OrderBy(entry => entry.Value.WriteTime)
+                    .Take(entriesToRemove)
+                    .Select(entry => entry.Key);
+
+            foreach (var key in removalList)
+            {
+                //ignore errors, likely just something else has cleared it such as TTL eviction
+                Requests.TryRemove(key, out _);
             }
         }
     }
