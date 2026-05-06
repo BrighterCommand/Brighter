@@ -312,7 +312,8 @@ namespace Paramore.Brighter
                 if (messages.Length != posts.Length)
                 {
                     var missingMessageIds = posts.Where(id => !messages.Any(m => m.Id == id));
-                    throw new NullReferenceException($"Message(s) with Id(s) {string.Join(",", missingMessageIds)} not found in Outbox");
+                    s_logger.LogError("Message(s) with Id(s) {MissingIds} not found in Outbox; dispatching found messages",
+                        string.Join(",", missingMessageIds));
                 }
                 BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, false,
                         _instrumentationOptions);
@@ -376,7 +377,8 @@ namespace Paramore.Brighter
                 if (messages.Length != posts.ToArray().Length)
                 {
                     var missingMessageIds = posts.Where(id => !messages.Any(m => m.Id == id));
-                    throw new NullReferenceException($"Message(s) with Id(s) {string.Join(",", missingMessageIds)} not found in Outbox");
+                    s_logger.LogError("Message(s) with Id(s) {MissingIds} not found in Outbox; dispatching found messages",
+                        string.Join(",", missingMessageIds));
                 }
                 BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, true,
                         _instrumentationOptions);
