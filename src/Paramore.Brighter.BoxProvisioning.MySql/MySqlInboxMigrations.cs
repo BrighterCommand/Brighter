@@ -59,6 +59,8 @@ public static class MySqlInboxMigrations
     {
         var table = config.InBoxTableName;
 
+        Identifiers.AssertSafe(table, nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
+
         return
         [
             new BoxMigration(
