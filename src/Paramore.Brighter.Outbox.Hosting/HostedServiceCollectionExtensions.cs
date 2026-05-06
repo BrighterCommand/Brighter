@@ -75,36 +75,11 @@ namespace Paramore.Brighter.Outbox.Hosting
             IAmAnArchiveProvider archiveProvider,
             Action<TimedOutboxArchiverOptions>? timedOutboxArchiverOptionsAction = null)
         {
-            var transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
-            var transactionTypes = new HashSet<Type>();
-
-            // Primary scan: look for explicitly registered IAmABoxTransactionProvider<T>
-            foreach (var descriptor in brighterBuilder.Services)
-            {
-                var serviceType = descriptor.ServiceType;
-                if (serviceType.IsGenericType && serviceType.GetGenericTypeDefinition() == transactionProviderInterface)
-                    transactionTypes.Add(serviceType.GetGenericArguments()[0]);
-            }
-
-            // Fallback scan: look for non-generic IAmABoxTransactionProvider with a concrete ImplementationType
-            if (transactionTypes.Count == 0)
-            {
-                foreach (var descriptor in brighterBuilder.Services)
-                {
-                    if (descriptor.ServiceType == typeof(IAmABoxTransactionProvider) && descriptor.ImplementationType != null)
-                    {
-                        foreach (var i in descriptor.ImplementationType.GetInterfaces())
-                        {
-                            if (i.IsGenericType && i.GetGenericTypeDefinition() == transactionProviderInterface)
-                                transactionTypes.Add(i.GetGenericArguments()[0]);
-                        }
-                    }
-                }
-            }
+            var transactionTypes = ResolveTransactionTypes(brighterBuilder.Services);
 
             if (transactionTypes.Count == 0)
                 throw new ConfigurationException(
-                    $"Unable to register {nameof(UseOutboxArchiver)} - no {transactionProviderInterface.Name} could be resolved from the service descriptors. " +
+                    $"Unable to register {nameof(UseOutboxArchiver)} - no {nameof(IAmABoxTransactionProvider<object>)} could be resolved from the service descriptors. " +
                     $"If you are using the deferred AddProducers overload, use {nameof(UseOutboxArchiver)}<TTransaction>() and specify the transaction type explicitly.");
 
             if (transactionTypes.Count > 1)
@@ -121,6 +96,26 @@ namespace Paramore.Brighter.Outbox.Hosting
                 .Invoke(null, new object?[] { brighterBuilder, archiveProvider, timedOutboxArchiverOptionsAction });
 
             return brighterBuilder;
+        }
+
+        private static HashSet<Type> ResolveTransactionTypes(IServiceCollection services)
+        {
+            var transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
+
+            var fromGeneric = services
+                .Where(d => d.ServiceType.IsGenericType && d.ServiceType.GetGenericTypeDefinition() == transactionProviderInterface)
+                .Select(d => d.ServiceType.GetGenericArguments()[0]);
+
+            var types = new HashSet<Type>(fromGeneric);
+            if (types.Count > 0) return types;
+
+            var fromNonGeneric = services
+                .Where(d => d.ServiceType == typeof(IAmABoxTransactionProvider) && d.ImplementationType != null)
+                .SelectMany(d => d.ImplementationType!.GetInterfaces())
+                .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == transactionProviderInterface)
+                .Select(i => i.GetGenericArguments()[0]);
+
+            return new HashSet<Type>(fromNonGeneric);
         }
 
         /// <summary>
