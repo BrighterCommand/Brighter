@@ -116,7 +116,7 @@ internal sealed partial class RmqMessagePublisher
                 message.Header.ReplyTo ?? string.Empty,
                 message.Persist,
                 headers),
-            message.Body.Bytes, cancellationToken);
+            message.Body.Memory, cancellationToken);
     }
 
     /// <summary>
@@ -154,7 +154,7 @@ internal sealed partial class RmqMessagePublisher
                 message.Header.ReplyTo ?? string.Empty,
                 message.Persist,
                 headers),
-            message.Body.Bytes, cancellationToken);
+            message.Body.Memory, cancellationToken);
     }
 
     private static Dictionary<string, object?> AddCloudEventsHeaders(Message message)

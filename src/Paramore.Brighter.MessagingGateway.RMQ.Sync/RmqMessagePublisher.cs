@@ -102,7 +102,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     message.Header.ReplyTo ?? string.Empty,
                     message.Persist,
                     headers),
-                message.Body.Bytes);
+                message.Body.Memory);
         }
 
         /// <summary>
@@ -142,7 +142,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     message.Header.ReplyTo ?? string.Empty,
                     message.Persist,
                     headers),
-                message.Body.Bytes);
+                message.Body.Memory);
         }
 
         private static Dictionary<string, object> AddCloudEventHeaders(Message message)

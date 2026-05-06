@@ -341,3 +341,6 @@ tests/certs/
 # Ralph loop
 RALPH_STOP
 ralph.log
+
+# AI agent session state
+PROMPT.md

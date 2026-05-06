@@ -293,7 +293,7 @@ internal static class Parser
     {
         var pubSubMessage = new PubsubMessage
         {
-            Data = ByteString.CopyFrom(message.Body.Bytes), OrderingKey = message.Header.PartitionKey
+            Data = ByteString.CopyFrom(message.Body.Memory.Span), OrderingKey = message.Header.PartitionKey
         };
 
         AddHeaders(pubSubMessage.Attributes, message);

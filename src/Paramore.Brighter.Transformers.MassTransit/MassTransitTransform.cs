@@ -185,7 +185,11 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
     /// <inheritdoc />
     public Message Unwrap(Message message)
     {
-        var envelop = JsonSerializer.Deserialize<MassTransitMessageEnvelop<JsonElement>>(message.Body.Bytes, JsonSerialisationOptions.Options);
+#if NETSTANDARD2_0
+        var envelop = JsonSerializer.Deserialize<MassTransitMessageEnvelop<JsonElement>>(message.Body.Memory.ToArray(), JsonSerialisationOptions.Options);
+#else
+        var envelop = JsonSerializer.Deserialize<MassTransitMessageEnvelop<JsonElement>>(message.Body.Memory.Span, JsonSerialisationOptions.Options);
+#endif
 
         if (envelop != null)
         {

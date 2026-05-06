@@ -124,7 +124,7 @@ public class AzureServiceBusScheduler(
 
     private static ServiceBusMessage ConvertToServiceBusMessage(Message message)
     {
-        var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
+        var azureServiceBusMessage = new ServiceBusMessage(message.Body.Memory);
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey,
             message.Header.MessageType.ToString());
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey,
