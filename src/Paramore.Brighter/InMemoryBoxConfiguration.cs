@@ -33,9 +33,22 @@ namespace Paramore.Brighter
     public record InMemoryBoxConfiguration
     {
         /// <summary>
-        /// How many messages to retain before compaction runs. Use -1 to disable compaction. Defaults to 2048.
+        /// How many messages to retain before compaction runs. Use -1 to disable compaction.
+        /// Must be -1 or a positive integer. Defaults to 2048.
         /// </summary>
-        public int EntryLimit { get; init; } = 2048;
+        public int EntryLimit
+        {
+            get => _entryLimit;
+            init
+            {
+                if (value == 0 || value < -1)
+                    throw new ArgumentOutOfRangeException(nameof(EntryLimit), value,
+                        "EntryLimit must be -1 (disabled) or a positive integer.");
+                _entryLimit = value;
+            }
+        }
+
+        private readonly int _entryLimit = 2048;
 
         /// <summary>
         /// How long a dispatched message lives before expiry removes it. Defaults to 5 minutes.

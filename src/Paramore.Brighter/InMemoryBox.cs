@@ -52,6 +52,7 @@ namespace Paramore.Brighter
         private DateTimeOffset _lastScanAt = timeProvider.GetUtcNow();
         private DateTimeOffset _lastCompactionAttemptAt = DateTimeOffset.MinValue;
         private readonly object _cleanupRunningLockObject = new object();
+        private int _entryLimit = 2048;
 
         /// <summary>
         /// How long an entry lives before it becomes eligible for expiry removal (defaults to 5 min).
@@ -76,9 +77,20 @@ namespace Paramore.Brighter
         public int EntryCount => Requests.Count;
      
         /// <summary>
-        /// How many messages should we retain, before we compact the Outbox
+        /// How many messages should we retain, before we compact the Outbox.
+        /// Use -1 to disable compaction. Must be -1 or a positive integer.
         /// </summary>
-        public int EntryLimit { get; set; } = 2048;
+        public int EntryLimit
+        {
+            get => _entryLimit;
+            set
+            {
+                if (value == 0 || value < -1)
+                    throw new ArgumentOutOfRangeException(nameof(EntryLimit), value,
+                        "EntryLimit must be -1 (disabled) or a positive integer.");
+                _entryLimit = value;
+            }
+        }
 
         /// <summary>
         /// Target size as a fraction of <see cref="EntryLimit"/> after compaction.
@@ -125,7 +137,7 @@ namespace Paramore.Brighter
 
         protected void EnforceCapacityLimit()
         {
-                if (EntryLimit <= 0)
+                if (EntryLimit == -1)
                     return;
 
                 var now = timeProvider.GetUtcNow();
