@@ -67,6 +67,8 @@ public static class SqliteOutboxMigrations
     {
         var table = config.OutBoxTableName;
 
+        Identifiers.AssertSafe(table, nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
+
         return
         [
             new BoxMigration(
