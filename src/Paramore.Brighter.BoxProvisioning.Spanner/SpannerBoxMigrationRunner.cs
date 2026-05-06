@@ -111,22 +111,8 @@ public class SpannerBoxMigrationRunner(
         if (await IsMigrationAppliedAsync(connection, tableName, vLatest, cancellationToken))
             return;
 
-        // The IsMigrationAppliedAsync check above + this insert form a TOCTOU pair: two
-        // concurrent fresh-installing replicas can both pass the existence check at zero
-        // (commit timestamps from the winner's eventual insert have not yet propagated to
-        // the loser's read snapshot — Spanner's history-row insert uses
-        // SpannerParameter.CommitTimestamp, so visibility lags), then both attempt the
-        // insert; the loser hits AlreadyExists on the PK (BoxTableName, MigrationVersion).
-        // Mirror ExecuteDdlSafeAsync's filter shape and absorb the benign race.
-        try
-        {
-            await InsertHistoryRowAsync(
-                connection, tableName, vLatest, $"fresh install at V{vLatest}", cancellationToken);
-        }
-        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists)
-        {
-            // Concurrent fresh-installer already stamped V_latest — benign race.
-        }
+        await InsertHistoryRowToleratingDuplicateAsync(
+            connection, tableName, vLatest, $"fresh install at V{vLatest}", cancellationToken);
     }
 
     private string BuildBoxDdl(BoxType boxType, string tableName) => boxType switch
@@ -154,7 +140,7 @@ public class SpannerBoxMigrationRunner(
         if (await IsMigrationAppliedAsync(connection, tableName, vLatest, cancellationToken))
             return;
 
-        await InsertHistoryRowAsync(
+        await InsertHistoryRowToleratingDuplicateAsync(
             connection, tableName, vLatest, BootstrapDescription, cancellationToken);
     }
 
@@ -231,5 +217,29 @@ public class SpannerBoxMigrationRunner(
             });
 
         await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    // The IsMigrationAppliedAsync check + the subsequent history-row INSERT form a TOCTOU
+    // pair on Spanner: two concurrent replicas (fresh-installing or bootstrapping the same
+    // existing-without-history table) can both pass the existence check (commit timestamps
+    // from the winner's eventual insert have not yet propagated to the loser's read snapshot
+    // — Spanner's history-row insert uses SpannerParameter.CommitTimestamp, so visibility
+    // lags), then both attempt the insert; the loser hits AlreadyExists on the PK
+    // (BoxTableName, MigrationVersion). Mirror ExecuteDdlSafeAsync's filter shape and absorb
+    // the benign race.
+    private static async Task InsertHistoryRowToleratingDuplicateAsync(
+        SpannerConnection connection, string tableName,
+        int version, string description,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await InsertHistoryRowAsync(
+                connection, tableName, version, description, cancellationToken);
+        }
+        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists)
+        {
+            // Concurrent caller already stamped this version — benign race.
+        }
     }
 }
