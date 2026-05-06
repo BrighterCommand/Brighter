@@ -642,6 +642,35 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
 
+        protected override void RemoveExpiredMessages(DateTimeOffset now)
+        {
+            var expiredEntries =
+                Requests
+                    .Where(entry => (now - entry.Value.WriteTime) >= EntryTimeToLive)
+                    .Select(entry => entry.Key);
+
+            foreach (var key in expiredEntries)
+            {
+                //if this fails ignore, killed by something else like compaction
+                Requests.TryRemove(key, out _);
+            }
+        }
+
+        protected override void Compact(int entriesToRemove)
+        {
+            var removalList =
+                Requests
+                    .OrderBy(entry => entry.Value.WriteTime)
+                    .Take(entriesToRemove)
+                    .Select(entry => entry.Key);
+
+            foreach (var key in removalList)
+            {
+                //ignore errors, likely just something else has cleared it such as TTL eviction
+                Requests.TryRemove(key, out _);
+            }
+        }
+
         private void Delete(Id messageId, RequestContext? requestContext = null)
         {
             var span = Tracer?.CreateDbSpan(

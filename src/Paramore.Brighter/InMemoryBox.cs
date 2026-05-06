@@ -46,7 +46,7 @@ namespace Paramore.Brighter
     /// Base class for in-memory inboxes, handles TTL on entries and cache clearing requirements
     /// </summary>
     /// <typeparam name="T">An entry in the box, needs to a writetime so we know if we can clear it from the box</typeparam>
-    public class InMemoryBox<T>(TimeProvider timeProvider) where T: IHaveABoxWriteTime
+    public abstract class InMemoryBox<T>(TimeProvider timeProvider) where T: IHaveABoxWriteTime
     {
         protected readonly ConcurrentDictionary<string, T> Requests = new ConcurrentDictionary<string, T>();
         private DateTimeOffset _lastScanAt = timeProvider.GetUtcNow();
@@ -117,19 +117,7 @@ namespace Paramore.Brighter
             }
         }
 
-        protected virtual void RemoveExpiredMessages(DateTimeOffset now)
-        {
-            var expiredEntries =
-                Requests
-                    .Where<KeyValuePair<string, T>>(entry => (now - entry.Value.WriteTime) >= EntryTimeToLive)
-                    .Select(entry => entry.Key);
-
-            foreach (var key in expiredEntries)
-            {
-                //if this fails ignore, killed by something else like compaction
-                Requests.TryRemove(key, out _);
-            }
-        }
+        protected abstract void RemoveExpiredMessages(DateTimeOffset now);
 
         protected void EnforceCapacityLimit()
         {
@@ -166,21 +154,6 @@ namespace Paramore.Brighter
             }
         }
 
-        // Compaction algorithm is to sort into date deposited order, with oldest first
-        // Then remove entries until newsize is reached
-        protected virtual void Compact(int entriesToRemove)
-        {
-            var removalList =
-                Requests
-                    .OrderBy(entry => entry.Value.WriteTime)
-                    .Take(entriesToRemove)
-                    .Select(entry => entry.Key);
-
-            foreach (var key in removalList)
-            {
-                //ignore errors, likely just something else has cleared it such as TTL eviction
-                Requests.TryRemove(key, out _);
-            }
-        }
+        protected abstract void Compact(int entriesToRemove);
     }
 }
