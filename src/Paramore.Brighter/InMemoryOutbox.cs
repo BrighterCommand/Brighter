@@ -646,7 +646,9 @@ namespace Paramore.Brighter
         {
             var expiredEntries =
                 Requests
-                    .Where(entry => (now - entry.Value.WriteTime) >= EntryTimeToLive)
+                    .Where(entry =>
+                        entry.Value.TimeFlushed != DateTimeOffset.MinValue
+                        && (now - entry.Value.TimeFlushed) >= EntryTimeToLive)
                     .Select(entry => entry.Key);
 
             foreach (var key in expiredEntries)
