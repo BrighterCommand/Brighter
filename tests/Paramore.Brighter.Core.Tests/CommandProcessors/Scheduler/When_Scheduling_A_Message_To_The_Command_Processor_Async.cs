@@ -111,7 +111,7 @@ public class CommandProcessorSchedulerCommandAsyncTests
         var actual = await _outbox.GetAsync(_myCommand.Id, new RequestContext());
         await Assert.That(actual).IsNotNull();
         var expected = new Message(new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options)));
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
@@ -135,7 +135,7 @@ public class CommandProcessorSchedulerCommandAsyncTests
         var actual = await _outbox.GetAsync(_myCommand.Id, new RequestContext());
         await Assert.That(actual).IsNotNull();
         var expected = new Message(new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options)));
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);

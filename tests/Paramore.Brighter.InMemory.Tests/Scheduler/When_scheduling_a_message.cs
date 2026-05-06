@@ -111,7 +111,7 @@ public class InMemorySchedulerMessageTests
         
         var actual = await _outbox.GetAsync(message.Id, new RequestContext());
 
-        await Assert.That(actual.Body).IsEquivalentTo(message.Body);
+        await Assert.That(actual.Body).IsEqualTo(message.Body);
         await Assert.That(actual.Id).IsEqualTo(message.Id);
         await Assert.That(actual.Persist).IsEqualTo(message.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(message.Redelivered);
@@ -147,7 +147,7 @@ public class InMemorySchedulerMessageTests
 
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
 
-        await Assert.That(actual.Body).IsEquivalentTo(message.Body);
+        await Assert.That(actual.Body).IsEqualTo(message.Body);
         await Assert.That(actual.Id).IsEqualTo(message.Id);
         await Assert.That(actual.Persist).IsEqualTo(message.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(message.Redelivered);
@@ -187,7 +187,7 @@ public class InMemorySchedulerMessageTests
         
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
 
-        await Assert.That(actual.Body).IsEquivalentTo(message.Body);
+        await Assert.That(actual.Body).IsEqualTo(message.Body);
         await Assert.That(actual.Id).IsEqualTo(message.Id);
         await Assert.That(actual.Persist).IsEqualTo(message.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(message.Redelivered);
@@ -283,7 +283,7 @@ public class InMemorySchedulerMessageTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);

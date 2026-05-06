@@ -134,7 +134,7 @@ public class QuartzSchedulerMessageAsyncTests
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        await Assert.That(await _outbox.GetAsync(message.Id, new RequestContext())).IsEquivalentTo(message);
+        await Assert.That(await _outbox.GetAsync(message.Id, new RequestContext())).IsEqualTo(message);
 
         await Assert.That(_internalBus.Stream(_routingKey)).IsNotEmpty();
     }
@@ -158,7 +158,7 @@ public class QuartzSchedulerMessageAsyncTests
         await Assert.That(() => _internalBus.Stream(_routingKey).Any())
             .Eventually(s => s.IsTrue(), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(250));
 
-        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsEquivalentTo(message);
+        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsEqualTo(message);
     }
 
     [Test]
@@ -183,7 +183,7 @@ public class QuartzSchedulerMessageAsyncTests
 
         await Assert.That(() => _internalBus.Stream(_routingKey).Any())
             .Eventually(s => s.IsTrue(), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(250));
-        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsEquivalentTo(message);
+        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsEqualTo(message);
     }
 
     [Test]
@@ -233,7 +233,7 @@ public class QuartzSchedulerMessageAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
@@ -269,7 +269,7 @@ public class QuartzSchedulerMessageAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);

@@ -78,7 +78,7 @@ public class SqsSchedulingMessageViaFireSchedulerTest
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
                 await Assert.That((object?)m).IsNotNull();
-                await Assert.That(m.Message).IsEquivalentTo(message);
+                await Assert.That(m.Message).IsEqualTo(message);
                 await Assert.That((bool)m.Async).IsFalse();
                 await _consumer.AcknowledgeAsync(messages[0]);
                 return;

@@ -8,6 +8,8 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
+    // Tests mutate static PipelineBuilder<MyCommand> caches; serialise to avoid clobbering each other.
+    [NotInParallel(nameof(When_Building_A_Pipeline_Post_Attributes_Are_Cached))]
     public class When_Building_A_Pipeline_Post_Attributes_Are_Cached
     {
         [Test]

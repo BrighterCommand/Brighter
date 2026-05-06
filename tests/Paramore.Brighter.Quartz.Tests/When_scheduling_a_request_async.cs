@@ -138,7 +138,7 @@ public class QuartzSchedulerRequestAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
@@ -170,7 +170,7 @@ public class QuartzSchedulerRequestAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
@@ -203,7 +203,7 @@ public class QuartzSchedulerRequestAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
@@ -235,7 +235,7 @@ public class QuartzSchedulerRequestAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
@@ -313,7 +313,7 @@ public class QuartzSchedulerRequestAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
@@ -350,7 +350,7 @@ public class QuartzSchedulerRequestAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
@@ -391,7 +391,7 @@ public class QuartzSchedulerRequestAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
@@ -426,7 +426,7 @@ public class QuartzSchedulerRequestAsyncTests
         var expected = Message.Empty;
         var actual = await _outbox.GetAsync(req.Id, new RequestContext());
         
-        await Assert.That(actual.Body).IsEquivalentTo(expected.Body);
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
         await Assert.That(actual.Id).IsEqualTo(expected.Id);
         await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
         await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);

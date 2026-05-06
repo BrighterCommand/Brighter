@@ -19,7 +19,7 @@ public class TickerQSchedulerMessageTests(TickerQTestHost host)
         await Assert.That(host.BusContains<MyEventSync>(message.Id)).IsFalse();
 
         await host.EventuallyOnBus<MyEventSync>(message.Id);
-        await Assert.That(await host.Outbox.GetAsync(message.Id, new RequestContext())).IsEquivalentTo(message);
+        await Assert.That(await host.Outbox.GetAsync(message.Id, new RequestContext())).IsEqualTo(message);
     }
 
     [Test]
@@ -34,7 +34,7 @@ public class TickerQSchedulerMessageTests(TickerQTestHost host)
         await Assert.That(host.BusContains<MyEventSync>(message.Id)).IsFalse();
 
         await host.EventuallyOnBus<MyEventSync>(message.Id);
-        await Assert.That(await host.Outbox.GetAsync(message.Id, new RequestContext())).IsEquivalentTo(message);
+        await Assert.That(await host.Outbox.GetAsync(message.Id, new RequestContext())).IsEqualTo(message);
     }
 
     [Test]
@@ -54,7 +54,7 @@ public class TickerQSchedulerMessageTests(TickerQTestHost host)
         await Assert.That(host.BusContains<MyEventSync>(message.Id)).IsFalse();
 
         await host.EventuallyOnBus<MyEventSync>(message.Id);
-        await Assert.That(await host.Outbox.GetAsync(message.Id, new RequestContext())).IsEquivalentTo(message);
+        await Assert.That(await host.Outbox.GetAsync(message.Id, new RequestContext())).IsEqualTo(message);
     }
 
     [Test]
@@ -74,7 +74,7 @@ public class TickerQSchedulerMessageTests(TickerQTestHost host)
         await Assert.That(host.BusContains<MyEventSync>(message.Id)).IsFalse();
 
         await host.EventuallyOnBus<MyEventSync>(message.Id);
-        await Assert.That(await host.Outbox.GetAsync(message.Id, new RequestContext())).IsEquivalentTo(message);
+        await Assert.That(await host.Outbox.GetAsync(message.Id, new RequestContext())).IsEqualTo(message);
     }
 
     [Test]
