@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
@@ -108,7 +109,10 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 
             await Assert.That(receivedMessages).IsNotEmpty();
             await Assert.That(receivedMessages.Count).IsEqualTo(messageCount);
-            await Assert.That(receivedMessages).IsEquivalentTo(sentMessages);
+            // Compare by Id rather than by Message: TUnit's IsEquivalentTo walks reflection,
+            // and MessageBody.Memory.Span is a ref struct that throws when invoked via Reflection.
+            await Assert.That(receivedMessages.Select(m => m.Id.ToString()).OrderBy(s => s).ToList())
+                .IsEquivalentTo(sentMessages.Select(m => m.Id.ToString()).OrderBy(s => s).ToList());
         }
     }
 }
