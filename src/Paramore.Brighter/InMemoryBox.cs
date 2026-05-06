@@ -50,6 +50,7 @@ namespace Paramore.Brighter
     {
         protected readonly ConcurrentDictionary<string, T> Requests = new ConcurrentDictionary<string, T>();
         private DateTimeOffset _lastScanAt = timeProvider.GetUtcNow();
+        private DateTimeOffset _lastCompactionAttemptAt = DateTimeOffset.MinValue;
         private readonly object _cleanupRunningLockObject = new object();
 
         /// <summary>
@@ -121,7 +122,14 @@ namespace Paramore.Brighter
 
         protected void EnforceCapacityLimit()
         {
-               //Take a copy as it may change whilst we are doing the calculation, we ignore that
+                if (EntryLimit == -1)
+                    return;
+
+                var now = timeProvider.GetUtcNow();
+                if ((now - _lastCompactionAttemptAt) < ExpirationScanInterval)
+                    return;
+
+                //Take a copy as it may change whilst we are doing the calculation, we ignore that
                 var count = EntryCount;
                 var upperSize = EntryLimit;
 
@@ -129,6 +137,8 @@ namespace Paramore.Brighter
                 {
                     int newSize = (int)(count * CompactionPercentage);
                     int entriesToRemove = upperSize - newSize;
+
+                    _lastCompactionAttemptAt = now;
 
                     Task.Factory.StartNew(
                         action: state => RunCompact((int)state!),
