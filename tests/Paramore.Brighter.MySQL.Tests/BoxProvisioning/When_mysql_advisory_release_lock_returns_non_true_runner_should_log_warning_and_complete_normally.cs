@@ -111,7 +111,10 @@ public class When_mysql_advisory_release_lock_returns_non_true_runner_should_log
 
         //Assert — fake observed acquire and release under the expected lock key
         //         (derived via the existing public MySqlMigrationLockName.For helper).
-        var expectedLockKey = MySqlMigrationLockName.For(_tableName);
+        //schemaName=null in MigrateAsync resolves to effectiveSchema=DATABASE() (the connection's
+        //bound database — "BrighterTests" here) in the runner, and the lock key folds the schema
+        //in to keep same-named tables in different schemas from sharing a lock. See Item O.
+        var expectedLockKey = MySqlMigrationLockName.For("BrighterTests", _tableName);
         Assert.Equal(expectedLockKey, fakeLock.AcquiredKey);
         Assert.Equal(expectedLockKey, fakeLock.ReleasedKey);
 

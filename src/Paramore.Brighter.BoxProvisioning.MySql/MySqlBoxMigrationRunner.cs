@@ -97,7 +97,7 @@ public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
         // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
         ValidateMigrationsMonotonic(effectiveSchema, tableName, migrations);
 
-        var lockKey = MySqlMigrationLockName.For(tableName);
+        var lockKey = MySqlMigrationLockName.For(effectiveSchema, tableName);
 
         using var connection = new MySqlConnection(EnsureAllowUserVariables(_configuration.ConnectionString));
         await connection.OpenAsync(cancellationToken);

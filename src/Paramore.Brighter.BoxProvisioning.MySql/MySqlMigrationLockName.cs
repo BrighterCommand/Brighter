@@ -29,19 +29,25 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 
 /// <summary>
 /// Builds the session-scoped lock identifier passed to MySQL <c>GET_LOCK</c> /
-/// <c>RELEASE_LOCK</c> for a given box table.
+/// <c>RELEASE_LOCK</c> for a given (schema, table) pair.
 /// </summary>
 /// <remarks>
-/// MySQL <c>GET_LOCK(name, timeout)</c> requires <paramref name="tableName"/>-derived names to
-/// be at most 64 characters; from MySQL 5.7.5 onward longer names raise
-/// <c>ER_USER_LOCK_WRONG_NAME</c>, and earlier versions silently truncated the name (which would
-/// let two distinct tables share a lock and let one runner skip a lock another already held).
+/// MySQL <c>GET_LOCK(name, timeout)</c> requires names to be at most 64 characters; from
+/// MySQL 5.7.5 onward longer names raise <c>ER_USER_LOCK_WRONG_NAME</c>, and earlier versions
+/// silently truncated the name (which would let two distinct tables share a lock and let one
+/// runner skip a lock another already held).
 /// <para>
-/// For names that fit the simple form (<c>BrighterMigration_</c> + table name ≤ 64 chars) the
-/// historical format is preserved so a running deployment that holds a lock under the old name
-/// continues to interlock with the new code. For longer names a SHA-256 suffix is folded in to
-/// keep the result within the limit while remaining collision-resistant across distinct tables
-/// that share a long common prefix.
+/// The schema is folded into the lock name so two same-named tables in different schemas
+/// (e.g. <c>BrighterTests.Outbox</c> and <c>billing.Outbox</c>) acquire distinct advisory locks
+/// instead of serialising on a shared key. Matches the MSSQL runner's <c>lockResource</c> shape
+/// at <c>MsSqlBoxMigrationRunner.cs:90</c>.
+/// </para>
+/// <para>
+/// For composites that fit the simple form (<c>BrighterMigration_&lt;schema&gt;.&lt;table&gt;</c> ≤ 64 chars,
+/// or <c>BrighterMigration_&lt;table&gt;</c> when schema is null/empty) the form is preserved
+/// for diagnostic readability. For longer composites a SHA-256 suffix is folded in over the
+/// full <c>schema.table</c> input to keep the result within the limit while remaining
+/// collision-resistant across distinct (schema, table) pairs that share a long common prefix.
 /// </para>
 /// </remarks>
 public static class MySqlMigrationLockName
@@ -53,28 +59,36 @@ public static class MySqlMigrationLockName
     private const int LongFormPrefixBudget = 29;
 
     /// <summary>
-    /// Builds the lock name for <paramref name="tableName"/>, guaranteed not to exceed
-    /// MySQL's 64-character <c>GET_LOCK</c> limit and collision-resistant across distinct
-    /// table names that share a long common prefix.
+    /// Builds the lock name for the given <paramref name="schema"/> and <paramref name="tableName"/>,
+    /// guaranteed not to exceed MySQL's 64-character <c>GET_LOCK</c> limit and collision-resistant
+    /// across distinct (schema, table) pairs that share a long common prefix.
     /// </summary>
-    /// <param name="tableName">The fully-qualified box table name.</param>
+    /// <param name="schema">The schema (database) the table lives in. When null or empty the
+    /// schema is omitted from the composite — the runner always passes a non-empty value
+    /// resolved via <c>SELECT DATABASE()</c> when no explicit schema is configured, so this
+    /// fallback is for direct callers of the helper.</param>
+    /// <param name="tableName">The box table name.</param>
     /// <returns>A lock identifier suitable for <c>GET_LOCK</c>.</returns>
-    public static string For(string tableName)
+    public static string For(string? schema, string tableName)
     {
-        var simpleForm = Prefix + tableName;
+        var composite = string.IsNullOrEmpty(schema)
+            ? tableName
+            : $"{schema}.{tableName}";
+
+        var simpleForm = Prefix + composite;
         if (simpleForm.Length <= MySqlGetLockNameLimit)
         {
             return simpleForm;
         }
 
-        var hashSuffix = ShortHashOf(tableName);
-        var truncatedPrefix = tableName.Substring(0, LongFormPrefixBudget);
+        var hashSuffix = ShortHashOf(composite);
+        var truncatedPrefix = composite.Substring(0, LongFormPrefixBudget);
         return $"{Prefix}{truncatedPrefix}_{hashSuffix}";
     }
 
-    private static string ShortHashOf(string tableName)
+    private static string ShortHashOf(string composite)
     {
-        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(tableName));
+        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(composite));
         return Convert.ToHexString(hashBytes, 0, HashHexChars / 2).ToLowerInvariant();
     }
 }

@@ -97,7 +97,11 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
         // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
         ValidateMigrationsMonotonic(effectiveSchema, tableName, migrations);
 
-        var lockKey = $"BrighterMigration_{tableName}";
+        // Include the schema in the lock key so two same-named tables in different schemas
+        // (e.g. public.Outbox and billing.Outbox) acquire distinct advisory locks. Without
+        // the schema qualifier they would share a lock and serialize unnecessarily — matches
+        // the MSSQL runner's lockResource shape at MsSqlBoxMigrationRunner.cs:90.
+        var lockKey = $"BrighterMigration_{effectiveSchema}.{tableName}";
 
         using var connection = new NpgsqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);

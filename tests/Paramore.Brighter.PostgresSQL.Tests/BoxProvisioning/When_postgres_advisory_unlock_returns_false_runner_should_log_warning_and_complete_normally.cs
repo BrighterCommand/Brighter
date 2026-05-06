@@ -74,7 +74,10 @@ public class When_postgres_advisory_unlock_returns_false_runner_should_log_warni
         Assert.True(await GetHistoryRowCount() >= 1);
 
         //Assert — fake observed both the acquire and release calls under the expected lock key.
-        var expectedLockKey = $"BrighterMigration_{_tableName}";
+        //schemaName=null in MigrateAsync resolves to effectiveSchema="public" in the runner, and
+        //the lock key folds the schema in (BrighterMigration_<schema>.<table>) to keep same-named
+        //tables in different schemas from sharing a lock. See Item O / ADR 0057.
+        var expectedLockKey = $"BrighterMigration_public.{_tableName}";
         Assert.Equal(expectedLockKey, fakeLock.AcquiredKey);
         Assert.Equal(expectedLockKey, fakeLock.ReleasedKey);
 
