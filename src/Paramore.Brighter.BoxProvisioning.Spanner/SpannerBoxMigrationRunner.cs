@@ -111,8 +111,22 @@ public class SpannerBoxMigrationRunner(
         if (await IsMigrationAppliedAsync(connection, tableName, vLatest, cancellationToken))
             return;
 
-        await InsertHistoryRowAsync(
-            connection, tableName, vLatest, $"fresh install at V{vLatest}", cancellationToken);
+        // The IsMigrationAppliedAsync check above + this insert form a TOCTOU pair: two
+        // concurrent fresh-installing replicas can both pass the existence check at zero
+        // (commit timestamps from the winner's eventual insert have not yet propagated to
+        // the loser's read snapshot — Spanner's history-row insert uses
+        // SpannerParameter.CommitTimestamp, so visibility lags), then both attempt the
+        // insert; the loser hits AlreadyExists on the PK (BoxTableName, MigrationVersion).
+        // Mirror ExecuteDdlSafeAsync's filter shape and absorb the benign race.
+        try
+        {
+            await InsertHistoryRowAsync(
+                connection, tableName, vLatest, $"fresh install at V{vLatest}", cancellationToken);
+        }
+        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists)
+        {
+            // Concurrent fresh-installer already stamped V_latest — benign race.
+        }
     }
 
     private string BuildBoxDdl(BoxType boxType, string tableName) => boxType switch
