@@ -65,7 +65,13 @@ namespace Paramore.Brighter
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
     /// store the message into a Outbox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
     /// This class is intended to be thread-safe, so you can use one InMemoryOutbox across multiple performers. However, the state is not global i.e. static
-    /// so you can use multiple instances safely as well
+    /// so you can use multiple instances safely as well.
+    /// <para>
+    /// Note: <see cref="InMemoryBox{T}.EntryLimit"/> and expiry only govern <b>dispatched</b> messages
+    /// (those whose <see cref="OutboxEntry.TimeFlushed"/> has been set). Undispatched messages are never
+    /// removed by compaction or expiry, so a stalled or slow broker combined with a high write rate will
+    /// continue to grow memory until <see cref="IAmProducersConfiguration.MaxOutStandingMessages"/> trips.
+    /// </para>
     /// </summary>
 #pragma warning disable CS0618
     public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
