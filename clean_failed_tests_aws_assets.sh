@@ -214,7 +214,7 @@ fi
 # Some test fixtures (particularly FIFO tests) were not tagged with Environment=Test.
 # These are identified by their naming pattern: <TestPrefix>-<GUID> (truncated to 45 chars).
 # This section lists all topics/queues and deletes those matching known test prefixes.
-TEST_PREFIXES="Producer-Send-Tests|Producer-Requeue-Tests|Producer-DLQ-Tests|Producer-Scheduler-Tests|Producer-Scheduler-Async-Tests|Producer-Fire-Scheduler-Tests|Producer-Fire-Scheduler-Async-Tests|Producer-Tag-Tests|Producer-FSR-Tests|Producer-FSRA-Tests|Consumer-Requeue-Tests|Consumer-DLQ-Tests|Consumer-Fallback-Tests|Consumer-Invalid-Tests|Consumer-NoChan-Tests|Buffered-Consumer-Tests|Buffered-Scheduler-Tests|Buffered-Scheduler-Async-Tests|Buffered-FSR-Tests|Redrive-Tests|Redrive-DLQ-Tests|Raw-Msg-Delivery-Tests"
+TEST_PREFIXES="Producer-Send-Tests|Producer-Requeue-Tests|Producer-DLQ-Tests|Producer-Scheduler-Tests|Producer-Scheduler-Async-Tests|Producer-Fire-Scheduler-Tests|Producer-Fire-Scheduler-Async-Tests|Producer-Tag-Tests|Producer-FSR-Tests|Producer-FSRA-Tests|Consumer-Requeue-Tests|Consumer-DLQ-Tests|Consumer-DLQ-Fifo|Consumer-Fallback-Tests|Consumer-Invalid-Tests|Consumer-NoChan-Tests|Buffered-Consumer-Tests|Buffered-Scheduler-Tests|Buffered-Scheduler-Async-Tests|Buffered-FSR-Tests|Redrive-Tests|Redrive-DLQ-Tests|Raw-Msg-Delivery-Tests|DLQ-Reader|Invalid-Reader"
 
 echo ""
 echo "Scanning for untagged test resources by naming convention ..."

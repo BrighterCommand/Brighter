@@ -24,6 +24,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -134,17 +136,27 @@ namespace Paramore.Brighter
             try
             {
                 ClearExpiredMessages();
+                EnforceCapacityLimit();
 
                 string key = InboxItem.CreateKey(command.Id, contextKey);
+                InboxItem item;
                 if (!ExistsInternal<T>(command.Id, contextKey))
                 {
-                    if (!Requests.TryAdd(key, new InboxItem(typeof(T), string.Empty, _timeProvider.GetUtcNow().DateTime, contextKey)))
+                    item = new InboxItem(typeof(T), string.Empty, _timeProvider.GetUtcNow(), contextKey);
+                    if (!Requests.TryAdd(key, item))
                     {
                         throw new Exception($"Could not add command: {command.Id} to the Inbox");
                     }
                 }
+                else
+                {
+                    if (!Requests.TryGetValue(key, out item!))
+                    {
+                        throw new Exception($"Could not find command: {command.Id} in the Inbox");
+                    }
+                }
 
-                Requests[key].RequestBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
+                item.RequestBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             }
             finally
             {
@@ -299,6 +311,35 @@ namespace Paramore.Brighter
 
             tcs.SetResult(command);
             return tcs.Task;
+        }
+
+        protected override void RemoveExpiredMessages(DateTimeOffset now)
+        {
+            var expiredEntries =
+                Requests
+                    .Where(entry => (now - entry.Value.WriteTime) >= EntryTimeToLive)
+                    .Select(entry => entry.Key);
+
+            foreach (var key in expiredEntries)
+            {
+                //if this fails ignore, killed by something else like compaction
+                Requests.TryRemove(key, out _);
+            }
+        }
+
+        protected override void Compact(int entriesToRemove)
+        {
+            var removalList =
+                Requests
+                    .OrderBy(entry => entry.Value.WriteTime)
+                    .Take(entriesToRemove)
+                    .Select(entry => entry.Key);
+
+            foreach (var key in removalList)
+            {
+                //ignore errors, likely just something else has cleared it such as TTL eviction
+                Requests.TryRemove(key, out _);
+            }
         }
 
         // Performs the logic of checking whether a command exists in the inbox without creating telemetry

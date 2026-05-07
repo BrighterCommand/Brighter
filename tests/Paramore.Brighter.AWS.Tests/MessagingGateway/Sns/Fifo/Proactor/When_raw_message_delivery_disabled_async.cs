@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Amazon.SimpleNotificationService.Model;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
@@ -24,7 +25,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channelName = $"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey($"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
-        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
+        var topicAttributes = new SnsAttributes(type: SqsType.Fifo, tags: [new Tag { Key = "Environment", Value = "Test" }]);
 
         const int bufferSize = 10;
 
