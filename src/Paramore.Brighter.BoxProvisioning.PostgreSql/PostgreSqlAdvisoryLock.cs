@@ -33,6 +33,13 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// <c>pg_try_advisory_lock(int4, int4)</c> / <c>pg_advisory_unlock(int4, int4)</c>. Uses an
 /// exponential backoff retry loop bounded by the supplied timeout for acquisition.
 /// </summary>
+/// <remarks>
+/// The deadline is measured against an injectable <see cref="TimeProvider"/>; the default
+/// <see cref="TimeProvider.System"/> reads <see cref="System.Diagnostics.Stopwatch.GetTimestamp"/>
+/// (monotonic), so a wall-clock jump (NTP correction during a long lock wait, leap-second
+/// smear, container clock skew on VM resume) cannot collapse or extend the budget. Tests
+/// inject a fake provider to drive the deadline check deterministically.
+/// </remarks>
 public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock
 {
     // Brighter-specific advisory-lock namespace. Postgres advisory locks operate in a single
@@ -43,12 +50,25 @@ public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock
     // not correctness, since the lock-key string further partitions per box table.
     private const int BRIGHTER_LOCK_NAMESPACE = 74726;
 
+    private readonly TimeProvider _timeProvider;
+
+    /// <summary>
+    /// Initialises a new <see cref="PostgreSqlAdvisoryLock"/>.
+    /// </summary>
+    /// <param name="timeProvider">Source of timestamps for the acquisition deadline. Defaults
+    /// to <see cref="TimeProvider.System"/> (monotonic). Tests pass
+    /// <c>FakeTimeProvider</c> from <c>Microsoft.Extensions.TimeProvider.Testing</c>.</param>
+    public PostgreSqlAdvisoryLock(TimeProvider? timeProvider = null)
+    {
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
     /// <inheritdoc />
     public async Task AcquireAsync(
         NpgsqlConnection connection, string lockKey,
         TimeSpan timeout, CancellationToken cancellationToken)
     {
-        var deadline = DateTime.UtcNow.Add(timeout);
+        var startTimestamp = _timeProvider.GetTimestamp();
         var delayMs = 100;
 
         while (true)
@@ -61,7 +81,7 @@ public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock
             var result = (bool)(await command.ExecuteScalarAsync(cancellationToken))!;
             if (result) return;
 
-            if (DateTime.UtcNow >= deadline)
+            if (_timeProvider.GetElapsedTime(startTimestamp) >= timeout)
             {
                 throw new TimeoutException(
                     $"Could not acquire migration lock for '{lockKey}' within {timeout.TotalSeconds}s.");
