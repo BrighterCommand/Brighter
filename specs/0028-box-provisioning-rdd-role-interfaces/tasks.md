@@ -128,7 +128,7 @@ Each detection helper static class becomes a public instance class implementing 
 
 ### 2.2 Postgres
 
-- [ ] **TIDY FIRST: Convert `PostgreSqlBoxDetectionHelpers` static class to `PostgreSqlBoxDetectionHelper` instance class implementing `IAmAVersionDetectingMigrationHelper<NpgsqlConnection, NpgsqlTransaction>`**
+- [x] **TIDY FIRST: Convert `PostgreSqlBoxDetectionHelpers` static class to `PostgreSqlBoxDetectionHelper` instance class implementing `IAmAVersionDetectingMigrationHelper<NpgsqlConnection, NpgsqlTransaction>`**
   - File rename + static → instance per the MSSQL recipe.
   - Bridging shim retained until Phase 8.
   - Validation: existing Postgres BoxProvisioning tests stay green.

@@ -21,7 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,168 +28,49 @@ using Npgsql;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
-/// <summary>
-/// Shared PostgreSQL detection queries used by the box provisioners (pre-lock) and the
-/// migration runner (under <c>pg_try_advisory_lock</c>). Each method accepts an optional
-/// <see cref="NpgsqlTransaction"/> so the runner can bind queries to its lock-bearing
-/// transaction; provisioners pass <c>null</c>.
-/// </summary>
-/// <remarks>
-/// Discriminator and column-set comparisons are case-sensitive (<see cref="StringComparer.Ordinal"/>)
-/// against the names returned by <c>information_schema.columns</c>, which folds unquoted
-/// identifiers to lowercase per PostgreSQL semantics. <c>LogicalColumns</c> on each migration
-/// must therefore be lowercase per ADR 0057 §1.
-/// </remarks>
+// Bridging shim — Phase 2.2 of spec 0028. Pure delegation onto a singleton
+// PostgreSqlBoxDetectionHelper instance. Removed in Phase 8 when call-sites
+// rewire to instance dispatch.
 public static class PostgreSqlBoxDetectionHelpers
 {
-    /// <summary>
-    /// Returns true if a table with the given name exists in the given schema.
-    /// </summary>
-    public static async Task<bool> DoesTableExistAsync(
+    private static readonly PostgreSqlBoxDetectionHelper s_instance = new();
+
+    public static Task<bool> DoesTableExistAsync(
         NpgsqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken,
         NpgsqlTransaction? transaction = null)
-    {
-        using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
-        command.CommandText = @"
-SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-        command.Parameters.AddWithValue("@TableName", tableName);
+        => s_instance.DoesTableExistAsync(
+            connection, tableName, schemaName, cancellationToken, transaction);
 
-        return (bool)(await command.ExecuteScalarAsync(cancellationToken))!;
-    }
-
-    /// <summary>
-    /// Returns true if the migration history table exists and has at least one row for the
-    /// given box table.
-    /// </summary>
-    public static async Task<bool> DoesHistoryExistAsync(
+    public static Task<bool> DoesHistoryExistAsync(
         NpgsqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken,
         NpgsqlTransaction? transaction = null)
-    {
-        var historyTableExists = await DoesTableExistAsync(
-            connection, "__BrighterMigrationHistory", "public", cancellationToken, transaction);
-        if (!historyTableExists)
-            return false;
+        => s_instance.DoesHistoryExistAsync(
+            connection, tableName, schemaName, cancellationToken, transaction);
 
-        using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
-        command.CommandText = @"
-SELECT COUNT(1) FROM ""public"".""__BrighterMigrationHistory""
-WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-
-        try
-        {
-            var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
-            return count > 0;
-        }
-        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
-        {
-            // TOCTOU: another connection dropped __BrighterMigrationHistory between our
-            // existence check and this count query. In production this cannot happen — the
-            // history table is created once and never dropped — but parallel tests do drop
-            // it deliberately, and a "table dropped between two queries" outcome is
-            // semantically equivalent to "no history". Returning false lets the caller fall
-            // through to the runner, which re-creates the history table under its lock.
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Returns the highest migration version recorded in history for the given box table,
-    /// or 0 if no rows exist.
-    /// </summary>
-    public static async Task<int> GetMaxVersionAsync(
+    public static Task<int> GetMaxVersionAsync(
         NpgsqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken,
         NpgsqlTransaction? transaction = null)
-    {
-        using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
-        command.CommandText = @"
-SELECT COALESCE(MAX(""MigrationVersion""), 0) FROM ""public"".""__BrighterMigrationHistory""
-WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
+        => s_instance.GetMaxVersionAsync(
+            connection, tableName, schemaName, cancellationToken, transaction);
 
-        return (int)(await command.ExecuteScalarAsync(cancellationToken))!;
-    }
-
-    /// <summary>
-    /// Reads the column name set for the given table from <c>information_schema.columns</c>.
-    /// Comparison is case-sensitive; PostgreSQL returns unquoted identifiers folded to lowercase.
-    /// </summary>
-    public static async Task<HashSet<string>> GetTableColumnsAsync(
+    public static Task<HashSet<string>> GetTableColumnsAsync(
         NpgsqlConnection connection, string tableName, string schemaName,
         CancellationToken cancellationToken,
         NpgsqlTransaction? transaction = null)
-    {
-        using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
-        command.CommandText = @"
-SELECT column_name FROM information_schema.columns
-WHERE table_schema = @SchemaName AND table_name = @TableName";
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-        command.Parameters.AddWithValue("@TableName", tableName);
+        => s_instance.GetTableColumnsAsHashSetAsync(
+            connection, tableName, schemaName, cancellationToken, transaction);
 
-        var columns = new HashSet<string>(StringComparer.Ordinal);
-        using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            columns.Add(reader.GetString(0));
-        }
-        return columns;
-    }
-
-    /// <summary>
-    /// Detects the current logical schema version of a box table by inspecting its column set.
-    /// Returns one of three values per ADR 0057 §3:
-    /// <list type="bullet">
-    ///   <item><description><c>-1</c> when the discriminator column is absent (the table is not a Brighter box).</description></item>
-    ///   <item><description><c>0</c> when the discriminator is present but the V1 column set is incomplete (unknown schema).</description></item>
-    ///   <item><description><c>V &gt;= 1</c> for the highest version whose cumulative <c>LogicalColumns</c> is a subset of the actual columns.</description></item>
-    /// </list>
-    /// </summary>
-    /// <param name="boxType">Selects the discriminator: <c>HeaderBag</c> for outbox, <c>CommandBody</c> for inbox.</param>
-    public static async Task<int> DetectCurrentVersionAsync(
+    public static Task<int> DetectCurrentVersionAsync(
         NpgsqlConnection connection, string tableName, string schemaName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
         CancellationToken cancellationToken,
         NpgsqlTransaction? transaction = null)
-    {
-        var actualColumns = await GetTableColumnsAsync(
-            connection, tableName, schemaName, cancellationToken, transaction);
+        => s_instance.DetectCurrentVersionAsync(
+            connection, tableName, schemaName, boxType, migrations, cancellationToken, transaction);
 
-        var discriminator = DiscriminatorFor(boxType);
-        if (!actualColumns.Contains(discriminator))
-            return -1;
-
-        if (migrations.Count == 0 || !actualColumns.IsSupersetOf(migrations[0].LogicalColumns))
-            return 0;
-
-        var matched = migrations[0].Version;
-        for (var i = 1; i < migrations.Count; i++)
-        {
-            if (!actualColumns.IsSupersetOf(migrations[i].LogicalColumns))
-                break;
-            matched = migrations[i].Version;
-        }
-        return matched;
-    }
-
-    /// <summary>
-    /// The discriminator column (lowercase per PostgreSQL folding) that distinguishes a
-    /// Brighter outbox/inbox table from any other table that happens to share its name.
-    /// </summary>
-    public static string DiscriminatorFor(BoxType boxType) => boxType switch
-    {
-        BoxType.Outbox => "headerbag",
-        BoxType.Inbox => "commandbody",
-        _ => throw new ArgumentOutOfRangeException(nameof(boxType), boxType, "Unknown BoxType")
-    };
+    public static string DiscriminatorFor(BoxType boxType)
+        => s_instance.DiscriminatorFor(boxType);
 }
