@@ -55,6 +55,5 @@ public class BoxProvisioningOptions
     /// Add a registration action that will be applied to the service collection.
     /// </summary>
     /// <param name="registration">The registration action.</param>
-    public void Add(Action<IServiceCollection> registration)
-        => _registrations.Add(registration);
+    public void Add(Action<IServiceCollection> registration) => _registrations.Add(registration);
 }

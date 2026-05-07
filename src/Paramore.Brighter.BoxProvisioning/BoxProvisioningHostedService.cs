@@ -74,15 +74,11 @@ public class BoxProvisioningHostedService : IHostedService
 
         foreach (var provisioner in ordered)
         {
-            _logger.LogInformation(
-                "Provisioning {BoxType} '{BoxTableName}'...",
-                provisioner.BoxType, provisioner.BoxTableName);
+            _logger.LogInformation("Provisioning {BoxType} '{BoxTableName}'...", provisioner.BoxType, provisioner.BoxTableName);
             try
             {
                 await provisioner.ProvisionAsync(cancellationToken);
-                _logger.LogInformation(
-                    "Provisioned {BoxType} '{BoxTableName}' successfully",
-                    provisioner.BoxType, provisioner.BoxTableName);
+                _logger.LogInformation("Provisioned {BoxType} '{BoxTableName}' successfully", provisioner.BoxType, provisioner.BoxTableName);
             }
             catch (OperationCanceledException)
             {

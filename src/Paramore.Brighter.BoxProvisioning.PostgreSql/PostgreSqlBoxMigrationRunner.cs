@@ -120,11 +120,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
             // means only the racing statement fails and we can ignore it.
             await EnsureHistoryTableAsync(connection, transaction: null, cancellationToken);
 
-#if NETFRAMEWORK
-            var transaction = connection.BeginTransaction();
-#else
             var transaction = (NpgsqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
-#endif
 
             try
             {

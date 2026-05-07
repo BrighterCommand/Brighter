@@ -78,7 +78,7 @@ public class MsSqlBoxMigrationRunner(
         using var connection = new SqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-#if NETFRAMEWORK
+#if !NET8_0_OR_GREATER
         var transaction = connection.BeginTransaction();
 #else
         var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);

@@ -57,8 +57,7 @@ public static class BrighterBuilderBoxProvisioningExtensions
             registration(builder.Services);
         }
 
-        builder.Services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IHostedService, BoxProvisioningHostedService>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, BoxProvisioningHostedService>());
         return builder;
     }
 }
