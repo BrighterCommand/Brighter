@@ -1,3 +1,26 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +40,14 @@ public class BoxProvisioningHostedService : IHostedService
     private readonly IEnumerable<IAmABoxProvisioner> _provisioners;
     private readonly ILogger<BoxProvisioningHostedService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="BoxProvisioningHostedService"/>.
+    /// </summary>
+    /// <param name="provisioners">The collection of <see cref="IAmABoxProvisioner"/>
+    /// registrations resolved from the container. Each provisioner targets a single box table;
+    /// applications typically register one per outbox or inbox in use.</param>
+    /// <param name="logger">The <see cref="ILogger{TCategoryName}"/> used to report
+    /// per-box provisioning progress and configuration failures at startup.</param>
     public BoxProvisioningHostedService(
         IEnumerable<IAmABoxProvisioner> provisioners,
         ILogger<BoxProvisioningHostedService> logger)
@@ -25,6 +56,18 @@ public class BoxProvisioningHostedService : IHostedService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Provisions every registered box table in turn — outboxes before inboxes — so that the
+    /// host does not begin accepting traffic until all box schemas are at the expected version.
+    /// </summary>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> signalled when the host
+    /// is shutting down or the startup deadline elapses; propagated as-is so Kubernetes readiness
+    /// probes see a cancellation rather than a configuration error.</param>
+    /// <returns>A <see cref="Task"/> that completes once every provisioner has finished
+    /// successfully.</returns>
+    /// <exception cref="ConfigurationException">Thrown when any provisioner fails for a
+    /// non-cancellation reason (for example an unreachable database or invalid migration).
+    /// The original failure is preserved as the inner exception.</exception>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         var ordered = _provisioners.OrderBy(p => OrderingOrdinal(p.BoxType));
@@ -62,6 +105,13 @@ public class BoxProvisioningHostedService : IHostedService
         }
     }
 
+    /// <summary>
+    /// No-op shutdown hook. Box provisioning has no resources that need releasing on host stop —
+    /// migrations either completed during <see cref="StartAsync"/> or the host failed fast.
+    /// </summary>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> signalled when the host
+    /// shutdown deadline elapses. Unused.</param>
+    /// <returns>A <see cref="Task"/> that has already run to completion.</returns>
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     // Single source of truth for provisioner ordering. The default arm converts a silent
