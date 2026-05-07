@@ -27,7 +27,7 @@ public class BoxProvisioningHostedService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var ordered = _provisioners.OrderBy(p => p.BoxType == BoxType.Outbox ? 0 : 1);
+        var ordered = _provisioners.OrderBy(p => OrderingOrdinal(p.BoxType));
 
         foreach (var provisioner in ordered)
         {
@@ -63,4 +63,17 @@ public class BoxProvisioningHostedService : IHostedService
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    // Single source of truth for provisioner ordering. The default arm converts a silent
+    // mis-ordering (intermittent, DI-registration-order-dependent) into a loud startup
+    // failure that names the file and method to update — so the next contributor adding
+    // a BoxType value (Lockbox / DeadLetterBox / etc.) sees exactly where to add the arm.
+    private static int OrderingOrdinal(BoxType type) => type switch
+    {
+        BoxType.Outbox => 0,
+        BoxType.Inbox => 1,
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(type), type,
+            $"BoxProvisioningHostedService does not know how to order BoxType.{type} — add it to the switch in OrderingOrdinal")
+    };
 }
