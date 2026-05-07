@@ -112,7 +112,7 @@ Each detection helper static class becomes a public instance class implementing 
   - **Bridging shim**: keep a `static class MsSqlBoxDetectionHelpers` thin facade that delegates to a private singleton `MsSqlBoxDetectionHelper` instance during Phases 2–7. Removed in Phase 8 when call-sites rewire to instance dispatch. The shim has no logic of its own — pure delegation.
   - Commit message: `refactor: spec 0028 Phase 2.1 — MSSQL detection helper as instance class implementing role interface`.
 
-- [ ] **TEST + IMPLEMENT: MSSQL detection helper substitutes "dbo" when schemaName is null**
+- [x] **TEST + IMPLEMENT: MSSQL detection helper substitutes "dbo" when schemaName is null**
   - **USE COMMAND**: `/test-first when MsSqlBoxDetectionHelper receives null schemaName it should substitute "dbo" as the default schema for SQL parameter binding`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_mssql_detection_helper_receives_null_schema_name_it_should_substitute_dbo.cs`

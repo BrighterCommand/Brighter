@@ -40,10 +40,12 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 public class MsSqlBoxDetectionHelper :
     IAmAVersionDetectingMigrationHelper<SqlConnection, SqlTransaction>
 {
+    private const string DefaultSchemaName = "dbo";
+
     /// <summary>
     /// Returns true if a table with the given name exists in the given schema.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c>.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
     public async Task<bool> DoesTableExistAsync(
         SqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -56,7 +58,7 @@ SELECT COUNT(1) FROM sys.tables t
 INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
 WHERE t.name = @TableName AND s.name = @SchemaName";
         command.Parameters.AddWithValue("@TableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
 
         var count = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
         return count > 0;
@@ -66,14 +68,14 @@ WHERE t.name = @TableName AND s.name = @SchemaName";
     /// Returns true if the migration history table exists and has at least one row for the
     /// given box table.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c>.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
     public async Task<bool> DoesHistoryExistAsync(
         SqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
         SqlTransaction? transaction = null)
     {
         var historyTableExists = await DoesTableExistAsync(
-            connection, "__BrighterMigrationHistory", "dbo", cancellationToken, transaction);
+            connection, "__BrighterMigrationHistory", DefaultSchemaName, cancellationToken, transaction);
         if (!historyTableExists)
             return false;
 
@@ -83,7 +85,7 @@ WHERE t.name = @TableName AND s.name = @SchemaName";
 SELECT COUNT(1) FROM [dbo].[__BrighterMigrationHistory]
 WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
 
         var count = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
         return count > 0;
@@ -93,7 +95,7 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
     /// Returns the highest migration version recorded in history for the given box table,
     /// or 0 if no rows exist.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c>.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
     public async Task<int> GetMaxVersionAsync(
         SqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -105,7 +107,7 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
 SELECT ISNULL(MAX([MigrationVersion]), 0) FROM [dbo].[__BrighterMigrationHistory]
 WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
 
         return (int)(await command.ExecuteScalarAsync(cancellationToken))!;
     }
@@ -114,7 +116,7 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
     /// Reads the column name set for the given table from <c>INFORMATION_SCHEMA.COLUMNS</c>,
     /// case-insensitively.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c>.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
     public async Task<IReadOnlyCollection<string>> GetTableColumnsAsync(
         SqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -134,7 +136,7 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
     /// </list>
     /// </summary>
     /// <param name="boxType">Selects the discriminator: <c>HeaderBag</c> for outbox, <c>CommandBody</c> for inbox.</param>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c>.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
     public async Task<int> DetectCurrentVersionAsync(
         SqlConnection connection, string tableName, string? schemaName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
@@ -183,7 +185,7 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
 SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
 WHERE TABLE_NAME = @TableName AND TABLE_SCHEMA = @SchemaName";
         command.Parameters.AddWithValue("@TableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
 
         var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         using var reader = await command.ExecuteReaderAsync(cancellationToken);
