@@ -102,7 +102,7 @@ Each detection helper static class becomes a public instance class implementing 
 
 ### 2.1 MSSQL
 
-- [ ] **TIDY FIRST: Convert `MsSqlBoxDetectionHelpers` static class to `MsSqlBoxDetectionHelper` instance class implementing `IAmAVersionDetectingMigrationHelper<SqlConnection, SqlTransaction>`**
+- [x] **TIDY FIRST: Convert `MsSqlBoxDetectionHelpers` static class to `MsSqlBoxDetectionHelper` instance class implementing `IAmAVersionDetectingMigrationHelper<SqlConnection, SqlTransaction>`**
   - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlBoxDetectionHelpers.cs` → renamed `MsSqlBoxDetectionHelper.cs` (singular).
   - Class `static class MsSqlBoxDetectionHelpers` → `public class MsSqlBoxDetectionHelper`.
   - All static methods become instance methods with identical bodies; `string schemaName` widens to `string? schemaName`.
