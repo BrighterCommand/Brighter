@@ -57,31 +57,31 @@ Phases 2/3/4/5 can proceed in parallel after Phase 1. Phase 6 requires Phase 5 (
 
 These tasks add the role interface declarations to `src/Paramore.Brighter.BoxProvisioning/`. No backend implementations yet; the shared assembly compiles standalone.
 
-- [ ] **TIDY FIRST: Add `IAmABoxMigrationDetectionHelper<TConnection, TTransaction>` interface declaration**
+- [x] **TIDY FIRST: Add `IAmABoxMigrationDetectionHelper<TConnection, TTransaction>` interface declaration**
   - File: `src/Paramore.Brighter.BoxProvisioning/IAmABoxMigrationDetectionHelper.cs`
   - Five methods per ADR 0058 §A.1 (`DoesTableExistAsync`, `DoesHistoryExistAsync`, `GetMaxVersionAsync`, `GetTableColumnsAsync`, `DiscriminatorFor`).
   - Generic constraints `where TConnection : DbConnection where TTransaction : DbTransaction`.
   - XML-doc per ADR §A.1 — including the "schemaName null is substituted with backend default by each implementation" note on every method that takes `schemaName`.
   - Validation: `dotnet build` succeeds on the full shared-assembly TFM matrix.
 
-- [ ] **TIDY FIRST: Add `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` interface declaration**
+- [x] **TIDY FIRST: Add `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` interface declaration**
   - File: `src/Paramore.Brighter.BoxProvisioning/IAmAVersionDetectingMigrationHelper.cs`
   - Inherits `IAmABoxMigrationDetectionHelper<TConnection, TTransaction>`.
   - Adds `DetectCurrentVersionAsync` per ADR §A.1.
   - XML-doc explaining the relational-four exemption shape (Spanner does NOT implement this interface — see ADR 0057 §6).
 
-- [ ] **TIDY FIRST: Add `IAmABoxMigrationCatalog` interface declaration**
+- [x] **TIDY FIRST: Add `IAmABoxMigrationCatalog` interface declaration**
   - File: `src/Paramore.Brighter.BoxProvisioning/IAmABoxMigrationCatalog.cs`
   - Single method `IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)` per ADR §A.2.
   - XML-doc explaining the "catalogue per (backend, box-type)" shape and the Spanner exemption (no catalogue per ADR 0057 §6).
 
-- [ ] **TIDY FIRST: Add `IAmABoxPayloadModeValidator<TConnection>` interface declaration**
+- [x] **TIDY FIRST: Add `IAmABoxPayloadModeValidator<TConnection>` interface declaration**
   - File: `src/Paramore.Brighter.BoxProvisioning/IAmABoxPayloadModeValidator.cs`
   - Single method `ValidateAsync` with `(TConnection, string tableName, string? schemaName, string columnName, bool binaryMessagePayload, CancellationToken)` per ADR §A.3.
   - Generic constraint `where TConnection : DbConnection`.
   - XML-doc — including the schemaName null-substitution note matching §A.1.
 
-- [ ] **TIDY FIRST: Add `IAmAProvisioningUnitOfWork<TTransaction>` interface declaration**
+- [x] **TIDY FIRST: Add `IAmAProvisioningUnitOfWork<TTransaction>` interface declaration**
   - File: `src/Paramore.Brighter.BoxProvisioning/IAmAProvisioningUnitOfWork.cs`
   - Inherits `IAsyncDisposable`.
   - Property `TTransaction? Transaction { get; }`.
@@ -89,7 +89,7 @@ These tasks add the role interface declarations to `src/Paramore.Brighter.BoxPro
   - Generic constraint `where TTransaction : DbTransaction`.
   - XML-doc per ADR §B.1 — including the "BeginAsync may throw → DisposeAsync still called → MUST tolerate dispose-after-failed-begin" note, and the "RollbackAsync MUST NOT throw" / "CommitAsync throws → RollbackAsync runs best-effort" notes from §B.3.
 
-- [ ] **Phase 1 gate: Full TFM-matrix build with the five new interface files**
+- [x] **Phase 1 gate: Full TFM-matrix build with the five new interface files**
   - `dotnet build` for `Paramore.Brighter.BoxProvisioning.csproj` clean on `netstandard2.0;net8.0;net9.0;net10.0`.
   - No `static virtual` / `IReadOnlySet<T>` slipped in (per C7).
   - **Commit** as a single Tidy First structural commit: `refactor: spec 0028 Phase 1 — add role interfaces (no implementations yet)`.
