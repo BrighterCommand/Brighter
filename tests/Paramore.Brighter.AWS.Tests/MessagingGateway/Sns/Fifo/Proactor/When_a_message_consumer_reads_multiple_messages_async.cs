@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Amazon.SimpleNotificationService.Model;
 using System.Linq;
 using System.Net.Mime;
 using System.Threading.Tasks;
@@ -28,7 +29,7 @@ public class SqsBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         var channelName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _topicName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
+        var topicAttributes = new SnsAttributes(type: SqsType.Fifo, tags: [new Tag { Key = "Environment", Value = "Test" }]);
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_topicName);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Amazon.SimpleNotificationService.Model;
 using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
@@ -38,7 +39,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         var topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
-        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
+        var topicAttributes = new SnsAttributes(type: SqsType.Fifo, tags: [new Tag { Key = "Environment", Value = "Test" }]);
 
         _subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Amazon.SimpleNotificationService.Model;
 using System.Linq;
 using System.Net.Mime;
 using System.Threading.Tasks;
@@ -31,7 +32,7 @@ public class SqsBufferedConsumerTests : IDisposable, IAsyncDisposable
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_topicName);
-        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
+        var topicAttributes = new SnsAttributes(type: SqsType.Fifo, tags: [new Tag { Key = "Environment", Value = "Test" }]);
 
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Amazon.SimpleNotificationService.Model;
 using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
@@ -36,7 +37,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
         _deadLetterChannel = new ChannelName(dlQueue);
-        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
+        var topicAttributes = new SnsAttributes(type: SqsType.Fifo, tags: [new Tag { Key = "Environment", Value = "Test" }]);
 
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(channelName),
