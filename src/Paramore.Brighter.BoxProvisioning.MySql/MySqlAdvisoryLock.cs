@@ -40,7 +40,10 @@ public class MySqlAdvisoryLock : IMySqlAdvisoryLock
         MySqlConnection connection, string lockKey,
         TimeSpan timeout, CancellationToken cancellationToken)
     {
-        var timeoutSeconds = (int)timeout.TotalSeconds;
+        // GET_LOCK takes whole seconds; truncating sub-second TimeSpans to 0 makes the call
+        // non-blocking, defeating the migration lock for callers that configure short timeouts.
+        // Floor at 1 second so a 500ms timeout still produces server-side blocking.
+        var timeoutSeconds = (int)Math.Max(1, Math.Ceiling(timeout.TotalSeconds));
 
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT GET_LOCK(@LockName, @Timeout)";
@@ -48,10 +51,24 @@ public class MySqlAdvisoryLock : IMySqlAdvisoryLock
         command.Parameters.AddWithValue("@Timeout", timeoutSeconds);
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
-        if (result == null || Convert.ToInt32(result) != 1)
+
+        // GET_LOCK returns 1 (acquired), 0 (timeout), or NULL (server-side error: OOM, KILLed
+        // session, memory-table fault). Distinguish the latter from a timeout so operators
+        // reading logs do not chase a phantom contention issue. NULL is unreachable on
+        // current MySQL 8 paths in practice (NULL/invalid lock names raise a typed
+        // MySqlException at parse time before GET_LOCK runs); kept as defensive coverage and
+        // for parity with MSSQL's per-return-code mapping (Item N).
+        if (result is null or DBNull)
+        {
+            throw new MySqlAdvisoryLockException(
+                $"GET_LOCK on '{lockKey}' returned NULL — likely a server-side error " +
+                "(out of memory, KILLed connection, or memory-table fault). Check server logs.");
+        }
+
+        if (Convert.ToInt32(result) != 1)
         {
             throw new TimeoutException(
-                $"Could not acquire migration lock '{lockKey}' within {timeout.TotalSeconds}s.");
+                $"Could not acquire migration lock '{lockKey}' within {timeoutSeconds}s.");
         }
     }
 

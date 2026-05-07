@@ -54,13 +54,18 @@ public interface IMySqlAdvisoryLock
     /// <param name="lockKey">The lock name to pass to <c>GET_LOCK</c>; must already be
     /// within MySQL's 64-character limit (callers should derive via
     /// <see cref="MySqlMigrationLockName.For"/>).</param>
-    /// <param name="timeout">Maximum wait, mapped to <c>GET_LOCK</c>'s timeout argument
-    /// (truncated to whole seconds).</param>
+    /// <param name="timeout">Maximum wait, mapped to <c>GET_LOCK</c>'s timeout argument.
+    /// Sub-second values are floored at one second to preserve server-side blocking
+    /// (<c>GET_LOCK(name, 0)</c> is documented as non-blocking).</param>
     /// <param name="cancellationToken">Cancellation token observed by the underlying
     /// command.</param>
     /// <returns>A task that completes when the lock has been acquired.</returns>
-    /// <exception cref="TimeoutException">Thrown when the lock cannot be acquired within
-    /// <paramref name="timeout"/>.</exception>
+    /// <exception cref="TimeoutException">Thrown when <c>GET_LOCK</c> returns <c>0</c>
+    /// (could not acquire <paramref name="lockKey"/> within <paramref name="timeout"/>).</exception>
+    /// <exception cref="MySqlAdvisoryLockException">Thrown when <c>GET_LOCK</c> returns
+    /// <c>NULL</c>, which MySQL documents as a server-side error (out of memory, KILLed
+    /// connection, memory-table fault). Kept distinct from <see cref="TimeoutException"/>
+    /// so operators can tell a contended lock apart from a server fault.</exception>
     Task AcquireAsync(
         MySqlConnection connection, string lockKey,
         TimeSpan timeout, CancellationToken cancellationToken);
