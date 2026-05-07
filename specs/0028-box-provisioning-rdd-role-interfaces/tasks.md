@@ -39,14 +39,14 @@ Phases 2/3/4/5 can proceed in parallel after Phase 1. Phase 6 requires Phase 5 (
 
 ## Phase 0 — Preliminaries
 
-- [ ] **Capture spec 0027 baseline as a tracked file**
+- [x] **Capture spec 0027 baseline as a tracked file**
   - Run `dotnet test --filter FullyQualifiedName~BoxProvisioning` against each of the six BoxProvisioning test directories.
   - Write the captured counts (per backend, per TFM) to `specs/0028-box-provisioning-rdd-role-interfaces/baseline.md`. This file is the spec 0028 NF2 floor — every subsequent phase gate compares against it.
   - Compare the captured counts against `requirements.md` NF2 (currently anchored at `edfa9fc99`). If counts have drifted upward (additive tests landed on `database_migration` since that commit), update the requirements NF2 enumeration in the same commit so the recorded floor matches the spec 0028 starting HEAD.
   - Commit: `docs: spec 0028 Phase 0 — capture baseline test counts`.
   - Exit early if any baseline test is red — investigate before continuing.
 
-- [ ] **Verify TFM matrix builds cleanly and record the result**
+- [x] **Verify TFM matrix builds cleanly and record the result**
   - `dotnet build src/Paramore.Brighter.BoxProvisioning/Paramore.Brighter.BoxProvisioning.csproj` succeeds on `netstandard2.0;net8.0;net9.0;net10.0`.
   - `dotnet build src/Paramore.Brighter.BoxProvisioning.MsSql/Paramore.Brighter.BoxProvisioning.MsSql.csproj` succeeds on `net462;net8.0;net9.0;net10.0`.
   - Record the TFM-matrix outcome inside the Phase 0 baseline-capture commit message (or in `baseline.md` itself). Confirms the matrix that Phase 1's role interfaces must respect (per C7).
