@@ -69,6 +69,11 @@ public class SpannerBoxMigrationRunner(
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
+        // Defence in depth (ADR 0057 §1, spec 0027 PR #4039 review #46-3 #4): Spanner has no
+        // *Migrations.All(...) factory, so this is the only place to reject unsafe identifiers
+        // before they reach BuildBoxDdl / BootstrapExistingTableAsync's information_schema probe.
+        Identifiers.AssertSafe(tableName, nameof(tableName));
+
         _ = migrations; // Spanner is fresh-install-only — no V_k chain (ADR 0057 §6).
         _ = schemaName; // Spanner does not use schemas; the configuration's database is implicit.
 
