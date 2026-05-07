@@ -133,7 +133,7 @@ Each detection helper static class becomes a public instance class implementing 
   - Bridging shim retained until Phase 8.
   - Validation: existing Postgres BoxProvisioning tests stay green.
 
-- [ ] **TEST + IMPLEMENT: Postgres detection helper substitutes "public" when schemaName is null**
+- [x] **TEST + IMPLEMENT: Postgres detection helper substitutes "public" when schemaName is null**
   - **USE COMMAND**: `/test-first when PostgreSqlBoxDetectionHelper receives null schemaName it should substitute "public" as the default schema for SQL parameter binding`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning`
   - Test file: `When_postgres_detection_helper_receives_null_schema_name_it_should_substitute_public.cs`

@@ -47,9 +47,12 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 public class PostgreSqlBoxDetectionHelper :
     IAmAVersionDetectingMigrationHelper<NpgsqlConnection, NpgsqlTransaction>
 {
+    private const string DefaultSchemaName = "public";
+
     /// <summary>
     /// Returns true if a table with the given name exists in the given schema.
     /// </summary>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
     public async Task<bool> DoesTableExistAsync(
         NpgsqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -60,7 +63,7 @@ public class PostgreSqlBoxDetectionHelper :
         command.CommandText = @"
 SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
-        command.Parameters.AddWithValue("@SchemaName", schemaName!);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
         command.Parameters.AddWithValue("@TableName", tableName);
 
         return (bool)(await command.ExecuteScalarAsync(cancellationToken))!;
@@ -70,13 +73,14 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
     /// Returns true if the migration history table exists and has at least one row for the
     /// given box table.
     /// </summary>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
     public async Task<bool> DoesHistoryExistAsync(
         NpgsqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
         NpgsqlTransaction? transaction = null)
     {
         var historyTableExists = await DoesTableExistAsync(
-            connection, "__BrighterMigrationHistory", "public", cancellationToken, transaction);
+            connection, "__BrighterMigrationHistory", DefaultSchemaName, cancellationToken, transaction);
         if (!historyTableExists)
             return false;
 
@@ -86,7 +90,7 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
 SELECT COUNT(1) FROM ""public"".""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName!);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
 
         try
         {
@@ -109,6 +113,7 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
     /// Returns the highest migration version recorded in history for the given box table,
     /// or 0 if no rows exist.
     /// </summary>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
     public async Task<int> GetMaxVersionAsync(
         NpgsqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -120,7 +125,7 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
 SELECT COALESCE(MAX(""MigrationVersion""), 0) FROM ""public"".""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName!);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
 
         return (int)(await command.ExecuteScalarAsync(cancellationToken))!;
     }
@@ -129,6 +134,7 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
     /// Reads the column name set for the given table from <c>information_schema.columns</c>.
     /// Comparison is case-sensitive; PostgreSQL returns unquoted identifiers folded to lowercase.
     /// </summary>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
     public async Task<IReadOnlyCollection<string>> GetTableColumnsAsync(
         NpgsqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -148,6 +154,7 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
     /// </list>
     /// </summary>
     /// <param name="boxType">Selects the discriminator: <c>headerbag</c> for outbox, <c>commandbody</c> for inbox.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
     public async Task<int> DetectCurrentVersionAsync(
         NpgsqlConnection connection, string tableName, string? schemaName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
@@ -195,7 +202,7 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         command.CommandText = @"
 SELECT column_name FROM information_schema.columns
 WHERE table_schema = @SchemaName AND table_name = @TableName";
-        command.Parameters.AddWithValue("@SchemaName", schemaName!);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
         command.Parameters.AddWithValue("@TableName", tableName);
 
         var columns = new HashSet<string>(StringComparer.Ordinal);
