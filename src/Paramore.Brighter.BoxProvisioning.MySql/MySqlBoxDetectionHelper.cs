@@ -53,6 +53,7 @@ public class MySqlBoxDetectionHelper :
     /// <summary>
     /// Returns true if a table with the given name exists in the given schema.
     /// </summary>
+    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c> per ADR 0057 §A.1.</param>
     /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
     public async Task<bool> DoesTableExistAsync(
         MySqlConnection connection, string tableName, string? schemaName,
@@ -63,7 +64,7 @@ public class MySqlBoxDetectionHelper :
         command.CommandText = @"
 SELECT EXISTS(SELECT 1 FROM information_schema.tables
 WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
-        command.Parameters.AddWithValue("@SchemaName", schemaName!);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? connection.Database);
         command.Parameters.AddWithValue("@TableName", tableName);
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
@@ -74,6 +75,7 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
     /// Returns true if the migration history table exists and has at least one row for the given
     /// box table.
     /// </summary>
+    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c> per ADR 0057 §A.1.</param>
     /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
     public async Task<bool> DoesHistoryExistAsync(
         MySqlConnection connection, string tableName, string? schemaName,
@@ -90,7 +92,7 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
 SELECT COUNT(1) FROM `__BrighterMigrationHistory`
 WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName!);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? connection.Database);
 
         var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
         return count > 0;
@@ -100,6 +102,7 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
     /// Returns the highest migration version recorded in history for the given box table, or 0
     /// if no rows exist.
     /// </summary>
+    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c> per ADR 0057 §A.1.</param>
     /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
     public async Task<int> GetMaxVersionAsync(
         MySqlConnection connection, string tableName, string? schemaName,
@@ -111,7 +114,7 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
 SELECT COALESCE(MAX(`MigrationVersion`), 0) FROM `__BrighterMigrationHistory`
 WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName!);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? connection.Database);
 
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
     }
@@ -120,6 +123,7 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
     /// Reads the column name set for the given table from <c>information_schema.columns</c>,
     /// case-insensitively (MySQL identifiers are case-insensitive on lookup).
     /// </summary>
+    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c> per ADR 0057 §A.1.</param>
     /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
     public async Task<IReadOnlyCollection<string>> GetTableColumnsAsync(
         MySqlConnection connection, string tableName, string? schemaName,
@@ -140,6 +144,7 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
     /// </list>
     /// </summary>
     /// <param name="boxType">Selects the discriminator: <c>HeaderBag</c> for outbox, <c>CommandBody</c> for inbox.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c> per ADR 0057 §A.1.</param>
     /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
     public async Task<int> DetectCurrentVersionAsync(
         MySqlConnection connection, string tableName, string? schemaName,
@@ -186,7 +191,7 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
         command.CommandText = @"
 SELECT COLUMN_NAME FROM information_schema.columns
 WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName";
-        command.Parameters.AddWithValue("@SchemaName", schemaName!);
+        command.Parameters.AddWithValue("@SchemaName", schemaName ?? connection.Database);
         command.Parameters.AddWithValue("@TableName", tableName);
 
         var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
