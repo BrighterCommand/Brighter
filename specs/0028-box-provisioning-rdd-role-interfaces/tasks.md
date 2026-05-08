@@ -212,7 +212,7 @@ Each `{Backend}{Box}Migrations` static class becomes a public instance class `{B
 
 - [x] **TIDY FIRST: Convert `MySqlOutboxMigrations` to `MySqlOutboxMigrationCatalog`**
 
-- [ ] **TIDY FIRST: Convert `MySqlInboxMigrations` to `MySqlInboxMigrationCatalog`**
+- [x] **TIDY FIRST: Convert `MySqlInboxMigrations` to `MySqlInboxMigrationCatalog`**
 
 - [ ] **TIDY FIRST: Convert `SqliteOutboxMigrations` to `SqliteOutboxMigrationCatalog`**
 
