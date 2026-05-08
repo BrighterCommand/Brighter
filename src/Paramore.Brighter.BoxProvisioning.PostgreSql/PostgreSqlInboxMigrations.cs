@@ -21,53 +21,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Collections.Generic;
-using Paramore.Brighter.Inbox.Postgres;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
-/// <summary>
-/// Defines the migration history for PostgreSQL inbox tables.
-/// </summary>
-/// <remarks>
-/// PostgreSQL inbox is V1-only by design. Unlike MSSQL/MySQL/SQLite — which have a V1 baseline
-/// followed by a V2 that adds <c>ContextKey</c> (commit <c>787c31c52</c>, Oct 2018) — the
-/// PostgreSQL inbox was born with <c>ContextKey</c> + composite primary key
-/// <c>(CommandId, ContextKey)</c> in PR #1401 (Feb 2021). No pre-ContextKey PostgreSQL inbox
-/// ever shipped (ADR 0057 "Alternatives → E"), so V1's <see cref="IAmABoxMigration.LogicalColumns"/>
-/// already includes <c>contextkey</c>.
-/// <para>
-/// LogicalColumns are lowercase per ADR 0057 §1 to match PostgreSQL's <c>information_schema.columns</c>
-/// folding at runtime; comparer is <see cref="StringComparer.Ordinal"/> to enforce that contract.
-/// </para>
-/// </remarks>
+// Bridging shim — Phase 3.4 of spec 0028. Pure delegation onto a singleton
+// PostgreSqlInboxMigrationCatalog instance. Removed in Phase 8 when call-sites
+// rewire to instance dispatch.
 public static class PostgreSqlInboxMigrations
 {
-    /// <summary>
-    /// Returns the migration list for the PostgreSQL inbox: a single V1 entry whose
-    /// <c>UpScript</c> is the live <see cref="PostgreSqlInboxBuilder"/> DDL.
-    /// </summary>
-    /// <param name="config">The relational database configuration.</param>
-    /// <returns>An ordered list with a single V1 migration.</returns>
-    public static IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration config)
-    {
-        Identifiers.AssertSafe(
-            config.InBoxTableName,
-            nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
+    private static readonly PostgreSqlInboxMigrationCatalog s_instance = new();
 
-        return
-        [
-            new BoxMigration(
-                Version: 1,
-                Description: "Create inbox table",
-                UpScript: PostgreSqlInboxBuilder.GetDDL(
-                    config.InBoxTableName,
-                    config.BinaryMessagePayload),
-                LogicalColumns: new HashSet<string>(StringComparer.Ordinal)
-                {
-                    "commandid", "commandtype", "commandbody", "timestamp", "contextkey"
-                })
-        ];
-    }
+    public static IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration config)
+        => s_instance.All(config);
 }
