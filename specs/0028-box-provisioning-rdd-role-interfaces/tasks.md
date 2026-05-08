@@ -198,7 +198,7 @@ Each detection helper static class becomes a public instance class implementing 
 
 Each `{Backend}{Box}Migrations` static class becomes a public instance class `{Backend}{Box}MigrationCatalog` implementing `IAmABoxMigrationCatalog`. Pure structural — `All()` body unchanged.
 
-- [ ] **TIDY FIRST: Convert `MsSqlOutboxMigrations` to `MsSqlOutboxMigrationCatalog` implementing `IAmABoxMigrationCatalog`**
+- [x] **TIDY FIRST: Convert `MsSqlOutboxMigrations` to `MsSqlOutboxMigrationCatalog` implementing `IAmABoxMigrationCatalog`**
   - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlOutboxMigrations.cs` → renamed `MsSqlOutboxMigrationCatalog.cs`.
   - `static class` → `public class`; `static IReadOnlyList<IAmABoxMigration> All(config)` → instance method.
   - Bridging shim: keep `static class MsSqlOutboxMigrations` thin facade delegating to a private singleton instance — same pattern as Phase 2 shims; removed in Phase 8.
