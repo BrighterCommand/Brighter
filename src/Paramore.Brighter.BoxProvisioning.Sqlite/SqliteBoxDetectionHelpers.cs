@@ -21,7 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,141 +28,50 @@ using Microsoft.Data.Sqlite;
 
 namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 
-/// <summary>
-/// Shared SQLite detection queries used by the box provisioners (pre-lock) and the migration
-/// runner (under lock). Each method accepts an optional <see cref="SqliteTransaction"/> so the
-/// runner can bind queries to its BEGIN IMMEDIATE transaction; provisioners pass <c>null</c>.
-/// </summary>
+// Bridging shim — Phase 2.4 of spec 0028. Pure delegation onto a singleton
+// SqliteBoxDetectionHelper instance, passing null for the new schemaName slot
+// (SQLite has no schema concept; the parameter is accepted and ignored).
+// Removed in Phase 8 when call-sites rewire to instance dispatch.
 public static class SqliteBoxDetectionHelpers
 {
-    /// <summary>
-    /// Returns true if a table with the given name exists in the database.
-    /// </summary>
-    public static async Task<bool> DoesTableExistAsync(
+    private static readonly SqliteBoxDetectionHelper s_instance = new();
+
+    public static Task<bool> DoesTableExistAsync(
         SqliteConnection connection, string tableName,
         CancellationToken cancellationToken,
         SqliteTransaction? transaction = null)
-    {
-        using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
-        command.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name=@TableName";
-        command.Parameters.AddWithValue("@TableName", tableName);
+        => s_instance.DoesTableExistAsync(
+            connection, tableName, null, cancellationToken, transaction);
 
-        var count = Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken));
-        return count > 0;
-    }
-
-    /// <summary>
-    /// Returns true if the migration history table exists and has at least one row for the
-    /// given box table.
-    /// </summary>
-    public static async Task<bool> DoesHistoryExistAsync(
+    public static Task<bool> DoesHistoryExistAsync(
         SqliteConnection connection, string tableName,
         CancellationToken cancellationToken,
         SqliteTransaction? transaction = null)
-    {
-        var historyTableExists = await DoesTableExistAsync(
-            connection, "__BrighterMigrationHistory", cancellationToken, transaction);
-        if (!historyTableExists)
-            return false;
+        => s_instance.DoesHistoryExistAsync(
+            connection, tableName, null, cancellationToken, transaction);
 
-        using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
-        command.CommandText = @"
-SELECT COUNT(1) FROM [__BrighterMigrationHistory]
-WHERE [BoxTableName] = @BoxTableName";
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
-
-        var count = Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken));
-        return count > 0;
-    }
-
-    /// <summary>
-    /// Returns the highest migration version recorded in history for the given box table,
-    /// or 0 if no rows exist.
-    /// </summary>
-    public static async Task<int> GetMaxVersionAsync(
+    public static Task<int> GetMaxVersionAsync(
         SqliteConnection connection, string tableName,
         CancellationToken cancellationToken,
         SqliteTransaction? transaction = null)
-    {
-        using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
-        command.CommandText = @"
-SELECT COALESCE(MAX([MigrationVersion]), 0) FROM [__BrighterMigrationHistory]
-WHERE [BoxTableName] = @BoxTableName";
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
+        => s_instance.GetMaxVersionAsync(
+            connection, tableName, null, cancellationToken, transaction);
 
-        return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
-    }
-
-    /// <summary>
-    /// Reads the column name set for the given table from <c>pragma_table_info</c>,
-    /// case-insensitively.
-    /// </summary>
-    public static async Task<HashSet<string>> GetTableColumnsAsync(
+    public static Task<HashSet<string>> GetTableColumnsAsync(
         SqliteConnection connection, string tableName,
         CancellationToken cancellationToken,
         SqliteTransaction? transaction = null)
-    {
-        using var command = connection.CreateCommand();
-        if (transaction != null) command.Transaction = transaction;
-        command.CommandText = "SELECT name FROM pragma_table_info(@TableName)";
-        command.Parameters.AddWithValue("@TableName", tableName);
+        => s_instance.GetTableColumnsAsHashSetAsync(
+            connection, tableName, null, cancellationToken, transaction);
 
-        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            columns.Add(reader.GetString(0));
-        }
-        return columns;
-    }
-
-    /// <summary>
-    /// Detects the current logical schema version of a box table by inspecting its column set.
-    /// Returns one of three values per ADR 0057 §3:
-    /// <list type="bullet">
-    ///   <item><description><c>-1</c> when the discriminator column is absent (the table is not a Brighter box).</description></item>
-    ///   <item><description><c>0</c> when the discriminator is present but the V1 column set is incomplete (unknown schema).</description></item>
-    ///   <item><description><c>V &gt;= 1</c> for the highest version whose cumulative <c>LogicalColumns</c> is a subset of the actual columns.</description></item>
-    /// </list>
-    /// </summary>
-    /// <param name="boxType">Selects the discriminator: <c>HeaderBag</c> for outbox, <c>CommandBody</c> for inbox.</param>
-    public static async Task<int> DetectCurrentVersionAsync(
+    public static Task<int> DetectCurrentVersionAsync(
         SqliteConnection connection, string tableName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
         CancellationToken cancellationToken,
         SqliteTransaction? transaction = null)
-    {
-        var actualColumns = await GetTableColumnsAsync(
-            connection, tableName, cancellationToken, transaction);
+        => s_instance.DetectCurrentVersionAsync(
+            connection, tableName, null, boxType, migrations, cancellationToken, transaction);
 
-        var discriminator = DiscriminatorFor(boxType);
-        if (!actualColumns.Contains(discriminator))
-            return -1;
-
-        if (migrations.Count == 0 || !actualColumns.IsSupersetOf(migrations[0].LogicalColumns))
-            return 0;
-
-        var matched = migrations[0].Version;
-        for (var i = 1; i < migrations.Count; i++)
-        {
-            if (!actualColumns.IsSupersetOf(migrations[i].LogicalColumns))
-                break;
-            matched = migrations[i].Version;
-        }
-        return matched;
-    }
-
-    /// <summary>
-    /// The discriminator column that distinguishes a Brighter outbox/inbox table from any
-    /// other table that happens to share its name.
-    /// </summary>
-    public static string DiscriminatorFor(BoxType boxType) => boxType switch
-    {
-        BoxType.Outbox => "HeaderBag",
-        BoxType.Inbox => "CommandBody",
-        _ => throw new ArgumentOutOfRangeException(nameof(boxType), boxType, "Unknown BoxType")
-    };
+    public static string DiscriminatorFor(BoxType boxType)
+        => s_instance.DiscriminatorFor(boxType);
 }

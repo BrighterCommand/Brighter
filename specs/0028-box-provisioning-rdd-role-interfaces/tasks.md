@@ -169,7 +169,7 @@ Each detection helper static class becomes a public instance class implementing 
 
 ### 2.4 SQLite
 
-- [ ] **TIDY FIRST: Convert `SqliteBoxDetectionHelpers` static class to `SqliteBoxDetectionHelper` instance class implementing `IAmAVersionDetectingMigrationHelper<SqliteConnection, SqliteTransaction>`**
+- [x] **TIDY FIRST: Convert `SqliteBoxDetectionHelpers` static class to `SqliteBoxDetectionHelper` instance class implementing `IAmAVersionDetectingMigrationHelper<SqliteConnection, SqliteTransaction>`**
   - File rename + static → instance.
   - **New parameter slot**: methods previously `(connection, tableName, cancellationToken, transaction)` become `(connection, tableName, string? schemaName, cancellationToken, transaction)`. The `schemaName` parameter is accepted and ignored (SQLite has no schema concept).
   - XML-doc explicitly states "the schemaName parameter is accepted and ignored — SQLite has no schema concept".
