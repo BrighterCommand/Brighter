@@ -324,7 +324,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
     - Inspect transaction state before attempting rollback (per §B.3 "best-effort after thrown CommitAsync").
     - Log Warning, never throw.
 
-- [ ] **TEST + IMPLEMENT: MsSqlProvisioningUnitOfWork DisposeAsync tolerates dispose-after-failed-BeginAsync**
+- [x] **TEST + IMPLEMENT: MsSqlProvisioningUnitOfWork DisposeAsync tolerates dispose-after-failed-BeginAsync**
   - **USE COMMAND**: `/test-first when MsSqlProvisioningUnitOfWork BeginAsync threw it should be safe to invoke DisposeAsync without throwing`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_mssql_provisioning_uow_begin_throws_it_should_dispose_without_throwing.cs`
