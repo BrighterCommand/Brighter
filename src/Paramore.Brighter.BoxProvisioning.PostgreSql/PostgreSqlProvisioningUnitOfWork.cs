@@ -81,11 +81,32 @@ public class PostgreSqlProvisioningUnitOfWork(
     }
 
     /// <inheritdoc />
-    public Task RollbackAsync(CancellationToken cancellationToken)
+    public async Task RollbackAsync(CancellationToken cancellationToken)
     {
-        // Phase 5.2.a: minimum no-op. Phase 5.2.c refines this to roll back the transaction
-        // and release the advisory lock — best-effort on both per ADR 0058 §B.3.
-        return Task.CompletedTask;
+        // Per ADR 0058 §B.3: best-effort. The runner may call RollbackAsync after a thrown
+        // CommitAsync (the transaction may already be in a finalised state by then —
+        // committed-but-client-side-failed, or zombied by a broken connection); calling
+        // _transaction.RollbackAsync on a finalised tx throws InvalidOperationException
+        // ("Cannot rollback; this transaction has been completed..."). RollbackAsync MUST NOT
+        // throw — log a Warning and continue so the lock is still released. Disposal-style
+        // semantics: BOTH halves of the unwind are attempted regardless.
+        if (_transaction is not null)
+        {
+            try
+            {
+                await _transaction.RollbackAsync(cancellationToken);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Postgres provisioning UoW: rollback skipped — transaction already finalised");
+            }
+        }
+        if (_lockResource is not null)
+        {
+            await _advisoryLock.ReleaseAsync(_connection, _lockResource, cancellationToken);
+        }
     }
 
     /// <inheritdoc />
