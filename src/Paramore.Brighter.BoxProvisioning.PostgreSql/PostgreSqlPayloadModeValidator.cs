@@ -1,3 +1,26 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -5,22 +28,35 @@ using Npgsql;
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
 /// <summary>
-/// Validates that the payload column type in an existing table matches the
-/// configured binary/text mode. Throws <see cref="ConfigurationException"/>
-/// on mismatch.
+/// Validates that the payload column type in an existing PostgreSQL box table matches the
+/// configured binary/text mode. Throws <see cref="ConfigurationException"/> on mismatch
+/// and returns quietly on match.
 /// </summary>
-public static class PostgreSqlPayloadModeValidator
+/// <remarks>
+/// Stateless service; safe to register as a DI singleton.
+/// </remarks>
+public class PostgreSqlPayloadModeValidator : IAmABoxPayloadModeValidator<NpgsqlConnection>
 {
-    public static async Task ValidateAsync(
-        NpgsqlConnection connection, string tableName, string schemaName,
+    /// <summary>
+    /// Validates the payload mode of an existing table column against
+    /// <c>information_schema.columns</c>.
+    /// </summary>
+    /// <param name="connection">An open Npgsql connection.</param>
+    /// <param name="tableName">The unqualified box table name.</param>
+    /// <param name="schemaName">The schema name.</param>
+    /// <param name="columnName">The unqualified payload column name (e.g. "body" or "commandbody").</param>
+    /// <param name="binaryMessagePayload">Whether binary payload mode is configured.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public async Task ValidateAsync(
+        NpgsqlConnection connection, string tableName, string? schemaName,
         string columnName, bool binaryMessagePayload,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         using var command = connection.CreateCommand();
         command.CommandText = @"
 SELECT data_type FROM information_schema.columns
 WHERE table_schema = @SchemaName AND table_name = @TableName AND column_name = @ColumnName";
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
+        command.Parameters.AddWithValue("@SchemaName", schemaName!);
         command.Parameters.AddWithValue("@TableName", tableName);
         command.Parameters.AddWithValue("@ColumnName", columnName);
 

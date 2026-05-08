@@ -98,7 +98,7 @@ public class PostgreSqlInboxProvisioner(
         await using var connection = new NpgsqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await PostgreSqlPayloadModeValidator.ValidateAsync(
+        await PostgreSqlPayloadModeValidators.ValidateAsync(
             connection, configuration.InBoxTableName, schemaName,
             "commandbody", configuration.BinaryMessagePayload, cancellationToken);
     }

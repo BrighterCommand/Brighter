@@ -101,7 +101,7 @@ public class PostgreSqlOutboxProvisioner(
         await using var connection = new NpgsqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await PostgreSqlPayloadModeValidator.ValidateAsync(
+        await PostgreSqlPayloadModeValidators.ValidateAsync(
             connection, configuration.OutBoxTableName, schemaName,
             "body", configuration.BinaryMessagePayload, cancellationToken);
     }

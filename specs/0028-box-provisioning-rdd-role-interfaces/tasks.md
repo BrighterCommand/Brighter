@@ -248,7 +248,7 @@ Per ADR §A.3. Relational three (MSSQL, Postgres, MySQL) — Tidy First (signatu
 
 ### 4.2 Postgres
 
-- [ ] **TIDY FIRST: Convert `PostgreSqlPayloadModeValidator` static → instance implementing `IAmABoxPayloadModeValidator<NpgsqlConnection>`**
+- [x] **TIDY FIRST: Convert `PostgreSqlPayloadModeValidator` static → instance implementing `IAmABoxPayloadModeValidator<NpgsqlConnection>`**
 
 - [ ] **TEST + IMPLEMENT: Postgres payload validator substitutes "public" when schemaName is null**
   - **USE COMMAND**: `/test-first when PostgreSqlPayloadModeValidator receives null schemaName it should substitute "public" before querying information_schema.columns`
