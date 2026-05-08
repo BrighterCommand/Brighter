@@ -233,7 +233,7 @@ Per ADR §A.3. Relational three (MSSQL, Postgres, MySQL) — Tidy First (signatu
   - `static class` → `public class`; `string schemaName` widens to `string? schemaName`.
   - Bridging shim retained until Phase 8.
 
-- [ ] **TEST + IMPLEMENT: MSSQL payload validator substitutes "dbo" when schemaName is null**
+- [x] **TEST + IMPLEMENT: MSSQL payload validator substitutes "dbo" when schemaName is null**
   - **USE COMMAND**: `/test-first when MsSqlPayloadModeValidator receives null schemaName it should substitute "dbo" before querying INFORMATION_SCHEMA`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_mssql_payload_validator_receives_null_schema_name_it_should_substitute_dbo.cs`
