@@ -218,7 +218,7 @@ Each `{Backend}{Box}Migrations` static class becomes a public instance class `{B
 
 - [x] **TIDY FIRST: Convert `SqliteInboxMigrations` to `SqliteInboxMigrationCatalog`**
 
-- [ ] **Phase 3 gate: All eight catalogues converted; existing tests green; no Spanner change (Spanner exempt per ADR §A.2)**
+- [x] **Phase 3 gate: All eight catalogues converted; existing tests green; no Spanner change (Spanner exempt per ADR §A.2)**
 
 ---
 
