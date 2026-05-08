@@ -37,13 +37,15 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// </remarks>
 public class PostgreSqlPayloadModeValidator : IAmABoxPayloadModeValidator<NpgsqlConnection>
 {
+    private const string DefaultSchemaName = "public";
+
     /// <summary>
     /// Validates the payload mode of an existing table column against
     /// <c>information_schema.columns</c>.
     /// </summary>
     /// <param name="connection">An open Npgsql connection.</param>
     /// <param name="tableName">The unqualified box table name.</param>
-    /// <param name="schemaName">The schema name.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
     /// <param name="columnName">The unqualified payload column name (e.g. "body" or "commandbody").</param>
     /// <param name="binaryMessagePayload">Whether binary payload mode is configured.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -52,11 +54,13 @@ public class PostgreSqlPayloadModeValidator : IAmABoxPayloadModeValidator<Npgsql
         string columnName, bool binaryMessagePayload,
         CancellationToken cancellationToken = default)
     {
+        var resolvedSchema = schemaName ?? DefaultSchemaName;
+
         using var command = connection.CreateCommand();
         command.CommandText = @"
 SELECT data_type FROM information_schema.columns
 WHERE table_schema = @SchemaName AND table_name = @TableName AND column_name = @ColumnName";
-        command.Parameters.AddWithValue("@SchemaName", schemaName!);
+        command.Parameters.AddWithValue("@SchemaName", resolvedSchema);
         command.Parameters.AddWithValue("@TableName", tableName);
         command.Parameters.AddWithValue("@ColumnName", columnName);
 
@@ -69,7 +73,7 @@ WHERE table_schema = @SchemaName AND table_name = @TableName AND column_name = @
         if (binaryMessagePayload && isText)
         {
             throw new ConfigurationException(
-                $"Payload mode mismatch for table \"{schemaName}\".\"{tableName}\". " +
+                $"Payload mode mismatch for table \"{resolvedSchema}\".\"{tableName}\". " +
                 $"Column \"{columnName}\" is {dataType} (text) but binary mode was configured. " +
                 "Either change the configuration or alter the column type.");
         }
@@ -77,7 +81,7 @@ WHERE table_schema = @SchemaName AND table_name = @TableName AND column_name = @
         if (!binaryMessagePayload && isBinary)
         {
             throw new ConfigurationException(
-                $"Payload mode mismatch for table \"{schemaName}\".\"{tableName}\". " +
+                $"Payload mode mismatch for table \"{resolvedSchema}\".\"{tableName}\". " +
                 $"Column \"{columnName}\" is {dataType} (binary) but text mode was configured. " +
                 "Either change the configuration or alter the column type.");
         }

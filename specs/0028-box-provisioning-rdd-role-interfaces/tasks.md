@@ -250,7 +250,7 @@ Per ADR §A.3. Relational three (MSSQL, Postgres, MySQL) — Tidy First (signatu
 
 - [x] **TIDY FIRST: Convert `PostgreSqlPayloadModeValidator` static → instance implementing `IAmABoxPayloadModeValidator<NpgsqlConnection>`**
 
-- [ ] **TEST + IMPLEMENT: Postgres payload validator substitutes "public" when schemaName is null**
+- [x] **TEST + IMPLEMENT: Postgres payload validator substitutes "public" when schemaName is null**
   - **USE COMMAND**: `/test-first when PostgreSqlPayloadModeValidator receives null schemaName it should substitute "public" before querying information_schema.columns`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning`
   - Test file: `When_postgres_payload_validator_receives_null_schema_name_it_should_substitute_public.cs`
