@@ -374,7 +374,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
     - `Transaction` property returns `null` after `BeginAsync`.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: MySqlProvisioningUnitOfWork CommitAsync is no-op for transaction and releases GET_LOCK**
+- [x] **TEST + IMPLEMENT: MySqlProvisioningUnitOfWork CommitAsync is no-op for transaction and releases GET_LOCK**
   - **USE COMMAND**: `/test-first when MySqlProvisioningUnitOfWork CommitAsync is called it should release GET_LOCK without committing any transaction`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning`
   - Test file: `When_mysql_provisioning_uow_commit_async_is_called_it_should_release_get_lock_without_committing_transaction.cs`

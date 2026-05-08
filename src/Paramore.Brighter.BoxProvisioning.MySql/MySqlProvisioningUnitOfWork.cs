@@ -71,7 +71,16 @@ public class MySqlProvisioningUnitOfWork(
     }
 
     /// <inheritdoc />
-    public Task CommitAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public async Task CommitAsync(CancellationToken cancellationToken)
+    {
+        // Per ADR 0058 §B.1 / ADR 0057 §5a / §5b: there is no transaction to commit (the
+        // UoW never opens one — see BeginAsync). CommitAsync's only side-effect is to
+        // release the session-level GET_LOCK acquired in BeginAsync, freeing contention
+        // for the next runner. Tri-state RELEASE_LOCK diagnostic (NULL/0/1) Warning
+        // logging is shared with RollbackAsync — landing in 5.3.c.
+        if (_lockResource is null) return;
+        await _advisoryLock.ReleaseAsync(_connection, _lockResource, cancellationToken);
+    }
 
     /// <inheritdoc />
     public Task RollbackAsync(CancellationToken cancellationToken) => Task.CompletedTask;
