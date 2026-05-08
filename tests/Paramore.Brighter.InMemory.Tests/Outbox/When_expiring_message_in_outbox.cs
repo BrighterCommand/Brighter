@@ -30,9 +30,10 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             //Act
             outbox.Add(messageToAdd, new RequestContext());
-            
+            outbox.MarkDispatched(messageId, new RequestContext());
+
             timeProvider.Advance(TimeSpan.FromMilliseconds(500)); //give the entry to time to expire
-            
+
             //Trigger a cache clean
             await outbox.GetAsync(messageId, new RequestContext());
 

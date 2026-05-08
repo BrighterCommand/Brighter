@@ -25,13 +25,20 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             };
 
             var context = new RequestContext();
-            for(int i =1; i <= limit; i++)
-                outbox.Add(new MessageTestDataBuilder(), context);
+            var ids = new string[limit];
+            for(int i = 0; i < limit; i++)
+            {
+                ids[i] = Guid.NewGuid().ToString();
+                outbox.Add(new MessageTestDataBuilder().WithId(ids[i]), context);
+                outbox.MarkDispatched(ids[i], context);
+            }
 
             //Act
             Assert.Equal(5, outbox.EntryCount);
-            
-            outbox.Add(new MessageTestDataBuilder(), context);
+
+            var triggerId = Guid.NewGuid().ToString();
+            outbox.Add(new MessageTestDataBuilder().WithId(triggerId), context);
+            outbox.MarkDispatched(triggerId, context);
 
             //Poll for compaction to complete - can be slow in CI environments
             int retries = 0;
@@ -65,13 +72,16 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             for (int i = 0; i <= limit - 1; i++)
             {
                 await outbox.AddAsync(new MessageTestDataBuilder().WithId(messageIds[i]), context);
+                outbox.MarkDispatched(messageIds[i], context);
                 timeProvider.Advance(TimeSpan.FromMilliseconds(1000));
             }
 
             //Act
             Assert.Equal(5, outbox.EntryCount);
-            
-            await outbox.AddAsync(new MessageTestDataBuilder(), context);
+
+            var triggerId = Guid.NewGuid().ToString();
+            await outbox.AddAsync(new MessageTestDataBuilder().WithId(triggerId), context);
+            outbox.MarkDispatched(triggerId, context);
 
             //Poll for compaction to complete - can be slow in CI environments
             int retries = 0;
