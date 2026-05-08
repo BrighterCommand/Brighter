@@ -261,7 +261,7 @@ Per ADR §A.3. Relational three (MSSQL, Postgres, MySQL) — Tidy First (signatu
 
 - [x] **TIDY FIRST: Convert `MySqlPayloadModeValidator` static → instance implementing `IAmABoxPayloadModeValidator<MySqlConnection>`**
 
-- [ ] **TEST + IMPLEMENT: MySQL payload validator substitutes connection.Database when schemaName is null**
+- [x] **TEST + IMPLEMENT: MySQL payload validator substitutes connection.Database when schemaName is null**
   - **USE COMMAND**: `/test-first when MySqlPayloadModeValidator receives null schemaName it should substitute connection.Database before querying information_schema.columns`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning`
   - Test file: `When_mysql_payload_validator_receives_null_schema_name_it_should_substitute_connection_database.cs`
