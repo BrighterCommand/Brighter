@@ -45,6 +45,7 @@ public class PostgreSqlProvisioningUnitOfWork(
     private readonly IPostgreSqlAdvisoryLock _advisoryLock = advisoryLock;
     private readonly ILogger _logger = logger;
     private NpgsqlTransaction? _transaction;
+    private string? _lockResource;
 
     /// <inheritdoc />
     public NpgsqlTransaction? Transaction => _transaction;
@@ -61,16 +62,22 @@ public class PostgreSqlProvisioningUnitOfWork(
         // (Postgres permits advisory-lock acquisition inside a tx), but the sequencing would
         // be misleading and breaks the §B.1 contract.
         _logger.LogTrace("Beginning Postgres provisioning UoW for resource {LockResource}", lockResource);
+        _lockResource = lockResource;
         await _advisoryLock.AcquireAsync(_connection, lockResource, lockTimeout, cancellationToken);
         _transaction = (NpgsqlTransaction)await _connection.BeginTransactionAsync(cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task CommitAsync(CancellationToken cancellationToken)
+    public async Task CommitAsync(CancellationToken cancellationToken)
     {
-        // Phase 5.2.a: minimum no-op. Phase 5.2.b refines this to commit the transaction and
-        // explicitly release the advisory lock via pg_advisory_unlock per ADR 0058 §B.1.
-        return Task.CompletedTask;
+        // Per ADR 0058 §B.1: lock release is EXPLICIT for Postgres because pg_advisory_lock is
+        // session-scoped — it is NOT auto-released on transaction commit (the MSSQL pattern,
+        // where sp_getapplock with @LockOwner='Transaction' rides the tx lifetime, does not
+        // apply here). Commit the tx first, then call pg_advisory_unlock; both must succeed
+        // in this happy-path branch.
+        if (_transaction is null) return;
+        await _transaction.CommitAsync(cancellationToken);
+        await _advisoryLock.ReleaseAsync(_connection, _lockResource!, cancellationToken);
     }
 
     /// <inheritdoc />
