@@ -269,16 +269,16 @@ Per ADR §A.3. Relational three (MSSQL, Postgres, MySQL) — Tidy First (signatu
 
 ### 4.4 SQLite
 
-- [ ] **TIDY FIRST: Convert `SqlitePayloadModeValidator` static → instance implementing `IAmABoxPayloadModeValidator<SqliteConnection>` with NEW `string? schemaName` parameter slot (accepted-and-ignored)**
+- [x] **TIDY FIRST: Convert `SqlitePayloadModeValidator` static → instance implementing `IAmABoxPayloadModeValidator<SqliteConnection>` with NEW `string? schemaName` parameter slot (accepted-and-ignored)**
   - Bridging shim: existing static signature delegates to new instance method passing `null`.
   - Validation: existing SQLite payload tests stay green via the shim.
 
 ### 4.5 Spanner
 
-- [ ] **TIDY FIRST: Convert `SpannerPayloadModeValidator` static → instance implementing `IAmABoxPayloadModeValidator<SpannerConnection>` with NEW `string? schemaName` parameter slot (accepted-and-ignored)**
+- [x] **TIDY FIRST: Convert `SpannerPayloadModeValidator` static → instance implementing `IAmABoxPayloadModeValidator<SpannerConnection>` with NEW `string? schemaName` parameter slot (accepted-and-ignored)**
   - The existing `STARTS_WITH("BYTES" / "STRING")` validation logic is preserved per ADR §A.3.
 
-- [ ] **Phase 4 gate: All five payload validators converted; existing tests green per backend per TFM**
+- [x] **Phase 4 gate: All five payload validators converted; existing tests green per backend per TFM**
 
 ---
 
