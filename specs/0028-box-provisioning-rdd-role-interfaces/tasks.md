@@ -187,7 +187,7 @@ Each detection helper static class becomes a public instance class implementing 
 
 ### 2.6 Phase 2 gate
 
-- [ ] **Phase 2 gate: All five detection helpers converted; all existing tests green; no regressions per NF2**
+- [x] **Phase 2 gate: All five detection helpers converted; all existing tests green; no regressions per NF2**
   - Run all six BoxProvisioning test filters; confirm pre-Phase-2 counts hold per backend per TFM.
   - Confirm bridging shims (per backend) compile and pass tests.
   - **No commit** — already committed per sub-task.
