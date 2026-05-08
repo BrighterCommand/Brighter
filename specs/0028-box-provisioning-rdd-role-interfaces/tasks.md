@@ -148,13 +148,13 @@ Each detection helper static class becomes a public instance class implementing 
 
 ### 2.3 MySQL
 
-- [ ] **TIDY FIRST: Convert `MySqlBoxDetectionHelpers` static class to `MySqlBoxDetectionHelper` instance class implementing `IAmAVersionDetectingMigrationHelper<MySqlConnection, MySqlTransaction>`**
+- [x] **TIDY FIRST: Convert `MySqlBoxDetectionHelpers` static class to `MySqlBoxDetectionHelper` instance class implementing `IAmAVersionDetectingMigrationHelper<MySqlConnection, MySqlTransaction>`**
   - File rename + static → instance per the recipe.
   - The transaction parameter is accepted but ignored (XML-doc states this); MySQL DDL auto-commits per ADR 0057 §5a.
   - Bridging shim retained until Phase 8.
   - Validation: existing MySQL BoxProvisioning tests stay green (net9.0 only).
 
-- [ ] **TEST + IMPLEMENT: MySQL detection helper substitutes connection.Database when schemaName is null**
+- [x] **TEST + IMPLEMENT: MySQL detection helper substitutes connection.Database when schemaName is null**
   - **USE COMMAND**: `/test-first when MySqlBoxDetectionHelper receives null schemaName it should substitute connection.Database as the default schema for SQL parameter binding`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning`
   - Test file: `When_mysql_detection_helper_receives_null_schema_name_it_should_substitute_connection_database.cs`
