@@ -178,7 +178,7 @@ Each detection helper static class becomes a public instance class implementing 
 
 ### 2.5 Spanner
 
-- [ ] **TIDY FIRST: Convert `SpannerBoxDetectionHelpers` static class to `SpannerBoxDetectionHelper` (PUBLIC) instance class implementing `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction>` (BASE INTERFACE ONLY, NO `DetectCurrentVersionAsync`)**
+- [x] **TIDY FIRST: Convert `SpannerBoxDetectionHelpers` static class to `SpannerBoxDetectionHelper` (PUBLIC) instance class implementing `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction>` (BASE INTERFACE ONLY, NO `DetectCurrentVersionAsync`)**
   - File rename + static → instance + visibility widened from `internal` to `public` (per ADR §A.1 source-break: Spanner becomes public).
   - **New parameter slot**: methods previously without `schemaName` gain `string? schemaName` accepted-and-ignored.
   - The new class implements ONLY the base interface `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction>` — NOT `IAmAVersionDetectingMigrationHelper` (Spanner is degenerate per ADR 0057 §6).

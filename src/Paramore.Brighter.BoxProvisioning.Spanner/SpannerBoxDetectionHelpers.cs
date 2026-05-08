@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,71 +5,39 @@ using Google.Cloud.Spanner.Data;
 
 namespace Paramore.Brighter.BoxProvisioning.Spanner;
 
+// Bridging shim — Phase 2.5 of spec 0028. Pure delegation onto a singleton
+// SpannerBoxDetectionHelper instance, passing null for the new schemaName slot
+// and the unused transaction slot (Spanner has no schema concept and DDL is
+// single-statement; both are accepted-and-ignored on the instance method).
+// Removed in Phase 8 when call-sites rewire to instance dispatch.
 internal static class SpannerBoxDetectionHelpers
 {
-    public static async Task<bool> DoesTableExistAsync(
+    private static readonly SpannerBoxDetectionHelper s_instance = new();
+
+    public static Task<bool> DoesTableExistAsync(
         SpannerConnection connection, string tableName,
         CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateSelectCommand(
-            "SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName",
-            new SpannerParameterCollection { { "TableName", SpannerDbType.String, tableName } });
+        => s_instance.DoesTableExistAsync(
+            connection, tableName, null, cancellationToken);
 
-        var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
-        return count > 0;
-    }
-
-    public static async Task<bool> DoesHistoryExistAsync(
+    public static Task<bool> DoesHistoryExistAsync(
         SpannerConnection connection, string tableName,
         CancellationToken cancellationToken)
-    {
-        var historyTableExists = await DoesTableExistAsync(
-            connection, SpannerBoxMigrationRunner.MigrationHistoryTable, cancellationToken);
-        if (!historyTableExists)
-            return false;
+        => s_instance.DoesHistoryExistAsync(
+            connection, tableName, null, cancellationToken);
 
-        using var command = connection.CreateSelectCommand(
-            @"SELECT COUNT(1) FROM `BrighterMigrationHistory`
-WHERE `BoxTableName` = @BoxTableName",
-            new SpannerParameterCollection { { "BoxTableName", SpannerDbType.String, tableName } });
-
-        var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
-        return count > 0;
-    }
-
-    public static async Task<int> GetMaxVersionAsync(
+    public static Task<int> GetMaxVersionAsync(
         SpannerConnection connection, string tableName,
         CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateSelectCommand(
-            @"SELECT COALESCE(MAX(`MigrationVersion`), 0) FROM `BrighterMigrationHistory`
-WHERE `BoxTableName` = @BoxTableName",
-            new SpannerParameterCollection { { "BoxTableName", SpannerDbType.String, tableName } });
+        => s_instance.GetMaxVersionAsync(
+            connection, tableName, null, cancellationToken);
 
-        return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
-    }
-
-    public static async Task<HashSet<string>> GetTableColumnsAsync(
+    public static Task<HashSet<string>> GetTableColumnsAsync(
         SpannerConnection connection, string tableName,
         CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateSelectCommand(
-            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @TableName",
-            new SpannerParameterCollection { { "TableName", SpannerDbType.String, tableName } });
+        => s_instance.GetTableColumnsAsHashSetAsync(
+            connection, tableName, null, cancellationToken);
 
-        var columns = new HashSet<string>(StringComparer.Ordinal);
-        using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            columns.Add(reader.GetString(0));
-        }
-        return columns;
-    }
-
-    public static string DiscriminatorFor(BoxType boxType) => boxType switch
-    {
-        BoxType.Outbox => "HeaderBag",
-        BoxType.Inbox => "CommandBody",
-        _ => throw new ArgumentOutOfRangeException(nameof(boxType), boxType, "Unsupported box type")
-    };
+    public static string DiscriminatorFor(BoxType boxType)
+        => s_instance.DiscriminatorFor(boxType);
 }
