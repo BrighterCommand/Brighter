@@ -364,7 +364,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
 
 ### 5.3 MySQL UoW
 
-- [ ] **TEST + IMPLEMENT: MySqlProvisioningUnitOfWork acquires GET_LOCK and never opens a transaction**
+- [x] **TEST + IMPLEMENT: MySqlProvisioningUnitOfWork acquires GET_LOCK and never opens a transaction**
   - **USE COMMAND**: `/test-first when MySqlProvisioningUnitOfWork BeginAsync is called it should acquire GET_LOCK and leave Transaction null because MySQL DDL auto-commits`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning`
   - Test file: `When_mysql_provisioning_uow_begin_async_is_called_it_should_acquire_get_lock_with_null_transaction.cs`
