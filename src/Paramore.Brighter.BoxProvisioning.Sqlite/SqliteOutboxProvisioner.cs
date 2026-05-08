@@ -74,7 +74,7 @@ public class SqliteOutboxProvisioner(
         using var connection = new SqliteConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await SqlitePayloadModeValidator.ValidateAsync(
+        await SqlitePayloadModeValidators.ValidateAsync(
             connection, configuration.OutBoxTableName,
             "Body", configuration.BinaryMessagePayload, cancellationToken);
     }
