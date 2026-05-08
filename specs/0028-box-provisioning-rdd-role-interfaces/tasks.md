@@ -204,7 +204,7 @@ Each `{Backend}{Box}Migrations` static class becomes a public instance class `{B
   - Bridging shim: keep `static class MsSqlOutboxMigrations` thin facade delegating to a private singleton instance — same pattern as Phase 2 shims; removed in Phase 8.
   - Validation: existing MSSQL outbox catalogue tests (`When_mssql_outbox_migrations_are_listed_it_should_return_v1_through_v7_*`) stay green.
 
-- [ ] **TIDY FIRST: Convert `MsSqlInboxMigrations` to `MsSqlInboxMigrationCatalog`**
+- [x] **TIDY FIRST: Convert `MsSqlInboxMigrations` to `MsSqlInboxMigrationCatalog`**
 
 - [ ] **TIDY FIRST: Convert `PostgreSqlOutboxMigrations` to `PostgreSqlOutboxMigrationCatalog`**
 
