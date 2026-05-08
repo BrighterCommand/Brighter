@@ -37,17 +37,47 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
 /// returns the parameterised <see cref="bool"/> so tests can drive the runner's diagnostic
 /// path for non-true unlock results.
 /// </summary>
-internal sealed class FakePostgreSqlAdvisoryLock(bool releaseResult) : IPostgreSqlAdvisoryLock
+/// <remarks>
+/// The optional <c>senseTransactionStateAtAcquire</c> flag makes <see cref="AcquireAsync"/>
+/// additionally probe whether a transaction was already active on the connection at the time
+/// it was invoked, by attempting <see cref="NpgsqlConnection.BeginTransactionAsync(CancellationToken)"/>
+/// inside a try/catch. Npgsql throws <see cref="InvalidOperationException"/> ("A transaction
+/// is already in progress; nested/concurrent transactions aren't supported.") when a tx is
+/// already active — used by the UoW BeginAsync ordering test (ADR 0058 §B.1) to verify that
+/// AcquireAsync runs BEFORE the UoW's BeginTransactionAsync.
+/// </remarks>
+internal sealed class FakePostgreSqlAdvisoryLock(
+    bool releaseResult,
+    bool senseTransactionStateAtAcquire = false) : IPostgreSqlAdvisoryLock
 {
     public string? AcquiredKey { get; private set; }
     public string? ReleasedKey { get; private set; }
 
-    public Task AcquireAsync(
+    /// <summary>
+    /// Captured at the moment <see cref="AcquireAsync"/> was first invoked, if
+    /// <c>senseTransactionStateAtAcquire</c> was true. <c>null</c> until first invocation;
+    /// <c>false</c> if no transaction was active on the connection at the time of the call;
+    /// <c>true</c> if a transaction was already active (Npgsql refused to begin a probe tx).
+    /// </summary>
+    public bool? TransactionWasActiveAtAcquireTime { get; private set; }
+
+    public async Task AcquireAsync(
         NpgsqlConnection connection, string lockKey,
         TimeSpan timeout, CancellationToken cancellationToken)
     {
+        if (senseTransactionStateAtAcquire)
+        {
+            try
+            {
+                await using var probe = await connection.BeginTransactionAsync(cancellationToken);
+                TransactionWasActiveAtAcquireTime = false;
+            }
+            catch (InvalidOperationException)
+            {
+                TransactionWasActiveAtAcquireTime = true;
+            }
+        }
         AcquiredKey = lockKey;
-        return Task.CompletedTask;
     }
 
     public Task<bool> ReleaseAsync(
