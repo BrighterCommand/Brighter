@@ -42,12 +42,14 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
 internal sealed class FakeMsSqlAdvisoryLock(Exception? throwOnAcquire) : IMsSqlAdvisoryLock
 {
     public string? AcquiredResource { get; private set; }
+    public SqlTransaction? CapturedTransaction { get; private set; }
 
     public Task AcquireAsync(
         SqlConnection connection, SqlTransaction transaction, string lockResource,
         TimeSpan timeout, CancellationToken cancellationToken)
     {
         AcquiredResource = lockResource;
+        CapturedTransaction = transaction;
         if (throwOnAcquire is not null) throw throwOnAcquire;
         return Task.CompletedTask;
     }

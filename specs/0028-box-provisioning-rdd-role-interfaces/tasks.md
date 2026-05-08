@@ -288,7 +288,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
 
 ### 5.1 MSSQL UoW
 
-- [ ] **TEST + IMPLEMENT: MsSqlProvisioningUnitOfWork acquires lock AFTER BeginTransaction during BeginAsync**
+- [x] **TEST + IMPLEMENT: MsSqlProvisioningUnitOfWork acquires lock AFTER BeginTransaction during BeginAsync**
   - **USE COMMAND**: `/test-first when MsSqlProvisioningUnitOfWork BeginAsync is called it should call BeginTransaction before acquiring the @LockOwner='Transaction' advisory lock`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_mssql_provisioning_uow_begin_async_is_called_it_should_acquire_lock_after_begin_transaction.cs`
