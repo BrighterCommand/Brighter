@@ -228,7 +228,7 @@ Per ADR §A.3. Relational three (MSSQL, Postgres, MySQL) — Tidy First (signatu
 
 ### 4.1 MSSQL
 
-- [ ] **TIDY FIRST: Convert `MsSqlPayloadModeValidator` static class to instance class implementing `IAmABoxPayloadModeValidator<SqlConnection>`**
+- [x] **TIDY FIRST: Convert `MsSqlPayloadModeValidator` static class to instance class implementing `IAmABoxPayloadModeValidator<SqlConnection>`**
   - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlPayloadModeValidator.cs`.
   - `static class` → `public class`; `string schemaName` widens to `string? schemaName`.
   - Bridging shim retained until Phase 8.

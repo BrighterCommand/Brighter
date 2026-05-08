@@ -97,7 +97,7 @@ public class MsSqlInboxProvisioner(
         using var connection = new SqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await MsSqlPayloadModeValidator.ValidateAsync(
+        await MsSqlPayloadModeValidators.ValidateAsync(
             connection, configuration.InBoxTableName, schemaName,
             "CommandBody", configuration.BinaryMessagePayload, cancellationToken);
     }

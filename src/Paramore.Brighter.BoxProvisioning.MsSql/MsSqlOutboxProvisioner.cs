@@ -100,7 +100,7 @@ public class MsSqlOutboxProvisioner(
         using var connection = new SqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await MsSqlPayloadModeValidator.ValidateAsync(
+        await MsSqlPayloadModeValidators.ValidateAsync(
             connection, configuration.OutBoxTableName, schemaName,
             "Body", configuration.BinaryMessagePayload, cancellationToken);
     }
