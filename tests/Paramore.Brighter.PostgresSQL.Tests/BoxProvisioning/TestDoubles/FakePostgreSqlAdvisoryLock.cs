@@ -33,9 +33,9 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
 
 /// <summary>
 /// Test double for <see cref="IPostgreSqlAdvisoryLock"/>: <see cref="AcquireAsync"/> is a
-/// no-op success that records the lock key it was called with; <see cref="ReleaseAsync"/>
-/// returns the parameterised <see cref="bool"/> so tests can drive the runner's diagnostic
-/// path for non-true unlock results.
+/// no-op success that records the lock key it was called with (or throws the configured
+/// exception); <see cref="ReleaseAsync"/> returns the parameterised <see cref="bool"/> so
+/// tests can drive the runner's diagnostic path for non-true unlock results.
 /// </summary>
 /// <remarks>
 /// The optional <c>senseTransactionStateAtAcquire</c> flag makes <see cref="AcquireAsync"/>
@@ -45,10 +45,15 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
 /// is already in progress; nested/concurrent transactions aren't supported.") when a tx is
 /// already active — used by the UoW BeginAsync ordering test (ADR 0058 §B.1) to verify that
 /// AcquireAsync runs BEFORE the UoW's BeginTransactionAsync.
+/// The optional <c>throwOnAcquire</c> exception drives the runner's distinguishable-exception-
+/// propagation path per ADR 0058 §B.3 (lock-acquisition failure surfaces unwrapped to the
+/// caller; the UoW's <c>await using</c> scope then exercises the partial-init DisposeAsync
+/// contract). Mirrors <c>FakeMsSqlAdvisoryLock(throwOnAcquire)</c>.
 /// </remarks>
 internal sealed class FakePostgreSqlAdvisoryLock(
     bool releaseResult,
-    bool senseTransactionStateAtAcquire = false) : IPostgreSqlAdvisoryLock
+    bool senseTransactionStateAtAcquire = false,
+    Exception? throwOnAcquire = null) : IPostgreSqlAdvisoryLock
 {
     public string? AcquiredKey { get; private set; }
     public string? ReleasedKey { get; private set; }
@@ -78,6 +83,7 @@ internal sealed class FakePostgreSqlAdvisoryLock(
             }
         }
         AcquiredKey = lockKey;
+        if (throwOnAcquire is not null) throw throwOnAcquire;
     }
 
     public Task<bool> ReleaseAsync(

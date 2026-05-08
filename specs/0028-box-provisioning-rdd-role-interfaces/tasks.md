@@ -356,7 +356,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
   - Test file: `When_postgres_provisioning_uow_rollback_async_is_called_it_should_release_lock_without_throwing.cs`
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: PostgreSqlProvisioningUnitOfWork DisposeAsync tolerates dispose-after-failed-BeginAsync**
+- [x] **TEST + IMPLEMENT: PostgreSqlProvisioningUnitOfWork DisposeAsync tolerates dispose-after-failed-BeginAsync**
   - **USE COMMAND**: `/test-first when PostgreSqlProvisioningUnitOfWork BeginAsync threw before lock was acquired it should dispose without releasing lock and without throwing`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning`
   - Test file: `When_postgres_provisioning_uow_begin_throws_it_should_dispose_without_throwing.cs`
