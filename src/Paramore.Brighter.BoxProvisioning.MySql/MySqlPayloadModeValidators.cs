@@ -1,0 +1,43 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+using System.Threading;
+using System.Threading.Tasks;
+using MySqlConnector;
+
+namespace Paramore.Brighter.BoxProvisioning.MySql;
+
+// Bridging shim — Phase 4.3 of spec 0028. Pure delegation onto a singleton
+// MySqlPayloadModeValidator instance. Removed in Phase 8 when call-sites
+// rewire to instance dispatch.
+public static class MySqlPayloadModeValidators
+{
+    private static readonly MySqlPayloadModeValidator s_instance = new();
+
+    public static Task ValidateAsync(
+        MySqlConnection connection, string tableName, string schemaName,
+        string columnName, bool binaryMessagePayload,
+        CancellationToken cancellationToken)
+        => s_instance.ValidateAsync(
+            connection, tableName, schemaName, columnName, binaryMessagePayload, cancellationToken);
+}

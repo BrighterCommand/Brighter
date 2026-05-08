@@ -259,7 +259,7 @@ Per ADR §A.3. Relational three (MSSQL, Postgres, MySQL) — Tidy First (signatu
 
 ### 4.3 MySQL
 
-- [ ] **TIDY FIRST: Convert `MySqlPayloadModeValidator` static → instance implementing `IAmABoxPayloadModeValidator<MySqlConnection>`**
+- [x] **TIDY FIRST: Convert `MySqlPayloadModeValidator` static → instance implementing `IAmABoxPayloadModeValidator<MySqlConnection>`**
 
 - [ ] **TEST + IMPLEMENT: MySQL payload validator substitutes connection.Database when schemaName is null**
   - **USE COMMAND**: `/test-first when MySqlPayloadModeValidator receives null schemaName it should substitute connection.Database before querying information_schema.columns`

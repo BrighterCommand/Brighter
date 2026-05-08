@@ -71,7 +71,7 @@ public class MySqlOutboxProvisioner(
         using var connection = new MySqlConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await MySqlPayloadModeValidator.ValidateAsync(
+        await MySqlPayloadModeValidators.ValidateAsync(
             connection, configuration.OutBoxTableName, schemaName,
             "Body", configuration.BinaryMessagePayload, cancellationToken);
     }
