@@ -312,7 +312,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
     - No call to `advisoryLock.ReleaseAsync()` (lock released implicitly when transaction commits per ADR §B.1).
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: MsSqlProvisioningUnitOfWork RollbackAsync does not throw when transaction is already finalised**
+- [x] **TEST + IMPLEMENT: MsSqlProvisioningUnitOfWork RollbackAsync does not throw when transaction is already finalised**
   - **USE COMMAND**: `/test-first when MsSqlProvisioningUnitOfWork RollbackAsync is called after CommitAsync threw it should be best-effort and not throw`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_mssql_provisioning_uow_rollback_async_is_called_after_commit_threw_it_should_not_throw.cs`

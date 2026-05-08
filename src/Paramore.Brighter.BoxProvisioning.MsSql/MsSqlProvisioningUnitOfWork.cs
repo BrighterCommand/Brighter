@@ -82,7 +82,31 @@ public class MsSqlProvisioningUnitOfWork(
     }
 
     /// <inheritdoc />
-    public Task RollbackAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public async Task RollbackAsync(CancellationToken cancellationToken)
+    {
+        // Per ADR 0058 §B.3: best-effort after a thrown CommitAsync. The runner may call
+        // RollbackAsync after the underlying transaction has already been finalised
+        // (committed-but-client-side-failed, or zombied by a broken connection); in those
+        // cases SqlTransaction.Rollback throws InvalidOperationException ("This SqlTransaction
+        // has completed; it is no longer usable."). RollbackAsync MUST NOT throw — log a
+        // Warning and return so the runner's unwind continues.
+        if (_transaction is null) return;
+        try
+        {
+#if NET8_0_OR_GREATER
+            await _transaction.RollbackAsync(cancellationToken);
+#else
+            _transaction.Rollback();
+            await Task.CompletedTask;
+#endif
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "MSSQL provisioning UoW: rollback skipped — transaction already finalised");
+        }
+    }
 
     /// <inheritdoc />
     public ValueTask DisposeAsync()
