@@ -77,7 +77,7 @@ public class SpannerOutboxProvisioner(
         using var connection = SpannerConnectionHelper.CreateConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await SpannerPayloadModeValidator.ValidateAsync(
+        await SpannerPayloadModeValidators.ValidateAsync(
             connection, configuration.OutBoxTableName,
             "Body", configuration.BinaryMessagePayload, cancellationToken);
     }

@@ -73,7 +73,7 @@ public class SpannerInboxProvisioner(
         using var connection = SpannerConnectionHelper.CreateConnection(configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await SpannerPayloadModeValidator.ValidateAsync(
+        await SpannerPayloadModeValidators.ValidateAsync(
             connection, configuration.InBoxTableName,
             "CommandBody", configuration.BinaryMessagePayload, cancellationToken);
     }
