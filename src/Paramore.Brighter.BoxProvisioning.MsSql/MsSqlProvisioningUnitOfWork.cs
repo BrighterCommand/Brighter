@@ -66,7 +66,20 @@ public class MsSqlProvisioningUnitOfWork(
     }
 
     /// <inheritdoc />
-    public Task CommitAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task CommitAsync(CancellationToken cancellationToken)
+    {
+        // Per ADR 0058 §B.1: lock release is implicit because sp_getapplock was acquired with
+        // @LockOwner='Transaction'. SQL Server releases the application lock when the
+        // surrounding transaction completes — there is no Release method on
+        // IMsSqlAdvisoryLock to call.
+        if (_transaction is null) return Task.CompletedTask;
+#if NET8_0_OR_GREATER
+        return _transaction.CommitAsync(cancellationToken);
+#else
+        _transaction.Commit();
+        return Task.CompletedTask;
+#endif
+    }
 
     /// <inheritdoc />
     public Task RollbackAsync(CancellationToken cancellationToken) => Task.CompletedTask;

@@ -303,7 +303,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
     - Ctor: `(SqlConnection connection, IMsSqlAdvisoryLock advisoryLock, ILogger logger)`.
     - `BeginAsync` calls `connection.BeginTransaction()` then `advisoryLock.AcquireAsync(...)` passing the transaction.
 
-- [ ] **TEST + IMPLEMENT: MsSqlProvisioningUnitOfWork CommitAsync commits transaction (lock release implicit)**
+- [x] **TEST + IMPLEMENT: MsSqlProvisioningUnitOfWork CommitAsync commits transaction (lock release implicit)**
   - **USE COMMAND**: `/test-first when MsSqlProvisioningUnitOfWork CommitAsync is called it should commit the transaction without explicit lock release because lock is transaction-scoped`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_mssql_provisioning_uow_commit_async_is_called_it_should_commit_transaction_without_explicit_lock_release.cs`
