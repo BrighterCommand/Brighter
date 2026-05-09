@@ -83,7 +83,19 @@ public class SqliteProvisioningUnitOfWork(
     }
 
     /// <inheritdoc />
-    public Task CommitAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    /// <remarks>
+    /// Commits the underlying transaction opened by <see cref="BeginAsync"/>. Per ADR 0058
+    /// §B.1 SQLite has no advisory-lock primitive — the database-wide RESERVED writer slot
+    /// reserved by the initial <c>BEGIN IMMEDIATE</c> is itself the migration lock — so
+    /// committing the transaction is what releases the writer slot. There is no separate
+    /// lock-release call. A no-op return when <c>_transaction</c> is null tolerates a
+    /// Commit-without-Begin or a Begin-that-threw-before-opening-the-transaction.
+    /// </remarks>
+    public Task CommitAsync(CancellationToken cancellationToken)
+    {
+        if (_transaction is null) return Task.CompletedTask;
+        return _transaction.CommitAsync(cancellationToken);
+    }
 
     /// <inheritdoc />
     public Task RollbackAsync(CancellationToken cancellationToken) => Task.CompletedTask;
