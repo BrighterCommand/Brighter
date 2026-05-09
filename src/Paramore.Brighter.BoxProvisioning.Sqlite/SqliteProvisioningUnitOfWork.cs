@@ -98,7 +98,30 @@ public class SqliteProvisioningUnitOfWork(
     }
 
     /// <inheritdoc />
-    public Task RollbackAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    /// <remarks>
+    /// Best-effort per ADR 0058 §B.3. The runner may invoke <see cref="RollbackAsync"/> from
+    /// its catch path after a thrown <see cref="CommitAsync"/>, by which time the underlying
+    /// transaction may already be finalised (committed-but-client-side-failed, or zombied by
+    /// a closed connection); in those cases <see cref="SqliteTransaction.Rollback"/> throws
+    /// <see cref="InvalidOperationException"/> ("Transaction has completed; it is no longer
+    /// usable."). <see cref="RollbackAsync"/> MUST NOT throw — log a Warning and return so the
+    /// runner's unwind continues. SQLite has no advisory-lock primitive to release separately;
+    /// completing the transaction (or a zombied tx being disposed) releases the writer slot.
+    /// </remarks>
+    public async Task RollbackAsync(CancellationToken cancellationToken)
+    {
+        if (_transaction is null) return;
+        try
+        {
+            await _transaction.RollbackAsync(cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "SQLite provisioning UoW: rollback skipped — transaction already finalised");
+        }
+    }
 
     /// <inheritdoc />
     public ValueTask DisposeAsync()
