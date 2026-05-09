@@ -412,19 +412,19 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
     - No separate lock primitive is acquired (no `IXxxAdvisoryLock` field; SQLite's UoW ctor takes only `SqliteConnection` + `ILogger`).
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: SqliteProvisioningUnitOfWork CommitAsync commits transaction releasing writer slot**
+- [x] **TEST + IMPLEMENT: SqliteProvisioningUnitOfWork CommitAsync commits transaction releasing writer slot**
   - **USE COMMAND**: `/test-first when SqliteProvisioningUnitOfWork CommitAsync is called it should commit the BEGIN IMMEDIATE transaction releasing the writer slot`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning`
   - Test file: `When_sqlite_provisioning_uow_commit_async_is_called_it_should_commit_releasing_writer_slot.cs`
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: SqliteProvisioningUnitOfWork RollbackAsync rolls back without throwing**
+- [x] **TEST + IMPLEMENT: SqliteProvisioningUnitOfWork RollbackAsync rolls back without throwing**
   - **USE COMMAND**: `/test-first when SqliteProvisioningUnitOfWork RollbackAsync is called it should roll back the transaction and never throw`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning`
   - Test file: `When_sqlite_provisioning_uow_rollback_async_is_called_it_should_not_throw.cs`
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: SqliteProvisioningUnitOfWork DisposeAsync tolerates dispose-after-failed-BeginAsync**
+- [x] **TEST + IMPLEMENT: SqliteProvisioningUnitOfWork DisposeAsync tolerates dispose-after-failed-BeginAsync**
   - **USE COMMAND**: `/test-first when SqliteProvisioningUnitOfWork BeginAsync threw it should dispose without throwing`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning`
   - Test file: `When_sqlite_provisioning_uow_begin_throws_it_should_dispose_without_throwing.cs`
@@ -432,7 +432,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
 
 ### 5.5 Phase 5 gate
 
-- [ ] **Phase 5 gate: Four UoW classes exist with full lifecycle test coverage; no runner refactor yet**
+- [x] **Phase 5 gate: Four UoW classes exist with full lifecycle test coverage; no runner refactor yet**
   - Run all relational BoxProvisioning test filters; confirm pre-Phase-5 counts hold (UoW tests are additive — counts INCREASE from this phase).
   - Confirm each UoW's `MUST NOT throw on RollbackAsync/DisposeAsync` contract is exercised.
 
