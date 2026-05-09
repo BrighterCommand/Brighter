@@ -461,7 +461,7 @@ Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO deri
     - Virtual hook: `RedetectStateAsync` (default calls `_detectionHelper.DoesTableExistAsync` + `DoesHistoryExistAsync`).
     - Protected `ValidateMigrationsMonotonic` helper lifted from spec 0027 Items H/I/Q (move from existing per-backend runners or keep duplicated until Phase 7).
 
-- [ ] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase calls RollbackAsync(CancellationToken.None) on exception from any hook between BeginAsync and CommitAsync**
+- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase calls RollbackAsync(CancellationToken.None) on exception from any hook between BeginAsync and CommitAsync**
   - **USE COMMAND**: `/test-first when RelationalBoxMigrationRunnerBase a hook between BeginAsync and CommitAsync throws it should call uow.RollbackAsync with CancellationToken.None and rethrow`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_hook_throws_it_should_rollback_with_cancellation_token_none_and_rethrow.cs`
