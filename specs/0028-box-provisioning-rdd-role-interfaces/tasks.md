@@ -402,7 +402,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
 
 ### 5.4 SQLite UoW
 
-- [ ] **TEST + IMPLEMENT: SqliteProvisioningUnitOfWork BeginAsync issues BEGIN IMMEDIATE as the writer-slot lock**
+- [x] **TEST + IMPLEMENT: SqliteProvisioningUnitOfWork BeginAsync issues BEGIN IMMEDIATE as the writer-slot lock**
   - **USE COMMAND**: `/test-first when SqliteProvisioningUnitOfWork BeginAsync is called it should issue BEGIN IMMEDIATE which reserves the writer slot as a combined lock-and-transaction`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning`
   - Test file: `When_sqlite_provisioning_uow_begin_async_is_called_it_should_begin_immediate_as_writer_slot_lock.cs`
