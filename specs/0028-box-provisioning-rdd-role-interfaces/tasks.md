@@ -473,7 +473,7 @@ Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO deri
     - The original exception is rethrown to the caller.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase does NOT call CommitAsync or RollbackAsync when BeginAsync throws**
+- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase does NOT call CommitAsync or RollbackAsync when BeginAsync throws**
   - **USE COMMAND**: `/test-first when RelationalBoxMigrationRunnerBase BeginAsync throws it should not call CommitAsync or RollbackAsync and should still dispose the UoW via await using`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_begin_async_throws_it_should_skip_commit_and_rollback_and_still_dispose.cs`
