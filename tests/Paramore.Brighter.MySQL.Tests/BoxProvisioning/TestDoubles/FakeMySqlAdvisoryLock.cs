@@ -33,11 +33,20 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
 
 /// <summary>
 /// Test double for <see cref="IMySqlAdvisoryLock"/>: <see cref="AcquireAsync"/> is a no-op
-/// success that records the lock key it was called with; <see cref="ReleaseAsync"/> returns
-/// the parameterised <see cref="bool?"/> so tests can drive the runner's diagnostic path for
-/// each of <c>RELEASE_LOCK</c>'s three outcomes (1 / 0 / NULL).
+/// success that records the lock key it was called with (or throws the configured exception);
+/// <see cref="ReleaseAsync"/> returns the parameterised <see cref="bool?"/> so tests can drive
+/// the runner's diagnostic path for each of <c>RELEASE_LOCK</c>'s three outcomes (1 / 0 / NULL).
 /// </summary>
-internal sealed class FakeMySqlAdvisoryLock(bool? releaseResult) : IMySqlAdvisoryLock
+/// <remarks>
+/// The optional <c>throwOnAcquire</c> exception drives the partial-init DisposeAsync contract
+/// per ADR 0058 §B.3 — a thrown <see cref="AcquireAsync"/> simulates a lock-acquisition failure
+/// (timeout or driver fault) and the UoW's <c>await using</c> scope then exercises the
+/// dispose-after-failed-Begin path. Mirrors <c>FakeMsSqlAdvisoryLock(throwOnAcquire)</c> and
+/// <c>FakePostgreSqlAdvisoryLock(throwOnAcquire)</c>.
+/// </remarks>
+internal sealed class FakeMySqlAdvisoryLock(
+    bool? releaseResult,
+    Exception? throwOnAcquire = null) : IMySqlAdvisoryLock
 {
     public string? AcquiredKey { get; private set; }
     public string? ReleasedKey { get; private set; }
@@ -47,6 +56,7 @@ internal sealed class FakeMySqlAdvisoryLock(bool? releaseResult) : IMySqlAdvisor
         TimeSpan timeout, CancellationToken cancellationToken)
     {
         AcquiredKey = lockKey;
+        if (throwOnAcquire is not null) throw throwOnAcquire;
         return Task.CompletedTask;
     }
 

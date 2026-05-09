@@ -394,7 +394,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
     - Preserve the spec 0027 Item M tri-state distinction inside `MySqlProvisioningUnitOfWork.RollbackAsync` (and `CommitAsync` — same diagnostic).
     - Reference ADR §B.3 "Diagnostic information preserved" — no information loss.
 
-- [ ] **TEST + IMPLEMENT: MySqlProvisioningUnitOfWork DisposeAsync tolerates dispose-after-failed-BeginAsync**
+- [x] **TEST + IMPLEMENT: MySqlProvisioningUnitOfWork DisposeAsync tolerates dispose-after-failed-BeginAsync**
   - **USE COMMAND**: `/test-first when MySqlProvisioningUnitOfWork BeginAsync threw before lock was acquired it should dispose without throwing`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning`
   - Test file: `When_mysql_provisioning_uow_begin_throws_it_should_dispose_without_throwing.cs`
