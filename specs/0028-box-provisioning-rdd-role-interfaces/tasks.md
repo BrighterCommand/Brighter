@@ -442,7 +442,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
 
 Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO derived runners yet.
 
-- [ ] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase orchestrates the template algorithm in the documented order on the success path**
+- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase orchestrates the template algorithm in the documented order on the success path**
   - **USE COMMAND**: `/test-first when RelationalBoxMigrationRunnerBase MigrateAsync runs successfully against a fake backend it should invoke the hooks in the order OpenConnection → CreateUnitOfWork → BeginAsync → EnsureHistoryTable → RedetectStateAsync → Run{Fresh,Bootstrap,Normal}PathAsync → CommitAsync`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_migrate_runs_successfully_it_should_invoke_hooks_in_documented_order.cs`
