@@ -71,19 +71,48 @@ public class MySqlProvisioningUnitOfWork(
     }
 
     /// <inheritdoc />
-    public async Task CommitAsync(CancellationToken cancellationToken)
-    {
+    public Task CommitAsync(CancellationToken cancellationToken) =>
         // Per ADR 0058 §B.1 / ADR 0057 §5a / §5b: there is no transaction to commit (the
         // UoW never opens one — see BeginAsync). CommitAsync's only side-effect is to
-        // release the session-level GET_LOCK acquired in BeginAsync, freeing contention
-        // for the next runner. Tri-state RELEASE_LOCK diagnostic (NULL/0/1) Warning
-        // logging is shared with RollbackAsync — landing in 5.3.c.
-        if (_lockResource is null) return;
-        await _advisoryLock.ReleaseAsync(_connection, _lockResource, cancellationToken);
-    }
+        // release the session-level GET_LOCK acquired in BeginAsync. The tri-state
+        // RELEASE_LOCK diagnostic is shared with RollbackAsync — see
+        // ReleaseLockAndLogTriStateAsync.
+        ReleaseLockAndLogTriStateAsync(cancellationToken);
 
     /// <inheritdoc />
-    public Task RollbackAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task RollbackAsync(CancellationToken cancellationToken) =>
+        // Per ADR 0058 §B.3: disposal-style semantics — RollbackAsync MUST NOT throw. There
+        // is no transaction to roll back (MySQL is transactionless per ADR 0057 §5a), so
+        // the only obligation is to release the session-level GET_LOCK acquired in
+        // BeginAsync. The tri-state RELEASE_LOCK diagnostic (NULL/0/1) Warning logging is
+        // shared with CommitAsync — see ReleaseLockAndLogTriStateAsync.
+        ReleaseLockAndLogTriStateAsync(cancellationToken);
+
+    private async Task ReleaseLockAndLogTriStateAsync(CancellationToken cancellationToken)
+    {
+        // Per spec 0027 Item M / ADR 0057 §5b / ADR 0058 §B.3: MySQL's RELEASE_LOCK has
+        // three outcomes — 1 (released by this session: clean), 0 (lock exists but held by
+        // another session: diagnostic anomaly because we just acquired it), NULL (no lock
+        // by that name: same anomaly because acquisition implied creation). Both non-true
+        // outcomes surface through a Warning-level entry preserving the marker convention
+        // (NULL/0) and the meaning text from the existing runner emission at
+        // MySqlBoxMigrationRunner.cs:138-141 — NF1 / no-information-loss.
+        //
+        // Guarded by the `_lockResource is null` short-circuit so a Commit/Rollback called
+        // without a prior BeginAsync (or after Begin threw before storing the lock
+        // resource) is a clean no-op. This is what makes RollbackAsync safe to call from
+        // the runner's catch path even if BeginAsync failed.
+        if (_lockResource is null) return;
+
+        var releaseResult = await _advisoryLock.ReleaseAsync(_connection, _lockResource, cancellationToken);
+        if (releaseResult is true) return;
+
+        var marker = releaseResult is null ? "NULL" : "0";
+        var meaning = releaseResult is null ? "lock did not exist" : "lock held by another session";
+        _logger.LogWarning(
+            "MySQL advisory lock '{LockResource}' was not released by this session: RELEASE_LOCK returned {Result} ({Marker} = {Meaning}). This is likely a Brighter defect — please report it.",
+            _lockResource, releaseResult, marker, meaning);
+    }
 
     /// <inheritdoc />
     public ValueTask DisposeAsync() => default;

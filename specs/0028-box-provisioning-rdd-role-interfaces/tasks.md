@@ -380,7 +380,7 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
   - Test file: `When_mysql_provisioning_uow_commit_async_is_called_it_should_release_get_lock_without_committing_transaction.cs`
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: MySqlProvisioningUnitOfWork RollbackAsync logs RELEASE_LOCK tri-state diagnostic without throwing**
+- [x] **TEST + IMPLEMENT: MySqlProvisioningUnitOfWork RollbackAsync logs RELEASE_LOCK tri-state diagnostic without throwing**
   - **USE COMMAND**: `/test-first when MySqlProvisioningUnitOfWork RollbackAsync sees RELEASE_LOCK return NULL or zero it should log a tri-state diagnostic and not throw`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning`
   - Test file: `When_mysql_provisioning_uow_rollback_observes_release_lock_tri_state_it_should_log_without_throwing.cs`
