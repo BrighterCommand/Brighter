@@ -77,7 +77,17 @@ public class PostgreSqlProvisioningUnitOfWork(
         // in this happy-path branch.
         if (_transaction is null) return;
         await _transaction.CommitAsync(cancellationToken);
-        await _advisoryLock.ReleaseAsync(_connection, _lockResource!, cancellationToken);
+        var held = await _advisoryLock.ReleaseAsync(_connection, _lockResource!, cancellationToken);
+        if (!held)
+        {
+            // Per ADR 0057 §5b: pg_advisory_unlock returns false when this session does not
+            // currently hold the named lock — a diagnostic anomaly because the UoW just
+            // acquired it. Surface it as a Warning naming the lock resource so the operator
+            // can correlate against the runner's table-level context, and continue.
+            _logger.LogWarning(
+                "Postgres provisioning UoW: pg_advisory_unlock returned false for lock resource '{LockResource}' — the lock was not held by this session at release. This is likely a Brighter defect — please report it.",
+                _lockResource);
+        }
     }
 
     /// <inheritdoc />
@@ -105,7 +115,13 @@ public class PostgreSqlProvisioningUnitOfWork(
         }
         if (_lockResource is not null)
         {
-            await _advisoryLock.ReleaseAsync(_connection, _lockResource, cancellationToken);
+            var held = await _advisoryLock.ReleaseAsync(_connection, _lockResource, cancellationToken);
+            if (!held)
+            {
+                _logger.LogWarning(
+                    "Postgres provisioning UoW: pg_advisory_unlock returned false for lock resource '{LockResource}' — the lock was not held by this session at release. This is likely a Brighter defect — please report it.",
+                    _lockResource);
+            }
         }
     }
 
