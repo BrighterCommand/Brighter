@@ -50,7 +50,6 @@ public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConne
     // Lock-timeout validation lives inside MsSqlAdvisoryLock.AcquireAsync (per ADR 0057 §5b)
     // so any caller of the abstraction is protected. A bad timeout surfaces as
     // ArgumentOutOfRangeException on first MigrateAsync call rather than at construction.
-    private readonly TimeSpan _lockTimeout;
     private readonly IMsSqlAdvisoryLock _advisoryLock;
     private readonly ILogger _logger;
 
@@ -65,7 +64,6 @@ public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConne
         TimeSpan? lockTimeout = null)
         : base(detectionHelper, configuration, lockTimeout ?? default, logger)
     {
-        _lockTimeout = lockTimeout ?? default;
         _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
         _logger = logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>();
     }
@@ -233,75 +231,6 @@ END";
             await InsertHistoryRowAsync(
                 connection, transaction!, effectiveSchema, tableName,
                 migration.Version, migration.Description, cancellationToken);
-        }
-    }
-
-    // ==== Legacy delegates — Phase 7.1b moves bodies into overrides; Phase 7.1c deletes MigrateLegacyAsync ====
-
-    private async Task MigrateLegacyAsync(
-        string tableName,
-        string? schemaName,
-        BoxType boxType,
-        IReadOnlyList<IAmABoxMigration> migrations,
-        BoxTableState tableState,
-        CancellationToken cancellationToken = default)
-    {
-        var effectiveSchema = schemaName ?? HISTORY_TABLE_SCHEMA;
-
-        // Reject duplicate / gap / out-of-order versions before opening a connection. Validation
-        // sits at MigrateAsync entry (rather than inside one of the path branches) so the rule
-        // applies uniformly across fresh / bootstrap / normal paths — a malformed list corrupts
-        // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
-        ValidateMigrationsMonotonic(effectiveSchema, tableName, migrations);
-
-        using var connection = new SqlConnection(Configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-
-#if !NET8_0_OR_GREATER
-        var transaction = connection.BeginTransaction();
-#else
-        var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
-#endif
-
-        var lockResource = $"BrighterMigration_{effectiveSchema}.{tableName}";
-
-        try
-        {
-            await _advisoryLock.AcquireAsync(
-                connection, transaction, lockResource, _lockTimeout, cancellationToken);
-            await EnsureHistoryTableAsync(connection, transaction, schemaName: null, cancellationToken);
-
-            var tableExistsNow = await MsSqlBoxDetectionHelpers.DoesTableExistAsync(
-                connection, tableName, effectiveSchema, cancellationToken, transaction);
-            var historyExistsNow = tableExistsNow && await MsSqlBoxDetectionHelpers.DoesHistoryExistAsync(
-                connection, tableName, effectiveSchema, cancellationToken, transaction);
-
-            if (!tableExistsNow)
-            {
-                await RunFreshPathAsync(
-                    connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
-            }
-            else if (!historyExistsNow)
-            {
-                await RunBootstrapPathAsync(
-                    connection, transaction, effectiveSchema, tableName, boxType, migrations, cancellationToken);
-            }
-            else
-            {
-                await RunNormalPathAsync(
-                    connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
-            }
-
-            transaction.Commit();
-        }
-        catch
-        {
-            try { transaction.Rollback(); } catch { /* connection may already be closed */ }
-            throw;
-        }
-        finally
-        {
-            transaction.Dispose();
         }
     }
 

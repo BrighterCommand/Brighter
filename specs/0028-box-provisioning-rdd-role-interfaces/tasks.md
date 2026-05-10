@@ -539,7 +539,7 @@ Each relational backend's runner refactor is broken into three structural sub-st
     - Commit per hook: `refactor: spec 0028 Phase 7.1b — MsSqlBoxMigrationRunner override {HookName}` (seven commits).
   - Default `RedetectStateAsync` (do NOT override).
 
-- [ ] **TIDY FIRST: 7.1c Delete the legacy `MigrateLegacyAsync` orchestration**
+- [x] **TIDY FIRST: 7.1c Delete the legacy `MigrateLegacyAsync` orchestration**
   - Remove `MigrateLegacyAsync` and any remaining try/catch/finally + lock + transaction lifecycle scaffolding now owned by the base.
   - Run MSSQL test filter — must stay 54/54 green.
   - Commit: `refactor: spec 0028 Phase 7.1c — MsSqlBoxMigrationRunner remove legacy orchestration`.
