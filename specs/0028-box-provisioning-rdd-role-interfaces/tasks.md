@@ -506,7 +506,7 @@ Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO deri
   - Test should verify the monotonicity check from spec 0027 Items H/I/Q is preserved at the base level.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **Phase 6 gate: Abstract base class compiles on full shared-assembly TFM matrix; all base-level tests green**
+- [x] **Phase 6 gate: Abstract base class compiles on full shared-assembly TFM matrix; all base-level tests green**
   - `dotnet build src/Paramore.Brighter.BoxProvisioning` clean on `netstandard2.0;net8.0;net9.0;net10.0`.
   - All Phase-6 `/test-first` tests pass against the fake `TestRunner` derivative.
   - **No backend runner change yet** — Phase 7 picks up.
