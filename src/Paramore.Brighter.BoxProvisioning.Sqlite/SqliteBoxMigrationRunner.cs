@@ -242,10 +242,22 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         }
     }
 
-    protected override Task RunNormalPathAsync(
+    protected override async Task RunNormalPathAsync(
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
-        => RunNormalPathLegacyAsync(connection, transaction!, tableName, migrations, cancellationToken);
+    {
+        _ = schemaName; // SQLite has no schema concept.
+
+        var maxVersion = await SqliteBoxDetectionHelpers.GetMaxVersionAsync(
+            connection, tableName, cancellationToken, transaction);
+
+        foreach (var migration in migrations)
+        {
+            if (migration.Version <= maxVersion) continue;
+
+            await ApplyOrSkipAsync(connection, transaction!, tableName, migration, cancellationToken);
+        }
+    }
 
     // ==== Legacy delegates — Phase 7.4b moves bodies into overrides; Phase 7.4c deletes MigrateLegacyAsync ====
 
@@ -297,8 +309,8 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
             }
             else
             {
-                await RunNormalPathLegacyAsync(
-                    connection, transaction, tableName, migrations, cancellationToken);
+                await RunNormalPathAsync(
+                    connection, transaction, schemaName: null, tableName, migrations, cancellationToken);
             }
 
             await transaction.CommitAsync(cancellationToken);
@@ -314,22 +326,6 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         finally
         {
             transaction.Dispose();
-        }
-    }
-
-    private static async Task RunNormalPathLegacyAsync(
-        SqliteConnection connection, SqliteTransaction transaction,
-        string tableName, IReadOnlyList<IAmABoxMigration> migrations,
-        CancellationToken cancellationToken)
-    {
-        var maxVersion = await SqliteBoxDetectionHelpers.GetMaxVersionAsync(
-            connection, tableName, cancellationToken, transaction);
-
-        foreach (var migration in migrations)
-        {
-            if (migration.Version <= maxVersion) continue;
-
-            await ApplyOrSkipAsync(connection, transaction, tableName, migration, cancellationToken);
         }
     }
 
