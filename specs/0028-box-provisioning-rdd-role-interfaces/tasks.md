@@ -521,7 +521,7 @@ Each relational backend's runner refactor is broken into three structural sub-st
 
 ### 7.1 MSSQL runner
 
-- [ ] **TIDY FIRST: 7.1a Introduce `MsSqlBoxMigrationRunner` derived shell that delegates to existing private methods (legacy delegates)**
+- [x] **TIDY FIRST: 7.1a Introduce `MsSqlBoxMigrationRunner` derived shell that delegates to existing private methods (legacy delegates)**
   - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlBoxMigrationRunner.cs`.
   - Change class declaration to `: RelationalBoxMigrationRunnerBase<SqlConnection, SqlTransaction>`.
   - Add new ctor `(MsSqlBoxDetectionHelper detectionHelper, IAmARelationalDatabaseConfiguration configuration, IMsSqlAdvisoryLock? advisoryLock = null, ILogger? logger = null, TimeSpan? lockTimeout = null)` — forwards `(detectionHelper, configuration, lockTimeout ?? default, logger)` to base ctor; stores `IMsSqlAdvisoryLock?` private field.

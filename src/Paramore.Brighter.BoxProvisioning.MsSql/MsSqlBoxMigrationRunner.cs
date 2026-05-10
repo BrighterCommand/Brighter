@@ -32,18 +32,14 @@ using Paramore.Brighter.Logging;
 namespace Paramore.Brighter.BoxProvisioning.MsSql;
 
 /// <summary>
-/// Runs box migrations against a MSSQL database. Uses an injected
-/// <see cref="IMsSqlAdvisoryLock"/> (default <see cref="MsSqlAdvisoryLock"/>) for concurrency
-/// control and a single transaction for all-or-nothing semantics. After acquiring the lock
-/// the runner re-reads box-table state under the lock and dispatches into one of three paths
-/// (fresh / bootstrap / normal) per ADR 0057 §3 — the caller's <see cref="BoxTableState"/>
-/// is treated as a stale hint to defeat TOCTOU races.
+/// Runs box migrations against a MSSQL database. Derives from
+/// <see cref="RelationalBoxMigrationRunnerBase{TConnection,TTransaction}"/> for the
+/// success/failure orchestration and supplies the per-backend hooks. Uses an injected
+/// <see cref="IMsSqlAdvisoryLock"/> (default <see cref="MsSqlAdvisoryLock"/>) for
+/// concurrency control via <see cref="MsSqlProvisioningUnitOfWork"/>; the dispatch into
+/// fresh / bootstrap / normal paths happens in the base after re-detection under the UoW.
 /// </summary>
-public class MsSqlBoxMigrationRunner(
-    IAmARelationalDatabaseConfiguration configuration,
-    TimeSpan lockTimeout,
-    IMsSqlAdvisoryLock? advisoryLock = null,
-    ILogger? logger = null) : IAmABoxMigrationRunner
+public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConnection, SqlTransaction>
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
     // The history table is global — one row per (SchemaName, BoxTableName, MigrationVersion)
@@ -54,12 +50,96 @@ public class MsSqlBoxMigrationRunner(
     // Lock-timeout validation lives inside MsSqlAdvisoryLock.AcquireAsync (per ADR 0057 §5b)
     // so any caller of the abstraction is protected. A bad timeout surfaces as
     // ArgumentOutOfRangeException on first MigrateAsync call rather than at construction.
-    private readonly TimeSpan _lockTimeout = lockTimeout;
-    private readonly IMsSqlAdvisoryLock _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
-    private readonly ILogger _logger = logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>();
+    private readonly TimeSpan _lockTimeout;
+    private readonly IMsSqlAdvisoryLock _advisoryLock;
+    private readonly ILogger _logger;
 
-    /// <inheritdoc />
-    public async Task MigrateAsync(
+    /// <summary>
+    /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
+    /// </summary>
+    public MsSqlBoxMigrationRunner(
+        MsSqlBoxDetectionHelper detectionHelper,
+        IAmARelationalDatabaseConfiguration configuration,
+        IMsSqlAdvisoryLock? advisoryLock = null,
+        ILogger? logger = null,
+        TimeSpan? lockTimeout = null)
+        : base(detectionHelper, configuration, lockTimeout ?? default, logger)
+    {
+        _lockTimeout = lockTimeout ?? default;
+        _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
+        _logger = logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>();
+    }
+
+    /// <summary>
+    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
+    /// call-sites (extensions + integration tests). Synthesises a default
+    /// <see cref="MsSqlBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
+    /// </summary>
+    public MsSqlBoxMigrationRunner(
+        IAmARelationalDatabaseConfiguration configuration,
+        TimeSpan lockTimeout,
+        IMsSqlAdvisoryLock? advisoryLock = null,
+        ILogger? logger = null)
+        : this(new MsSqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout)
+    {
+    }
+
+    // ==== Hook overrides — Phase 7.1a delegates to legacy helpers ====
+
+    protected override Task<SqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+        => OpenConnectionLegacyAsync(cancellationToken);
+
+    protected override Task<IAmAProvisioningUnitOfWork<SqlTransaction>> CreateUnitOfWorkAsync(
+        SqlConnection connection, CancellationToken cancellationToken)
+        => CreateUnitOfWorkLegacyAsync(connection, cancellationToken);
+
+    protected override string LockResourceFor(string? schemaName, string tableName)
+        => LockResourceForLegacy(schemaName, tableName);
+
+    protected override Task EnsureHistoryTableAsync(
+        SqlConnection connection, SqlTransaction? transaction, string? schemaName,
+        CancellationToken cancellationToken)
+        => EnsureHistoryTableLegacyAsync(connection, transaction!, cancellationToken);
+
+    protected override Task RunFreshPathAsync(
+        SqlConnection connection, SqlTransaction? transaction, string? schemaName, string tableName,
+        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunFreshPathLegacyAsync(
+            connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, migrations, cancellationToken);
+
+    protected override Task RunBootstrapPathAsync(
+        SqlConnection connection, SqlTransaction? transaction, string? schemaName, string tableName,
+        BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunBootstrapPathLegacyAsync(
+            connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, boxType, migrations, cancellationToken);
+
+    protected override Task RunNormalPathAsync(
+        SqlConnection connection, SqlTransaction? transaction, string? schemaName, string tableName,
+        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunNormalPathLegacyAsync(
+            connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, migrations, cancellationToken);
+
+    // ==== Legacy delegates — Phase 7.1b moves bodies into overrides; Phase 7.1c deletes MigrateLegacyAsync ====
+
+    private async Task<SqlConnection> OpenConnectionLegacyAsync(CancellationToken cancellationToken)
+    {
+        var connection = new SqlConnection(Configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        return connection;
+    }
+
+    private Task<IAmAProvisioningUnitOfWork<SqlTransaction>> CreateUnitOfWorkLegacyAsync(
+        SqlConnection connection, CancellationToken cancellationToken)
+        => Task.FromResult<IAmAProvisioningUnitOfWork<SqlTransaction>>(
+            new MsSqlProvisioningUnitOfWork(connection, _advisoryLock, _logger));
+
+    // Include the schema name so that two same-named tables in different schemas
+    // (e.g. dbo.Outbox and billing.Outbox) acquire distinct advisory locks. Without
+    // the schema qualifier they would share a lock and serialize unnecessarily.
+    private static string LockResourceForLegacy(string? schemaName, string tableName)
+        => $"BrighterMigration_{schemaName ?? HISTORY_TABLE_SCHEMA}.{tableName}";
+
+    private async Task MigrateLegacyAsync(
         string tableName,
         string? schemaName,
         BoxType boxType,
@@ -67,7 +147,7 @@ public class MsSqlBoxMigrationRunner(
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
-        var effectiveSchema = schemaName ?? "dbo";
+        var effectiveSchema = schemaName ?? HISTORY_TABLE_SCHEMA;
 
         // Reject duplicate / gap / out-of-order versions before opening a connection. Validation
         // sits at MigrateAsync entry (rather than inside one of the path branches) so the rule
@@ -75,7 +155,7 @@ public class MsSqlBoxMigrationRunner(
         // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
         ValidateMigrationsMonotonic(effectiveSchema, tableName, migrations);
 
-        using var connection = new SqlConnection(configuration.ConnectionString);
+        using var connection = new SqlConnection(Configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
 #if !NET8_0_OR_GREATER
@@ -84,16 +164,13 @@ public class MsSqlBoxMigrationRunner(
         var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
 #endif
 
-        // Include the schema name so that two same-named tables in different schemas
-        // (e.g. dbo.Outbox and billing.Outbox) acquire distinct advisory locks. Without
-        // the schema qualifier they would share a lock and serialize unnecessarily.
         var lockResource = $"BrighterMigration_{effectiveSchema}.{tableName}";
 
         try
         {
             await _advisoryLock.AcquireAsync(
                 connection, transaction, lockResource, _lockTimeout, cancellationToken);
-            await EnsureHistoryTableAsync(connection, transaction, cancellationToken);
+            await EnsureHistoryTableLegacyAsync(connection, transaction, cancellationToken);
 
             var tableExistsNow = await MsSqlBoxDetectionHelpers.DoesTableExistAsync(
                 connection, tableName, effectiveSchema, cancellationToken, transaction);
@@ -102,17 +179,17 @@ public class MsSqlBoxMigrationRunner(
 
             if (!tableExistsNow)
             {
-                await RunFreshPathAsync(
+                await RunFreshPathLegacyAsync(
                     connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
             }
             else if (!historyExistsNow)
             {
-                await RunBootstrapPathAsync(
+                await RunBootstrapPathLegacyAsync(
                     connection, transaction, effectiveSchema, tableName, boxType, migrations, cancellationToken);
             }
             else
             {
-                await RunNormalPathAsync(
+                await RunNormalPathLegacyAsync(
                     connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
             }
 
@@ -129,7 +206,7 @@ public class MsSqlBoxMigrationRunner(
         }
     }
 
-    private async Task RunFreshPathAsync(
+    private async Task RunFreshPathLegacyAsync(
         SqlConnection connection, SqlTransaction transaction,
         string schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations,
@@ -155,7 +232,7 @@ public class MsSqlBoxMigrationRunner(
             latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
     }
 
-    private async Task RunBootstrapPathAsync(
+    private async Task RunBootstrapPathLegacyAsync(
         SqlConnection connection, SqlTransaction transaction,
         string schemaName, string tableName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
@@ -195,7 +272,7 @@ public class MsSqlBoxMigrationRunner(
         }
     }
 
-    private async Task RunNormalPathAsync(
+    private async Task RunNormalPathLegacyAsync(
         SqlConnection connection, SqlTransaction transaction,
         string schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations,
@@ -215,23 +292,7 @@ public class MsSqlBoxMigrationRunner(
         }
     }
 
-    private static void ValidateMigrationsMonotonic(
-        string schemaName, string tableName, IReadOnlyList<IAmABoxMigration> migrations)
-    {
-        for (var i = 1; i < migrations.Count; i++)
-        {
-            var prev = migrations[i - 1].Version;
-            var curr = migrations[i].Version;
-            if (curr != prev + 1)
-            {
-                throw new ConfigurationException(
-                    $"Migration list for '{schemaName}.{tableName}' is not contiguous and ascending: " +
-                    $"V{prev} followed by V{curr} (expected V{prev + 1}).");
-            }
-        }
-    }
-
-    private static async Task EnsureHistoryTableAsync(
+    private static async Task EnsureHistoryTableLegacyAsync(
         SqlConnection connection, SqlTransaction transaction,
         CancellationToken cancellationToken)
     {
