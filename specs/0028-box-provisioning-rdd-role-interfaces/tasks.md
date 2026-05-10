@@ -554,9 +554,9 @@ Each relational backend's runner refactor is broken into three structural sub-st
 
 ### 7.3 MySQL runner — apply the recipe
 
-- [ ] **TIDY FIRST: 7.3a Introduce `MySqlBoxMigrationRunner` derived shell with `IMySqlAdvisoryLock?` field. MySQL UoW takes the lock primitive; transaction stays null per Phase 5.3. Validation: 50/50 net9.0-only.**
+- [x] **TIDY FIRST: 7.3a Introduce `MySqlBoxMigrationRunner` derived shell with `IMySqlAdvisoryLock?` field. MySQL UoW takes the lock primitive; transaction stays null per Phase 5.3. Validation: 50/50 net9.0-only.**
 
-- [ ] **TIDY FIRST: 7.3b Replace each legacy-delegate hook (one commit per hook). Validation: 50/50 net9.0-only each commit.**
+- [x] **TIDY FIRST: 7.3b Replace each legacy-delegate hook (one commit per hook). Validation: 50/50 net9.0-only each commit.**
 
 - [ ] **TIDY FIRST: 7.3c Delete the legacy `MigrateLegacyAsync` orchestration. Validation: 50/50 net9.0-only.**
 
