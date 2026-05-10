@@ -55,6 +55,13 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
     private readonly IMySqlAdvisoryLock _advisoryLock;
     private readonly ILogger _logger;
 
+    // Threaded through the base's LockResourceFor → CreateUnitOfWorkAsync sequence so the
+    // per-invocation tableName reaches MySqlProvisioningUnitOfWork's ctor for NF1-faithful
+    // tri-state RELEASE_LOCK Warning emission (MySqlMigrationLockName.For hash-truncates the
+    // raw tableName for long composites, so lockResource alone cannot surface it). AsyncLocal
+    // preserves correctness under concurrent MigrateAsync invocations on the same instance.
+    private readonly AsyncLocal<string?> _activeTableName = new();
+
     /// <summary>
     /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
     /// </summary>
@@ -95,7 +102,13 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
         => CreateUnitOfWorkLegacyAsync(connection, cancellationToken);
 
     protected override string LockResourceFor(string? schemaName, string tableName)
-        => LockResourceForLegacy(schemaName, tableName);
+    {
+        // Capture the per-invocation table name so CreateUnitOfWorkAsync can thread it into
+        // the UoW ctor for NF1-faithful tri-state Warning emission — MySqlMigrationLockName.For
+        // hash-truncates long composites and would otherwise lose the raw tableName.
+        _activeTableName.Value = tableName;
+        return LockResourceForLegacy(schemaName, tableName);
+    }
 
     protected override Task EnsureHistoryTableAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName,
@@ -132,7 +145,7 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
     private Task<IAmAProvisioningUnitOfWork<MySqlTransaction>> CreateUnitOfWorkLegacyAsync(
         MySqlConnection connection, CancellationToken cancellationToken)
         => Task.FromResult<IAmAProvisioningUnitOfWork<MySqlTransaction>>(
-            new MySqlProvisioningUnitOfWork(connection, _advisoryLock, _logger));
+            new MySqlProvisioningUnitOfWork(connection, _advisoryLock, _logger, _activeTableName.Value));
 
     // The schema is folded into the lock name so two same-named tables in different schemas
     // acquire distinct advisory locks. MySQL's GET_LOCK has a 64-char limit; the helper

@@ -45,11 +45,13 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 public class MySqlProvisioningUnitOfWork(
     MySqlConnection connection,
     IMySqlAdvisoryLock advisoryLock,
-    ILogger logger) : IAmAProvisioningUnitOfWork<MySqlTransaction>
+    ILogger logger,
+    string? tableName = null) : IAmAProvisioningUnitOfWork<MySqlTransaction>
 {
     private readonly MySqlConnection _connection = connection;
     private readonly IMySqlAdvisoryLock _advisoryLock = advisoryLock;
     private readonly ILogger _logger = logger;
+    private readonly string? _tableName = tableName;
     private string? _lockResource;
 
     /// <inheritdoc />
@@ -109,9 +111,24 @@ public class MySqlProvisioningUnitOfWork(
 
         var marker = releaseResult is null ? "NULL" : "0";
         var meaning = releaseResult is null ? "lock did not exist" : "lock held by another session";
-        _logger.LogWarning(
-            "MySQL advisory lock '{LockResource}' was not released by this session: RELEASE_LOCK returned {Result} ({Marker} = {Meaning}). This is likely a Brighter defect — please report it.",
-            _lockResource, releaseResult, marker, meaning);
+        if (_tableName is not null)
+        {
+            // Phase 5.3 regression fix: restore the legacy runner's TableName+LockKey emission
+            // shape per NF1 (no information loss). MySqlMigrationLockName.For hashes long
+            // composites into a 64-char-safe GET_LOCK key, so lockResource alone cannot
+            // surface the raw table name in long-name cases. The runner threads tableName
+            // through the UoW ctor so this Warning preserves diagnostic context regardless
+            // of name length.
+            _logger.LogWarning(
+                "MySQL advisory lock for migration of '{TableName}' (key '{LockKey}') was not released by this session: RELEASE_LOCK returned {Result} ({Marker} = {Meaning}). This is likely a Brighter defect — please report it.",
+                _tableName, _lockResource, releaseResult, marker, meaning);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "MySQL advisory lock '{LockResource}' was not released by this session: RELEASE_LOCK returned {Result} ({Marker} = {Meaning}). This is likely a Brighter defect — please report it.",
+                _lockResource, releaseResult, marker, meaning);
+        }
     }
 
     /// <inheritdoc />
