@@ -206,11 +206,24 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
         }
     }
 
-    protected override Task RunNormalPathAsync(
+    protected override async Task RunNormalPathAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
-        => RunNormalPathLegacyAsync(
-            connection, schemaName ?? DatabaseName(), tableName, migrations, cancellationToken);
+    {
+        var effectiveSchema = schemaName ?? DatabaseName();
+        var maxVersion = await DetectionHelper.GetMaxVersionAsync(
+            connection, tableName, effectiveSchema, cancellationToken);
+
+        foreach (var migration in migrations)
+        {
+            if (migration.Version <= maxVersion) continue;
+
+            await ExecuteUpScriptAsync(connection, migration, cancellationToken);
+            await InsertHistoryRowAsync(
+                connection, effectiveSchema, tableName,
+                migration.Version, migration.Description, cancellationToken);
+        }
+    }
 
     // ==== Legacy delegates — Phase 7.3b moves bodies into overrides; Phase 7.3c deletes MigrateLegacyAsync ====
 
@@ -259,8 +272,8 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
             }
             else
             {
-                await RunNormalPathLegacyAsync(
-                    connection, effectiveSchema, tableName, migrations, cancellationToken);
+                await RunNormalPathAsync(
+                    connection, transaction: null, effectiveSchema, tableName, migrations, cancellationToken);
             }
         }
         finally
@@ -274,24 +287,6 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
                     tableName, lockKey, releaseResult, resultMarker,
                     releaseResult is null ? "lock did not exist" : "lock held by another session");
             }
-        }
-    }
-
-    private static async Task RunNormalPathLegacyAsync(
-        MySqlConnection connection, string schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
-    {
-        var maxVersion = await MySqlBoxDetectionHelpers.GetMaxVersionAsync(
-            connection, tableName, schemaName, cancellationToken);
-
-        foreach (var migration in migrations)
-        {
-            if (migration.Version <= maxVersion) continue;
-
-            await ExecuteUpScriptAsync(connection, migration, cancellationToken);
-            await InsertHistoryRowAsync(
-                connection, schemaName, tableName,
-                migration.Version, migration.Description, cancellationToken);
         }
     }
 
