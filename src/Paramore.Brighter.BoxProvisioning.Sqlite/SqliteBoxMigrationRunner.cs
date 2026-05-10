@@ -123,8 +123,19 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
 
     // ==== Hook overrides — Phase 7.4a delegates to legacy helpers ====
 
-    protected override Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
-        => OpenConnectionLegacyAsync(cancellationToken);
+    protected override async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+    {
+        var connection = new SqliteConnection(Configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await SetSqliteBusyTimeoutToZeroAsync(connection, cancellationToken);
+        if (_enableWalMode)
+        {
+            await EnsureWalModeAsync(connection, cancellationToken);
+        }
+
+        return connection;
+    }
 
     protected override Task<IAmAProvisioningUnitOfWork<SqliteTransaction>> CreateUnitOfWorkAsync(
         SqliteConnection connection, CancellationToken cancellationToken)
@@ -154,20 +165,6 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
         => RunNormalPathLegacyAsync(connection, transaction!, tableName, migrations, cancellationToken);
 
     // ==== Legacy delegates — Phase 7.4b moves bodies into overrides; Phase 7.4c deletes MigrateLegacyAsync ====
-
-    private async Task<SqliteConnection> OpenConnectionLegacyAsync(CancellationToken cancellationToken)
-    {
-        var connection = new SqliteConnection(Configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-
-        await SetSqliteBusyTimeoutToZeroAsync(connection, cancellationToken);
-        if (_enableWalMode)
-        {
-            await EnsureWalModeAsync(connection, cancellationToken);
-        }
-
-        return connection;
-    }
 
     private Task<IAmAProvisioningUnitOfWork<SqliteTransaction>> CreateUnitOfWorkLegacyAsync(
         SqliteConnection connection, CancellationToken cancellationToken)
