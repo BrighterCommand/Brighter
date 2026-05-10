@@ -492,7 +492,7 @@ Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO deri
     - `DoesTableExistAsync = true, DoesHistoryExistAsync = false` → returns `(true, false)`.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase derived class can override RedetectStateAsync without overriding any other hook**
+- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase derived class can override RedetectStateAsync without overriding any other hook**
   - **USE COMMAND**: `/test-first when a derived runner overrides RedetectStateAsync to return constant true it should be invoked instead of the base default and the base algorithm should still run unchanged`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_redetect_state_is_overridden_it_should_use_the_override.cs`
