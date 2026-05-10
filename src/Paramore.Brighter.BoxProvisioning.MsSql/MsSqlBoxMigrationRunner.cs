@@ -95,7 +95,8 @@ public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConne
 
     protected override Task<IAmAProvisioningUnitOfWork<SqlTransaction>> CreateUnitOfWorkAsync(
         SqlConnection connection, CancellationToken cancellationToken)
-        => CreateUnitOfWorkLegacyAsync(connection, cancellationToken);
+        => Task.FromResult<IAmAProvisioningUnitOfWork<SqlTransaction>>(
+            new MsSqlProvisioningUnitOfWork(connection, _advisoryLock, _logger));
 
     protected override string LockResourceFor(string? schemaName, string tableName)
         => LockResourceForLegacy(schemaName, tableName);
@@ -124,11 +125,6 @@ public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConne
             connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, migrations, cancellationToken);
 
     // ==== Legacy delegates — Phase 7.1b moves bodies into overrides; Phase 7.1c deletes MigrateLegacyAsync ====
-
-    private Task<IAmAProvisioningUnitOfWork<SqlTransaction>> CreateUnitOfWorkLegacyAsync(
-        SqlConnection connection, CancellationToken cancellationToken)
-        => Task.FromResult<IAmAProvisioningUnitOfWork<SqlTransaction>>(
-            new MsSqlProvisioningUnitOfWork(connection, _advisoryLock, _logger));
 
     // Include the schema name so that two same-named tables in different schemas
     // (e.g. dbo.Outbox and billing.Outbox) acquire distinct advisory locks. Without
