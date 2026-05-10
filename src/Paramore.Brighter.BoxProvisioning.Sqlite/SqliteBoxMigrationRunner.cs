@@ -178,10 +178,32 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    protected override Task RunFreshPathAsync(
+    protected override async Task RunFreshPathAsync(
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
-        => RunFreshPathLegacyAsync(connection, transaction!, tableName, migrations, cancellationToken);
+    {
+        _ = schemaName; // SQLite has no schema concept.
+
+        if (migrations.Count == 0) return;
+
+        // V1's UpScript IS the live builder DDL (V_latest-shape per ADR §3 fresh-install fast
+        // path). A list whose first entry is anything other than V1 would silently install the
+        // wrong schema, so reject it before any DDL fires.
+        if (migrations[0].Version != 1)
+            throw new ConfigurationException(
+                $"Cannot install '{tableName}' from a fresh state: " +
+                $"the first migration must be V1, but the supplied migrations list starts at V{migrations[0].Version}.");
+
+        // Stamp directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs
+        // would all be no-ops (and would in fact throw "duplicate column name" without the
+        // IdempotencyCheckSql skip), so we elide the chain.
+        await ExecuteUpScriptAsync(connection, transaction!, migrations[0].UpScript, cancellationToken);
+
+        var latest = migrations[migrations.Count - 1];
+        await InsertHistoryRowAsync(
+            connection, transaction!, tableName,
+            latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
+    }
 
     protected override Task RunBootstrapPathAsync(
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
@@ -233,8 +255,8 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
 
             if (!tableExistsNow)
             {
-                await RunFreshPathLegacyAsync(
-                    connection, transaction, tableName, migrations, cancellationToken);
+                await RunFreshPathAsync(
+                    connection, transaction, schemaName: null, tableName, migrations, cancellationToken);
             }
             else if (!historyExistsNow)
             {
@@ -261,32 +283,6 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         {
             transaction.Dispose();
         }
-    }
-
-    private static async Task RunFreshPathLegacyAsync(
-        SqliteConnection connection, SqliteTransaction transaction,
-        string tableName, IReadOnlyList<IAmABoxMigration> migrations,
-        CancellationToken cancellationToken)
-    {
-        if (migrations.Count == 0) return;
-
-        // V1's UpScript IS the live builder DDL (V_latest-shape per ADR §3 fresh-install fast
-        // path). A list whose first entry is anything other than V1 would silently install the
-        // wrong schema, so reject it before any DDL fires.
-        if (migrations[0].Version != 1)
-            throw new ConfigurationException(
-                $"Cannot install '{tableName}' from a fresh state: " +
-                $"the first migration must be V1, but the supplied migrations list starts at V{migrations[0].Version}.");
-
-        // Stamp directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs
-        // would all be no-ops (and would in fact throw "duplicate column name" without the
-        // IdempotencyCheckSql skip), so we elide the chain.
-        await ExecuteUpScriptAsync(connection, transaction, migrations[0].UpScript, cancellationToken);
-
-        var latest = migrations[migrations.Count - 1];
-        await InsertHistoryRowAsync(
-            connection, transaction, tableName,
-            latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
     }
 
     private static async Task RunBootstrapPathLegacyAsync(
