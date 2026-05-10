@@ -104,10 +104,43 @@ public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<Npg
     protected override string LockResourceFor(string? schemaName, string tableName)
         => $"BrighterMigration_{schemaName ?? HISTORY_TABLE_SCHEMA}.{tableName}";
 
-    protected override Task EnsureHistoryTableAsync(
+    protected override async Task EnsureHistoryTableAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName,
         CancellationToken cancellationToken)
-        => EnsureHistoryTableLegacyAsync(connection, transaction, cancellationToken);
+    {
+        // schemaName is accepted for symmetry with the abstract signature but ignored — the
+        // history table always lives in [public] regardless of the configured box schema (see
+        // HISTORY_TABLE_SCHEMA constant comment).
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $@"
+CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE}"" (
+    ""MigrationVersion"" INT NOT NULL,
+    ""SchemaName"" VARCHAR(256) NOT NULL DEFAULT 'public',
+    ""BoxTableName"" VARCHAR(256) NOT NULL,
+    ""Description"" VARCHAR(512) NOT NULL,
+    ""AppliedAt"" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (""SchemaName"", ""BoxTableName"", ""MigrationVersion"")
+)";
+        try
+        {
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (PostgresException ex) when (
+            ex.SqlState == PostgresErrorCodes.UniqueViolation
+            || ex.SqlState == PostgresErrorCodes.DuplicateTable
+            || ex.SqlState == PostgresErrorCodes.DuplicateObject)
+        {
+            // TOCTOU on Postgres catalog: another connection raced our CREATE TABLE IF NOT EXISTS
+            // between the existence check (pg_class) and the type insert (pg_type), or between
+            // the type insert and a duplicate-relation check. The error surfaces as one of:
+            //   23505 (UniqueViolation) on pg_type_typname_nsp_index — most common
+            //   42P07 (DuplicateTable) — relation already exists
+            //   42710 (DuplicateObject) — type/constraint already exists
+            // In every case the history table now exists with the schema we intended to create
+            // (the racing session ran the same DDL), which is the post-condition we wanted.
+        }
+    }
 
     protected override Task RunFreshPathAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName, string tableName,
@@ -167,7 +200,7 @@ public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<Npg
             // pg_type_typname_nsp_index (23505). Inside a transaction that failure poisons the
             // session (every subsequent statement returns 25P02); pulling it out to autocommit
             // means only the racing statement fails and we can ignore it.
-            await EnsureHistoryTableLegacyAsync(connection, transaction: null, cancellationToken);
+            await EnsureHistoryTableAsync(connection, transaction: null, schemaName: null, cancellationToken);
 
             var transaction = (NpgsqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
 
@@ -304,40 +337,6 @@ public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<Npg
         }
     }
 
-    private static async Task EnsureHistoryTableLegacyAsync(
-        NpgsqlConnection connection, NpgsqlTransaction? transaction,
-        CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = $@"
-CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE}"" (
-    ""MigrationVersion"" INT NOT NULL,
-    ""SchemaName"" VARCHAR(256) NOT NULL DEFAULT 'public',
-    ""BoxTableName"" VARCHAR(256) NOT NULL,
-    ""Description"" VARCHAR(512) NOT NULL,
-    ""AppliedAt"" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (""SchemaName"", ""BoxTableName"", ""MigrationVersion"")
-)";
-        try
-        {
-            await command.ExecuteNonQueryAsync(cancellationToken);
-        }
-        catch (PostgresException ex) when (
-            ex.SqlState == PostgresErrorCodes.UniqueViolation
-            || ex.SqlState == PostgresErrorCodes.DuplicateTable
-            || ex.SqlState == PostgresErrorCodes.DuplicateObject)
-        {
-            // TOCTOU on Postgres catalog: another connection raced our CREATE TABLE IF NOT EXISTS
-            // between the existence check (pg_class) and the type insert (pg_type), or between
-            // the type insert and a duplicate-relation check. The error surfaces as one of:
-            //   23505 (UniqueViolation) on pg_type_typname_nsp_index — most common
-            //   42P07 (DuplicateTable) — relation already exists
-            //   42710 (DuplicateObject) — type/constraint already exists
-            // In every case the history table now exists with the schema we intended to create
-            // (the racing session ran the same DDL), which is the post-condition we wanted.
-        }
-    }
 
     private static async Task ExecuteUpScriptAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction,
