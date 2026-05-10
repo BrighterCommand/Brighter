@@ -216,11 +216,25 @@ END";
         }
     }
 
-    protected override Task RunNormalPathAsync(
+    protected override async Task RunNormalPathAsync(
         SqlConnection connection, SqlTransaction? transaction, string? schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
-        => RunNormalPathLegacyAsync(
-            connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, migrations, cancellationToken);
+    {
+        var effectiveSchema = schemaName ?? HISTORY_TABLE_SCHEMA;
+
+        var maxVersion = await DetectionHelper.GetMaxVersionAsync(
+            connection, tableName, effectiveSchema, cancellationToken, transaction);
+
+        foreach (var migration in migrations)
+        {
+            if (migration.Version <= maxVersion) continue;
+
+            await ExecuteUpScriptAsync(connection, transaction!, migration, cancellationToken);
+            await InsertHistoryRowAsync(
+                connection, transaction!, effectiveSchema, tableName,
+                migration.Version, migration.Description, cancellationToken);
+        }
+    }
 
     // ==== Legacy delegates — Phase 7.1b moves bodies into overrides; Phase 7.1c deletes MigrateLegacyAsync ====
 
@@ -274,7 +288,7 @@ END";
             }
             else
             {
-                await RunNormalPathLegacyAsync(
+                await RunNormalPathAsync(
                     connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
             }
 
@@ -288,26 +302,6 @@ END";
         finally
         {
             transaction.Dispose();
-        }
-    }
-
-    private async Task RunNormalPathLegacyAsync(
-        SqlConnection connection, SqlTransaction transaction,
-        string schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations,
-        CancellationToken cancellationToken)
-    {
-        var maxVersion = await MsSqlBoxDetectionHelpers.GetMaxVersionAsync(
-            connection, tableName, schemaName, cancellationToken, transaction);
-
-        foreach (var migration in migrations)
-        {
-            if (migration.Version <= maxVersion) continue;
-
-            await ExecuteUpScriptAsync(connection, transaction, migration, cancellationToken);
-            await InsertHistoryRowAsync(
-                connection, transaction, schemaName, tableName,
-                migration.Version, migration.Description, cancellationToken);
         }
     }
 
