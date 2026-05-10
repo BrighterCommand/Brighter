@@ -166,11 +166,45 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
             latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
     }
 
-    protected override Task RunBootstrapPathAsync(
+    protected override async Task RunBootstrapPathAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
-        => RunBootstrapPathLegacyAsync(
-            connection, schemaName ?? DatabaseName(), tableName, boxType, migrations, cancellationToken);
+    {
+        var effectiveSchema = schemaName ?? DatabaseName();
+
+        var detected = await DetectionHelper.DetectCurrentVersionAsync(
+            connection, tableName, effectiveSchema, boxType, migrations, cancellationToken);
+
+        if (detected == -1)
+        {
+            var discriminator = DetectionHelper.DiscriminatorFor(boxType);
+            throw new ConfigurationException(
+                $"Table '{effectiveSchema}.{tableName}' is not a Brighter {boxType.ToString().ToLowerInvariant()}: " +
+                $"missing discriminator column '{discriminator}'.");
+        }
+
+        if (detected == 0)
+        {
+            throw new ConfigurationException(
+                $"Table '{effectiveSchema}.{tableName}' does not match any known schema version. " +
+                $"Cannot bootstrap a Brighter {boxType.ToString().ToLowerInvariant()} from an unrecognised column set.");
+        }
+
+        await InsertHistoryRowAsync(
+            connection, effectiveSchema, tableName,
+            detected, $"bootstrap: detected at V{detected}", cancellationToken);
+
+        for (var i = 0; i < migrations.Count; i++)
+        {
+            var migration = migrations[i];
+            if (migration.Version <= detected) continue;
+
+            await ExecuteUpScriptAsync(connection, migration, cancellationToken);
+            await InsertHistoryRowAsync(
+                connection, effectiveSchema, tableName,
+                migration.Version, migration.Description, cancellationToken);
+        }
+    }
 
     protected override Task RunNormalPathAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
@@ -220,8 +254,8 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
             }
             else if (!historyExistsNow)
             {
-                await RunBootstrapPathLegacyAsync(
-                    connection, effectiveSchema, tableName, boxType, migrations, cancellationToken);
+                await RunBootstrapPathAsync(
+                    connection, transaction: null, effectiveSchema, tableName, boxType, migrations, cancellationToken);
             }
             else
             {
@@ -240,45 +274,6 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
                     tableName, lockKey, releaseResult, resultMarker,
                     releaseResult is null ? "lock did not exist" : "lock held by another session");
             }
-        }
-    }
-
-    private static async Task RunBootstrapPathLegacyAsync(
-        MySqlConnection connection, string schemaName, string tableName,
-        BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
-        CancellationToken cancellationToken)
-    {
-        var detected = await MySqlBoxDetectionHelpers.DetectCurrentVersionAsync(
-            connection, tableName, schemaName, boxType, migrations, cancellationToken);
-
-        if (detected == -1)
-        {
-            var discriminator = MySqlBoxDetectionHelpers.DiscriminatorFor(boxType);
-            throw new ConfigurationException(
-                $"Table '{schemaName}.{tableName}' is not a Brighter {boxType.ToString().ToLowerInvariant()}: " +
-                $"missing discriminator column '{discriminator}'.");
-        }
-
-        if (detected == 0)
-        {
-            throw new ConfigurationException(
-                $"Table '{schemaName}.{tableName}' does not match any known schema version. " +
-                $"Cannot bootstrap a Brighter {boxType.ToString().ToLowerInvariant()} from an unrecognised column set.");
-        }
-
-        await InsertHistoryRowAsync(
-            connection, schemaName, tableName,
-            detected, $"bootstrap: detected at V{detected}", cancellationToken);
-
-        for (var i = 0; i < migrations.Count; i++)
-        {
-            var migration = migrations[i];
-            if (migration.Version <= detected) continue;
-
-            await ExecuteUpScriptAsync(connection, migration, cancellationToken);
-            await InsertHistoryRowAsync(
-                connection, schemaName, tableName,
-                migration.Version, migration.Description, cancellationToken);
         }
     }
 
