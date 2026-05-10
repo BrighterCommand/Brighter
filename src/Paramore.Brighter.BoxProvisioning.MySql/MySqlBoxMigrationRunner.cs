@@ -103,7 +103,8 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
 
     protected override Task<IAmAProvisioningUnitOfWork<MySqlTransaction>> CreateUnitOfWorkAsync(
         MySqlConnection connection, CancellationToken cancellationToken)
-        => CreateUnitOfWorkLegacyAsync(connection, cancellationToken);
+        => Task.FromResult<IAmAProvisioningUnitOfWork<MySqlTransaction>>(
+            new MySqlProvisioningUnitOfWork(connection, _advisoryLock, _logger, _activeTableName.Value));
 
     protected override string LockResourceFor(string? schemaName, string tableName)
     {
@@ -138,11 +139,6 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
             connection, schemaName ?? DatabaseName(), tableName, migrations, cancellationToken);
 
     // ==== Legacy delegates — Phase 7.3b moves bodies into overrides; Phase 7.3c deletes MigrateLegacyAsync ====
-
-    private Task<IAmAProvisioningUnitOfWork<MySqlTransaction>> CreateUnitOfWorkLegacyAsync(
-        MySqlConnection connection, CancellationToken cancellationToken)
-        => Task.FromResult<IAmAProvisioningUnitOfWork<MySqlTransaction>>(
-            new MySqlProvisioningUnitOfWork(connection, _advisoryLock, _logger, _activeTableName.Value));
 
     // The schema is folded into the lock name so two same-named tables in different schemas
     // acquire distinct advisory locks. MySQL's GET_LOCK has a 64-char limit; the helper
