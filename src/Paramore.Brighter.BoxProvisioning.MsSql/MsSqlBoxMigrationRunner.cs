@@ -104,10 +104,51 @@ public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConne
     protected override string LockResourceFor(string? schemaName, string tableName)
         => $"BrighterMigration_{schemaName ?? HISTORY_TABLE_SCHEMA}.{tableName}";
 
-    protected override Task EnsureHistoryTableAsync(
+    protected override async Task EnsureHistoryTableAsync(
         SqlConnection connection, SqlTransaction? transaction, string? schemaName,
         CancellationToken cancellationToken)
-        => EnsureHistoryTableLegacyAsync(connection, transaction!, cancellationToken);
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        // Filter sys.tables by both name AND schema_id — without the schema_id filter the
+        // existence check misfires when any other schema happens to contain a table by that name,
+        // skipping the [dbo] create and breaking subsequent INSERT/SELECT statements.
+        // The WHERE values are parameterised (matching DoesTableExistAsync); the bracketed
+        // identifiers in the CREATE TABLE body must remain inline because T-SQL DDL does not
+        // accept bind parameters for object names.
+        command.CommandText = $@"
+IF NOT EXISTS (
+    SELECT 1 FROM sys.tables
+    WHERE name = @HistoryTableName AND schema_id = SCHEMA_ID(@HistorySchema)
+)
+BEGIN
+    CREATE TABLE [{HISTORY_TABLE_SCHEMA}].[{MIGRATION_HISTORY_TABLE}] (
+        [MigrationVersion] INT NOT NULL,
+        [SchemaName] VARCHAR(256) NOT NULL DEFAULT 'dbo',
+        [BoxTableName] VARCHAR(256) NOT NULL,
+        [Description] NVARCHAR(512) NOT NULL,
+        [AppliedAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+        CONSTRAINT PK_BrighterMigrationHistory
+            PRIMARY KEY ([SchemaName], [BoxTableName], [MigrationVersion])
+    );
+END";
+        command.Parameters.AddWithValue("@HistoryTableName", MIGRATION_HISTORY_TABLE);
+        command.Parameters.AddWithValue("@HistorySchema", HISTORY_TABLE_SCHEMA);
+        try
+        {
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (SqlException ex) when (ex.Number == 2714)
+        {
+            // TOCTOU on sys.tables: the per-table sp_getapplock above does not cover the shared
+            // __BrighterMigrationHistory, so two concurrent provisioners with different table
+            // names (e.g. outbox + inbox) can both pass the IF NOT EXISTS check and both issue
+            // CREATE TABLE; the loser hits 2714 ("There is already an object named ..."). 2714
+            // is a statement-terminating error with default XACT_ABORT OFF — the transaction is
+            // not doomed, so we can ignore it and continue. The history table now exists with
+            // the schema we intended (the racing session ran the same DDL).
+        }
+    }
 
     protected override Task RunFreshPathAsync(
         SqlConnection connection, SqlTransaction? transaction, string? schemaName, string tableName,
@@ -160,7 +201,7 @@ public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConne
         {
             await _advisoryLock.AcquireAsync(
                 connection, transaction, lockResource, _lockTimeout, cancellationToken);
-            await EnsureHistoryTableLegacyAsync(connection, transaction, cancellationToken);
+            await EnsureHistoryTableAsync(connection, transaction, schemaName: null, cancellationToken);
 
             var tableExistsNow = await MsSqlBoxDetectionHelpers.DoesTableExistAsync(
                 connection, tableName, effectiveSchema, cancellationToken, transaction);
@@ -279,52 +320,6 @@ public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConne
             await InsertHistoryRowAsync(
                 connection, transaction, schemaName, tableName,
                 migration.Version, migration.Description, cancellationToken);
-        }
-    }
-
-    private static async Task EnsureHistoryTableLegacyAsync(
-        SqlConnection connection, SqlTransaction transaction,
-        CancellationToken cancellationToken)
-    {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        // Filter sys.tables by both name AND schema_id — without the schema_id filter the
-        // existence check misfires when any other schema happens to contain a table by that name,
-        // skipping the [dbo] create and breaking subsequent INSERT/SELECT statements.
-        // The WHERE values are parameterised (matching DoesTableExistAsync); the bracketed
-        // identifiers in the CREATE TABLE body must remain inline because T-SQL DDL does not
-        // accept bind parameters for object names.
-        command.CommandText = $@"
-IF NOT EXISTS (
-    SELECT 1 FROM sys.tables
-    WHERE name = @HistoryTableName AND schema_id = SCHEMA_ID(@HistorySchema)
-)
-BEGIN
-    CREATE TABLE [{HISTORY_TABLE_SCHEMA}].[{MIGRATION_HISTORY_TABLE}] (
-        [MigrationVersion] INT NOT NULL,
-        [SchemaName] VARCHAR(256) NOT NULL DEFAULT 'dbo',
-        [BoxTableName] VARCHAR(256) NOT NULL,
-        [Description] NVARCHAR(512) NOT NULL,
-        [AppliedAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        CONSTRAINT PK_BrighterMigrationHistory
-            PRIMARY KEY ([SchemaName], [BoxTableName], [MigrationVersion])
-    );
-END";
-        command.Parameters.AddWithValue("@HistoryTableName", MIGRATION_HISTORY_TABLE);
-        command.Parameters.AddWithValue("@HistorySchema", HISTORY_TABLE_SCHEMA);
-        try
-        {
-            await command.ExecuteNonQueryAsync(cancellationToken);
-        }
-        catch (SqlException ex) when (ex.Number == 2714)
-        {
-            // TOCTOU on sys.tables: the per-table sp_getapplock above does not cover the shared
-            // __BrighterMigrationHistory, so two concurrent provisioners with different table
-            // names (e.g. outbox + inbox) can both pass the IF NOT EXISTS check and both issue
-            // CREATE TABLE; the loser hits 2714 ("There is already an object named ..."). 2714
-            // is a statement-terminating error with default XACT_ABORT OFF — the transaction is
-            // not doomed, so we can ignore it and continue. The history table now exists with
-            // the schema we intended (the racing session ran the same DDL).
         }
     }
 
