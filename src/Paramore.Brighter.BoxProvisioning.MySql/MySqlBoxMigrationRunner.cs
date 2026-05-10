@@ -51,7 +51,6 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
 
-    private readonly TimeSpan _lockTimeout;
     private readonly IMySqlAdvisoryLock _advisoryLock;
     private readonly ILogger _logger;
 
@@ -73,7 +72,6 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
         TimeSpan? lockTimeout = null)
         : base(detectionHelper, configuration, lockTimeout ?? default, logger)
     {
-        _lockTimeout = lockTimeout ?? default;
         _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
         _logger = logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>();
     }
@@ -222,71 +220,6 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
             await InsertHistoryRowAsync(
                 connection, effectiveSchema, tableName,
                 migration.Version, migration.Description, cancellationToken);
-        }
-    }
-
-    // ==== Legacy delegates — Phase 7.3b moves bodies into overrides; Phase 7.3c deletes MigrateLegacyAsync ====
-
-    private async Task MigrateLegacyAsync(
-        string tableName,
-        string? schemaName,
-        BoxType boxType,
-        IReadOnlyList<IAmABoxMigration> migrations,
-        BoxTableState tableState,
-        CancellationToken cancellationToken = default)
-    {
-        _ = tableState; // Stale hint — runner re-detects under the GET_LOCK session.
-        var effectiveSchema = schemaName ?? DatabaseName();
-
-        // Reject duplicate / gap / out-of-order versions before opening a connection. Validation
-        // sits at MigrateAsync entry (rather than inside one of the path branches) so the rule
-        // applies uniformly across fresh / bootstrap / normal paths — a malformed list corrupts
-        // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
-        ValidateMigrationsMonotonic(effectiveSchema, tableName, migrations);
-
-        var lockKey = MySqlMigrationLockName.For(effectiveSchema, tableName);
-
-        using var connection = new MySqlConnection(EnsureAllowUserVariables(Configuration.ConnectionString));
-        await connection.OpenAsync(cancellationToken);
-
-        await _advisoryLock.AcquireAsync(connection, lockKey, _lockTimeout, cancellationToken);
-
-        try
-        {
-            await EnsureHistoryTableAsync(connection, transaction: null, schemaName: null, cancellationToken);
-
-            var tableExistsNow = await MySqlBoxDetectionHelpers.DoesTableExistAsync(
-                connection, tableName, effectiveSchema, cancellationToken);
-            var historyExistsNow = tableExistsNow && await MySqlBoxDetectionHelpers.DoesHistoryExistAsync(
-                connection, tableName, effectiveSchema, cancellationToken);
-
-            if (!tableExistsNow)
-            {
-                await RunFreshPathAsync(
-                    connection, transaction: null, effectiveSchema, tableName, migrations, cancellationToken);
-            }
-            else if (!historyExistsNow)
-            {
-                await RunBootstrapPathAsync(
-                    connection, transaction: null, effectiveSchema, tableName, boxType, migrations, cancellationToken);
-            }
-            else
-            {
-                await RunNormalPathAsync(
-                    connection, transaction: null, effectiveSchema, tableName, migrations, cancellationToken);
-            }
-        }
-        finally
-        {
-            var releaseResult = await _advisoryLock.ReleaseAsync(connection, lockKey, cancellationToken);
-            if (releaseResult is not true)
-            {
-                var resultMarker = releaseResult is null ? "NULL" : "0";
-                _logger.LogWarning(
-                    "MySQL advisory lock for migration of '{TableName}' (key '{LockKey}') was not released by this session: RELEASE_LOCK returned {Result} ({ResultMarker} = {ResultMeaning}). This is likely a Brighter defect — please report it.",
-                    tableName, lockKey, releaseResult, resultMarker,
-                    releaseResult is null ? "lock did not exist" : "lock held by another session");
-            }
         }
     }
 
