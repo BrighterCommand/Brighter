@@ -499,7 +499,7 @@ Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO deri
   - Test should verify the virtual hook contract per ADR §B.2 (the third escape hatch — override `RedetectStateAsync` for non-standard detection model).
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase ValidateMigrationsMonotonic throws on non-monotonic migration list**
+- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase ValidateMigrationsMonotonic throws on non-monotonic migration list**
   - **USE COMMAND**: `/test-first when RelationalBoxMigrationRunnerBase MigrateAsync receives a non-monotonic migration list it should throw before opening any connection`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_migrate_receives_non_monotonic_migrations_it_should_throw_before_opening_connection.cs`
