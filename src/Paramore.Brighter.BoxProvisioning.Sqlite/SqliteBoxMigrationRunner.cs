@@ -205,10 +205,42 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
             latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
     }
 
-    protected override Task RunBootstrapPathAsync(
+    protected override async Task RunBootstrapPathAsync(
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
-        => RunBootstrapPathLegacyAsync(connection, transaction!, tableName, boxType, migrations, cancellationToken);
+    {
+        _ = schemaName; // SQLite has no schema concept.
+
+        var detected = await SqliteBoxDetectionHelpers.DetectCurrentVersionAsync(
+            connection, tableName, boxType, migrations, cancellationToken, transaction);
+
+        if (detected == -1)
+        {
+            var discriminator = SqliteBoxDetectionHelpers.DiscriminatorFor(boxType);
+            throw new ConfigurationException(
+                $"Table '{tableName}' is not a Brighter {boxType.ToString().ToLowerInvariant()}: " +
+                $"missing discriminator column '{discriminator}'.");
+        }
+
+        if (detected == 0)
+        {
+            throw new ConfigurationException(
+                $"Table '{tableName}' does not match any known schema version. " +
+                $"Cannot bootstrap a Brighter {boxType.ToString().ToLowerInvariant()} from an unrecognised column set.");
+        }
+
+        await InsertHistoryRowAsync(
+            connection, transaction!, tableName,
+            detected, $"bootstrap: detected at V{detected}", cancellationToken);
+
+        for (var i = 0; i < migrations.Count; i++)
+        {
+            var migration = migrations[i];
+            if (migration.Version <= detected) continue;
+
+            await ApplyOrSkipAsync(connection, transaction!, tableName, migration, cancellationToken);
+        }
+    }
 
     protected override Task RunNormalPathAsync(
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
@@ -260,8 +292,8 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
             }
             else if (!historyExistsNow)
             {
-                await RunBootstrapPathLegacyAsync(
-                    connection, transaction, tableName, boxType, migrations, cancellationToken);
+                await RunBootstrapPathAsync(
+                    connection, transaction, schemaName: null, tableName, boxType, migrations, cancellationToken);
             }
             else
             {
@@ -282,42 +314,6 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         finally
         {
             transaction.Dispose();
-        }
-    }
-
-    private static async Task RunBootstrapPathLegacyAsync(
-        SqliteConnection connection, SqliteTransaction transaction,
-        string tableName, BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
-        CancellationToken cancellationToken)
-    {
-        var detected = await SqliteBoxDetectionHelpers.DetectCurrentVersionAsync(
-            connection, tableName, boxType, migrations, cancellationToken, transaction);
-
-        if (detected == -1)
-        {
-            var discriminator = SqliteBoxDetectionHelpers.DiscriminatorFor(boxType);
-            throw new ConfigurationException(
-                $"Table '{tableName}' is not a Brighter {boxType.ToString().ToLowerInvariant()}: " +
-                $"missing discriminator column '{discriminator}'.");
-        }
-
-        if (detected == 0)
-        {
-            throw new ConfigurationException(
-                $"Table '{tableName}' does not match any known schema version. " +
-                $"Cannot bootstrap a Brighter {boxType.ToString().ToLowerInvariant()} from an unrecognised column set.");
-        }
-
-        await InsertHistoryRowAsync(
-            connection, transaction, tableName,
-            detected, $"bootstrap: detected at V{detected}", cancellationToken);
-
-        for (var i = 0; i < migrations.Count; i++)
-        {
-            var migration = migrations[i];
-            if (migration.Version <= detected) continue;
-
-            await ApplyOrSkipAsync(connection, transaction, tableName, migration, cancellationToken);
         }
     }
 
