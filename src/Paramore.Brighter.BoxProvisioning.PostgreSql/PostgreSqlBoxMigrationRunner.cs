@@ -142,11 +142,31 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
         }
     }
 
-    protected override Task RunFreshPathAsync(
+    protected override async Task RunFreshPathAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
-        => RunFreshPathLegacyAsync(
-            connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, migrations, cancellationToken);
+    {
+        if (migrations.Count == 0) return;
+
+        var effectiveSchema = schemaName ?? HISTORY_TABLE_SCHEMA;
+
+        // V1's UpScript IS the live builder DDL (V_latest-shape per ADR §3 fresh-install fast
+        // path). A list whose first entry is anything other than V1 would silently install the
+        // wrong schema, so reject it before any DDL fires.
+        if (migrations[0].Version != 1)
+            throw new ConfigurationException(
+                $"Cannot install '{effectiveSchema}.{tableName}' from a fresh state: " +
+                $"the first migration must be V1, but the supplied migrations list starts at V{migrations[0].Version}.");
+
+        // We stamp directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs
+        // would be no-ops on the V_latest-shape table, so we skip them.
+        await ExecuteUpScriptAsync(connection, transaction!, migrations[0], cancellationToken);
+
+        var latest = migrations[migrations.Count - 1];
+        await InsertHistoryRowAsync(
+            connection, transaction!, effectiveSchema, tableName,
+            latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
+    }
 
     protected override Task RunBootstrapPathAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName, string tableName,
@@ -213,7 +233,7 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
 
                 if (!tableExistsNow)
                 {
-                    await RunFreshPathLegacyAsync(
+                    await RunFreshPathAsync(
                         connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
                 }
                 else if (!historyExistsNow)
@@ -249,32 +269,6 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
                     tableName, lockKey);
             }
         }
-    }
-
-    private async Task RunFreshPathLegacyAsync(
-        NpgsqlConnection connection, NpgsqlTransaction transaction,
-        string schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations,
-        CancellationToken cancellationToken)
-    {
-        if (migrations.Count == 0) return;
-
-        // V1's UpScript IS the live builder DDL (V_latest-shape per ADR §3 fresh-install fast
-        // path). A list whose first entry is anything other than V1 would silently install the
-        // wrong schema, so reject it before any DDL fires.
-        if (migrations[0].Version != 1)
-            throw new ConfigurationException(
-                $"Cannot install '{schemaName}.{tableName}' from a fresh state: " +
-                $"the first migration must be V1, but the supplied migrations list starts at V{migrations[0].Version}.");
-
-        // We stamp directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs
-        // would be no-ops on the V_latest-shape table, so we skip them.
-        await ExecuteUpScriptAsync(connection, transaction, migrations[0], cancellationToken);
-
-        var latest = migrations[migrations.Count - 1];
-        await InsertHistoryRowAsync(
-            connection, transaction, schemaName, tableName,
-            latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
     }
 
     private async Task RunBootstrapPathLegacyAsync(
