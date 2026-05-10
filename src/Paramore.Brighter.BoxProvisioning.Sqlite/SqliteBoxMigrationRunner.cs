@@ -139,7 +139,11 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
 
     protected override Task<IAmAProvisioningUnitOfWork<SqliteTransaction>> CreateUnitOfWorkAsync(
         SqliteConnection connection, CancellationToken cancellationToken)
-        => CreateUnitOfWorkLegacyAsync(connection, cancellationToken);
+    {
+        _ = cancellationToken;
+        return Task.FromResult<IAmAProvisioningUnitOfWork<SqliteTransaction>>(
+            new SqliteProvisioningUnitOfWork(connection, _logger));
+    }
 
     protected override string LockResourceFor(string? schemaName, string tableName)
         => LockResourceForLegacy(schemaName, tableName);
@@ -165,14 +169,6 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
         => RunNormalPathLegacyAsync(connection, transaction!, tableName, migrations, cancellationToken);
 
     // ==== Legacy delegates — Phase 7.4b moves bodies into overrides; Phase 7.4c deletes MigrateLegacyAsync ====
-
-    private Task<IAmAProvisioningUnitOfWork<SqliteTransaction>> CreateUnitOfWorkLegacyAsync(
-        SqliteConnection connection, CancellationToken cancellationToken)
-    {
-        _ = cancellationToken;
-        return Task.FromResult<IAmAProvisioningUnitOfWork<SqliteTransaction>>(
-            new SqliteProvisioningUnitOfWork(connection, _logger));
-    }
 
     // SQLite has no schema concept, so the schema is folded out of the lock resource. The
     // string is symbolic only — SqliteProvisioningUnitOfWork's BeginAsync logs it for trace
