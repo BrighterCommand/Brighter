@@ -94,8 +94,12 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
 
     // ==== Hook overrides — Phase 7.3a delegates to legacy helpers ====
 
-    protected override Task<MySqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
-        => OpenConnectionLegacyAsync(cancellationToken);
+    protected override async Task<MySqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+    {
+        var connection = new MySqlConnection(EnsureAllowUserVariables(Configuration.ConnectionString));
+        await connection.OpenAsync(cancellationToken);
+        return connection;
+    }
 
     protected override Task<IAmAProvisioningUnitOfWork<MySqlTransaction>> CreateUnitOfWorkAsync(
         MySqlConnection connection, CancellationToken cancellationToken)
@@ -134,13 +138,6 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
             connection, schemaName ?? DatabaseName(), tableName, migrations, cancellationToken);
 
     // ==== Legacy delegates — Phase 7.3b moves bodies into overrides; Phase 7.3c deletes MigrateLegacyAsync ====
-
-    private async Task<MySqlConnection> OpenConnectionLegacyAsync(CancellationToken cancellationToken)
-    {
-        var connection = new MySqlConnection(EnsureAllowUserVariables(Configuration.ConnectionString));
-        await connection.OpenAsync(cancellationToken);
-        return connection;
-    }
 
     private Task<IAmAProvisioningUnitOfWork<MySqlTransaction>> CreateUnitOfWorkLegacyAsync(
         MySqlConnection connection, CancellationToken cancellationToken)
