@@ -49,7 +49,6 @@ public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<Npg
     // first on search_path, scattering history rows across the cluster.
     private const string HISTORY_TABLE_SCHEMA = "public";
 
-    private readonly TimeSpan _lockTimeout;
     private readonly IPostgreSqlAdvisoryLock _advisoryLock;
     private readonly ILogger _logger;
 
@@ -64,7 +63,6 @@ public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<Npg
         TimeSpan? lockTimeout = null)
         : base(detectionHelper, configuration, lockTimeout ?? default, logger)
     {
-        _lockTimeout = lockTimeout ?? default;
         _advisoryLock = advisoryLock ?? new PostgreSqlAdvisoryLock();
         _logger = logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>();
     }
@@ -82,8 +80,6 @@ public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<Npg
         : this(new PostgreSqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout)
     {
     }
-
-    // ==== Hook overrides — Phase 7.2a delegates to legacy helpers ====
 
     protected override async Task<NpgsqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
@@ -225,97 +221,6 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
             await InsertHistoryRowAsync(
                 connection, transaction!, effectiveSchema, tableName,
                 migration.Version, migration.Description, cancellationToken);
-        }
-    }
-
-    // ==== Legacy delegates — Phase 7.2b moves bodies into overrides; Phase 7.2c deletes MigrateLegacyAsync ====
-
-    private async Task MigrateLegacyAsync(
-        string tableName,
-        string? schemaName,
-        BoxType boxType,
-        IReadOnlyList<IAmABoxMigration> migrations,
-        BoxTableState tableState,
-        CancellationToken cancellationToken = default)
-    {
-        _ = tableState; // Stale hint — runner re-detects under the advisory lock.
-        var effectiveSchema = schemaName ?? HISTORY_TABLE_SCHEMA;
-
-        // Reject duplicate / gap / out-of-order versions before opening a connection. Validation
-        // sits at MigrateAsync entry (rather than inside one of the path branches) so the rule
-        // applies uniformly across fresh / bootstrap / normal paths — a malformed list corrupts
-        // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
-        ValidateMigrationsMonotonic(effectiveSchema, tableName, migrations);
-
-        // Include the schema in the lock key so two same-named tables in different schemas
-        // (e.g. public.Outbox and billing.Outbox) acquire distinct advisory locks. Without
-        // the schema qualifier they would share a lock and serialize unnecessarily — matches
-        // the MSSQL runner's lockResource shape at MsSqlBoxMigrationRunner.cs:90.
-        var lockKey = $"BrighterMigration_{effectiveSchema}.{tableName}";
-
-        using var connection = new NpgsqlConnection(Configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-
-        await _advisoryLock.AcquireAsync(connection, lockKey, _lockTimeout, cancellationToken);
-
-        try
-        {
-            // Run the history-table create OUTSIDE the migration transaction. CREATE TABLE IF
-            // NOT EXISTS is not atomic in the Postgres catalog — the existence check on pg_class
-            // and the type insert into pg_type are separate steps, so two concurrent provisioners
-            // (the per-table advisory lock above does not cover the shared history table) can
-            // both pass the existence check and both try to add the type, with one losing on
-            // pg_type_typname_nsp_index (23505). Inside a transaction that failure poisons the
-            // session (every subsequent statement returns 25P02); pulling it out to autocommit
-            // means only the racing statement fails and we can ignore it.
-            await EnsureHistoryTableAsync(connection, transaction: null, schemaName: null, cancellationToken);
-
-            var transaction = (NpgsqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
-
-            try
-            {
-                var tableExistsNow = await PostgreSqlBoxDetectionHelpers.DoesTableExistAsync(
-                    connection, tableName, effectiveSchema, cancellationToken, transaction);
-                var historyExistsNow = tableExistsNow && await PostgreSqlBoxDetectionHelpers.DoesHistoryExistAsync(
-                    connection, tableName, effectiveSchema, cancellationToken, transaction);
-
-                if (!tableExistsNow)
-                {
-                    await RunFreshPathAsync(
-                        connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
-                }
-                else if (!historyExistsNow)
-                {
-                    await RunBootstrapPathAsync(
-                        connection, transaction, effectiveSchema, tableName, boxType, migrations, cancellationToken);
-                }
-                else
-                {
-                    await RunNormalPathAsync(
-                        connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
-                }
-
-                transaction.Commit();
-            }
-            catch
-            {
-                try { transaction.Rollback(); } catch { /* connection may already be closed */ }
-                throw;
-            }
-            finally
-            {
-                transaction.Dispose();
-            }
-        }
-        finally
-        {
-            var held = await _advisoryLock.ReleaseAsync(connection, lockKey, cancellationToken);
-            if (!held)
-            {
-                _logger.LogWarning(
-                    "Postgres advisory lock for migration of '{TableName}' (key '{LockKey}') was not held by this session at release; pg_advisory_unlock returned false. This is likely a Brighter defect — please report it.",
-                    tableName, lockKey);
-            }
         }
     }
 
