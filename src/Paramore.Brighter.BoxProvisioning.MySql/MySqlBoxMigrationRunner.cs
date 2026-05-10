@@ -32,12 +32,13 @@ using Paramore.Brighter.Logging;
 namespace Paramore.Brighter.BoxProvisioning.MySql;
 
 /// <summary>
-/// Runs box migrations against a MySQL database. Uses an injected
+/// Runs box migrations against a MySQL database. Derives from
+/// <see cref="RelationalBoxMigrationRunnerBase{TConnection,TTransaction}"/> for the
+/// success/failure orchestration and supplies the per-backend hooks. Uses an injected
 /// <see cref="IMySqlAdvisoryLock"/> (default <see cref="MySqlAdvisoryLock"/>) for
-/// session-scoped concurrency control. After acquiring the lock the runner re-reads
-/// box-table state under the lock and dispatches into one of three paths (fresh /
-/// bootstrap / normal) per ADR 0057 §3 — the caller's <see cref="BoxTableState"/> is
-/// treated as a stale hint to defeat TOCTOU races.
+/// session-scoped concurrency control via <see cref="MySqlProvisioningUnitOfWork"/>; the
+/// dispatch into fresh / bootstrap / normal paths happens in the base after re-detection
+/// under the UoW.
 /// </summary>
 /// <remarks>
 /// Unlike MSSQL/Postgres, MySQL DDL has implicit per-statement commit (ADR 0057 §5a) so the
@@ -46,41 +47,101 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// next invocation" rather than whole-chain rollback. The history table's PK on
 /// <c>(SchemaName, BoxTableName, MigrationVersion)</c> ensures concurrent racers cannot double-stamp.
 /// </remarks>
-public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
+public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlConnection, MySqlTransaction>
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
 
-    private readonly IAmARelationalDatabaseConfiguration _configuration;
     private readonly TimeSpan _lockTimeout;
     private readonly IMySqlAdvisoryLock _advisoryLock;
     private readonly ILogger _logger;
 
     /// <summary>
-    /// Constructs a runner with the default advisory-lock implementation and the Brighter
-    /// application logger.
+    /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
     /// </summary>
-    /// <param name="configuration">Database configuration providing the connection string.</param>
-    /// <param name="lockTimeout">Maximum time to wait while acquiring the migration advisory
-    /// lock before giving up with <see cref="TimeoutException"/>.</param>
-    /// <param name="advisoryLock">Optional advisory-lock collaborator. Defaults to a new
-    /// <see cref="MySqlAdvisoryLock"/> instance — substitutable for tests and for integrators
-    /// per ADR 0057 §5b.</param>
-    /// <param name="logger">Optional logger. Defaults to <c>ApplicationLogging.CreateLogger</c>
-    /// of this runner type.</param>
+    public MySqlBoxMigrationRunner(
+        MySqlBoxDetectionHelper detectionHelper,
+        IAmARelationalDatabaseConfiguration configuration,
+        IMySqlAdvisoryLock? advisoryLock = null,
+        ILogger? logger = null,
+        TimeSpan? lockTimeout = null)
+        : base(detectionHelper, configuration, lockTimeout ?? default, logger)
+    {
+        _lockTimeout = lockTimeout ?? default;
+        _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
+        _logger = logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>();
+    }
+
+    /// <summary>
+    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
+    /// call-sites (extensions + integration tests). Synthesises a default
+    /// <see cref="MySqlBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
+    /// </summary>
     public MySqlBoxMigrationRunner(
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null)
+        : this(new MySqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout)
     {
-        _configuration = configuration;
-        _lockTimeout = lockTimeout;
-        _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
-        _logger = logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>();
     }
 
-    /// <inheritdoc />
-    public async Task MigrateAsync(
+    // ==== Hook overrides — Phase 7.3a delegates to legacy helpers ====
+
+    protected override Task<MySqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+        => OpenConnectionLegacyAsync(cancellationToken);
+
+    protected override Task<IAmAProvisioningUnitOfWork<MySqlTransaction>> CreateUnitOfWorkAsync(
+        MySqlConnection connection, CancellationToken cancellationToken)
+        => CreateUnitOfWorkLegacyAsync(connection, cancellationToken);
+
+    protected override string LockResourceFor(string? schemaName, string tableName)
+        => LockResourceForLegacy(schemaName, tableName);
+
+    protected override Task EnsureHistoryTableAsync(
+        MySqlConnection connection, MySqlTransaction? transaction, string? schemaName,
+        CancellationToken cancellationToken)
+        => EnsureHistoryTableLegacyAsync(connection, cancellationToken);
+
+    protected override Task RunFreshPathAsync(
+        MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
+        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunFreshPathLegacyAsync(
+            connection, schemaName ?? DatabaseName(), tableName, migrations, cancellationToken);
+
+    protected override Task RunBootstrapPathAsync(
+        MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
+        BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunBootstrapPathLegacyAsync(
+            connection, schemaName ?? DatabaseName(), tableName, boxType, migrations, cancellationToken);
+
+    protected override Task RunNormalPathAsync(
+        MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
+        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunNormalPathLegacyAsync(
+            connection, schemaName ?? DatabaseName(), tableName, migrations, cancellationToken);
+
+    // ==== Legacy delegates — Phase 7.3b moves bodies into overrides; Phase 7.3c deletes MigrateLegacyAsync ====
+
+    private async Task<MySqlConnection> OpenConnectionLegacyAsync(CancellationToken cancellationToken)
+    {
+        var connection = new MySqlConnection(EnsureAllowUserVariables(Configuration.ConnectionString));
+        await connection.OpenAsync(cancellationToken);
+        return connection;
+    }
+
+    private Task<IAmAProvisioningUnitOfWork<MySqlTransaction>> CreateUnitOfWorkLegacyAsync(
+        MySqlConnection connection, CancellationToken cancellationToken)
+        => Task.FromResult<IAmAProvisioningUnitOfWork<MySqlTransaction>>(
+            new MySqlProvisioningUnitOfWork(connection, _advisoryLock, _logger));
+
+    // The schema is folded into the lock name so two same-named tables in different schemas
+    // acquire distinct advisory locks. MySQL's GET_LOCK has a 64-char limit; the helper
+    // hashes names exceeding it (long form) and otherwise preserves the simple form for
+    // diagnostic readability. See MySqlMigrationLockName.
+    private string LockResourceForLegacy(string? schemaName, string tableName)
+        => MySqlMigrationLockName.For(schemaName ?? DatabaseName(), tableName);
+
+    private async Task MigrateLegacyAsync(
         string tableName,
         string? schemaName,
         BoxType boxType,
@@ -99,14 +160,14 @@ public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
 
         var lockKey = MySqlMigrationLockName.For(effectiveSchema, tableName);
 
-        using var connection = new MySqlConnection(EnsureAllowUserVariables(_configuration.ConnectionString));
+        using var connection = new MySqlConnection(EnsureAllowUserVariables(Configuration.ConnectionString));
         await connection.OpenAsync(cancellationToken);
 
         await _advisoryLock.AcquireAsync(connection, lockKey, _lockTimeout, cancellationToken);
 
         try
         {
-            await EnsureHistoryTableAsync(connection, cancellationToken);
+            await EnsureHistoryTableLegacyAsync(connection, cancellationToken);
 
             var tableExistsNow = await MySqlBoxDetectionHelpers.DoesTableExistAsync(
                 connection, tableName, effectiveSchema, cancellationToken);
@@ -115,17 +176,17 @@ public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
 
             if (!tableExistsNow)
             {
-                await RunFreshPathAsync(
+                await RunFreshPathLegacyAsync(
                     connection, effectiveSchema, tableName, migrations, cancellationToken);
             }
             else if (!historyExistsNow)
             {
-                await RunBootstrapPathAsync(
+                await RunBootstrapPathLegacyAsync(
                     connection, effectiveSchema, tableName, boxType, migrations, cancellationToken);
             }
             else
             {
-                await RunNormalPathAsync(
+                await RunNormalPathLegacyAsync(
                     connection, effectiveSchema, tableName, migrations, cancellationToken);
             }
         }
@@ -143,7 +204,7 @@ public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
         }
     }
 
-    private static async Task RunFreshPathAsync(
+    private static async Task RunFreshPathLegacyAsync(
         MySqlConnection connection, string schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
     {
@@ -167,7 +228,7 @@ public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
             latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
     }
 
-    private static async Task RunBootstrapPathAsync(
+    private static async Task RunBootstrapPathLegacyAsync(
         MySqlConnection connection, string schemaName, string tableName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
         CancellationToken cancellationToken)
@@ -206,7 +267,7 @@ public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
         }
     }
 
-    private static async Task RunNormalPathAsync(
+    private static async Task RunNormalPathLegacyAsync(
         MySqlConnection connection, string schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
     {
@@ -233,7 +294,7 @@ public class MySqlBoxMigrationRunner : IAmABoxMigrationRunner
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task EnsureHistoryTableAsync(
+    private static async Task EnsureHistoryTableLegacyAsync(
         MySqlConnection connection, CancellationToken cancellationToken)
     {
         // No race-handling needed: MySQL acquires a metadata lock (MDL_EXCLUSIVE) on the table
@@ -272,30 +333,8 @@ VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
 
     private string DatabaseName()
     {
-        var builder = new MySqlConnectionStringBuilder(_configuration.ConnectionString);
+        var builder = new MySqlConnectionStringBuilder(Configuration.ConnectionString);
         return builder.Database;
-    }
-
-    /// <summary>
-    /// Validates that the supplied migration list is contiguous and ascending (V_k+1 follows V_k).
-    /// The V1-start invariant is enforced separately in <see cref="RunFreshPathAsync"/> because the
-    /// bootstrap and normal paths legitimately consume migration lists that begin above V1 (they
-    /// resume from <c>MAX(V)</c> in history rather than installing from scratch).
-    /// </summary>
-    private static void ValidateMigrationsMonotonic(
-        string schemaName, string tableName, IReadOnlyList<IAmABoxMigration> migrations)
-    {
-        for (var i = 1; i < migrations.Count; i++)
-        {
-            var prev = migrations[i - 1].Version;
-            var curr = migrations[i].Version;
-            if (curr != prev + 1)
-            {
-                throw new ConfigurationException(
-                    $"Migration list for '{schemaName}.{tableName}' is not contiguous and ascending: " +
-                    $"V{prev} followed by V{curr} (expected V{prev + 1}).");
-            }
-        }
     }
 
     /// <summary>
