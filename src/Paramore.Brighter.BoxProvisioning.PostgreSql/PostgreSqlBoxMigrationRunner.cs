@@ -85,8 +85,12 @@ public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<Npg
 
     // ==== Hook overrides — Phase 7.2a delegates to legacy helpers ====
 
-    protected override Task<NpgsqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
-        => OpenConnectionLegacyAsync(cancellationToken);
+    protected override async Task<NpgsqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+    {
+        var connection = new NpgsqlConnection(Configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        return connection;
+    }
 
     protected override Task<IAmAProvisioningUnitOfWork<NpgsqlTransaction>> CreateUnitOfWorkAsync(
         NpgsqlConnection connection, CancellationToken cancellationToken)
@@ -119,13 +123,6 @@ public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<Npg
             connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, migrations, cancellationToken);
 
     // ==== Legacy delegates — Phase 7.2b moves bodies into overrides; Phase 7.2c deletes MigrateLegacyAsync ====
-
-    private async Task<NpgsqlConnection> OpenConnectionLegacyAsync(CancellationToken cancellationToken)
-    {
-        var connection = new NpgsqlConnection(Configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-        return connection;
-    }
 
     private Task<IAmAProvisioningUnitOfWork<NpgsqlTransaction>> CreateUnitOfWorkLegacyAsync(
         NpgsqlConnection connection, CancellationToken cancellationToken)
