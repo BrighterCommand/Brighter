@@ -141,11 +141,30 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    protected override Task RunFreshPathAsync(
+    protected override async Task RunFreshPathAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
-        => RunFreshPathLegacyAsync(
-            connection, schemaName ?? DatabaseName(), tableName, migrations, cancellationToken);
+    {
+        var effectiveSchema = schemaName ?? DatabaseName();
+        if (migrations.Count == 0) return;
+
+        // V1's UpScript IS the live builder DDL (V_latest-shape per ADR §3 fresh-install fast
+        // path). A list whose first entry is anything other than V1 would silently install the
+        // wrong schema, so reject it before any DDL fires.
+        if (migrations[0].Version != 1)
+            throw new ConfigurationException(
+                $"Cannot install '{effectiveSchema}.{tableName}' from a fresh state: " +
+                $"the first migration must be V1, but the supplied migrations list starts at V{migrations[0].Version}.");
+
+        // We stamp directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs
+        // would be no-ops on the V_latest-shape table, so we skip them.
+        await ExecuteUpScriptAsync(connection, migrations[0], cancellationToken);
+
+        var latest = migrations[migrations.Count - 1];
+        await InsertHistoryRowAsync(
+            connection, effectiveSchema, tableName,
+            latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
+    }
 
     protected override Task RunBootstrapPathAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
@@ -196,8 +215,8 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
 
             if (!tableExistsNow)
             {
-                await RunFreshPathLegacyAsync(
-                    connection, effectiveSchema, tableName, migrations, cancellationToken);
+                await RunFreshPathAsync(
+                    connection, transaction: null, effectiveSchema, tableName, migrations, cancellationToken);
             }
             else if (!historyExistsNow)
             {
@@ -222,30 +241,6 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
                     releaseResult is null ? "lock did not exist" : "lock held by another session");
             }
         }
-    }
-
-    private static async Task RunFreshPathLegacyAsync(
-        MySqlConnection connection, string schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
-    {
-        if (migrations.Count == 0) return;
-
-        // V1's UpScript IS the live builder DDL (V_latest-shape per ADR §3 fresh-install fast
-        // path). A list whose first entry is anything other than V1 would silently install the
-        // wrong schema, so reject it before any DDL fires.
-        if (migrations[0].Version != 1)
-            throw new ConfigurationException(
-                $"Cannot install '{schemaName}.{tableName}' from a fresh state: " +
-                $"the first migration must be V1, but the supplied migrations list starts at V{migrations[0].Version}.");
-
-        // We stamp directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs
-        // would be no-ops on the V_latest-shape table, so we skip them.
-        await ExecuteUpScriptAsync(connection, migrations[0], cancellationToken);
-
-        var latest = migrations[migrations.Count - 1];
-        await InsertHistoryRowAsync(
-            connection, schemaName, tableName,
-            latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
     }
 
     private static async Task RunBootstrapPathLegacyAsync(
