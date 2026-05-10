@@ -482,7 +482,7 @@ Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO deri
     - The exception propagates to the caller of `MigrateAsync`.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase RedetectStateAsync default implementation calls DoesTableExistAsync then DoesHistoryExistAsync (and short-circuits when table missing)**
+- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase RedetectStateAsync default implementation calls DoesTableExistAsync then DoesHistoryExistAsync (and short-circuits when table missing)**
   - **USE COMMAND**: `/test-first when RelationalBoxMigrationRunnerBase RedetectStateAsync default runs it should call DoesTableExistAsync and only call DoesHistoryExistAsync when the table exists`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_redetect_state_default_runs_it_should_short_circuit_history_check_when_table_missing.cs`
