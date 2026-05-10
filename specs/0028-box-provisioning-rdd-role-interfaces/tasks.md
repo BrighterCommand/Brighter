@@ -562,7 +562,7 @@ Each relational backend's runner refactor is broken into three structural sub-st
 
 ### 7.4 SQLite runner — apply the recipe
 
-- [ ] **TIDY FIRST: 7.4a Introduce `SqliteBoxMigrationRunner` derived shell. SQLite has no advisory-lock primitive — the derived ctor does NOT take `I*AdvisoryLock`. UoW ctor takes only connection + logger per Phase 5.4. Validation: 40/40 per TFM.**
+- [x] **TIDY FIRST: 7.4a Introduce `SqliteBoxMigrationRunner` derived shell. SQLite has no advisory-lock primitive — the derived ctor does NOT take `I*AdvisoryLock`. UoW ctor takes only connection + logger per Phase 5.4. Validation: 44/44 per TFM.**
 
 - [ ] **TIDY FIRST: 7.4b Replace each legacy-delegate hook (one commit per hook). Validation: 40/40 each commit.**
 

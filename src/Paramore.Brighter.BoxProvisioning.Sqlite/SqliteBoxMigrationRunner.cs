@@ -28,36 +28,32 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 
 /// <summary>
-/// Runs box migrations against a SQLite database. Uses <c>BEGIN IMMEDIATE TRANSACTION</c> to
-/// acquire the writer slot up front and a runner-owned exponential-backoff retry loop on
-/// <c>SQLITE_BUSY</c> bounded by <see cref="_lockTimeout"/> (per ADR 0057 §4 — SQLite has no
-/// network-style advisory lock, so the writer slot itself serves as the migration lock).
+/// Runs box migrations against a SQLite database. Derives from
+/// <see cref="RelationalBoxMigrationRunnerBase{TConnection,TTransaction}"/> for the
+/// success/failure orchestration and supplies the per-backend hooks. Per ADR 0057 §4 /
+/// ADR 0058 §B.1, SQLite has no advisory-lock primitive — <c>BEGIN IMMEDIATE</c> atomically
+/// opens the transaction and reserves the database-wide writer slot, so
+/// <see cref="SqliteProvisioningUnitOfWork"/> takes no <c>IAmA*AdvisoryLock</c>.
 /// </summary>
 /// <remarks>
-/// <para>
-/// After acquiring the writer slot the runner re-reads box-table state under the same
-/// transaction and dispatches into one of three paths (fresh / bootstrap / normal) per
-/// ADR 0057 §3 — the caller's <see cref="BoxTableState"/> is treated as a stale hint that
-/// might have been invalidated between detection and lock-acquire (TOCTOU).
-/// </para>
 /// <para>
 /// SQLite's grammar lacks <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c>, so each V2..V_latest
 /// migration carries an <see cref="IAmABoxMigration.IdempotencyCheckSql"/> probing
 /// <c>pragma_table_info</c>. The runner evaluates this scalar before applying
 /// <see cref="IAmABoxMigration.UpScript"/> and skips the ALTER (still inserting the history row)
-/// when the column is already present — this is the V1-already-ships-V_latest-shape case
-/// described in the spec-0023-era transition plus the discriminator-shape bootstrap on legacy
-/// tables.
+/// when the column is already present.
 /// </para>
 /// <para>
 /// The whole bootstrap/normal chain runs inside the single BEGIN IMMEDIATE transaction (per
-/// ADR 0057 §5a — SQLite is whole-chain transactional like MSSQL/Postgres, unlike MySQL's
-/// per-DDL implicit commit). A mid-chain failure rolls everything back, including the
-/// history table itself if <c>EnsureHistoryTableAsync</c> ran inside the same transaction.
+/// ADR 0057 §5a — SQLite is whole-chain transactional like MSSQL/Postgres). A mid-chain failure
+/// rolls everything back, including the history table itself if <c>EnsureHistoryTableAsync</c>
+/// ran inside the same transaction.
 /// </para>
 /// <para>
 /// <strong>WAL journal mode side effect:</strong> when <paramref name="enableWalMode"/> is
@@ -69,10 +65,7 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// host application owns that decision.
 /// </para>
 /// </remarks>
-public class SqliteBoxMigrationRunner(
-    IAmARelationalDatabaseConfiguration configuration,
-    TimeSpan lockTimeout,
-    bool enableWalMode = true) : IAmABoxMigrationRunner
+public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteConnection, SqliteTransaction>
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
 
@@ -85,8 +78,38 @@ public class SqliteBoxMigrationRunner(
     private static readonly TimeSpan s_initialBackoff = TimeSpan.FromMilliseconds(25);
     private static readonly TimeSpan s_maxBackoff = TimeSpan.FromMilliseconds(200);
 
-    private readonly TimeSpan _lockTimeout = lockTimeout;
-    private readonly bool _enableWalMode = enableWalMode;
+    private readonly TimeSpan _lockTimeout;
+    private readonly bool _enableWalMode;
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
+    /// </summary>
+    public SqliteBoxMigrationRunner(
+        SqliteBoxDetectionHelper detectionHelper,
+        IAmARelationalDatabaseConfiguration configuration,
+        ILogger? logger = null,
+        TimeSpan? lockTimeout = null,
+        bool enableWalMode = true)
+        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30), logger)
+    {
+        _lockTimeout = lockTimeout ?? TimeSpan.FromSeconds(30);
+        _enableWalMode = enableWalMode;
+        _logger = logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>();
+    }
+
+    /// <summary>
+    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
+    /// call-sites (extensions + integration tests). Synthesises a default
+    /// <see cref="SqliteBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
+    /// </summary>
+    public SqliteBoxMigrationRunner(
+        IAmARelationalDatabaseConfiguration configuration,
+        TimeSpan lockTimeout,
+        bool enableWalMode = true)
+        : this(new SqliteBoxDetectionHelper(), configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode)
+    {
+    }
 
     /// <summary>
     /// Convenience constructor using the default <see cref="BoxProvisioningOptions.MigrationLockTimeout"/>
@@ -98,8 +121,77 @@ public class SqliteBoxMigrationRunner(
     {
     }
 
-    /// <inheritdoc />
-    public async Task MigrateAsync(
+    // ==== Hook overrides — Phase 7.4a delegates to legacy helpers ====
+
+    protected override Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+        => OpenConnectionLegacyAsync(cancellationToken);
+
+    protected override Task<IAmAProvisioningUnitOfWork<SqliteTransaction>> CreateUnitOfWorkAsync(
+        SqliteConnection connection, CancellationToken cancellationToken)
+        => CreateUnitOfWorkLegacyAsync(connection, cancellationToken);
+
+    protected override string LockResourceFor(string? schemaName, string tableName)
+        => LockResourceForLegacy(schemaName, tableName);
+
+    protected override Task EnsureHistoryTableAsync(
+        SqliteConnection connection, SqliteTransaction? transaction, string? schemaName,
+        CancellationToken cancellationToken)
+        => EnsureHistoryTableLegacyAsync(connection, transaction!, cancellationToken);
+
+    protected override Task RunFreshPathAsync(
+        SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
+        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunFreshPathLegacyAsync(connection, transaction!, tableName, migrations, cancellationToken);
+
+    protected override Task RunBootstrapPathAsync(
+        SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
+        BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunBootstrapPathLegacyAsync(connection, transaction!, tableName, boxType, migrations, cancellationToken);
+
+    protected override Task RunNormalPathAsync(
+        SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
+        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunNormalPathLegacyAsync(connection, transaction!, tableName, migrations, cancellationToken);
+
+    // ==== Legacy delegates — Phase 7.4b moves bodies into overrides; Phase 7.4c deletes MigrateLegacyAsync ====
+
+    private async Task<SqliteConnection> OpenConnectionLegacyAsync(CancellationToken cancellationToken)
+    {
+        var connection = new SqliteConnection(Configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await SetSqliteBusyTimeoutToZeroAsync(connection, cancellationToken);
+        if (_enableWalMode)
+        {
+            await EnsureWalModeAsync(connection, cancellationToken);
+        }
+
+        return connection;
+    }
+
+    private Task<IAmAProvisioningUnitOfWork<SqliteTransaction>> CreateUnitOfWorkLegacyAsync(
+        SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        return Task.FromResult<IAmAProvisioningUnitOfWork<SqliteTransaction>>(
+            new SqliteProvisioningUnitOfWork(connection, _logger));
+    }
+
+    // SQLite has no schema concept, so the schema is folded out of the lock resource. The
+    // string is symbolic only — SqliteProvisioningUnitOfWork's BeginAsync logs it for trace
+    // diagnostics but does not use it for locking (BEGIN IMMEDIATE owns that role).
+    private static string LockResourceForLegacy(string? schemaName, string tableName)
+    {
+        _ = schemaName;
+        return tableName;
+    }
+
+    private Task EnsureHistoryTableLegacyAsync(
+        SqliteConnection connection, SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+        => EnsureHistoryTableAsync(connection, transaction, cancellationToken);
+
+    private async Task MigrateLegacyAsync(
         string tableName,
         string? schemaName,
         BoxType boxType,
@@ -114,9 +206,9 @@ public class SqliteBoxMigrationRunner(
         // sits at MigrateAsync entry (rather than inside one of the path branches) so the rule
         // applies uniformly across fresh / bootstrap / normal paths — a malformed list corrupts
         // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
-        ValidateMigrationsMonotonic(tableName, migrations);
+        ValidateMigrationsMonotonic(schemaName: null, tableName, migrations);
 
-        using var connection = new SqliteConnection(configuration.ConnectionString);
+        using var connection = new SqliteConnection(Configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         await SetSqliteBusyTimeoutToZeroAsync(connection, cancellationToken);
@@ -137,17 +229,17 @@ public class SqliteBoxMigrationRunner(
 
             if (!tableExistsNow)
             {
-                await RunFreshPathAsync(
+                await RunFreshPathLegacyAsync(
                     connection, transaction, tableName, migrations, cancellationToken);
             }
             else if (!historyExistsNow)
             {
-                await RunBootstrapPathAsync(
+                await RunBootstrapPathLegacyAsync(
                     connection, transaction, tableName, boxType, migrations, cancellationToken);
             }
             else
             {
-                await RunNormalPathAsync(
+                await RunNormalPathLegacyAsync(
                     connection, transaction, tableName, migrations, cancellationToken);
             }
 
@@ -167,7 +259,7 @@ public class SqliteBoxMigrationRunner(
         }
     }
 
-    private static async Task RunFreshPathAsync(
+    private static async Task RunFreshPathLegacyAsync(
         SqliteConnection connection, SqliteTransaction transaction,
         string tableName, IReadOnlyList<IAmABoxMigration> migrations,
         CancellationToken cancellationToken)
@@ -193,7 +285,7 @@ public class SqliteBoxMigrationRunner(
             latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
     }
 
-    private static async Task RunBootstrapPathAsync(
+    private static async Task RunBootstrapPathLegacyAsync(
         SqliteConnection connection, SqliteTransaction transaction,
         string tableName, BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
         CancellationToken cancellationToken)
@@ -229,7 +321,7 @@ public class SqliteBoxMigrationRunner(
         }
     }
 
-    private static async Task RunNormalPathAsync(
+    private static async Task RunNormalPathLegacyAsync(
         SqliteConnection connection, SqliteTransaction transaction,
         string tableName, IReadOnlyList<IAmABoxMigration> migrations,
         CancellationToken cancellationToken)
@@ -330,22 +422,6 @@ public class SqliteBoxMigrationRunner(
                 await Task.Delay(delay, cancellationToken);
                 backoff = backoff.Add(backoff);
                 if (backoff > s_maxBackoff) backoff = s_maxBackoff;
-            }
-        }
-    }
-
-    private static void ValidateMigrationsMonotonic(
-        string tableName, IReadOnlyList<IAmABoxMigration> migrations)
-    {
-        for (var i = 1; i < migrations.Count; i++)
-        {
-            var prev = migrations[i - 1].Version;
-            var curr = migrations[i].Version;
-            if (curr != prev + 1)
-            {
-                throw new ConfigurationException(
-                    $"Migration list for '{tableName}' is not contiguous and ascending: " +
-                    $"V{prev} followed by V{curr} (expected V{prev + 1}).");
             }
         }
     }
