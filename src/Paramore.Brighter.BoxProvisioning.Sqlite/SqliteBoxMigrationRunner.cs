@@ -154,10 +154,29 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
         return tableName;
     }
 
-    protected override Task EnsureHistoryTableAsync(
+    protected override async Task EnsureHistoryTableAsync(
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName,
         CancellationToken cancellationToken)
-        => EnsureHistoryTableLegacyAsync(connection, transaction!, cancellationToken);
+    {
+        _ = schemaName; // SQLite has no schema concept.
+
+        // No race-handling needed: BEGIN IMMEDIATE above acquires SQLite's database-wide RESERVED
+        // lock, so only one writer can be inside this transaction at a time. Concurrent runners
+        // queue at BeginImmediateWithRetryAsync (with SQLITE_BUSY backoff) rather than racing on
+        // CREATE TABLE — by the time a second writer enters this method, the first has already
+        // committed and IF NOT EXISTS sees the table.
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $@"
+CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
+    [MigrationVersion] INTEGER NOT NULL,
+    [BoxTableName] TEXT NOT NULL,
+    [Description] TEXT NOT NULL,
+    [AppliedAt] TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY ([BoxTableName], [MigrationVersion])
+)";
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
 
     protected override Task RunFreshPathAsync(
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
@@ -175,11 +194,6 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
         => RunNormalPathLegacyAsync(connection, transaction!, tableName, migrations, cancellationToken);
 
     // ==== Legacy delegates — Phase 7.4b moves bodies into overrides; Phase 7.4c deletes MigrateLegacyAsync ====
-
-    private Task EnsureHistoryTableLegacyAsync(
-        SqliteConnection connection, SqliteTransaction transaction,
-        CancellationToken cancellationToken)
-        => EnsureHistoryTableAsync(connection, transaction, cancellationToken);
 
     private async Task MigrateLegacyAsync(
         string tableName,
@@ -210,7 +224,7 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
         var transaction = await BeginImmediateWithRetryAsync(connection, cancellationToken);
         try
         {
-            await EnsureHistoryTableAsync(connection, transaction, cancellationToken);
+            await EnsureHistoryTableAsync(connection, transaction, schemaName: null, cancellationToken);
 
             var tableExistsNow = await SqliteBoxDetectionHelpers.DoesTableExistAsync(
                 connection, tableName, cancellationToken, transaction);
@@ -433,28 +447,6 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
     {
         using var command = connection.CreateCommand();
         command.CommandText = "PRAGMA journal_mode=WAL;";
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    private static async Task EnsureHistoryTableAsync(
-        SqliteConnection connection, SqliteTransaction transaction,
-        CancellationToken cancellationToken)
-    {
-        // No race-handling needed: BEGIN IMMEDIATE above acquires SQLite's database-wide RESERVED
-        // lock, so only one writer can be inside this transaction at a time. Concurrent runners
-        // queue at BeginImmediateWithRetryAsync (with SQLITE_BUSY backoff) rather than racing on
-        // CREATE TABLE — by the time a second writer enters this method, the first has already
-        // committed and IF NOT EXISTS sees the table.
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = $@"
-CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
-    [MigrationVersion] INTEGER NOT NULL,
-    [BoxTableName] TEXT NOT NULL,
-    [Description] TEXT NOT NULL,
-    [AppliedAt] TEXT NOT NULL DEFAULT (datetime('now')),
-    PRIMARY KEY ([BoxTableName], [MigrationVersion])
-)";
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
