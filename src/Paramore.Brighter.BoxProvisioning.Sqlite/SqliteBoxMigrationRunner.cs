@@ -145,8 +145,14 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
             new SqliteProvisioningUnitOfWork(connection, _logger));
     }
 
+    // SQLite has no schema concept, so the schema is folded out of the lock resource. The
+    // string is symbolic only — SqliteProvisioningUnitOfWork's BeginAsync logs it for trace
+    // diagnostics but does not use it for locking (BEGIN IMMEDIATE owns that role).
     protected override string LockResourceFor(string? schemaName, string tableName)
-        => LockResourceForLegacy(schemaName, tableName);
+    {
+        _ = schemaName;
+        return tableName;
+    }
 
     protected override Task EnsureHistoryTableAsync(
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName,
@@ -169,15 +175,6 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
         => RunNormalPathLegacyAsync(connection, transaction!, tableName, migrations, cancellationToken);
 
     // ==== Legacy delegates — Phase 7.4b moves bodies into overrides; Phase 7.4c deletes MigrateLegacyAsync ====
-
-    // SQLite has no schema concept, so the schema is folded out of the lock resource. The
-    // string is symbolic only — SqliteProvisioningUnitOfWork's BeginAsync logs it for trace
-    // diagnostics but does not use it for locking (BEGIN IMMEDIATE owns that role).
-    private static string LockResourceForLegacy(string? schemaName, string tableName)
-    {
-        _ = schemaName;
-        return tableName;
-    }
 
     private Task EnsureHistoryTableLegacyAsync(
         SqliteConnection connection, SqliteTransaction transaction,
