@@ -546,7 +546,7 @@ Each relational backend's runner refactor is broken into three structural sub-st
 
 ### 7.2 Postgres runner — apply the 7.1a/b/c recipe
 
-- [ ] **TIDY FIRST: 7.2a Introduce `PostgreSqlBoxMigrationRunner` derived shell with `IPostgreSqlAdvisoryLock?` field; legacy delegates. Validation: 46/46 per TFM.**
+- [x] **TIDY FIRST: 7.2a Introduce `PostgreSqlBoxMigrationRunner` derived shell with `IPostgreSqlAdvisoryLock?` field; legacy delegates. Validation: 46/46 per TFM.**
 
 - [ ] **TIDY FIRST: 7.2b Replace each legacy-delegate hook with the cleaned override (one commit per hook). Validation: 46/46 each commit.**
 

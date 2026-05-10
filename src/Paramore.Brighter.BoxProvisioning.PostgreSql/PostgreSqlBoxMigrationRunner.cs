@@ -32,15 +32,14 @@ using Paramore.Brighter.Logging;
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
 /// <summary>
-/// Runs box migrations against a PostgreSQL database. Uses an injected
+/// Runs box migrations against a PostgreSQL database. Derives from
+/// <see cref="RelationalBoxMigrationRunnerBase{TConnection,TTransaction}"/> for the
+/// success/failure orchestration and supplies the per-backend hooks. Uses an injected
 /// <see cref="IPostgreSqlAdvisoryLock"/> (default <see cref="PostgreSqlAdvisoryLock"/>) for
-/// concurrency control and a single <see cref="NpgsqlTransaction"/> for all-or-nothing
-/// semantics. After acquiring the lock the runner re-reads box-table state under the lock
-/// and dispatches into one of three paths (fresh / bootstrap / normal) per ADR 0057 §3 —
-/// the caller's <see cref="BoxTableState"/> is treated as a stale hint to defeat TOCTOU
-/// races.
+/// concurrency control via <see cref="PostgreSqlProvisioningUnitOfWork"/>; the dispatch into
+/// fresh / bootstrap / normal paths happens in the base after re-detection under the UoW.
 /// </summary>
-public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
+public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<NpgsqlConnection, NpgsqlTransaction>
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
     // The history table is global — one row per (SchemaName, BoxTableName, MigrationVersion)
@@ -50,37 +49,97 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
     // first on search_path, scattering history rows across the cluster.
     private const string HISTORY_TABLE_SCHEMA = "public";
 
-    private readonly IAmARelationalDatabaseConfiguration _configuration;
     private readonly TimeSpan _lockTimeout;
     private readonly IPostgreSqlAdvisoryLock _advisoryLock;
     private readonly ILogger _logger;
 
     /// <summary>
-    /// Constructs a runner with the default advisory-lock implementation and the Brighter
-    /// application logger.
+    /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
     /// </summary>
-    /// <param name="configuration">Database configuration providing the connection string.</param>
-    /// <param name="lockTimeout">Maximum time to wait while acquiring the migration advisory
-    /// lock before giving up with <see cref="TimeoutException"/>.</param>
-    /// <param name="advisoryLock">Optional advisory-lock collaborator. Defaults to a new
-    /// <see cref="PostgreSqlAdvisoryLock"/> instance — substitutable for tests and for
-    /// integrators with custom lock-key derivation per ADR 0057 §5b.</param>
-    /// <param name="logger">Optional logger. Defaults to <c>ApplicationLogging.CreateLogger</c>
-    /// of this runner type.</param>
+    public PostgreSqlBoxMigrationRunner(
+        PostgreSqlBoxDetectionHelper detectionHelper,
+        IAmARelationalDatabaseConfiguration configuration,
+        IPostgreSqlAdvisoryLock? advisoryLock = null,
+        ILogger? logger = null,
+        TimeSpan? lockTimeout = null)
+        : base(detectionHelper, configuration, lockTimeout ?? default, logger)
+    {
+        _lockTimeout = lockTimeout ?? default;
+        _advisoryLock = advisoryLock ?? new PostgreSqlAdvisoryLock();
+        _logger = logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>();
+    }
+
+    /// <summary>
+    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
+    /// call-sites (extensions + integration tests). Synthesises a default
+    /// <see cref="PostgreSqlBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
+    /// </summary>
     public PostgreSqlBoxMigrationRunner(
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         IPostgreSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null)
+        : this(new PostgreSqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout)
     {
-        _configuration = configuration;
-        _lockTimeout = lockTimeout;
-        _advisoryLock = advisoryLock ?? new PostgreSqlAdvisoryLock();
-        _logger = logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>();
     }
 
-    /// <inheritdoc />
-    public async Task MigrateAsync(
+    // ==== Hook overrides — Phase 7.2a delegates to legacy helpers ====
+
+    protected override Task<NpgsqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+        => OpenConnectionLegacyAsync(cancellationToken);
+
+    protected override Task<IAmAProvisioningUnitOfWork<NpgsqlTransaction>> CreateUnitOfWorkAsync(
+        NpgsqlConnection connection, CancellationToken cancellationToken)
+        => CreateUnitOfWorkLegacyAsync(connection, cancellationToken);
+
+    protected override string LockResourceFor(string? schemaName, string tableName)
+        => LockResourceForLegacy(schemaName, tableName);
+
+    protected override Task EnsureHistoryTableAsync(
+        NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName,
+        CancellationToken cancellationToken)
+        => EnsureHistoryTableLegacyAsync(connection, transaction, cancellationToken);
+
+    protected override Task RunFreshPathAsync(
+        NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName, string tableName,
+        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunFreshPathLegacyAsync(
+            connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, migrations, cancellationToken);
+
+    protected override Task RunBootstrapPathAsync(
+        NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName, string tableName,
+        BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunBootstrapPathLegacyAsync(
+            connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, boxType, migrations, cancellationToken);
+
+    protected override Task RunNormalPathAsync(
+        NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName, string tableName,
+        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        => RunNormalPathLegacyAsync(
+            connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, migrations, cancellationToken);
+
+    // ==== Legacy delegates — Phase 7.2b moves bodies into overrides; Phase 7.2c deletes MigrateLegacyAsync ====
+
+    private async Task<NpgsqlConnection> OpenConnectionLegacyAsync(CancellationToken cancellationToken)
+    {
+        var connection = new NpgsqlConnection(Configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        return connection;
+    }
+
+    private Task<IAmAProvisioningUnitOfWork<NpgsqlTransaction>> CreateUnitOfWorkLegacyAsync(
+        NpgsqlConnection connection, CancellationToken cancellationToken)
+        => Task.FromResult<IAmAProvisioningUnitOfWork<NpgsqlTransaction>>(
+            new PostgreSqlProvisioningUnitOfWork(connection, _advisoryLock, _logger));
+
+    // Include the schema in the lock key so two same-named tables in different schemas
+    // (e.g. public.Outbox and billing.Outbox) acquire distinct advisory locks. Without
+    // the schema qualifier they would share a lock and serialize unnecessarily — matches
+    // the MSSQL runner's lockResource shape.
+    private static string LockResourceForLegacy(string? schemaName, string tableName)
+        => $"BrighterMigration_{schemaName ?? HISTORY_TABLE_SCHEMA}.{tableName}";
+
+    private async Task MigrateLegacyAsync(
         string tableName,
         string? schemaName,
         BoxType boxType,
@@ -89,7 +148,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
         CancellationToken cancellationToken = default)
     {
         _ = tableState; // Stale hint — runner re-detects under the advisory lock.
-        var effectiveSchema = schemaName ?? "public";
+        var effectiveSchema = schemaName ?? HISTORY_TABLE_SCHEMA;
 
         // Reject duplicate / gap / out-of-order versions before opening a connection. Validation
         // sits at MigrateAsync entry (rather than inside one of the path branches) so the rule
@@ -103,7 +162,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
         // the MSSQL runner's lockResource shape at MsSqlBoxMigrationRunner.cs:90.
         var lockKey = $"BrighterMigration_{effectiveSchema}.{tableName}";
 
-        using var connection = new NpgsqlConnection(_configuration.ConnectionString);
+        using var connection = new NpgsqlConnection(Configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         await _advisoryLock.AcquireAsync(connection, lockKey, _lockTimeout, cancellationToken);
@@ -118,7 +177,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
             // pg_type_typname_nsp_index (23505). Inside a transaction that failure poisons the
             // session (every subsequent statement returns 25P02); pulling it out to autocommit
             // means only the racing statement fails and we can ignore it.
-            await EnsureHistoryTableAsync(connection, transaction: null, cancellationToken);
+            await EnsureHistoryTableLegacyAsync(connection, transaction: null, cancellationToken);
 
             var transaction = (NpgsqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
 
@@ -131,17 +190,17 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
 
                 if (!tableExistsNow)
                 {
-                    await RunFreshPathAsync(
+                    await RunFreshPathLegacyAsync(
                         connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
                 }
                 else if (!historyExistsNow)
                 {
-                    await RunBootstrapPathAsync(
+                    await RunBootstrapPathLegacyAsync(
                         connection, transaction, effectiveSchema, tableName, boxType, migrations, cancellationToken);
                 }
                 else
                 {
-                    await RunNormalPathAsync(
+                    await RunNormalPathLegacyAsync(
                         connection, transaction, effectiveSchema, tableName, migrations, cancellationToken);
                 }
 
@@ -169,7 +228,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
         }
     }
 
-    private async Task RunFreshPathAsync(
+    private async Task RunFreshPathLegacyAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction,
         string schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations,
@@ -195,7 +254,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
             latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
     }
 
-    private async Task RunBootstrapPathAsync(
+    private async Task RunBootstrapPathLegacyAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction,
         string schemaName, string tableName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,
@@ -235,7 +294,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
         }
     }
 
-    private async Task RunNormalPathAsync(
+    private async Task RunNormalPathLegacyAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction,
         string schemaName, string tableName,
         IReadOnlyList<IAmABoxMigration> migrations,
@@ -255,23 +314,7 @@ public class PostgreSqlBoxMigrationRunner : IAmABoxMigrationRunner
         }
     }
 
-    private static void ValidateMigrationsMonotonic(
-        string schemaName, string tableName, IReadOnlyList<IAmABoxMigration> migrations)
-    {
-        for (var i = 1; i < migrations.Count; i++)
-        {
-            var prev = migrations[i - 1].Version;
-            var curr = migrations[i].Version;
-            if (curr != prev + 1)
-            {
-                throw new ConfigurationException(
-                    $"Migration list for '{schemaName}.{tableName}' is not contiguous and ascending: " +
-                    $"V{prev} followed by V{curr} (expected V{prev + 1}).");
-            }
-        }
-    }
-
-    private static async Task EnsureHistoryTableAsync(
+    private static async Task EnsureHistoryTableLegacyAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction,
         CancellationToken cancellationToken)
     {
