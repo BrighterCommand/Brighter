@@ -97,8 +97,12 @@ public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<Npg
         => Task.FromResult<IAmAProvisioningUnitOfWork<NpgsqlTransaction>>(
             new PostgreSqlProvisioningUnitOfWork(connection, _advisoryLock, _logger));
 
+    // Include the schema in the lock key so two same-named tables in different schemas
+    // (e.g. public.Outbox and billing.Outbox) acquire distinct advisory locks. Without
+    // the schema qualifier they would share a lock and serialize unnecessarily — matches
+    // the MSSQL runner's lockResource shape.
     protected override string LockResourceFor(string? schemaName, string tableName)
-        => LockResourceForLegacy(schemaName, tableName);
+        => $"BrighterMigration_{schemaName ?? HISTORY_TABLE_SCHEMA}.{tableName}";
 
     protected override Task EnsureHistoryTableAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName,
@@ -124,13 +128,6 @@ public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<Npg
             connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, migrations, cancellationToken);
 
     // ==== Legacy delegates — Phase 7.2b moves bodies into overrides; Phase 7.2c deletes MigrateLegacyAsync ====
-
-    // Include the schema in the lock key so two same-named tables in different schemas
-    // (e.g. public.Outbox and billing.Outbox) acquire distinct advisory locks. Without
-    // the schema qualifier they would share a lock and serialize unnecessarily — matches
-    // the MSSQL runner's lockResource shape.
-    private static string LockResourceForLegacy(string? schemaName, string tableName)
-        => $"BrighterMigration_{schemaName ?? HISTORY_TABLE_SCHEMA}.{tableName}";
 
     private async Task MigrateLegacyAsync(
         string tableName,
