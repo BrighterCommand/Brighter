@@ -530,7 +530,7 @@ Each relational backend's runner refactor is broken into three structural sub-st
   - Validation: existing 54/54 MSSQL tests stay green. Both the new base orchestration AND the legacy delegates coexist for one commit.
   - Commit: `refactor: spec 0028 Phase 7.1a — MsSqlBoxMigrationRunner derives from base via legacy-delegate hooks`.
 
-- [ ] **TIDY FIRST: 7.1b Replace each legacy-delegate hook body with the cleaned override (one hook per commit)**
+- [x] **TIDY FIRST: 7.1b Replace each legacy-delegate hook body with the cleaned override (one hook per commit)**
   - For each hook in turn (`OpenConnectionAsync`, `CreateUnitOfWorkAsync`, `LockResourceFor`, `EnsureHistoryTableAsync`, `RunFreshPathAsync`, `RunBootstrapPathAsync`, `RunNormalPathAsync`):
     - Move the corresponding logic from the `*Legacy` helper into the override body itself.
     - Adjust signatures to use base-supplied protected properties (`Configuration.ConnectionString`, `DetectionHelper.DetectCurrentVersionAsync(...)`) instead of locally-stored fields.
