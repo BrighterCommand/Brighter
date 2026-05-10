@@ -86,8 +86,12 @@ public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConne
 
     // ==== Hook overrides — Phase 7.1a delegates to legacy helpers ====
 
-    protected override Task<SqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
-        => OpenConnectionLegacyAsync(cancellationToken);
+    protected override async Task<SqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+    {
+        var connection = new SqlConnection(Configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        return connection;
+    }
 
     protected override Task<IAmAProvisioningUnitOfWork<SqlTransaction>> CreateUnitOfWorkAsync(
         SqlConnection connection, CancellationToken cancellationToken)
@@ -120,13 +124,6 @@ public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConne
             connection, transaction!, schemaName ?? HISTORY_TABLE_SCHEMA, tableName, migrations, cancellationToken);
 
     // ==== Legacy delegates — Phase 7.1b moves bodies into overrides; Phase 7.1c deletes MigrateLegacyAsync ====
-
-    private async Task<SqlConnection> OpenConnectionLegacyAsync(CancellationToken cancellationToken)
-    {
-        var connection = new SqlConnection(Configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-        return connection;
-    }
 
     private Task<IAmAProvisioningUnitOfWork<SqlTransaction>> CreateUnitOfWorkLegacyAsync(
         SqlConnection connection, CancellationToken cancellationToken)
