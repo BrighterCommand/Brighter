@@ -112,7 +112,11 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
         // the UoW ctor for NF1-faithful tri-state Warning emission — MySqlMigrationLockName.For
         // hash-truncates long composites and would otherwise lose the raw tableName.
         _activeTableName.Value = tableName;
-        return LockResourceForLegacy(schemaName, tableName);
+        // The schema is folded into the lock name so two same-named tables in different schemas
+        // acquire distinct advisory locks. MySQL's GET_LOCK has a 64-char limit; the helper
+        // hashes names exceeding it (long form) and otherwise preserves the simple form for
+        // diagnostic readability. See MySqlMigrationLockName.
+        return MySqlMigrationLockName.For(schemaName ?? DatabaseName(), tableName);
     }
 
     protected override Task EnsureHistoryTableAsync(
@@ -139,13 +143,6 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
             connection, schemaName ?? DatabaseName(), tableName, migrations, cancellationToken);
 
     // ==== Legacy delegates — Phase 7.3b moves bodies into overrides; Phase 7.3c deletes MigrateLegacyAsync ====
-
-    // The schema is folded into the lock name so two same-named tables in different schemas
-    // acquire distinct advisory locks. MySQL's GET_LOCK has a 64-char limit; the helper
-    // hashes names exceeding it (long form) and otherwise preserves the simple form for
-    // diagnostic readability. See MySqlMigrationLockName.
-    private string LockResourceForLegacy(string? schemaName, string tableName)
-        => MySqlMigrationLockName.For(schemaName ?? DatabaseName(), tableName);
 
     private async Task MigrateLegacyAsync(
         string tableName,
