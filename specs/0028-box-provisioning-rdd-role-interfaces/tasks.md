@@ -548,7 +548,7 @@ Each relational backend's runner refactor is broken into three structural sub-st
 
 - [x] **TIDY FIRST: 7.2a Introduce `PostgreSqlBoxMigrationRunner` derived shell with `IPostgreSqlAdvisoryLock?` field; legacy delegates. Validation: 46/46 per TFM.**
 
-- [ ] **TIDY FIRST: 7.2b Replace each legacy-delegate hook with the cleaned override (one commit per hook). Validation: 46/46 each commit.**
+- [x] **TIDY FIRST: 7.2b Replace each legacy-delegate hook with the cleaned override (one commit per hook). Validation: 46/46 each commit.**
 
 - [ ] **TIDY FIRST: 7.2c Delete the legacy `MigrateLegacyAsync` orchestration. Validation: 46/46.**
 
