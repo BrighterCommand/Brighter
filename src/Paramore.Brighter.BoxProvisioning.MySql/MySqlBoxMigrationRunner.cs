@@ -119,10 +119,27 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
         return MySqlMigrationLockName.For(schemaName ?? DatabaseName(), tableName);
     }
 
-    protected override Task EnsureHistoryTableAsync(
+    protected override async Task EnsureHistoryTableAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName,
         CancellationToken cancellationToken)
-        => EnsureHistoryTableLegacyAsync(connection, cancellationToken);
+    {
+        // No race-handling needed: MySQL acquires a metadata lock (MDL_EXCLUSIVE) on the table
+        // name for the duration of CREATE TABLE, and the IF NOT EXISTS check is evaluated under
+        // that lock. Concurrent CREATE TABLE IF NOT EXISTS statements serialize via the MDL —
+        // the loser sees the table already exists and emits a warning rather than an error.
+        // (Contrast with Postgres, where the pg_class check and pg_type insert are not atomic.)
+        using var command = connection.CreateCommand();
+        command.CommandText = $@"
+CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
+    `MigrationVersion` INT NOT NULL,
+    `SchemaName` VARCHAR(256) NOT NULL,
+    `BoxTableName` VARCHAR(256) NOT NULL,
+    `Description` VARCHAR(512) NOT NULL,
+    `AppliedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`SchemaName`, `BoxTableName`, `MigrationVersion`)
+) ENGINE = InnoDB";
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
 
     protected override Task RunFreshPathAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
@@ -170,7 +187,7 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
 
         try
         {
-            await EnsureHistoryTableLegacyAsync(connection, cancellationToken);
+            await EnsureHistoryTableAsync(connection, transaction: null, schemaName: null, cancellationToken);
 
             var tableExistsNow = await MySqlBoxDetectionHelpers.DoesTableExistAsync(
                 connection, tableName, effectiveSchema, cancellationToken);
@@ -294,27 +311,6 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
     {
         using var command = connection.CreateCommand();
         command.CommandText = migration.UpScript;
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    private static async Task EnsureHistoryTableLegacyAsync(
-        MySqlConnection connection, CancellationToken cancellationToken)
-    {
-        // No race-handling needed: MySQL acquires a metadata lock (MDL_EXCLUSIVE) on the table
-        // name for the duration of CREATE TABLE, and the IF NOT EXISTS check is evaluated under
-        // that lock. Concurrent CREATE TABLE IF NOT EXISTS statements serialize via the MDL —
-        // the loser sees the table already exists and emits a warning rather than an error.
-        // (Contrast with Postgres, where the pg_class check and pg_type insert are not atomic.)
-        using var command = connection.CreateCommand();
-        command.CommandText = $@"
-CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
-    `MigrationVersion` INT NOT NULL,
-    `SchemaName` VARCHAR(256) NOT NULL,
-    `BoxTableName` VARCHAR(256) NOT NULL,
-    `Description` VARCHAR(512) NOT NULL,
-    `AppliedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`SchemaName`, `BoxTableName`, `MigrationVersion`)
-) ENGINE = InnoDB";
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
