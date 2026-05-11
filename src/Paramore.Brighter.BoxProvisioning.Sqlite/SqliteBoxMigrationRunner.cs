@@ -23,8 +23,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -69,16 +67,6 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
 
-    //SQLite returns SQLITE_BUSY (5) when a writer slot is contended. We retry on this code
-    //only — any other SqliteException surfaces as a real failure.
-    private const int SQLITE_BUSY = 5;
-
-    //Backoff schedule: start at 25ms, double up to a 200ms cap, plus a small random jitter to
-    //avoid lock-step retries between racing instances. Retries are bounded by lockTimeout.
-    private static readonly TimeSpan s_initialBackoff = TimeSpan.FromMilliseconds(25);
-    private static readonly TimeSpan s_maxBackoff = TimeSpan.FromMilliseconds(200);
-
-    private readonly TimeSpan _lockTimeout;
     private readonly bool _enableWalMode;
     private readonly ILogger _logger;
 
@@ -93,7 +81,6 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
         bool enableWalMode = true)
         : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30), logger)
     {
-        _lockTimeout = lockTimeout ?? TimeSpan.FromSeconds(30);
         _enableWalMode = enableWalMode;
         _logger = logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>();
     }
@@ -121,7 +108,7 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
     {
     }
 
-    // ==== Hook overrides — Phase 7.4a delegates to legacy helpers ====
+    // ==== Per-backend hook overrides for RelationalBoxMigrationRunnerBase ====
 
     protected override async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
@@ -162,9 +149,9 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
 
         // No race-handling needed: BEGIN IMMEDIATE above acquires SQLite's database-wide RESERVED
         // lock, so only one writer can be inside this transaction at a time. Concurrent runners
-        // queue at BeginImmediateWithRetryAsync (with SQLITE_BUSY backoff) rather than racing on
-        // CREATE TABLE — by the time a second writer enters this method, the first has already
-        // committed and IF NOT EXISTS sees the table.
+        // queue at the BEGIN IMMEDIATE call rather than racing on CREATE TABLE — by the time a
+        // second writer enters this method, the first has already committed and IF NOT EXISTS
+        // sees the table.
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
@@ -259,76 +246,6 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         }
     }
 
-    // ==== Legacy delegates — Phase 7.4b moves bodies into overrides; Phase 7.4c deletes MigrateLegacyAsync ====
-
-    private async Task MigrateLegacyAsync(
-        string tableName,
-        string? schemaName,
-        BoxType boxType,
-        IReadOnlyList<IAmABoxMigration> migrations,
-        BoxTableState tableState,
-        CancellationToken cancellationToken = default)
-    {
-        _ = schemaName; // SQLite has no schema concept in this context.
-        _ = tableState; // Stale hint — runner re-detects under the BEGIN IMMEDIATE transaction.
-
-        // Reject duplicate / gap / out-of-order versions before opening a connection. Validation
-        // sits at MigrateAsync entry (rather than inside one of the path branches) so the rule
-        // applies uniformly across fresh / bootstrap / normal paths — a malformed list corrupts
-        // any of them (PK violation on history insert, skipped ALTERs, double-applied DDL).
-        ValidateMigrationsMonotonic(schemaName: null, tableName, migrations);
-
-        using var connection = new SqliteConnection(Configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-
-        await SetSqliteBusyTimeoutToZeroAsync(connection, cancellationToken);
-        if (_enableWalMode)
-        {
-            await EnsureWalModeAsync(connection, cancellationToken);
-        }
-
-        var transaction = await BeginImmediateWithRetryAsync(connection, cancellationToken);
-        try
-        {
-            await EnsureHistoryTableAsync(connection, transaction, schemaName: null, cancellationToken);
-
-            var tableExistsNow = await SqliteBoxDetectionHelpers.DoesTableExistAsync(
-                connection, tableName, cancellationToken, transaction);
-            var historyExistsNow = tableExistsNow && await SqliteBoxDetectionHelpers.DoesHistoryExistAsync(
-                connection, tableName, cancellationToken, transaction);
-
-            if (!tableExistsNow)
-            {
-                await RunFreshPathAsync(
-                    connection, transaction, schemaName: null, tableName, migrations, cancellationToken);
-            }
-            else if (!historyExistsNow)
-            {
-                await RunBootstrapPathAsync(
-                    connection, transaction, schemaName: null, tableName, boxType, migrations, cancellationToken);
-            }
-            else
-            {
-                await RunNormalPathAsync(
-                    connection, transaction, schemaName: null, tableName, migrations, cancellationToken);
-            }
-
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            // Pass CancellationToken.None: if the caller's token is already signalled (host shutdown
-            // mid-migration), RollbackAsync(cancellationToken) would throw OperationCanceledException
-            // immediately and skip the rollback we are trying to perform.
-            try { await transaction.RollbackAsync(CancellationToken.None); } catch { /* connection may already be closed */ }
-            throw;
-        }
-        finally
-        {
-            transaction.Dispose();
-        }
-    }
-
     private static async Task ApplyOrSkipAsync(
         SqliteConnection connection, SqliteTransaction transaction,
         string tableName, IAmABoxMigration migration,
@@ -377,54 +294,12 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private async Task<SqliteTransaction> BeginImmediateWithRetryAsync(
-        SqliteConnection connection, CancellationToken cancellationToken)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        var backoff = s_initialBackoff;
-        var random = new Random();
-
-        while (true)
-        {
-            try
-            {
-                // Microsoft.Data.Sqlite's async BeginTransactionAsync overload doesn't expose the
-                // `deferred` flag, so we use the synchronous form to guarantee BEGIN IMMEDIATE
-                // (deferred: false). The call is local-only and fast — the long wait, if any, is
-                // in Task.Delay below.
-                return connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
-            }
-            catch (SqliteException ex) when (ex.SqliteErrorCode == SQLITE_BUSY)
-            {
-                if (stopwatch.Elapsed >= _lockTimeout)
-                {
-                    throw new TimeoutException(
-                        $"Could not acquire SQLite writer lock within {_lockTimeout.TotalSeconds}s.",
-                        ex);
-                }
-
-                var jitterMs = random.Next(0, (int)Math.Max(1, backoff.TotalMilliseconds / 4));
-                var delay = backoff + TimeSpan.FromMilliseconds(jitterMs);
-                if (stopwatch.Elapsed + delay > _lockTimeout)
-                {
-                    delay = _lockTimeout - stopwatch.Elapsed;
-                    if (delay <= TimeSpan.Zero) delay = TimeSpan.FromMilliseconds(1);
-                }
-
-                await Task.Delay(delay, cancellationToken);
-                backoff = backoff.Add(backoff);
-                if (backoff > s_maxBackoff) backoff = s_maxBackoff;
-            }
-        }
-    }
-
     private static async Task SetSqliteBusyTimeoutToZeroAsync(
         SqliteConnection connection, CancellationToken cancellationToken)
     {
-        // Disable Microsoft.Data.Sqlite's automatic busy_timeout (default = CommandTimeout = 30s)
-        // so SQLite returns SQLITE_BUSY immediately and our explicit BeginImmediateWithRetryAsync
-        // loop is the sole path for handling contention. Without this, the auto-retry would
-        // mask MigrationLockTimeout and our backoff strategy would never run.
+        // Cancel any inherited PRAGMA busy_timeout so the connection enters BEGIN IMMEDIATE with
+        // no per-statement waiter — contention surfaces through the base orchestration's writer-
+        // slot acquisition rather than being absorbed silently here.
         using var command = connection.CreateCommand();
         command.CommandText = "PRAGMA busy_timeout = 0;";
         await command.ExecuteNonQueryAsync(cancellationToken);

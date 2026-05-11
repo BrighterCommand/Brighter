@@ -566,7 +566,7 @@ Each relational backend's runner refactor is broken into three structural sub-st
 
 - [x] **TIDY FIRST: 7.4b Replace each legacy-delegate hook (one commit per hook). Validation: 40/40 each commit.**
 
-- [ ] **TIDY FIRST: 7.4c Delete the legacy `MigrateLegacyAsync` orchestration. Validation: 40/40.**
+- [x] **TIDY FIRST: 7.4c Delete the legacy `MigrateLegacyAsync` orchestration. Validation: 40/40.**
 
 ### 7.5 Spanner runner — static-to-instance rewire (NOT derived from base)
 
