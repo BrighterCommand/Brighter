@@ -716,7 +716,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
 
 ### 10.1 Cancellation token discipline
 
-- [ ] **TEST + IMPLEMENT: MSSQL — Caller's cancellation during a migration path triggers RollbackAsync(CancellationToken.None) preserving lock release**
+- [x] **TEST + IMPLEMENT: MSSQL — Caller's cancellation during a migration path triggers RollbackAsync(CancellationToken.None) preserving lock release**
   - **USE COMMAND**: `/test-first when MSSQL migration is cancelled mid-flight RollbackAsync should run with CancellationToken.None to ensure lock release completes`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_mssql_migration_is_cancelled_mid_flight_it_should_rollback_with_cancellation_token_none.cs`
