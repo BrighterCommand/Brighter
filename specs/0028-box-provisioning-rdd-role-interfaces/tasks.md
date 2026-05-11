@@ -645,13 +645,13 @@ Per ADR §A.1 source-break "Provisioner ctor cascade" + §A.4 step 6. Each provi
 
 ### 8.5 Spanner provisioners (catalogue OMITTED per ADR 0057 §6)
 
-- [ ] **TIDY FIRST: `SpannerOutboxProvisioner` ctor gains TWO new parameters (detection helper + payload validator); NO catalogue**
+- [x] **TIDY FIRST: `SpannerOutboxProvisioner` ctor gains TWO new parameters (detection helper + payload validator); NO catalogue**
   - File: `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerOutboxProvisioner.cs`.
   - New ctor parameters: `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> detectionHelper` (BASE interface, NOT the version-detecting variant — Spanner is degenerate per ADR 0057 §6), `IAmABoxPayloadModeValidator<SpannerConnection> payloadValidator`.
   - Body changes: rewire `SpannerBoxDetectionHelpers.{Method}(...)` and `SpannerPayloadModeValidator.ValidateAsync(...)` to instance dispatch. Schema parameter passed as `null` everywhere.
   - Validation: existing Spanner outbox provisioner tests stay green.
 
-- [ ] **TIDY FIRST: `SpannerInboxProvisioner` ctor cascade — same recipe (TWO new params, no catalogue)**
+- [x] **TIDY FIRST: `SpannerInboxProvisioner` ctor cascade — same recipe (TWO new params, no catalogue)**
   - File: `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerInboxProvisioner.cs`.
   - Validation: existing Spanner inbox provisioner tests stay green.
 
