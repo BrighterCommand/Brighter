@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -32,17 +33,56 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// validation, then delegates to <see cref="IAmABoxMigrationRunner"/> which re-detects state
 /// under the lock and dispatches into fresh / bootstrap / normal paths per ADR 0057 §3.
 /// </summary>
-public class MsSqlOutboxProvisioner(
-    IAmARelationalDatabaseConfiguration configuration,
-    IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
+public class MsSqlOutboxProvisioner : IAmABoxProvisioner
 {
+    private readonly IAmAVersionDetectingMigrationHelper<SqlConnection, SqlTransaction> _detectionHelper;
+    private readonly IAmABoxMigrationCatalog _catalog;
+    private readonly IAmABoxPayloadModeValidator<SqlConnection> _payloadValidator;
+    private readonly IAmARelationalDatabaseConfiguration _configuration;
+    private readonly IAmABoxMigrationRunner _migrationRunner;
+
+    /// <summary>
+    /// Canonical ctor — Phase 8.1 of spec 0028. Takes the role-interface dependencies
+    /// explicitly so the provisioner does not reach for backend statics.
+    /// </summary>
+    public MsSqlOutboxProvisioner(
+        IAmAVersionDetectingMigrationHelper<SqlConnection, SqlTransaction> detectionHelper,
+        IAmABoxMigrationCatalog catalog,
+        IAmABoxPayloadModeValidator<SqlConnection> payloadValidator,
+        IAmARelationalDatabaseConfiguration configuration,
+        IAmABoxMigrationRunner migrationRunner)
+    {
+        _detectionHelper = detectionHelper;
+        _catalog = catalog;
+        _payloadValidator = payloadValidator;
+        _configuration = configuration;
+        _migrationRunner = migrationRunner;
+    }
+
+    /// <summary>
+    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
+    /// call-sites (extensions + integration tests). Synthesises default singletons for the
+    /// three role-interface dependencies; removed when the DI cascade lands in Phase 9.
+    /// </summary>
+    public MsSqlOutboxProvisioner(
+        IAmARelationalDatabaseConfiguration configuration,
+        IAmABoxMigrationRunner migrationRunner)
+        : this(
+            new MsSqlBoxDetectionHelper(),
+            new MsSqlOutboxMigrationCatalog(),
+            new MsSqlPayloadModeValidator(),
+            configuration,
+            migrationRunner)
+    {
+    }
+
     public BoxType BoxType => BoxType.Outbox;
-    public string BoxTableName => configuration.OutBoxTableName;
+    public string BoxTableName => _configuration.OutBoxTableName;
 
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
-        var migrations = MsSqlOutboxMigrations.All(configuration);
+        var migrations = _catalog.All(_configuration);
         var tableState = await DetectTableStateAsync(migrations, cancellationToken);
 
         if (tableState.TableExists)
@@ -50,9 +90,9 @@ public class MsSqlOutboxProvisioner(
             await ValidatePayloadModeAsync(cancellationToken);
         }
 
-        await migrationRunner.MigrateAsync(
-            configuration.OutBoxTableName,
-            configuration.SchemaName,
+        await _migrationRunner.MigrateAsync(
+            _configuration.OutBoxTableName,
+            _configuration.SchemaName,
             BoxType.Outbox,
             migrations,
             tableState,
@@ -60,48 +100,44 @@ public class MsSqlOutboxProvisioner(
     }
 
     private async Task<BoxTableState> DetectTableStateAsync(
-        System.Collections.Generic.IReadOnlyList<IAmABoxMigration> migrations,
+        IReadOnlyList<IAmABoxMigration> migrations,
         CancellationToken cancellationToken)
     {
-        var schemaName = configuration.SchemaName ?? "dbo";
-
-        using var connection = new SqlConnection(configuration.ConnectionString);
+        using var connection = new SqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        var tableExists = await MsSqlBoxDetectionHelpers.DoesTableExistAsync(
-            connection, configuration.OutBoxTableName, schemaName, cancellationToken);
+        var tableExists = await _detectionHelper.DoesTableExistAsync(
+            connection, _configuration.OutBoxTableName, _configuration.SchemaName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        var historyExists = await MsSqlBoxDetectionHelpers.DoesHistoryExistAsync(
-            connection, configuration.OutBoxTableName, schemaName, cancellationToken);
+        var historyExists = await _detectionHelper.DoesHistoryExistAsync(
+            connection, _configuration.OutBoxTableName, _configuration.SchemaName, cancellationToken);
         if (!historyExists)
         {
             // Pre-lock detection is a hint for the caller; the runner re-detects under the lock.
             // Negative or zero return values are not gated here — the runner is the single source
             // of truth for discriminator violations and unknown-schema rejections.
-            var detectedVersion = await MsSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
-                connection, configuration.OutBoxTableName, schemaName,
+            var detectedVersion = await _detectionHelper.DetectCurrentVersionAsync(
+                connection, _configuration.OutBoxTableName, _configuration.SchemaName,
                 BoxType.Outbox, migrations, cancellationToken);
             return new BoxTableState(
                 TableExists: true, HistoryExists: false,
                 CurrentVersion: detectedVersion < 0 ? 0 : detectedVersion);
         }
 
-        var maxVersion = await MsSqlBoxDetectionHelpers.GetMaxVersionAsync(
-            connection, configuration.OutBoxTableName, schemaName, cancellationToken);
+        var maxVersion = await _detectionHelper.GetMaxVersionAsync(
+            connection, _configuration.OutBoxTableName, _configuration.SchemaName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
     private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
     {
-        var schemaName = configuration.SchemaName ?? "dbo";
-
-        using var connection = new SqlConnection(configuration.ConnectionString);
+        using var connection = new SqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await MsSqlPayloadModeValidators.ValidateAsync(
-            connection, configuration.OutBoxTableName, schemaName,
-            "Body", configuration.BinaryMessagePayload, cancellationToken);
+        await _payloadValidator.ValidateAsync(
+            connection, _configuration.OutBoxTableName, _configuration.SchemaName,
+            "Body", _configuration.BinaryMessagePayload, cancellationToken);
     }
 }
