@@ -582,7 +582,7 @@ Spanner is degenerate per ADR 0057 §6 and stays free-standing as `IAmABoxMigrat
 
 ### 7.6 Phase 7 gate
 
-- [ ] **Phase 7 gate: All four relational runners derive from base; Spanner runner rewires to instance helper; pre-Phase-7 counts preserved per NF2**
+- [x] **Phase 7 gate: All four relational runners derive from base; Spanner runner rewires to instance helper; pre-Phase-7 counts preserved per NF2**
   - Run all six BoxProvisioning test filters; confirm counts ≥ `baseline.md` per backend per TFM (counts INCREASE due to new Phase-5/6/10 tests; Phase 7 itself adds no new tests).
   - Quote count delta vs `baseline.md` in the closing Phase 7 commit message.
 
