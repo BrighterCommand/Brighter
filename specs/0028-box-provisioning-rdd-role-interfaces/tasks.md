@@ -621,13 +621,13 @@ Per ADR §A.1 source-break "Provisioner ctor cascade" + §A.4 step 6. Each provi
 
 ### 8.3 MySQL provisioners
 
-- [ ] **TIDY FIRST: `MySqlOutboxProvisioner` ctor cascade — three new typed params; rewire static→instance**
+- [x] **TIDY FIRST: `MySqlOutboxProvisioner` ctor cascade — three new typed params; rewire static→instance**
   - File: `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlOutboxProvisioner.cs`.
   - New ctor parameters: `IAmAVersionDetectingMigrationHelper<MySqlConnection, MySqlTransaction> detectionHelper`, `IAmABoxMigrationCatalog catalog` (Outbox), `IAmABoxPayloadModeValidator<MySqlConnection> payloadValidator`.
   - Body: same static→instance rewire pattern as Postgres above.
   - Validation: existing MySQL outbox provisioner tests stay green (net9.0-only).
 
-- [ ] **TIDY FIRST: `MySqlInboxProvisioner` ctor cascade — same recipe with `MySqlInboxMigrationCatalog`**
+- [x] **TIDY FIRST: `MySqlInboxProvisioner` ctor cascade — same recipe with `MySqlInboxMigrationCatalog`**
   - File: `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlInboxProvisioner.cs`.
   - Validation: existing MySQL inbox provisioner tests stay green (net9.0-only).
 
