@@ -762,7 +762,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
 
 ### 10.3 Best-effort RollbackAsync after thrown CommitAsync
 
-- [ ] **TEST + IMPLEMENT: MSSQL — When CommitAsync throws, RollbackAsync runs best-effort against the zombied transaction without throwing**
+- [x] **TEST + IMPLEMENT: MSSQL — When CommitAsync throws, RollbackAsync runs best-effort against the zombied transaction without throwing**
   - **USE COMMAND**: `/test-first when MSSQL CommitAsync throws RollbackAsync should be best-effort against the already finalised zombied transaction and not throw`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_mssql_commit_throws_rollback_should_be_best_effort_without_throwing.cs`
