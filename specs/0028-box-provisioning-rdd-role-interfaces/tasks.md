@@ -633,13 +633,13 @@ Per ADR §A.1 source-break "Provisioner ctor cascade" + §A.4 step 6. Each provi
 
 ### 8.4 SQLite provisioners
 
-- [ ] **TIDY FIRST: `SqliteOutboxProvisioner` ctor cascade — three new typed params; rewire static→instance; payload validator now takes `string? schemaName` (passed as `null`)**
+- [x] **TIDY FIRST: `SqliteOutboxProvisioner` ctor cascade — three new typed params; rewire static→instance; payload validator now takes `string? schemaName` (passed as `null`)**
   - File: `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteOutboxProvisioner.cs`.
   - New ctor parameters: `IAmAVersionDetectingMigrationHelper<SqliteConnection, SqliteTransaction> detectionHelper`, `IAmABoxMigrationCatalog catalog` (Outbox), `IAmABoxPayloadModeValidator<SqliteConnection> payloadValidator`.
   - Body: rewire to instance; SQLite's payload validator signature now takes `string? schemaName` — always pass `null` (SQLite has no schema concept). Same `null`-pass convention applies everywhere SQLite calls the detection helper's schema-bearing methods.
   - Validation: existing SQLite outbox provisioner tests stay green.
 
-- [ ] **TIDY FIRST: `SqliteInboxProvisioner` ctor cascade — same recipe with `SqliteInboxMigrationCatalog`**
+- [x] **TIDY FIRST: `SqliteInboxProvisioner` ctor cascade — same recipe with `SqliteInboxMigrationCatalog`**
   - File: `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteInboxProvisioner.cs`.
   - Validation: existing SQLite inbox provisioner tests stay green.
 
