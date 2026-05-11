@@ -774,7 +774,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
 
 ### 10.4 Phase 10 gate
 
-- [ ] **Phase 10 gate: Cross-backend lifecycle contract uniformly verified; all backend-specific lifecycle tests green**
+- [x] **Phase 10 gate: Cross-backend lifecycle contract uniformly verified; all backend-specific lifecycle tests green**
   - Run all four relational backend BoxProvisioning test filters; verify the lifecycle/cancellation contract tests pass.
   - Confirm Spanner BoxProvisioning is unchanged (degenerate per ADR 0057 §6 — no UoW lifecycle to contract-check).
 
