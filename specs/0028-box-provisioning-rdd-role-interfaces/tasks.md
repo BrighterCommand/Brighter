@@ -694,7 +694,7 @@ Per ADR §A.4 step 6 final paragraph + §A.4 the Alternatives section "instance 
 
 ### 9.4 SQLite
 
-- [ ] **TIDY FIRST: `AddSqliteOutbox` / `AddSqliteInbox` DI updates**
+- [x] **TIDY FIRST: `AddSqliteOutbox` / `AddSqliteInbox` DI updates**
 
 ### 9.5 Spanner (NO catalogue registration)
 

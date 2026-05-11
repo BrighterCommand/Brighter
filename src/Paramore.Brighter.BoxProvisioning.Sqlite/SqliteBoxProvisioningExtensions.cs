@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 
@@ -27,10 +28,19 @@ public static class SqliteBoxProvisioningExtensions
     {
         options.Add(services =>
         {
-            var runner = new SqliteBoxMigrationRunner(
-                configuration, options.MigrationLockTimeout, enableWalMode);
-            services.AddSingleton<IAmABoxProvisioner>(
-                new SqliteOutboxProvisioner(configuration, runner));
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<SqliteOutboxMigrationCatalog>();
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+            {
+                var runner = new SqliteBoxMigrationRunner(
+                    configuration, options.MigrationLockTimeout, enableWalMode);
+                return new SqliteOutboxProvisioner(
+                    sp.GetRequiredService<SqliteBoxDetectionHelper>(),
+                    sp.GetRequiredService<SqliteOutboxMigrationCatalog>(),
+                    sp.GetRequiredService<SqlitePayloadModeValidator>(),
+                    configuration,
+                    runner);
+            });
         });
         return options;
     }
@@ -52,6 +62,8 @@ public static class SqliteBoxProvisioningExtensions
     {
         options.Add(services =>
         {
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<SqliteOutboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -64,7 +76,12 @@ public static class SqliteBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var runner = new SqliteBoxMigrationRunner(
                     dbConfig, options.MigrationLockTimeout, enableWalMode);
-                return new SqliteOutboxProvisioner(dbConfig, runner);
+                return new SqliteOutboxProvisioner(
+                    sp.GetRequiredService<SqliteBoxDetectionHelper>(),
+                    sp.GetRequiredService<SqliteOutboxMigrationCatalog>(),
+                    sp.GetRequiredService<SqlitePayloadModeValidator>(),
+                    dbConfig,
+                    runner);
             });
         });
         return options;
@@ -85,10 +102,19 @@ public static class SqliteBoxProvisioningExtensions
     {
         options.Add(services =>
         {
-            var runner = new SqliteBoxMigrationRunner(
-                configuration, options.MigrationLockTimeout, enableWalMode);
-            services.AddSingleton<IAmABoxProvisioner>(
-                new SqliteInboxProvisioner(configuration, runner));
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<SqliteInboxMigrationCatalog>();
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+            {
+                var runner = new SqliteBoxMigrationRunner(
+                    configuration, options.MigrationLockTimeout, enableWalMode);
+                return new SqliteInboxProvisioner(
+                    sp.GetRequiredService<SqliteBoxDetectionHelper>(),
+                    sp.GetRequiredService<SqliteInboxMigrationCatalog>(),
+                    sp.GetRequiredService<SqlitePayloadModeValidator>(),
+                    configuration,
+                    runner);
+            });
         });
         return options;
     }
@@ -110,6 +136,8 @@ public static class SqliteBoxProvisioningExtensions
     {
         options.Add(services =>
         {
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<SqliteInboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -122,9 +150,25 @@ public static class SqliteBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var runner = new SqliteBoxMigrationRunner(
                     dbConfig, options.MigrationLockTimeout, enableWalMode);
-                return new SqliteInboxProvisioner(dbConfig, runner);
+                return new SqliteInboxProvisioner(
+                    sp.GetRequiredService<SqliteBoxDetectionHelper>(),
+                    sp.GetRequiredService<SqliteInboxMigrationCatalog>(),
+                    sp.GetRequiredService<SqlitePayloadModeValidator>(),
+                    dbConfig,
+                    runner);
             });
         });
         return options;
+    }
+
+    // Detection helper + payload validator are shared across Outbox and Inbox extensions;
+    // TryAddSingleton makes the registration idempotent so calling both AddSqliteOutbox and
+    // AddSqliteInbox does not produce duplicate singletons. Catalogue registration is per
+    // box-type and lives in the call-site (Outbox catalogue from AddSqliteOutbox; Inbox
+    // catalogue from AddSqliteInbox) per ADR 0058 §A.4 Alternatives.
+    private static void RegisterSharedRoleImpls(IServiceCollection services)
+    {
+        services.TryAddSingleton<SqliteBoxDetectionHelper>();
+        services.TryAddSingleton<SqlitePayloadModeValidator>();
     }
 }
