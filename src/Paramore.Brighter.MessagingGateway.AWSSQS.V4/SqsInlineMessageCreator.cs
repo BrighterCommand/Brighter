@@ -49,9 +49,6 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
         try
         {
-            // AWS SDK v4 returns null (not an empty dictionary) when Attributes was never set on the wire.
-            sqsMessage.Attributes ??= new Dictionary<string, string>();
-
             var jsonDocument = JsonDocument.Parse(sqsMessage.Body);
             _messageAttributes = ReadMessageAttributes(jsonDocument);
 
@@ -409,7 +406,8 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
     private static HeaderResult<PartitionKey> ReadPartitionKey(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageGroupId, out var value))
+        if (sqsMessage.Attributes is not null
+            && sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageGroupId, out var value))
         {
             //we have an arn, and we want the topic
             return new HeaderResult<PartitionKey>(value, true);
@@ -420,7 +418,8 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
     private static HeaderResult<string> ReadDeduplicationId(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageDeduplicationId, out var value))
+        if (sqsMessage.Attributes is not null
+            && sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageDeduplicationId, out var value))
         {
             //we have an arn, and we want the topic
             return new HeaderResult<string>(value, true);
