@@ -18,7 +18,8 @@ public static class SpannerBoxProvisioningExtensions
     {
         options.Add(services =>
         {
-            var runner = new SpannerBoxMigrationRunner(configuration);
+            var detectionHelper = new SpannerBoxDetectionHelper();
+            var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration);
             services.AddSingleton<IAmABoxProvisioner>(
                 new SpannerOutboxProvisioner(configuration, runner));
         });
@@ -46,7 +47,8 @@ public static class SpannerBoxProvisioningExtensions
                     connectionString,
                     outBoxTableName: outboxTableName ?? "Outbox",
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new SpannerBoxMigrationRunner(dbConfig);
+                var detectionHelper = new SpannerBoxDetectionHelper();
+                var runner = new SpannerBoxMigrationRunner(detectionHelper, dbConfig);
                 return new SpannerOutboxProvisioner(dbConfig, runner);
             });
         });
@@ -62,7 +64,8 @@ public static class SpannerBoxProvisioningExtensions
     {
         options.Add(services =>
         {
-            var runner = new SpannerBoxMigrationRunner(configuration);
+            var detectionHelper = new SpannerBoxDetectionHelper();
+            var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration);
             services.AddSingleton<IAmABoxProvisioner>(
                 new SpannerInboxProvisioner(configuration, runner));
         });
@@ -90,7 +93,8 @@ public static class SpannerBoxProvisioningExtensions
                     connectionString,
                     inboxTableName: inboxTableName ?? "Inbox",
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new SpannerBoxMigrationRunner(dbConfig);
+                var detectionHelper = new SpannerBoxDetectionHelper();
+                var runner = new SpannerBoxMigrationRunner(detectionHelper, dbConfig);
                 return new SpannerInboxProvisioner(dbConfig, runner);
             });
         });

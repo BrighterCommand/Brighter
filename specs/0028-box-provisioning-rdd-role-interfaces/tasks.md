@@ -572,7 +572,7 @@ Each relational backend's runner refactor is broken into three structural sub-st
 
 Spanner is degenerate per ADR 0057 §6 and stays free-standing as `IAmABoxMigrationRunner`. It does NOT derive from `RelationalBoxMigrationRunnerBase`. But it DOES call `SpannerBoxDetectionHelpers` directly (`SpannerBoxMigrationRunner.cs:134, 137`); after Phase 2.5 the helper is an instance class, and after Phase 8.6 the static facade is deleted. Without rewiring the Spanner runner, Phase 8.6's grep gate becomes unsatisfiable.
 
-- [ ] **TIDY FIRST: Refactor `SpannerBoxMigrationRunner` to take an injected detection helper and call instance methods on it**
+- [x] **TIDY FIRST: Refactor `SpannerBoxMigrationRunner` to take an injected detection helper and call instance methods on it**
   - File: `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerBoxMigrationRunner.cs`.
   - New ctor parameter: `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> detectionHelper` (BASE interface — Spanner is degenerate; no version inference per ADR 0057 §6).
   - Body changes: `SpannerBoxDetectionHelpers.{Method}(...)` → `_detectionHelper.{Method}(...)` with explicit `null` for the new `string? schemaName` parameter slot at every call-site.

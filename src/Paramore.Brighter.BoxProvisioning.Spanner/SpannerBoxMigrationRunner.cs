@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
@@ -35,13 +36,38 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 /// racing process cannot double-stamp. No application-level lock is therefore required.
 /// </para>
 /// </remarks>
-public class SpannerBoxMigrationRunner(
-    IAmARelationalDatabaseConfiguration configuration) : IAmABoxMigrationRunner
+public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
 {
     // Spanner rejects identifiers starting with `_` (reserved for system objects),
     // so this backend uses `BrighterMigrationHistory` while other backends use
     // `__BrighterMigrationHistory`.
     internal const string MigrationHistoryTable = "BrighterMigrationHistory";
+
+    private readonly IAmARelationalDatabaseConfiguration _configuration;
+    private readonly IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> _detectionHelper;
+
+    /// <summary>
+    /// Initialises the runner with an explicit detection helper. Spanner is degenerate per
+    /// ADR 0057 §6 (no V_k chain), so the BASE detection-helper interface is sufficient —
+    /// no version inference is performed.
+    /// </summary>
+    public SpannerBoxMigrationRunner(
+        IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> detectionHelper,
+        IAmARelationalDatabaseConfiguration configuration)
+    {
+        _detectionHelper = detectionHelper;
+        _configuration = configuration;
+    }
+
+    /// <summary>
+    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
+    /// call-sites (extensions + integration tests). Synthesises a default
+    /// <see cref="SpannerBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
+    /// </summary>
+    public SpannerBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration)
+        : this(new SpannerBoxDetectionHelper(), configuration)
+    {
+    }
 
     // IMPORTANT: keep these in sync with the relational chain length —
     //   VLatestOutbox === MySqlOutboxMigrations.All(...).Count
@@ -77,7 +103,7 @@ public class SpannerBoxMigrationRunner(
         _ = migrations; // Spanner is fresh-install-only — no V_k chain (ADR 0057 §6).
         _ = schemaName; // Spanner does not use schemas; the configuration's database is implicit.
 
-        using var connection = SpannerConnectionHelper.CreateConnection(configuration.ConnectionString);
+        using var connection = SpannerConnectionHelper.CreateConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         await EnsureHistoryTableAsync(connection, cancellationToken);
@@ -122,19 +148,19 @@ public class SpannerBoxMigrationRunner(
 
     private string BuildBoxDdl(BoxType boxType, string tableName) => boxType switch
     {
-        BoxType.Outbox => SpannerOutboxBuilder.GetDDL(tableName, configuration.BinaryMessagePayload),
+        BoxType.Outbox => SpannerOutboxBuilder.GetDDL(tableName, _configuration.BinaryMessagePayload),
         BoxType.Inbox => SpannerInboxBuilder.GetDDL(tableName),
         _ => throw new ArgumentOutOfRangeException(nameof(boxType), boxType, "Unsupported box type")
     };
 
-    private static async Task BootstrapExistingTableAsync(
+    private async Task BootstrapExistingTableAsync(
         SpannerConnection connection, string tableName, BoxType boxType, int vLatest,
         CancellationToken cancellationToken)
     {
-        var columns = await SpannerBoxDetectionHelpers.GetTableColumnsAsync(
-            connection, tableName, cancellationToken);
+        var columns = await _detectionHelper.GetTableColumnsAsync(
+            connection, tableName, schemaName: null, cancellationToken);
 
-        var discriminator = SpannerBoxDetectionHelpers.DiscriminatorFor(boxType);
+        var discriminator = _detectionHelper.DiscriminatorFor(boxType);
         if (!columns.Contains(discriminator))
         {
             throw new ConfigurationException(
