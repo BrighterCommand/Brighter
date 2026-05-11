@@ -676,7 +676,7 @@ Per ADR §A.4 step 6 final paragraph + §A.4 the Alternatives section "instance 
 
 ### 9.1 MSSQL
 
-- [ ] **TIDY FIRST: `AddMsSqlOutbox` / `AddMsSqlInbox` register `MsSqlBoxDetectionHelper`, `MsSqlOutboxMigrationCatalog` (Outbox-only), `MsSqlInboxMigrationCatalog` (Inbox-only), `MsSqlPayloadModeValidator` as singletons; supply them to provisioner ctor**
+- [x] **TIDY FIRST: `AddMsSqlOutbox` / `AddMsSqlInbox` register `MsSqlBoxDetectionHelper`, `MsSqlOutboxMigrationCatalog` (Outbox-only), `MsSqlInboxMigrationCatalog` (Inbox-only), `MsSqlPayloadModeValidator` as singletons; supply them to provisioner ctor**
   - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlBoxProvisioningExtensions.cs`.
   - Detection helper + payload validator registered ONCE per backend (covered by both extensions; idempotent registration if both extensions called).
   - Catalogues registered per box-type (`MsSqlOutboxMigrationCatalog` only by `AddMsSqlOutbox`; `MsSqlInboxMigrationCatalog` only by `AddMsSqlInbox`).

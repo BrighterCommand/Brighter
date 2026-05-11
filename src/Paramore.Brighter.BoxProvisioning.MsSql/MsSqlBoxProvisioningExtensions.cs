@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Paramore.Brighter.BoxProvisioning.MsSql;
 
@@ -22,9 +23,18 @@ public static class MsSqlBoxProvisioningExtensions
         // has fully completed inside UseBoxProvisioning).
         options.Add(services =>
         {
-            var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
-            services.AddSingleton<IAmABoxProvisioner>(
-                new MsSqlOutboxProvisioner(configuration, runner));
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<MsSqlOutboxMigrationCatalog>();
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+            {
+                var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                return new MsSqlOutboxProvisioner(
+                    sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<MsSqlOutboxMigrationCatalog>(),
+                    sp.GetRequiredService<MsSqlPayloadModeValidator>(),
+                    configuration,
+                    runner);
+            });
         });
         return options;
     }
@@ -41,6 +51,8 @@ public static class MsSqlBoxProvisioningExtensions
     {
         options.Add(services =>
         {
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<MsSqlOutboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -53,7 +65,12 @@ public static class MsSqlBoxProvisioningExtensions
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
                 var runner = new MsSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
-                return new MsSqlOutboxProvisioner(dbConfig, runner);
+                return new MsSqlOutboxProvisioner(
+                    sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<MsSqlOutboxMigrationCatalog>(),
+                    sp.GetRequiredService<MsSqlPayloadModeValidator>(),
+                    dbConfig,
+                    runner);
             });
         });
         return options;
@@ -68,9 +85,18 @@ public static class MsSqlBoxProvisioningExtensions
     {
         options.Add(services =>
         {
-            var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
-            services.AddSingleton<IAmABoxProvisioner>(
-                new MsSqlInboxProvisioner(configuration, runner));
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<MsSqlInboxMigrationCatalog>();
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+            {
+                var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                return new MsSqlInboxProvisioner(
+                    sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<MsSqlInboxMigrationCatalog>(),
+                    sp.GetRequiredService<MsSqlPayloadModeValidator>(),
+                    configuration,
+                    runner);
+            });
         });
         return options;
     }
@@ -87,6 +113,8 @@ public static class MsSqlBoxProvisioningExtensions
     {
         options.Add(services =>
         {
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<MsSqlInboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -99,9 +127,25 @@ public static class MsSqlBoxProvisioningExtensions
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
                 var runner = new MsSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
-                return new MsSqlInboxProvisioner(dbConfig, runner);
+                return new MsSqlInboxProvisioner(
+                    sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<MsSqlInboxMigrationCatalog>(),
+                    sp.GetRequiredService<MsSqlPayloadModeValidator>(),
+                    dbConfig,
+                    runner);
             });
         });
         return options;
+    }
+
+    // Detection helper + payload validator are shared across Outbox and Inbox extensions;
+    // TryAddSingleton makes the registration idempotent so calling both Add*Outbox and
+    // Add*Inbox does not produce duplicate singletons. Catalogue registration is per
+    // box-type and lives in the call-site (Outbox catalogue from Add*Outbox; Inbox
+    // catalogue from Add*Inbox) per ADR 0058 §A.4 Alternatives.
+    private static void RegisterSharedRoleImpls(IServiceCollection services)
+    {
+        services.TryAddSingleton<MsSqlBoxDetectionHelper>();
+        services.TryAddSingleton<MsSqlPayloadModeValidator>();
     }
 }
