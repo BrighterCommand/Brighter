@@ -810,26 +810,26 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
 
 ## Phase 12 — Final verification and acceptance criteria sign-off
 
-- [ ] **Run the full BoxProvisioning test matrix and confirm NF2 counts (per AC6)**
+- [x] **Run the full BoxProvisioning test matrix and confirm NF2 counts (per AC6)**
   - Six test filters: MSSQL 54+/54+ per TFM, Postgres 46+/46+ per TFM, MySQL 50+/50 net9.0-only, SQLite 40+/40 per TFM, Spanner 26/26 per TFM (unchanged), Core BoxProvisioning.Tests 23+/23 per TFM, Core BoxProvisioning 5/5.
   - Counts EXCEED baseline due to additive Phase 5/6/10 tests; record the new counts.
   - Spanner counts EQUAL baseline (Spanner unchanged per ADR 0057 §6).
 
-- [ ] **Confirm no `InternalsVisibleTo` directives added (per AC8 / NF5)**
+- [x] **Confirm no `InternalsVisibleTo` directives added (per AC8 / NF5)**
   - `grep -r "InternalsVisibleTo" src/Paramore.Brighter.BoxProvisioning*` returns no NEW entries beyond pre-Phase-0 baseline.
 
-- [ ] **Confirm no test-only public surface introduced (per AC8 / NF6)**
+- [x] **Confirm no test-only public surface introduced (per AC8 / NF6)**
   - Survey new public types from Phase 1/5/6 — any motivated by testability? If yes, document in ADR 0058 with trade-off (per NF6).
   - Expected outcome: no test-only public types.
 
-- [ ] **Confirm naming convention compliance per AC9 / C4**
+- [x] **Confirm naming convention compliance per AC9 / C4**
   - All five new role interfaces start with `IAmA*` per Brighter convention.
   - No deviation requiring justification (the ADR §A.1/§A.2/§A.3 already justifies naming choices in the Rationale sub-sections).
 
-- [ ] **Confirm TFM matrix is unchanged per C6**
+- [x] **Confirm TFM matrix is unchanged per C6**
   - `grep -A2 "TargetFrameworks" src/Paramore.Brighter.BoxProvisioning*/Paramore.Brighter.BoxProvisioning.csproj src/Paramore.Brighter.BoxProvisioning*/*.csproj` matches pre-Phase-0 state.
 
-- [ ] **Cross-walk F1..F9 against the shipped surface (per requirements.md functional requirements)**
+- [x] **Cross-walk F1..F9 against the shipped surface (per requirements.md functional requirements)**
   - For each functional requirement, list the implementing files / classes / sections in `specs/0028-box-provisioning-rdd-role-interfaces/traceability.md`.
   - F1 — confirm ADR 0058 exists with status Accepted, contains §A and §B sections.
   - F2 — confirm `IAmABoxMigrationDetectionHelper<TConnection, TTransaction>` interface present and implemented by 5 backend classes.
@@ -842,7 +842,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
   - F9 — verify AC4 discharge: re-walk ADR §B.4 candidate list against the post-implementation surface; confirm the four "No" decisions still hold; record any new candidate (typically empty) in `specs/0028-box-provisioning-rdd-role-interfaces/sweep-result.md`. If a candidate IS surfaced during implementation, the spec scope expands and a new round of `/spec:review code` is required before approval.
   - Discharge any uncovered requirement before requesting `/spec:approve code`.
 
-- [ ] **Tick spec acceptance criteria AC1..AC11 in `specs/0028-box-provisioning-rdd-role-interfaces/acceptance.md` (per-AC, not bulk)**
+- [x] **Tick spec acceptance criteria AC1..AC11 in `specs/0028-box-provisioning-rdd-role-interfaces/acceptance.md` (per-AC, not bulk)**
   - For each AC, record (a) the verifying artefact (test name / file path / commit sha / ADR section reference) and (b) the tick.
   - AC1 — ADR 0058 reviewed and Accepted (`docs/adr/0058-box-provisioning-rdd-role-interfaces.md` status = Accepted, `.design-approved` exists).
   - AC2 — F2/F3/F4 interfaces named with `IAmA*`, present in `src/Paramore.Brighter.BoxProvisioning/`, each with XML-doc; implementations across backends.
