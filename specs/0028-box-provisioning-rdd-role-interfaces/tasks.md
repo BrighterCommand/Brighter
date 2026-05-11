@@ -594,7 +594,7 @@ Per ADR §A.1 source-break "Provisioner ctor cascade" + §A.4 step 6. Each provi
 
 ### 8.1 MSSQL provisioners
 
-- [ ] **TIDY FIRST: `MsSqlOutboxProvisioner` ctor gains three new typed parameters; body rewires static calls to instance dispatch**
+- [x] **TIDY FIRST: `MsSqlOutboxProvisioner` ctor gains three new typed parameters; body rewires static calls to instance dispatch**
   - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlOutboxProvisioner.cs`.
   - New ctor parameters: `IAmAVersionDetectingMigrationHelper<SqlConnection, SqlTransaction> detectionHelper`, `IAmABoxMigrationCatalog catalog`, `IAmABoxPayloadModeValidator<SqlConnection> payloadValidator`.
   - Body changes:
@@ -603,7 +603,7 @@ Per ADR §A.1 source-break "Provisioner ctor cascade" + §A.4 step 6. Each provi
     - `MsSqlPayloadModeValidator.ValidateAsync(...)` → `_payloadValidator.ValidateAsync(...)`.
   - Validation: existing MSSQL outbox provisioner tests stay green.
 
-- [ ] **TIDY FIRST: `MsSqlInboxProvisioner` ctor cascade — same recipe as MSSQL outbox, with `MsSqlInboxMigrationCatalog` injected as the `IAmABoxMigrationCatalog`**
+- [x] **TIDY FIRST: `MsSqlInboxProvisioner` ctor cascade — same recipe as MSSQL outbox, with `MsSqlInboxMigrationCatalog` injected as the `IAmABoxMigrationCatalog`**
   - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlInboxProvisioner.cs`.
   - Validation: existing MSSQL inbox provisioner tests stay green.
 
