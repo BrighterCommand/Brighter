@@ -736,7 +736,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
   - Test file: `When_postgres_migration_is_cancelled_mid_flight_it_should_rollback_and_release_session_lock.cs`
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: MySQL — Caller's cancellation mid-flight triggers RELEASE_LOCK with CancellationToken.None**
+- [x] **TEST + IMPLEMENT: MySQL — Caller's cancellation mid-flight triggers RELEASE_LOCK with CancellationToken.None**
   - **USE COMMAND**: `/test-first when MySQL migration is cancelled mid-flight RollbackAsync should run with CancellationToken.None and RELEASE_LOCK should free the GET_LOCK`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning`
   - Test file: `When_mysql_migration_is_cancelled_mid_flight_it_should_release_get_lock.cs`
