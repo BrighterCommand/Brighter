@@ -665,7 +665,7 @@ Per ADR §A.1 source-break "Provisioner ctor cascade" + §A.4 step 6. Each provi
 
 ### 8.7 Phase 8 gate
 
-- [ ] **Phase 8 gate: All provisioner ctors updated; all bridging shims removed; existing tests green per NF2**
+- [x] **Phase 8 gate: All provisioner ctors updated; all bridging shims removed; existing tests green per NF2**
   - Run all six BoxProvisioning test filters — counts ≥ pre-Phase-0 baseline (now boosted by Phase 5/6/10 additions).
 
 ---
