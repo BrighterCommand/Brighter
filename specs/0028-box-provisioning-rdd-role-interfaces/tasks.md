@@ -686,7 +686,7 @@ Per ADR §A.4 step 6 final paragraph + §A.4 the Alternatives section "instance 
 
 ### 9.2 Postgres
 
-- [ ] **TIDY FIRST: `AddPostgreSqlOutbox` / `AddPostgreSqlInbox` DI updates**
+- [x] **TIDY FIRST: `AddPostgreSqlOutbox` / `AddPostgreSqlInbox` DI updates**
 
 ### 9.3 MySQL
 

@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
@@ -22,9 +23,18 @@ public static class PostgreSqlBoxProvisioningExtensions
         // has fully completed inside UseBoxProvisioning).
         options.Add(services =>
         {
-            var runner = new PostgreSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
-            services.AddSingleton<IAmABoxProvisioner>(
-                new PostgreSqlOutboxProvisioner(configuration, runner));
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<PostgreSqlOutboxMigrationCatalog>();
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+            {
+                var runner = new PostgreSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                return new PostgreSqlOutboxProvisioner(
+                    sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<PostgreSqlOutboxMigrationCatalog>(),
+                    sp.GetRequiredService<PostgreSqlPayloadModeValidator>(),
+                    configuration,
+                    runner);
+            });
         });
         return options;
     }
@@ -41,6 +51,8 @@ public static class PostgreSqlBoxProvisioningExtensions
     {
         options.Add(services =>
         {
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<PostgreSqlOutboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -53,7 +65,12 @@ public static class PostgreSqlBoxProvisioningExtensions
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
                 var runner = new PostgreSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
-                return new PostgreSqlOutboxProvisioner(dbConfig, runner);
+                return new PostgreSqlOutboxProvisioner(
+                    sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<PostgreSqlOutboxMigrationCatalog>(),
+                    sp.GetRequiredService<PostgreSqlPayloadModeValidator>(),
+                    dbConfig,
+                    runner);
             });
         });
         return options;
@@ -68,9 +85,18 @@ public static class PostgreSqlBoxProvisioningExtensions
     {
         options.Add(services =>
         {
-            var runner = new PostgreSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
-            services.AddSingleton<IAmABoxProvisioner>(
-                new PostgreSqlInboxProvisioner(configuration, runner));
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<PostgreSqlInboxMigrationCatalog>();
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+            {
+                var runner = new PostgreSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                return new PostgreSqlInboxProvisioner(
+                    sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<PostgreSqlInboxMigrationCatalog>(),
+                    sp.GetRequiredService<PostgreSqlPayloadModeValidator>(),
+                    configuration,
+                    runner);
+            });
         });
         return options;
     }
@@ -87,6 +113,8 @@ public static class PostgreSqlBoxProvisioningExtensions
     {
         options.Add(services =>
         {
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<PostgreSqlInboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -99,9 +127,25 @@ public static class PostgreSqlBoxProvisioningExtensions
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
                 var runner = new PostgreSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
-                return new PostgreSqlInboxProvisioner(dbConfig, runner);
+                return new PostgreSqlInboxProvisioner(
+                    sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<PostgreSqlInboxMigrationCatalog>(),
+                    sp.GetRequiredService<PostgreSqlPayloadModeValidator>(),
+                    dbConfig,
+                    runner);
             });
         });
         return options;
+    }
+
+    // Detection helper + payload validator are shared across Outbox and Inbox extensions;
+    // TryAddSingleton makes the registration idempotent so calling both Add*Outbox and
+    // Add*Inbox does not produce duplicate singletons. Catalogue registration is per
+    // box-type and lives in the call-site (Outbox catalogue from Add*Outbox; Inbox
+    // catalogue from Add*Inbox) per ADR 0058 §A.4 Alternatives.
+    private static void RegisterSharedRoleImpls(IServiceCollection services)
+    {
+        services.TryAddSingleton<PostgreSqlBoxDetectionHelper>();
+        services.TryAddSingleton<PostgreSqlPayloadModeValidator>();
     }
 }
