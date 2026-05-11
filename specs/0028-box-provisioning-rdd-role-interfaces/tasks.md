@@ -750,7 +750,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
 
 ### 10.2 BeginAsync-throws contract
 
-- [ ] **TEST + IMPLEMENT: MSSQL — BeginAsync throwing during lock acquire surfaces MigrationLockDeadlockException without invoking commit/rollback**
+- [x] **TEST + IMPLEMENT: MSSQL — BeginAsync throwing during lock acquire surfaces MigrationLockDeadlockException without invoking commit/rollback**
   - **USE COMMAND**: `/test-first when MSSQL advisory lock acquire throws MigrationLockDeadlockException during BeginAsync it should propagate without the runner calling CommitAsync or RollbackAsync`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_mssql_advisory_lock_acquire_throws_during_begin_async_runner_should_not_call_commit_or_rollback.cs`
