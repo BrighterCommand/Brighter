@@ -704,7 +704,7 @@ Per ADR §A.4 step 6 final paragraph + §A.4 the Alternatives section "instance 
 
 ### 9.6 Phase 9 gate
 
-- [ ] **Phase 9 gate: DI registers all role-impls as singletons; provisioners construct with role-typed dependencies; existing tests green per NF2**
+- [x] **Phase 9 gate: DI registers all role-impls as singletons; provisioners construct with role-typed dependencies; existing tests green per NF2**
   - Run all six BoxProvisioning test filters; confirm counts ≥ pre-Phase-0 baseline.
   - Confirm spec 0027 Phase 11 connection-name overload tests (Items U-*) stay green for all four relational backends.
 
