@@ -49,6 +49,9 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
         try
         {
+            // AWS SDK v4 returns null (not an empty dictionary) when Attributes was never set on the wire.
+            sqsMessage.Attributes ??= new Dictionary<string, string>();
+
             var jsonDocument = JsonDocument.Parse(sqsMessage.Body);
             _messageAttributes = ReadMessageAttributes(jsonDocument);
 

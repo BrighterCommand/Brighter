@@ -61,6 +61,11 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
         try
         {
+            // AWS SDK v4 returns null (not an empty dictionary) when these properties were never set on the wire.
+            // Normalise so the Read* helpers can use TryGetValue unconditionally.
+            sqsMessage.MessageAttributes ??= new Dictionary<string, MessageAttributeValue>();
+            sqsMessage.Attributes ??= new Dictionary<string, string>();
+
             topic = ReadTopic(sqsMessage);
             messageId = ReadMessageId(sqsMessage);
             var cloudEventHeaders = ReadCloudEventHeaders(sqsMessage);
