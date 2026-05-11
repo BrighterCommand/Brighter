@@ -698,7 +698,7 @@ Per ADR §A.4 step 6 final paragraph + §A.4 the Alternatives section "instance 
 
 ### 9.5 Spanner (NO catalogue registration)
 
-- [ ] **TIDY FIRST: `AddSpannerOutbox` / `AddSpannerInbox` register `SpannerBoxDetectionHelper` and `SpannerPayloadModeValidator` as singletons (NO catalogue per ADR 0057 §6); supply them to Spanner provisioners AND to the Spanner runner**
+- [x] **TIDY FIRST: `AddSpannerOutbox` / `AddSpannerInbox` register `SpannerBoxDetectionHelper` and `SpannerPayloadModeValidator` as singletons (NO catalogue per ADR 0057 §6); supply them to Spanner provisioners AND to the Spanner runner**
   - Total: 2 DI registrations for Spanner (vs 4 for relational backends).
   - Note: the same `SpannerBoxDetectionHelper` singleton is consumed by both the provisioner pair (Phase 8.5) AND `SpannerBoxMigrationRunner` (Phase 7.5).
 

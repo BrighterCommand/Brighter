@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Paramore.Brighter.BoxProvisioning.Spanner;
 
@@ -18,10 +19,17 @@ public static class SpannerBoxProvisioningExtensions
     {
         options.Add(services =>
         {
-            var detectionHelper = new SpannerBoxDetectionHelper();
-            var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration);
-            services.AddSingleton<IAmABoxProvisioner>(
-                new SpannerOutboxProvisioner(configuration, runner));
+            RegisterSharedRoleImpls(services);
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+            {
+                var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
+                var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration);
+                return new SpannerOutboxProvisioner(
+                    detectionHelper,
+                    sp.GetRequiredService<SpannerPayloadModeValidator>(),
+                    configuration,
+                    runner);
+            });
         });
         return options;
     }
@@ -37,6 +45,7 @@ public static class SpannerBoxProvisioningExtensions
     {
         options.Add(services =>
         {
+            RegisterSharedRoleImpls(services);
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -47,9 +56,13 @@ public static class SpannerBoxProvisioningExtensions
                     connectionString,
                     outBoxTableName: outboxTableName ?? "Outbox",
                     binaryMessagePayload: binaryMessagePayload);
-                var detectionHelper = new SpannerBoxDetectionHelper();
+                var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
                 var runner = new SpannerBoxMigrationRunner(detectionHelper, dbConfig);
-                return new SpannerOutboxProvisioner(dbConfig, runner);
+                return new SpannerOutboxProvisioner(
+                    detectionHelper,
+                    sp.GetRequiredService<SpannerPayloadModeValidator>(),
+                    dbConfig,
+                    runner);
             });
         });
         return options;
@@ -64,10 +77,17 @@ public static class SpannerBoxProvisioningExtensions
     {
         options.Add(services =>
         {
-            var detectionHelper = new SpannerBoxDetectionHelper();
-            var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration);
-            services.AddSingleton<IAmABoxProvisioner>(
-                new SpannerInboxProvisioner(configuration, runner));
+            RegisterSharedRoleImpls(services);
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+            {
+                var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
+                var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration);
+                return new SpannerInboxProvisioner(
+                    detectionHelper,
+                    sp.GetRequiredService<SpannerPayloadModeValidator>(),
+                    configuration,
+                    runner);
+            });
         });
         return options;
     }
@@ -83,6 +103,7 @@ public static class SpannerBoxProvisioningExtensions
     {
         options.Add(services =>
         {
+            RegisterSharedRoleImpls(services);
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -93,11 +114,28 @@ public static class SpannerBoxProvisioningExtensions
                     connectionString,
                     inboxTableName: inboxTableName ?? "Inbox",
                     binaryMessagePayload: binaryMessagePayload);
-                var detectionHelper = new SpannerBoxDetectionHelper();
+                var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
                 var runner = new SpannerBoxMigrationRunner(detectionHelper, dbConfig);
-                return new SpannerInboxProvisioner(dbConfig, runner);
+                return new SpannerInboxProvisioner(
+                    detectionHelper,
+                    sp.GetRequiredService<SpannerPayloadModeValidator>(),
+                    dbConfig,
+                    runner);
             });
         });
         return options;
+    }
+
+    // Detection helper + payload validator are shared across Outbox and Inbox extensions;
+    // TryAddSingleton makes the registration idempotent so calling both AddSpannerOutbox and
+    // AddSpannerInbox does not produce duplicate singletons. The detection helper is ALSO
+    // consumed by SpannerBoxMigrationRunner (Phase 7.5) — the runner is constructed inside
+    // the factory using the same singleton so both the runner and provisioner see one
+    // shared instance per service-provider scope. NO catalogue registration per ADR 0057 §6
+    // (Spanner is degenerate fresh-only).
+    private static void RegisterSharedRoleImpls(IServiceCollection services)
+    {
+        services.TryAddSingleton<SpannerBoxDetectionHelper>();
+        services.TryAddSingleton<SpannerPayloadModeValidator>();
     }
 }
