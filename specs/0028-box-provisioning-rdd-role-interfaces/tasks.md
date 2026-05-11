@@ -609,13 +609,13 @@ Per ADR §A.1 source-break "Provisioner ctor cascade" + §A.4 step 6. Each provi
 
 ### 8.2 Postgres provisioners
 
-- [ ] **TIDY FIRST: `PostgreSqlOutboxProvisioner` ctor cascade — three new typed params; rewire static→instance**
+- [x] **TIDY FIRST: `PostgreSqlOutboxProvisioner` ctor cascade — three new typed params; rewire static→instance**
   - File: `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlOutboxProvisioner.cs`.
   - New ctor parameters: `IAmAVersionDetectingMigrationHelper<NpgsqlConnection, NpgsqlTransaction> detectionHelper`, `IAmABoxMigrationCatalog catalog` (Outbox catalogue), `IAmABoxPayloadModeValidator<NpgsqlConnection> payloadValidator`.
   - Body: `PostgreSqlBoxDetectionHelpers.{Method}(...)` → `_detectionHelper.{Method}(...)`; `PostgreSqlOutboxMigrations.All(config)` → `_catalog.All(config)`; `PostgreSqlPayloadModeValidator.ValidateAsync(...)` → `_payloadValidator.ValidateAsync(...)`.
   - Validation: existing Postgres outbox provisioner tests stay green.
 
-- [ ] **TIDY FIRST: `PostgreSqlInboxProvisioner` ctor cascade — same recipe, with `PostgreSqlInboxMigrationCatalog` injected**
+- [x] **TIDY FIRST: `PostgreSqlInboxProvisioner` ctor cascade — same recipe, with `PostgreSqlInboxMigrationCatalog` injected**
   - File: `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlInboxProvisioner.cs`.
   - Validation: existing Postgres inbox provisioner tests stay green.
 

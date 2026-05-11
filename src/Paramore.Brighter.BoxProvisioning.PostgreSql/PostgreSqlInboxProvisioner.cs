@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -33,17 +34,56 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// under <c>pg_try_advisory_lock</c> and dispatches into fresh / bootstrap / normal paths
 /// per ADR 0057 §3.
 /// </summary>
-public class PostgreSqlInboxProvisioner(
-    IAmARelationalDatabaseConfiguration configuration,
-    IAmABoxMigrationRunner migrationRunner) : IAmABoxProvisioner
+public class PostgreSqlInboxProvisioner : IAmABoxProvisioner
 {
+    private readonly IAmAVersionDetectingMigrationHelper<NpgsqlConnection, NpgsqlTransaction> _detectionHelper;
+    private readonly IAmABoxMigrationCatalog _catalog;
+    private readonly IAmABoxPayloadModeValidator<NpgsqlConnection> _payloadValidator;
+    private readonly IAmARelationalDatabaseConfiguration _configuration;
+    private readonly IAmABoxMigrationRunner _migrationRunner;
+
+    /// <summary>
+    /// Canonical ctor — Phase 8.2 of spec 0028. Takes the role-interface dependencies
+    /// explicitly so the provisioner does not reach for backend statics.
+    /// </summary>
+    public PostgreSqlInboxProvisioner(
+        IAmAVersionDetectingMigrationHelper<NpgsqlConnection, NpgsqlTransaction> detectionHelper,
+        IAmABoxMigrationCatalog catalog,
+        IAmABoxPayloadModeValidator<NpgsqlConnection> payloadValidator,
+        IAmARelationalDatabaseConfiguration configuration,
+        IAmABoxMigrationRunner migrationRunner)
+    {
+        _detectionHelper = detectionHelper;
+        _catalog = catalog;
+        _payloadValidator = payloadValidator;
+        _configuration = configuration;
+        _migrationRunner = migrationRunner;
+    }
+
+    /// <summary>
+    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
+    /// call-sites (extensions + integration tests). Synthesises default singletons for the
+    /// three role-interface dependencies; removed when the DI cascade lands in Phase 9.
+    /// </summary>
+    public PostgreSqlInboxProvisioner(
+        IAmARelationalDatabaseConfiguration configuration,
+        IAmABoxMigrationRunner migrationRunner)
+        : this(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlInboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            configuration,
+            migrationRunner)
+    {
+    }
+
     public BoxType BoxType => BoxType.Inbox;
-    public string BoxTableName => configuration.InBoxTableName;
+    public string BoxTableName => _configuration.InBoxTableName;
 
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
-        var migrations = PostgreSqlInboxMigrations.All(configuration);
+        var migrations = _catalog.All(_configuration);
         var tableState = await DetectTableStateAsync(migrations, cancellationToken);
 
         if (tableState.TableExists)
@@ -51,9 +91,9 @@ public class PostgreSqlInboxProvisioner(
             await ValidatePayloadModeAsync(cancellationToken);
         }
 
-        await migrationRunner.MigrateAsync(
-            configuration.InBoxTableName,
-            configuration.SchemaName,
+        await _migrationRunner.MigrateAsync(
+            _configuration.InBoxTableName,
+            _configuration.SchemaName,
             BoxType.Inbox,
             migrations,
             tableState,
@@ -61,45 +101,41 @@ public class PostgreSqlInboxProvisioner(
     }
 
     private async Task<BoxTableState> DetectTableStateAsync(
-        System.Collections.Generic.IReadOnlyList<IAmABoxMigration> migrations,
+        IReadOnlyList<IAmABoxMigration> migrations,
         CancellationToken cancellationToken)
     {
-        var schemaName = configuration.SchemaName ?? "public";
-
-        await using var connection = new NpgsqlConnection(configuration.ConnectionString);
+        await using var connection = new NpgsqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        var tableExists = await PostgreSqlBoxDetectionHelpers.DoesTableExistAsync(
-            connection, configuration.InBoxTableName, schemaName, cancellationToken);
+        var tableExists = await _detectionHelper.DoesTableExistAsync(
+            connection, _configuration.InBoxTableName, _configuration.SchemaName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        var historyExists = await PostgreSqlBoxDetectionHelpers.DoesHistoryExistAsync(
-            connection, configuration.InBoxTableName, schemaName, cancellationToken);
+        var historyExists = await _detectionHelper.DoesHistoryExistAsync(
+            connection, _configuration.InBoxTableName, _configuration.SchemaName, cancellationToken);
         if (!historyExists)
         {
-            var detectedVersion = await PostgreSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
-                connection, configuration.InBoxTableName, schemaName,
+            var detectedVersion = await _detectionHelper.DetectCurrentVersionAsync(
+                connection, _configuration.InBoxTableName, _configuration.SchemaName,
                 BoxType.Inbox, migrations, cancellationToken);
             return new BoxTableState(
                 TableExists: true, HistoryExists: false,
                 CurrentVersion: detectedVersion < 0 ? 0 : detectedVersion);
         }
 
-        var maxVersion = await PostgreSqlBoxDetectionHelpers.GetMaxVersionAsync(
-            connection, configuration.InBoxTableName, schemaName, cancellationToken);
+        var maxVersion = await _detectionHelper.GetMaxVersionAsync(
+            connection, _configuration.InBoxTableName, _configuration.SchemaName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
     private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
     {
-        var schemaName = configuration.SchemaName ?? "public";
-
-        await using var connection = new NpgsqlConnection(configuration.ConnectionString);
+        await using var connection = new NpgsqlConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await PostgreSqlPayloadModeValidators.ValidateAsync(
-            connection, configuration.InBoxTableName, schemaName,
-            "commandbody", configuration.BinaryMessagePayload, cancellationToken);
+        await _payloadValidator.ValidateAsync(
+            connection, _configuration.InBoxTableName, _configuration.SchemaName,
+            "commandbody", _configuration.BinaryMessagePayload, cancellationToken);
     }
 }
