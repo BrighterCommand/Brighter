@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Paramore.Brighter.BoxProvisioning.MySql;
 
@@ -22,9 +23,18 @@ public static class MySqlBoxProvisioningExtensions
         // has fully completed inside UseBoxProvisioning).
         options.Add(services =>
         {
-            var runner = new MySqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
-            services.AddSingleton<IAmABoxProvisioner>(
-                new MySqlOutboxProvisioner(configuration, runner));
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<MySqlOutboxMigrationCatalog>();
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+            {
+                var runner = new MySqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                return new MySqlOutboxProvisioner(
+                    sp.GetRequiredService<MySqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<MySqlOutboxMigrationCatalog>(),
+                    sp.GetRequiredService<MySqlPayloadModeValidator>(),
+                    configuration,
+                    runner);
+            });
         });
         return options;
     }
@@ -41,6 +51,8 @@ public static class MySqlBoxProvisioningExtensions
     {
         options.Add(services =>
         {
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<MySqlOutboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -53,7 +65,12 @@ public static class MySqlBoxProvisioningExtensions
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
                 var runner = new MySqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
-                return new MySqlOutboxProvisioner(dbConfig, runner);
+                return new MySqlOutboxProvisioner(
+                    sp.GetRequiredService<MySqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<MySqlOutboxMigrationCatalog>(),
+                    sp.GetRequiredService<MySqlPayloadModeValidator>(),
+                    dbConfig,
+                    runner);
             });
         });
         return options;
@@ -68,9 +85,18 @@ public static class MySqlBoxProvisioningExtensions
     {
         options.Add(services =>
         {
-            var runner = new MySqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
-            services.AddSingleton<IAmABoxProvisioner>(
-                new MySqlInboxProvisioner(configuration, runner));
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<MySqlInboxMigrationCatalog>();
+            services.AddSingleton<IAmABoxProvisioner>(sp =>
+            {
+                var runner = new MySqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                return new MySqlInboxProvisioner(
+                    sp.GetRequiredService<MySqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<MySqlInboxMigrationCatalog>(),
+                    sp.GetRequiredService<MySqlPayloadModeValidator>(),
+                    configuration,
+                    runner);
+            });
         });
         return options;
     }
@@ -87,6 +113,8 @@ public static class MySqlBoxProvisioningExtensions
     {
         options.Add(services =>
         {
+            RegisterSharedRoleImpls(services);
+            services.TryAddSingleton<MySqlInboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -99,9 +127,25 @@ public static class MySqlBoxProvisioningExtensions
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
                 var runner = new MySqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
-                return new MySqlInboxProvisioner(dbConfig, runner);
+                return new MySqlInboxProvisioner(
+                    sp.GetRequiredService<MySqlBoxDetectionHelper>(),
+                    sp.GetRequiredService<MySqlInboxMigrationCatalog>(),
+                    sp.GetRequiredService<MySqlPayloadModeValidator>(),
+                    dbConfig,
+                    runner);
             });
         });
         return options;
+    }
+
+    // Detection helper + payload validator are shared across Outbox and Inbox extensions;
+    // TryAddSingleton makes the registration idempotent so calling both Add*Outbox and
+    // Add*Inbox does not produce duplicate singletons. Catalogue registration is per
+    // box-type and lives in the call-site (Outbox catalogue from Add*Outbox; Inbox
+    // catalogue from Add*Inbox) per ADR 0058 §A.4 Alternatives.
+    private static void RegisterSharedRoleImpls(IServiceCollection services)
+    {
+        services.TryAddSingleton<MySqlBoxDetectionHelper>();
+        services.TryAddSingleton<MySqlPayloadModeValidator>();
     }
 }

@@ -690,7 +690,7 @@ Per ADR §A.4 step 6 final paragraph + §A.4 the Alternatives section "instance 
 
 ### 9.3 MySQL
 
-- [ ] **TIDY FIRST: `AddMySqlOutbox` / `AddMySqlInbox` DI updates**
+- [x] **TIDY FIRST: `AddMySqlOutbox` / `AddMySqlInbox` DI updates**
 
 ### 9.4 SQLite
 
