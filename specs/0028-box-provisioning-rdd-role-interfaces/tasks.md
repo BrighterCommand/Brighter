@@ -742,7 +742,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
   - Test file: `When_mysql_migration_is_cancelled_mid_flight_it_should_release_get_lock.cs`
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [ ] **TEST + IMPLEMENT: SQLite — Caller's cancellation mid-flight rolls back BEGIN IMMEDIATE releasing writer slot**
+- [x] **TEST + IMPLEMENT: SQLite — Caller's cancellation mid-flight rolls back BEGIN IMMEDIATE releasing writer slot**
   - **USE COMMAND**: `/test-first when SQLite migration is cancelled mid-flight RollbackAsync should run with CancellationToken.None and the writer slot should be released`
   - Test location: `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning`
   - Test file: `When_sqlite_migration_is_cancelled_mid_flight_it_should_rollback_releasing_writer_slot.cs`
