@@ -32,7 +32,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 public class MySqlOutboxMigrationsTests
 {
     //MySQL identifiers are case-insensitive; comparer is OrdinalIgnoreCase to match the
-    //existing MySqlOutboxMigrations LogicalColumns convention (PascalCase storage, lookup-folded).
+    //existing MySqlOutboxMigrationCatalog LogicalColumns convention (PascalCase storage, lookup-folded).
     private static readonly string[] s_v1Columns =
         ["MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body"];
 
@@ -57,7 +57,7 @@ public class MySqlOutboxMigrationsTests
         var expectedPerVersion = BuildExpectedColumnsByVersion();
 
         //Act
-        var migrations = MySqlOutboxMigrations.All(config);
+        var migrations = new MySqlOutboxMigrationCatalog().All(config);
 
         //Assert — exactly seven migrations numbered 1..7 in order.
         Assert.Equal(7, migrations.Count);

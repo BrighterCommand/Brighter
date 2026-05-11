@@ -57,7 +57,7 @@ public class When_postgres_runner_fresh_path_acquires_advisory_lock_it_should_re
         await ExecuteDdl(PostgreSqlOutboxBuilder.GetDDL(_tableName));
         await SeedMarkerRow();
 
-        var migrations = PostgreSqlOutboxMigrations.All(_config);
+        var migrations = new PostgreSqlOutboxMigrationCatalog().All(_config);
         var staleState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act — the runner must NOT throw a duplicate-CREATE-TABLE exception. The TOCTOU re-check

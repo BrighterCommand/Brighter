@@ -47,7 +47,7 @@ public class MsSqlInboxMigrationsTests
         var expectedPerVersion = BuildExpectedColumnsByVersion();
 
         //Act
-        var migrations = MsSqlInboxMigrations.All(config);
+        var migrations = new MsSqlInboxMigrationCatalog().All(config);
 
         //Assert — exactly two migrations numbered 1..2 in order
         Assert.Equal(2, migrations.Count);

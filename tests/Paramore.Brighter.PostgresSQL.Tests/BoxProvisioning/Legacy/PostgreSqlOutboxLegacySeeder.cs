@@ -33,7 +33,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.Legacy;
 /// runner exercises real legacy schemas — not migration UpScript round-trips.
 /// </summary>
 /// <remarks>
-/// Cumulative column sets match <c>PostgreSqlOutboxMigrations</c> LogicalColumns plus the V1
+/// Cumulative column sets match <c>PostgreSqlOutboxMigrationCatalog</c> LogicalColumns plus the V1
 /// housekeeping (<c>id</c>, <c>messageid</c>). Column types align with the live
 /// <c>PostgreSqlOutboxBuilder</c> DDL so the V7 hand-rolled shape and the live builder shape are
 /// byte-equivalent. Column names are lowercase to match Postgres unquoted-identifier folding —

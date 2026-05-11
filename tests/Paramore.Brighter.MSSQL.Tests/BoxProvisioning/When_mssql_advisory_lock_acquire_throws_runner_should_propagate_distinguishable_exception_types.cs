@@ -94,7 +94,7 @@ public class When_mssql_advisory_lock_acquire_throws_runner_should_propagate_dis
         Configuration.EnsureDatabaseExists(_connectionString);
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = MsSqlOutboxMigrations.All(config);
+        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
         var fakeLock = new FakeMsSqlAdvisoryLock(throwOnAcquire: null);
 
@@ -120,7 +120,7 @@ public class When_mssql_advisory_lock_acquire_throws_runner_should_propagate_dis
         //          to set up the database here because the runner must throw before any DDL
         //          fires; the parameterised assertion below proves no half-state was left.
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = MsSqlOutboxMigrations.All(config);
+        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
         var fakeLock = new FakeMsSqlAdvisoryLock(throwOnAcquire: toThrow);
 

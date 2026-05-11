@@ -58,7 +58,7 @@ public class PostgreSqlOutboxMigrationsTests
         var expectedPerVersion = BuildExpectedColumnsByVersion();
 
         //Act
-        var migrations = PostgreSqlOutboxMigrations.All(config);
+        var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
         //Assert — exactly seven migrations numbered 1..7 in order.
         Assert.Equal(7, migrations.Count);

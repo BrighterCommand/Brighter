@@ -56,7 +56,7 @@ public class When_postgres_advisory_unlock_returns_false_runner_should_log_warni
         new PostgresSqlTestHelper().SetupDatabase();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = PostgreSqlOutboxMigrations.All(config);
+        var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
         var fakeLock = new FakePostgreSqlAdvisoryLock(releaseResult: false);
         var capturingLogger = new CapturingLogger();

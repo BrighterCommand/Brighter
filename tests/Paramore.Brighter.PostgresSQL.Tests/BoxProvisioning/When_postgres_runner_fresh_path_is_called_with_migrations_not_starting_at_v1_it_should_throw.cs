@@ -50,7 +50,7 @@ public class When_postgres_runner_fresh_path_is_called_with_migrations_not_start
         new PostgresSqlTestHelper().SetupDatabase();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var realMigrations = PostgreSqlOutboxMigrations.All(config);
+        var realMigrations = new PostgreSqlOutboxMigrationCatalog().All(config);
         var malformedMigrations = realMigrations.Skip(1).ToList();
         Assert.Equal(2, malformedMigrations[0].Version); // sanity: first entry is V2
 

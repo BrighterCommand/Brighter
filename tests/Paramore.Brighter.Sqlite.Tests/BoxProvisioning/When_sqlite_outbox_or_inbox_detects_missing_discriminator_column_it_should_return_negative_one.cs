@@ -46,15 +46,15 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE [{tableName}] ([CommandId] TEXT NOT NULL, [Timestamp] TEXT NULL);");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = SqliteOutboxMigrations.All(config);
+        var migrations = new SqliteOutboxMigrationCatalog().All(config);
 
         //Act — direct helper call.
         int detected;
         await using (var connection = new SqliteConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await SqliteBoxDetectionHelpers.DetectCurrentVersionAsync(
-                connection, tableName, BoxType.Outbox, migrations, default);
+            detected = await new SqliteBoxDetectionHelper().DetectCurrentVersionAsync(
+                connection, tableName, null, BoxType.Outbox, migrations, default);
         }
 
         //Assert — helper returns -1 (no discriminator).
@@ -79,15 +79,15 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE [{tableName}] ([Topic] TEXT NULL, [Timestamp] TEXT NULL);");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName);
-        var migrations = SqliteInboxMigrations.All(config);
+        var migrations = new SqliteInboxMigrationCatalog().All(config);
 
         //Act — direct helper call.
         int detected;
         await using (var connection = new SqliteConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await SqliteBoxDetectionHelpers.DetectCurrentVersionAsync(
-                connection, tableName, BoxType.Inbox, migrations, default);
+            detected = await new SqliteBoxDetectionHelper().DetectCurrentVersionAsync(
+                connection, tableName, null, BoxType.Inbox, migrations, default);
         }
 
         //Assert — helper returns -1.
@@ -113,15 +113,15 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE [{tableName}] ([Id] INTEGER PRIMARY KEY, [HeaderBag] TEXT NULL);");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = SqliteOutboxMigrations.All(config);
+        var migrations = new SqliteOutboxMigrationCatalog().All(config);
 
         //Act — direct helper call.
         int detected;
         await using (var connection = new SqliteConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await SqliteBoxDetectionHelpers.DetectCurrentVersionAsync(
-                connection, tableName, BoxType.Outbox, migrations, default);
+            detected = await new SqliteBoxDetectionHelper().DetectCurrentVersionAsync(
+                connection, tableName, null, BoxType.Outbox, migrations, default);
         }
 
         //Assert — helper returns 0 (discriminator OK, but unknown schema).
@@ -157,15 +157,15 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
             );");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = SqliteOutboxMigrations.All(config);
+        var migrations = new SqliteOutboxMigrationCatalog().All(config);
 
         //Act
         int detected;
         await using (var connection = new SqliteConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await SqliteBoxDetectionHelpers.DetectCurrentVersionAsync(
-                connection, tableName, BoxType.Outbox, migrations, default);
+            detected = await new SqliteBoxDetectionHelper().DetectCurrentVersionAsync(
+                connection, tableName, null, BoxType.Outbox, migrations, default);
         }
 
         //Assert — V3 is the highest cumulative match (V4 column PartitionKey absent stops the walk).
@@ -188,15 +188,15 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
             );");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName);
-        var migrations = SqliteInboxMigrations.All(config);
+        var migrations = new SqliteInboxMigrationCatalog().All(config);
 
         //Act
         int detected;
         await using (var connection = new SqliteConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await SqliteBoxDetectionHelpers.DetectCurrentVersionAsync(
-                connection, tableName, BoxType.Inbox, migrations, default);
+            detected = await new SqliteBoxDetectionHelper().DetectCurrentVersionAsync(
+                connection, tableName, null, BoxType.Inbox, migrations, default);
         }
 
         //Assert — V1 matches (V2 column ContextKey absent stops the walk).

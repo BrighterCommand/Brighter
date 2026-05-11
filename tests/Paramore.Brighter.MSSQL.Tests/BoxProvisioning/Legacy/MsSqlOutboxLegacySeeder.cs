@@ -33,7 +33,7 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning.Legacy;
 /// runner exercises real legacy schemas — not migration UpScript round-trips.
 /// </summary>
 /// <remarks>
-/// Cumulative column sets match <c>MsSqlOutboxMigrations</c> LogicalColumns plus the V1 housekeeping
+/// Cumulative column sets match <c>MsSqlOutboxMigrationCatalog</c> LogicalColumns plus the V1 housekeeping
 /// <c>Id</c>. Column types align with the live <c>SqlOutboxBuilder</c> DDL so the V7 hand-rolled
 /// shape and the live builder shape are byte-equivalent.
 /// </remarks>

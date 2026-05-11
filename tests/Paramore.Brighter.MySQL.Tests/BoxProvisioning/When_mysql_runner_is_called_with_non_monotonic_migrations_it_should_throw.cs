@@ -61,7 +61,7 @@ public class When_mysql_runner_is_called_with_non_monotonic_migrations_it_should
     private IReadOnlyList<IAmABoxMigration> BuildList(params int[] indices)
     {
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var realMigrations = MySqlOutboxMigrations.All(config);
+        var realMigrations = new MySqlOutboxMigrationCatalog().All(config);
         return indices.Select(i => realMigrations[i]).ToList();
     }
 

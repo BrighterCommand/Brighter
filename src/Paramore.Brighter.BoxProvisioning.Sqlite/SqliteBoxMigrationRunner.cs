@@ -198,12 +198,12 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
     {
         _ = schemaName; // SQLite has no schema concept.
 
-        var detected = await SqliteBoxDetectionHelpers.DetectCurrentVersionAsync(
-            connection, tableName, boxType, migrations, cancellationToken, transaction);
+        var detected = await DetectionHelper.DetectCurrentVersionAsync(
+            connection, tableName, null, boxType, migrations, cancellationToken, transaction);
 
         if (detected == -1)
         {
-            var discriminator = SqliteBoxDetectionHelpers.DiscriminatorFor(boxType);
+            var discriminator = DetectionHelper.DiscriminatorFor(boxType);
             throw new ConfigurationException(
                 $"Table '{tableName}' is not a Brighter {boxType.ToString().ToLowerInvariant()}: " +
                 $"missing discriminator column '{discriminator}'.");
@@ -235,8 +235,8 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
     {
         _ = schemaName; // SQLite has no schema concept.
 
-        var maxVersion = await SqliteBoxDetectionHelpers.GetMaxVersionAsync(
-            connection, tableName, cancellationToken, transaction);
+        var maxVersion = await DetectionHelper.GetMaxVersionAsync(
+            connection, tableName, null, cancellationToken, transaction);
 
         foreach (var migration in migrations)
         {

@@ -52,7 +52,7 @@ public class SqliteInboxMigrationsTests
         var expectedPerVersion = BuildExpectedColumnsByVersion();
 
         //Act
-        var migrations = SqliteInboxMigrations.All(config);
+        var migrations = new SqliteInboxMigrationCatalog().All(config);
 
         //Assert — exactly two migrations numbered 1..2 in order.
         Assert.Equal(2, migrations.Count);

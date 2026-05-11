@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
 // Item Q-spanner (spec 0027 PR #4039 third review). Pins the runner-entry wiring of
 // Identifiers.AssertSafe at SpannerBoxMigrationRunner.MigrateAsync. Spanner is a degenerate
-// runner per ADR 0057 §6 (no V_k chain, no *Migrations.All(...) factory), so the runner entry
+// runner per ADR 0057 §6 (no V_k chain, no *MigrationCatalog.All(...) factory), so the runner entry
 // is the only place to assert. The injection vectors sit at BuildBoxDdl (which interpolates
 // tableName into Spanner CREATE TABLE DDL via SpannerOutboxBuilder.GetDDL / SpannerInboxBuilder.GetDDL)
 // and at BootstrapExistingTableAsync (which interpolates tableName into the

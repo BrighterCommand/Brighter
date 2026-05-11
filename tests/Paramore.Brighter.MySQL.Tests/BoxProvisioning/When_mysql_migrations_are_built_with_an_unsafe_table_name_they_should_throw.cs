@@ -27,9 +27,9 @@ using Xunit;
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
 // Item Q-mysql (spec 0027 PR #4039 third review). Pins the factory-entry wiring of
-// Identifiers.AssertSafe at the MySQL *Migrations.All(...) entry: any unsafe table name must be
+// Identifiers.AssertSafe at the MySQL *MigrationCatalog.All(...) entry: any unsafe table name must be
 // rejected before the factory builds migration up-scripts. The injection vector called out in the
-// reviewer comment sits at MySqlOutboxMigrations.cs:165 where a single quote in tableName breaks
+// reviewer comment sits at MySqlOutboxMigrationCatalog.cs:165 where a single quote in tableName breaks
 // the inlined information_schema.columns predicate ('{table}'); the helper guarantees no quote
 // ever reaches that interpolation path.
 //
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 public class MySqlMigrationsUnsafeIdentifierTests
 {
     [Theory]
-    [InlineData("O'Brien")]    // single quote — exact injection vector at MySqlOutboxMigrations.cs:165
+    [InlineData("O'Brien")]    // single quote — exact injection vector at MySqlOutboxMigrationCatalog.cs:165
     [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
     [InlineData("my-outbox")]  // hyphen — would need backtick-quoting to be legal
     public void When_mysql_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
@@ -53,7 +53,7 @@ public class MySqlMigrationsUnsafeIdentifierTests
             outBoxTableName: unsafeTable);
 
         //Act + Assert
-        var ex = Assert.Throws<ConfigurationException>(() => MySqlOutboxMigrations.All(config));
+        var ex = Assert.Throws<ConfigurationException>(() => new MySqlOutboxMigrationCatalog().All(config));
         Assert.Contains(unsafeTable, ex.Message);
     }
 
@@ -69,7 +69,7 @@ public class MySqlMigrationsUnsafeIdentifierTests
             inboxTableName: unsafeTable);
 
         //Act + Assert
-        var ex = Assert.Throws<ConfigurationException>(() => MySqlInboxMigrations.All(config));
+        var ex = Assert.Throws<ConfigurationException>(() => new MySqlInboxMigrationCatalog().All(config));
         Assert.Contains(unsafeTable, ex.Message);
     }
 }

@@ -56,7 +56,7 @@ public class When_mysql_runner_fresh_path_acquires_lock_it_should_re_check_table
         await ExecuteDdl(MySqlOutboxBuilder.GetDDL(_tableName));
         await SeedMarkerRow();
 
-        var migrations = MySqlOutboxMigrations.All(_config);
+        var migrations = new MySqlOutboxMigrationCatalog().All(_config);
         var staleState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act — the runner must NOT throw a duplicate-CREATE-TABLE exception. The TOCTOU re-check

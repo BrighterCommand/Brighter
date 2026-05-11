@@ -46,14 +46,14 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE `{tableName}` (`CommandId` VARCHAR(255) NOT NULL, `Timestamp` TIMESTAMP NULL) ENGINE = InnoDB;");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = MySqlOutboxMigrations.All(config);
+        var migrations = new MySqlOutboxMigrationCatalog().All(config);
 
         //Act — direct helper call.
         int detected;
         using (var connection = new MySqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await MySqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new MySqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, DatabaseName(), BoxType.Outbox, migrations, default);
         }
 
@@ -79,14 +79,14 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE `{tableName}` (`Topic` VARCHAR(255) NULL, `Timestamp` TIMESTAMP NULL) ENGINE = InnoDB;");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName);
-        var migrations = MySqlInboxMigrations.All(config);
+        var migrations = new MySqlInboxMigrationCatalog().All(config);
 
         //Act — direct helper call.
         int detected;
         using (var connection = new MySqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await MySqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new MySqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, DatabaseName(), BoxType.Inbox, migrations, default);
         }
 
@@ -113,14 +113,14 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE `{tableName}` (`Id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, `HeaderBag` TEXT NULL) ENGINE = InnoDB;");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = MySqlOutboxMigrations.All(config);
+        var migrations = new MySqlOutboxMigrationCatalog().All(config);
 
         //Act — direct helper call.
         int detected;
         using (var connection = new MySqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await MySqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new MySqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, DatabaseName(), BoxType.Outbox, migrations, default);
         }
 
@@ -158,14 +158,14 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             ) ENGINE = InnoDB;");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = MySqlOutboxMigrations.All(config);
+        var migrations = new MySqlOutboxMigrationCatalog().All(config);
 
         //Act
         int detected;
         using (var connection = new MySqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await MySqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new MySqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, DatabaseName(), BoxType.Outbox, migrations, default);
         }
 
@@ -189,14 +189,14 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             ) ENGINE = InnoDB;");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName);
-        var migrations = MySqlInboxMigrations.All(config);
+        var migrations = new MySqlInboxMigrationCatalog().All(config);
 
         //Act
         int detected;
         using (var connection = new MySqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await MySqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new MySqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, DatabaseName(), BoxType.Inbox, migrations, default);
         }
 

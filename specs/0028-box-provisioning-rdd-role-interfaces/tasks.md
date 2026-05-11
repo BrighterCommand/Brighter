@@ -657,7 +657,7 @@ Per ADR §A.1 source-break "Provisioner ctor cascade" + §A.4 step 6. Each provi
 
 ### 8.6 Remove bridging shims
 
-- [ ] **TIDY FIRST: Remove all bridging shims (`static class {Backend}BoxDetectionHelpers`, `static class {Backend}{Box}Migrations`, `static class {Backend}PayloadModeValidator`)**
+- [x] **TIDY FIRST: Remove all bridging shims (`static class {Backend}BoxDetectionHelpers`, `static class {Backend}{Box}Migrations`, `static class {Backend}PayloadModeValidator`)**
   - All call-sites have rewired to instance dispatch via Phase 8 ctor cascade (and Phase 7 runner refactor — runner overrides call helpers via injected fields, not statics).
   - Verify with `grep -r "BoxDetectionHelpers\." src/` returns zero hits in the BoxProvisioning packages.
   - Verify with `grep -r "OutboxMigrations\.\|InboxMigrations\." src/` returns zero hits.

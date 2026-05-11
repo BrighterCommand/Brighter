@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning.Legacy;
 /// round-trips.
 /// </summary>
 /// <remarks>
-/// Cumulative column sets match <see cref="BoxProvisioning.MySql.MySqlOutboxMigrations"/>
+/// Cumulative column sets match <see cref="BoxProvisioning.MySql.MySqlOutboxMigrationCatalog"/>
 /// LogicalColumns plus the V1 housekeeping (<c>Created</c>, <c>CreatedID</c>) and PK
 /// <c>MessageId</c>. Column types align with the live <c>MySqlOutboxBuilder</c> DDL so the V7
 /// hand-rolled shape and the live builder shape are byte-equivalent.

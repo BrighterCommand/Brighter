@@ -58,7 +58,7 @@ public class When_sqlite_runner_fails_mid_chain_it_should_roll_back_all_migratio
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var realMigrations = SqliteOutboxMigrations.All(config);
+        var realMigrations = new SqliteOutboxMigrationCatalog().All(config);
         var brokenMigrations = BrokenMigrationFactory.WithBrokenVersion(
             realMigrations, BrokenVersion, BrokenUpScript);
 

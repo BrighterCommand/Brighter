@@ -52,7 +52,7 @@ public class When_mssql_runner_fails_mid_chain_it_should_roll_back_all_migration
         SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var realMigrations = MsSqlOutboxMigrations.All(config);
+        var realMigrations = new MsSqlOutboxMigrationCatalog().All(config);
         var brokenMigrations = BrokenMigrationFactory.WithBrokenVersion(
             realMigrations, BrokenVersion, BrokenUpScript);
 

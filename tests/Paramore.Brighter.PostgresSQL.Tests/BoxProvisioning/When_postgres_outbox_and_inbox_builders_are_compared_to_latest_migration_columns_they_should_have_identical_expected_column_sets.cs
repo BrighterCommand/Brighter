@@ -62,7 +62,7 @@ public class PostgreSqlOutboxBuilderDriftTests
             StringComparer.OrdinalIgnoreCase);
 
         //Act
-        var migrations = PostgreSqlOutboxMigrations.All(config);
+        var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
         var migrationColumns = new HashSet<string>(
             migrations[migrations.Count - 1].LogicalColumns,
             StringComparer.OrdinalIgnoreCase);
@@ -95,7 +95,7 @@ public class PostgreSqlInboxBuilderDriftTests
             StringComparer.OrdinalIgnoreCase);
 
         //Act
-        var migrations = PostgreSqlInboxMigrations.All(config);
+        var migrations = new PostgreSqlInboxMigrationCatalog().All(config);
         var migrationColumns = new HashSet<string>(
             migrations[migrations.Count - 1].LogicalColumns,
             StringComparer.OrdinalIgnoreCase);

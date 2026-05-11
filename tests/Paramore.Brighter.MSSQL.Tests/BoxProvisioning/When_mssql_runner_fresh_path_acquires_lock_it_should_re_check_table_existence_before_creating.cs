@@ -55,7 +55,7 @@ public class When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table
         Configuration.CreateTable(_connectionString, SqlOutboxBuilder.GetDDL(_tableName));
         SeedMarkerRow();
 
-        var migrations = MsSqlOutboxMigrations.All(_config);
+        var migrations = new MsSqlOutboxMigrationCatalog().All(_config);
         var staleState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act — the runner must NOT throw a duplicate-CREATE-TABLE exception. The TOCTOU re-check

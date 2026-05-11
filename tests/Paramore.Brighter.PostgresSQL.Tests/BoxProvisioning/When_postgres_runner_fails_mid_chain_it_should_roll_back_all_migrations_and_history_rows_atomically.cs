@@ -53,7 +53,7 @@ public class When_postgres_runner_fails_mid_chain_it_should_roll_back_all_migrat
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var realMigrations = PostgreSqlOutboxMigrations.All(config);
+        var realMigrations = new PostgreSqlOutboxMigrationCatalog().All(config);
         var brokenMigrations = BrokenMigrationFactory.WithBrokenVersion(
             realMigrations, BrokenVersion, BrokenUpScript);
 

@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 public class SqliteOutboxMigrationsTests
 {
     //SQLite identifiers are case-insensitive (per QuoteStyle.Sqlite); LogicalColumns are
-    //OrdinalIgnoreCase to match the SqliteOutboxMigrations storage convention.
+    //OrdinalIgnoreCase to match the SqliteOutboxMigrationCatalog storage convention.
     private const string TableName = "outbox_test";
 
     private static readonly string[] s_v1Columns =
@@ -63,7 +63,7 @@ public class SqliteOutboxMigrationsTests
         var expectedPerVersion = BuildExpectedColumnsByVersion();
 
         //Act
-        var migrations = SqliteOutboxMigrations.All(config);
+        var migrations = new SqliteOutboxMigrationCatalog().All(config);
 
         //Assert — exactly seven migrations numbered 1..7 in order.
         Assert.Equal(7, migrations.Count);

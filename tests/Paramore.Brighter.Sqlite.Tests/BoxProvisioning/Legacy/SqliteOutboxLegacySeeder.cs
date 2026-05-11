@@ -34,11 +34,11 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning.Legacy;
 /// round-trips.
 /// </summary>
 /// <remarks>
-/// Cumulative column sets match <see cref="BoxProvisioning.Sqlite.SqliteOutboxMigrations"/>
+/// Cumulative column sets match <see cref="BoxProvisioning.Sqlite.SqliteOutboxMigrationCatalog"/>
 /// LogicalColumns. SQLite has no declared housekeeping (the engine's implicit <c>rowid</c> is
 /// not part of the DDL surface) and no synthetic identity column (unlike MSSQL <c>Id</c>,
 /// MySQL <c>Created</c>/<c>CreatedID</c>, Postgres <c>id</c>). Column types align with the
-/// live <see cref="BoxProvisioning.Sqlite.SqliteOutboxMigrations"/> (TEXT for everything
+/// live <see cref="BoxProvisioning.Sqlite.SqliteOutboxMigrationCatalog"/> (TEXT for everything
 /// except <c>Body</c> in binary mode — text-mode is the default this seeder uses) so the V7
 /// hand-rolled shape and the live builder shape have identical column-name sets. Column order
 /// differs from the live builder, which interleaves V_k columns; the migration-list-order

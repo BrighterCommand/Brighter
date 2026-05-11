@@ -27,7 +27,7 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
 // Item Q (spec 0027 PR #4039 third review). Pins the factory-entry wiring of
-// Identifiers.AssertSafe at the MSSQL *Migrations.All(...) entry: any unsafe table or schema
+// Identifiers.AssertSafe at the MSSQL *MigrationCatalog.All(...) entry: any unsafe table or schema
 // name must be rejected before the factory builds migration up-scripts whose UpScript text
 // interpolates the identifier directly. ConfigurationException is the documented contract;
 // no MSSQL connection is required because the rejection happens before any DDL is rendered
@@ -47,7 +47,7 @@ public class MsSqlMigrationsUnsafeIdentifierTests
             outBoxTableName: unsafeTable);
 
         //Act + Assert
-        var ex = Assert.Throws<ConfigurationException>(() => MsSqlOutboxMigrations.All(config));
+        var ex = Assert.Throws<ConfigurationException>(() => new MsSqlOutboxMigrationCatalog().All(config));
         Assert.Contains(unsafeTable, ex.Message);
     }
 
@@ -63,7 +63,7 @@ public class MsSqlMigrationsUnsafeIdentifierTests
             inboxTableName: unsafeTable);
 
         //Act + Assert
-        var ex = Assert.Throws<ConfigurationException>(() => MsSqlInboxMigrations.All(config));
+        var ex = Assert.Throws<ConfigurationException>(() => new MsSqlInboxMigrationCatalog().All(config));
         Assert.Contains(unsafeTable, ex.Message);
     }
 
@@ -79,7 +79,7 @@ public class MsSqlMigrationsUnsafeIdentifierTests
             schemaName: "bad-schema");
 
         //Act + Assert
-        var ex = Assert.Throws<ConfigurationException>(() => MsSqlOutboxMigrations.All(config));
+        var ex = Assert.Throws<ConfigurationException>(() => new MsSqlOutboxMigrationCatalog().All(config));
         Assert.Contains("bad-schema", ex.Message);
     }
 }

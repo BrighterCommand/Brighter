@@ -54,7 +54,7 @@ public class MsSqlOutboxBuilderDriftTests
             QuoteStyle.MsSql);
 
         //Act
-        var migrations = MsSqlOutboxMigrations.All(config);
+        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
         var migrationColumns = new HashSet<string>(
             migrations[migrations.Count - 1].LogicalColumns,
             StringComparer.OrdinalIgnoreCase);

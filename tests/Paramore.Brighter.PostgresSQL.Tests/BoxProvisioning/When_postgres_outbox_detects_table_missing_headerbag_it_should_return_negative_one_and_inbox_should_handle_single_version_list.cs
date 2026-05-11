@@ -47,14 +47,14 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE \"{tableName}\" (commandid varchar(255) NOT NULL, timestamp timestamptz NULL);");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = PostgreSqlOutboxMigrations.All(config);
+        var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
         //Act — direct helper call.
         int detected;
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await PostgreSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new PostgreSqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, "public", BoxType.Outbox, migrations, default);
         }
 
@@ -81,14 +81,14 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE \"{tableName}\" (topic varchar(255) NULL, timestamp timestamptz NULL);");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName);
-        var migrations = PostgreSqlInboxMigrations.All(config);
+        var migrations = new PostgreSqlInboxMigrationCatalog().All(config);
 
         //Act — direct helper call.
         int detected;
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await PostgreSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new PostgreSqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, "public", BoxType.Inbox, migrations, default);
         }
 
@@ -116,14 +116,14 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE \"{tableName}\" (id bigserial PRIMARY KEY, headerbag text NULL);");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = PostgreSqlOutboxMigrations.All(config);
+        var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
         //Act — direct helper call.
         int detected;
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await PostgreSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new PostgreSqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, "public", BoxType.Outbox, migrations, default);
         }
 
@@ -162,14 +162,14 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             );");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = PostgreSqlOutboxMigrations.All(config);
+        var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
         //Act
         int detected;
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await PostgreSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new PostgreSqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, "public", BoxType.Outbox, migrations, default);
         }
 
@@ -195,14 +195,14 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             );");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName);
-        var migrations = PostgreSqlInboxMigrations.All(config);
+        var migrations = new PostgreSqlInboxMigrationCatalog().All(config);
 
         //Act
         int detected;
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await PostgreSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new PostgreSqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, "public", BoxType.Inbox, migrations, default);
         }
 

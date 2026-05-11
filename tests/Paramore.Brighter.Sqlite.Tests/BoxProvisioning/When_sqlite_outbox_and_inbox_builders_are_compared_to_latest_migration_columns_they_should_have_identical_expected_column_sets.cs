@@ -56,7 +56,7 @@ public class SqliteOutboxBuilderDriftTests
             QuoteStyle.Sqlite);
 
         //Act
-        var migrations = SqliteOutboxMigrations.All(config);
+        var migrations = new SqliteOutboxMigrationCatalog().All(config);
         var migrationColumns = new HashSet<string>(
             migrations[migrations.Count - 1].LogicalColumns,
             StringComparer.OrdinalIgnoreCase);
@@ -89,7 +89,7 @@ public class SqliteInboxBuilderDriftTests
             QuoteStyle.Sqlite);
 
         //Act
-        var migrations = SqliteInboxMigrations.All(config);
+        var migrations = new SqliteInboxMigrationCatalog().All(config);
         var migrationColumns = new HashSet<string>(
             migrations[migrations.Count - 1].LogicalColumns,
             StringComparer.OrdinalIgnoreCase);

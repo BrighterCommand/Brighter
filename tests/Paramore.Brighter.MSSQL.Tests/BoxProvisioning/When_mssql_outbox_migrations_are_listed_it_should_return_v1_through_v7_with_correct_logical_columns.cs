@@ -55,7 +55,7 @@ public class MsSqlOutboxMigrationsTests
         var expectedPerVersion = BuildExpectedColumnsByVersion();
 
         //Act
-        var migrations = MsSqlOutboxMigrations.All(config);
+        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
         //Assert — exactly seven migrations numbered 1..7 in order
         Assert.Equal(7, migrations.Count);

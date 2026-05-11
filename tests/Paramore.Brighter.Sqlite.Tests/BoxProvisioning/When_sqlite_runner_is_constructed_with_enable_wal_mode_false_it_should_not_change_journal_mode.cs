@@ -64,7 +64,7 @@ public class When_sqlite_runner_is_constructed_with_enable_wal_mode_false_it_sho
             config, TimeSpan.FromSeconds(30), enableWalMode: false);
 
         //Act — let the runner provision a fresh outbox.
-        var migrations = SqliteOutboxMigrations.All(config);
+        var migrations = new SqliteOutboxMigrationCatalog().All(config);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
         await runner.MigrateAsync(tableName, schemaName: null, BoxType.Outbox, migrations, freshHint);
 
@@ -87,7 +87,7 @@ public class When_sqlite_runner_is_constructed_with_enable_wal_mode_false_it_sho
             config, TimeSpan.FromSeconds(30), enableWalMode: true);
 
         //Act
-        var migrations = SqliteOutboxMigrations.All(config);
+        var migrations = new SqliteOutboxMigrationCatalog().All(config);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
         await runner.MigrateAsync(tableName, schemaName: null, BoxType.Outbox, migrations, freshHint);
 

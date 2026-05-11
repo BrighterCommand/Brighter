@@ -27,10 +27,10 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
 // Item Q-sqlite (spec 0027 PR #4039 third review). Pins the factory-entry wiring of
-// Identifiers.AssertSafe at the SQLite *Migrations.All(...) entry: any unsafe table name must be
+// Identifiers.AssertSafe at the SQLite *MigrationCatalog.All(...) entry: any unsafe table name must be
 // rejected before the factory builds migration up-scripts and idempotency-check SQL. The
 // injection vector sits in two places per migration: the bracket-quoted ALTER TABLE [{table}]
-// and the single-quoted pragma_table_info('{table}') predicate at SqliteOutboxMigrations.cs:150
+// and the single-quoted pragma_table_info('{table}') predicate at SqliteOutboxMigrationCatalog.cs:150
 // (and the inbox mirror at :73). The helper guarantees no quote ever reaches either path.
 //
 // SQLite has no schema concept (single attached database), so only the table identifier is
@@ -52,7 +52,7 @@ public class SqliteMigrationsUnsafeIdentifierTests
             outBoxTableName: unsafeTable);
 
         //Act + Assert
-        var ex = Assert.Throws<ConfigurationException>(() => SqliteOutboxMigrations.All(config));
+        var ex = Assert.Throws<ConfigurationException>(() => new SqliteOutboxMigrationCatalog().All(config));
         Assert.Contains(unsafeTable, ex.Message);
     }
 
@@ -68,7 +68,7 @@ public class SqliteMigrationsUnsafeIdentifierTests
             inboxTableName: unsafeTable);
 
         //Act + Assert
-        var ex = Assert.Throws<ConfigurationException>(() => SqliteInboxMigrations.All(config));
+        var ex = Assert.Throws<ConfigurationException>(() => new SqliteInboxMigrationCatalog().All(config));
         Assert.Contains(unsafeTable, ex.Message);
     }
 }

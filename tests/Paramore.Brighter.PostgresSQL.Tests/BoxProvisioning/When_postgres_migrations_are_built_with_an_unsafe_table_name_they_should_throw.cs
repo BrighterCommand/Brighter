@@ -27,7 +27,7 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
 // Item Q-postgres (spec 0027 PR #4039 third review). Pins the factory-entry wiring of
-// Identifiers.AssertSafe at the PostgreSQL *Migrations.All(...) entry: any unsafe table or
+// Identifiers.AssertSafe at the PostgreSQL *MigrationCatalog.All(...) entry: any unsafe table or
 // schema name must be rejected before the factory builds migration up-scripts whose UpScript
 // text interpolates the identifier directly into ALTER TABLE / CREATE TABLE strings.
 // ConfigurationException is the documented contract; no Postgres connection is required because
@@ -48,7 +48,7 @@ public class PostgresMigrationsUnsafeIdentifierTests
             outBoxTableName: unsafeTable);
 
         //Act + Assert
-        var ex = Assert.Throws<ConfigurationException>(() => PostgreSqlOutboxMigrations.All(config));
+        var ex = Assert.Throws<ConfigurationException>(() => new PostgreSqlOutboxMigrationCatalog().All(config));
         Assert.Contains(unsafeTable, ex.Message);
     }
 
@@ -64,7 +64,7 @@ public class PostgresMigrationsUnsafeIdentifierTests
             inboxTableName: unsafeTable);
 
         //Act + Assert
-        var ex = Assert.Throws<ConfigurationException>(() => PostgreSqlInboxMigrations.All(config));
+        var ex = Assert.Throws<ConfigurationException>(() => new PostgreSqlInboxMigrationCatalog().All(config));
         Assert.Contains(unsafeTable, ex.Message);
     }
 
@@ -80,7 +80,7 @@ public class PostgresMigrationsUnsafeIdentifierTests
             schemaName: "bad-schema");
 
         //Act + Assert
-        var ex = Assert.Throws<ConfigurationException>(() => PostgreSqlOutboxMigrations.All(config));
+        var ex = Assert.Throws<ConfigurationException>(() => new PostgreSqlOutboxMigrationCatalog().All(config));
         Assert.Contains("bad-schema", ex.Message);
     }
 }

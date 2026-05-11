@@ -47,14 +47,14 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE [{tableName}] ([CommandId] NVARCHAR(255) NOT NULL, [Timestamp] DATETIME NULL);");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = MsSqlOutboxMigrations.All(config);
+        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
         //Act — direct helper call
         int detected;
         await using (var connection = new SqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await MsSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new MsSqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, "dbo", BoxType.Outbox, migrations, default);
         }
 
@@ -81,14 +81,14 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE [{tableName}] ([Topic] NVARCHAR(255) NULL, [Timestamp] DATETIME NULL);");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName);
-        var migrations = MsSqlInboxMigrations.All(config);
+        var migrations = new MsSqlInboxMigrationCatalog().All(config);
 
         //Act — direct helper call
         int detected;
         await using (var connection = new SqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await MsSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new MsSqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, "dbo", BoxType.Inbox, migrations, default);
         }
 
@@ -116,14 +116,14 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             $"CREATE TABLE [{tableName}] ([Id] BIGINT NOT NULL IDENTITY, [HeaderBag] NVARCHAR(MAX) NULL, PRIMARY KEY ([Id]));");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = MsSqlOutboxMigrations.All(config);
+        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
         //Act — direct helper call
         int detected;
         await using (var connection = new SqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await MsSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new MsSqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, "dbo", BoxType.Outbox, migrations, default);
         }
 
@@ -163,14 +163,14 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
             );");
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: tableName);
-        var migrations = MsSqlOutboxMigrations.All(config);
+        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
         //Act
         int detected;
         await using (var connection = new SqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await MsSqlBoxDetectionHelpers.DetectCurrentVersionAsync(
+            detected = await new MsSqlBoxDetectionHelper().DetectCurrentVersionAsync(
                 connection, tableName, "dbo", BoxType.Outbox, migrations, default);
         }
 

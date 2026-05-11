@@ -48,7 +48,7 @@ public class PostgreSqlInboxMigrationsTests
         var expectedV1 = new HashSet<string>(s_v1Columns, StringComparer.Ordinal);
 
         //Act
-        var migrations = PostgreSqlInboxMigrations.All(config);
+        var migrations = new PostgreSqlInboxMigrationCatalog().All(config);
 
         //Assert — exactly one migration, version 1, no SourceReference (no archaeology pointer
         //for V1 baseline — same convention as outbox V1).

@@ -67,7 +67,7 @@ public class When_mssql_runner_acquires_lock_resource_should_be_qualified_by_sch
 
         var runner = new MsSqlBoxMigrationRunner(
             config, TimeSpan.FromSeconds(30), fakeLock);
-        var migrations = MsSqlOutboxMigrations.All(config);
+        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act

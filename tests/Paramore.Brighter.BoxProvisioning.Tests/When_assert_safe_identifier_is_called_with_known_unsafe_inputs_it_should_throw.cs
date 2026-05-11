@@ -26,7 +26,7 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 // Item Q (spec 0027 PR #4039 third review). Identifiers.AssertSafe is a defence-in-depth
-// helper that runs at *Migrations.All(...) factory entry and at runner MigrateAsync entry to
+// helper that runs at *MigrationCatalog.All(...) factory entry and at runner MigrateAsync entry to
 // reject SQL identifiers that fall outside the regex ^[A-Za-z_][A-Za-z0-9_]*$. The point of
 // this regex is not "what does the backend allow" — quoted identifiers in MSSQL/PG/Spanner
 // (and backticked identifiers in MySQL) accept much more — but "what is safe to interpolate
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 // so the runtime rejection of unusual identifiers does not break any released configuration.
 //
 // This test exercises the helper directly with the canonical unsafe inputs called out in the
-// reviewer comment: a single quote (the actual injection vector at MySqlOutboxMigrations.cs:165
+// reviewer comment: a single quote (the actual injection vector at MySqlOutboxMigrationCatalog.cs:165
 // where the table name is inlined into an information_schema probe), a semicolon (statement
 // separator), a hyphen (rejected outside backticks/brackets), a leading digit (rejected by every
 // backend's bare-identifier rule), and the empty string (degenerate).
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 public class AssertSafeIdentifierTests
 {
     [Theory]
-    [InlineData("O'Brien")]      // single quote — breaks information_schema probe at MySqlOutboxMigrations.cs:165
+    [InlineData("O'Brien")]      // single quote — breaks information_schema probe at MySqlOutboxMigrationCatalog.cs:165
     [InlineData("Outbox; DROP")] // semicolon — statement terminator
     [InlineData("my-outbox")]    // hyphen — invalid in bare identifiers
     [InlineData("1Outbox")]      // leading digit — invalid as bare identifier across all backends

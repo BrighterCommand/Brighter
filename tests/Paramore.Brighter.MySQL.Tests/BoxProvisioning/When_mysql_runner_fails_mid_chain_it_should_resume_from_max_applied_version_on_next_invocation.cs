@@ -52,7 +52,7 @@ public class When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var realMigrations = MySqlOutboxMigrations.All(config);
+        var realMigrations = new MySqlOutboxMigrationCatalog().All(config);
         var brokenMigrations = BrokenMigrationFactory.WithBrokenVersion(
             realMigrations, BrokenVersion, BrokenUpScript);
 

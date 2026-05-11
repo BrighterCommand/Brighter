@@ -51,7 +51,7 @@ public class When_mssql_runner_fresh_path_is_called_with_migrations_not_starting
         Configuration.EnsureDatabaseExists(_connectionString);
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var realMigrations = MsSqlOutboxMigrations.All(config);
+        var realMigrations = new MsSqlOutboxMigrationCatalog().All(config);
         var malformedMigrations = realMigrations.Skip(1).ToList();
         Assert.Equal(2, malformedMigrations[0].Version); // sanity: first entry is V2
 

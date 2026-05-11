@@ -70,11 +70,11 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     }
 
     // IMPORTANT: keep these in sync with the relational chain length —
-    //   VLatestOutbox === MySqlOutboxMigrations.All(...).Count
-    //                 === MsSqlOutboxMigrations.All(...).Count
-    //                 === PostgreSqlOutboxMigrations.All(...).Count
-    //                 === SqliteOutboxMigrations.All(...).Count
-    //   VLatestInbox  === <Backend>InboxMigrations.All(...).Count (across all four relational backends)
+    //   VLatestOutbox === new MySqlOutboxMigrationCatalog().All(...).Count
+    //                 === new MsSqlOutboxMigrationCatalog().All(...).Count
+    //                 === new PostgreSqlOutboxMigrationCatalog().All(...).Count
+    //                 === new SqliteOutboxMigrationCatalog().All(...).Count
+    //   VLatestInbox  === new <Backend>InboxMigrationCatalog().All(...).Count (across all four relational backends)
     // Spanner has no V_k chain (ADR 0057 §6 — fresh-install-only), so the latest version is
     // effectively a stamp on a freshly-built table. When a relational backend advances to
     // V8/V3 etc., bump these constants so Spanner's history row keeps the same V_latest as
