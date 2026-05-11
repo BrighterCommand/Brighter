@@ -730,7 +730,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
     - The runner base's catch block already passes `CancellationToken.None` per Phase 6 implementation. This test exercises the contract end-to-end via MSSQL.
     - If test fails because rollback throws or lock leaks, fix in `MsSqlProvisioningUnitOfWork.RollbackAsync`.
 
-- [ ] **TEST + IMPLEMENT: Postgres — Caller's cancellation mid-flight triggers RollbackAsync(CancellationToken.None) and pg_advisory_unlock**
+- [x] **TEST + IMPLEMENT: Postgres — Caller's cancellation mid-flight triggers RollbackAsync(CancellationToken.None) and pg_advisory_unlock**
   - **USE COMMAND**: `/test-first when Postgres migration is cancelled mid-flight RollbackAsync should run with CancellationToken.None and pg_advisory_unlock should release the lock`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning`
   - Test file: `When_postgres_migration_is_cancelled_mid_flight_it_should_rollback_and_release_session_lock.cs`
