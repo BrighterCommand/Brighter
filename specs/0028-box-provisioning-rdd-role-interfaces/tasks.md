@@ -782,7 +782,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
 
 ## Phase 11 — Documentation, release notes, PR description
 
-- [ ] **Update `release_notes.md` with the spec 0028 source-breaks and additive surface (per AC7)**
+- [x] **Update `release_notes.md` with the spec 0028 source-breaks and additive surface (per AC7)**
   - File: `release_notes.md` (existing PR #4039 file).
   - Under the existing "Breaking Changes" section, enumerate per ADR §A.1 / §A.2 / §A.3 source-break bullets:
     - Detection helpers: `static class {Backend}BoxDetectionHelpers` → `public class {Backend}BoxDetectionHelper` (singular). All five backends. SpannerBoxDetectionHelpers visibility widened from `internal` to `public`.
@@ -795,13 +795,13 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
     - Runner ctors: 4 relational runners derive from `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` and gain `IAmAVersionDetectingMigrationHelper`, `IAmARelationalDatabaseConfiguration`, `TimeSpan lockTimeout`, `ILogger?` ctor params (forwarded to base).
   - Under "Additive" section, enumerate the new public types: 5 role interfaces + 1 abstract base class + 4 UoW classes + 5 detection-helper classes (instance) + 8 catalogue classes + 5 payload-validator classes (instance).
 
-- [ ] **Update PR #4039 description to enumerate spec 0028 work (per AC11)**
+- [x] **Update PR #4039 description to enumerate spec 0028 work (per AC11)**
   - Add a new section "Spec 0028 Box Provisioning RDD Role Interfaces" with:
     - Link to ADR 0058.
     - Link to `specs/0028-box-provisioning-rdd-role-interfaces/`.
     - Note that spec 0028 is a fourth-pass review response on the same PR (per requirements C1).
 
-- [ ] **Verify "Adding a new BoxProvisioning backend" section in ADR 0058 reflects shipped surface (per AC5)**
+- [x] **Verify "Adding a new BoxProvisioning backend" section in ADR 0058 reflects shipped surface (per AC5)**
   - Locate the section using `grep -n "## Adding a new BoxProvisioning backend" docs/adr/0058-box-provisioning-rdd-role-interfaces.md` (line numbers drift as the ADR is edited; the section title is stable).
   - For each class name listed in the section (`{Backend}BoxDetectionHelper`, `{Backend}{Box}MigrationCatalog`, `{Backend}PayloadModeValidator`, `{Backend}ProvisioningUnitOfWork`, `{Backend}BoxMigrationRunner`, plus the abstract base `RelationalBoxMigrationRunnerBase`), confirm via `grep -rn "class {ClassName} " src/Paramore.Brighter.BoxProvisioning*` that each class exists with the documented name.
   - If any name drift is found, update the ADR section AND the implementation in the same commit so the doc and surface stay aligned.

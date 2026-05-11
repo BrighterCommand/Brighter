@@ -110,6 +110,96 @@ The session-level migration-lock collaborator is now substitutable per backend, 
 
 See [ADR 0057](docs/adr/0057-box-schema-versioning-and-migrations.md) and [spec 0027](specs/0027-box-schema-versioning-and-migrations/) for full details.
 
+### Box Provisioning RDD role-interface refactor (spec 0028)
+
+A fourth-pass review of PR #4039 surfaced static helper classes and free-standing runners across spec 0027's BoxProvisioning surface. Spec 0028 restructures that surface around Responsibility-Driven-Design role interfaces and a template-method runner base. The change is purely a structural refactor — no behaviour changes — but it is source-breaking for any external implementor of the affected types. The shipped Brighter call-sites and DI extensions absorb the cascade; existing `UseBoxProvisioning` configure-delegate users require no change. See [ADR 0058](docs/adr/0058-box-provisioning-rdd-role-interfaces.md) and [spec 0028](specs/0028-box-provisioning-rdd-role-interfaces/) for full details.
+
+#### Source-breaking change: detection helpers become instance classes (`{Backend}BoxDetectionHelper`)
+
+The static `{Backend}BoxDetectionHelpers` (plural) classes for all five backends become public instance classes `{Backend}BoxDetectionHelper` (singular) implementing the new role interfaces:
+
+* **Relational four** (MSSQL/PostgreSQL/MySQL/SQLite) implement `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` — adds `DetectCurrentVersionAsync` on top of the base interface.
+* **Spanner** implements the base interface `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction>` only — degenerate fresh-install model per ADR 0057 §6, no version inference. `SpannerBoxDetectionHelpers` was `internal`; the new `SpannerBoxDetectionHelper` is `public`.
+
+Method-signature changes on the new instance methods:
+
+* **MSSQL / PostgreSQL / MySQL**: `string schemaName` widens to `string? schemaName` (existing slot). Each impl substitutes the backend default when null (`"dbo"` / `"public"` / `connection.Database`). Positional argument lists at existing call-sites are unchanged.
+* **SQLite / Spanner**: gain a `string? schemaName` parameter inserted between `tableName` and `cancellationToken`. Existing positional call-sites that passed `(connection, tableName, cancellationToken, transaction)` must insert an explicit `null` and become `(connection, tableName, null, cancellationToken, transaction)`. Each impl ignores the parameter.
+* **All five backends**: `GetTableColumnsAsync` return type changes from `HashSet<string>` to `IReadOnlyCollection<string>` (looser; symmetric with `IAmABoxMigration.LogicalColumns` and netstandard2.0-compatible).
+
+The widened nullability + return-type looseness are licensed by NF1: the spec 0027 surface had not shipped at the time spec 0028 landed (same PR).
+
+```csharp
+// Before
+var exists = await MsSqlBoxDetectionHelpers.DoesTableExistAsync(
+    connection, "Outbox", "dbo", ct, transaction);
+
+// After
+var helper = new MsSqlBoxDetectionHelper();
+var exists = await helper.DoesTableExistAsync(
+    connection, "Outbox", "dbo", ct, transaction);
+// or null for schemaName — the helper substitutes "dbo":
+var exists = await helper.DoesTableExistAsync(
+    connection, "Outbox", null, ct, transaction);
+```
+
+#### Source-breaking change: migration catalogues become instance classes (`{Backend}{Box}MigrationCatalog`)
+
+The static `{Backend}{Box}Migrations` classes (eight total — MSSQL/PG/MySQL/SQLite × Outbox/Inbox) become public instance classes `{Backend}{Box}MigrationCatalog` implementing `IAmABoxMigrationCatalog`. Spanner is exempt per ADR 0057 §6 (no migration catalogue).
+
+```csharp
+// Before
+IReadOnlyList<IAmABoxMigration> migrations = MsSqlOutboxMigrations.All(config);
+
+// After
+IAmABoxMigrationCatalog catalog = new MsSqlOutboxMigrationCatalog();
+IReadOnlyList<IAmABoxMigration> migrations = catalog.All(config);
+// or receive the catalogue via DI (singleton lifetime registered by AddMsSqlOutbox).
+```
+
+#### Source-breaking change: payload-mode validators become instance classes (`{Backend}PayloadModeValidator`)
+
+The static `{Backend}PayloadModeValidator` classes for all five backends become public instance classes implementing `IAmABoxPayloadModeValidator<TConnection>` (single-generic, no `TTransaction`). Method-signature changes:
+
+* **MSSQL / PostgreSQL / MySQL**: `string schemaName` widens to `string?`. Existing positional call-sites are unchanged; each impl substitutes the backend default when null.
+* **SQLite / Spanner**: gain a `string? schemaName` parameter inserted between `tableName` and `columnName`. Existing positional call-sites that passed `(connection, tableName, columnName, binaryMessagePayload, cancellationToken)` must become `(connection, tableName, null, columnName, binaryMessagePayload, cancellationToken)`. Each impl ignores the parameter.
+
+#### Source-breaking change: provisioner constructor cascade
+
+All ten existing provisioner classes (`{Backend}{Box}Provisioner` × four relational backends × two box-types, plus the `SpannerOutboxProvisioner`/`SpannerInboxProvisioner` pair) gain three new typed constructor parameters reflecting the static→instance conversion:
+
+* `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` for the relational eight (provisioners call `DetectCurrentVersionAsync` during the bootstrap branch). Spanner's pair receives `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction>` (base interface — no version-detection capability).
+* `IAmABoxMigrationCatalog` for the relational eight (Outbox provisioners receive the Outbox catalogue; Inbox provisioners receive the Inbox catalogue). Spanner's pair: omitted per ADR 0057 §6.
+* `IAmABoxPayloadModeValidator<TConnection>` for all ten.
+
+External code that constructs provisioners directly must supply the new parameters. Existing call-sites that wire provisioners via `UseBoxProvisioning(opts => opts.Add{Backend}Outbox(config))` are absorbed by the DI extensions — no change required.
+
+#### Source-breaking change: runner constructor cascade and template-method base
+
+The four relational migration runners (`MsSqlBoxMigrationRunner`, `PostgreSqlBoxMigrationRunner`, `MySqlBoxMigrationRunner`, `SqliteBoxMigrationRunner`) now derive from the new abstract base `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>`. Each derived runner forwards new constructor parameters to the base:
+
+* `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` — the typed detection helper.
+* `IAmARelationalDatabaseConfiguration` — for `OpenConnectionAsync` to read `ConnectionString`, plus access to `OutBoxTableName`/`InBoxTableName`/payload-mode flags.
+* `TimeSpan lockTimeout` — per-runner-instance deployment knob, supplied by `Add{Backend}Outbox`/`Add{Backend}Inbox` from `BoxProvisioningOptions.MigrationLockTimeout`.
+* `ILogger? logger` — exposed to derived classes as `protected Logger { get; }` and forwarded into per-backend `IAmAProvisioningUnitOfWork<TTransaction>` construction.
+
+The base owns the `MigrateAsync` algorithm — open connection, create UoW, begin UoW (lock + transaction in backend-specific order), ensure history table, re-detect existence under the UoW (TOCTOU defence per ADR 0057 §3), dispatch on detection state (fresh / bootstrap / normal), commit, rollback-on-throw with `CancellationToken.None`, dispose via `await using`. Each derived runner implements only the irreducibly-backend-specific hooks: `OpenConnectionAsync`, `CreateUnitOfWorkAsync`, `LockResourceFor`, `EnsureHistoryTableAsync`, `RunFreshPathAsync`, `RunBootstrapPathAsync`, `RunNormalPathAsync`. The Spanner runner remains free-standing per ADR 0057 §6 (degenerate fresh-install-only).
+
+External code that constructs the relational runners directly must supply the new parameters. The harmonised UoW lifecycle / cancellation / disposal contract is described in ADR 0058 §B.3.
+
+#### Additive: new public types
+
+Spec 0028 introduces the following net-new public surface (all in `Paramore.Brighter.BoxProvisioning` unless noted):
+
+* **Role interfaces** (5): `IAmABoxMigrationDetectionHelper<TConnection, TTransaction>`, `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` (extends the base), `IAmABoxMigrationCatalog`, `IAmABoxPayloadModeValidator<TConnection>`, `IAmAProvisioningUnitOfWork<TTransaction>`.
+* **Abstract base** (1): `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` implementing `IAmABoxMigrationRunner`.
+* **Provisioning UoW implementations** (4 — one per relational backend, in each backend's package): `MsSqlProvisioningUnitOfWork`, `PostgreSqlProvisioningUnitOfWork`, `MySqlProvisioningUnitOfWork`, `SqliteProvisioningUnitOfWork`. Each encapsulates that backend's specific lock+transaction pairing and ordering.
+* **Detection-helper instance classes** (5): `MsSqlBoxDetectionHelper`, `PostgreSqlBoxDetectionHelper`, `MySqlBoxDetectionHelper`, `SqliteBoxDetectionHelper`, `SpannerBoxDetectionHelper`.
+* **Migration-catalogue instance classes** (8): `{MsSql,PostgreSql,MySql,Sqlite}{Outbox,Inbox}MigrationCatalog` (Spanner exempt).
+* **Payload-validator instance classes** (5): `{MsSql,PostgreSql,MySql,Sqlite,Spanner}PayloadModeValidator`.
+
+DI extensions in each `Add{Backend}{Box}` register the detection helper, catalogue, and payload validator as singletons (each role-impl is stateless after construction); existing call-site shape `UseBoxProvisioning(opts => opts.Add{Backend}Outbox(config))` is unchanged.
+
 ## Release 10.0.0
 
 With V10 we have made a number of significant changes to Brighter. There are breaking changes that you will need to be aware of. However, most of the changes required are straightforward to make. A summary of the most important changes:
