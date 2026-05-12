@@ -972,7 +972,7 @@ Test-file shape convention (matches the Phase 6 precedent in `tests/Paramore.Bri
     - Guarantee: the hook is called exactly once per `DetectTableStateAsync` invocation, only on the bootstrap branch (HistoryExists: false). The history-exists branch (HistoryExists: true) goes through `GetMaxVersionAsync` and does NOT apply clamp — pinned by Case 2's positive-pass-through case via the bootstrap branch and (by inspection) by the orchestration test's history-exists case.
   - Commit: `feat: spec 0028 sub-phase A 13.A.1 — SqlBoxProvisioner introduces transitional ClampDetectedVersion virtual hook (slice 3)`.
 
-- [ ] **Phase 13.A.1 gate: abstract base compiles on shared-assembly TFM matrix; 8 base-contract test cases green**
+- [x] **Phase 13.A.1 gate: abstract base compiles on shared-assembly TFM matrix; 8 base-contract test cases green**
   - `dotnet build src/Paramore.Brighter.BoxProvisioning -c Release` clean (0 warnings, 0 errors) on `netstandard2.0;net8.0;net9.0;net10.0` (the same TFM matrix the Phase 6 sibling base targets, per C6 / NF11).
   - All 8 Phase 13.A.1 `[Fact]` methods pass against their respective fake derivatives — Core BoxProvisioning.Tests count is 44/44 per TFM (= 36 pre-13.A.1 floor + 8 new `[Fact]`s — matches the 13.A.0.5 amended NF9 floor exactly).
   - **No backend provisioner change yet** — 13.A.2 picks up.
