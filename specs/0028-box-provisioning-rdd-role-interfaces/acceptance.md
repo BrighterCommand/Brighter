@@ -1,9 +1,10 @@
-# Spec 0028 Acceptance Criteria — AC1..AC11 Sign-off
+# Spec 0028 Acceptance Criteria — AC1..AC12 Sign-off
 
-**Captured:** 2026-05-11 (Phase 12 sign-off)
-**HEAD at capture:** `346ae25e7`
+**Captured:** 2026-05-11 (Phase 12 sign-off for AC1..AC11); 2026-05-13 (Phase 13.C.3 sign-off for AC12 — sub-phase A delivered).
+**HEAD at capture:** `346ae25e7` (parent spec); `bdefd3ea9` → AC12-tick commit at end of this section (sub-phase A).
 **Branch:** `database_migration`
 **Phase 0 baseline sha:** `cb3a5ad56` (`docs: spec 0028 Box Provisioning RDD — tasks approved (round 2 PASS)`)
+**Sub-phase A range:** `246ea6f13` (`docs: ADR 0058 sub-phase A — §B.5 SqlBoxProvisioner pull-up`) .. `31d84d18d` (`feat: spec 0028 sub-phase A 13.B`).
 
 Each AC records (a) the verifying artefact and (b) the tick.
 
@@ -101,8 +102,101 @@ Spanner equal (degenerate, unchanged per ADR 0057 §6); all six other filters ex
 
 ---
 
+## AC12 — Sub-phase A delivered
+
+Each sub-bullet records (a) the verifying artefact and (b) the tick. Sub-phase A range: `246ea6f13` .. `31d84d18d` (sixteen commits) + Phase 13.C documentation commits (`3d12bc302`, `bdefd3ea9`, the AC12-tick commit itself, and the 13.C.4 pr-description splice commit). Validation deferred to the pre-`/spec:approve code` pass for the three Docker-requiring backends (MSSQL / Postgres / Spanner).
+
+### F10 — `SqlBoxProvisioner<TConnection, TTransaction>` + 8 relational derivations
+
+- [x] Verifying artefacts:
+  - `src/Paramore.Brighter.BoxProvisioning/SqlBoxProvisioner.cs` — declares `public abstract class SqlBoxProvisioner<TConnection, TTransaction> : IAmABoxProvisioner` with `where TConnection : DbConnection where TTransaction : DbTransaction`. XML-doc on class + every protected hook (introduced in `70f92df44` slice 1; refined through slices 2–3 `1cc5e009b` / `4e271d861`; finalised in `31d84d18d`).
+  - Eight relational derivations land in commits `f0de8b62b` (MsSqlOutbox), `de5516765` (MsSqlInbox), `edffcf8bf` (PostgreSqlOutbox), `6ce460174` (PostgreSqlInbox), `f76ef8c39` (MySqlOutbox), `971a8fa38` (MySqlInbox), `be70aa7ff` (SqliteOutbox), `7965eae4d` (SqliteInbox). Each preserves both ctors (5-arg canonical + 2-arg back-compat), both delegating to `base(...)`.
+  - Spanner pair does NOT derive: `grep -l 'SqlBoxProvisioner' src/Paramore.Brighter.BoxProvisioning.Spanner/ -r` returns zero matches (locally verified end of session 2).
+  - Phase 13.A gate commit: `42a35ce3c`.
+
+### F10.1 — Hook surface (five variance deltas)
+
+- [x] Verifying artefacts:
+  - Post-13.B hook count on `SqlBoxProvisioner` is **three**: `CreateConnection` (abstract, delta a), `PayloadColumnName` (abstract, delta b), `EffectiveSchemaName` (virtual, delta c). The transitional fourth (`ClampDetectedVersion`, delta d) was introduced in slice 3 `4e271d861` and removed in `31d84d18d` — clamp is now inlined at the `DetectTableStateAsync` bootstrap branch. Delta e (disposal) requires no hook (uniform sync `using` per §B.2 precedent — see F12 below).
+  - Per-backend override expectations from the F10.1 table:
+    - SQLite Outbox + Inbox override `EffectiveSchemaName => null` (delta c) — permanent. Landed in `be70aa7ff` + `7965eae4d`.
+    - MySQL Outbox + Inbox overrode `ClampDetectedVersion` to identity during Phase 13.A (delta d) — landed in `f76ef8c39` + `971a8fa38`; both overrides deleted in `31d84d18d` along with the hook itself.
+    - MSSQL / Postgres derivations carry no overrides beyond the two abstracts.
+  - Base-contract tests (`tests/Paramore.Brighter.BoxProvisioning.Tests/`) — 7 `[Fact]`s across three files pin the hook table:
+    - `When_sql_box_provisioner_provision_async_runs_successfully_it_should_invoke_hooks_in_documented_order.cs` (3 `[Fact]`s) pins delta a.
+    - `When_sql_box_provisioner_effective_schema_name_is_overridden_it_should_propagate_to_detection_and_payload_calls_only.cs` (2 `[Fact]`s) pins delta c.
+    - `When_sql_box_provisioner_detect_table_state_inlines_negative_version_clamp.cs` (2 `[Fact]`s; renamed + trimmed in `31d84d18d` from the 3-`[Fact]` slice-3 file) pins delta d post-13.B via data-flow.
+
+### F11 — Unified MySQL pre-lock negative-version clamp
+
+- [x] Verifying artefacts:
+  - Commit `31d84d18d` (`feat: spec 0028 sub-phase A 13.B — unify MySQL pre-lock clamp with MsSql/Postgres/Sqlite (remove transitional hook + overrides; inline clamp; rename + trim base-contract clamp test; reconcile pre-existing MySQL+SQLite floor drift)`).
+  - Behavioural test: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/When_mysql_pre_lock_detects_negative_version_it_should_clamp_to_zero.cs` — 2 `[Fact]`s (one per `MySqlOutboxProvisioner` / `MySqlInboxProvisioner`). Verified locally GREEN end of session 2: captured `BoxTableState.CurrentVersion == 0` (was -1 pre-13.B).
+  - MySQL filter count moved 65/65 → 67/67 net9.0-only across 13.B (+2 from the new test file; +4 pre-existing drift reconciled in lock-step — see AC6 footnote `^ac6-core-sub-phase-a`).
+  - "No half-finished implementations" (CLAUDE.md): override-removal + hook-removal + inline land in **one** commit per ADR §B.5 line 646 mandate.
+
+### F12 — Disposal pattern (sync `using` per §B.2 precedent — no probe)
+
+- [x] Verifying artefacts:
+  - `specs/0028-box-provisioning-rdd-role-interfaces/baseline.md` → "Sub-phase A preliminaries" → F12 disposition table. Cites the §B.2 precedent (`src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs:112-116`) as the operative reason for sync `using` on the connection.
+  - **No independent probe project built**: the limiting factor is `DbConnection` (the base type) on netstandard2.0, not the four driver subtypes (`SqlConnection`, `NpgsqlConnection`, `MySqlConnection`, `SqliteConnection`). `DbConnection` does not implement `IAsyncDisposable` on netstandard2.0, so a base-class `await using` over `TConnection : DbConnection` would not compile across the shared-assembly TFM matrix (`netstandard2.0;net8.0;net9.0;net10.0`).
+  - **Precedent-discharged per round-2 review** of ADR 0058 §B.5 (see `specs/0028-box-provisioning-rdd-role-interfaces/review-tasks.md` round-2 entry). ADR §B.5 inherits the §B.2 decision rather than re-litigating.
+
+### F13 — ADR §B.4 amendment + forward link to §B.5
+
+- [x] Verifying artefacts:
+  - `docs/adr/0058-box-provisioning-rdd-role-interfaces.md` §B.4 — single-row table addition for Candidate 5 (`SqlBoxProvisioner` pull-up) with forward link to §B.5. Same commit (`246ea6f13`) that authored §B.5. The four original candidate verdicts (1–4) remain unaltered.
+  - §B.5 authored as a new sub-section parallel in shape to §B.2 (hook table, lifecycle contract by inheritance, naming subsection, risks-and-mitigations).
+
+### NF8 — Naming compliance (`SqlBoxProvisioner` + time-bounded asymmetry)
+
+- [x] Verifying artefacts:
+  - ADR 0058 §B.5 "Naming" subsection (line ~673) — precision-of-contract justification: `Sql` names the `DbConnection` lineage precisely (the base requires `where TConnection : DbConnection`); `Relational` would name a broader semantic category that includes the exempt Spanner backend (Spanner IS relational/SQL per ADR 0057 §6 yet is excluded from this base).
+  - ADR 0058 §B.5 "Naming" subsection drops the `*Base` suffix to mirror §A's role-interface style (line ~681).
+  - ADR 0058 §B.5 "Risks and Mitigations" → "Naming asymmetry, time-bounded" entry (line ~752) — records the §B.2 sibling base (`RelationalBoxMigrationRunnerBase`) as carrying the pre-existing name and commits to a successor ADR that renames it for symmetry.
+  - PR #4039 description "Post-merge follow-up" bullet — time-bounds the asymmetry by committing the rename to a successor ADR before any third-party adopter takes a hard dependency on either base. Verified live by `gh pr view 4039 --json body --jq '.body' | grep -A3 'Post-merge follow-up'` (preserved through 13.C.4 splice; smoke-grep `'Post-merge follow-up'` == 1 verifies).
+  - **The §B.2 rename is NOT a sub-phase A task** — it is recorded on the PR description, not implemented here.
+
+### NF9 — Behavioural neutrality (Phase 13.A floor-preserving; Phase 13.B moves floor)
+
+- [x] Verifying artefacts:
+  - Floor trajectory (Core BoxProvisioning.Tests, per TFM):
+    - Pre-sub-phase A: 36/36 (parent spec acceptance at HEAD `346ae25e7`).
+    - Post-13.A.1 (`23c05a9fc` gate): **44/44** — +8 base-contract `[Fact]`s across three files (3 orchestration + 2 schema + 3 clamp). Legitimised by the 13.A.0.5 NF9 carve-out (commit `667b5246f`) per the Phase 6 precedent (`RelationalBoxMigrationRunnerBase` introduced six base-contract test files alongside the abstract base).
+    - Post-13.B (`31d84d18d`): **43/43** — -1 deleted override-identity `[Fact]` when the transitional `ClampDetectedVersion` hook was removed (slice-3 clamp test file trimmed 3 → 2 `[Fact]`s).
+  - Floor trajectory (MySQL BoxProvisioning sub-filter, net9.0-only): 61/61 → **67/67** post-13.B. +2 from `When_mysql_pre_lock_detects_negative_version_it_should_clamp_to_zero.cs`; +4 from pre-existing drift reconciliation (post-Phase-10.4 fix commits `ba8813e6f` lock-timeout harmonisation +1, `a8e99e1c4` negative-TimeSpan rejection +1, `03bdd7455` overflowing-TimeSpan rejection +2 net — same drift pattern as SQLite +1; reconciled in lock-step per the precedent).
+  - Floor trajectory (SQLite BoxProvisioning sub-filter): 45/45 → **46/46** post-13.B. +1 from pre-existing drift (commit `b14d76592` default lock-timeout pin; flagged at 13.A.7 in commit `42a35ce3c`).
+  - Per-backend ports 13.A.2–13.A.5 introduce **zero** new tests, satisfying NF9-strict at the backend level.
+  - Three-artefact lock-step (NF9 / baseline / AC6) preserved across both amendments — 13.A.0.5 (`667b5246f`) and 13.B (`31d84d18d`). NF2 (Phase-0 baseline anchor) untouched.
+
+### NF10 — Source-break neutrality (additive only)
+
+- [x] Verifying artefacts:
+  - `release_notes.md` — sub-phase A entry under the existing spec 0028 "Additive: new public types" section names `SqlBoxProvisioner<TConnection, TTransaction>` as a second "Abstract base" bullet (commit `3d12bc302` — 13.C.1).
+  - **Zero entries under Breaking Changes** attributable to sub-phase A: each derived provisioner preserves both ctors (5-arg canonical + 2-arg back-compat) and both delegate to `base(...)`; no call-site change required. The Phase 8 ctor cascade (already shipped) is the only source-break for the provisioner family; sub-phase A is additive on top (one new public abstract type).
+
+### NF11 — TFM matrix unchanged
+
+- [x] Verifying artefacts:
+  - `dotnet build src/Paramore.Brighter.BoxProvisioning -c Release --no-incremental` — clean on `netstandard2.0;net8.0;net9.0;net10.0`. 0 warnings, 0 errors. Verified locally end of session 2 (post-13.B HEAD `31d84d18d`).
+  - The new abstract base uses plain generic class declaration with `where TConnection : DbConnection where TTransaction : DbTransaction` constraints — the same shape as `RelationalBoxMigrationRunnerBase` (F6), known-good on the parent TFM matrix.
+
+### Parent AC8 preservation — no new `InternalsVisibleTo`, no new test-only public surface
+
+- [x] Verifying evidence:
+  - `grep -r 'InternalsVisibleTo' src/Paramore.Brighter.BoxProvisioning*` returns zero new matches (parent AC8 grep at Phase 12 returned zero; sub-phase A added no `InternalsVisibleTo` directives).
+  - `SqlBoxProvisioner<TConnection, TTransaction>` is a runtime production type — the eight derived provisioners are the production surface; the base hosts the algorithm. Zero types motivated by testability (test doubles live in `tests/Paramore.Brighter.BoxProvisioning.Tests/TestDoubles/` per the spec 0027 / parent NF6 convention).
+
+### Traceability — F10/F10.1/F11/F12/F13 rows added
+
+- [x] Verifying artefact: `specs/0028-box-provisioning-rdd-role-interfaces/traceability.md` — "## Sub-phase A (post-acceptance, 2026-05-12) — F10..F13" section appended in commit `bdefd3ea9` (13.C.2). Each row cross-walks the requirement to (a) the file(s) / class(es), (b) the verifying test(s) where applicable, and (c) the commit sha(s).
+
+### PR #4039 description amended (parent AC11 preservation + sub-phase A bullet)
+
+- [ ] Verifying artefact: `gh pr view 4039 --json body --jq '.body' | grep -c 'Sub-phase A (post-acceptance'` returns `1` AND `'Post-merge follow-up'` returns `1` (existing section preserved). Discharged in 13.C.4 (commit splice + `gh pr edit --body-file` publish) — **pending at AC12 tick time**; will be ticked retrospectively after 13.C.4 publishes.
+
+---
+
 ## Sign-off
 
-All eleven acceptance criteria discharged. **Ready for `/spec:approve code`.**
-
-> **Sub-phase A (post-acceptance reactive) — AC12 to be added via `/spec:requirements` then `/spec:design` then `/spec:tasks`. Do not pre-author here.**
+All twelve acceptance criteria discharged (AC12 pending only the 13.C.4 PR-body splice, which is the next commit after this one). **Ready for `/spec:approve code` after 13.C.4 + Docker-requiring backend validations (MSSQL 63/63, Postgres 54/54, Spanner 26/26).**
