@@ -57,6 +57,7 @@ internal sealed class FakePostgreSqlAdvisoryLock(
 {
     public string? AcquiredKey { get; private set; }
     public string? ReleasedKey { get; private set; }
+    public TimeSpan? AcquiredTimeout { get; private set; }
 
     /// <summary>
     /// Captured at the moment <see cref="AcquireAsync"/> was first invoked, if
@@ -83,6 +84,7 @@ internal sealed class FakePostgreSqlAdvisoryLock(
             }
         }
         AcquiredKey = lockKey;
+        AcquiredTimeout = timeout;
         if (throwOnAcquire is not null) throw throwOnAcquire;
     }
 

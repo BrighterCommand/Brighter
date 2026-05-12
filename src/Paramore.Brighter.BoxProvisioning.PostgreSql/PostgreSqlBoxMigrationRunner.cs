@@ -61,7 +61,7 @@ public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<Npg
         IPostgreSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null)
-        : base(detectionHelper, configuration, lockTimeout ?? default, logger)
+        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30), logger)
     {
         _advisoryLock = advisoryLock ?? new PostgreSqlAdvisoryLock();
         _logger = logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>();
