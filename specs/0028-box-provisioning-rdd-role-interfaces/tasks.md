@@ -1024,7 +1024,7 @@ PG's outbox provisioner currently uses `await using` for its connection (the dis
 
 MySQL is the no-clamp outlier per requirements.md line 198 (F10.1 row d) and line 263-264. To preserve behaviour bit-for-bit during 13.A per NF9, both MySQL derivations override `ClampDetectedVersion` to identity. The overrides AND the base hook are removed in 13.B.1 (F11) as a single commit — see ADR §B.5 line 646 and the XML-doc lifecycle at ADR §B.5 line 620-633. MySQL tests run net9.0-only per `BrighterTestNineOnlyTargetFrameworks`.
 
-- [ ] **TIDY FIRST: `MySqlOutboxProvisioner` derives from `SqlBoxProvisioner<MySqlConnection, MySqlTransaction>` with transitional clamp override**
+- [x] **TIDY FIRST: `MySqlOutboxProvisioner` derives from `SqlBoxProvisioner<MySqlConnection, MySqlTransaction>` with transitional clamp override**
   - File: `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlOutboxProvisioner.cs`.
   - Same shape as the MSSQL Outbox port. `base(...)` passes `BoxType.Outbox`. `CreateConnection` returns `new MySqlConnection(connectionString)`. `PayloadColumnName` returns `"Body"`.
   - **Override** `protected override int ClampDetectedVersion(int detectedVersion) => detectedVersion;` (identity — preserves MySQL's pre-13.B no-clamp behaviour bit-for-bit).
