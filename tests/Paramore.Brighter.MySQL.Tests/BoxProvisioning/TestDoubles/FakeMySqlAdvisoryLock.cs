@@ -50,12 +50,14 @@ internal sealed class FakeMySqlAdvisoryLock(
 {
     public string? AcquiredKey { get; private set; }
     public string? ReleasedKey { get; private set; }
+    public TimeSpan? AcquiredTimeout { get; private set; }
 
     public Task AcquireAsync(
         MySqlConnection connection, string lockKey,
         TimeSpan timeout, CancellationToken cancellationToken)
     {
         AcquiredKey = lockKey;
+        AcquiredTimeout = timeout;
         if (throwOnAcquire is not null) throw throwOnAcquire;
         return Task.CompletedTask;
     }

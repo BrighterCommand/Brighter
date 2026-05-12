@@ -70,7 +70,7 @@ public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlCon
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null)
-        : base(detectionHelper, configuration, lockTimeout ?? default, logger)
+        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30), logger)
     {
         _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
         _logger = logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>();
