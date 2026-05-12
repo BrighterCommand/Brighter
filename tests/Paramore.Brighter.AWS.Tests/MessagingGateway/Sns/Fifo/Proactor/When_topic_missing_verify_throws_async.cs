@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
+using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
@@ -31,7 +32,7 @@ public class AwsValidateMissingTopicTestsAsync
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Validate,
-                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                TopicAttributes = new SnsAttributes(type: SqsType.Fifo, tags: [new Tag { Key = "Environment", Value = "Test" }])
             });
 
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";

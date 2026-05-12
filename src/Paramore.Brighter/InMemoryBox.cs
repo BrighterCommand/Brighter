@@ -46,17 +46,20 @@ namespace Paramore.Brighter
     /// Base class for in-memory inboxes, handles TTL on entries and cache clearing requirements
     /// </summary>
     /// <typeparam name="T">An entry in the box, needs to a writetime so we know if we can clear it from the box</typeparam>
-    public class InMemoryBox<T>(TimeProvider timeProvider) where T: IHaveABoxWriteTime
+    public abstract class InMemoryBox<T>(TimeProvider timeProvider) where T: IHaveABoxWriteTime
     {
         protected readonly ConcurrentDictionary<string, T> Requests = new ConcurrentDictionary<string, T>();
         private DateTimeOffset _lastScanAt = timeProvider.GetUtcNow();
+        private DateTimeOffset _lastCompactionAttemptAt = DateTimeOffset.MinValue;
         private readonly object _cleanupRunningLockObject = new object();
+        private int _entryLimit = 2048;
 
         /// <summary>
-        /// How long does an entry last in the Outbox before we delete it (defaults to 5 min)
-        /// Think about your typical data volumes over a window of time, they all use memory to store
-        /// But contrast with how long you want to be able to resend due to broker failure for.
-        /// Memory is not reclaimed until an expiration scan
+        /// How long an entry lives before it becomes eligible for expiry removal (defaults to 5 min).
+        /// The reference time depends on the subclass: the outbox measures from dispatch time
+        /// (<see cref="OutboxEntry.TimeFlushed"/>), while the inbox measures from write time.
+        /// Think about your typical data volumes over a window of time, they all use memory to store.
+        /// Memory is not reclaimed until an expiration scan.
         /// </summary>
         public TimeSpan EntryTimeToLive { get; set; } = TimeSpan.FromMinutes(5);
 
@@ -74,14 +77,27 @@ namespace Paramore.Brighter
         public int EntryCount => Requests.Count;
      
         /// <summary>
-        /// How many messages should we retain, before we compact the Outbox
+        /// How many messages should we retain, before we compact the Outbox.
+        /// Use -1 to disable compaction. Must be -1 or a positive integer.
         /// </summary>
-        public int EntryLimit { get; set; } = 2048;
+        public int EntryLimit
+        {
+            get => _entryLimit;
+            set
+            {
+                if (value == 0 || value < -1)
+                    throw new ArgumentOutOfRangeException(nameof(EntryLimit), value,
+                        "EntryLimit must be -1 (disabled) or a positive integer.");
+                _entryLimit = value;
+            }
+        }
 
         /// <summary>
-        /// At what percentage of our size limit should we return, once we hit that limit
+        /// Target size as a fraction of <see cref="EntryLimit"/> after compaction.
+        /// For example 0.5 means compact down to 50% of the limit. Defaults to 0.5.
+        /// A value of 0 removes all eligible entries on each compaction.
         /// </summary>
-        public double CompactionPercentage{ get; set; }
+        public double CompactionPercentage{ get; set; } = 0.5;
 
         public void ClearExpiredMessages()
         {
@@ -91,34 +107,24 @@ namespace Paramore.Brighter
             if (elapsedSinceLastScan < ExpirationScanInterval)
                 return;
 
+            _lastScanAt = now;
+
             //This is expensive, so use a background thread
             Task.Factory.StartNew(
-                action: state => RemoveExpiredMessages((DateTimeOffset)state!),
+                action: state => RunRemoveExpiredMessages((DateTimeOffset)state!),
                 state: now,
                 cancellationToken: CancellationToken.None,
                 creationOptions: TaskCreationOptions.DenyChildAttach,
                 scheduler: TaskScheduler.Default);
-            
-            _lastScanAt = now;
         }
 
-        private void RemoveExpiredMessages(DateTimeOffset now)
+        private void RunRemoveExpiredMessages(DateTimeOffset now)
         {
             if (Monitor.TryEnter(_cleanupRunningLockObject))
             {
                 try
                 {
-                    var expiredEntries =
-                        Requests
-                            .Where<KeyValuePair<string, T>>(entry => (now - entry.Value.WriteTime) >= EntryTimeToLive)
-                            .Select(entry => entry.Key);
-
-                    foreach (var key in expiredEntries)
-                    {
-                        //if this fails ignore, killed by something else like compaction
-                        Requests.TryRemove(key, out _);
-                    }
-
+                    RemoveExpiredMessages(now);
                 }
                 finally
                 {
@@ -127,19 +133,30 @@ namespace Paramore.Brighter
             }
         }
 
+        protected abstract void RemoveExpiredMessages(DateTimeOffset now);
+
         protected void EnforceCapacityLimit()
         {
-               //Take a copy as it may change whilst we are doing the calculation, we ignore that
+                if (EntryLimit == -1)
+                    return;
+
+                var now = timeProvider.GetUtcNow();
+                if ((now - _lastCompactionAttemptAt) < ExpirationScanInterval)
+                    return;
+
+                //Take a copy as it may change whilst we are doing the calculation, we ignore that
                 var count = EntryCount;
                 var upperSize = EntryLimit;
 
                 if (count >= upperSize)
                 {
-                    int newSize = (int)(count * CompactionPercentage);
-                    int entriesToRemove = upperSize - newSize;
+                    int newSize = (int)(upperSize * CompactionPercentage);
+                    int entriesToRemove = count - newSize;
+
+                    _lastCompactionAttemptAt = now;
 
                     Task.Factory.StartNew(
-                        action: state => Compact((int)state!),
+                        action: state => RunCompact((int)state!),
                         state: entriesToRemove,
                         CancellationToken.None,
                         TaskCreationOptions.DenyChildAttach,
@@ -147,25 +164,13 @@ namespace Paramore.Brighter
                 }
         }
         
-        // Compaction algorithm is to sort into date deposited order, with oldest first
-        // Then remove entries until newsize is reached
-        private void Compact(int entriesToRemove)
+        private void RunCompact(int entriesToRemove)
         {
             if (Monitor.TryEnter(_cleanupRunningLockObject))
             {
                 try
                 {
-                    var removalList =
-                        Requests
-                            .OrderBy(entry => entry.Value.WriteTime)
-                            .Take(entriesToRemove)
-                            .Select(entry => entry.Key);
-
-                    foreach (var key in removalList)
-                    {
-                        //ignore errors, likely just something else has cleared it such as TTL eviction
-                        Requests.TryRemove(key, out _);
-                    }
+                    Compact(entriesToRemove);
                 }
                 finally
                 {
@@ -173,5 +178,7 @@ namespace Paramore.Brighter
                 }
             }
         }
+
+        protected abstract void Compact(int entriesToRemove);
     }
 }
