@@ -1054,7 +1054,7 @@ SQLite has no schema concept per ADR 0057 §6 (and per requirements.md line 197 
   - Validation: SQLite test filter stays at the AC6 floor — 45/45 per TFM.
   - Commit: `tidy: spec 0028 sub-phase A 13.A.5 — SqliteOutboxProvisioner derives from SqlBoxProvisioner base (null schema override)`.
 
-- [ ] **TIDY FIRST: `SqliteInboxProvisioner` derives from `SqlBoxProvisioner<SqliteConnection, SqliteTransaction>` with null-schema override**
+- [x] **TIDY FIRST: `SqliteInboxProvisioner` derives from `SqlBoxProvisioner<SqliteConnection, SqliteTransaction>` with null-schema override**
   - File: `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteInboxProvisioner.cs`.
   - Same shape. `BoxType.Inbox`. `PayloadColumnName` returns `"CommandBody"`. Same `EffectiveSchemaName` override.
   - Validation: SQLite test filter stays 45/45 per TFM.
