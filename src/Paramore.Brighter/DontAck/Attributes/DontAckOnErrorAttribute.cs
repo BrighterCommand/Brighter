@@ -29,8 +29,8 @@ namespace Paramore.Brighter.DontAck.Attributes;
 
 /// <summary>
 /// Attribute that adds a handler to catch unhandled exceptions and convert them to <see cref="Actions.DontAckAction"/>.
-/// When used with a message pump (Reactor or Proactor), this causes the message to remain unacknowledged on the channel,
-/// allowing the transport to re-deliver it after its visibility timeout expires.
+/// When used with a message pump (Reactor or Proactor), this asks the channel to apply its not-acknowledged
+/// disposition. The resulting redelivery behavior is transport-specific.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.DontAck.Attributes;
 /// [UsePolicy("RetryPolicy", step: 2)]        // Retries first
 /// public override MyMessage Handle(MyMessage message)
 /// {
-///     // Business logic - if this fails after retries, message stays on the channel
+///     // Business logic - if this fails after retries, the transport's not-acknowledged behavior is used
 ///     return base.Handle(message);
 /// }
 /// </code>
