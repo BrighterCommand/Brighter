@@ -17,4 +17,7 @@
     <PackageReference Include="MongoDB.Driver"/>
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="SharpCompress" />
+  </ItemGroup>
 </Project>
