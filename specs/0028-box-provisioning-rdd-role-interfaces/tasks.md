@@ -1070,7 +1070,7 @@ SQLite has no schema concept per ADR 0057 §6 (and per requirements.md line 197 
 
 #### 13.A.7 Phase 13.A gate (NF9 behavioural neutrality at the per-backend level)
 
-- [ ] **Phase 13.A gate: All eight relational provisioners derive from `SqlBoxProvisioner`; Spanner stays free-standing; the post-13.A.0.5 amended floor is preserved**
+- [x] **Phase 13.A gate: All eight relational provisioners derive from `SqlBoxProvisioner`; Spanner stays free-standing; the post-13.A.0.5 amended floor is preserved**
   - Re-run every BoxProvisioning test filter and confirm counts equal the **post-13.A.0.5 amended NF9 floor** recorded in `baseline.md` "Sub-phase A preliminaries" (the floor is already at 44/44 for Core BoxProvisioning.Tests because the 13.A.0.5 docs commit raised it; the 13.A.1 base-contract test cases then land *exactly* at the new floor):
 
     | Filter | Test project | Expected per TFM |
