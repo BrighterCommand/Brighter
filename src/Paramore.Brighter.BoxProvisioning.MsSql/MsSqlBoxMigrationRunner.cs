@@ -62,7 +62,7 @@ public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConne
         IMsSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null)
-        : base(detectionHelper, configuration, lockTimeout ?? default, logger)
+        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30), logger)
     {
         _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
         _logger = logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>();

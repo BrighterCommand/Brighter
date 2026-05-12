@@ -43,6 +43,7 @@ internal sealed class FakeMsSqlAdvisoryLock(Exception? throwOnAcquire) : IMsSqlA
 {
     public string? AcquiredResource { get; private set; }
     public SqlTransaction? CapturedTransaction { get; private set; }
+    public TimeSpan? AcquiredTimeout { get; private set; }
 
     public Task AcquireAsync(
         SqlConnection connection, SqlTransaction transaction, string lockResource,
@@ -50,6 +51,7 @@ internal sealed class FakeMsSqlAdvisoryLock(Exception? throwOnAcquire) : IMsSqlA
     {
         AcquiredResource = lockResource;
         CapturedTransaction = transaction;
+        AcquiredTimeout = timeout;
         if (throwOnAcquire is not null) throw throwOnAcquire;
         return Task.CompletedTask;
     }
