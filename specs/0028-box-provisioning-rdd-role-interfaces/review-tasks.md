@@ -1,80 +1,60 @@
-# Review: tasks (round 2) — 0028-box-provisioning-rdd-role-interfaces
+# Review: tasks — 0028-box-provisioning-rdd-role-interfaces (Sub-phase A round 4)
 
-**Date**: 2026-05-07
+**Date**: 2026-05-12
 **Threshold**: 60
+**Scope**: Phase 13 (sub-phase A) — round 4 review after addressing round-3 findings
 **Verdict**: PASS
 
 No findings at or above threshold 60. Consider addressing lower-scored items.
 
-## Round-1 findings status
+> **Note**: This file supersedes the round-1, round-2, and round-3 sub-phase A review records (all NEEDS WORK) and the earlier round-2 PASS record for the parent tasks list (Phase 0..12, dated 2026-05-07). The parent record passed PASS / 0 findings ≥60 on 2026-05-07 and remains valid for Phase 0..12. Sub-phase A passed after four iteration rounds:
+> - Round 1: 7 findings, 7 ≥60 (High 4, Medium 3)
+> - Round 2: 2 new findings, 2 ≥60 (Medium 2 — score 67 and 62)
+> - Round 3: 3 new findings, 3 ≥60 (High 2 — score 78, 72; Medium 1 — score 65)
+> - Round 4: 0 findings — PASS
 
-| # | Title (round 1) | Score (r1) | Status (r2) |
-|---|-----------------|------------|-------------|
-| 1 | SpannerBoxMigrationRunner ctor rewire missing — Phase 8.6 grep gate unsatisfiable | 90 | **Fixed** (Phase 7.5 added; ctor takes `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction>`; Phase 9.5 wires it through DI) |
-| 2 | Phase 0 baseline / phase gates not auditable | 75 | **Fixed** (Phase 0 writes tracked `baseline.md`; preamble mandates phase-gate commit messages quote count delta vs baseline) |
-| 3 | F9 / AC4 (open-closed sweep) has no traceable task | 70 | **Fixed** (Phase 12 cross-walks F1..F9; F9 discharge via `sweep-result.md`; Appendix adds AC4 reactive obligation) |
-| 4 | Phase 7 backend runner refactor tasks are monolithic | 65 | **Fixed** (Phase 7.1 broken into 7.1a/7.1b/7.1c; same a/b/c structure for 7.2/7.3/7.4; "one commit per hook" inside 7.1b/etc.) |
-| 5 | Phase 12 lacks F1..F9 cross-walk to tasks | 60 | **Fixed** (Phase 12 contains explicit F1..F9 enumeration with verifying artefacts; per-AC checklist replaces bulk tick) |
+## Round-3 resolution verification
 
-Below-threshold round-1 findings (#6 Phase 8 "Same shape" stubs, #7 bridging-shim behavioural-change framing, #8 Phase 11 fragile ADR line numbers, #9 UoW accepted-and-ignored, #10 baseline drift) — all addressed by the new "Unreleased-branch licence" preamble, the fleshed-out Phase 8 sub-tasks, the Phase 11 grep-by-section-title, and the Phase 0 baseline.md workflow.
+**Finding 1 — stale `[InlineData]` token at the 13.A.1 gate bullet (round-3 score 72)**: **RESOLVED**
 
-## Findings (round 2)
+Verified by grepping Phase 13 (lines 862–1194) for `InlineData` / `[Theory]` / `[Fact]`:
+- 13.A.1 gate bullet at line 977 reads: *"All 8 Phase 13.A.1 `[Fact]` methods pass against their respective fake derivatives — Core BoxProvisioning.Tests count is 44/44 per TFM (= 36 pre-13.A.1 floor + 8 new `[Fact]`s — matches the 13.A.0.5 amended NF9 floor exactly)."* — `[Fact]`, not `[InlineData]`.
+- Only two `[Theory]` / `[InlineData]` occurrences remain in Phase 13, both in legitimate contrastive context:
+  - Line 912: *"matches the Phase 6 precedent... `[Fact]` methods rather than `[Theory] + [InlineData]`"* — contrasts the chosen shape with the rejected alternative.
+  - Line 1098: *"Not a `[Theory]` because the two derivations are distinct types — parameterising a generic type on `[InlineData]` is awkward..."* — justifies why 13.B's MySQL test uses two `[Fact]`s instead of a `[Theory]`.
+- All `[Fact]` references throughout Phase 13.A.1 slices 1–3 consistently use `[Fact]`. No drift.
 
-### 1. Phase 9.2/9.3/9.4 DI extension tasks remain one-line stubs (Score: 50)
+**Finding 2 — NF2 mis-targeted as the running floor (round-3 score 78)**: **RESOLVED**
 
-Phase 9.2 (Postgres), 9.3 (MySQL), 9.4 (SQLite) are each a single bullet — `**TIDY FIRST: AddPostgreSqlOutbox / AddPostgreSqlInbox DI updates**`, with no body, no file path, no validation step. Phase 9.1 (MSSQL) is fully spelled out (file path, four registrations enumerated, connection-name overload note, validation). Phase 9.5 (Spanner) is partially spelled out. Same risk shape as round-1 finding #6 about Phase 8 — uneven task quality across sibling backends. Below threshold so does not block, but worth replicating the 9.1 template for the other three.
+Verified by reading requirements.md:56-65 and grepping the lock-step instruction:
+- NF2 (requirements.md:56-65) carries the Phase-0 baseline anchor: MSSQL 54/54, PG 46/46, MySQL 50/50, SQLite 40/40, Spanner 26/26, Core 23/23, Core sub-filter 5/5 — these are pre-spec-0028 counts captured at HEAD `edfa9fc99`. NF2 contains no 36/36, no 44/44, no 61/61.
+- Two explicit *"Do NOT touch NF2"* guards in Phase 13 (lines 890, 1115). Plus the "NF2 stays put as the Phase-0 baseline anchor" reminder in the 13.B lock-step note (line 1111).
+- Lock-step rule reads correctly: *"three artefacts move together: NF9-parenthetical / baseline.md / AC6"* at line 1111 — three artefacts, not "NF2 / baseline.md / AC6". The 13.A.0.5 artefact-targeting note (line 885) likewise enumerates *"(1) NF9's parenthetical in `requirements.md:211` ... (2) baseline.md ... (3) AC6 in acceptance.md"* with the explicit "NF2 ... must NOT move" reminder.
+- NF9 parenthetical updates are explicit: 13.A.0.5 spells out the full before/after text at line 888 (36/36 → 44/44); 13.B spells out the full before/after text at line 1115 (44/44 → 43/43, 61/61 → 63/63).
+- The verbatim text instruction at line 888 matches requirements.md:211 character-for-character.
+- Validation greps (lines 900, 1117) explicitly check that 36/36, 44/44, +21/+21, 61/61 net9.0-only, and +11 are absent post-amendment and that NF2's 23/23 is preserved.
 
-**Recommendation**: For 9.2/9.3/9.4 either (a) replicate the 9.1 task body (file path + 4 registrations + connection-name overload note + validation) or (b) compress all four relational backends into a single task with a per-backend checklist.
+**Finding 3 — AC6 Δ column not updated (round-3 score 65)**: **RESOLVED**
 
----
+Δ-column arithmetic verified end-to-end:
+- 13.A.0.5 (line 894): *"`44/44 | 44/44 | 23/23 | +21/+21`"* — 44 − 23 = +21 per TFM ✓
+- 13.B Core (line 1116): *"`44/44 +21/+21` → `43/43 +20/+20`; Δ recomputed: 43 − 23 = +20"* ✓
+- 13.B MySQL (line 1116): *"`61/61 net9.0-only +11` → `63/63 net9.0-only +13`; Δ recomputed: 63 − 50 = +13"* ✓
+- Pre-13.B MySQL Δ +11 = 61 − 50 ✓
+- Validation grep clauses at line 1117 include `+21/+21` and `+11` as stale tokens that must vanish post-edit.
 
-### 2. Phase 7.{2,3,4}b "one commit per hook" sub-task is itself a 7-commit checklist disguised as one bullet (Score: 50)
+## Findings (new in round 4)
 
-Each of 7.2b, 7.3b, 7.4b says "Replace each legacy-delegate hook with the cleaned override (one commit per hook)". The MSSQL equivalent 7.1b enumerates the seven hooks explicitly. The Postgres/MySQL/SQLite equivalents do not, so a developer working 7.2b has to back-reference 7.1b to know "one commit per hook" means seven sub-commits. The dependency graph also shows Phase 7.1–7.4 in parallel; if four developers worked these concurrently, three of them would have less guidance than the first.
+No new findings introduced by the round-3 fixes. Additional spot-checks all passed:
 
-**Recommendation**: Either (a) replicate the seven-hook enumeration in 7.2b/7.3b/7.4b, or (b) add a one-line back-reference like "see 7.1b for the seven-hook list — same shape applies here".
+- **NF9 parenthetical edit instruction matches requirements.md:211 verbatim** — confirmed character-for-character. Both round-3 edits target identical text strings.
+- **No remaining mis-references to NF2 or stale floor values outside 13.A.0.5 / 13.B** — Phase 13.A.7 gate (line 1086) correctly references the *"post-13.A.0.5 amended NF9 floor"* (no NF2 confusion). The 13.A.7 gate table (lines 1078–1084) lists 44/44 / 5/5 / 63/63 / 54/54 / 61/61 net9.0-only / 45/45 / 26/26 — matches the post-13.A.0.5 floor exactly. Backend-port validation lines (1014, 1020, 1033, 1040, 1054, 1060) reference "AC6 floor" without NF2 confusion.
+- **AC12 NF9 sub-bullet (line 1143)** correctly walks the trajectory: Core `36/36 → 44/44` post-13.A.1, `44/44 → 43/43` post-13.B; MySQL `61/61 → 63/63` post-13.B. Numbers match the running ledger.
+- **Phase 13 final gate count table (line 1168)** matches the post-13.B floor: Core BoxProvisioning.Tests 43/43, sub-filter 5/5, MSSQL 63/63, PG 54/54, MySQL 63/63 net9.0-only, SQLite 45/45, Spanner 26/26. Consistent with 13.B's instruction that Core moves to 43/43 and MySQL moves to 63/63 in the F11 commit.
 
----
-
-### 3. Phase 11 ADR-section verification still uses brittle naming-grep substitute for diff (Score: 45)
-
-The round-1 finding #8 (Phase 11 manual eyeball without diff record) is partially fixed — the section is referenced by title now, and there is class-name grep verification. However, the verification only catches drift in *class names*; it does not catch drift in *method signatures*, *ctor parameter shapes*, or *interface inheritance edges*. If `RelationalBoxMigrationRunnerBase` ends up taking five ctor params instead of four, the class-name grep still passes while the ADR text drifts silently.
-
-**Recommendation**: Add a second grep step: "grep ADR ctor signatures (`protected RelationalBoxMigrationRunnerBase(...)`) against the shipped `.cs` file and confirm they match parameter-for-parameter".
-
----
-
-### 4. UoW "accepted-and-ignored" parameter contracts still have no test coverage (Score: 45)
-
-Round-1 finding #9 noted that `SqliteProvisioningUnitOfWork`'s `BeginAsync(lockResource, lockTimeout, ...)` takes parameters it must ignore (no separate lock primitive in SQLite); same shape applies to MySQL UoW's `lockTimeout` slot. Phase 5.4 tests still verify only "BEGIN IMMEDIATE issued, Transaction non-null". No test pins the ignore-contract for `lockResource` and `lockTimeout`.
-
-**Recommendation**: Add one `/test-first` task per UoW where parameters are ignored, asserting parameter values cannot leak into the lifecycle.
-
----
-
-### 5. Phase 7.1a "Both base orchestration AND legacy delegates coexist for one commit" creates a transient state with two MigrateAsync codepaths (Score: 40)
-
-The 7.1a task says "Both the new base orchestration AND the legacy delegates coexist for one commit". The base ctor in 7.1a wires `(detectionHelper, configuration, lockTimeout ?? default, logger)` — calling `MigrateAsync` on the new instance now goes through the BASE's algorithm, not the legacy one. The "legacy" `MigrateLegacyAsync` is private and never invoked. So the validation "existing 54/54 MSSQL tests stay green" actually exercises the NEW base algorithm via the base-supplied `MigrateAsync`, not the legacy code; the legacy private method is dead code from the moment 7.1a commits. The framing is misleading — it's not "both coexist", it's "base wins, legacy is private dead code transitionally".
-
-**Recommendation**: Rephrase as "Base orchestration becomes the single live path; legacy delegates remain as transitional internal helpers each override calls into for one commit; legacy `MigrateLegacyAsync` is private dead code until 7.1c removes it."
-
----
-
-### 6. Phase 0 baseline workflow does not commit `baseline.md` separately from the requirements NF2 update (Score: 35)
-
-Phase 0 instructs the developer to update `requirements.md` NF2 in the same commit as `baseline.md` if counts have drifted. The commit message is fixed regardless of whether `requirements.md` was touched. A future reader running `git log --oneline | grep "Phase 0"` cannot tell whether the requirements update happened just from the message.
-
-**Recommendation**: Make the commit message conditional: append "and update NF2 enumeration" only when requirements.md was modified.
-
----
-
-### 7. Appendix "AC4 reactive obligation" introduces process scope expansion that isn't reflected in the task numbering (Score: 35)
-
-The Appendix says "if implementation surfaces an open-closed sweep candidate that ADR §B.4 missed, the spec scope EXPANDS to fold it in (or document the deferral with reason). Do NOT silently absorb such a candidate as scope creep". This is correct but conflicts with the strict CLAUDE.md change-scope rule ("Do NOT change defaults or make changes beyond what was explicitly requested"). The Appendix gives an explicit escape hatch but a developer might still hesitate.
-
-**Recommendation**: Add a note in the Appendix saying "this is a documented exception to CLAUDE.md's strict change-scope rule, sanctioned by F9/AC4".
-
----
+Two minor stylistic notes (well below threshold, not findings):
+- The 13.B MySQL row update instruction (line 1116) uses the phrasing *"61/61 net9.0-only +11"* rather than the literal four-column form *"61/61 | n/a | 50/50 | +11"* that AC6 carries (acceptance.md:51). Functionally unambiguous (the "net9.0-only" encodes the `n/a` column), but a literal-row form would tighten fidelity if a future round wants belt-and-braces.
+- The AC6 footnote authored in 13.A.0.5 (line 894) forward-references the post-13.B 43/43 + 63/63 numbers — a docs commit recording a planned trajectory. Stylistic, not a defect.
 
 ## Summary
 
@@ -82,8 +62,10 @@ The Appendix says "if implementation surfaces an open-closed sweep candidate tha
 |-------------|-------|
 | 90-100 (Critical) | 0 |
 | 70-89 (High) | 0 |
-| 50-69 (Medium) | 2 |
-| 0-49 (Low) | 5 |
+| 50-69 (Medium) | 0 |
+| 0-49 (Low) | 0 |
 
-**Total findings**: 7
+**Total findings**: 0
 **Findings at or above threshold (60)**: 0
+
+Phase 13 sub-phase A passes round-4 review. All three round-3 findings (the `[InlineData]` token, the NF2 mis-target, and the AC6 Δ column) are sound and fully resolved. The before/after texts the tasks file instructs to edit match the actual requirements.md:211 / baseline.md:71 / acceptance.md:47 strings verbatim. The Δ arithmetic on every floor transition (23→44, 44→43, 50→61, 61→63) is correct. NF2 is properly preserved as the Phase-0 historical anchor, never mutated.

@@ -861,7 +861,317 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
 
 ## Phase 13 — `SqlBoxProvisioner` pull-up (sub-phase A; post-acceptance reactive)
 
-> **PENDING `/spec:requirements` + `/spec:design`.** Phase 13 task list authored via `/spec:tasks` after ADR 0058 §B.5 (or equivalent) is approved. Do not pre-author here.
+Per ADR 0058 §B.5 (post-acceptance amendment 2026-05-12). Discharges requirements F10..F13 + NF8..NF11 / AC12. The eight relational provisioners (MSSQL/PG/MySQL/SQLite × Outbox/Inbox) pull up onto an abstract base `SqlBoxProvisioner<TConnection, TTransaction>` that owns the orchestration body (~640 duplicated lines collapse to one ~120-line base). Spanner's pair stays free-standing per ADR 0057 §6 — the §B.5 Spanner-exemption is operative because the base ctor requires `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` which Spanner cannot honestly implement (no version inference per §A.1).
+
+Phase 13.A is structural-only (Tidy First per Beck) for the per-backend ports; the base introduction in 13.A.1 adds new base-contract tests per the Phase 6 precedent (a base introduction legitimately raises the floor), so NF9 is amended in 13.A.0.5 *before* 13.A.1 lands. NF9's "no new tests in 13.A" wording is carved-out to exempt the base-contract tests in `tests/Paramore.Brighter.BoxProvisioning.Tests/` — the per-backend ports (13.A.2–13.A.5) add no tests and stay strictly behaviour-preserving. Phase 13.B is the F11 MySQL clamp behavioural slice, delivered as a `/test-first` task per parent NF3 / AC10. Phase 13.C bundles documentation updates. The naming asymmetry between §B.2 (`RelationalBoxMigrationRunnerBase`) and §B.5 (`SqlBoxProvisioner`) is time-bounded by PR #4039's "Post-merge follow-up" bullet (added 2026-05-12 — see PR description live on GitHub); the §B.2 rename is **NOT** a sub-phase A task and stays out of scope per parent OoS3.
+
+### 13.A — Structural pull-up (Tidy First, NF9 behavioural neutrality)
+
+#### 13.A.0 Anchor check (no code change)
+
+- [ ] **TIDY FIRST: Confirm the F12 disposition pre-conditions still hold before introducing the base**
+  - This is NOT an `IAsyncDisposable` probe. F12 is resolved-by-precedent per `baseline.md` → "Sub-phase A preliminaries" → F12 disposition table — the operative reason is that `DbConnection` lacks `IAsyncDisposable` on netstandard2.0, and `SqlBoxProvisioner` declares `using` over the constrained type-parameter `TConnection : DbConnection` (not the runtime subtype), so runtime-subtype `IAsyncDisposable` support is immaterial. 13.A.0 only re-checks that the conditions justifying the precedent haven't shifted.
+  - Run: `grep -A2 'BrighterTargetFrameworks' src/Directory.Build.props` — expect `netstandard2.0;net8.0;net9.0;net10.0` still present (the netstandard2.0 floor is what forces sync `using`; if a future TFM bump drops it, F12 can be re-opened in a follow-up spec).
+  - Run: `grep -n 'IAsyncDisposable' src/Paramore.Brighter.BoxProvisioning/Paramore.Brighter.BoxProvisioning.csproj` — expect zero project-level overrides.
+  - Read `src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs:112-116` — expect the §B.2 sibling-base sync-`using` precedent comment intact (this is the verbatim disposition `SqlBoxProvisioner` mirrors).
+  - **No commit** (read-only anchor). If any condition has shifted, STOP and re-open F12 with the user before proceeding.
+
+#### 13.A.0.5 Amend NF9 floor for the Phase 6 precedent (pre-13.A.1 requirements update)
+
+The currently approved NF9 wording (requirements.md:211, baseline.md:79) says *"No new tests are added during Phase 13.A"*. That wording is too strict for the base-introduction sub-phase 13.A.1 — by the Phase 6 precedent, introducing an abstract base legitimately ships with base-contract tests against a fake derivative (Phase 6 introduced six such test files alongside `RelationalBoxMigrationRunnerBase`). Phase 13.A.1 follows the same precedent and adds 8 base-contract test cases (3 + 2 + 3, see 13.A.1) to `tests/Paramore.Brighter.BoxProvisioning.Tests/`. The per-backend ports (13.A.2–13.A.5) remain strictly tests-preserving — no new tests at the backend level. NF9 needs a small carve-out to legitimise the base-contract additions before 13.A.1 lands; the alternative (mutating NF9 inside the 13.A.7 gate commit) is an out-of-band requirements amendment and violates the spec workflow.
+
+- [ ] **TIDY FIRST: Amend NF9 (parenthetical + last sentence) + baseline.md NF9 floor + acceptance.md AC6 to legitimise Phase 13.A.1's base-contract test cases**
+
+  **Artefact targeting note**: the running floor lives in THREE places that must move in lock-step — (1) NF9's parenthetical in `requirements.md:211` (currently *"Core 36/36 + 5/5, MSSQL 63/63, PG 54/54, MySQL 61/61 net9.0-only, SQLite 45/45, Spanner 26/26"*), (2) baseline.md "Sub-phase A preliminaries" → NF9 floor table, and (3) AC6 in acceptance.md. **NF2 is the Phase-0 baseline anchor (`requirements.md:56-65`, counts 23/23 + 50/50 etc.) and must NOT move** — it is the historical anchor every prior phase gate (Phase 2/7/8/9/10) has verified against per the "tests green per NF2" assertion in tasks.md:190 / 585 / 668 / 707 / 813.
+
+  - File: `specs/0028-box-provisioning-rdd-role-interfaces/requirements.md`. **Two edits inside NF9 (line ~211)**:
+    1. Update the parenthetical floor numbers from *"(Core 36/36 + 5/5, MSSQL 63/63, PG 54/54, MySQL 61/61 net9.0-only, SQLite 45/45, Spanner 26/26 — per the AC6 table)"* to *"(Core 44/44 + 5/5, MSSQL 63/63, PG 54/54, MySQL 61/61 net9.0-only, SQLite 45/45, Spanner 26/26 — per the AC6 table; the Core 36 → 44 raise reflects Phase 13.A.1's base-contract test cases per the Phase 6 precedent)"*.
+    2. Replace the final sentence *"No new tests are added during Phase 13.A"* with *"No new tests are added at the **per-backend** level during Phase 13.A (the per-backend ports 13.A.2–13.A.5 are strictly behaviour-preserving Tidy First commits). Phase 13.A.1 introduces base-contract `[Fact]` methods against `SqlBoxProvisioner` at `tests/Paramore.Brighter.BoxProvisioning.Tests/` per the Phase 6 precedent (`RelationalBoxMigrationRunnerBase` introduced six base-contract test files alongside the abstract base); the post-13.A.1 Core BoxProvisioning.Tests floor is 44/44 per TFM, reflecting 8 added `[Fact]` methods across three files (3 + 2 + 3) — see baseline.md "Sub-phase A preliminaries" → NF9 floor."*
+    3. **Do NOT touch NF2.** NF2's enumeration is the Phase-0 baseline pinned at HEAD `edfa9fc99`; it remains an immutable anchor.
+
+  - File: `specs/0028-box-provisioning-rdd-role-interfaces/baseline.md`. In the "Sub-phase A preliminaries" → NF9 floor table (line ~70), update the Core BoxProvisioning.Tests row from `36/36` to `44/44` and add a footnote explaining the +8 `[Fact]` methods come from the three 13.A.1 test files. Add a Core BoxProvisioning sub-filter row clarification: the sub-filter row (in `Brighter.Core.Tests`) stays at 5/5 — Phase 13.A.1's new tests live in `tests/Paramore.Brighter.BoxProvisioning.Tests/`, NOT in the Core test project. Update the NF9 prose under the table (line ~79) from *"Phase 13.A introduces NO new tests (per NF9)"* to *"Phase 13.A.1 introduces 8 base-contract `[Fact]` methods at the abstract-base level per the Phase 6 precedent (see NF9 carve-out in requirements.md); per-backend ports 13.A.2–13.A.5 introduce zero new tests (per NF9 strict)."*
+
+  - File: `specs/0028-box-provisioning-rdd-role-interfaces/acceptance.md`. **AC6 is the source of truth NF9 references** (per requirements.md:211 *"per the AC6 table"*); leaving AC6's Core row at `36/36` while baseline.md + NF9 parenthetical move to `44/44` would create a residual contradiction. Update AC6's Core BoxProvisioning.Tests row (currently *"Core BoxProvisioning.Tests | 36/36 | 36/36 | 23/23 | +13/+13"* at line ~47) to *"Core BoxProvisioning.Tests | 44/44 | 44/44 | 23/23 | +21/+21"* (Δ recomputed: 44 − 23 = +21 per TFM). Add a footnote: *"Post-Phase-13.A.1 (sub-phase A base introduction). Phase 6 precedent legitimises adding base-contract tests alongside an abstract base; 8 `[Fact]` methods across three test files. Phase 13.B subsequently moves Core from 44/44 +21/+21 → 43/43 +20/+20 (-1 deleted override-identity `[Fact]`) and MySQL from 61/61 +11 → 63/63 +13 (+2 unification `[Fact]`s)."* The 13.B commit later mirrors the 44→43 + 61→63 transition (with Δ recomputed) into baseline.md, NF9 parenthetical, AND acceptance.md AC6 — keeping all three artefacts in lock-step.
+
+  - **Workflow gate — confirm with user before proceeding**: NF9 was last approved on 2026-05-12 17:01 (per the `.requirements-approved` re-stamp). This 13.A.0.5 amendment changes both the *wording* (carve-out for the Phase 6 precedent) AND the *numeric floor* (parenthetical + AC6 raised from 36/36 to 44/44) of an approved requirement. Per CLAUDE.md spec workflow, requirement amendments warrant re-running `/spec:approve requirements`. **Pause after authoring the amendment commit and ask the user**: *"NF9 (wording + parenthetical) and AC6 (count + Δ) are being raised by the Phase 6 precedent argument. Re-run `/spec:approve requirements` before 13.A.1 lands, or accept the change as a `docs:` commit on the assumption you'll re-review at `/spec:approve code` time?"* The user's decision determines whether to interrupt the implementation flow with a `/spec:approve requirements` round before 13.A.1.
+
+  - Validation:
+    - Read the amended NF9 wording back; confirm both edits (parenthetical + last sentence) are in place.
+    - Run `grep -n '36/36' specs/0028-box-provisioning-rdd-role-interfaces/requirements.md specs/0028-box-provisioning-rdd-role-interfaces/baseline.md specs/0028-box-provisioning-rdd-role-interfaces/acceptance.md` — expect **zero matches** in NF9, baseline.md NF9-floor table, and AC6 Core row. (NF2's 23/23 row stays; verify the grep does NOT match in NF2 — NF2 carries Phase-0 baseline counts that are unrelated to the 36/36 floor.)
+    - Run `grep -n '+13/+13' specs/0028-box-provisioning-rdd-role-interfaces/acceptance.md` — expect **zero matches** in AC6 Core row (the stale Δ should also be gone). Other AC6 rows that legitimately carry `+13` style Δ (if any) are unaffected — confirm by inspection.
+    - Confirm `requirements.md` NF2 enumeration is **unchanged** (still says *"Core BoxProvisioning.Tests **23/23** per TFM"* etc.).
+
+  - Commit (single, docs-only): `docs: spec 0028 sub-phase A 13.A.0.5 — amend NF9 (parenthetical + carve-out wording) and AC6 (count + Δ) to legitimise Phase 6 base-contract-test precedent; Core floor 36→44; NF2 baseline anchor untouched`.
+
+  - **This commit MUST precede 13.A.1** — the 13.A.1 base-contract tests would otherwise violate the pre-amendment NF9 wording.
+
+#### 13.A.1 Introduce `SqlBoxProvisioner<TConnection, TTransaction>` base
+
+Per ADR §B.5 listing (lines 487–636). Introduce the abstract base class in the shared `Paramore.Brighter.BoxProvisioning` assembly *incrementally* across three TEST + IMPLEMENT cycles — each test is genuinely RED against the in-progress base before its implementation slice lands. This ordering matches the Phase 6 precedent where the sibling base's six tests drove six separate implementation slices. NO derived provisioners are touched in this sub-phase — the eight relational provisioners stay on their current free-standing implementations until 13.A.2–13.A.5. The base is exercised by a fake `TestSqlBoxProvisioner` derivative in `tests/Paramore.Brighter.BoxProvisioning.Tests`.
+
+Test-file shape convention (matches the Phase 6 precedent in `tests/Paramore.Brighter.BoxProvisioning.Tests/` — `When_relational_box_migration_runner_base_*` files each use multiple `[Fact]` methods rather than `[Theory] + [InlineData]`): each test file uses **N `[Fact]` methods, one per behavioural case**. The three test files contribute **8 discovered cases total** (3 + 2 + 3 = 3 `[Fact]`s in the orchestration file, 2 `[Fact]`s in the schema-propagation file, 3 `[Fact]`s in the clamp file); the post-13.A.1 Core BoxProvisioning.Tests floor of 44/44 (= 36 + 8) is the post-amendment value already recorded in `baseline.md` NF9 floor by 13.A.0.5.
+
+- [ ] **TEST + IMPLEMENT: SqlBoxProvisioner.ProvisionAsync invokes the hooks in the documented order on the three success-path branches**
+  - **USE COMMAND**: `/test-first when SqlBoxProvisioner ProvisionAsync runs successfully against a fake backend it should invoke the hooks in the documented order for each of three table-state branches (table-exists-with-history short-circuits the bootstrap branch; table-exists-without-history takes the bootstrap branch; table-missing short-circuits payload validation and history checks)`
+  - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
+  - Test file: `When_sql_box_provisioner_provision_async_runs_successfully_it_should_invoke_hooks_in_documented_order.cs`
+  - Test shape: **3 `[Fact]` methods**, one per behavioural case (matches the Phase 6 sibling-base test convention at `When_relational_box_migration_runner_base_migrate_runs_successfully_it_should_invoke_hooks_in_documented_order.cs`). The fake `TestSqlBoxProvisioner : SqlBoxProvisioner<DbConnection, DbTransaction>` hard-codes `CreateConnection` (returns a spy `DbConnection`) and `PayloadColumnName` (`"Body"`); the test injects spies for `IAmABoxMigrationRunner` / `IAmAVersionDetectingMigrationHelper<...>` / `IAmABoxPayloadModeValidator<...>` / `IAmABoxMigrationCatalog`.
+  - Test should verify, one `[Fact]` per case:
+    - **`When_table_exists_with_history_it_should_call_GetMaxVersion_then_validate_payload_then_migrate`**: CreateConnection → OpenAsync → DoesTableExistAsync → DoesHistoryExistAsync → GetMaxVersionAsync → (connection disposed via sync `using`) → CreateConnection (second open for payload validation) → OpenAsync → ValidatePayloadModeAsync → (connection disposed) → MigrateAsync invoked with the inferred state.
+    - **`When_table_exists_without_history_it_should_take_bootstrap_branch_then_validate_payload_then_migrate`**: CreateConnection → OpenAsync → DoesTableExistAsync → DoesHistoryExistAsync → DetectCurrentVersionAsync (bootstrap branch) → (connection disposed) → CreateConnection → ValidatePayloadModeAsync → (connection disposed) → MigrateAsync invoked with `HistoryExists: false`.
+    - **`When_table_does_not_exist_it_should_skip_history_and_payload_checks_and_call_migrate_with_fresh_state`**: CreateConnection → OpenAsync → DoesTableExistAsync → (early return — DoesHistoryExistAsync NOT called; payload validator NOT called) → MigrateAsync invoked with `TableExists: false`.
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - File: `src/Paramore.Brighter.BoxProvisioning/SqlBoxProvisioner.cs`.
+    - Class: `public abstract class SqlBoxProvisioner<TConnection, TTransaction> : IAmABoxProvisioner where TConnection : DbConnection where TTransaction : DbTransaction`.
+    - Ctor: `(IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>, IAmABoxMigrationCatalog, IAmABoxPayloadModeValidator<TConnection>, IAmARelationalDatabaseConfiguration, IAmABoxMigrationRunner, BoxType)` — six parameters per ADR §B.5 line 501-516.
+    - Public sealed `ProvisionAsync` body per ADR §B.5 line 524-541.
+    - Private `DetectTableStateAsync` per ADR §B.5 line 543-576 — **but hardcode `_configuration.SchemaName` at every detection-helper call site for this slice** (no `EffectiveSchemaName` property yet) and **pass `detectedVersion` through unchanged** at the bootstrap branch (no `ClampDetectedVersion` hook yet — that's slice 3). The schema and clamp slices land in the next two TEST + IMPLEMENT tasks so each can be genuinely RED against this slice's implementation.
+    - Private `ValidatePayloadModeAsync` per ADR §B.5 line 578-589 — same hardcoded `_configuration.SchemaName` for this slice.
+    - Sealed `public BoxType BoxType { get; }` and `public string BoxTableName` per ADR §B.5 line 517-521.
+    - Abstract hooks: `CreateConnection(string) → TConnection`, `PayloadColumnName : string`.
+    - **NO virtual hooks yet** — `EffectiveSchemaName` and `ClampDetectedVersion` are introduced by slices 2 and 3 (driven RED→GREEN by their tests).
+    - XML-doc on the class and on `CreateConnection` / `PayloadColumnName`.
+    - Sync `using` for the connection in both private methods per ADR §B.5 line 547-550 and 580-583 (with the comment text from line 547-550, mirroring the §B.2 precedent at `RelationalBoxMigrationRunnerBase.cs:112-116`).
+  - Commit: `feat: spec 0028 sub-phase A 13.A.1 — SqlBoxProvisioner base introduces ProvisionAsync orchestration (slice 1: hardcoded schema, no clamp hook)`.
+
+- [ ] **TEST + IMPLEMENT: SqlBoxProvisioner extracts schema name into a virtual EffectiveSchemaName property; derivation override yields null**
+  - **USE COMMAND**: `/test-first when SqlBoxProvisioner EffectiveSchemaName is overridden to null it should pass null to DoesTableExistAsync DoesHistoryExistAsync DetectCurrentVersionAsync GetMaxVersionAsync and ValidatePayloadModeAsync while the runner MigrateAsync call still receives the configured schema name`
+  - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
+  - Test file: `When_sql_box_provisioner_effective_schema_name_is_overridden_it_should_propagate_to_detection_and_payload_calls_only.cs`
+  - Test shape: **2 `[Fact]` methods** (default path; override-to-null path) — matches the Phase 6 `[Fact]`-per-case convention. Two new test derivatives: `TestSqlBoxProvisionerWithDefaultSchema` (no override — inherits `_configuration.SchemaName`) and `TestSqlBoxProvisionerWithNullSchema` (overrides `EffectiveSchemaName => null`).
+  - Test should verify, one `[Fact]` per case:
+    - **`When_effective_schema_name_is_default_it_should_pass_configured_schema_to_detection_and_validator_and_runner`**: the configured `_configuration.SchemaName` (e.g. `"dbo"`) flows to every detection helper call AND to the payload validator AND to the runner's `MigrateAsync`. Captures argument-passed schema name on each spy call.
+    - **`When_effective_schema_name_is_overridden_to_null_it_should_pass_null_to_detection_and_validator_but_configured_schema_to_runner`**: all five detection/validator calls observe `null`; `MigrateAsync` still receives the configured `"dbo"` (the runner call propagates `_configuration.SchemaName` directly per ADR §B.5 line 611-612).
+  - RED state: against slice 1's implementation the schema string is hardcoded at `_configuration.SchemaName` for every detection/validator call site — the override-to-null `[Fact]` will assert `null` and observe `"dbo"` instead, failing the test. (Plus the `TestSqlBoxProvisionerWithNullSchema` derivative cannot compile because the `EffectiveSchemaName` virtual member doesn't exist yet on the base — this is also a valid TDD RED, just at compile time rather than run time; either suffices.)
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should (drives RED→GREEN by extracting the hook):
+    - File: `src/Paramore.Brighter.BoxProvisioning/SqlBoxProvisioner.cs`.
+    - Introduce `protected virtual string? EffectiveSchemaName => _configuration.SchemaName;` per ADR §B.5 line 608-614.
+    - Replace the hardcoded `_configuration.SchemaName` at every detection-helper call site AND at the payload-validator call site inside `DetectTableStateAsync` and `ValidatePayloadModeAsync` with `EffectiveSchemaName`.
+    - Leave the runner's `MigrateAsync` call inside `ProvisionAsync` propagating `_configuration.SchemaName` directly (per ADR §B.5 line 611-612 — only detection/validation observe the override).
+    - XML-doc on the new virtual property per ADR §B.5 line 608-613.
+  - Commit: `feat: spec 0028 sub-phase A 13.A.1 — SqlBoxProvisioner extracts EffectiveSchemaName virtual hook (slice 2)`.
+
+- [ ] **TEST + IMPLEMENT: SqlBoxProvisioner introduces a transitional ClampDetectedVersion virtual hook; default clamps negative to zero; override yields identity**
+  - **USE COMMAND**: `/test-first when SqlBoxProvisioner ClampDetectedVersion default sees a negative detectedVersion it should clamp to zero in the returned BoxTableState and when a derivative overrides ClampDetectedVersion to identity the negative value should propagate unchanged`
+  - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
+  - Test file: `When_sql_box_provisioner_clamp_detected_version_runs_it_should_apply_default_clamp_or_override_identity.cs`
+  - Test shape: **3 `[Fact]` methods** (default-negative, default-positive, override-identity) — matches the Phase 6 `[Fact]`-per-case convention. Two test derivatives: `TestSqlBoxProvisionerWithDefaultClamp` (no override) and `TestSqlBoxProvisionerWithIdentityClamp` (overrides `ClampDetectedVersion` to `v => v`).
+  - Test should verify, one `[Fact]` per case:
+    - **`When_clamp_detected_version_default_sees_negative_it_should_return_zero`**: `DetectCurrentVersionAsync` returning `-1` (spec 0027's "discriminator missing" sentinel) → captured `BoxTableState.CurrentVersion` is `0`.
+    - **`When_clamp_detected_version_default_sees_positive_it_should_pass_through_unchanged`**: `DetectCurrentVersionAsync` returning `3` → captured `BoxTableState.CurrentVersion` is `3`.
+    - **`When_clamp_detected_version_is_overridden_to_identity_it_should_propagate_negative_unchanged`**: with the identity-override derivative and `DetectCurrentVersionAsync` returning `-1` → captured `BoxTableState.CurrentVersion` is `-1` (unchanged). This is the MySQL-during-13.A shape exercised in 13.A.4 and removed in 13.B (along with the `[Fact]` itself per 13.B's rewrite).
+  - RED state: against slice 2's implementation `detectedVersion` is passed through unchanged at the bootstrap branch (`CurrentVersion: detectedVersion`); the default-clamp-negative `[Fact]` will assert `0` and observe `-1` instead, failing the test. (Plus the `TestSqlBoxProvisionerWithIdentityClamp` derivative cannot compile because the `ClampDetectedVersion` virtual member doesn't exist yet on the base — valid compile-time RED.)
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should (drives RED→GREEN by introducing the transitional hook):
+    - File: `src/Paramore.Brighter.BoxProvisioning/SqlBoxProvisioner.cs`.
+    - Introduce `protected virtual int ClampDetectedVersion(int detectedVersion) => detectedVersion < 0 ? 0 : detectedVersion;` per ADR §B.5 line 616-635.
+    - XML-doc on the hook MUST flag it as transitional with explicit reference to Phase 13.B removal, per ADR §B.5 line 620-633 (verbatim).
+    - At the bootstrap branch of `DetectTableStateAsync` (per ADR §B.5 line 570), replace `CurrentVersion: detectedVersion` with `CurrentVersion: ClampDetectedVersion(detectedVersion)`.
+    - Guarantee: the hook is called exactly once per `DetectTableStateAsync` invocation, only on the bootstrap branch (HistoryExists: false). The history-exists branch (HistoryExists: true) goes through `GetMaxVersionAsync` and does NOT apply clamp — pinned by Case 2's positive-pass-through case via the bootstrap branch and (by inspection) by the orchestration test's history-exists case.
+  - Commit: `feat: spec 0028 sub-phase A 13.A.1 — SqlBoxProvisioner introduces transitional ClampDetectedVersion virtual hook (slice 3)`.
+
+- [ ] **Phase 13.A.1 gate: abstract base compiles on shared-assembly TFM matrix; 8 base-contract test cases green**
+  - `dotnet build src/Paramore.Brighter.BoxProvisioning -c Release` clean (0 warnings, 0 errors) on `netstandard2.0;net8.0;net9.0;net10.0` (the same TFM matrix the Phase 6 sibling base targets, per C6 / NF11).
+  - All 8 Phase 13.A.1 `[Fact]` methods pass against their respective fake derivatives — Core BoxProvisioning.Tests count is 44/44 per TFM (= 36 pre-13.A.1 floor + 8 new `[Fact]`s — matches the 13.A.0.5 amended NF9 floor exactly).
+  - **No backend provisioner change yet** — 13.A.2 picks up.
+  - Commit: `docs: spec 0028 sub-phase A 13.A.1 — Phase 13.A.1 gate ✓; Core BoxProvisioning.Tests at amended floor (44/44)`.
+
+#### 13.A.2 MSSQL provisioner pair ports to `SqlBoxProvisioner` base
+
+The MSSQL pair has zero variance overrides — both derivations inherit defaults for `EffectiveSchemaName` and `ClampDetectedVersion`; only `CreateConnection` and `PayloadColumnName` need a per-derivation override.
+
+- [ ] **TIDY FIRST: `MsSqlOutboxProvisioner` derives from `SqlBoxProvisioner<SqlConnection, SqlTransaction>`**
+  - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlOutboxProvisioner.cs`.
+  - Change class declaration from `: IAmABoxProvisioner` to `: SqlBoxProvisioner<SqlConnection, SqlTransaction>`.
+  - 5-arg canonical ctor body — replace field assignments with `base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Outbox)`.
+  - 2-arg back-compat ctor — unchanged (still chains via `this(...)` to the 5-arg, which now chains to `base(...)`).
+  - Delete the five private fields (`_detectionHelper`, `_catalog`, `_payloadValidator`, `_configuration`, `_migrationRunner`) — owned by base.
+  - Delete the sealed `BoxType` / `BoxTableName` overrides (owned by base).
+  - Delete `ProvisionAsync`, `DetectTableStateAsync`, `ValidatePayloadModeAsync` (owned by base).
+  - Override `protected override SqlConnection CreateConnection(string connectionString) => new SqlConnection(connectionString);`.
+  - Override `protected override string PayloadColumnName => "Body";`.
+  - **Do NOT** override `EffectiveSchemaName` or `ClampDetectedVersion` — MSSQL inherits both defaults.
+  - Validation: existing MSSQL test filter stays at the AC6 floor — 63/63 per TFM. Per-TFM build + test (`dotnet test -f net9.0` then `-f net10.0` per `baseline.md` "MSSQL parallel-TFM contention" note — the multi-target runner reproducibly deadlocks on `When_mssql_inbox_provisioner_detects_payload_mode_mismatch_it_should_throw` when net9.0 + net10.0 race the same container).
+  - Commit: `tidy: spec 0028 sub-phase A 13.A.2 — MsSqlOutboxProvisioner derives from SqlBoxProvisioner base`.
+
+- [ ] **TIDY FIRST: `MsSqlInboxProvisioner` derives from `SqlBoxProvisioner<SqlConnection, SqlTransaction>`**
+  - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlInboxProvisioner.cs`.
+  - Same shape as the Outbox port. `base(...)` ctor passes `BoxType.Inbox`. `PayloadColumnName` override returns `"CommandBody"`.
+  - Validation: MSSQL test filter stays 63/63 per TFM.
+  - Commit: `tidy: spec 0028 sub-phase A 13.A.2 — MsSqlInboxProvisioner derives from SqlBoxProvisioner base`.
+
+#### 13.A.3 Postgres provisioner pair ports to `SqlBoxProvisioner` base
+
+PG's outbox provisioner currently uses `await using` for its connection (the disposal-pattern outlier per requirements.md line 261). After the pull-up, the base's sync `using` becomes the contract. PG's `*.BoxProvisioning.PostgreSql` package targets `$(BrighterCoreTargetFrameworks)` (net8/9/10, no netstandard2.0) so the existing `await using` compiles in the package; the base does not have that latitude (NF11 / C6). The change is local — call-site disposal moves from `await using` to sync `using` inside the base's body; no source-break to consumers (NF10).
+
+- [ ] **TIDY FIRST: `PostgreSqlOutboxProvisioner` derives from `SqlBoxProvisioner<NpgsqlConnection, NpgsqlTransaction>`**
+  - File: `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlOutboxProvisioner.cs`.
+  - Same shape as the MSSQL Outbox port. `base(...)` passes `BoxType.Outbox`. `CreateConnection` returns `new NpgsqlConnection(connectionString)`. `PayloadColumnName` returns `"body"` (lower-case per PG convention).
+  - **Do NOT** override `EffectiveSchemaName` or `ClampDetectedVersion`.
+  - Existing `await using` shape inside the deleted `DetectTableStateAsync` / `ValidatePayloadModeAsync` bodies disappears with the bodies — the base's sync `using` is now the disposal pattern. No behavioural delta (the connection is still disposed after each detection / validation call; only the disposal mechanism changes from `IAsyncDisposable` to `IDisposable`).
+  - Validation: Postgres test filter stays at the AC6 floor — 54/54 per TFM.
+  - Commit: `tidy: spec 0028 sub-phase A 13.A.3 — PostgreSqlOutboxProvisioner derives from SqlBoxProvisioner base`.
+
+- [ ] **TIDY FIRST: `PostgreSqlInboxProvisioner` derives from `SqlBoxProvisioner<NpgsqlConnection, NpgsqlTransaction>`**
+  - File: `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlInboxProvisioner.cs`.
+  - Same shape. `BoxType.Inbox`. `PayloadColumnName` returns `"commandbody"`.
+  - Validation: Postgres test filter stays 54/54 per TFM.
+  - Commit: `tidy: spec 0028 sub-phase A 13.A.3 — PostgreSqlInboxProvisioner derives from SqlBoxProvisioner base`.
+
+#### 13.A.4 MySQL provisioner pair ports to `SqlBoxProvisioner` base (with transitional `ClampDetectedVersion` override)
+
+MySQL is the no-clamp outlier per requirements.md line 198 (F10.1 row d) and line 263-264. To preserve behaviour bit-for-bit during 13.A per NF9, both MySQL derivations override `ClampDetectedVersion` to identity. The overrides AND the base hook are removed in 13.B.1 (F11) as a single commit — see ADR §B.5 line 646 and the XML-doc lifecycle at ADR §B.5 line 620-633. MySQL tests run net9.0-only per `BrighterTestNineOnlyTargetFrameworks`.
+
+- [ ] **TIDY FIRST: `MySqlOutboxProvisioner` derives from `SqlBoxProvisioner<MySqlConnection, MySqlTransaction>` with transitional clamp override**
+  - File: `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlOutboxProvisioner.cs`.
+  - Same shape as the MSSQL Outbox port. `base(...)` passes `BoxType.Outbox`. `CreateConnection` returns `new MySqlConnection(connectionString)`. `PayloadColumnName` returns `"Body"`.
+  - **Override** `protected override int ClampDetectedVersion(int detectedVersion) => detectedVersion;` (identity — preserves MySQL's pre-13.B no-clamp behaviour bit-for-bit).
+  - XML-doc on the override MUST flag it as **TRANSITIONAL — removed in Phase 13.B per F11** so a reader doesn't mistake it for load-bearing behaviour. Cite ADR §B.5 line 646 + the base's `ClampDetectedVersion` XML-doc.
+  - **Do NOT** override `EffectiveSchemaName`.
+  - Validation: MySQL test filter stays at the AC6 floor — 61/61 net9.0-only. Run `dotnet test tests/Paramore.Brighter.MySQL.Tests -f net9.0 --filter "FullyQualifiedName~BoxProvisioning"` after `dotnet build -f net9.0` per the `baseline.md` "stale per-TFM DLL" note.
+  - Commit: `tidy: spec 0028 sub-phase A 13.A.4 — MySqlOutboxProvisioner derives from SqlBoxProvisioner base (transitional clamp override)`.
+
+- [ ] **TIDY FIRST: `MySqlInboxProvisioner` derives from `SqlBoxProvisioner<MySqlConnection, MySqlTransaction>` with transitional clamp override**
+  - File: `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlInboxProvisioner.cs`.
+  - Same shape. `BoxType.Inbox`. `PayloadColumnName` returns `"CommandBody"`.
+  - **Override** `ClampDetectedVersion` identically to Outbox — same TRANSITIONAL XML-doc text.
+  - Validation: MySQL test filter stays 61/61 net9.0-only.
+  - Commit: `tidy: spec 0028 sub-phase A 13.A.4 — MySqlInboxProvisioner derives from SqlBoxProvisioner base (transitional clamp override)`.
+
+#### 13.A.5 SQLite provisioner pair ports to `SqlBoxProvisioner` base (with `EffectiveSchemaName` null override)
+
+SQLite has no schema concept per ADR 0057 §6 (and per requirements.md line 197 / F10.1 row c, line 265-266). Both SQLite derivations override `EffectiveSchemaName` to return `null` to preserve current behaviour. The override is NOT transitional — SQLite's schema absence is permanent.
+
+**Gitignore gotcha**: per `CLAUDE.md` "Git Gotcha", `*.sqlite` in `.gitignore` matches the `src/Paramore.Brighter.BoxProvisioning.Sqlite/` directory case-insensitively on macOS. Modifying *already-tracked* files (which is what 13.A.5 does — both `Sqlite{Outbox,Inbox}Provisioner.cs` already exist) stages normally. Only *new* files in the directory would require `git add -f`. 13.A.5 introduces no new files in the SQLite project, so the gotcha is informational, not blocking.
+
+- [ ] **TIDY FIRST: `SqliteOutboxProvisioner` derives from `SqlBoxProvisioner<SqliteConnection, SqliteTransaction>` with null-schema override**
+  - File: `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteOutboxProvisioner.cs`.
+  - Same shape as the MSSQL Outbox port. `base(...)` passes `BoxType.Outbox`. `CreateConnection` returns `new SqliteConnection(connectionString)`. `PayloadColumnName` returns `"Body"`.
+  - **Override** `protected override string? EffectiveSchemaName => null;` (permanent — SQLite has no schema concept).
+  - **Do NOT** override `ClampDetectedVersion` (SQLite is one of the three clamp-by-default backends).
+  - Validation: SQLite test filter stays at the AC6 floor — 45/45 per TFM.
+  - Commit: `tidy: spec 0028 sub-phase A 13.A.5 — SqliteOutboxProvisioner derives from SqlBoxProvisioner base (null schema override)`.
+
+- [ ] **TIDY FIRST: `SqliteInboxProvisioner` derives from `SqlBoxProvisioner<SqliteConnection, SqliteTransaction>` with null-schema override**
+  - File: `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteInboxProvisioner.cs`.
+  - Same shape. `BoxType.Inbox`. `PayloadColumnName` returns `"CommandBody"`. Same `EffectiveSchemaName` override.
+  - Validation: SQLite test filter stays 45/45 per TFM.
+  - Commit: `tidy: spec 0028 sub-phase A 13.A.5 — SqliteInboxProvisioner derives from SqlBoxProvisioner base (null schema override)`.
+
+#### 13.A.6 Spanner exemption verification (no code change)
+
+- [ ] **TIDY FIRST: Verify the Spanner pair does NOT derive from `SqlBoxProvisioner`**
+  - Run: `grep -l 'SqlBoxProvisioner' src/Paramore.Brighter.BoxProvisioning.Spanner/` — expect zero matches.
+  - Confirm `SpannerOutboxProvisioner` and `SpannerInboxProvisioner` still declare `: IAmABoxProvisioner` directly per ADR §B.5 line 669-671 (Spanner-exemption subsection) — the base's ctor requires `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>`, and Spanner's pair receives the base `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction>` per ADR 0057 §6 / §A.1. The compile-time mismatch is the operative reason for the exemption.
+  - Validation: Spanner test filter stays at the AC6 floor — 26/26 per TFM. Set `SPANNER_EMULATOR_HOST=localhost:9010` and `GOOGLE_CLOUD_PROJECT=brighter-tests` before running the Gcp test filter per `baseline.md` "Spanner emulator env vars required" note.
+  - **No commit** (read-only verification). If a match IS found, STOP — sub-phase A has accidentally pulled Spanner into the base, violating OoS11 + §B.5 Spanner exemption.
+
+#### 13.A.7 Phase 13.A gate (NF9 behavioural neutrality at the per-backend level)
+
+- [ ] **Phase 13.A gate: All eight relational provisioners derive from `SqlBoxProvisioner`; Spanner stays free-standing; the post-13.A.0.5 amended floor is preserved**
+  - Re-run every BoxProvisioning test filter and confirm counts equal the **post-13.A.0.5 amended NF9 floor** recorded in `baseline.md` "Sub-phase A preliminaries" (the floor is already at 44/44 for Core BoxProvisioning.Tests because the 13.A.0.5 docs commit raised it; the 13.A.1 base-contract test cases then land *exactly* at the new floor):
+
+    | Filter | Test project | Expected per TFM |
+    |---|---|---|
+    | Core BoxProvisioning library | `tests/Paramore.Brighter.BoxProvisioning.Tests` | 44/44 |
+    | Core BoxProvisioning sub-filter | `tests/Paramore.Brighter.Core.Tests` | 5/5 (unchanged — Phase 13.A.1's new test cases live in `Paramore.Brighter.BoxProvisioning.Tests`, NOT in `Paramore.Brighter.Core.Tests`) |
+    | MSSQL | `tests/Paramore.Brighter.MSSQL.Tests` | 63/63 (net9.0 + net10.0, run separately per `baseline.md` deadlock note) |
+    | Postgres | `tests/Paramore.Brighter.PostgresSQL.Tests` | 54/54 (both TFMs) |
+    | MySQL | `tests/Paramore.Brighter.MySQL.Tests` | 61/61 (net9.0-only) |
+    | SQLite | `tests/Paramore.Brighter.Sqlite.Tests` | 45/45 (both TFMs) |
+    | Spanner | `tests/Paramore.Brighter.Gcp.Tests` (BoxProvisioning sub-filter) | 26/26 (both TFMs) |
+
+  - All seven backend filters MUST equal the floor exactly — Phase 13.A.2–13.A.5 (per-backend ports) introduce NO new tests; Phase 13.A.1 already landed its 8 cases at slice-commit time and the post-13.A.1 gate confirmed Core at 44/44. By the time 13.A.7 runs, the gate is a pure re-verification — no floor mutation occurs in this commit (the floor amendment lives in the 13.A.0.5 commit; the 13.A.7 gate only verifies).
+  - `dotnet build src/Paramore.Brighter.BoxProvisioning -c Release` clean on `netstandard2.0;net8.0;net9.0;net10.0`.
+  - Commit: `docs: spec 0028 sub-phase A 13.A.7 — Phase 13.A gate ✓; seven filters at post-13.A.0.5 amended floor`.
+
+### 13.B — MySQL clamp behavioural slice (F11 — TEST + IMPLEMENT)
+
+Per ADR §B.5 line 646 + requirements F11. The MySQL `ClampDetectedVersion` identity overrides from 13.A.4 AND the `ClampDetectedVersion` virtual hook on `SqlBoxProvisioner` are removed in **one commit**, with the clamp inlined directly into `DetectTableStateAsync`. The post-13.B base has three hooks (`CreateConnection` abstract, `PayloadColumnName` abstract, `EffectiveSchemaName` virtual) — the transitional fourth disappears. Per CLAUDE.md "no half-finished implementations": do NOT split the override-removal from the hook-removal across two commits. The hook earns no keep once no derivation overrides it (ADR §B.5 line 646 — "preserving the hook post-13.B would be speculative generality").
+
+- [ ] **TEST + IMPLEMENT: MySQL pre-lock negative-version detection clamps to zero matching the other three relational backends**
+  - **USE COMMAND**: `/test-first when MySql provisioner pre-lock detection returns a negative version it should clamp to zero in the BoxTableState passed to the migration runner matching MsSql Postgres and Sqlite`
+  - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning`
+  - Test file: `When_mysql_pre_lock_detects_negative_version_it_should_clamp_to_zero.cs`
+  - Test shape: **2 `[Fact]`s** in one file — one for `MySqlOutboxProvisioner`, one for `MySqlInboxProvisioner`. (Not a `[Theory]` because the two derivations are distinct types — parameterising a generic type on `[InlineData]` is awkward and the duplication is small.)
+  - Test should verify:
+    - Construct `MySqlOutboxProvisioner` / `MySqlInboxProvisioner` with a stub `IAmAVersionDetectingMigrationHelper<MySqlConnection, MySqlTransaction>` whose `DetectCurrentVersionAsync` returns `-1` (spec 0027's "discriminator missing" sentinel) AND a spy `IAmABoxMigrationRunner` that captures the `BoxTableState` argument.
+    - Assert that the captured `BoxTableState.CurrentVersion` is `0` (NOT `-1`) — matching the existing MSSQL/PG/SQLite behaviour pinned by sibling tests in those backends' BoxProvisioning suites.
+    - The test exercises the bootstrap branch (table exists, history missing) so the inlined clamp in `DetectTableStateAsync` is the only path to the captured value.
+  - RED state: pre-13.B (post-13.A floor), the MySQL `ClampDetectedVersion` override returns identity → captured `CurrentVersion: -1`. Tests fail until the override is removed AND the hook deletion + inline lands in the SAME commit.
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should (all in ONE commit per CLAUDE.md "no half-finished implementations"):
+    - File `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlOutboxProvisioner.cs`: delete the transitional `ClampDetectedVersion` override added in 13.A.4. Delete the TRANSITIONAL XML-doc that flagged it.
+    - File `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlInboxProvisioner.cs`: same.
+    - File `src/Paramore.Brighter.BoxProvisioning/SqlBoxProvisioner.cs`: delete the `protected virtual int ClampDetectedVersion(int detectedVersion) => detectedVersion < 0 ? 0 : detectedVersion;` method AND its XML-doc (ADR §B.5 line 616-635). Inline the clamp at the call-site in `DetectTableStateAsync` — the line that today reads `CurrentVersion: ClampDetectedVersion(detectedVersion)` (per ADR §B.5 line 570) becomes `CurrentVersion: detectedVersion < 0 ? 0 : detectedVersion`. (Single-line inline; no comment — the clamp is self-evident.)
+    - File `tests/Paramore.Brighter.BoxProvisioning.Tests/When_sql_box_provisioner_clamp_detected_version_runs_it_should_apply_default_clamp_or_override_identity.cs` (from 13.A.1 slice 3): rename to `When_sql_box_provisioner_detect_table_state_inlines_negative_version_clamp.cs` and **delete the `When_clamp_detected_version_is_overridden_to_identity_it_should_propagate_negative_unchanged` `[Fact]` method AND the `TestSqlBoxProvisionerWithIdentityClamp` derivative** (the hook no longer exists so the override path is unreachable; the derivative will no longer compile). Keep the `When_clamp_detected_version_default_sees_negative_it_should_return_zero` and `When_clamp_detected_version_default_sees_positive_it_should_pass_through_unchanged` `[Fact]` methods — they now pin the inlined clamp at the `DetectTableStateAsync` call-site directly (negative input → 0 in captured `CurrentVersion` is the location pin: the path from the stub `DetectCurrentVersionAsync` → captured `MigrateAsync.BoxTableState.CurrentVersion` traverses only `DetectTableStateAsync`'s bootstrap branch, so an accidental relocation or elimination of the inlined clamp will break this test).
+    - **Location-pin trade-off acknowledgement**: deleting the override-identity `[Fact]` loses the *hook's* call-site pin (which proved the clamp went through `ClampDetectedVersion` specifically and not elsewhere). Post-13.B the hook is gone, so that pin earns no keep. The remaining default-clamp `[Fact]` pins the *behaviour* at the documented call-site by data-flow; combined with the MySQL integration test in `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`, coverage of the inlined clamp is preserved at two levels (base unit + backend integration).
+    - Update `baseline.md` "Sub-phase A preliminaries" NF9 floor (keep in lock-step with the 13.A.0.5 amendment pattern — three artefacts move together: NF9-parenthetical / baseline.md / AC6; NF2 stays put as the Phase-0 baseline anchor):
+      - MySQL row: `61/61` → `63/63` (net9.0-only) — +2 from the two new MySQL `[Fact]`s.
+      - Core BoxProvisioning.Tests row: `44/44` → `43/43` — -1 from the deleted override-identity `[Fact]` in the renamed clamp test file.
+      - Core BoxProvisioning sub-filter row: unchanged (5/5 — the rewrite is in `Paramore.Brighter.BoxProvisioning.Tests`, NOT in `Paramore.Brighter.Core.Tests`).
+    - Update `requirements.md` NF9 parenthetical (line ~211) to mirror the new floor: change *"(Core 44/44 + 5/5, MSSQL 63/63, PG 54/54, MySQL 61/61 net9.0-only, SQLite 45/45, Spanner 26/26 — ...)"* to *"(Core 43/43 + 5/5, MSSQL 63/63, PG 54/54, MySQL 63/63 net9.0-only, SQLite 45/45, Spanner 26/26 — ...)"*. **Do NOT touch NF2** — Phase-0 baseline anchor.
+    - Update `acceptance.md` AC6 Core BoxProvisioning.Tests row (`44/44 +21/+21` → `43/43 +20/+20`; Δ recomputed: 43 − 23 = +20) AND MySQL row (`61/61 net9.0-only +11` → `63/63 net9.0-only +13`; Δ recomputed: 63 − 50 = +13) in the same commit.
+    - Validation: `grep -n '44/44' specs/0028-box-provisioning-rdd-role-interfaces/acceptance.md specs/0028-box-provisioning-rdd-role-interfaces/baseline.md specs/0028-box-provisioning-rdd-role-interfaces/requirements.md` expects zero matches in the Core row (the 44/44 floor moved to 43/43). `grep -n '+21/+21' specs/0028-box-provisioning-rdd-role-interfaces/acceptance.md` expects zero matches in the AC6 Core row. Same for `61/61 net9.0-only` and `+11` in the MySQL row. NF2 enumeration unchanged.
+    - Validation: MySQL test filter rises from 61/61 to 63/63 net9.0-only. Core BoxProvisioning.Tests drops from 44/44 to 43/43 per TFM. All other filters unchanged.
+  - Commit (single, per "no half-finished implementations"): `feat: spec 0028 sub-phase A 13.B — unify MySQL pre-lock clamp behaviour with MsSql/Postgres/Sqlite (remove transitional hook + overrides; inline clamp; rename + trim base-contract clamp test)`.
+
+### 13.C — Documentation and PR description updates
+
+- [ ] **TIDY FIRST: Update `release_notes.md` with the `SqlBoxProvisioner` additive surface (per NF10 — additive only)**
+  - File: `release_notes.md`.
+  - Under the existing spec 0028 "Additive" section, add a sub-bullet: *"`SqlBoxProvisioner<TConnection, TTransaction>` — abstract base class in `Paramore.Brighter.BoxProvisioning` for the eight relational provisioners (MSSQL/PG/MySQL/SQLite × Outbox/Inbox). Spanner's pair stays free-standing per ADR 0057 §6."*
+  - **Do NOT** add any entry under Breaking Changes — sub-phase A is source-break-neutral per NF10 (both ctors on every derivation preserved; `base(...)` chaining is internal).
+  - Commit: `docs: spec 0028 sub-phase A 13.C — release_notes.md additive entry for SqlBoxProvisioner`.
+
+- [ ] **TIDY FIRST: Add traceability rows for F10, F10.1, F11, F12, F13 to `traceability.md`**
+  - File: `specs/0028-box-provisioning-rdd-role-interfaces/traceability.md`.
+  - Add five rows (under a new "Sub-phase A" sub-section if the existing structure suggests one, or as appended rows to the existing functional-requirements table):
+    - **F10** → ADR §B.5 → `src/Paramore.Brighter.BoxProvisioning/SqlBoxProvisioner.cs` + 8 derivation files at `src/Paramore.Brighter.BoxProvisioning.{MsSql,PostgreSql,MySql,Sqlite}/*BoxProvisioner.cs` + commits from 13.A.1..13.A.5.
+    - **F10.1** → ADR §B.5 hook table → individual hooks (`CreateConnection`, `PayloadColumnName`, `EffectiveSchemaName`, `ClampDetectedVersion` *(removed 13.B)*) and per-backend override rows (SQLite `EffectiveSchemaName`, MySQL `ClampDetectedVersion` 13.A-only).
+    - **F11** → ADR §B.5 line 646 + requirements F11 → MySQL clamp unification → `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/When_mysql_pre_lock_detects_negative_version_it_should_clamp_to_zero.cs` + commit `feat: spec 0028 sub-phase A 13.B — unify MySQL pre-lock clamp behaviour…`.
+    - **F12** → `baseline.md` "Sub-phase A preliminaries" → F12 disposition table → sync `using` per §B.2 precedent (no probe; precedent-discharged per round-2 review of ADR §B.5).
+    - **F13** → ADR §B.4 (Candidate 5 row, post-acceptance amendment 2026-05-12) → forward link to ADR §B.5.
+  - Commit: `docs: spec 0028 sub-phase A 13.C — traceability.md rows for F10/F10.1/F11/F12/F13`.
+
+- [ ] **TIDY FIRST: Tick AC12 in `acceptance.md`**
+  - File: `specs/0028-box-provisioning-rdd-role-interfaces/acceptance.md`.
+  - Append a new section `## AC12 — Sub-phase A delivered` mirroring the existing AC1..AC11 structure. For each AC12 sub-bullet from requirements.md line 237-251 (F10, F10.1, F11, F12, F13, NF8, NF9, NF10, NF11, no-new-IVT, no-test-only-public, traceability rows, PR #4039 description), record (a) the verifying artefact (test name / file path / commit sha / ADR section reference / `gh pr view` output where applicable) and (b) the tick.
+  - In particular:
+    - **NF9 (behavioural neutrality)**: cite the 13.A.0.5 amendment commit + the 13.A.7 gate commit + the 13.B commit. NF9's wording was carved-out in 13.A.0.5 to permit the Phase 13.A.1 base-contract test cases per the Phase 6 precedent. Floor trajectory: Core BoxProvisioning.Tests `36/36 → 44/44` post-13.A.1 (+8 cases across 3 base-contract test files; legitimised by the 13.A.0.5 amendment), `44/44 → 43/43` post-13.B (-1 case from the rewritten clamp test); MySQL `61/61 → 63/63` post-13.B (+2 cases). Per-backend ports 13.A.2–13.A.5 introduce zero new tests, satisfying NF9-strict at the backend level.
+    - **NF8 (naming)**: cite ADR §B.5 line 673-681 (Naming subsection) + ADR §B.5 line 752 (Risks-and-Mitigations entry "Naming asymmetry, time-bounded") + PR #4039 description "Post-merge follow-up" bullet (added 2026-05-12 — read via `gh pr view 4039 --json body --jq .body | grep -A3 'Post-merge follow-up'`). The §B.2 rename is NOT a sub-phase A task — the follow-up is recorded on the live PR description, not implemented here.
+    - **F12 (disposition)**: cite `baseline.md` "Sub-phase A preliminaries" → F12 disposition table. No probe was run; precedent-discharged per round-2 ADR review.
+  - Commit: `docs: spec 0028 sub-phase A 13.C — AC12 ticked`.
+
+- [ ] **TIDY FIRST: Capture PR #4039 description as a local artefact, splice in the sub-phase A bullet, commit, then publish via `gh pr edit --body-file`**
+
+  Two-step: (a) the spliced PR body is captured in a tracked file so the change has a git trail, then (b) `gh pr edit` publishes it from that file. This restores audit-trail discipline lost by the previous "no commit — GitHub state" framing.
+
+  - **Step a — fetch + splice + commit**:
+    - Fetch the current body: `gh pr view 4039 --json body --jq '.body' > specs/0028-box-provisioning-rdd-role-interfaces/pr-description.md`. Record the pre-edit line count: `wc -l specs/0028-box-provisioning-rdd-role-interfaces/pr-description.md` (memorise — used in the post-edit smoke test).
+    - Open `specs/0028-box-provisioning-rdd-role-interfaces/pr-description.md` and verify the existing "Post-merge follow-up" section (added 2026-05-12 — see PROMPT.md, contains the §B.2 rename commitment) is present and unmodified. **Do NOT** remove or modify that section.
+    - Under the existing "Spec 0028 — Box Provisioning RDD Role Interfaces" Scope bullet, add a sub-bullet: *"Sub-phase A (post-acceptance review response, 2026-05-12) — `SqlBoxProvisioner<TConnection, TTransaction>` pull-up consolidating ~640 lines duplicated body across the eight relational provisioners into one ~120-line base. MySQL pre-lock negative-version clamp unified with MsSql/Postgres/Sqlite per F11. ADR 0058 §B.5 + `specs/0028-box-provisioning-rdd-role-interfaces/` sub-phase A appendix."*
+    - Stage and commit (the file is newly tracked): `docs: spec 0028 sub-phase A 13.C — local pr-description.md captures spliced PR #4039 body with sub-phase A bullet`.
+  - **Step b — publish**:
+    - `gh pr edit 4039 --body-file specs/0028-box-provisioning-rdd-role-interfaces/pr-description.md`.
+    - Post-edit verification (run all three; any failure → revert via `gh pr edit 4039 --body-file <prior-body-backup>` and investigate):
+      - `gh pr view 4039 --json body --jq '.body' | grep -c 'Sub-phase A (post-acceptance'` returns `1`.
+      - `gh pr view 4039 --json body --jq '.body' | grep -c 'Post-merge follow-up'` returns `1` (existing section preserved).
+      - `gh pr view 4039 --json body --jq '.body' | wc -l` returns a value ≥ the pre-edit line count + the new sub-bullet's line count (catches accidental truncation that would drop the Post-merge follow-up section).
+    - **No second commit** for the publish step — `gh pr edit` is a GitHub-side action. The local commit from step a is the audit trail; the publish is the apply.
+
+### Phase 13 final gate
+
+- [ ] **Phase 13 gate: `/spec:approve code` ready — AC1..AC12 all ticked**
+  - All seven backend test filters at the post-13.B floor (Core BoxProvisioning.Tests `43/43`, Core sub-filter `5/5`, MSSQL `63/63`, PG `54/54`, MySQL `63/63` net9.0-only, SQLite `45/45`, Spanner `26/26`).
+  - `dotnet build src/Paramore.Brighter.BoxProvisioning -c Release` clean on `netstandard2.0;net8.0;net9.0;net10.0`.
+  - No new `InternalsVisibleTo` directives (parent AC8 preserved): `grep -r 'InternalsVisibleTo' src/Paramore.Brighter.BoxProvisioning*` returns zero new matches.
+  - No new test-only public types (parent AC8 preserved): `SqlBoxProvisioner` is a runtime production type — derived classes are the production surface, the base hosts the algorithm.
+  - PR #4039 description contains both the existing "Post-merge follow-up" section and the new "Sub-phase A (post-acceptance)" bullet (verified via `gh pr view 4039 --json body --jq '.body'` greps from 13.C.4).
+  - `.code-approved` re-stamped after `/spec:approve code` succeeds.
+  - **Push**: `git push origin database_migration` to publish sub-phase A. Commit budget on top of pre-session `246ea6f13`: 13.A.0.5 floor amendment (1) + 13.A.1 three slice commits + 13.A.1 gate (4) + 13.A.2–13.A.5 eight per-backend port commits (8) + 13.A.7 gate (1) + 13.B unified-clamp commit (1) + 13.C release_notes + traceability + AC12 tick (3) + 13.C.4 pr-description.md splice commit (1) = ~19 new commits.
 
 ---
 
