@@ -38,7 +38,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 /// (<see cref="Close"/>, <see cref="Open"/>) update an in-memory state field so
 /// <c>using</c>/<c>await using</c> dispose paths complete cleanly.
 /// </summary>
-internal sealed class FakeDbConnection : DbConnection
+internal class FakeDbConnection : DbConnection
 {
     private ConnectionState _state = ConnectionState.Closed;
 

@@ -911,7 +911,7 @@ Per ADR §B.5 listing (lines 487–636). Introduce the abstract base class in th
 
 Test-file shape convention (matches the Phase 6 precedent in `tests/Paramore.Brighter.BoxProvisioning.Tests/` — `When_relational_box_migration_runner_base_*` files each use multiple `[Fact]` methods rather than `[Theory] + [InlineData]`): each test file uses **N `[Fact]` methods, one per behavioural case**. The three test files contribute **8 discovered cases total** (3 + 2 + 3 = 3 `[Fact]`s in the orchestration file, 2 `[Fact]`s in the schema-propagation file, 3 `[Fact]`s in the clamp file); the post-13.A.1 Core BoxProvisioning.Tests floor of 44/44 (= 36 + 8) is the post-amendment value already recorded in `baseline.md` NF9 floor by 13.A.0.5.
 
-- [ ] **TEST + IMPLEMENT: SqlBoxProvisioner.ProvisionAsync invokes the hooks in the documented order on the three success-path branches**
+- [x] **TEST + IMPLEMENT: SqlBoxProvisioner.ProvisionAsync invokes the hooks in the documented order on the three success-path branches**
   - **USE COMMAND**: `/test-first when SqlBoxProvisioner ProvisionAsync runs successfully against a fake backend it should invoke the hooks in the documented order for each of three table-state branches (table-exists-with-history short-circuits the bootstrap branch; table-exists-without-history takes the bootstrap branch; table-missing short-circuits payload validation and history checks)`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_sql_box_provisioner_provision_async_runs_successfully_it_should_invoke_hooks_in_documented_order.cs`
