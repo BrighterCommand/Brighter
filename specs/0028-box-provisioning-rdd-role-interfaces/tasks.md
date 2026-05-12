@@ -1046,7 +1046,7 @@ SQLite has no schema concept per ADR 0057 §6 (and per requirements.md line 197 
 
 **Gitignore gotcha**: per `CLAUDE.md` "Git Gotcha", `*.sqlite` in `.gitignore` matches the `src/Paramore.Brighter.BoxProvisioning.Sqlite/` directory case-insensitively on macOS. Modifying *already-tracked* files (which is what 13.A.5 does — both `Sqlite{Outbox,Inbox}Provisioner.cs` already exist) stages normally. Only *new* files in the directory would require `git add -f`. 13.A.5 introduces no new files in the SQLite project, so the gotcha is informational, not blocking.
 
-- [ ] **TIDY FIRST: `SqliteOutboxProvisioner` derives from `SqlBoxProvisioner<SqliteConnection, SqliteTransaction>` with null-schema override**
+- [x] **TIDY FIRST: `SqliteOutboxProvisioner` derives from `SqlBoxProvisioner<SqliteConnection, SqliteTransaction>` with null-schema override**
   - File: `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteOutboxProvisioner.cs`.
   - Same shape as the MSSQL Outbox port. `base(...)` passes `BoxType.Outbox`. `CreateConnection` returns `new SqliteConnection(connectionString)`. `PayloadColumnName` returns `"Body"`.
   - **Override** `protected override string? EffectiveSchemaName => null;` (permanent — SQLite has no schema concept).
