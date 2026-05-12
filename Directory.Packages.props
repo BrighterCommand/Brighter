@@ -5,16 +5,16 @@
     <AwsDynamoDbV4>4.0.18.1</AwsDynamoDbV4>
     <AWSSDKIdentityManagementV4>4.0.9.22</AWSSDKIdentityManagementV4>
     <AWSSDKSchedulerV4>4.0.2.27</AWSSDKSchedulerV4>
-    <AWSSDKV4>4.0.22.2</AWSSDKV4>
+    <AWSSDKV4>4.0.23</AWSSDKV4>
     <AWSSecurityTokenV4>4.0.6.3</AWSSecurityTokenV4>
     <AWSSQSV4>4.0.2.28</AWSSQSV4>
     <AWSSDKSimpleNotificationServiceV4>4.0.2.30</AWSSDKSimpleNotificationServiceV4>
-    <AWSSDKExtensionsNETCoreSetup>4.0.3.36</AWSSDKExtensionsNETCoreSetup>
+    <AWSSDKExtensionsNETCoreSetup>4.0.3.37</AWSSDKExtensionsNETCoreSetup>
     <RabbitMQClientV6>6.8.1</RabbitMQClientV6>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.2.4" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.2.4" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.3.0" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.3.0" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="[3.7.400, 4)" />
@@ -23,7 +23,7 @@
     <PackageVersion Include="AWSSDK.Scheduler" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.SQS" Version="[3.7.500.5, 4)" />
-    <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.27.0" />
@@ -91,7 +91,7 @@
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.5.0" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.5.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.8.0" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.8.1" />
     <PackageVersion Include="MQTTnet" Version="4.3.7.1207" />
     <PackageVersion Include="MySqlConnector" Version="2.5.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
@@ -133,6 +133,7 @@
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.10.0" />
+    <PackageVersion Include="SharpCompress" Version="0.48.0" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.1.7" />
     <PackageVersion Include="System.CommandLine" Version="2.0.7" />
