@@ -1006,7 +1006,7 @@ The MSSQL pair has zero variance overrides — both derivations inherit defaults
 
 PG's outbox provisioner currently uses `await using` for its connection (the disposal-pattern outlier per requirements.md line 261). After the pull-up, the base's sync `using` becomes the contract. PG's `*.BoxProvisioning.PostgreSql` package targets `$(BrighterCoreTargetFrameworks)` (net8/9/10, no netstandard2.0) so the existing `await using` compiles in the package; the base does not have that latitude (NF11 / C6). The change is local — call-site disposal moves from `await using` to sync `using` inside the base's body; no source-break to consumers (NF10).
 
-- [ ] **TIDY FIRST: `PostgreSqlOutboxProvisioner` derives from `SqlBoxProvisioner<NpgsqlConnection, NpgsqlTransaction>`**
+- [x] **TIDY FIRST: `PostgreSqlOutboxProvisioner` derives from `SqlBoxProvisioner<NpgsqlConnection, NpgsqlTransaction>`**
   - File: `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlOutboxProvisioner.cs`.
   - Same shape as the MSSQL Outbox port. `base(...)` passes `BoxType.Outbox`. `CreateConnection` returns `new NpgsqlConnection(connectionString)`. `PayloadColumnName` returns `"body"` (lower-case per PG convention).
   - **Do NOT** override `EffectiveSchemaName` or `ClampDetectedVersion`.
