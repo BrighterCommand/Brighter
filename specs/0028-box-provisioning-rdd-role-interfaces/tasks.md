@@ -996,7 +996,7 @@ The MSSQL pair has zero variance overrides — both derivations inherit defaults
   - Validation: existing MSSQL test filter stays at the AC6 floor — 63/63 per TFM. Per-TFM build + test (`dotnet test -f net9.0` then `-f net10.0` per `baseline.md` "MSSQL parallel-TFM contention" note — the multi-target runner reproducibly deadlocks on `When_mssql_inbox_provisioner_detects_payload_mode_mismatch_it_should_throw` when net9.0 + net10.0 race the same container).
   - Commit: `tidy: spec 0028 sub-phase A 13.A.2 — MsSqlOutboxProvisioner derives from SqlBoxProvisioner base`.
 
-- [ ] **TIDY FIRST: `MsSqlInboxProvisioner` derives from `SqlBoxProvisioner<SqlConnection, SqlTransaction>`**
+- [x] **TIDY FIRST: `MsSqlInboxProvisioner` derives from `SqlBoxProvisioner<SqlConnection, SqlTransaction>`**
   - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlInboxProvisioner.cs`.
   - Same shape as the Outbox port. `base(...)` ctor passes `BoxType.Inbox`. `PayloadColumnName` override returns `"CommandBody"`.
   - Validation: MSSQL test filter stays 63/63 per TFM.

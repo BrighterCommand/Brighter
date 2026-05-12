@@ -21,26 +21,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 
 namespace Paramore.Brighter.BoxProvisioning.MsSql;
 
 /// <summary>
-/// Provisions a MSSQL inbox table. Performs a pre-lock detection pass to gate payload-mode
-/// validation, then delegates to <see cref="IAmABoxMigrationRunner"/> which re-detects state
-/// under the lock and dispatches into fresh / bootstrap / normal paths per ADR 0057 §3.
+/// Provisions a MSSQL inbox table. Pre-lock detection and payload-mode validation are owned
+/// by the <see cref="SqlBoxProvisioner{TConnection,TTransaction}"/> base; this class supplies
+/// only the abstract hooks for the MSSQL connection factory and the inbox payload column name.
 /// </summary>
-public class MsSqlInboxProvisioner : IAmABoxProvisioner
+public class MsSqlInboxProvisioner : SqlBoxProvisioner<SqlConnection, SqlTransaction>
 {
-    private readonly IAmAVersionDetectingMigrationHelper<SqlConnection, SqlTransaction> _detectionHelper;
-    private readonly IAmABoxMigrationCatalog _catalog;
-    private readonly IAmABoxPayloadModeValidator<SqlConnection> _payloadValidator;
-    private readonly IAmARelationalDatabaseConfiguration _configuration;
-    private readonly IAmABoxMigrationRunner _migrationRunner;
-
     /// <summary>
     /// Canonical ctor — Phase 8.1 of spec 0028. Takes the role-interface dependencies
     /// explicitly so the provisioner does not reach for backend statics.
@@ -51,12 +42,8 @@ public class MsSqlInboxProvisioner : IAmABoxProvisioner
         IAmABoxPayloadModeValidator<SqlConnection> payloadValidator,
         IAmARelationalDatabaseConfiguration configuration,
         IAmABoxMigrationRunner migrationRunner)
+        : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Inbox)
     {
-        _detectionHelper = detectionHelper;
-        _catalog = catalog;
-        _payloadValidator = payloadValidator;
-        _configuration = configuration;
-        _migrationRunner = migrationRunner;
     }
 
     /// <summary>
@@ -76,65 +63,10 @@ public class MsSqlInboxProvisioner : IAmABoxProvisioner
     {
     }
 
-    public BoxType BoxType => BoxType.Inbox;
-    public string BoxTableName => _configuration.InBoxTableName;
+    /// <inheritdoc />
+    protected override SqlConnection CreateConnection(string connectionString)
+        => new SqlConnection(connectionString);
 
     /// <inheritdoc />
-    public async Task ProvisionAsync(CancellationToken cancellationToken = default)
-    {
-        var migrations = _catalog.All(_configuration);
-        var tableState = await DetectTableStateAsync(migrations, cancellationToken);
-
-        if (tableState.TableExists)
-        {
-            await ValidatePayloadModeAsync(cancellationToken);
-        }
-
-        await _migrationRunner.MigrateAsync(
-            _configuration.InBoxTableName,
-            _configuration.SchemaName,
-            BoxType.Inbox,
-            migrations,
-            tableState,
-            cancellationToken);
-    }
-
-    private async Task<BoxTableState> DetectTableStateAsync(
-        IReadOnlyList<IAmABoxMigration> migrations,
-        CancellationToken cancellationToken)
-    {
-        using var connection = new SqlConnection(_configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-
-        var tableExists = await _detectionHelper.DoesTableExistAsync(
-            connection, _configuration.InBoxTableName, _configuration.SchemaName, cancellationToken);
-        if (!tableExists)
-            return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
-
-        var historyExists = await _detectionHelper.DoesHistoryExistAsync(
-            connection, _configuration.InBoxTableName, _configuration.SchemaName, cancellationToken);
-        if (!historyExists)
-        {
-            var detectedVersion = await _detectionHelper.DetectCurrentVersionAsync(
-                connection, _configuration.InBoxTableName, _configuration.SchemaName,
-                BoxType.Inbox, migrations, cancellationToken);
-            return new BoxTableState(
-                TableExists: true, HistoryExists: false,
-                CurrentVersion: detectedVersion < 0 ? 0 : detectedVersion);
-        }
-
-        var maxVersion = await _detectionHelper.GetMaxVersionAsync(
-            connection, _configuration.InBoxTableName, _configuration.SchemaName, cancellationToken);
-        return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
-    }
-
-    private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
-    {
-        using var connection = new SqlConnection(_configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-
-        await _payloadValidator.ValidateAsync(
-            connection, _configuration.InBoxTableName, _configuration.SchemaName,
-            "CommandBody", _configuration.BinaryMessagePayload, cancellationToken);
-    }
+    protected override string PayloadColumnName => "CommandBody";
 }
