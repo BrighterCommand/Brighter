@@ -21,26 +21,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using MySqlConnector;
 
 namespace Paramore.Brighter.BoxProvisioning.MySql;
 
 /// <summary>
-/// Provisions a MySQL inbox table. Performs a pre-lock detection pass to gate payload-mode
-/// validation, then delegates to <see cref="IAmABoxMigrationRunner"/> which re-detects state
-/// under <c>GET_LOCK</c> and dispatches into fresh / bootstrap / normal paths per ADR 0057 §3.
+/// Provisions a MySQL inbox table. Pre-lock detection and payload-mode validation are owned
+/// by the <see cref="SqlBoxProvisioner{TConnection,TTransaction}"/> base; this class supplies
+/// only the abstract hooks for the MySQL connection factory and the inbox payload column name,
+/// plus a transitional identity override of <c>ClampDetectedVersion</c> to preserve MySQL's
+/// no-clamp pre-13.B behaviour (removed in Phase 13.B per F11).
 /// </summary>
-public class MySqlInboxProvisioner : IAmABoxProvisioner
+public class MySqlInboxProvisioner : SqlBoxProvisioner<MySqlConnection, MySqlTransaction>
 {
-    private readonly IAmAVersionDetectingMigrationHelper<MySqlConnection, MySqlTransaction> _detectionHelper;
-    private readonly IAmABoxMigrationCatalog _catalog;
-    private readonly IAmABoxPayloadModeValidator<MySqlConnection> _payloadValidator;
-    private readonly IAmARelationalDatabaseConfiguration _configuration;
-    private readonly IAmABoxMigrationRunner _migrationRunner;
-
     /// <summary>
     /// Canonical ctor — Phase 8.3 of spec 0028. Takes the role-interface dependencies
     /// explicitly so the provisioner does not reach for backend statics.
@@ -51,12 +44,8 @@ public class MySqlInboxProvisioner : IAmABoxProvisioner
         IAmABoxPayloadModeValidator<MySqlConnection> payloadValidator,
         IAmARelationalDatabaseConfiguration configuration,
         IAmABoxMigrationRunner migrationRunner)
+        : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Inbox)
     {
-        _detectionHelper = detectionHelper;
-        _catalog = catalog;
-        _payloadValidator = payloadValidator;
-        _configuration = configuration;
-        _migrationRunner = migrationRunner;
     }
 
     /// <summary>
@@ -76,64 +65,23 @@ public class MySqlInboxProvisioner : IAmABoxProvisioner
     {
     }
 
-    public BoxType BoxType => BoxType.Inbox;
-    public string BoxTableName => _configuration.InBoxTableName;
+    /// <inheritdoc />
+    protected override MySqlConnection CreateConnection(string connectionString)
+        => new MySqlConnection(connectionString);
 
     /// <inheritdoc />
-    public async Task ProvisionAsync(CancellationToken cancellationToken = default)
-    {
-        var migrations = _catalog.All(_configuration);
-        var tableState = await DetectTableStateAsync(migrations, cancellationToken);
+    protected override string PayloadColumnName => "CommandBody";
 
-        if (tableState.TableExists)
-        {
-            await ValidatePayloadModeAsync(cancellationToken);
-        }
-
-        await _migrationRunner.MigrateAsync(
-            _configuration.InBoxTableName,
-            _configuration.SchemaName,
-            BoxType.Inbox,
-            migrations,
-            tableState,
-            cancellationToken);
-    }
-
-    private async Task<BoxTableState> DetectTableStateAsync(
-        IReadOnlyList<IAmABoxMigration> migrations,
-        CancellationToken cancellationToken)
-    {
-        using var connection = new MySqlConnection(_configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-
-        var tableExists = await _detectionHelper.DoesTableExistAsync(
-            connection, _configuration.InBoxTableName, _configuration.SchemaName, cancellationToken);
-        if (!tableExists)
-            return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
-
-        var historyExists = await _detectionHelper.DoesHistoryExistAsync(
-            connection, _configuration.InBoxTableName, _configuration.SchemaName, cancellationToken);
-
-        if (!historyExists)
-        {
-            var detectedVersion = await _detectionHelper.DetectCurrentVersionAsync(
-                connection, _configuration.InBoxTableName, _configuration.SchemaName,
-                BoxType.Inbox, migrations, cancellationToken);
-            return new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: detectedVersion);
-        }
-
-        var maxVersion = await _detectionHelper.GetMaxVersionAsync(
-            connection, _configuration.InBoxTableName, _configuration.SchemaName, cancellationToken);
-        return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
-    }
-
-    private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
-    {
-        using var connection = new MySqlConnection(_configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-
-        await _payloadValidator.ValidateAsync(
-            connection, _configuration.InBoxTableName, _configuration.SchemaName,
-            "CommandBody", _configuration.BinaryMessagePayload, cancellationToken);
-    }
+    /// <summary>
+    /// <b>TRANSITIONAL — removed in Phase 13.B per F11.</b> Identity override preserves
+    /// MySQL's no-clamp pre-13.A behaviour bit-for-bit (NF9 — behavioural neutrality of
+    /// the sub-phase A structural pull-up). Phase 13.B (F11) unifies MySQL's behaviour
+    /// with the other three relational backends and removes both this override AND the
+    /// base hook in the same commit, inlining the clamp into <c>DetectTableStateAsync</c>.
+    /// See ADR 0058 §B.5 line 646 and the base's <c>ClampDetectedVersion</c> XML-doc.
+    /// </summary>
+    /// <param name="detectedVersion">The version inferred by the detection helper for a
+    /// pre-existing table without history rows.</param>
+    /// <returns>The detected version unchanged — MySQL's pre-13.B contract.</returns>
+    protected override int ClampDetectedVersion(int detectedVersion) => detectedVersion;
 }

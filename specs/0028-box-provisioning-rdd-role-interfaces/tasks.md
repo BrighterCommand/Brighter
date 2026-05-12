@@ -1033,7 +1033,7 @@ MySQL is the no-clamp outlier per requirements.md line 198 (F10.1 row d) and lin
   - Validation: MySQL test filter stays at the AC6 floor — 61/61 net9.0-only. Run `dotnet test tests/Paramore.Brighter.MySQL.Tests -f net9.0 --filter "FullyQualifiedName~BoxProvisioning"` after `dotnet build -f net9.0` per the `baseline.md` "stale per-TFM DLL" note.
   - Commit: `tidy: spec 0028 sub-phase A 13.A.4 — MySqlOutboxProvisioner derives from SqlBoxProvisioner base (transitional clamp override)`.
 
-- [ ] **TIDY FIRST: `MySqlInboxProvisioner` derives from `SqlBoxProvisioner<MySqlConnection, MySqlTransaction>` with transitional clamp override**
+- [x] **TIDY FIRST: `MySqlInboxProvisioner` derives from `SqlBoxProvisioner<MySqlConnection, MySqlTransaction>` with transitional clamp override**
   - File: `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlInboxProvisioner.cs`.
   - Same shape. `BoxType.Inbox`. `PayloadColumnName` returns `"CommandBody"`.
   - **Override** `ClampDetectedVersion` identically to Outbox — same TRANSITIONAL XML-doc text.
