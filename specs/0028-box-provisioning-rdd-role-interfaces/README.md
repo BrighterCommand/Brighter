@@ -51,6 +51,16 @@ Five role-based interface extractions plus one (or two) abstract base classes:
 - [ ] Implementation — TDD per task; STOP for approval after each `/test-first` test before the GREEN
 - [ ] Review — closes the fourth-pass PR #4039 review feedback from 2026-05-07
 
+## Sub-phase A — `SqlBoxProvisioner` pull-up (post-acceptance reactive)
+
+**Surfaced:** 2026-05-12, post Phase 12 acceptance, before PR #4039 merge. Reactive to F9 / AC4 obligation — see `sweep-result.md` Amendment (Candidate 5).
+
+**Scope summary**: introduce `SqlBoxProvisioner<TConnection, TTransaction>` abstract base; port the eight relational provisioners to derive; Spanner pair exempt (parallel to the `RelationalBoxMigrationRunnerBase` exemption in §B.2 / ADR 0057 §6). Unify the MySQL pre-lock negative-version-clamp inconsistency as a separate `/test-first` slice after the structural pull-up lands.
+
+**Requirements, design, tasks**: live in `requirements.md` (F10 + NF additions), ADR 0058 §B.5 (to be authored via `/spec:design`), and a Phase 13 block to be added to `tasks.md` (via `/spec:tasks`) after design approval. **Do not edit those documents directly** — follow the `/spec:*` workflow.
+
+---
+
 ## Source feedback (verbatim — fourth-pass PR #4039 review, 2026-05-07)
 
 > **DB Migrator**

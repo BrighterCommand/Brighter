@@ -1,61 +1,42 @@
-# Review: design — 0028-box-provisioning-rdd-role-interfaces
+# Review: design — 0028-box-provisioning-rdd-role-interfaces (Sub-phase A round 4)
 
-**Date**: 2026-05-07
+**Date**: 2026-05-12
 **Threshold**: 60
+**Scope**: ADR 0058 §B.5 amendment (post-acceptance sub-phase A) — round-4 review after edit addressing round-3 Finding 16
 **Verdict**: PASS
 
 No findings at or above threshold 60. Consider addressing lower-scored items.
 
-## Findings
+> **Note**: This file supersedes the round-1, round-2, and round-3 sub-phase A review records (all NEEDS WORK). Sub-phase A passed after four iteration rounds:
+> - Round 1: 9 findings, 4 ≥60 (Critical 1, High 2, Medium 1, Low 5)
+> - Round 2: 6 findings, 2 ≥60 (High 2, Medium 2, Low 2)
+> - Round 3: 1 finding, 1 ≥60 (Medium 1)
+> - Round 4: 0 findings — PASS
+>
+> The earlier round-1..round-7 review record for the parent design (§A / §B.1–§B.4) passed PASS / 0 findings ≥60 on 2026-05-07 — see git history for that record.
 
-### 1. Step 7 leaves the nullability/optionality of the new `I{Backend}AdvisoryLock` ctor parameter unspecified (Score: 45)
+## Round-3 resolution verification
 
-The round-7 fix reads: *"Your derived runner ctor adds an `I{Backend}AdvisoryLock` parameter (or your backend's lock-primitive interface from step 4) and forwards `(detectionHelper, configuration, lockTimeout, logger)` to the base ctor; store the lock primitive as a private field for use inside `CreateUnitOfWorkAsync`."* Existing precedent in the codebase makes the parameter **optional with a self-defaulting fallback** — `MsSqlBoxMigrationRunner.cs:45` declares `IMsSqlAdvisoryLock? advisoryLock = null` and the body assigns `advisoryLock ?? new MsSqlAdvisoryLock()`; PG/MySQL match this exactly. A new contributor reading step 7 alone would not know whether to make the parameter required or optional-with-default. Score 45 (Low) because both shapes work and the sentence "Use the existing four relational runners as references (after spec 0028 lands)" earlier in step 7 effectively defers the convention question.
+### Finding 16 (Medium, round 3 score 65) — stale NoSQL-headroom cross-reference
+**RESOLVED** — The "Reference precedent" paragraph at `requirements.md:256` has been fully rewritten. It now reads: *"`RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` (ADR 0058 §B.2) — same shape, same generic constraints, same Spanner-exemption pattern. The §B.2 sibling's `Relational*Base` naming is provisional: the precision-of-contract argument that motivates `SqlBoxProvisioner` for §B.5 (see NF8) applies equally to §B.2, and the asymmetry is time-bounded by the PR #4039 'Post-merge follow-up' bullet committing to a successor ADR that renames `RelationalBoxMigrationRunnerBase` to a `Sql*`-prefixed equivalent before any third-party adopter takes a hard dependency on either base. Sub-phase A ships the new base under the corrected naming; §B.2 follows in the successor ADR."* The NoSQL/DynamoDB/Cosmos DB/MongoDB phrasing is gone (grep across `requirements.md`, `docs/adr/0058-...md`, and `baseline.md` returns zero matches). The new cross-reference to NF8 is truthful — NF8 (line 209) does contain the precision-of-contract argument (`Sql` names the `DbConnection` lineage; `Relational` names a broader category that includes the exempt Spanner backend), so the new pointer is internally consistent. The new framing aligns with ADR §B.5 line 679 (Naming subsection point 2, identical "Post-merge follow-up" narrative) and Risks-and-Mitigations line 752 ("Naming asymmetry, time-bounded"), and with the PR #4039 description "Post-merge follow-up" bullet ("successor ADR will be authored after this PR merges, renaming `RelationalBoxMigrationRunnerBase` to a `Sql*`-prefixed equivalent"). `.requirements-approved` re-stamped 2026-05-12 17:01.
 
-**Evidence**:
-- ADR §A.4 step 7 line 492 round-7 sentence: silent on nullability.
-- `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlBoxMigrationRunner.cs:42-46` — `IMsSqlAdvisoryLock? advisoryLock = null` with `?? new MsSqlAdvisoryLock()` fallback in body.
-- `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlBoxMigrationRunner.cs:70-80` — same shape.
-- `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlBoxMigrationRunner.cs:70-80` — same shape.
+## Findings (new in round 4)
 
-**Recommendation**: Optional. If pursued, append: *"Mirror the existing four runners' shape — declare the parameter as nullable with a self-defaulting fallback (`IMsSqlAdvisoryLock? advisoryLock = null` plus `advisoryLock ?? new MsSqlAdvisoryLock()` in the body)."* Below threshold; not a blocker.
+No new findings introduced by the round-3 fix. The only related token from the broader search ("future relational backend" at ADR line 439) is unrelated context — it describes a `RedetectStateAsync` override escape-hatch for a hypothetical lock-primitive-guaranteeing backend, not a NoSQL/headroom argument.
 
----
+## Cross-document consistency snapshot (final state)
 
-### 2. "SQLite/Spanner pattern" lumping in step 7's final clause is mildly misleading — Spanner does not reach this checklist item at all (Score: 35)
-
-The round-7 sentence ends: *"Backends without an advisory-lock primitive (SQLite/Spanner pattern) skip this addition — their UoW folds the lock into transaction-begin per step 5."* But step 7's preceding text already says: *"If degenerate (no version inference — Spanner pattern), implement `IAmABoxMigrationRunner` directly and skip this base."* A Spanner-style implementer never derives from `RelationalBoxMigrationRunnerBase` and so never reaches the "skip this addition" instruction. The pairing of SQLite and Spanner in the lock-primitive clause is therefore a category error — SQLite is the only backend that simultaneously (a) inherits the base, (b) lacks an advisory lock, and (c) folds lock into transaction-begin. Spanner is exempt at a higher level.
-
-**Evidence**: ADR §A.4 step 7 line 492: *"Backends without an advisory-lock primitive (SQLite/Spanner pattern) skip this addition"* immediately preceding *"If degenerate (no version inference — Spanner pattern), implement `IAmABoxMigrationRunner` directly and skip this base."*
-
-**Recommendation**: Replace "SQLite/Spanner pattern" with "SQLite pattern" in that clause. Score 35 (Low) — cosmetic; Spanner's full exemption is repeated three times in the same paragraph and no implementer would be misled.
-
----
-
-### 3. §A.1 "Provisioner ctor cascade" leading sentence still claims "ten ... three new ctor parameters" while sub-bullet exempts the Spanner pair (still-open round-7 finding #2, score: 52)
-
-Round-7 finding #2 (score 52, Medium, below threshold) was intentionally not fixed and is still present at line 129 / line 486. No new angle pushes this above threshold; documented here for completeness only.
-
----
-
-### 4. §A.4 step 6 line 491 mixes how-to-guide voice with documentation-of-existing-state voice (still-open round-7 finding #3, score: 38)
-
-Round-7 finding #3 (score 38, Low, below threshold) was intentionally not fixed and is still present at line 491. Documented here for completeness only.
-
----
-
-## Round-7 fix verification (not findings)
-
-**Round-7 finding #1 (advisory-lock ambiguity in step 7)** — RESOLVED. The new sentence at line 492 now names the missing wiring shape: *"Your derived runner ctor adds an `I{Backend}AdvisoryLock` parameter (or your backend's lock-primitive interface from step 4) and forwards `(detectionHelper, configuration, lockTimeout, logger)` to the base ctor; store the lock primitive as a private field for use inside `CreateUnitOfWorkAsync`. Backends without an advisory-lock primitive (SQLite/Spanner pattern) skip this addition — their UoW folds the lock into transaction-begin per step 5."*
-
-Internal consistency verified:
-- Forwarded tuple `(detectionHelper, configuration, lockTimeout, logger)` matches the §B.2 sample base ctor parameter order at lines 332-336 exactly.
-- "Lock primitive from step 4" reference is consistent with step 4's introduction of `I{Backend}AdvisoryLock` (line 484).
-- "Store the lock primitive as a private field for use inside `CreateUnitOfWorkAsync`" composes correctly with step 5 (line 485) — UoW ctor takes `(connection, advisoryLock, ILogger)` — and with §B.3's logger plumbing row example `new MsSqlProvisioningUnitOfWork(connection, advisoryLock, Logger)`.
-- Codebase precedent verified: `IMsSqlAdvisoryLock`, `IPostgreSqlAdvisoryLock`, `IMySqlAdvisoryLock` exist as expected (`src/Paramore.Brighter.BoxProvisioning.{MsSql,PostgreSql,MySql}/I{Backend}AdvisoryLock.cs`); SQLite and Spanner have no such interface, matching the "skip this addition" exemption.
-- The two existing pattern conventions in the four relational runners (each takes `I{Backend}AdvisoryLock? advisoryLock = null` with self-defaulting body) are not contradicted by the new sentence — though they are also not specifically affirmed (see finding #1).
-
-Round-7 findings #2 (score 52) and #3 (score 38) were intentionally not fixed; they remain in the ADR at the same locations and at the same scores.
+| Topic | Document | Location | Status |
+|---|---|---|---|
+| **Disposal pattern: sync `using`** | ADR §B.5 | line 547 (DetectTableStateAsync), 583 (ValidatePayloadModeAsync), 647 (rationale bullet), 667 (variance row e) | ✓ aligned |
+| ↳ | requirements.md | line 199 (F10.1 row e), 203 (F12), 241 (AC12 F12 bullet) | ✓ aligned |
+| ↳ | baseline.md | "Sub-phase A preliminaries" → F12 disposition table | ✓ aligned |
+| **Naming: `SqlBoxProvisioner` + time-bounded follow-up** | ADR §B.5 | line 679 (Naming subsection), 752 (Risks-and-Mitigations) | ✓ aligned (both present-tense, live PR state) |
+| ↳ | requirements.md | line 209 (NF8), 243 (AC12 NF8), 256 (Additional Context) | ✓ aligned |
+| ↳ | PR #4039 description | "Post-merge follow-up" section | ✓ present (added 2026-05-12) |
+| **`ClampDetectedVersion` transitional lifecycle** | ADR §B.5 | line 620-633 (XML-doc), 646 (rationale bullet), 657 (hook table), 666 (variance row d), 702 (step 6 parenthetical) | ✓ aligned (introduced 13.A → removed 13.B alongside MySQL override + clamp inlined) |
+| ↳ | requirements.md | line 198 (F10.1 row d), 211 (NF9), 240 (AC12 F11 bullet) | ✓ aligned |
+| **Spanner exemption — actual blocker** | ADR §B.5 | line 669-671 (Spanner exemption subsection) | ✓ leads with `IAmAVersionDetectingMigrationHelper` ctor requirement |
 
 ## Summary
 
@@ -63,8 +44,8 @@ Round-7 findings #2 (score 52) and #3 (score 38) were intentionally not fixed; t
 |-------------|-------|
 | 90-100 (Critical) | 0 |
 | 70-89 (High) | 0 |
-| 50-69 (Medium) | 1 |
-| 0-49 (Low) | 3 |
+| 50-69 (Medium) | 0 |
+| 0-49 (Low) | 0 |
 
-**Total findings**: 4
+**Total findings**: 0
 **Findings at or above threshold (60)**: 0

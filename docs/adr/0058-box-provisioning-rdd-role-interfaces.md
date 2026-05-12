@@ -1,10 +1,13 @@
 # 0058. Box Provisioning RDD Role Interfaces and Template-Method Runner
 
 Date: 2026-05-07
+Amendment Date: 2026-05-12 (sub-phase A appended — §B.5 + §B.4 row 5 + "Adding a new backend" step 6 amended)
 
 ## Status
 
 Accepted
+
+> **Approval state**: §A / §B.1–§B.4 (rows 1–4) / "Adding a new BoxProvisioning backend" (pre-amendment) were Accepted 2026-05-07. Sub-phase A appendix (§B.5, §B.4 row 5, step 6 amendment) was Accepted 2026-05-12 after a 4-round adversarial review (round 4 PASS, 0 findings ≥60); see `specs/0028-box-provisioning-rdd-role-interfaces/review-design.md` for the round-4 record. The whole ADR is now Accepted.
 
 ## Context
 
@@ -467,8 +470,221 @@ public abstract class RelationalBoxMigrationRunnerBase<TConnection, TTransaction
 | `*Outbox/InboxMigrations` row data — V_n × backend cross product?        | **No**   | Each migration row is unique DDL. Rows have nothing to share.                                                                                                                                                       |
 | `BoxProvisioningHostedService` — open-closed via abstract base?          | **No**   | Single class with no per-backend variants. Open-closed is satisfied by the existing `IAmABoxProvisioner` collection injection.                                                                                      |
 | `Identifiers.AssertSafe` (spec 0027 Item Q) helper — interface?          | **No**   | Already a single static method in the shared `Paramore.Brighter.BoxProvisioning` assembly. No polymorphic role.                                                                                                     |
+| `*BoxProvisioner` (relational 8) — could share an abstract base? *(amended 2026-05-12)* | **Yes** — see §B.5 | **Post-acceptance amendment.** The original 2026-05-07 sweep treated provisioners at the role-interface level only (item 4 — already met by `IAmABoxProvisioner`) and did not consider implementation-side body duplication. After Phase 8 cleaned the eight relational provisioners onto the canonical 5-arg ctor with instance-dispatched dependencies, the duplication became structurally visible (~80 lines × 8 = ~640 lines of substantially identical body). See §B.5 for the design. |
 
 Decision recorded in this ADR. If implementation surfaces new candidates, the spec 0028 tasks list folds them in or defers them with documented reason.
+
+**Post-acceptance amendment (2026-05-12)**: row 5 added. Discovered during a code-review pass of the ten shipped `*BoxProvisioner.cs` files on 2026-05-12 (HEAD `efdced78e`, post-Phase-12 acceptance, before PR #4039 merge). The closing-paragraph clause above is invoked: the candidate is folded into sub-phase A (per parent requirements §F10–F13 / §AC12 / `sweep-result.md` Amendment); the design lives at §B.5 below.
+
+---
+
+### B.5 `SqlBoxProvisioner<TConnection, TTransaction>` — pulling the eight relational provisioners up (sub-phase A, post-acceptance)
+
+> **Status**: Proposed (sub-phase A, 2026-05-12) — pending `/spec:approve design`. Approval re-stamps the top-of-file ADR Status to Accepted.
+
+**Decision** (addressing requirements F10, F11, F12, F13): Introduce one abstract base class — `SqlBoxProvisioner<TConnection, TTransaction>` — implementing `IAmABoxProvisioner` for the eight relational provisioners (MSSQL/PG/MySQL/SQLite × Outbox/Inbox). The base owns the orchestration; derived classes supply only the irreducibly-backend-specific hooks. Spanner's pair (`SpannerOutboxProvisioner`, `SpannerInboxProvisioner`) stays free-standing per the same exemption shape as `RelationalBoxMigrationRunnerBase` (§B.2 / ADR 0057 §6).
+
+```csharp
+namespace Paramore.Brighter.BoxProvisioning;
+
+public abstract class SqlBoxProvisioner<TConnection, TTransaction>
+    : IAmABoxProvisioner
+    where TConnection : DbConnection
+    where TTransaction : DbTransaction
+{
+    private readonly IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> _detectionHelper;
+    private readonly IAmABoxMigrationCatalog _catalog;
+    private readonly IAmABoxPayloadModeValidator<TConnection> _payloadValidator;
+    private readonly IAmARelationalDatabaseConfiguration _configuration;
+    private readonly IAmABoxMigrationRunner _migrationRunner;
+
+    protected SqlBoxProvisioner(
+        IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> detectionHelper,
+        IAmABoxMigrationCatalog catalog,
+        IAmABoxPayloadModeValidator<TConnection> payloadValidator,
+        IAmARelationalDatabaseConfiguration configuration,
+        IAmABoxMigrationRunner migrationRunner,
+        BoxType boxType)
+    {
+        _detectionHelper = detectionHelper;
+        _catalog = catalog;
+        _payloadValidator = payloadValidator;
+        _configuration = configuration;
+        _migrationRunner = migrationRunner;
+        BoxType = boxType;
+    }
+
+    public BoxType BoxType { get; }
+
+    public string BoxTableName => BoxType == BoxType.Outbox
+        ? _configuration.OutBoxTableName
+        : _configuration.InBoxTableName;
+
+    /// <inheritdoc />
+    public async Task ProvisionAsync(CancellationToken cancellationToken = default)
+    {
+        var migrations = _catalog.All(_configuration);
+        var tableState = await DetectTableStateAsync(migrations, cancellationToken);
+
+        if (tableState.TableExists)
+        {
+            await ValidatePayloadModeAsync(cancellationToken);
+        }
+
+        await _migrationRunner.MigrateAsync(
+            BoxTableName,
+            _configuration.SchemaName,
+            BoxType,
+            migrations,
+            tableState,
+            cancellationToken);
+    }
+
+    private async Task<BoxTableState> DetectTableStateAsync(
+        IReadOnlyList<IAmABoxMigration> migrations,
+        CancellationToken cancellationToken)
+    {
+        // Sync `using` for the connection: DbConnection does not implement IAsyncDisposable
+        // on netstandard2.0, so `await using` would not compile across the shared-assembly
+        // TFM matrix. Mirrors the §B.2 precedent at RelationalBoxMigrationRunnerBase.cs:112-116.
+        using var connection = CreateConnection(_configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        var tableExists = await _detectionHelper.DoesTableExistAsync(
+            connection, BoxTableName, EffectiveSchemaName, cancellationToken);
+        if (!tableExists)
+            return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
+
+        var historyExists = await _detectionHelper.DoesHistoryExistAsync(
+            connection, BoxTableName, EffectiveSchemaName, cancellationToken);
+        if (!historyExists)
+        {
+            // Pre-lock detection is a hint for the caller; the runner re-detects under the lock.
+            // Negative or zero return values are not gated here — the runner is the single source
+            // of truth for discriminator violations and unknown-schema rejections.
+            var detectedVersion = await _detectionHelper.DetectCurrentVersionAsync(
+                connection, BoxTableName, EffectiveSchemaName,
+                BoxType, migrations, cancellationToken);
+            return new BoxTableState(
+                TableExists: true, HistoryExists: false,
+                CurrentVersion: ClampDetectedVersion(detectedVersion));
+        }
+
+        var maxVersion = await _detectionHelper.GetMaxVersionAsync(
+            connection, BoxTableName, EffectiveSchemaName, cancellationToken);
+        return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
+    }
+
+    private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
+    {
+        // Sync `using` for the connection: DbConnection does not implement IAsyncDisposable
+        // on netstandard2.0, so `await using` would not compile across the shared-assembly
+        // TFM matrix. Mirrors the §B.2 precedent at RelationalBoxMigrationRunnerBase.cs:112-116.
+        using var connection = CreateConnection(_configuration.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await _payloadValidator.ValidateAsync(
+            connection, BoxTableName, EffectiveSchemaName,
+            PayloadColumnName, _configuration.BinaryMessagePayload, cancellationToken);
+    }
+
+    // Abstract hooks (each derived class implements):
+
+    /// <summary>
+    /// Backend-specific connection factory. Implementations typically return
+    /// <c>new {Backend}Connection(connectionString)</c>.
+    /// </summary>
+    protected abstract TConnection CreateConnection(string connectionString);
+
+    /// <summary>
+    /// The payload column name to validate against the configured payload mode.
+    /// Outbox: <c>"Body"</c> (most backends) or <c>"body"</c> (Postgres lower-case convention).
+    /// Inbox: <c>"CommandBody"</c> / <c>"commandbody"</c>.
+    /// </summary>
+    protected abstract string PayloadColumnName { get; }
+
+    // Virtual hooks (each derived class may override):
+
+    /// <summary>
+    /// The schema name to pass to the detection helper and payload validator. Defaults to the
+    /// configured schema; SQLite overrides to <c>null</c> (no schema concept per ADR 0057 §6).
+    /// The runner call inside <see cref="ProvisionAsync"/> always uses <c>_configuration.SchemaName</c>
+    /// directly — only the detection-helper and payload-validator calls observe this property.
+    /// </summary>
+    protected virtual string? EffectiveSchemaName => _configuration.SchemaName;
+
+    /// <summary>
+    /// Post-process the version inferred by <c>DetectCurrentVersionAsync</c>. Default clamps negative
+    /// values (e.g. spec 0027's <c>-1</c> "discriminator missing" sentinel) to zero — the pre-lock
+    /// value is a hint and the runner is authoritative.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Transitional — removed in Phase 13.B.</b> This hook exists solely to host MySQL's
+    /// no-clamp override during Phase 13.A (NF9 — bit-for-bit behavioural neutrality of the
+    /// structural pull-up). Phase 13.B (F11) unifies MySQL's behaviour with the other three
+    /// relational backends and, in the same commit, removes both <c>MySql*Provisioner</c>'s
+    /// override AND this hook — inlining <c>detectedVersion &lt; 0 ? 0 : detectedVersion</c>
+    /// directly into <see cref="DetectTableStateAsync"/>. After 13.B no derivation overrides
+    /// this method, so the hook earns no keep; preserving it post-13.B would be speculative
+    /// generality. A future backend with a richer sentinel set can re-introduce a hook in
+    /// a follow-up spec without regret.
+    /// </para>
+    /// </remarks>
+    protected virtual int ClampDetectedVersion(int detectedVersion) =>
+        detectedVersion < 0 ? 0 : detectedVersion;
+}
+```
+
+**Rationale**:
+
+- **The base owns the algorithm.** `ProvisionAsync` + `DetectTableStateAsync` + `ValidatePayloadModeAsync` were ~80 lines duplicated across the eight relational provisioners, differing only on five deltas (see hook table below). Pulling them up makes the orchestration a documented contract for "what provisioning a box means" — and means future cross-backend changes are made once.
+- **`TConnection` AND `TTransaction` generics on the base.** The injected role-interface dependencies are typed on the backend-specific connection (`NpgsqlConnection`, `MySqlConnection`, etc.). A non-generic base typed at `DbConnection` would not compile — the detection helper's methods require the narrowed `TConnection`. The two-generic shape matches §B.2 `RelationalBoxMigrationRunnerBase`.
+- **Detection helper injected at the version-detecting interface.** Same reasoning as §B.2: every relational provisioner performs version detection during the bootstrap pre-check; the type system enforces that no relational provisioner can be constructed without the capability it needs. Spanner is degenerate (per ADR 0057 §6) and bypasses this base — Spanner's pair takes the base `IAmABoxMigrationDetectionHelper<TConnection, TTransaction>` instead and stays free-standing.
+- **`PayloadColumnName` is abstract** (not virtual with a default). The four relational backends each pick a casing convention (`"Body"` Pascal vs `"body"` lower) per their column-naming style; there is no neutral default that fits all four. Forcing an explicit declaration on each derivation prevents a copy-paste mistake from a sibling backend.
+- **`EffectiveSchemaName` is virtual.** Three of four relational backends use `_configuration.SchemaName` directly; SQLite passes `null` to detection and validation calls because SQLite has no schema concept. The default-with-override shape matches the existing behaviour and keeps the SQLite divergence local to the SQLite pair. The runner call inside `ProvisionAsync` propagates `_configuration.SchemaName` independently — only detection/validation observes `EffectiveSchemaName`.
+- **`ClampDetectedVersion` is a *transitional* virtual hook with a clamp default.** Three of four relational backends clamp `detectedVersion < 0 ? 0 : v`; MySQL does not. Picking clamp as the default matches the three-of-four majority and the principled rationale already documented inline in the existing MSSQL/PG/SQLite code (*"the pre-lock value is a hint; the runner is authoritative"*). MySQL's transitional override during Phase 13.A returns identity to preserve current behaviour bit-for-bit (NF9). **Phase 13.B removes both MySQL's override AND this hook in one commit** — inlining the clamp directly into `DetectTableStateAsync`. The hook exists solely to host the transient 13.A divergence; after 13.B every derivation would inherit the same default, so retaining the hook would be speculative generality (no surveyed second-derivation scenario justifies it; CLAUDE.md *"Do NOT change defaults or make changes beyond what was explicitly requested"* applies). A future backend with a different clamp policy can re-introduce a hook at the point of need without regret. The hook's lifecycle is therefore: **introduced in Phase 13.A → exercised by MySQL's override in 13.A → removed (along with MySQL's override and the clamp inlined into `DetectTableStateAsync`) in Phase 13.B**.
+- **Sync `using` for the connection — mirroring the §B.2 precedent.** The base preserves the existing sync-disposal shape used by three of four relational provisioners (MSSQL/MySQL/SQLite) and adopted by `RelationalBoxMigrationRunnerBase` (the sibling base in the same shared assembly) for the same reason: the shared `Paramore.Brighter.BoxProvisioning` assembly targets `netstandard2.0;net8.0;net9.0;net10.0` per C6, and `DbConnection` does not implement `IAsyncDisposable` on netstandard2.0 — so a base-class `await using` declaration over `TConnection : DbConnection` does not compile across the shared-assembly TFM matrix. The existing `PostgreSqlOutboxProvisioner` can use `await using` only because its package targets `$(BrighterCoreTargetFrameworks)` (= `net8.0;net9.0;net10.0`) and not netstandard2.0; the base does not have that latitude. The §B.2 sibling base at `src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs:112-116` already documents this constraint verbatim — *"// Sync `using` for the connection: DbConnection does not implement IAsyncDisposable on netstandard2.0, so `await using` would not compile across the shared-assembly TFM matrix. The UoW does implement IAsyncDisposable (see IAmAProvisioningUnitOfWork) and is declared with `await using` below."* — and sub-phase A mirrors that decision for the same reason. (The UoW-vs-connection asymmetry the §B.2 comment closes with is informative: per-instance `await using` IS available for types that declare `IAsyncDisposable` directly, just not for `DbConnection` itself via the constrained-type-parameter `TConnection`. `SqlBoxProvisioner` does not introduce a UoW or other disposable; the only disposable in §B.5 is the connection, which therefore stays sync.) F12's IAsyncDisposable probe is therefore moot: the answer is already in the codebase. `baseline.md` records the disposition (sync `using` per §B.2 precedent) rather than running the probe. PG's free-standing provisioner can keep its existing `await using` shape only outside the base — but with PG's derived class now inheriting the base's method bodies, the per-call disposal pattern is sync-uniform across all four backends. (A future TFM bump that drops netstandard2.0 from the shared assembly may revisit; out of scope here.)
+- **`BoxType` is a ctor parameter, not abstract.** Outbox vs Inbox differs only in which catalogue is injected, which table name is read from configuration, and which payload column is named. Encoding `BoxType` as a ctor parameter (not an abstract property) keeps the eight derivations symmetric — each derived class has the same shape, differing only in which `BoxType` value it forwards to the base ctor. `BoxTableName` follows from `BoxType` via a sealed base property.
+
+#### Hook table (F10.1)
+
+| Hook | Kind | Default | Per-backend override expectation |
+|---|---|---|---|
+| `CreateConnection(string) → TConnection` | abstract | — | All eight derivations: `new {Backend}Connection(connectionString)` |
+| `PayloadColumnName : string` | abstract | — | All eight derivations: backend-specific casing (`"Body"` / `"body"` / `"CommandBody"` / `"commandbody"`) |
+| `EffectiveSchemaName : string?` | virtual | `_configuration.SchemaName` | SQLite pair overrides to `null`; MSSQL/PG/MySQL pairs inherit default |
+| `ClampDetectedVersion(int) → int` *(transitional — removed in Phase 13.B)* | virtual | `v < 0 ? 0 : v` | MySQL pair overrides to identity during Phase 13.A; Phase 13.B removes both the MySQL override AND this hook (clamp inlined into `DetectTableStateAsync`) per F11 |
+
+#### Variance reconciliation (the five deltas surveyed 2026-05-12)
+
+| # | Delta observed in the eight pre-sub-phase-A provisioners | Resolution |
+|---|---|---|
+| a | Connection factory (per-backend `new {Backend}Connection(cs)`) | `CreateConnection` abstract hook (one line per derivation) |
+| b | Payload column casing (`"Body"` / `"body"` / `"CommandBody"` / `"commandbody"`) | `PayloadColumnName` abstract property (one line per derivation) |
+| c | Schema-name argument (relational `_configuration.SchemaName`; SQLite `null`) | `EffectiveSchemaName` virtual; SQLite pair overrides |
+| d | Negative-version clamp (MSSQL/PG/SQLite clamp; MySQL no-clamp) | `ClampDetectedVersion` virtual with clamp default — transitional hook. MySQL transitional override in Phase 13.A; F11 removes BOTH the MySQL override AND the hook itself in Phase 13.B (clamp inlined into `DetectTableStateAsync`). Post-13.B the base has no hook for this delta. |
+| e | Disposal pattern (`await using` Postgres only; `using` others) | Base uses sync `using` for the connection per §B.2 precedent (`RelationalBoxMigrationRunnerBase.cs:112-116`) — `DbConnection` lacks `IAsyncDisposable` on netstandard2.0, so a base-class `await using` over `TConnection : DbConnection` does not compile. No backend-specific override hook is needed — the sync shape is uniform across all four derivations. F12 disposition recorded in `baseline.md`; no probe required. |
+
+#### Spanner exemption (NF11, OoS11)
+
+`SpannerOutboxProvisioner` and `SpannerInboxProvisioner` cannot derive from `SqlBoxProvisioner` because the base's ctor requires `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` — the §A.1 extension that adds `DetectCurrentVersionAsync` — and Spanner's pair receives the base interface `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction>` only (no version detection, per ADR 0057 §6 / §A.1 Backend assignments). That compile-time mismatch is the operative reason for the exemption; the surrounding differences are independent symptoms of the same Spanner-degeneracy (fresh-install only, no V_k chain, no migration catalogue per §A.2, custom column-subset version inference `V1Columns.IsSubsetOf(actualColumns)` rather than the per-migration column-set walk the relational helpers use). The same exclusion shape that keeps Spanner out of `RelationalBoxMigrationRunnerBase` (§B.2) keeps it out of `SqlBoxProvisioner`. Two alternative shapes were considered and rejected: (a) a Spanner-specific abstract layer above `SqlBoxProvisioner` that knew about both the detection-helper-interface and catalogue exemptions — adding a class for one derivation, and (b) hooks on `SqlBoxProvisioner` that nullify themselves under a flag — Liskov-hostile. Neither earns its keep. The right place for Spanner's degeneracy is at the `IAmABoxProvisioner` level, free-standing — same shape as the runner exemption from §B.2.
+
+#### Naming (NF8)
+
+The base class is `SqlBoxProvisioner` — **not** `BoxProvisionerBase` and **not** `RelationalBoxProvisionerBase`. The choice is justified on one current, concrete ground and the asymmetry with §B.2 (`RelationalBoxMigrationRunnerBase`) is acknowledged honestly with a defined follow-up:
+
+1. **Precision of the implementation contract.** The base's qualifier is `where TConnection : DbConnection` — i.e. the ADO.NET `DbConnection` lineage with its `IDbCommand`/`DbCommand`-shaped query surface. "Sql" honestly names that contract. "Relational" names a broader *category* — Spanner IS a relational/SQL backend per Google's documentation and per ADR 0057 §6, yet Spanner is exempt from this base (see Spanner exemption above). A `RelationalBoxProvisionerBase` would therefore name a category that includes one of its own exempt backends, muddling its scope; `SqlBoxProvisioner` names the implementation lineage cleanly. The `*Base` suffix is dropped because §A's role interfaces (`IAmA*`) deliberately eschew the `*Base` suffix and the new base mirrors that style.
+
+2. **Asymmetry with §B.2 is acknowledged — and is reconciled by a defined follow-up, not deferred indefinitely.** §B.2's `RelationalBoxMigrationRunnerBase` was authored 2026-05-07 when only one abstraction layer existed in the migration-runner family; the `Relational*Base` name reflects that earlier choice. Sub-phase A could either propagate §B.2's name (entrenching the imprecision identified in point 1) or rename §B.2 in the same sub-phase (out of scope per parent OoS3 — *"No changes to existing public role interfaces"* — and the sibling abstract base is part of the spec 0028 public surface accepted on 2026-05-07; reopening it post-acceptance is out of bounds). The third option, chosen here, is to ship the right name for §B.5 now and commit to a follow-up that renames §B.2 for symmetry. The follow-up is recorded as a "Post-merge follow-up" bullet on the PR #4039 description (added 2026-05-12 in the same edit pass as this ADR amendment) — that bullet commits to authoring a successor ADR renaming `RelationalBoxMigrationRunnerBase` to a `Sql*`-prefixed equivalent (e.g. `SqlBoxMigrationRunner`) before any third-party adopter takes a hard dependency on either base. The asymmetry is therefore time-bounded by the same PR that introduces it, not deferred to an indefinite "future spec if symmetric naming becomes load-bearing".
+
+The deviation from `*Base` suffix is documented here to satisfy parent C4 / AC9 (naming-convention reconciliation). The follow-up commitment is recorded under Consequences → Risks and Mitigations (see the new "Naming asymmetry, time-bounded" risk).
+
+#### Source-break and TFM-matrix notes
+
+- **Source-break**: none. Both ctors on every derived class (5-arg canonical from Phase 8, 2-arg back-compat) are preserved. Both delegate to `base(...)`. No call-site change required — the DI extensions wired in Phase 9 continue to construct the 5-arg ctor (per NF10).
+- **TFM matrix unchanged** (NF11 / parent C6 / C7). The base uses plain generic class declaration; both type constraints (`where TConnection : DbConnection` and `where TTransaction : DbTransaction`) are pre-net5 compatible. No static virtual / static abstract / `IReadOnlySet<T>` introduced.
+- **Public surface delta**: +1 type (`SqlBoxProvisioner<TConnection, TTransaction>` — abstract) in the shared `Paramore.Brighter.BoxProvisioning` assembly. Per parent AC8 / NF6 this is a runtime production type, not testability-motivated — derived classes are the production surface; the base is the algorithm host.
 
 ---
 
@@ -483,7 +699,7 @@ To add a new BoxProvisioning backend (e.g. Oracle), implement the following in a
 3. **Payload-mode validator**: `public class {Backend}PayloadModeValidator : IAmABoxPayloadModeValidator<{Backend}Connection>`. Apply the same `schemaName` null-substitution rule as the detection helper.
 4. **Advisory lock primitive** (if your backend has one): `public interface I{Backend}AdvisoryLock` and a default `public class {Backend}AdvisoryLock : I{Backend}AdvisoryLock` per ADR 0057 §5b. Acquire returns; release returns `bool` (or backend-specific richer type — MySQL's tri-state `bool?` is the precedent for richer return types). Skip if your backend has no advisory lock concept (SQLite/Spanner pattern — fold the lock into the UoW's transaction-begin or omit entirely).
 5. **Provisioning UoW**: `public class {Backend}ProvisioningUnitOfWork : IAmAProvisioningUnitOfWork<{Backend}Transaction>`. The ctor receives the connection, the advisory-lock primitive from step 4 (where applicable), and an `ILogger`. Encapsulate your backend's lock+transaction pairing (and ordering — see §B.1 for the existing four for reference). If your backend has no transaction (like MySQL), return `null` for `Transaction` and make Commit/Rollback no-ops on the transaction side; your UoW is the lock-only scope. If your backend has no advisory lock (like SQLite), fold the lock into your transaction-begin (e.g. `BEGIN IMMEDIATE`-style) and make the lock release implicit.
-6. **Provisioners**: `public class {Backend}OutboxProvisioner : IAmABoxProvisioner` and `public class {Backend}InboxProvisioner : IAmABoxProvisioner` — composition with the existing `IAmABoxProvisioner` interface defined in ADR 0053; no new role interface introduced by spec 0028. Each provisioner ctor receives three new instance-typed parameters (the static-to-instance cascade from §A.1, §A.2, §A.3 — see the §A.1 source-break "Provisioner ctor cascade" bullet for the parallel summary):
+6. **Provisioners**: for a **relational backend** (SQL-shaped, with a `DbConnection`-derived connection type), derive from the abstract base `SqlBoxProvisioner<{Backend}Connection, {Backend}Transaction>` (§B.5 — sub-phase A, post-acceptance amendment). The base owns the `ProvisionAsync` / `DetectTableStateAsync` / `ValidatePayloadModeAsync` orchestration. Post-Phase-13.B the base exposes three hooks: `CreateConnection` (factory — abstract), `PayloadColumnName` (`"Body"` / `"CommandBody"` casing — abstract), and optional `EffectiveSchemaName` override (return `null` if your backend has no schema concept — SQLite pattern). Post-13.B the base inlines `detectedVersion < 0 ? 0 : detectedVersion` into `DetectTableStateAsync` directly; there is no per-backend clamp hook. (If you are reading this between merge of the spec 0028 PR and the Phase 13.B commit, the base has four hooks — `ClampDetectedVersion` is present as a transitional virtual hook with a clamp default; MySQL's pair overrides it to identity during this window only. See the §B.5 Hook table for the lifecycle; Phase 13.B removes both MySQL's override AND the hook itself by inlining the clamp into `DetectTableStateAsync`.) For a **degenerate or non-SQL backend** (Spanner pattern — fresh-only, no V_k chain, no catalogue, or non-`DbConnection` connection model), implement `IAmABoxProvisioner` directly without deriving from the base — same exemption shape as the runner exemption from `RelationalBoxMigrationRunnerBase` (§B.2). Either way, the public surface is `public class {Backend}OutboxProvisioner` and `public class {Backend}InboxProvisioner`, both implementing (directly or via the base) the existing `IAmABoxProvisioner` interface (ADR 0053; no new role interface introduced by spec 0028). Each provisioner ctor receives three new instance-typed parameters (the static-to-instance cascade from §A.1, §A.2, §A.3 — see the §A.1 source-break "Provisioner ctor cascade" bullet for the parallel summary):
    - **Detection helper** — `IAmAVersionDetectingMigrationHelper<{Backend}Connection, {Backend}Transaction>` for the relational four (provisioners call both base-interface methods AND `DetectCurrentVersionAsync` during their bootstrap branch, so the version-detecting interface is required at compile time). Spanner's pair receives the base-interface-typed helper (`IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction>`) — Spanner's provisioner does no version inference per ADR 0057 §6.
    - **Migration catalogue** — `IAmABoxMigrationCatalog` (one instance: Outbox provisioner receives the `{Backend}OutboxMigrationCatalog`; Inbox provisioner receives the `{Backend}InboxMigrationCatalog`). Existing static `{Backend}{Box}Migrations.All(config)` call-sites become `_catalog.All(config)` on the injected field. Spanner's pair: omit (no migrations).
    - **Payload-mode validator** — `IAmABoxPayloadModeValidator<{Backend}Connection>` (single-generic, no `TTransaction`). Existing static `{Backend}PayloadModeValidator.ValidateAsync(...)` call-sites become `_payloadValidator.ValidateAsync(...)` on the injected field.
@@ -532,6 +748,8 @@ A minimum-viable backend implementing this checklist will compose with `BoxProvi
   - **Mitigation**: refactor lands as Tidy First — structural-only commits with the existing tests passing before and after; behavioural changes (the diagnostic-contract harmonisation in §B.3, the TOCTOU re-detection promotion to base) are separate commits with new `/test-first` tests. Every UoW class gets its own integration-test coverage.
 - **Risk: PR #4039 diff explodes**. Spec 0028 is a substantial refactor on top of spec 0027's already-large diff; instance-based interfaces touch more files than the static-virtual approach would have.
   - **Mitigation**: spec 0028 is treated as review feedback on the same PR rather than greenfield work (per requirements C1) — re-opening the diff is the accepted cost of catching the RDD gap before merge rather than after. Clarity for reviewers is the responsibility of the PR description maintained during the implementation phase.
+- **Risk: Naming asymmetry between §B.2 (`RelationalBoxMigrationRunnerBase`) and §B.5 (`SqlBoxProvisioner`)** — a contributor pattern-matching from one base to find the sibling will not find them adjacent in the namespace.
+  - **Mitigation**: time-bounded by PR #4039. The PR description carries a "Post-merge follow-up" bullet committing to a successor ADR that renames `RelationalBoxMigrationRunnerBase` to a `Sql*`-prefixed equivalent for symmetry, authored before any third-party adopter ships against either base. The asymmetry exists for the duration of PR #4039 only; once merged, the follow-up ADR is opened immediately. Sub-phase A introduces the right §B.5 name now (per Naming §NF8) and refuses to entrench the imprecision in §B.2's name by propagating it; the symmetric end-state is `SqlBoxProvisioner` + `SqlBoxMigrationRunner` (or whichever canonical name the follow-up ADR settles on).
 
 ## Alternatives Considered
 

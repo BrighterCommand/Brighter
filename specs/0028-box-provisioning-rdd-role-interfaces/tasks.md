@@ -859,6 +859,12 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
 
 ---
 
+## Phase 13 — `SqlBoxProvisioner` pull-up (sub-phase A; post-acceptance reactive)
+
+> **PENDING `/spec:requirements` + `/spec:design`.** Phase 13 task list authored via `/spec:tasks` after ADR 0058 §B.5 (or equivalent) is approved. Do not pre-author here.
+
+---
+
 ## Appendix — Out-of-scope reminders
 
 These items are explicitly NOT in spec 0028 scope (per requirements §Out of Scope and §Removed):

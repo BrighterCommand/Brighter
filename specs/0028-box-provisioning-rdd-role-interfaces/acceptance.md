@@ -102,3 +102,5 @@ Spanner equal (degenerate, unchanged per ADR 0057 §6); all six other filters ex
 ## Sign-off
 
 All eleven acceptance criteria discharged. **Ready for `/spec:approve code`.**
+
+> **Sub-phase A (post-acceptance reactive) — AC12 to be added via `/spec:requirements` then `/spec:design` then `/spec:tasks`. Do not pre-author here.**

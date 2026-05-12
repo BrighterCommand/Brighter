@@ -52,3 +52,26 @@ Surface families *not* addressed by §A or §B that I considered for an open-clo
 ## Conclusion
 
 ADR 0058 §B.4's four "No" decisions all hold post-implementation. No new candidates emerged. F9 is fully discharged; AC4 is dischargeable.
+
+---
+
+## Amendment — Candidate 5 (post-acceptance, 2026-05-12)
+
+**Surfaced:** 2026-05-12, on `database_migration` post-Phase-12 acceptance (HEAD `efdced78e`), before PR #4039 merge. Discovered during a code-review pass of the ten shipped `*BoxProvisioner.cs` files after the Phase 8 ctor cascade.
+
+**Reactive obligation invoked**: per requirements F9 / AC4 and ADR 0058 §B.4 closing paragraph ("If implementation surfaces new candidates, the spec 0028 tasks list folds them in or defers them with documented reason"). The original 2026-05-11 sweep missed this candidate; the AC4 clause re-opens the spec for sub-phase A.
+
+### Candidate 5: `*BoxProvisioner` (relational 8) — could share an abstract base?
+
+**Original verdict (this file, 2026-05-11):** Not surveyed. Provisioners were treated as "already met by `IAmABoxProvisioner`" per requirements §Out of Scope item 4 (feedback item 4 — no finer-grained sub-role needed). The sweep did not consider the *implementation-side* duplication across the eight relational provisioner bodies, only the role-interface side.
+
+**Re-examination 2026-05-12:** the eight relational provisioners' `ProvisionAsync` / `DetectTableStateAsync` / `ValidatePayloadModeAsync` are substantially identical — ~80 lines per provisioner × 8 = ~640 lines of duplication. Five real deltas (negative-clamp, payload column casing, schema-name handling, disposal pattern, Spanner shape mismatch) are all encapsulable via abstract / virtual hooks on a generic base `SqlBoxProvisioner<TConnection, TTransaction>`. This is parallel to the existing `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` (ADR 0058 §B.2) — and the same Spanner exemption applies for the same reasons (degenerate fresh-only per ADR 0057 §6, base-interface-only detection helper, no catalogue).
+
+**Revised decision: Yes — fold in as Spec 0028 sub-phase A.**
+
+- Treatment: introduce `SqlBoxProvisioner<TConnection, TTransaction>` abstract base in `src/Paramore.Brighter.BoxProvisioning/`. Port the eight relational provisioners to derive. Spanner stays free-standing.
+- Slicing: Phase 13.A (TIDY FIRST structural pull-up, MySQL preserves no-clamp via override), Phase 13.B (TEST + IMPLEMENT behavioural unification of the MySQL clamp). See README.md "Sub-phase A" section for the full charter.
+- Design: amend ADR 0058 §B.4 row addition / §B.5 new section (shape parallel to §B.2). To be authored via `/adr` skill.
+- Acceptance: AC12 added to `acceptance.md` covering F10.
+
+**Why the original sweep missed it**: the §B.4 candidate list was framed around feedback items 1–8 from the fourth-pass review, which addressed provisioners only as "interface candidate item 4 — already met". The implementation-side duplication only became visible after the Phase 8 ctor cascade made all eight provisioners structurally homogeneous — before Phase 8 they differed in their dependence on static helper classes which obscured the common shape.
