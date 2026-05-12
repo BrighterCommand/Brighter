@@ -935,7 +935,7 @@ Test-file shape convention (matches the Phase 6 precedent in `tests/Paramore.Bri
     - Sync `using` for the connection in both private methods per ADR §B.5 line 547-550 and 580-583 (with the comment text from line 547-550, mirroring the §B.2 precedent at `RelationalBoxMigrationRunnerBase.cs:112-116`).
   - Commit: `feat: spec 0028 sub-phase A 13.A.1 — SqlBoxProvisioner base introduces ProvisionAsync orchestration (slice 1: hardcoded schema, no clamp hook)`.
 
-- [ ] **TEST + IMPLEMENT: SqlBoxProvisioner extracts schema name into a virtual EffectiveSchemaName property; derivation override yields null**
+- [x] **TEST + IMPLEMENT: SqlBoxProvisioner extracts schema name into a virtual EffectiveSchemaName property; derivation override yields null**
   - **USE COMMAND**: `/test-first when SqlBoxProvisioner EffectiveSchemaName is overridden to null it should pass null to DoesTableExistAsync DoesHistoryExistAsync DetectCurrentVersionAsync GetMaxVersionAsync and ValidatePayloadModeAsync while the runner MigrateAsync call still receives the configured schema name`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_sql_box_provisioner_effective_schema_name_is_overridden_it_should_propagate_to_detection_and_payload_calls_only.cs`

@@ -117,19 +117,19 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         await connection.OpenAsync(cancellationToken);
 
         var tableExists = await _detectionHelper.DoesTableExistAsync(
-            connection, BoxTableName, _configuration.SchemaName, cancellationToken);
+            connection, BoxTableName, EffectiveSchemaName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         var historyExists = await _detectionHelper.DoesHistoryExistAsync(
-            connection, BoxTableName, _configuration.SchemaName, cancellationToken);
+            connection, BoxTableName, EffectiveSchemaName, cancellationToken);
         if (!historyExists)
         {
             // Pre-lock detection is a hint for the caller; the runner re-detects under the lock.
             // Negative or zero return values are not gated here — the runner is the single source
             // of truth for discriminator violations and unknown-schema rejections.
             var detectedVersion = await _detectionHelper.DetectCurrentVersionAsync(
-                connection, BoxTableName, _configuration.SchemaName,
+                connection, BoxTableName, EffectiveSchemaName,
                 BoxType, migrations, cancellationToken);
             return new BoxTableState(
                 TableExists: true, HistoryExists: false,
@@ -137,7 +137,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         }
 
         var maxVersion = await _detectionHelper.GetMaxVersionAsync(
-            connection, BoxTableName, _configuration.SchemaName, cancellationToken);
+            connection, BoxTableName, EffectiveSchemaName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
@@ -150,7 +150,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         await connection.OpenAsync(cancellationToken);
 
         await _payloadValidator.ValidateAsync(
-            connection, BoxTableName, _configuration.SchemaName,
+            connection, BoxTableName, EffectiveSchemaName,
             PayloadColumnName, _configuration.BinaryMessagePayload, cancellationToken);
     }
 
@@ -168,4 +168,13 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     /// Inbox: <c>"CommandBody"</c> / <c>"commandbody"</c>.
     /// </summary>
     protected abstract string PayloadColumnName { get; }
+
+    /// <summary>
+    /// The schema name to pass to the detection helper and payload validator. Defaults to the
+    /// configured schema; SQLite overrides to <c>null</c> (no schema concept per ADR 0057 §6).
+    /// The runner call inside <see cref="ProvisionAsync"/> always uses
+    /// <see cref="IAmARelationalDatabaseConfiguration.SchemaName"/> directly — only the
+    /// detection-helper and payload-validator calls observe this property.
+    /// </summary>
+    protected virtual string? EffectiveSchemaName => _configuration.SchemaName;
 }
