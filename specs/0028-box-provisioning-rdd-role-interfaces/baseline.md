@@ -68,12 +68,16 @@ The Phase 13.A structural pull-up commit must preserve every backend's BoxProvis
 
 | Backend | Test count to preserve (per TFM) |
 |---|---|
-| Core (BoxProvisioning library) | 36/36 |
-| Core (BoxProvisioning sub-filter in Brighter.Core.Tests) | 5/5 |
+| Core (BoxProvisioning library) | 44/44 [^core-base-contract] |
+| Core (BoxProvisioning sub-filter in Brighter.Core.Tests) | 5/5 [^core-sub-filter] |
 | MSSQL | 63/63 |
 | Postgres | 54/54 |
 | MySQL (net9.0-only) | 61/61 |
 | SQLite | 45/45 |
 | Spanner | 26/26 |
 
-Phase 13.A introduces NO new tests (per NF9). Phase 13.B introduces the new F11 `/test-first` clamp-behaviour test in `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/` (counts against MySQL net9.0 only); the new floor is recorded in `requirements.md` NF2 and this section in the same commit.
+[^core-base-contract]: Post-Phase-13.A.1 base-introduction floor. The Phase 6 precedent legitimises adding base-contract tests alongside an abstract base (`RelationalBoxMigrationRunnerBase` shipped with six base-contract test files at Phase 6 — same precedent). Phase 13.A.1 adds 8 `[Fact]` methods across three files (3 + 2 + 3) at `tests/Paramore.Brighter.BoxProvisioning.Tests/`: orchestration-order (3), `EffectiveSchemaName` propagation (2), and transitional `ClampDetectedVersion` (3). The 36 → 44 raise was authorised by the 13.A.0.5 NF9 amendment (carve-out wording added). Phase 13.B subsequently drops Core to 43/43 (-1 deleted override-identity `[Fact]` when the transitional hook is removed) and raises MySQL to 63/63 (+2 unification `[Fact]`s).
+
+[^core-sub-filter]: Unchanged at 5/5 — Phase 13.A.1's new test cases live in `tests/Paramore.Brighter.BoxProvisioning.Tests/`, NOT in `tests/Paramore.Brighter.Core.Tests/` (the sub-filter project). The Core sub-filter is the BoxProvisioning slice of the Core test project; the new base-contract `[Fact]` methods belong to the standalone BoxProvisioning test project per the Phase 6 sibling-base convention.
+
+Phase 13.A.1 introduces 8 base-contract `[Fact]` methods at the abstract-base level per the Phase 6 precedent (see NF9 carve-out in requirements.md); per-backend ports 13.A.2–13.A.5 introduce zero new tests (per NF9 strict). Phase 13.B introduces the new F11 `/test-first` clamp-behaviour test in `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/` (counts against MySQL net9.0 only) and rewrites the slice-3 base-contract clamp test (deletes the override-identity `[Fact]` since the transitional hook disappears); the new floor is recorded in `requirements.md` NF9 (parenthetical), this section, and `acceptance.md` AC6 in the same commit. **NF2 is the Phase-0 baseline anchor and remains immutable**; only NF9 (and the AC6 / baseline.md tables it points to) move.
