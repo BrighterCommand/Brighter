@@ -8,6 +8,9 @@
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/2900/badge.svg)](https://scan.coverity.com/projects/2900)
 [![CodeScene Code Health](https://codescene.io/projects/32198/status-badges/code-health)](https://codescene.io/projects/32198)
 ![CodeScene System Mastery](https://codescene.io/projects/32198/status-badges/system-mastery)
+[![Documentation](https://img.shields.io/badge/docs-GitBook-blue?logo=gitbook)](https://brightercommand.gitbook.io/paramore-brighter-documentation/)
+
+> 📖 **New to Brighter?** Check out the **[full documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation/)** for guides, tutorials, and API reference.
 
 **Brighter is a Command Dispatcher and Command Processor framework for .NET**. It enables you to build loosely coupled, maintainable applications using the Command pattern and supports both in-process and out-of-process messaging for microservices architectures. Its companion project, **[Darker](https://github.com/BrighterCommand/Darker)**, provides the query side for CQRS architectures.
 

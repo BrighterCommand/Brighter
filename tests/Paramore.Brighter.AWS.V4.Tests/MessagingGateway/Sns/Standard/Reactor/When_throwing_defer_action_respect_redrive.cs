@@ -18,7 +18,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Reactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessagePump _messagePump;

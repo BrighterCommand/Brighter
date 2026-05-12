@@ -10,7 +10,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly SqsMessageProducer _messageProducer;

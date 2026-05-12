@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -146,6 +147,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             // Create registries - they always register as Transient, actual lifetime managed by ServiceProviderHandlerFactory
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
             services.TryAddSingleton(subscriberRegistry);
+            services.TryAddSingleton<IAmASubscriberRegistryInspector>(subscriberRegistry);
 
             var transformRegistry = new ServiceCollectionTransformerRegistry(services);
             services.TryAddSingleton(transformRegistry);
@@ -177,6 +179,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 transformRegistry,
                 null // PolicyRegistry resolved at runtime
             );
+
+            // Register built-in Brighter handlers, mappers, and transforms from Paramore.Brighter assemblies.
+            // This is done here rather than in the constructor so that direct construction of the builder
+            // (e.g. in tests) does not force assembly scanning.
+            var brighterAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
+                !a.IsDynamic && a.FullName?.StartsWith("Paramore.Brighter", true, CultureInfo.InvariantCulture) == true)
+                .ToArray();
+
+            builder.MapperRegistryFromAssemblies(brighterAssemblies);
+            builder.HandlersFromAssemblies(brighterAssemblies, null);
+            builder.AsyncHandlersFromAssemblies(brighterAssemblies, null);
+            builder.TransformsFromAssemblies(brighterAssemblies);
 
             // Register InMemorySchedulerFactory as the default using TryAddSingleton.
             // TryAddSingleton ensures these are only registered if no scheduler has been
@@ -279,7 +293,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 RegisterConnectionAndTransactionProvider(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
             
             //we always need an outbox in case of producer callbacks
-            var outbox = busConfiguration.Outbox ?? new InMemoryOutbox(TimeProvider.System);
+            var outbox = busConfiguration.Outbox ?? CreateDefaultOutbox(busConfiguration);
 
             //we create the outbox from interfaces from the determined transaction type to prevent the need
             //to pass generic types as we know the transaction provider type
@@ -413,7 +427,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 if (transactionType == null)
                     throw new ConfigurationException("Unable to determine transaction type from transaction provider");
 
-                var outbox = busConfiguration.Outbox ?? new InMemoryOutbox(TimeProvider.System);
+                var outbox = busConfiguration.Outbox ?? CreateDefaultOutbox(busConfiguration);
 
                 // Validate outbox interfaces
                 var syncOutboxType = typeof(IAmAnOutboxSync<,>).MakeGenericType(typeof(Message), transactionType);
@@ -867,6 +881,27 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return provider.GetRequiredService<IAmAPublicationFinder>();
         }
         
+        /// <summary>
+        /// Creates the default <see cref="InMemoryOutbox"/> when no explicit outbox is provided.
+        /// Uses <see cref="IAmProducersConfiguration.DefaultBoxConfiguration"/> when set;
+        /// otherwise built-in defaults are used.
+        /// </summary>
+        private static InMemoryOutbox CreateDefaultOutbox(IAmProducersConfiguration busConfiguration)
+        {
+            var boxConfig = busConfiguration.DefaultBoxConfiguration;
+            var outbox = new InMemoryOutbox(TimeProvider.System);
+
+            if (boxConfig != null)
+            {
+                outbox.EntryLimit = boxConfig.EntryLimit;
+                outbox.EntryTimeToLive = boxConfig.EntryTimeToLive;
+                outbox.ExpirationScanInterval = boxConfig.ExpirationScanInterval;
+                outbox.CompactionPercentage = boxConfig.CompactionPercentage;
+            }
+
+            return outbox;
+        }
+
         private static IAmABrighterTracer? Tracer(IServiceProvider serviceProvider)
         {
             return serviceProvider.GetService<BrighterTracer>();

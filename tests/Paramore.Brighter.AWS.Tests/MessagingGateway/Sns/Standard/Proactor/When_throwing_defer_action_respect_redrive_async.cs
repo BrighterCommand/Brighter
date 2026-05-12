@@ -18,7 +18,6 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessagePump _messagePump;
@@ -94,10 +93,10 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         );
 
         var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
-            null
+            null,
+            new SimpleMessageMapperFactoryAsync(_ => new MyDeferredCommandMessageMapperAsync())
         );
-        messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
+        messageMapperRegistry.RegisterAsync<MyDeferredCommand, MyDeferredCommandMessageMapperAsync>();
 
         _messagePump = new ServiceActivator.Proactor(commandProcessor , (message) => typeof(MyDeferredCommand), 
             messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
@@ -126,7 +125,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    [Fact(Skip = "Failing async tests caused by task scheduler issues")]
+    [Fact]
     public async Task When_throwing_defer_action_respect_redrive_async()
     {
         await _sender.SendAsync(_message);

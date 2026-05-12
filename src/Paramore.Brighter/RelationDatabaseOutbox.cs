@@ -1286,7 +1286,7 @@ namespace Paramore.Brighter
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             
             var body = DatabaseConfiguration.BinaryMessagePayload ? 
-                CreateSqlParameter($"@{prefix}Body", DbType.Binary, message.Body.Bytes)
+                CreateSqlParameter($"@{prefix}Body", DbType.Binary, message.Body.ToByteArray())
                 : CreateSqlParameter($"@{prefix}Body", DbType.String, message.Body.Value);
 
             return

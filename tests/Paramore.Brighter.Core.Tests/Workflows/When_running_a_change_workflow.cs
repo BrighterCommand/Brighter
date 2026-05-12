@@ -14,6 +14,7 @@ public class MediatorChangeStepFlowTests
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
+    private readonly InMemoryJobChannel<WorkflowTestData> _channel;
     private readonly Job<WorkflowTestData> _job;
     private bool _stepCompleted;
 
@@ -50,34 +51,33 @@ public class MediatorChangeStepFlowTests
         _job.InitSteps(firstStep);
         
         var store = new InMemoryStateStoreAsync ();
-        InMemoryJobChannel<WorkflowTestData> channel = new();
-        
+        _channel = new InMemoryJobChannel<WorkflowTestData>();
+
         _scheduler = new Scheduler<WorkflowTestData>(
-            channel,
+            _channel,
             store
         );
-        
-        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor, _scheduler);
+
+        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
     }
     
     [Fact]
     public async Task When_running_a_change_workflow()
     {
         await _scheduler.ScheduleAsync(_job);
+        _channel.Stop();
 
-        //let it run long enough to finish work, then terminate
         var ct = new CancellationTokenSource();
-        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+        ct.CancelAfter(TimeSpan.FromSeconds(1));
         try
         {
-            _runner.RunAsync(ct.Token);
+            await _runner.RunAsync(ct.Token);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException ex)
         {
-            // swallow the exception, we expect it to be cancelled
             _testOutputHelper.WriteLine(ex.ToString());
         }
-        
+
         Assert.Equal(JobState.Done, _job.State);
         Assert.True(_stepCompleted);
         Assert.Equal("Altered", _job.Data.Bag["MyValue"]);

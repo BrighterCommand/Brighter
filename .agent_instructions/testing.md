@@ -3,9 +3,10 @@
 - Use TDD where possible.
 - Write developer tests using xUnit.
 - Name test methods in the format: When_[condition]_should_[expected_behavior].
+- Name test classes `[Behavior]Tests` — the `When_` convention is for method names and file names only, never class names. For example `PipelineValidatorErrorAggregationTests`, `CommandProcessorPostBoxBulkClearAsyncTests`.
 - Prefer a test case per file.
-- Name test files for the test method in the file i.e. When_[condition]_should_[expected_behavior].cs 
-- If you decide to use multiple test cases per file, for example shared complex set up, then name test classes [behavior]Tests for the behavior being tested across all tests in the file, for example CommandProcessorPostBoxBulkClearAsyncTests.
+- Name test files for the test method in the file i.e. When_[condition]_should_[expected_behavior].cs
+- If you decide to use multiple test cases per file, for example shared complex set up, name the file after the happy path test method and the class after the shared behavior.
 - Ensure all new features and bug fixes include appropriate test coverage.
 
 ## TDD Style
@@ -78,6 +79,13 @@ This ensures the mandatory approval step is never skipped and tests are reviewed
   3. Tests always go through the public interface - internal classes are covered by those tests
 - If you need to inject a dependency for testing (e.g., randomness, I/O), make the interface **public** so it can be injected through the public API.
 - The goal is that tests are coupled to behavior, not implementation. Refactoring internals should never break tests.
+
+## Exploratory Tests for Implementation Details
+
+- You may write tests against a public class to explore and validate an algorithm or implementation detail during development.
+- Once you are confident the detail is correct, make the class `internal` and delete the exploratory tests.
+- The internal class must then be exercised indirectly through tests on the public classes that use it.
+- Do not leave exploratory tests in the codebase — they couple tests to implementation details and prevent refactoring.
 
 ## Test Doubles
 

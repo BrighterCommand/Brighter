@@ -219,6 +219,10 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
 
     /// <inheritdoc />
     public TMessage MapToRequest(Message message) 
-        => JsonSerializer.Deserialize<TMessage>(message.Body.Bytes, JsonSerialisationOptions.Options)!;
+#if NETSTANDARD2_0
+        => JsonSerializer.Deserialize<TMessage>(message.Body.Memory.ToArray(), JsonSerialisationOptions.Options)!;
+#else
+        => JsonSerializer.Deserialize<TMessage>(message.Body.Memory.Span, JsonSerialisationOptions.Options)!;
+#endif
 }
 

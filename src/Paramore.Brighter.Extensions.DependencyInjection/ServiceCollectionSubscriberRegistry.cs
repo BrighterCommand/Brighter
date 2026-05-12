@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// <summary>
     /// .NET IoC backed Subscriber registry, used to find matching handlers
     /// </summary>
-    public class ServiceCollectionSubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry
+    public class ServiceCollectionSubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry, IAmASubscriberRegistryInspector
     {
         private readonly IServiceCollection _services;
         private readonly SubscriberRegistry _registry;
@@ -62,6 +62,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, ServiceLifetime.Transient));
             _registry.Add(requestType, handlerType);
+        }
+
+        /// <summary>
+        /// Register a handler type in the DI container only, without adding it to the subscriber registry.
+        /// Used for open generic handler types (e.g. ExceptionPolicyHandler&lt;&gt;) that must be resolvable
+        /// at runtime but should not appear in the subscriber registry (which would expose generic type
+        /// parameters like TRequest as registered request types).
+        /// </summary>
+        /// <param name="handlerType">The handler type to register in DI</param>
+        public void EnsureHandlerIsRegistered(Type handlerType)
+        {
+            _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, ServiceLifetime.Transient));
         }
 
         /// <summary>
@@ -149,5 +161,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             });
             _registry.RegisterAsync<TRequest>(router, handlerTypes);
         }
+
+        /// <inheritdoc />
+        public IReadOnlyCollection<Type> GetHandlerTypes(Type requestType) => _registry.GetHandlerTypes(requestType);
+
+        /// <inheritdoc />
+        public IReadOnlyCollection<Type> GetRegisteredRequestTypes() => _registry.GetRegisteredRequestTypes();
     }
 }

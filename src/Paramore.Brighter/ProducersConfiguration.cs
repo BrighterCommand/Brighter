@@ -141,6 +141,11 @@ namespace Paramore.Brighter
         /// </summary>
         bool UseRpc { get; set; }
 
+        /// <summary>
+        /// Configuration for the default <see cref="InMemoryOutbox"/> created when no explicit <see cref="IAmAnOutbox"/> is provided.
+        /// Only applies when <see cref="Outbox"/> is null.
+        /// </summary>
+        InMemoryBoxConfiguration? DefaultBoxConfiguration { get; set; }
     }
 
     /// <summary>
@@ -273,6 +278,12 @@ namespace Paramore.Brighter
         /// NOTE: Must implement IAmABoxTransactionProvider&lt; &gt;
         /// </summary>
         public Type? TransactionProvider { get; set; }
+
+        /// <summary>
+        /// Configuration for the default <see cref="InMemoryOutbox"/> created when no explicit <see cref="IAmAnOutbox"/> is provided.
+        /// Only applies when <see cref="IAmProducersConfiguration.Outbox"/> is null.
+        /// </summary>
+        public InMemoryBoxConfiguration? DefaultBoxConfiguration { get; set; }
 
         /// <summary>
         /// Do we want to support RPC on an external bus?
