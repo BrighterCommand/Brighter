@@ -953,7 +953,7 @@ Test-file shape convention (matches the Phase 6 precedent in `tests/Paramore.Bri
     - XML-doc on the new virtual property per ADR §B.5 line 608-613.
   - Commit: `feat: spec 0028 sub-phase A 13.A.1 — SqlBoxProvisioner extracts EffectiveSchemaName virtual hook (slice 2)`.
 
-- [ ] **TEST + IMPLEMENT: SqlBoxProvisioner introduces a transitional ClampDetectedVersion virtual hook; default clamps negative to zero; override yields identity**
+- [x] **TEST + IMPLEMENT: SqlBoxProvisioner introduces a transitional ClampDetectedVersion virtual hook; default clamps negative to zero; override yields identity**
   - **USE COMMAND**: `/test-first when SqlBoxProvisioner ClampDetectedVersion default sees a negative detectedVersion it should clamp to zero in the returned BoxTableState and when a derivative overrides ClampDetectedVersion to identity the negative value should propagate unchanged`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_sql_box_provisioner_clamp_detected_version_runs_it_should_apply_default_clamp_or_override_identity.cs`

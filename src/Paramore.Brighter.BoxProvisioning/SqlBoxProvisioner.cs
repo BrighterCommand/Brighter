@@ -133,7 +133,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
                 BoxType, migrations, cancellationToken);
             return new BoxTableState(
                 TableExists: true, HistoryExists: false,
-                CurrentVersion: detectedVersion);
+                CurrentVersion: ClampDetectedVersion(detectedVersion));
         }
 
         var maxVersion = await _detectionHelper.GetMaxVersionAsync(
@@ -177,4 +177,30 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     /// detection-helper and payload-validator calls observe this property.
     /// </summary>
     protected virtual string? EffectiveSchemaName => _configuration.SchemaName;
+
+    /// <summary>
+    /// Post-process the version inferred by
+    /// <see cref="IAmAVersionDetectingMigrationHelper{TConnection,TTransaction}.DetectCurrentVersionAsync"/>.
+    /// Default clamps negative values (e.g. spec 0027's <c>-1</c> "discriminator missing"
+    /// sentinel) to zero — the pre-lock value is a hint and the runner is authoritative.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Transitional — removed in Phase 13.B.</b> This hook exists solely to host MySQL's
+    /// no-clamp override during Phase 13.A (NF9 — bit-for-bit behavioural neutrality of the
+    /// structural pull-up). Phase 13.B (F11) unifies MySQL's behaviour with the other three
+    /// relational backends and, in the same commit, removes both <c>MySql*Provisioner</c>'s
+    /// override AND this hook — inlining <c>detectedVersion &lt; 0 ? 0 : detectedVersion</c>
+    /// directly into <see cref="DetectTableStateAsync"/>. After 13.B no derivation overrides
+    /// this method, so the hook earns no keep; preserving it post-13.B would be speculative
+    /// generality. A future backend with a richer sentinel set can re-introduce a hook in
+    /// a follow-up spec without regret.
+    /// </para>
+    /// </remarks>
+    /// <param name="detectedVersion">The version inferred by the detection helper for a
+    /// pre-existing table without history rows.</param>
+    /// <returns>The clamped or pass-through version to record on the
+    /// <see cref="BoxTableState"/> returned from <see cref="DetectTableStateAsync"/>.</returns>
+    protected virtual int ClampDetectedVersion(int detectedVersion) =>
+        detectedVersion < 0 ? 0 : detectedVersion;
 }
