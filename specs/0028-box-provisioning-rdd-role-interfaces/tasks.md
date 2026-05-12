@@ -982,7 +982,7 @@ Test-file shape convention (matches the Phase 6 precedent in `tests/Paramore.Bri
 
 The MSSQL pair has zero variance overrides — both derivations inherit defaults for `EffectiveSchemaName` and `ClampDetectedVersion`; only `CreateConnection` and `PayloadColumnName` need a per-derivation override.
 
-- [ ] **TIDY FIRST: `MsSqlOutboxProvisioner` derives from `SqlBoxProvisioner<SqlConnection, SqlTransaction>`**
+- [x] **TIDY FIRST: `MsSqlOutboxProvisioner` derives from `SqlBoxProvisioner<SqlConnection, SqlTransaction>`**
   - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlOutboxProvisioner.cs`.
   - Change class declaration from `: IAmABoxProvisioner` to `: SqlBoxProvisioner<SqlConnection, SqlTransaction>`.
   - 5-arg canonical ctor body — replace field assignments with `base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Outbox)`.
