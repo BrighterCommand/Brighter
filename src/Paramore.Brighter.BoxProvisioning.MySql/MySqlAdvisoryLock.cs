@@ -40,6 +40,8 @@ public class MySqlAdvisoryLock : IMySqlAdvisoryLock
         MySqlConnection connection, string lockKey,
         TimeSpan timeout, CancellationToken cancellationToken)
     {
+        ValidateLockParameters(timeout);
+
         // GET_LOCK takes whole seconds; truncating sub-second TimeSpans to 0 makes the call
         // non-blocking, defeating the migration lock for callers that configure short timeouts.
         // Floor at 1 second so a 500ms timeout still produces server-side blocking.
@@ -84,5 +86,19 @@ public class MySqlAdvisoryLock : IMySqlAdvisoryLock
         var raw = await command.ExecuteScalarAsync(cancellationToken);
         if (raw == null || raw is DBNull) return null;
         return Convert.ToInt32(raw) == 1;
+    }
+
+    private static void ValidateLockParameters(TimeSpan timeout)
+    {
+        // A negative TimeSpan has no meaningful interpretation for an exclusive application
+        // lock — the existing `Math.Max(1, Math.Ceiling(timeout.TotalSeconds))` floor would
+        // silently coerce it to a 1-second wait, masking the bad input from the caller. Surface
+        // it as an actionable ArgumentOutOfRangeException so the failure mode at construction
+        // time is a clear diagnostic rather than a confusingly short wait at acquire time.
+        // Mirrors `MsSqlAdvisoryLock.ValidateLockParameters` per PR #4039 review item #7.
+        if (timeout < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Migration lock timeout must be non-negative.");
+        }
     }
 }
