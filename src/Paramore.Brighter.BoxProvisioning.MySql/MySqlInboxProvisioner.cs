@@ -28,9 +28,7 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// <summary>
 /// Provisions a MySQL inbox table. Pre-lock detection and payload-mode validation are owned
 /// by the <see cref="SqlBoxProvisioner{TConnection,TTransaction}"/> base; this class supplies
-/// only the abstract hooks for the MySQL connection factory and the inbox payload column name,
-/// plus a transitional identity override of <c>ClampDetectedVersion</c> to preserve MySQL's
-/// no-clamp pre-13.B behaviour (removed in Phase 13.B per F11).
+/// only the abstract hooks for the MySQL connection factory and the inbox payload column name.
 /// </summary>
 public class MySqlInboxProvisioner : SqlBoxProvisioner<MySqlConnection, MySqlTransaction>
 {
@@ -71,17 +69,4 @@ public class MySqlInboxProvisioner : SqlBoxProvisioner<MySqlConnection, MySqlTra
 
     /// <inheritdoc />
     protected override string PayloadColumnName => "CommandBody";
-
-    /// <summary>
-    /// <b>TRANSITIONAL — removed in Phase 13.B per F11.</b> Identity override preserves
-    /// MySQL's no-clamp pre-13.A behaviour bit-for-bit (NF9 — behavioural neutrality of
-    /// the sub-phase A structural pull-up). Phase 13.B (F11) unifies MySQL's behaviour
-    /// with the other three relational backends and removes both this override AND the
-    /// base hook in the same commit, inlining the clamp into <c>DetectTableStateAsync</c>.
-    /// See ADR 0058 §B.5 line 646 and the base's <c>ClampDetectedVersion</c> XML-doc.
-    /// </summary>
-    /// <param name="detectedVersion">The version inferred by the detection helper for a
-    /// pre-existing table without history rows.</param>
-    /// <returns>The detected version unchanged — MySQL's pre-13.B contract.</returns>
-    protected override int ClampDetectedVersion(int detectedVersion) => detectedVersion;
 }

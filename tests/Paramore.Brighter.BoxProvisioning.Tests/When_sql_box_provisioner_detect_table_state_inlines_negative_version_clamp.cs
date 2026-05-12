@@ -32,48 +32,53 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// The <c>SqlBoxProvisioner</c> base hosts <c>ClampDetectedVersion</c> as a transitional virtual
-/// hook with a clamp-negative-to-zero default. Three of four relational backends inherit the
-/// default; MySQL's identity override (added in 13.A.4) preserves its no-clamp behaviour bit-for-
-/// bit through Phase 13.A. Phase 13.B (F11) removes both the MySQL override AND this hook in one
-/// commit, inlining the clamp into <c>DetectTableStateAsync</c>. These tests pin the default-clamp
-/// contract and the identity-override extension point (the latter is the MySQL shape that 13.A.4
-/// will adopt and 13.B will delete).
+/// <c>SqlBoxProvisioner.DetectTableStateAsync</c> inlines a negative-version clamp on the
+/// pre-lock-detected version: spec 0027's <c>-1</c> "discriminator missing" sentinel maps to
+/// 0 before being recorded on the <see cref="BoxTableState"/> handed to the migration runner;
+/// non-negative values pass through unchanged. These tests pin that behaviour at the call
+/// site by data-flow — the captured <c>BoxTableState.CurrentVersion</c> traverses only the
+/// bootstrap branch of <c>DetectTableStateAsync</c>, so an accidental relocation or
+/// elimination of the inlined clamp would break this test.
 /// </summary>
 /// <remarks>
-/// Each <c>[Fact]</c> exercises the bootstrap branch (table exists, no history) — the only call
-/// site where <c>ClampDetectedVersion</c> applies. The history-exists branch goes through
-/// <c>GetMaxVersionAsync</c> and does NOT apply clamp.
+/// Pre-13.B this behaviour was hosted in a virtual <c>ClampDetectedVersion</c> hook that
+/// MySQL overrode to identity for behavioural neutrality of the structural pull-up. Phase
+/// 13.B (F11) unified MySQL's clamp behaviour with the other three relational backends and,
+/// in one commit, removed both the MySQL override AND the base hook, inlining the clamp
+/// into <c>DetectTableStateAsync</c>. The MySQL integration test in
+/// <c>tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/When_mysql_pre_lock_detects_negative_version_it_should_clamp_to_zero.cs</c>
+/// pins the same behaviour from the backend side.
 /// </remarks>
-public class SqlBoxProvisionerClampDetectedVersionTests
+public class SqlBoxProvisionerNegativeVersionClampTests
 {
     [Fact]
-    public async Task When_clamp_detected_version_default_sees_negative_it_should_return_zero()
+    public async Task When_detect_table_state_sees_negative_detected_version_it_should_clamp_to_zero()
     {
-        //Arrange — default derivation (no override); DetectCurrentVersionAsync returns -1
-        //(spec 0027's "discriminator missing" sentinel). The clamp default maps -1 → 0.
+        //Arrange — bootstrap branch (table exists, no history); DetectCurrentVersionAsync
+        //returns -1 (spec 0027's "discriminator missing" sentinel). The inlined clamp in
+        //DetectTableStateAsync maps -1 → 0 before recording on BoxTableState.
         var detection = new BootstrapDetectionHelper { DetectedVersionResult = -1 };
         var migrationRunner = new VersionCapturingMigrationRunner();
-        var provisioner = new TestSqlBoxProvisionerWithDefaultClamp(
+        var provisioner = new TestSqlBoxProvisioner(
             detection, new NullMigrationCatalog(), new NullPayloadValidator(),
             new RecordingConfiguration(), migrationRunner, BoxType.Outbox);
 
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — captured BoxTableState.CurrentVersion clamped to 0.
+        //Assert — captured BoxTableState.CurrentVersion clamped from -1 to 0.
         Assert.NotNull(migrationRunner.CapturedTableState);
         Assert.Equal(0, migrationRunner.CapturedTableState!.CurrentVersion);
     }
 
     [Fact]
-    public async Task When_clamp_detected_version_default_sees_positive_it_should_pass_through_unchanged()
+    public async Task When_detect_table_state_sees_positive_detected_version_it_should_pass_through_unchanged()
     {
-        //Arrange — default derivation; DetectCurrentVersionAsync returns 3 (a real V_k).
-        //The clamp default leaves non-negatives untouched.
+        //Arrange — bootstrap branch (table exists, no history); DetectCurrentVersionAsync
+        //returns 3 (a real V_k). The inlined clamp leaves non-negatives untouched.
         var detection = new BootstrapDetectionHelper { DetectedVersionResult = 3 };
         var migrationRunner = new VersionCapturingMigrationRunner();
-        var provisioner = new TestSqlBoxProvisionerWithDefaultClamp(
+        var provisioner = new TestSqlBoxProvisioner(
             detection, new NullMigrationCatalog(), new NullPayloadValidator(),
             new RecordingConfiguration(), migrationRunner, BoxType.Outbox);
 
@@ -85,32 +90,14 @@ public class SqlBoxProvisionerClampDetectedVersionTests
         Assert.Equal(3, migrationRunner.CapturedTableState!.CurrentVersion);
     }
 
-    [Fact]
-    public async Task When_clamp_detected_version_is_overridden_to_identity_it_should_propagate_negative_unchanged()
-    {
-        //Arrange — identity-override derivation (the MySQL-during-13.A shape; removed in 13.B);
-        //DetectCurrentVersionAsync returns -1. The override bypasses the clamp.
-        var detection = new BootstrapDetectionHelper { DetectedVersionResult = -1 };
-        var migrationRunner = new VersionCapturingMigrationRunner();
-        var provisioner = new TestSqlBoxProvisionerWithIdentityClamp(
-            detection, new NullMigrationCatalog(), new NullPayloadValidator(),
-            new RecordingConfiguration(), migrationRunner, BoxType.Outbox);
-
-        //Act
-        await provisioner.ProvisionAsync();
-
-        //Assert — captured BoxTableState.CurrentVersion is -1 (unchanged from detected value).
-        Assert.NotNull(migrationRunner.CapturedTableState);
-        Assert.Equal(-1, migrationRunner.CapturedTableState!.CurrentVersion);
-    }
-
     /// <summary>
-    /// Derivation with no <c>ClampDetectedVersion</c> override — inherits the base's clamp default
-    /// (negative → 0; non-negative pass-through). Represents the MSSQL/PostgreSQL/SQLite shape.
+    /// Concrete derivation supplying only the abstract hooks. Represents the post-13.B shape:
+    /// no derivation overrides clamp behaviour because the hook no longer exists; the inlined
+    /// clamp in <c>DetectTableStateAsync</c> applies uniformly across all eight derivations.
     /// </summary>
-    private sealed class TestSqlBoxProvisionerWithDefaultClamp : SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction>
+    private sealed class TestSqlBoxProvisioner : SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction>
     {
-        public TestSqlBoxProvisionerWithDefaultClamp(
+        public TestSqlBoxProvisioner(
             IAmAVersionDetectingMigrationHelper<FakeDbConnection, FakeDbTransaction> detectionHelper,
             IAmABoxMigrationCatalog catalog,
             IAmABoxPayloadModeValidator<FakeDbConnection> payloadValidator,
@@ -125,38 +112,12 @@ public class SqlBoxProvisionerClampDetectedVersionTests
             => new FakeDbConnection();
 
         protected override string PayloadColumnName => "Body";
-    }
-
-    /// <summary>
-    /// Derivation that overrides <c>ClampDetectedVersion</c> to identity — represents the MySQL
-    /// transitional shape during Phase 13.A (the override is removed in Phase 13.B alongside the
-    /// base hook itself; clamp is then inlined into <c>DetectTableStateAsync</c>).
-    /// </summary>
-    private sealed class TestSqlBoxProvisionerWithIdentityClamp : SqlBoxProvisioner<FakeDbConnection, FakeDbTransaction>
-    {
-        public TestSqlBoxProvisionerWithIdentityClamp(
-            IAmAVersionDetectingMigrationHelper<FakeDbConnection, FakeDbTransaction> detectionHelper,
-            IAmABoxMigrationCatalog catalog,
-            IAmABoxPayloadModeValidator<FakeDbConnection> payloadValidator,
-            IAmARelationalDatabaseConfiguration configuration,
-            IAmABoxMigrationRunner migrationRunner,
-            BoxType boxType)
-            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType)
-        {
-        }
-
-        protected override FakeDbConnection CreateConnection(string connectionString)
-            => new FakeDbConnection();
-
-        protected override string PayloadColumnName => "Body";
-
-        protected override int ClampDetectedVersion(int detectedVersion) => detectedVersion;
     }
 
     /// <summary>
     /// Drives the provisioner into the bootstrap branch (table exists, no history) so
     /// <c>DetectCurrentVersionAsync</c> returns <see cref="DetectedVersionResult"/> — the only
-    /// path where <c>ClampDetectedVersion</c> is applied.
+    /// path where the inlined clamp applies.
     /// </summary>
     private sealed class BootstrapDetectionHelper : IAmAVersionDetectingMigrationHelper<FakeDbConnection, FakeDbTransaction>
     {

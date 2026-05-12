@@ -44,15 +44,15 @@ Each AC records (a) the verifying artefact and (b) the tick.
 
 | Filter | net9.0 | net10.0 | Baseline | Δ |
 |---|---|---|---|---|
-| Core BoxProvisioning.Tests | 44/44 [^ac6-core-sub-phase-a] | 44/44 [^ac6-core-sub-phase-a] | 23/23 | +21/+21 |
+| Core BoxProvisioning.Tests | 43/43 [^ac6-core-sub-phase-a] | 43/43 [^ac6-core-sub-phase-a] | 23/23 | +20/+20 |
 | Core sub-filter | 5/5 | 5/5 | 5/5 | =/= |
 | MSSQL | 63/63 | 63/63 | 54/54 | +9/+9 |
 | Postgres | 54/54 | 54/54 | 46/46 | +8/+8 |
-| MySQL | 61/61 | n/a | 50/50 | +11 |
-| SQLite | 45/45 | 45/45 | 40/40 | +5/+5 |
+| MySQL | 67/67 | n/a | 50/50 | +17 |
+| SQLite | 46/46 | 46/46 | 40/40 | +6/+6 |
 | Spanner | 26/26 | 26/26 | 26/26 | =/= |
 
-[^ac6-core-sub-phase-a]: Post-Phase-13.A.1 (sub-phase A base introduction). The Phase 6 precedent legitimises adding base-contract tests alongside an abstract base; 8 `[Fact]` methods across three test files (orchestration 3 + schema 2 + clamp 3) at `tests/Paramore.Brighter.BoxProvisioning.Tests/`. Δ recomputed: 44 − 23 = +21 per TFM (was +13 pre-13.A.0.5 amendment). Phase 13.B subsequently moves Core from 44/44 +21/+21 → 43/43 +20/+20 (-1 deleted override-identity `[Fact]` once the transitional `ClampDetectedVersion` hook is removed) and MySQL from 61/61 +11 → 63/63 +13 (+2 unification `[Fact]`s in `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/`).
+[^ac6-core-sub-phase-a]: Post-Phase-13.B (sub-phase A complete). The Phase 6 precedent legitimises adding base-contract tests alongside an abstract base; Phase 13.A.1 added 8 `[Fact]` methods across three test files (orchestration 3 + schema 2 + clamp 3) at `tests/Paramore.Brighter.BoxProvisioning.Tests/` — recomputed Δ at 13.A.1: 44 − 23 = +21 per TFM (was +13 pre-13.A.0.5 amendment). Phase 13.B then moved Core from 44/44 +21/+21 → 43/43 +20/+20 (-1 deleted override-identity `[Fact]` once the transitional `ClampDetectedVersion` hook was removed) and MySQL from 61/61 +11 → 67/67 +17 (+2 unification `[Fact]`s in `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/` PLUS +4 pre-existing drift from three post-Phase-10.4 fix commits: `ba8813e6f` "harmonise MySql default lock timeout to 30 seconds" +1, `a8e99e1c4` "reject negative TimeSpan in MySqlAdvisoryLock.AcquireAsync" +1, `03bdd7455` "reject overflowing TimeSpan in MySqlAdvisoryLock.AcquireAsync" +2 net — same pattern as the SQLite +1 drift, reconciled here in lock-step). SQLite recorded a pre-existing +1 drift from commit `b14d76592` (default lock-timeout pin) — reconciled in lock-step at 13.B: 45/45 +5/+5 → 46/46 +6/+6.
 
 Spanner equal (degenerate, unchanged per ADR 0057 §6); all six other filters exceed baseline due to additive Phase 5/6/10 tests plus the sub-phase A base-contract additions on the Core row.
 
