@@ -196,6 +196,17 @@ The bootstrap-path error message branches on this: `-1` → "Table *{name}* exis
 
 **Why V1 does not need to be idempotent**: V1 is the full `CREATE TABLE` from the current builder, and the three-path logic guarantees it runs only when `!TableExists` *and* no concurrent instance has since created it (re-checked under lock). V2+ UpScripts MUST be idempotent per §5 because they may run on any intermediate schema state — including post-bootstrap and post-failed-partial-migration.
 
+**Cross-box history-table race**: the advisory lock above scopes per-box (`BrighterMigration_{schema}.{table}`), but `__BrighterMigrationHistory` is shared across every box in the database. Concurrent provisioners targeting different boxes (e.g. outbox + inbox at host startup) hold *different* advisory locks and can both reach `EnsureHistoryTableAsync` simultaneously. The history-table DDL is intentionally outside any global lock; cross-backend resolution falls to the database's own duplicate-object handling:
+
+| Backend | Strategy | Why no extra serialization |
+|---|---|---|
+| MSSQL | `IF NOT EXISTS` + `CREATE TABLE`; catch 2714 | Statement-terminating under default `XACT_ABORT OFF` — loser's tx stays usable |
+| PostgreSQL | `CREATE TABLE IF NOT EXISTS`; catch 23505 / 42P07 / 42710 | pg_class check and pg_type insert are not atomic |
+| MySQL | `CREATE TABLE IF NOT EXISTS` | `MDL_EXCLUSIVE` metadata lock makes the statement atomic |
+| SQLite | `CREATE TABLE IF NOT EXISTS` | `BEGIN IMMEDIATE` writer lock already serialises concurrent runners |
+
+A global "history-table lock" was considered and rejected: the race is rare (first-touch only), each backend's native semantics produce a clean recovery, and a global lock would serialize otherwise-independent per-box provisioning chains. Compensating catches live at `MsSqlBoxMigrationRunner.EnsureHistoryTableAsync` and `PostgreSqlBoxMigrationRunner.EnsureHistoryTableAsync`.
+
 ### 4. Migration object — extend, don't replace
 
 `IAmABoxMigration` gains one new required member and two optional members:
