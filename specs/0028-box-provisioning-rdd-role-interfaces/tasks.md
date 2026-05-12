@@ -1014,7 +1014,7 @@ PG's outbox provisioner currently uses `await using` for its connection (the dis
   - Validation: Postgres test filter stays at the AC6 floor — 54/54 per TFM.
   - Commit: `tidy: spec 0028 sub-phase A 13.A.3 — PostgreSqlOutboxProvisioner derives from SqlBoxProvisioner base`.
 
-- [ ] **TIDY FIRST: `PostgreSqlInboxProvisioner` derives from `SqlBoxProvisioner<NpgsqlConnection, NpgsqlTransaction>`**
+- [x] **TIDY FIRST: `PostgreSqlInboxProvisioner` derives from `SqlBoxProvisioner<NpgsqlConnection, NpgsqlTransaction>`**
   - File: `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlInboxProvisioner.cs`.
   - Same shape. `BoxType.Inbox`. `PayloadColumnName` returns `"commandbody"`.
   - Validation: Postgres test filter stays 54/54 per TFM.
