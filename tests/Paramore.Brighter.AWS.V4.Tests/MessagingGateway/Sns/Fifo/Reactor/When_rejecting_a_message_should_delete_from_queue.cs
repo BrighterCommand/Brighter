@@ -8,6 +8,7 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Xunit;
 using System.Collections.Generic;
+using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Fifo.Reactor;
 
@@ -30,7 +31,7 @@ public class SqsMessageConsumerRejectTests : IDisposable
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
-        var topicAttributes = new SnsAttributes { Type = SqsType.Fifo };
+        var topicAttributes = new SnsAttributes(type: SqsType.Fifo, tags: [new Tag { Key = "Environment", Value = "Test" }]);
 
         SqsSubscription<MyCommand> subscription = new(
             subscriptionName: new SubscriptionName(channelName),
