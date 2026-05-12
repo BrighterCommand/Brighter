@@ -1091,7 +1091,7 @@ SQLite has no schema concept per ADR 0057 §6 (and per requirements.md line 197 
 
 Per ADR §B.5 line 646 + requirements F11. The MySQL `ClampDetectedVersion` identity overrides from 13.A.4 AND the `ClampDetectedVersion` virtual hook on `SqlBoxProvisioner` are removed in **one commit**, with the clamp inlined directly into `DetectTableStateAsync`. The post-13.B base has three hooks (`CreateConnection` abstract, `PayloadColumnName` abstract, `EffectiveSchemaName` virtual) — the transitional fourth disappears. Per CLAUDE.md "no half-finished implementations": do NOT split the override-removal from the hook-removal across two commits. The hook earns no keep once no derivation overrides it (ADR §B.5 line 646 — "preserving the hook post-13.B would be speculative generality").
 
-- [ ] **TEST + IMPLEMENT: MySQL pre-lock negative-version detection clamps to zero matching the other three relational backends**
+- [x] **TEST + IMPLEMENT: MySQL pre-lock negative-version detection clamps to zero matching the other three relational backends**
   - **USE COMMAND**: `/test-first when MySql provisioner pre-lock detection returns a negative version it should clamp to zero in the BoxTableState passed to the migration runner matching MsSql Postgres and Sqlite`
   - Test location: `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning`
   - Test file: `When_mysql_pre_lock_detects_negative_version_it_should_clamp_to_zero.cs`
@@ -1120,7 +1120,7 @@ Per ADR §B.5 line 646 + requirements F11. The MySQL `ClampDetectedVersion` iden
 
 ### 13.C — Documentation and PR description updates
 
-- [ ] **TIDY FIRST: Update `release_notes.md` with the `SqlBoxProvisioner` additive surface (per NF10 — additive only)**
+- [x] **TIDY FIRST: Update `release_notes.md` with the `SqlBoxProvisioner` additive surface (per NF10 — additive only)**
   - File: `release_notes.md`.
   - Under the existing spec 0028 "Additive" section, add a sub-bullet: *"`SqlBoxProvisioner<TConnection, TTransaction>` — abstract base class in `Paramore.Brighter.BoxProvisioning` for the eight relational provisioners (MSSQL/PG/MySQL/SQLite × Outbox/Inbox). Spanner's pair stays free-standing per ADR 0057 §6."*
   - **Do NOT** add any entry under Breaking Changes — sub-phase A is source-break-neutral per NF10 (both ctors on every derivation preserved; `base(...)` chaining is internal).

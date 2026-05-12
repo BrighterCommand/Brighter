@@ -193,6 +193,7 @@ Spec 0028 introduces the following net-new public surface (all in `Paramore.Brig
 
 * **Role interfaces** (5): `IAmABoxMigrationDetectionHelper<TConnection, TTransaction>`, `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` (extends the base), `IAmABoxMigrationCatalog`, `IAmABoxPayloadModeValidator<TConnection>`, `IAmAProvisioningUnitOfWork<TTransaction>`.
 * **Abstract base** (1): `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` implementing `IAmABoxMigrationRunner`.
+* **Abstract base** (1, sub-phase A): `SqlBoxProvisioner<TConnection, TTransaction>` — abstract base class in `Paramore.Brighter.BoxProvisioning` for the eight relational provisioners (MSSQL/PG/MySQL/SQLite × Outbox/Inbox). Spanner's pair stays free-standing per ADR 0057 §6.
 * **Provisioning UoW implementations** (4 — one per relational backend, in each backend's package): `MsSqlProvisioningUnitOfWork`, `PostgreSqlProvisioningUnitOfWork`, `MySqlProvisioningUnitOfWork`, `SqliteProvisioningUnitOfWork`. Each encapsulates that backend's specific lock+transaction pairing and ordering.
 * **Detection-helper instance classes** (5): `MsSqlBoxDetectionHelper`, `PostgreSqlBoxDetectionHelper`, `MySqlBoxDetectionHelper`, `SqliteBoxDetectionHelper`, `SpannerBoxDetectionHelper`.
 * **Migration-catalogue instance classes** (8): `{MsSql,PostgreSql,MySql,Sqlite}{Outbox,Inbox}MigrationCatalog` (Spanner exempt).
