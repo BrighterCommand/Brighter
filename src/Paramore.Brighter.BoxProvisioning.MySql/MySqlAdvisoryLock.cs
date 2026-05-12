@@ -90,15 +90,29 @@ public class MySqlAdvisoryLock : IMySqlAdvisoryLock
 
     private static void ValidateLockParameters(TimeSpan timeout)
     {
-        // A negative TimeSpan has no meaningful interpretation for an exclusive application
-        // lock — the existing `Math.Max(1, Math.Ceiling(timeout.TotalSeconds))` floor would
-        // silently coerce it to a 1-second wait, masking the bad input from the caller. Surface
-        // it as an actionable ArgumentOutOfRangeException so the failure mode at construction
-        // time is a clear diagnostic rather than a confusingly short wait at acquire time.
-        // Mirrors `MsSqlAdvisoryLock.ValidateLockParameters` per PR #4039 review item #7.
+        // GET_LOCK takes its @timeout via a SQL INT bind (whole seconds). A negative TimeSpan
+        // has no meaningful interpretation for an exclusive application lock — the existing
+        // `Math.Max(1, Math.Ceiling(timeout.TotalSeconds))` floor would silently coerce it to a
+        // 1-second wait, masking the bad input from the caller. A TimeSpan whose ceil(TotalSeconds)
+        // exceeds int.MaxValue silently overflows on cast (wraps to a negative int) and GET_LOCK
+        // then interprets the bind as "wait forever" — defeating the migration lock for callers
+        // expecting bounded waits. Surface both as actionable ArgumentOutOfRangeException so the
+        // failure mode at acquire time is a clear diagnostic rather than a deadlocked deployment.
+        // Mirrors `MsSqlAdvisoryLock.ValidateLockParameters` per PR #4039 review item #7; note the
+        // MSSQL boundary is int.MaxValue *milliseconds* (~24.85 days) because sp_getapplock takes
+        // ms, whereas GET_LOCK takes seconds — so the MySQL boundary is int.MaxValue seconds (~68
+        // years).
         if (timeout < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Migration lock timeout must be non-negative.");
+        }
+
+        if (timeout.TotalSeconds > int.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(timeout), timeout,
+                $"Migration lock timeout must not exceed {TimeSpan.FromSeconds(int.MaxValue)} " +
+                $"(int.MaxValue seconds ≈ 68 years). GET_LOCK would silently overflow on cast.");
         }
     }
 }
