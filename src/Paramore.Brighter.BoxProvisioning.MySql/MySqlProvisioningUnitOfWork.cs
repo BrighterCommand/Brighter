@@ -106,7 +106,26 @@ public class MySqlProvisioningUnitOfWork(
         // the runner's catch path even if BeginAsync failed.
         if (_lockResource is null) return;
 
-        var releaseResult = await _advisoryLock.ReleaseAsync(_connection, _lockResource, cancellationToken);
+        bool? releaseResult;
+        try
+        {
+            releaseResult = await _advisoryLock.ReleaseAsync(_connection, _lockResource, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // RELEASE_LOCK executes SQL on the same connection — if the connection is dead
+            // (mid-migration driver fault, ObjectDisposedException, MySqlException) ReleaseAsync
+            // throws. RollbackAsync MUST NOT throw — otherwise the runner's catch path
+            // (catch { RollbackAsync(...); throw; }) replaces the original migration exception
+            // with this cleanup-side failure, masking the real cause. The session-scoped
+            // GET_LOCK is released by the server when the connection closes.
+            _logger.LogWarning(
+                ex,
+                "MySQL provisioning UoW: RELEASE_LOCK threw for lock resource '{LockResource}' — release skipped, the session will release the lock when the connection closes.",
+                _lockResource);
+            return;
+        }
+
         if (releaseResult is true) return;
 
         var marker = releaseResult is null ? "NULL" : "0";

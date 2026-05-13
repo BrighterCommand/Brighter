@@ -115,11 +115,26 @@ public class PostgreSqlProvisioningUnitOfWork(
         }
         if (_lockResource is not null)
         {
-            var held = await _advisoryLock.ReleaseAsync(_connection, _lockResource, cancellationToken);
-            if (!held)
+            try
             {
+                var held = await _advisoryLock.ReleaseAsync(_connection, _lockResource, cancellationToken);
+                if (!held)
+                {
+                    _logger.LogWarning(
+                        "Postgres provisioning UoW: pg_advisory_unlock returned false for lock resource '{LockResource}' — the lock was not held by this session at release. This is likely a Brighter defect — please report it.",
+                        _lockResource);
+                }
+            }
+            catch (Exception ex)
+            {
+                // pg_advisory_unlock executes SQL on the same connection — if the connection is
+                // dead (mid-migration driver fault, ObjectDisposedException, NpgsqlException)
+                // ReleaseAsync throws. RollbackAsync MUST NOT throw — otherwise the runner's
+                // catch path (catch { RollbackAsync(...); throw; }) replaces the original
+                // migration exception with this cleanup-side failure, masking the real cause.
                 _logger.LogWarning(
-                    "Postgres provisioning UoW: pg_advisory_unlock returned false for lock resource '{LockResource}' — the lock was not held by this session at release. This is likely a Brighter defect — please report it.",
+                    ex,
+                    "Postgres provisioning UoW: pg_advisory_unlock threw for lock resource '{LockResource}' — release skipped, the session will release the lock when the connection closes.",
                     _lockResource);
             }
         }

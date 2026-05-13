@@ -53,7 +53,8 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
 internal sealed class FakePostgreSqlAdvisoryLock(
     bool releaseResult,
     bool senseTransactionStateAtAcquire = false,
-    Exception? throwOnAcquire = null) : IPostgreSqlAdvisoryLock
+    Exception? throwOnAcquire = null,
+    Exception? throwOnRelease = null) : IPostgreSqlAdvisoryLock
 {
     public string? AcquiredKey { get; private set; }
     public string? ReleasedKey { get; private set; }
@@ -93,6 +94,7 @@ internal sealed class FakePostgreSqlAdvisoryLock(
         CancellationToken cancellationToken)
     {
         ReleasedKey = lockKey;
+        if (throwOnRelease is not null) throw throwOnRelease;
         return Task.FromResult(releaseResult);
     }
 }

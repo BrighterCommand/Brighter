@@ -46,7 +46,8 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
 /// </remarks>
 internal sealed class FakeMySqlAdvisoryLock(
     bool? releaseResult,
-    Exception? throwOnAcquire = null) : IMySqlAdvisoryLock
+    Exception? throwOnAcquire = null,
+    Exception? throwOnRelease = null) : IMySqlAdvisoryLock
 {
     public string? AcquiredKey { get; private set; }
     public string? ReleasedKey { get; private set; }
@@ -67,6 +68,7 @@ internal sealed class FakeMySqlAdvisoryLock(
         CancellationToken cancellationToken)
     {
         ReleasedKey = lockKey;
+        if (throwOnRelease is not null) throw throwOnRelease;
         return Task.FromResult(releaseResult);
     }
 }
