@@ -258,12 +258,12 @@ public class CloudEventsTransformerTests
         //act
         var cloudEvents = _transformer.Wrap(_message, publication);
         
-        //assert
-        Assert.Equal(new Uri("http://goparamore.io"), cloudEvents.Header.Source);
-        Assert.Equal( CloudEventsType.Empty, cloudEvents.Header.Type);
+        //assert - message header values should be preserved when publication has no explicit cloud event properties
+        Assert.Equal(_source, cloudEvents.Header.Source);
+        Assert.Equal(_type, cloudEvents.Header.Type);
         Assert.Equal(new ContentType(MediaTypeNames.Text.Plain), cloudEvents.Header.ContentType);
-        Assert.Null(cloudEvents.Header.DataSchema);
-        Assert.Null(cloudEvents.Header.Subject);
+        Assert.Equal(_dataSchema, cloudEvents.Header.DataSchema);
+        Assert.Equal(_subject, cloudEvents.Header.Subject);
     }
     
     [Fact]
@@ -299,7 +299,7 @@ public class CloudEventsTransformerTests
        var message = _transformer.Unwrap(cloudEvents);
        
        Assert.Equal(_source, message.Header.Source);
-       Assert.Equal(CloudEventsType.Empty, message.Header.Type);
+       Assert.Equal(_type, message.Header.Type);
        Assert.Equal(_dataSchema, message.Header.DataSchema);
        Assert.Equal(_subject, message.Header.Subject);
        Assert.Equal(_message.Body.Bytes, message.Body.Bytes);
