@@ -48,8 +48,16 @@ internal sealed class StubBoxProvisioner : IAmABoxProvisioner
     public BoxType BoxType { get; }
     public string BoxTableName { get; }
 
+    /// <summary>
+    /// Set when <see cref="ProvisionAsync"/> has been entered (regardless of whether the stub
+    /// then throws). Lets tests assert that a later provisioner did NOT run after an earlier
+    /// one failed.
+    /// </summary>
+    public bool ProvisionCalled { get; private set; }
+
     public Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
+        ProvisionCalled = true;
         if (_throwOnProvision is not null) throw _throwOnProvision;
         return Task.CompletedTask;
     }
