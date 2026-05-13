@@ -62,6 +62,18 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// to WAL. Pass <see langword="false"/> to leave the existing journal mode untouched if the
 /// host application owns that decision.
 /// </para>
+/// <para>
+/// <strong>busy_timeout side effect:</strong> the runner unconditionally issues
+/// <c>PRAGMA busy_timeout = 0</c> on its own connection at the start of every
+/// <see cref="MigrateAsync"/> call. The pragma is connection-scoped (it does not bleed into
+/// the host application's other connections), but it means contention from another writer
+/// surfaces as an immediate <c>SQLITE_BUSY</c> on <c>BEGIN IMMEDIATE</c> rather than the
+/// inherited wait. This is deliberate per ADR 0057: contention should be visible to the
+/// base orchestration's writer-slot acquisition (which the base handles), not absorbed
+/// silently here. Hosts running on a shared SQLite file that relied on a non-zero
+/// <c>busy_timeout</c> at provisioning time should be aware that the runner's connection
+/// will not wait.
+/// </para>
 /// </remarks>
 public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, SqliteTransaction>
 {
