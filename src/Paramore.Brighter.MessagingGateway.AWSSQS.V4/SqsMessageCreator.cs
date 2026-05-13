@@ -240,15 +240,17 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)
     {
+        var bag = new Dictionary<string, object>();
+
         if (sqsMessage.MessageAttributes is not null
             && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Bag, out MessageAttributeValue? value))
         {
             try
             {
-                var bag = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(value.StringValue,
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(value.StringValue,
                     JsonSerialisationOptions.Options);
-                if (bag != null)
-                    return bag;
+                if (parsed != null)
+                    bag = parsed;
             }
             catch (Exception)
             {
@@ -256,7 +258,22 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
             }
         }
 
-        return new Dictionary<string, object>();
+        if (sqsMessage.MessageAttributes is null)
+            return bag;
+
+        // Surface inbound MessageAttributes Brighter doesn't already consume so foreign producers'
+        // metadata can flow through to consumers via the bag. Entries already present in Brighter's
+        // own JSON bag attribute take precedence.
+        foreach (var attribute in sqsMessage.MessageAttributes)
+        {
+            if (HeaderNames.IsKnown(attribute.Key) || bag.ContainsKey(attribute.Key))
+                continue;
+            var raw = attribute.Value.StringValue;
+            if (raw != null)
+                bag[attribute.Key] = raw;
+        }
+
+        return bag;
     }
 
     private static HeaderResult<RoutingKey> ReadReplyTo(Amazon.SQS.Model.Message sqsMessage)

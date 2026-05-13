@@ -168,20 +168,20 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
     private Dictionary<string, object> ReadMessageBag()
     {
+        var bag = new Dictionary<string, object>();
+
         if (_messageAttributes.TryGetValue(HeaderNames.Bag, out var headerBag))
         {
             try
             {
                 var json = headerBag.GetValueInString();
-                if (string.IsNullOrEmpty(json))
+                if (!string.IsNullOrEmpty(json))
                 {
-                    return new Dictionary<string, object>();
+                    var parsed = JsonSerializer.Deserialize<Dictionary<string, object>>(json!,
+                        JsonSerialisationOptions.Options);
+                    if (parsed != null)
+                        bag = parsed;
                 }
-
-                var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(json!,
-                    JsonSerialisationOptions.Options);
-
-                return bag ?? new Dictionary<string, object>();
             }
             catch (Exception)
             {
@@ -189,7 +189,19 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
             }
         }
 
-        return new Dictionary<string, object>();
+        // Surface inbound MessageAttributes Brighter doesn't already consume so foreign producers'
+        // metadata can flow through to consumers via the bag. Entries already present in Brighter's
+        // own JSON bag attribute take precedence.
+        foreach (var attribute in _messageAttributes)
+        {
+            if (HeaderNames.IsKnown(attribute.Key) || bag.ContainsKey(attribute.Key))
+                continue;
+            var raw = attribute.Value.GetValueInString();
+            if (raw != null)
+                bag[attribute.Key] = raw;
+        }
+
+        return bag;
     }
     
     private Dictionary<string, string> ReadMessageCloudEvents()
