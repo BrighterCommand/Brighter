@@ -5,12 +5,14 @@ namespace Paramore.Brighter.Transforms.Attributes;
 
 /// <summary>
 /// Support the usage of CloudEvents in the message.
-/// We can take the metadata for a CloudEvent from different sources, and they are handled in this order:
-/// 1. The <see cref="Publication"/> parameter in the Message Mapper; use this if you want to map them by hand
-/// 2. The <see cref="Publication"/> parameter in the CloudEvents transformer; use this if you just want mapping by convention
-///     via the <see cref="CloudEventsTransformer"/>
-/// 2. The parameters provided to the <see cref="CloudEventsAttribute"/> attribute; use this if you want to hardcode these via the
-///     attribute over the <see cref="Publication"/>
+/// We can take the metadata for a CloudEvent from different sources, and they are handled in this order
+/// (highest priority first):
+/// 1. The parameters provided to the <see cref="CloudEventsAttribute"/> attribute; use this if you want to hardcode values
+///     that override everything else
+/// 2. The message header values set by the Message Mapper; these are preserved if already set (e.g. by a custom mapper
+///     or <c>JustSayingMessageMapper</c>), so the mapper's values take priority over the <see cref="Publication"/> defaults
+/// 3. The <see cref="Publication"/> parameter passed to the <see cref="CloudEventsTransformer"/>; use this as a fallback
+///     when neither the attribute nor the mapper provides a value
 /// </summary>
 public class CloudEventsAttribute : WrapWithAttribute
 {
