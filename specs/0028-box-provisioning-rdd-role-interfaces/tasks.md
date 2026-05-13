@@ -1183,7 +1183,7 @@ Per [ADR 0059](../../docs/adr/0059-box-provisioning-abstract-base-naming-symmetr
 
 ### 14.A — Pre-rename grep audit (read-only)
 
-- [ ] **TIDY FIRST: Enumerate every consumer of `SqlBoxMigrationRunner` and record the baseline count for post-rename completeness verification**
+- [x] **TIDY FIRST: Enumerate every consumer of `SqlBoxMigrationRunner` and record the baseline count for post-rename completeness verification**
   - This is a read-only anchor task. No commit. The goal is to know how many references exist *before* the rename, so post-rename we can verify the count dropped to the expected residual (zero in `src/` + `tests/`; non-zero only in ADR 0059 itself and any historical record in commit messages — git history is immutable).
   - Run: `grep -rln 'SqlBoxMigrationRunner' src/ tests/ docs/ specs/ release_notes.md` — capture the file list.
   - Run: `grep -rc 'SqlBoxMigrationRunner' src/ tests/ docs/ specs/ release_notes.md | grep -v ':0$'` — capture per-file occurrence counts.
@@ -1194,7 +1194,7 @@ Per [ADR 0059](../../docs/adr/0059-box-provisioning-abstract-base-naming-symmetr
 
 The rename must land atomically across `src/` and `tests/` because the compiler binds symbols at build time — a partial rename breaks the build for the next reader. One commit captures: file rename, class declaration, four downstream derivations, every test-code reference. Documentation/prose follows in 14.C (those references don't affect the build, so they can split off).
 
-- [ ] **TIDY FIRST: Rename `SqlBoxMigrationRunner<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` across `src/` and `tests/` in a single atomic commit**
+- [x] **TIDY FIRST: Rename `SqlBoxMigrationRunner<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` across `src/` and `tests/` in a single atomic commit**
 
   - **File rename (git-aware)**: `git mv src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs`. The `git mv` preserves rename detection in `git log` / `git blame`, so the file's history threads through the rename.
 
@@ -1249,7 +1249,7 @@ The rename must land atomically across `src/` and `tests/` because the compiler 
 
 Prose references don't affect the build, so they split off into their own commit for review-friendliness. This includes ADR 0058 prose (including the "Naming asymmetry, time-bounded" risk being marked resolved), spec 0028 artefact prose, and `release_notes.md`.
 
-- [ ] **TIDY FIRST: Rebind documentation and prose references from `SqlBoxMigrationRunner` to `SqlBoxMigrationRunner`**
+- [x] **TIDY FIRST: Rebind documentation and prose references from `SqlBoxMigrationRunner` to `SqlBoxMigrationRunner`**
 
   - **ADR 0058** (`docs/adr/0058-box-provisioning-rdd-role-interfaces.md`):
     - Update every prose mention of the old name. The §B.2 sub-section heading and body refer to the old name throughout; rebind all to the new name. Preserve the generic-parameter list in xmldoc-style `<TConnection, TTransaction>` where the original used it.
@@ -1293,7 +1293,7 @@ Prose references don't affect the build, so they split off into their own commit
 
 The user instructed that tests run **once** at the end, not at each rename step. This is the once. Every BoxProvisioning filter at every supported TFM, against the post-13.D floor (which Phase 14 does not alter — rename adds zero `[Fact]`s).
 
-- [ ] **TIDY FIRST: Verify behavioural neutrality of the 14.B rename via a single end-to-end test-pass**
+- [x] **TIDY FIRST: Verify behavioural neutrality of the 14.B rename via a single end-to-end test-pass**
 
   - **Shared assembly Release build**: `dotnet build src/Paramore.Brighter.BoxProvisioning -c Release` — expect 0 errors, 0 warnings on `netstandard2.0;net8.0;net9.0;net10.0`. (Already verified in 14.B but re-verified here as the start of the gate, in case anything in 14.C inadvertently introduced a build break.)
 
@@ -1341,7 +1341,7 @@ The user instructed that tests run **once** at the end, not at each rename step.
 
 The PR body currently has a "## Post-merge follow-up" section that committed to a successor ADR. Sub-phase B fulfils that commitment **in-PR**, so the section either gets rewritten as a "Sub-phase B (delivered in-PR)" entry or removed entirely. A new "Sub-phase B" bullet announces the rename.
 
-- [ ] **TIDY FIRST: Splice sub-phase B bullet into PR #4039 body; rewrite/remove the "Post-merge follow-up" section now that the commitment is honoured in-PR**
+- [x] **TIDY FIRST: Splice sub-phase B bullet into PR #4039 body; rewrite/remove the "Post-merge follow-up" section now that the commitment is honoured in-PR**
 
   - **Local audit-trail update first**. Edit `specs/0028-box-provisioning-rdd-role-interfaces/pr-description.md` to splice in:
     - A new sub-phase B bullet under the existing "Spec 0028 — Box Provisioning RDD Role Interfaces" Scope section, immediately after the sub-phase A bullet. Wording (draft):
@@ -1362,7 +1362,7 @@ The PR body currently has a "## Post-merge follow-up" section that committed to 
 
 ### Phase 14 final gate
 
-- [ ] **Phase 14 gate: `/spec:approve code` ready — Phase 14 discharges ADR 0059 in full**
+- [x] **Phase 14 gate: `/spec:approve code` ready — Phase 14 discharges ADR 0059 in full**
   - 14.A grep audit captured the pre-rename baseline.
   - 14.B rename commit landed atomically: zero `SqlBoxMigrationRunner` matches in `src/` + `tests/`; build clean on all TFMs.
   - 14.C docs/prose rebound: zero matches in `docs/adr/` (excluding ADR 0059), `specs/`, `release_notes.md`.
