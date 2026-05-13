@@ -176,7 +176,7 @@ External code that constructs provisioners directly must supply the new paramete
 
 #### Source-breaking change: runner constructor cascade and template-method base
 
-The four relational migration runners (`MsSqlBoxMigrationRunner`, `PostgreSqlBoxMigrationRunner`, `MySqlBoxMigrationRunner`, `SqliteBoxMigrationRunner`) now derive from the new abstract base `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>`. Each derived runner forwards new constructor parameters to the base:
+The four relational migration runners (`MsSqlBoxMigrationRunner`, `PostgreSqlBoxMigrationRunner`, `MySqlBoxMigrationRunner`, `SqliteBoxMigrationRunner`) now derive from the new abstract base `SqlBoxMigrationRunner<TConnection, TTransaction>`. Each derived runner forwards new constructor parameters to the base:
 
 * `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` — the typed detection helper.
 * `IAmARelationalDatabaseConfiguration` — for `OpenConnectionAsync` to read `ConnectionString`, plus access to `OutBoxTableName`/`InBoxTableName`/payload-mode flags.
@@ -192,7 +192,7 @@ External code that constructs the relational runners directly must supply the ne
 Spec 0028 introduces the following net-new public surface (all in `Paramore.Brighter.BoxProvisioning` unless noted):
 
 * **Role interfaces** (5): `IAmABoxMigrationDetectionHelper<TConnection, TTransaction>`, `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` (extends the base), `IAmABoxMigrationCatalog`, `IAmABoxPayloadModeValidator<TConnection>`, `IAmAProvisioningUnitOfWork<TTransaction>`.
-* **Abstract base** (1): `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` implementing `IAmABoxMigrationRunner`.
+* **Abstract base** (1): `SqlBoxMigrationRunner<TConnection, TTransaction>` implementing `IAmABoxMigrationRunner`.
 * **Abstract base** (1, sub-phase A): `SqlBoxProvisioner<TConnection, TTransaction>` — abstract base class in `Paramore.Brighter.BoxProvisioning` for the eight relational provisioners (MSSQL/PG/MySQL/SQLite × Outbox/Inbox). Spanner's pair stays free-standing per ADR 0057 §6.
 * **Provisioning UoW implementations** (4 — one per relational backend, in each backend's package): `MsSqlProvisioningUnitOfWork`, `PostgreSqlProvisioningUnitOfWork`, `MySqlProvisioningUnitOfWork`, `SqliteProvisioningUnitOfWork`. Each encapsulates that backend's specific lock+transaction pairing and ordering.
 * **Detection-helper instance classes** (5): `MsSqlBoxDetectionHelper`, `PostgreSqlBoxDetectionHelper`, `MySqlBoxDetectionHelper`, `SqliteBoxDetectionHelper`, `SpannerBoxDetectionHelper`.

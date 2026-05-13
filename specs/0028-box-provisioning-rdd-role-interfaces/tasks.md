@@ -438,22 +438,22 @@ Per ADR §B.1. Each backend ships one `{Backend}ProvisioningUnitOfWork` class im
 
 ---
 
-## Phase 6 — RelationalBoxMigrationRunnerBase abstract class
+## Phase 6 — SqlBoxMigrationRunner abstract class
 
 Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO derived runners yet.
 
-- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase orchestrates the template algorithm in the documented order on the success path**
-  - **USE COMMAND**: `/test-first when RelationalBoxMigrationRunnerBase MigrateAsync runs successfully against a fake backend it should invoke the hooks in the order OpenConnection → CreateUnitOfWork → BeginAsync → EnsureHistoryTable → RedetectStateAsync → Run{Fresh,Bootstrap,Normal}PathAsync → CommitAsync`
+- [x] **TEST + IMPLEMENT: SqlBoxMigrationRunner orchestrates the template algorithm in the documented order on the success path**
+  - **USE COMMAND**: `/test-first when SqlBoxMigrationRunner MigrateAsync runs successfully against a fake backend it should invoke the hooks in the order OpenConnection → CreateUnitOfWork → BeginAsync → EnsureHistoryTable → RedetectStateAsync → Run{Fresh,Bootstrap,Normal}PathAsync → CommitAsync`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_migrate_runs_successfully_it_should_invoke_hooks_in_documented_order.cs`
-  - Test should verify (against a fake `TestRunner : RelationalBoxMigrationRunnerBase<DbConnection, DbTransaction>` with hook spies):
+  - Test should verify (against a fake `TestRunner : SqlBoxMigrationRunner<DbConnection, DbTransaction>` with hook spies):
     - Order on fresh-table path: OpenConnection → CreateUnitOfWork → BeginAsync → EnsureHistoryTable → RedetectStateAsync → RunFreshPathAsync → CommitAsync → DisposeAsync.
     - Order on bootstrap path: same up to RedetectStateAsync, then RunBootstrapPathAsync (not RunFreshPath/RunNormalPath).
     - Order on normal path: same up to RedetectStateAsync, then RunNormalPathAsync.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - File: `src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs`.
-    - Class: `public abstract class RelationalBoxMigrationRunnerBase<TConnection, TTransaction> : IAmABoxMigrationRunner where TConnection : DbConnection where TTransaction : DbTransaction`.
+    - File: `src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs`.
+    - Class: `public abstract class SqlBoxMigrationRunner<TConnection, TTransaction> : IAmABoxMigrationRunner where TConnection : DbConnection where TTransaction : DbTransaction`.
     - Ctor: `(IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>, IAmARelationalDatabaseConfiguration, TimeSpan lockTimeout, ILogger? logger = null)`.
     - Protected props: `Logger`, `DetectionHelper`, `Configuration` per ADR §B.2.
     - Public sealed `MigrateAsync` body per ADR §B.2 listing.
@@ -461,8 +461,8 @@ Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO deri
     - Virtual hook: `RedetectStateAsync` (default calls `_detectionHelper.DoesTableExistAsync` + `DoesHistoryExistAsync`).
     - Protected `ValidateMigrationsMonotonic` helper lifted from spec 0027 Items H/I/Q (move from existing per-backend runners or keep duplicated until Phase 7).
 
-- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase calls RollbackAsync(CancellationToken.None) on exception from any hook between BeginAsync and CommitAsync**
-  - **USE COMMAND**: `/test-first when RelationalBoxMigrationRunnerBase a hook between BeginAsync and CommitAsync throws it should call uow.RollbackAsync with CancellationToken.None and rethrow`
+- [x] **TEST + IMPLEMENT: SqlBoxMigrationRunner calls RollbackAsync(CancellationToken.None) on exception from any hook between BeginAsync and CommitAsync**
+  - **USE COMMAND**: `/test-first when SqlBoxMigrationRunner a hook between BeginAsync and CommitAsync throws it should call uow.RollbackAsync with CancellationToken.None and rethrow`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_hook_throws_it_should_rollback_with_cancellation_token_none_and_rethrow.cs`
   - Test should verify:
@@ -473,8 +473,8 @@ Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO deri
     - The original exception is rethrown to the caller.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase does NOT call CommitAsync or RollbackAsync when BeginAsync throws**
-  - **USE COMMAND**: `/test-first when RelationalBoxMigrationRunnerBase BeginAsync throws it should not call CommitAsync or RollbackAsync and should still dispose the UoW via await using`
+- [x] **TEST + IMPLEMENT: SqlBoxMigrationRunner does NOT call CommitAsync or RollbackAsync when BeginAsync throws**
+  - **USE COMMAND**: `/test-first when SqlBoxMigrationRunner BeginAsync throws it should not call CommitAsync or RollbackAsync and should still dispose the UoW via await using`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_begin_async_throws_it_should_skip_commit_and_rollback_and_still_dispose.cs`
   - Test should verify:
@@ -482,8 +482,8 @@ Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO deri
     - The exception propagates to the caller of `MigrateAsync`.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase RedetectStateAsync default implementation calls DoesTableExistAsync then DoesHistoryExistAsync (and short-circuits when table missing)**
-  - **USE COMMAND**: `/test-first when RelationalBoxMigrationRunnerBase RedetectStateAsync default runs it should call DoesTableExistAsync and only call DoesHistoryExistAsync when the table exists`
+- [x] **TEST + IMPLEMENT: SqlBoxMigrationRunner RedetectStateAsync default implementation calls DoesTableExistAsync then DoesHistoryExistAsync (and short-circuits when table missing)**
+  - **USE COMMAND**: `/test-first when SqlBoxMigrationRunner RedetectStateAsync default runs it should call DoesTableExistAsync and only call DoesHistoryExistAsync when the table exists`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_redetect_state_default_runs_it_should_short_circuit_history_check_when_table_missing.cs`
   - Test should verify:
@@ -492,15 +492,15 @@ Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO deri
     - `DoesTableExistAsync = true, DoesHistoryExistAsync = false` → returns `(true, false)`.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase derived class can override RedetectStateAsync without overriding any other hook**
+- [x] **TEST + IMPLEMENT: SqlBoxMigrationRunner derived class can override RedetectStateAsync without overriding any other hook**
   - **USE COMMAND**: `/test-first when a derived runner overrides RedetectStateAsync to return constant true it should be invoked instead of the base default and the base algorithm should still run unchanged`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_redetect_state_is_overridden_it_should_use_the_override.cs`
   - Test should verify the virtual hook contract per ADR §B.2 (the third escape hatch — override `RedetectStateAsync` for non-standard detection model).
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
 
-- [x] **TEST + IMPLEMENT: RelationalBoxMigrationRunnerBase ValidateMigrationsMonotonic throws on non-monotonic migration list**
-  - **USE COMMAND**: `/test-first when RelationalBoxMigrationRunnerBase MigrateAsync receives a non-monotonic migration list it should throw before opening any connection`
+- [x] **TEST + IMPLEMENT: SqlBoxMigrationRunner ValidateMigrationsMonotonic throws on non-monotonic migration list**
+  - **USE COMMAND**: `/test-first when SqlBoxMigrationRunner MigrateAsync receives a non-monotonic migration list it should throw before opening any connection`
   - Test location: `tests/Paramore.Brighter.BoxProvisioning.Tests`
   - Test file: `When_relational_box_migration_runner_base_migrate_receives_non_monotonic_migrations_it_should_throw_before_opening_connection.cs`
   - Test should verify the monotonicity check from spec 0027 Items H/I/Q is preserved at the base level.
@@ -515,7 +515,7 @@ Per ADR §B.2. Introduce the abstract base class in the shared assembly. NO deri
 
 ## Phase 7 — Refactor migration runners (per backend)
 
-The four relational runners refactor to derive from `RelationalBoxMigrationRunnerBase`. The Spanner runner does NOT derive from the base (degenerate per ADR 0057 §6) but DOES rewire its detection-helper static calls to instance dispatch — same shape as the provisioner cascade in Phase 8. Without the Spanner rewire, Phase 8.6's grep gate is unsatisfiable.
+The four relational runners refactor to derive from `SqlBoxMigrationRunner`. The Spanner runner does NOT derive from the base (degenerate per ADR 0057 §6) but DOES rewire its detection-helper static calls to instance dispatch — same shape as the provisioner cascade in Phase 8. Without the Spanner rewire, Phase 8.6's grep gate is unsatisfiable.
 
 Each relational backend's runner refactor is broken into three structural sub-steps (a/b/c) per Beck's Tidy First — each sub-step a separate commit, each compiles, each runs the existing per-backend BoxProvisioning test filter green before the next sub-step starts. This avoids a 400-line "TIDY FIRST" task that bundles ctor rewrite + 7 hook overrides + delete-old-orchestration in one go.
 
@@ -523,10 +523,10 @@ Each relational backend's runner refactor is broken into three structural sub-st
 
 - [x] **TIDY FIRST: 7.1a Introduce `MsSqlBoxMigrationRunner` derived shell that delegates to existing private methods (legacy delegates)**
   - File: `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlBoxMigrationRunner.cs`.
-  - Change class declaration to `: RelationalBoxMigrationRunnerBase<SqlConnection, SqlTransaction>`.
+  - Change class declaration to `: SqlBoxMigrationRunner<SqlConnection, SqlTransaction>`.
   - Add new ctor `(MsSqlBoxDetectionHelper detectionHelper, IAmARelationalDatabaseConfiguration configuration, IMsSqlAdvisoryLock? advisoryLock = null, ILogger? logger = null, TimeSpan? lockTimeout = null)` — forwards `(detectionHelper, configuration, lockTimeout ?? default, logger)` to base ctor; stores `IMsSqlAdvisoryLock?` private field.
   - Implement each abstract hook by delegating to the existing private method body — rename the existing internal helpers to `*Legacy` for the duration so the override `OpenConnectionAsync` simply calls `OpenConnectionLegacyAsync(...)`, etc.
-  - Rename the existing public `MigrateAsync` to `private MigrateLegacyAsync` (no longer overrides anything); the public surface is now the inherited `RelationalBoxMigrationRunnerBase.MigrateAsync` from the base, but the legacy orchestration is preserved internally for now.
+  - Rename the existing public `MigrateAsync` to `private MigrateLegacyAsync` (no longer overrides anything); the public surface is now the inherited `SqlBoxMigrationRunner.MigrateAsync` from the base, but the legacy orchestration is preserved internally for now.
   - Validation: existing 54/54 MSSQL tests stay green. Both the new base orchestration AND the legacy delegates coexist for one commit.
   - Commit: `refactor: spec 0028 Phase 7.1a — MsSqlBoxMigrationRunner derives from base via legacy-delegate hooks`.
 
@@ -570,7 +570,7 @@ Each relational backend's runner refactor is broken into three structural sub-st
 
 ### 7.5 Spanner runner — static-to-instance rewire (NOT derived from base)
 
-Spanner is degenerate per ADR 0057 §6 and stays free-standing as `IAmABoxMigrationRunner`. It does NOT derive from `RelationalBoxMigrationRunnerBase`. But it DOES call `SpannerBoxDetectionHelpers` directly (`SpannerBoxMigrationRunner.cs:134, 137`); after Phase 2.5 the helper is an instance class, and after Phase 8.6 the static facade is deleted. Without rewiring the Spanner runner, Phase 8.6's grep gate becomes unsatisfiable.
+Spanner is degenerate per ADR 0057 §6 and stays free-standing as `IAmABoxMigrationRunner`. It does NOT derive from `SqlBoxMigrationRunner`. But it DOES call `SpannerBoxDetectionHelpers` directly (`SpannerBoxMigrationRunner.cs:134, 137`); after Phase 2.5 the helper is an instance class, and after Phase 8.6 the static facade is deleted. Without rewiring the Spanner runner, Phase 8.6's grep gate becomes unsatisfiable.
 
 - [x] **TIDY FIRST: Refactor `SpannerBoxMigrationRunner` to take an injected detection helper and call instance methods on it**
   - File: `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerBoxMigrationRunner.cs`.
@@ -712,7 +712,7 @@ Per ADR §A.4 step 6 final paragraph + §A.4 the Alternatives section "instance 
 
 ## Phase 10 — Harmonised UoW lifecycle and cancellation contract tests (cross-backend)
 
-Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly across the four relational backends. Each backend gets its own copy of the contract test suite (Brighter convention for backend-specific tests). The tests run end-to-end via `RelationalBoxMigrationRunnerBase.MigrateAsync` to observe the contract through the runner.
+Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly across the four relational backends. Each backend gets its own copy of the contract test suite (Brighter convention for backend-specific tests). The tests run end-to-end via `SqlBoxMigrationRunner.MigrateAsync` to observe the contract through the runner.
 
 ### 10.1 Cancellation token discipline
 
@@ -792,7 +792,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
     - Migration catalogues: `static class {Backend}{Box}Migrations` → `public class {Backend}{Box}MigrationCatalog`. Eight classes (Spanner exempt).
     - Payload validators: `static class {Backend}PayloadModeValidator` → `public class {Backend}PayloadModeValidator`. SQLite/Spanner gain `string? schemaName` parameter.
     - Provisioner ctors: 10 provisioners gain new typed parameters (3 for relational eight; 2 for Spanner pair).
-    - Runner ctors: 4 relational runners derive from `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` and gain `IAmAVersionDetectingMigrationHelper`, `IAmARelationalDatabaseConfiguration`, `TimeSpan lockTimeout`, `ILogger?` ctor params (forwarded to base).
+    - Runner ctors: 4 relational runners derive from `SqlBoxMigrationRunner<TConnection, TTransaction>` and gain `IAmAVersionDetectingMigrationHelper`, `IAmARelationalDatabaseConfiguration`, `TimeSpan lockTimeout`, `ILogger?` ctor params (forwarded to base).
   - Under "Additive" section, enumerate the new public types: 5 role interfaces + 1 abstract base class + 4 UoW classes + 5 detection-helper classes (instance) + 8 catalogue classes + 5 payload-validator classes (instance).
 
 - [x] **Update PR #4039 description to enumerate spec 0028 work (per AC11)**
@@ -803,7 +803,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
 
 - [x] **Verify "Adding a new BoxProvisioning backend" section in ADR 0058 reflects shipped surface (per AC5)**
   - Locate the section using `grep -n "## Adding a new BoxProvisioning backend" docs/adr/0058-box-provisioning-rdd-role-interfaces.md` (line numbers drift as the ADR is edited; the section title is stable).
-  - For each class name listed in the section (`{Backend}BoxDetectionHelper`, `{Backend}{Box}MigrationCatalog`, `{Backend}PayloadModeValidator`, `{Backend}ProvisioningUnitOfWork`, `{Backend}BoxMigrationRunner`, plus the abstract base `RelationalBoxMigrationRunnerBase`), confirm via `grep -rn "class {ClassName} " src/Paramore.Brighter.BoxProvisioning*` that each class exists with the documented name.
+  - For each class name listed in the section (`{Backend}BoxDetectionHelper`, `{Backend}{Box}MigrationCatalog`, `{Backend}PayloadModeValidator`, `{Backend}ProvisioningUnitOfWork`, `{Backend}BoxMigrationRunner`, plus the abstract base `SqlBoxMigrationRunner`), confirm via `grep -rn "class {ClassName} " src/Paramore.Brighter.BoxProvisioning*` that each class exists with the documented name.
   - If any name drift is found, update the ADR section AND the implementation in the same commit so the doc and surface stay aligned.
 
 ---
@@ -836,7 +836,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
   - F3 — confirm `IAmABoxMigrationCatalog` interface present and implemented by 8 backend classes (Spanner exempt per ADR 0057 §6).
   - F4 — confirm `IAmABoxPayloadModeValidator<TConnection>` interface present and implemented by 5 backend classes.
   - F5 — confirm `IAmAProvisioningUnitOfWork<TTransaction>` interface present and implemented by 4 relational backend classes.
-  - F6 — confirm `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` abstract class present and 4 relational runners derive from it.
+  - F6 — confirm `SqlBoxMigrationRunner<TConnection, TTransaction>` abstract class present and 4 relational runners derive from it.
   - F7 — confirm harmonised UoW lifecycle / cancellation / disposal contract is exercised by at least one test per relational backend (Phase 10).
   - F8 — confirm "Adding a new BoxProvisioning backend" section in ADR 0058 enumerates the role interfaces from F2/F3/F4/F5 and the optional base from F6.
   - F9 — verify AC4 discharge: re-walk ADR §B.4 candidate list against the post-implementation surface; confirm the four "No" decisions still hold; record any new candidate (typically empty) in `specs/0028-box-provisioning-rdd-role-interfaces/sweep-result.md`. If a candidate IS surfaced during implementation, the spec scope expands and a new round of `/spec:review code` is required before approval.
@@ -846,7 +846,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
   - For each AC, record (a) the verifying artefact (test name / file path / commit sha / ADR section reference) and (b) the tick.
   - AC1 — ADR 0058 reviewed and Accepted (`docs/adr/0058-box-provisioning-rdd-role-interfaces.md` status = Accepted, `.design-approved` exists).
   - AC2 — F2/F3/F4 interfaces named with `IAmA*`, present in `src/Paramore.Brighter.BoxProvisioning/`, each with XML-doc; implementations across backends.
-  - AC3 — `RelationalBoxMigrationRunnerBase` exists; `IAmAProvisioningUnitOfWork` exists with 4 backend impls; Spanner runner exemption documented.
+  - AC3 — `SqlBoxMigrationRunner` exists; `IAmAProvisioningUnitOfWork` exists with 4 backend impls; Spanner runner exemption documented.
   - AC4 — sweep result recorded per F9 task above (`sweep-result.md`).
   - AC5 — "Adding a new BoxProvisioning backend" section verified per Phase 11 task.
   - AC6 — backend test counts ≥ `baseline.md` per backend per TFM.
@@ -863,7 +863,7 @@ Per ADR §B.3. These tests verify the harmonised contract is upheld uniformly ac
 
 Per ADR 0058 §B.5 (post-acceptance amendment 2026-05-12). Discharges requirements F10..F13 + NF8..NF11 / AC12. The eight relational provisioners (MSSQL/PG/MySQL/SQLite × Outbox/Inbox) pull up onto an abstract base `SqlBoxProvisioner<TConnection, TTransaction>` that owns the orchestration body (~640 duplicated lines collapse to one ~120-line base). Spanner's pair stays free-standing per ADR 0057 §6 — the §B.5 Spanner-exemption is operative because the base ctor requires `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` which Spanner cannot honestly implement (no version inference per §A.1).
 
-Phase 13.A is structural-only (Tidy First per Beck) for the per-backend ports; the base introduction in 13.A.1 adds new base-contract tests per the Phase 6 precedent (a base introduction legitimately raises the floor), so NF9 is amended in 13.A.0.5 *before* 13.A.1 lands. NF9's "no new tests in 13.A" wording is carved-out to exempt the base-contract tests in `tests/Paramore.Brighter.BoxProvisioning.Tests/` — the per-backend ports (13.A.2–13.A.5) add no tests and stay strictly behaviour-preserving. Phase 13.B is the F11 MySQL clamp behavioural slice, delivered as a `/test-first` task per parent NF3 / AC10. Phase 13.C bundles documentation updates. The naming asymmetry between §B.2 (`RelationalBoxMigrationRunnerBase`) and §B.5 (`SqlBoxProvisioner`) is time-bounded by PR #4039's "Post-merge follow-up" bullet (added 2026-05-12 — see PR description live on GitHub); the §B.2 rename is **NOT** a sub-phase A task and stays out of scope per parent OoS3.
+Phase 13.A is structural-only (Tidy First per Beck) for the per-backend ports; the base introduction in 13.A.1 adds new base-contract tests per the Phase 6 precedent (a base introduction legitimately raises the floor), so NF9 is amended in 13.A.0.5 *before* 13.A.1 lands. NF9's "no new tests in 13.A" wording is carved-out to exempt the base-contract tests in `tests/Paramore.Brighter.BoxProvisioning.Tests/` — the per-backend ports (13.A.2–13.A.5) add no tests and stay strictly behaviour-preserving. Phase 13.B is the F11 MySQL clamp behavioural slice, delivered as a `/test-first` task per parent NF3 / AC10. Phase 13.C bundles documentation updates. The naming asymmetry between §B.2 (`SqlBoxMigrationRunner`) and §B.5 (`SqlBoxProvisioner`) is time-bounded by PR #4039's "Post-merge follow-up" bullet (added 2026-05-12 — see PR description live on GitHub); the §B.2 rename is **NOT** a sub-phase A task and stays out of scope per parent OoS3.
 
 ### 13.A — Structural pull-up (Tidy First, NF9 behavioural neutrality)
 
@@ -873,12 +873,12 @@ Phase 13.A is structural-only (Tidy First per Beck) for the per-backend ports; t
   - This is NOT an `IAsyncDisposable` probe. F12 is resolved-by-precedent per `baseline.md` → "Sub-phase A preliminaries" → F12 disposition table — the operative reason is that `DbConnection` lacks `IAsyncDisposable` on netstandard2.0, and `SqlBoxProvisioner` declares `using` over the constrained type-parameter `TConnection : DbConnection` (not the runtime subtype), so runtime-subtype `IAsyncDisposable` support is immaterial. 13.A.0 only re-checks that the conditions justifying the precedent haven't shifted.
   - Run: `grep -A2 'BrighterTargetFrameworks' src/Directory.Build.props` — expect `netstandard2.0;net8.0;net9.0;net10.0` still present (the netstandard2.0 floor is what forces sync `using`; if a future TFM bump drops it, F12 can be re-opened in a follow-up spec).
   - Run: `grep -n 'IAsyncDisposable' src/Paramore.Brighter.BoxProvisioning/Paramore.Brighter.BoxProvisioning.csproj` — expect zero project-level overrides.
-  - Read `src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs:112-116` — expect the §B.2 sibling-base sync-`using` precedent comment intact (this is the verbatim disposition `SqlBoxProvisioner` mirrors).
+  - Read `src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs:112-116` — expect the §B.2 sibling-base sync-`using` precedent comment intact (this is the verbatim disposition `SqlBoxProvisioner` mirrors).
   - **No commit** (read-only anchor). If any condition has shifted, STOP and re-open F12 with the user before proceeding.
 
 #### 13.A.0.5 Amend NF9 floor for the Phase 6 precedent (pre-13.A.1 requirements update)
 
-The currently approved NF9 wording (requirements.md:211, baseline.md:79) says *"No new tests are added during Phase 13.A"*. That wording is too strict for the base-introduction sub-phase 13.A.1 — by the Phase 6 precedent, introducing an abstract base legitimately ships with base-contract tests against a fake derivative (Phase 6 introduced six such test files alongside `RelationalBoxMigrationRunnerBase`). Phase 13.A.1 follows the same precedent and adds 8 base-contract test cases (3 + 2 + 3, see 13.A.1) to `tests/Paramore.Brighter.BoxProvisioning.Tests/`. The per-backend ports (13.A.2–13.A.5) remain strictly tests-preserving — no new tests at the backend level. NF9 needs a small carve-out to legitimise the base-contract additions before 13.A.1 lands; the alternative (mutating NF9 inside the 13.A.7 gate commit) is an out-of-band requirements amendment and violates the spec workflow.
+The currently approved NF9 wording (requirements.md:211, baseline.md:79) says *"No new tests are added during Phase 13.A"*. That wording is too strict for the base-introduction sub-phase 13.A.1 — by the Phase 6 precedent, introducing an abstract base legitimately ships with base-contract tests against a fake derivative (Phase 6 introduced six such test files alongside `SqlBoxMigrationRunner`). Phase 13.A.1 follows the same precedent and adds 8 base-contract test cases (3 + 2 + 3, see 13.A.1) to `tests/Paramore.Brighter.BoxProvisioning.Tests/`. The per-backend ports (13.A.2–13.A.5) remain strictly tests-preserving — no new tests at the backend level. NF9 needs a small carve-out to legitimise the base-contract additions before 13.A.1 lands; the alternative (mutating NF9 inside the 13.A.7 gate commit) is an out-of-band requirements amendment and violates the spec workflow.
 
 - [x] **TIDY FIRST: Amend NF9 (parenthetical + last sentence) + baseline.md NF9 floor + acceptance.md AC6 to legitimise Phase 13.A.1's base-contract test cases**
 
@@ -886,7 +886,7 @@ The currently approved NF9 wording (requirements.md:211, baseline.md:79) says *"
 
   - File: `specs/0028-box-provisioning-rdd-role-interfaces/requirements.md`. **Two edits inside NF9 (line ~211)**:
     1. Update the parenthetical floor numbers from *"(Core 36/36 + 5/5, MSSQL 63/63, PG 54/54, MySQL 61/61 net9.0-only, SQLite 45/45, Spanner 26/26 — per the AC6 table)"* to *"(Core 44/44 + 5/5, MSSQL 63/63, PG 54/54, MySQL 61/61 net9.0-only, SQLite 45/45, Spanner 26/26 — per the AC6 table; the Core 36 → 44 raise reflects Phase 13.A.1's base-contract test cases per the Phase 6 precedent)"*.
-    2. Replace the final sentence *"No new tests are added during Phase 13.A"* with *"No new tests are added at the **per-backend** level during Phase 13.A (the per-backend ports 13.A.2–13.A.5 are strictly behaviour-preserving Tidy First commits). Phase 13.A.1 introduces base-contract `[Fact]` methods against `SqlBoxProvisioner` at `tests/Paramore.Brighter.BoxProvisioning.Tests/` per the Phase 6 precedent (`RelationalBoxMigrationRunnerBase` introduced six base-contract test files alongside the abstract base); the post-13.A.1 Core BoxProvisioning.Tests floor is 44/44 per TFM, reflecting 8 added `[Fact]` methods across three files (3 + 2 + 3) — see baseline.md "Sub-phase A preliminaries" → NF9 floor."*
+    2. Replace the final sentence *"No new tests are added during Phase 13.A"* with *"No new tests are added at the **per-backend** level during Phase 13.A (the per-backend ports 13.A.2–13.A.5 are strictly behaviour-preserving Tidy First commits). Phase 13.A.1 introduces base-contract `[Fact]` methods against `SqlBoxProvisioner` at `tests/Paramore.Brighter.BoxProvisioning.Tests/` per the Phase 6 precedent (`SqlBoxMigrationRunner` introduced six base-contract test files alongside the abstract base); the post-13.A.1 Core BoxProvisioning.Tests floor is 44/44 per TFM, reflecting 8 added `[Fact]` methods across three files (3 + 2 + 3) — see baseline.md "Sub-phase A preliminaries" → NF9 floor."*
     3. **Do NOT touch NF2.** NF2's enumeration is the Phase-0 baseline pinned at HEAD `edfa9fc99`; it remains an immutable anchor.
 
   - File: `specs/0028-box-provisioning-rdd-role-interfaces/baseline.md`. In the "Sub-phase A preliminaries" → NF9 floor table (line ~70), update the Core BoxProvisioning.Tests row from `36/36` to `44/44` and add a footnote explaining the +8 `[Fact]` methods come from the three 13.A.1 test files. Add a Core BoxProvisioning sub-filter row clarification: the sub-filter row (in `Brighter.Core.Tests`) stays at 5/5 — Phase 13.A.1's new tests live in `tests/Paramore.Brighter.BoxProvisioning.Tests/`, NOT in the Core test project. Update the NF9 prose under the table (line ~79) from *"Phase 13.A introduces NO new tests (per NF9)"* to *"Phase 13.A.1 introduces 8 base-contract `[Fact]` methods at the abstract-base level per the Phase 6 precedent (see NF9 carve-out in requirements.md); per-backend ports 13.A.2–13.A.5 introduce zero new tests (per NF9 strict)."*
@@ -932,7 +932,7 @@ Test-file shape convention (matches the Phase 6 precedent in `tests/Paramore.Bri
     - Abstract hooks: `CreateConnection(string) → TConnection`, `PayloadColumnName : string`.
     - **NO virtual hooks yet** — `EffectiveSchemaName` and `ClampDetectedVersion` are introduced by slices 2 and 3 (driven RED→GREEN by their tests).
     - XML-doc on the class and on `CreateConnection` / `PayloadColumnName`.
-    - Sync `using` for the connection in both private methods per ADR §B.5 line 547-550 and 580-583 (with the comment text from line 547-550, mirroring the §B.2 precedent at `RelationalBoxMigrationRunnerBase.cs:112-116`).
+    - Sync `using` for the connection in both private methods per ADR §B.5 line 547-550 and 580-583 (with the comment text from line 547-550, mirroring the §B.2 precedent at `SqlBoxMigrationRunner.cs:112-116`).
   - Commit: `feat: spec 0028 sub-phase A 13.A.1 — SqlBoxProvisioner base introduces ProvisionAsync orchestration (slice 1: hardcoded schema, no clamp hook)`.
 
 - [x] **TEST + IMPLEMENT: SqlBoxProvisioner extracts schema name into a virtual EffectiveSchemaName property; derivation override yields null**
@@ -1175,7 +1175,7 @@ Per ADR §B.5 line 646 + requirements F11. The MySQL `ClampDetectedVersion` iden
 
 ---
 
-## Phase 14 — `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` (sub-phase B; pre-merge Tidy First rename per ADR 0059)
+## Phase 14 — `SqlBoxMigrationRunner<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` (sub-phase B; pre-merge Tidy First rename per ADR 0059)
 
 Per [ADR 0059](../../docs/adr/0059-box-provisioning-abstract-base-naming-symmetry.md) (post-acceptance amendment 2026-05-13; Accepted on the same date). Closes ADR 0058's "Naming asymmetry, time-bounded" risk by renaming the §B.2 sibling abstract base for `Sql*` symmetry with §B.5's `SqlBoxProvisioner<TConnection, TTransaction>` — pre-merge, while neither name has shipped. Pure Tidy First in the Beck sense: structural rename, zero behavioural delta. The rename is brought into PR #4039's scope rather than landing post-merge because (a) nothing under either base name has shipped, so the rename is a code-review improvement on unreleased code rather than a public-surface break, (b) doing it post-merge would force exactly the source break the in-PR rename avoids, and (c) symmetric naming of the two abstract bases is part of the design's coherence, not an afterthought to patch later. See ADR 0059 §Context for the full cost-ledger argument.
 
@@ -1183,35 +1183,35 @@ Per [ADR 0059](../../docs/adr/0059-box-provisioning-abstract-base-naming-symmetr
 
 ### 14.A — Pre-rename grep audit (read-only)
 
-- [ ] **TIDY FIRST: Enumerate every consumer of `RelationalBoxMigrationRunnerBase` and record the baseline count for post-rename completeness verification**
+- [ ] **TIDY FIRST: Enumerate every consumer of `SqlBoxMigrationRunner` and record the baseline count for post-rename completeness verification**
   - This is a read-only anchor task. No commit. The goal is to know how many references exist *before* the rename, so post-rename we can verify the count dropped to the expected residual (zero in `src/` + `tests/`; non-zero only in ADR 0059 itself and any historical record in commit messages — git history is immutable).
-  - Run: `grep -rln 'RelationalBoxMigrationRunnerBase' src/ tests/ docs/ specs/ release_notes.md` — capture the file list.
-  - Run: `grep -rc 'RelationalBoxMigrationRunnerBase' src/ tests/ docs/ specs/ release_notes.md | grep -v ':0$'` — capture per-file occurrence counts.
-  - **Expected pre-rename baseline** (subject to verification at task execution): the class declaration (1 in `src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs`), four downstream derivations (1 each in `src/Paramore.Brighter.BoxProvisioning.{MsSql,PostgreSql,MySql,Sqlite}/*BoxMigrationRunner.cs`), Phase 6 sibling-base contract tests in `tests/Paramore.Brighter.BoxProvisioning.Tests/` (multiple), per-backend test references (multiple), ADR 0058 prose (multiple), spec 0028 artefacts (multiple), `release_notes.md` (2 — lines ~179 and ~195), and ADR 0059 itself (multiple — these stay).
+  - Run: `grep -rln 'SqlBoxMigrationRunner' src/ tests/ docs/ specs/ release_notes.md` — capture the file list.
+  - Run: `grep -rc 'SqlBoxMigrationRunner' src/ tests/ docs/ specs/ release_notes.md | grep -v ':0$'` — capture per-file occurrence counts.
+  - **Expected pre-rename baseline** (subject to verification at task execution): the class declaration (1 in `src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs`), four downstream derivations (1 each in `src/Paramore.Brighter.BoxProvisioning.{MsSql,PostgreSql,MySql,Sqlite}/*BoxMigrationRunner.cs`), Phase 6 sibling-base contract tests in `tests/Paramore.Brighter.BoxProvisioning.Tests/` (multiple), per-backend test references (multiple), ADR 0058 prose (multiple), spec 0028 artefacts (multiple), `release_notes.md` (2 — lines ~179 and ~195), and ADR 0059 itself (multiple — these stay).
   - Record the file list inline as a comment block in the 14.B commit message (`Pre-rename baseline: N references across M files (see grep listing). Post-rename: zero in src/ and tests/; residual matches only in docs/adr/0059-*.md and release_notes.md's "what changed" prose. Verified.`). This is the audit trail that proves the rename swept the codebase cleanly.
 
 ### 14.B — The rename atomic (one Tidy First commit covering source + tests)
 
 The rename must land atomically across `src/` and `tests/` because the compiler binds symbols at build time — a partial rename breaks the build for the next reader. One commit captures: file rename, class declaration, four downstream derivations, every test-code reference. Documentation/prose follows in 14.C (those references don't affect the build, so they can split off).
 
-- [ ] **TIDY FIRST: Rename `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` across `src/` and `tests/` in a single atomic commit**
+- [ ] **TIDY FIRST: Rename `SqlBoxMigrationRunner<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` across `src/` and `tests/` in a single atomic commit**
 
-  - **File rename (git-aware)**: `git mv src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs`. The `git mv` preserves rename detection in `git log` / `git blame`, so the file's history threads through the rename.
+  - **File rename (git-aware)**: `git mv src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs`. The `git mv` preserves rename detection in `git log` / `git blame`, so the file's history threads through the rename.
 
-  - **Class declaration**: in the renamed file, change `public abstract class RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` to `public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>`. Generic-parameter list, base interface list (`: IAmABoxMigrationRunner`), and type constraints (`where TConnection : DbConnection where TTransaction : DbTransaction`) unchanged. Ctor, sealed `MigrateAsync` body, abstract/virtual hook signatures, and `using` blocks unchanged.
+  - **Class declaration**: in the renamed file, change `public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>` to `public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>`. Generic-parameter list, base interface list (`: IAmABoxMigrationRunner`), and type constraints (`where TConnection : DbConnection where TTransaction : DbTransaction`) unchanged. Ctor, sealed `MigrateAsync` body, abstract/virtual hook signatures, and `using` blocks unchanged.
 
-  - **Internal references inside the renamed file**: search for any remaining `RelationalBoxMigrationRunnerBase` in xmldoc comments inside the same file (e.g. `/// <see cref="RelationalBoxMigrationRunnerBase"/>` or prose mentioning the old name in xmldoc bodies). Rebind to `SqlBoxMigrationRunner`. Keep generic-parameter syntax in xmldoc as `SqlBoxMigrationRunner{TConnection, TTransaction}` (xmldoc curly-brace convention) where the original used the same shape for the old name.
+  - **Internal references inside the renamed file**: search for any remaining `SqlBoxMigrationRunner` in xmldoc comments inside the same file (e.g. `/// <see cref="SqlBoxMigrationRunner"/>` or prose mentioning the old name in xmldoc bodies). Rebind to `SqlBoxMigrationRunner`. Keep generic-parameter syntax in xmldoc as `SqlBoxMigrationRunner{TConnection, TTransaction}` (xmldoc curly-brace convention) where the original used the same shape for the old name.
 
-  - **Four downstream derivations** — for each of the following files, change `: RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` to `: SqlBoxMigrationRunner<TConnection, TTransaction>` (or whatever concrete type-argument list the derivation supplies — preserve the exact generic-argument shape, only swap the identifier):
+  - **Four downstream derivations** — for each of the following files, change `: SqlBoxMigrationRunner<TConnection, TTransaction>` to `: SqlBoxMigrationRunner<TConnection, TTransaction>` (or whatever concrete type-argument list the derivation supplies — preserve the exact generic-argument shape, only swap the identifier):
     - `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlBoxMigrationRunner.cs`
     - `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlBoxMigrationRunner.cs`
     - `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlBoxMigrationRunner.cs`
     - `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteBoxMigrationRunner.cs`
     Constructor `base(...)` argument lists are unchanged (the constructor parameter list of the base is untouched), so only the type identifier moves.
 
-  - **xmldoc cross-references in each downstream file**: search for `RelationalBoxMigrationRunnerBase` inside each of the four files above and rebind.
+  - **xmldoc cross-references in each downstream file**: search for `SqlBoxMigrationRunner` inside each of the four files above and rebind.
 
-  - **Spanner runner — verify NO change**: `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerBoxMigrationRunner.cs` is free-standing per ADR 0057 §6 (implements `IAmABoxMigrationRunner` directly). Run `grep -n 'RelationalBoxMigrationRunnerBase\|SqlBoxMigrationRunner' src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerBoxMigrationRunner.cs` — expect **zero matches** both before and after the rename (Spanner doesn't derive from the base and shouldn't reference it).
+  - **Spanner runner — verify NO change**: `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerBoxMigrationRunner.cs` is free-standing per ADR 0057 §6 (implements `IAmABoxMigrationRunner` directly). Run `grep -n 'SqlBoxMigrationRunner\|SqlBoxMigrationRunner' src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerBoxMigrationRunner.cs` — expect **zero matches** both before and after the rename (Spanner doesn't derive from the base and shouldn't reference it).
 
   - **Test-code symbol rebinds** — every test file that references the old base name by symbol must rebind in the same commit, else the test projects fail to build. The grep audit in 14.A produced the file list; expected locations:
     - `tests/Paramore.Brighter.BoxProvisioning.Tests/` — the Phase 6 sibling-base contract tests (six files originally) and any base-contract tests added during sub-phase A (Phase 13.A.1, three files) that exercise the §B.2 base.
@@ -1221,14 +1221,14 @@ The rename must land atomically across `src/` and `tests/` because the compiler 
   - **Build verification (per-TFM, NOT a test run)**: after all symbol rebinds, run `dotnet build src/Paramore.Brighter.BoxProvisioning -c Release` — expect 0 errors, 0 warnings on `netstandard2.0;net8.0;net9.0;net10.0`. Then `dotnet build` at the repository root (or the relevant solution) to verify every downstream project — `Paramore.Brighter.BoxProvisioning.{MsSql,PostgreSql,MySql,Sqlite,Spanner}` and the matching test projects — still compiles. If any project fails to build, the rename has a missed reference: re-run the grep, find it, fix in this same commit.
 
   - **Validation greps (run as the last step before staging)**:
-    - `grep -rn 'RelationalBoxMigrationRunnerBase' src/ tests/` — expect **zero matches**. Any non-zero is a missed rebind.
+    - `grep -rn 'SqlBoxMigrationRunner' src/ tests/` — expect **zero matches**. Any non-zero is a missed rebind.
     - `grep -rn 'SqlBoxMigrationRunner' src/Paramore.Brighter.BoxProvisioning/` — expect the new class declaration plus any internal `<see cref>` cross-refs.
     - `grep -rn 'SqlBoxMigrationRunner' src/Paramore.Brighter.BoxProvisioning.{MsSql,PostgreSql,MySql,Sqlite}/` — expect one occurrence per downstream project (the `: base` declaration; plus xmldoc cross-refs if any).
     - `grep -rn 'SqlBoxMigrationRunner' src/Paramore.Brighter.BoxProvisioning.Spanner/` — expect **zero matches**. Spanner is exempt.
 
   - **Commit message shape**:
     ```
-    refactor: spec 0028 sub-phase B 14.B — rename RelationalBoxMigrationRunnerBase → SqlBoxMigrationRunner (Tidy First atomic; src/ + tests/)
+    refactor: spec 0028 sub-phase B 14.B — rename SqlBoxMigrationRunner → SqlBoxMigrationRunner (Tidy First atomic; src/ + tests/)
 
     [Per ADR 0059. Pre-merge rename — nothing has shipped under either name, so this is a code-review improvement on unreleased code, not a public-surface source break.]
 
@@ -1249,11 +1249,11 @@ The rename must land atomically across `src/` and `tests/` because the compiler 
 
 Prose references don't affect the build, so they split off into their own commit for review-friendliness. This includes ADR 0058 prose (including the "Naming asymmetry, time-bounded" risk being marked resolved), spec 0028 artefact prose, and `release_notes.md`.
 
-- [ ] **TIDY FIRST: Rebind documentation and prose references from `RelationalBoxMigrationRunnerBase` to `SqlBoxMigrationRunner`**
+- [ ] **TIDY FIRST: Rebind documentation and prose references from `SqlBoxMigrationRunner` to `SqlBoxMigrationRunner`**
 
   - **ADR 0058** (`docs/adr/0058-box-provisioning-rdd-role-interfaces.md`):
     - Update every prose mention of the old name. The §B.2 sub-section heading and body refer to the old name throughout; rebind all to the new name. Preserve the generic-parameter list in xmldoc-style `<TConnection, TTransaction>` where the original used it.
-    - Update the Risks-and-Mitigations entry titled "Naming asymmetry between §B.2 (`RelationalBoxMigrationRunnerBase`) and §B.5 (`SqlBoxProvisioner`)" (line ~751 of ADR 0058). The risk is now **resolved**, not merely time-bounded. Append a closing paragraph:
+    - Update the Risks-and-Mitigations entry titled "Naming asymmetry between §B.2 (`SqlBoxMigrationRunner`) and §B.5 (`SqlBoxProvisioner`)" (line ~751 of ADR 0058). The risk is now **resolved**, not merely time-bounded. Append a closing paragraph:
       > **Status: resolved by [ADR 0059](0059-box-provisioning-abstract-base-naming-symmetry.md) (Accepted 2026-05-13).** The successor ADR was originally planned as a post-merge follow-up; PR #4039 instead absorbs the rename pre-merge — neither the §B.2 base in its old name nor the §B.5 base has reached release, so the rename is a code-review improvement on unreleased code rather than a public-surface break. The asymmetry never makes it to a shipped release.
     - Keep the historical record of *why* `SqlBoxProvisioner` was chosen over `Relational*` in §B.5 / NF8 — that rationale still stands and now applies symmetrically to both bases.
 
@@ -1263,14 +1263,14 @@ Prose references don't affect the build, so they split off into their own commit
     > "the asymmetry is **resolved in-PR** by sub-phase B (per [ADR 0059](../../docs/adr/0059-box-provisioning-abstract-base-naming-symmetry.md), Accepted 2026-05-13). The §B.2 base is renamed to `SqlBoxMigrationRunner<TConnection, TTransaction>` in the same PR as the §B.5 base's introduction; the asymmetry never reaches release."
     Preserve the rest of NF8 (the rationale for `Sql*` over `Relational*` still applies).
 
-  - **Spec 0028 acceptance.md / traceability.md / baseline.md**: grep each file for `RelationalBoxMigrationRunnerBase`, rebind in place. Any AC text that referenced the old name updates to the new name. Any traceability rows that name the §B.2 base by symbol rebind. The post-13.D NF9 floor numbers do not change (the rename adds zero `[Fact]` methods); only the *name* in any prose mentioning the base updates.
+  - **Spec 0028 acceptance.md / traceability.md / baseline.md**: grep each file for `SqlBoxMigrationRunner`, rebind in place. Any AC text that referenced the old name updates to the new name. Any traceability rows that name the §B.2 base by symbol rebind. The post-13.D NF9 floor numbers do not change (the rename adds zero `[Fact]` methods); only the *name* in any prose mentioning the base updates.
 
   - **`release_notes.md`** lines ~179 + ~195 — per ADR 0059's Implementation approach step 5, **substitute the new name in place**. Do NOT add a "source break" entry. The spec 0028 release-notes section is the only place this base is announced to adopters; substituting in place means the first released form of this type is `SqlBoxMigrationRunner<TConnection, TTransaction>`. If the existing prose mentions the old name in a "rationale" sentence (e.g. "We chose `*Base` suffix to mirror …"), update the rationale to align with the §B.5 / NF8 reasoning (drop `*Base` suffix, mirror `IAmA*` interface family). If the existing prose has no such rationale sentence and only mentions the type by name, a simple name substitution is sufficient.
 
   - **xmldoc inside `*.csproj`-generated XML docs**: not directly editable (regenerated at build time). The `<see cref>` references in source code were already rebound in 14.B. This step covers only static markdown prose.
 
   - **Validation greps**:
-    - `grep -rn 'RelationalBoxMigrationRunnerBase' docs/adr/ specs/ release_notes.md | grep -v '0059-box-provisioning-abstract-base-naming-symmetry'` — expect **zero matches**. The pipe-grep-v exclusion is because ADR 0059 itself documents the rename and deliberately mentions the old name as the "before" side. Every other reference must be rebound.
+    - `grep -rn 'SqlBoxMigrationRunner' docs/adr/ specs/ release_notes.md | grep -v '0059-box-provisioning-abstract-base-naming-symmetry'` — expect **zero matches**. The pipe-grep-v exclusion is because ADR 0059 itself documents the rename and deliberately mentions the old name as the "before" side. Every other reference must be rebound.
     - `grep -n 'Post-merge follow-up' docs/adr/0058-box-provisioning-rdd-role-interfaces.md` — expect updated wording (now references in-PR resolution).
 
   - **Commit message shape**:
@@ -1345,7 +1345,7 @@ The PR body currently has a "## Post-merge follow-up" section that committed to 
 
   - **Local audit-trail update first**. Edit `specs/0028-box-provisioning-rdd-role-interfaces/pr-description.md` to splice in:
     - A new sub-phase B bullet under the existing "Spec 0028 — Box Provisioning RDD Role Interfaces" Scope section, immediately after the sub-phase A bullet. Wording (draft):
-      > **Sub-phase B (pre-merge rename, post-acceptance):** per [ADR 0059](docs/adr/0059-box-provisioning-abstract-base-naming-symmetry.md) (Accepted 2026-05-13), renamed `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` for naming symmetry with sub-phase A's `SqlBoxProvisioner<TConnection, TTransaction>`. Pure Tidy First — zero behavioural delta; build clean on `netstandard2.0;net8.0;net9.0;net10.0`; all BoxProvisioning filters green at the post-13.D floor (MSSQL 64/64, PG 55/55, MySQL 67/67 net9.0-only, SQLite 46/46, Core 43/43, Spanner 26/26 per TFM). Pre-merge scope — see ADR 0059 §Context. Closes the "Naming asymmetry, time-bounded" risk in ADR 0058.
+      > **Sub-phase B (pre-merge rename, post-acceptance):** per [ADR 0059](docs/adr/0059-box-provisioning-abstract-base-naming-symmetry.md) (Accepted 2026-05-13), renamed `SqlBoxMigrationRunner<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` for naming symmetry with sub-phase A's `SqlBoxProvisioner<TConnection, TTransaction>`. Pure Tidy First — zero behavioural delta; build clean on `netstandard2.0;net8.0;net9.0;net10.0`; all BoxProvisioning filters green at the post-13.D floor (MSSQL 64/64, PG 55/55, MySQL 67/67 net9.0-only, SQLite 46/46, Core 43/43, Spanner 26/26 per TFM). Pre-merge scope — see ADR 0059 §Context. Closes the "Naming asymmetry, time-bounded" risk in ADR 0058.
     - Rewrite (or remove) the "## Post-merge follow-up" section. Recommended rewrite — keep the section heading but transform the content:
       > **(Resolved in-PR by sub-phase B — see Scope above.)** Originally this section committed to a post-merge successor ADR for the §B.2 / §B.5 naming asymmetry. The successor ADR ([0059](docs/adr/0059-box-provisioning-abstract-base-naming-symmetry.md)) and the rename it documents both ship inside PR #4039 itself, eliminating the post-merge migration cost. No outstanding post-merge follow-ups remain for spec 0028.
     Alternative: remove the section entirely. Recommended retention because the section preserves the audit trail of *why* the rename moved from post-merge to in-PR.
@@ -1364,7 +1364,7 @@ The PR body currently has a "## Post-merge follow-up" section that committed to 
 
 - [ ] **Phase 14 gate: `/spec:approve code` ready — Phase 14 discharges ADR 0059 in full**
   - 14.A grep audit captured the pre-rename baseline.
-  - 14.B rename commit landed atomically: zero `RelationalBoxMigrationRunnerBase` matches in `src/` + `tests/`; build clean on all TFMs.
+  - 14.B rename commit landed atomically: zero `SqlBoxMigrationRunner` matches in `src/` + `tests/`; build clean on all TFMs.
   - 14.C docs/prose rebound: zero matches in `docs/adr/` (excluding ADR 0059), `specs/`, `release_notes.md`.
   - 14.D end-to-end test-pass confirmed behavioural neutrality: all seven filters at the post-13.D floor (Core 43/43, MSSQL 64/64, PG 55/55, MySQL 67/67 net9.0-only, SQLite 46/46, Spanner 26/26).
   - 14.E PR #4039 body carries the sub-phase B bullet; the "Post-merge follow-up" section is rewritten (or removed) to reflect in-PR resolution. Local audit-trail `pr-description.md` mirrors the live PR.

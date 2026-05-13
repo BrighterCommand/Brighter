@@ -22,10 +22,10 @@ Each AC records (a) the verifying artefact and (b) the tick.
   - **Feedback item 3 (migration catalogues)** — `IAmABoxMigrationCatalog` at `src/Paramore.Brighter.BoxProvisioning/IAmABoxMigrationCatalog.cs`. XML-doc on interface and method. 8 backend impls (Spanner exempt — see `traceability.md` F3 table).
   - **Feedback item 5 (payload-mode validators)** — `IAmABoxPayloadModeValidator<TConnection>` at `src/Paramore.Brighter.BoxProvisioning/IAmABoxPayloadModeValidator.cs`. XML-doc on interface and method. 5 backend impls (see `traceability.md` F4 table).
 
-## AC3 — Feedback item 7 has abstract base `RelationalBoxMigrationRunnerBase` AND `IAmAProvisioningUnitOfWork` interface with 4 relational impls; Spanner exemption documented
+## AC3 — Feedback item 7 has abstract base `SqlBoxMigrationRunner` AND `IAmAProvisioningUnitOfWork` interface with 4 relational impls; Spanner exemption documented
 
 - [x] Verifying artefacts:
-  - Abstract base: `src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs` (`public abstract class RelationalBoxMigrationRunnerBase<TConnection, TTransaction> : IAmABoxMigrationRunner`).
+  - Abstract base: `src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs` (`public abstract class SqlBoxMigrationRunner<TConnection, TTransaction> : IAmABoxMigrationRunner`).
   - 4 relational runners derive from base — see `traceability.md` F6 table.
   - UoW interface: `src/Paramore.Brighter.BoxProvisioning/IAmAProvisioningUnitOfWork.cs` (`public interface IAmAProvisioningUnitOfWork<TTransaction> : IAsyncDisposable`).
   - 4 relational UoW impls — see `traceability.md` F5 table.
@@ -142,7 +142,7 @@ Each sub-bullet records (a) the verifying artefact and (b) the tick. Sub-phase A
 ### F12 — Disposal pattern (sync `using` per §B.2 precedent — no probe)
 
 - [x] Verifying artefacts:
-  - `specs/0028-box-provisioning-rdd-role-interfaces/baseline.md` → "Sub-phase A preliminaries" → F12 disposition table. Cites the §B.2 precedent (`src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs:112-116`) as the operative reason for sync `using` on the connection.
+  - `specs/0028-box-provisioning-rdd-role-interfaces/baseline.md` → "Sub-phase A preliminaries" → F12 disposition table. Cites the §B.2 precedent (`src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs:112-116`) as the operative reason for sync `using` on the connection.
   - **No independent probe project built**: the limiting factor is `DbConnection` (the base type) on netstandard2.0, not the four driver subtypes (`SqlConnection`, `NpgsqlConnection`, `MySqlConnection`, `SqliteConnection`). `DbConnection` does not implement `IAsyncDisposable` on netstandard2.0, so a base-class `await using` over `TConnection : DbConnection` would not compile across the shared-assembly TFM matrix (`netstandard2.0;net8.0;net9.0;net10.0`).
   - **Precedent-discharged per round-2 review** of ADR 0058 §B.5 (see `specs/0028-box-provisioning-rdd-role-interfaces/review-tasks.md` round-2 entry). ADR §B.5 inherits the §B.2 decision rather than re-litigating.
 
@@ -157,7 +157,7 @@ Each sub-bullet records (a) the verifying artefact and (b) the tick. Sub-phase A
 - [x] Verifying artefacts:
   - ADR 0058 §B.5 "Naming" subsection (line ~673) — precision-of-contract justification: `Sql` names the `DbConnection` lineage precisely (the base requires `where TConnection : DbConnection`); `Relational` would name a broader semantic category that includes the exempt Spanner backend (Spanner IS relational/SQL per ADR 0057 §6 yet is excluded from this base).
   - ADR 0058 §B.5 "Naming" subsection drops the `*Base` suffix to mirror §A's role-interface style (line ~681).
-  - ADR 0058 §B.5 "Risks and Mitigations" → "Naming asymmetry, time-bounded" entry (line ~752) — records the §B.2 sibling base (`RelationalBoxMigrationRunnerBase`) as carrying the pre-existing name and commits to a successor ADR that renames it for symmetry.
+  - ADR 0058 §B.5 "Risks and Mitigations" → "Naming asymmetry, time-bounded" entry (line ~752) — records the §B.2 sibling base (`SqlBoxMigrationRunner`) as carrying the pre-existing name and commits to a successor ADR that renames it for symmetry.
   - PR #4039 description "Post-merge follow-up" bullet — time-bounds the asymmetry by committing the rename to a successor ADR before any third-party adopter takes a hard dependency on either base. Verified live by `gh pr view 4039 --json body --jq '.body' | grep -A3 'Post-merge follow-up'` (preserved through 13.C.4 splice; smoke-grep `'Post-merge follow-up'` == 1 verifies).
   - **The §B.2 rename is NOT a sub-phase A task** — it is recorded on the PR description, not implemented here.
 
@@ -166,7 +166,7 @@ Each sub-bullet records (a) the verifying artefact and (b) the tick. Sub-phase A
 - [x] Verifying artefacts:
   - Floor trajectory (Core BoxProvisioning.Tests, per TFM):
     - Pre-sub-phase A: 36/36 (parent spec acceptance at HEAD `346ae25e7`).
-    - Post-13.A.1 (`23c05a9fc` gate): **44/44** — +8 base-contract `[Fact]`s across three files (3 orchestration + 2 schema + 3 clamp). Legitimised by the 13.A.0.5 NF9 carve-out (commit `667b5246f`) per the Phase 6 precedent (`RelationalBoxMigrationRunnerBase` introduced six base-contract test files alongside the abstract base).
+    - Post-13.A.1 (`23c05a9fc` gate): **44/44** — +8 base-contract `[Fact]`s across three files (3 orchestration + 2 schema + 3 clamp). Legitimised by the 13.A.0.5 NF9 carve-out (commit `667b5246f`) per the Phase 6 precedent (`SqlBoxMigrationRunner` introduced six base-contract test files alongside the abstract base).
     - Post-13.B (`31d84d18d`): **43/43** — -1 deleted override-identity `[Fact]` when the transitional `ClampDetectedVersion` hook was removed (slice-3 clamp test file trimmed 3 → 2 `[Fact]`s).
   - Floor trajectory (MySQL BoxProvisioning sub-filter, net9.0-only): 61/61 → **67/67** post-13.B. +2 from `When_mysql_pre_lock_detects_negative_version_it_should_clamp_to_zero.cs`; +4 from pre-existing drift reconciliation (post-Phase-10.4 fix commits `ba8813e6f` lock-timeout harmonisation +1, `a8e99e1c4` negative-TimeSpan rejection +1, `03bdd7455` overflowing-TimeSpan rejection +2 net — same drift pattern as SQLite +1; reconciled in lock-step per the precedent).
   - Floor trajectory (SQLite BoxProvisioning sub-filter): 45/45 → **46/46** post-13.B. +1 from pre-existing drift (commit `b14d76592` default lock-timeout pin; flagged at 13.A.7 in commit `42a35ce3c`).
@@ -183,7 +183,7 @@ Each sub-bullet records (a) the verifying artefact and (b) the tick. Sub-phase A
 
 - [x] Verifying artefacts:
   - `dotnet build src/Paramore.Brighter.BoxProvisioning -c Release --no-incremental` — clean on `netstandard2.0;net8.0;net9.0;net10.0`. 0 warnings, 0 errors. Verified locally end of session 2 (post-13.B HEAD `31d84d18d`).
-  - The new abstract base uses plain generic class declaration with `where TConnection : DbConnection where TTransaction : DbTransaction` constraints — the same shape as `RelationalBoxMigrationRunnerBase` (F6), known-good on the parent TFM matrix.
+  - The new abstract base uses plain generic class declaration with `where TConnection : DbConnection where TTransaction : DbTransaction` constraints — the same shape as `SqlBoxMigrationRunner` (F6), known-good on the parent TFM matrix.
 
 ### Parent AC8 preservation — no new `InternalsVisibleTo`, no new test-only public surface
 

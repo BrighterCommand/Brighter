@@ -81,17 +81,17 @@ Spanner is exempt (no UoW lifecycle to model — degenerate fresh-install-only p
 
 ADR section: §B.1 (line 232). Per-backend ordering table at line 281.
 
-## F6 — `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` + 4 derived runners
+## F6 — `SqlBoxMigrationRunner<TConnection, TTransaction>` + 4 derived runners
 
-**Abstract base:** `src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs` — implements `IAmABoxMigrationRunner`. Owns `MigrateAsync` algorithm; exposes `protected DetectionHelper`, `protected Configuration`, `protected Logger`.
+**Abstract base:** `src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs` — implements `IAmABoxMigrationRunner`. Owns `MigrateAsync` algorithm; exposes `protected DetectionHelper`, `protected Configuration`, `protected Logger`.
 
 **Derived classes (4 relational; Spanner free-standing):**
 | Backend | Class | Base parameterisation |
 |---|---|---|
-| MSSQL | `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlBoxMigrationRunner.cs` | `RelationalBoxMigrationRunnerBase<SqlConnection, SqlTransaction>` |
-| Postgres | `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlBoxMigrationRunner.cs` | `RelationalBoxMigrationRunnerBase<NpgsqlConnection, NpgsqlTransaction>` |
-| MySQL | `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlBoxMigrationRunner.cs` | `RelationalBoxMigrationRunnerBase<MySqlConnection, MySqlTransaction>` |
-| SQLite | `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteBoxMigrationRunner.cs` | `RelationalBoxMigrationRunnerBase<SqliteConnection, SqliteTransaction>` |
+| MSSQL | `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlBoxMigrationRunner.cs` | `SqlBoxMigrationRunner<SqlConnection, SqlTransaction>` |
+| Postgres | `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlBoxMigrationRunner.cs` | `SqlBoxMigrationRunner<NpgsqlConnection, NpgsqlTransaction>` |
+| MySQL | `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlBoxMigrationRunner.cs` | `SqlBoxMigrationRunner<MySqlConnection, MySqlTransaction>` |
+| SQLite | `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteBoxMigrationRunner.cs` | `SqlBoxMigrationRunner<SqliteConnection, SqliteTransaction>` |
 | Spanner | `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerBoxMigrationRunner.cs` | Implements `IAmABoxMigrationRunner` directly — exempt per ADR 0057 §6 |
 
 ADR section: §B.2 (line 296). Hooks enumerated at lines 386-425.
@@ -119,7 +119,7 @@ Phase 6 base test pins the cross-backend contract; Phase 10 tests pin per-backen
 4. Advisory lock primitive (where applicable) — `I{Backend}AdvisoryLock` per ADR 0057 §5b.
 5. Provisioning UoW (F5) — `{Backend}ProvisioningUnitOfWork : IAmAProvisioningUnitOfWork<TTransaction>`.
 6. Provisioners (existing role from ADR 0053) — ctor cascade absorbs three new typed parameters (detection helper, catalogue, payload validator).
-7. Migration runner (F6) — `{Backend}BoxMigrationRunner : RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` (or implements `IAmABoxMigrationRunner` directly for degenerate backends — Spanner pattern).
+7. Migration runner (F6) — `{Backend}BoxMigrationRunner : SqlBoxMigrationRunner<TConnection, TTransaction>` (or implements `IAmABoxMigrationRunner` directly for degenerate backends — Spanner pattern).
 
 Phase 11.3 verified all 27 referenced class names match shipped surface (no drift).
 
@@ -151,7 +151,7 @@ ADR amendment: `docs/adr/0058-box-provisioning-rdd-role-interfaces.md` §B.5 ("S
 | SQLite | `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteOutboxProvisioner.cs` | `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteInboxProvisioner.cs` |
 | Spanner | `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerOutboxProvisioner.cs` (free-standing — `IAmABoxProvisioner` direct) | `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerInboxProvisioner.cs` (free-standing) |
 
-Spanner exemption per ADR 0057 §6 — same shape as `RelationalBoxMigrationRunnerBase` (F6). Verified locally: `grep -l 'SqlBoxProvisioner' src/Paramore.Brighter.BoxProvisioning.Spanner/ -r` returns zero matches.
+Spanner exemption per ADR 0057 §6 — same shape as `SqlBoxMigrationRunner` (F6). Verified locally: `grep -l 'SqlBoxProvisioner' src/Paramore.Brighter.BoxProvisioning.Spanner/ -r` returns zero matches.
 
 **Commits introducing the base and the eight derivations:**
 - `70f92df44` — slice 1 (base + `ProvisionAsync` orchestration; hardcoded schema; no clamp hook).
@@ -175,7 +175,7 @@ ADR section: §B.5 (added in `246ea6f13`). NF10 source-break neutrality preserve
 | b. Payload column name | `protected abstract string PayloadColumnName { get; }` | All 8 derivations override (one per (backend, box-type) — `"Body"` / `"body"` / `"CommandBody"` / `"commandbody"`). |
 | c. Schema-name to detection helper + payload validator | `protected virtual string? EffectiveSchemaName => _configuration.SchemaName;` | SQLite Outbox + Inbox override to `=> null` (per ADR 0057 §6 — SQLite has no schema concept). MSSQL/PG/MySQL inherit default. |
 | d. Negative-version clamp | **Inlined post-13.B** at `DetectTableStateAsync` bootstrap branch (`CurrentVersion: detectedVersion < 0 ? 0 : detectedVersion`). The transitional `protected virtual int ClampDetectedVersion(int)` hook (added in slice 3 `4e271d861`) was removed in `31d84d18d` along with the MySQL identity overrides. | None — uniform behaviour. |
-| e. Disposal pattern | Sync `using` for the connection per §B.2 precedent (`RelationalBoxMigrationRunnerBase.cs:112-116`) — no hook required (uniform across all four derivations; `DbConnection` lacks `IAsyncDisposable` on netstandard2.0). | N/A — F12 disposition. |
+| e. Disposal pattern | Sync `using` for the connection per §B.2 precedent (`SqlBoxMigrationRunner.cs:112-116`) — no hook required (uniform across all four derivations; `DbConnection` lacks `IAsyncDisposable` on netstandard2.0). | N/A — F12 disposition. |
 
 **Base-contract tests (`tests/Paramore.Brighter.BoxProvisioning.Tests/`):**
 - `When_sql_box_provisioner_provision_async_runs_successfully_it_should_invoke_hooks_in_documented_order.cs` — 3 `[Fact]`s (slice 1 `70f92df44`); pins delta (a) via `RecordingFakeDbConnection`.
@@ -195,7 +195,7 @@ ADR section: §B.5 (added in `246ea6f13`). NF10 source-break neutrality preserve
 
 ## F12 — Disposal pattern (sync `using` per §B.2 precedent)
 
-**Disposition:** sync `using` for the connection on `SqlBoxProvisioner` — **no independent probe required**. Discharged by §B.2 precedent: `RelationalBoxMigrationRunnerBase.cs:112-116` already encodes the same decision (`DbConnection` does not implement `IAsyncDisposable` on netstandard2.0, so a base-class `await using` over `TConnection : DbConnection` would not compile across the shared-assembly TFM matrix `netstandard2.0;net8.0;net9.0;net10.0`).
+**Disposition:** sync `using` for the connection on `SqlBoxProvisioner` — **no independent probe required**. Discharged by §B.2 precedent: `SqlBoxMigrationRunner.cs:112-116` already encodes the same decision (`DbConnection` does not implement `IAsyncDisposable` on netstandard2.0, so a base-class `await using` over `TConnection : DbConnection` would not compile across the shared-assembly TFM matrix `netstandard2.0;net8.0;net9.0;net10.0`).
 
 **Where recorded:** `specs/0028-box-provisioning-rdd-role-interfaces/baseline.md` → "Sub-phase A preliminaries" → F12 disposition table. ADR 0058 §B.5 inherits the same decision (no §B.5 disposal sub-section beyond a cross-reference to §B.2).
 

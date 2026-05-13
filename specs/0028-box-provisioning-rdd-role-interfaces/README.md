@@ -21,7 +21,7 @@ Five role-based interface extractions plus one (or two) abstract base classes:
 | 3 | Migration factories (`*OutboxMigrations`, `*InboxMigrations`) | role interface — uniform `static IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration)` | MSSQL, PG, MySQL, SQLite (Spanner exempt — no V_k chain per ADR 0057 §6) |
 | 4 | Provisioners (`*OutboxProvisioner`, `*InboxProvisioner`) | **already implements `IAmABoxProvisioner`** — finding to reconcile in requirements (likely already-met) | MSSQL, PG, MySQL, SQLite, Spanner |
 | 5 | Payload-mode validators (`*PayloadModeValidator`) | role interface (likely static-virtual) | MSSQL, PG, MySQL, SQLite (Spanner exempt — fixed binary payload) |
-| 7 | Migration runners (`*BoxMigrationRunner`) | abstract base class `RelationalBoxMigrationRunnerBase` (template-method); Spanner stays free-standing per ADR 0057 §6 | MSSQL, PG, MySQL, SQLite (Spanner exempt) |
+| 7 | Migration runners (`*BoxMigrationRunner`) | abstract base class `SqlBoxMigrationRunner` (template-method); Spanner stays free-standing per ADR 0057 §6 | MSSQL, PG, MySQL, SQLite (Spanner exempt) |
 | 8 | Other open-closed sweep candidates | TBD during design | TBD |
 
 ## Decisions already agreed (Phase 0 discussion 2026-05-07)
@@ -55,7 +55,7 @@ Five role-based interface extractions plus one (or two) abstract base classes:
 
 **Surfaced:** 2026-05-12, post Phase 12 acceptance, before PR #4039 merge. Reactive to F9 / AC4 obligation — see `sweep-result.md` Amendment (Candidate 5).
 
-**Scope summary**: introduce `SqlBoxProvisioner<TConnection, TTransaction>` abstract base; port the eight relational provisioners to derive; Spanner pair exempt (parallel to the `RelationalBoxMigrationRunnerBase` exemption in §B.2 / ADR 0057 §6). Unify the MySQL pre-lock negative-version-clamp inconsistency as a separate `/test-first` slice after the structural pull-up lands.
+**Scope summary**: introduce `SqlBoxProvisioner<TConnection, TTransaction>` abstract base; port the eight relational provisioners to derive; Spanner pair exempt (parallel to the `SqlBoxMigrationRunner` exemption in §B.2 / ADR 0057 §6). Unify the MySQL pre-lock negative-version-clamp inconsistency as a separate `/test-first` slice after the structural pull-up lands.
 
 **Requirements, design, tasks**: live in `requirements.md` (F10 + NF additions), ADR 0058 §B.5 (to be authored via `/spec:design`), and a Phase 13 block to be added to `tasks.md` (via `/spec:tasks`) after design approval. **Do not edit those documents directly** — follow the `/spec:*` workflow.
 
