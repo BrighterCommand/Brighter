@@ -42,9 +42,12 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// <c>deferred</c> flag, so the synchronous <see cref="SqliteConnection.BeginTransaction(IsolationLevel, bool)"/>
 /// form is used to guarantee <c>BEGIN IMMEDIATE</c> (<c>deferred: false</c>). The call is
 /// local-only and fast — any wait for a contended writer slot manifests as
-/// <c>SQLITE_BUSY</c> being returned from this call and is the caller's responsibility to
-/// retry within <paramref name="lockTimeout"/> (the runner currently owns this retry loop;
-/// see ADR 0058 §B.1).
+/// <c>SQLITE_BUSY</c> being returned from this call and surfaces to the runner's catch path.
+/// Concurrent provisioning against the same SQLite file is fail-fast by design: neither the
+/// UoW nor the runner retries (the runner's <c>PRAGMA busy_timeout = 0</c> deliberately
+/// suppresses the inherited driver wait — see ADR 0057 §4 / ADR 0058 §B.1). Typical
+/// single-host deployments will never see contention; multi-process scenarios (sidecar +
+/// main app each calling <c>UseBoxProvisioning</c>) should serialise startup externally.
 /// </remarks>
 public class SqliteProvisioningUnitOfWork(
     SqliteConnection connection,
@@ -67,11 +70,11 @@ public class SqliteProvisioningUnitOfWork(
     /// unused — SQLite has no named-lock primitive (per ADR 0057 §4).
     /// </para>
     /// <para>
-    /// The <paramref name="lockTimeout"/> parameter is accepted for interface symmetry. If the
-    /// writer slot is contended, <c>BEGIN IMMEDIATE</c> throws <see cref="SqliteException"/>
-    /// with <c>SqliteErrorCode == 5</c> (<c>SQLITE_BUSY</c>) — retry-with-backoff is currently
-    /// the runner's responsibility (see <c>SqliteBoxMigrationRunner.BeginImmediateWithRetryAsync</c>),
-    /// not the UoW's.
+    /// The <paramref name="lockTimeout"/> parameter is accepted for interface symmetry but is
+    /// not honoured: if the writer slot is contended, <c>BEGIN IMMEDIATE</c> throws
+    /// <see cref="SqliteException"/> with <c>SqliteErrorCode == 5</c> (<c>SQLITE_BUSY</c>)
+    /// immediately and propagates to the runner's catch path. Concurrent SQLite migration is
+    /// fail-fast by design — see the class-level remarks and ADR 0057 §4 / ADR 0058 §B.1.
     /// </para>
     /// </remarks>
     public Task BeginAsync(string lockResource, TimeSpan lockTimeout, CancellationToken cancellationToken)

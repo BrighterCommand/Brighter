@@ -68,11 +68,13 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// <see cref="MigrateAsync"/> call. The pragma is connection-scoped (it does not bleed into
 /// the host application's other connections), but it means contention from another writer
 /// surfaces as an immediate <c>SQLITE_BUSY</c> on <c>BEGIN IMMEDIATE</c> rather than the
-/// inherited wait. This is deliberate per ADR 0057: contention should be visible to the
-/// base orchestration's writer-slot acquisition (which the base handles), not absorbed
-/// silently here. Hosts running on a shared SQLite file that relied on a non-zero
-/// <c>busy_timeout</c> at provisioning time should be aware that the runner's connection
-/// will not wait.
+/// inherited wait. This is deliberate per ADR 0057: concurrent SQLite migration is fail-fast
+/// by design — there is no retry loop in the UoW or the runner, and contention propagates
+/// to the catch path so the operator sees it immediately. Typical single-host deployments
+/// will never see this; multi-process scenarios (sidecar + main app each calling
+/// <c>UseBoxProvisioning</c>) should serialise startup externally. Hosts running on a shared
+/// SQLite file that relied on a non-zero <c>busy_timeout</c> at provisioning time should be
+/// aware that the runner's connection will not wait.
 /// </para>
 /// </remarks>
 public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, SqliteTransaction>
@@ -309,8 +311,9 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         SqliteConnection connection, CancellationToken cancellationToken)
     {
         // Cancel any inherited PRAGMA busy_timeout so the connection enters BEGIN IMMEDIATE with
-        // no per-statement waiter — contention surfaces through the base orchestration's writer-
-        // slot acquisition rather than being absorbed silently here.
+        // no per-statement waiter — concurrent SQLite migration is fail-fast by design, so
+        // contention surfaces immediately to the runner's catch path rather than being absorbed
+        // silently here. See class-level remarks and ADR 0057 §4 / ADR 0058 §B.1.
         using var command = connection.CreateCommand();
         command.CommandText = "PRAGMA busy_timeout = 0;";
         await command.ExecuteNonQueryAsync(cancellationToken);
