@@ -2,6 +2,7 @@ using System;
 using System.Net.Mime;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.Transforms.Attributes;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
@@ -179,5 +180,36 @@ public class CloudEventsPreservesExistingHeadersTests
         Assert.Equal(_mapperType, json.Type);
         Assert.Equal(_mapperDataSchema, json.DataSchema);
         Assert.Equal(_mapperSubject, json.Subject);
+    }
+
+    [Fact]
+    public void When_attribute_has_default_data_content_type_should_not_override_mapper_content_type()
+    {
+        //Arrange - mapper sets XML content type; attribute uses [CloudEvents(0)] with no explicit DataContentType
+        var xmlContentType = new ContentType(MediaTypeNames.Text.Xml);
+        var message = new Message(
+            new MessageHeader(
+                Id.Random(),
+                new RoutingKey("Test.Topic"),
+                MessageType.MT_EVENT,
+                contentType: xmlContentType,
+                source: _mapperSource,
+                subject: _mapperSubject,
+                type: _mapperType,
+                dataSchema: _mapperDataSchema),
+            new MessageBody("<order><id>123</id></order>"));
+
+        // Simulate the real attribute pipeline: CloudEventsAttribute with no explicit DataContentType
+        var attribute = new CloudEventsAttribute(0);
+        var initParams = attribute.InitializerParams();
+        _transformer.InitializeWrapFromAttributeParams(initParams);
+
+        var publication = new Publication();
+
+        //Act
+        var wrapped = _transformer.Wrap(message, publication);
+
+        //Assert - mapper's XML content type should be preserved, not overwritten with application/json
+        Assert.Equal(xmlContentType, wrapped.Header.ContentType);
     }
 }
