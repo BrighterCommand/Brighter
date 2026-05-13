@@ -94,7 +94,11 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName ?? connection.Database);
 
-        var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
+        var raw = await command.ExecuteScalarAsync(cancellationToken);
+        var count = raw is long l
+            ? l
+            : throw new InvalidOperationException(
+                $"DoesHistoryExistAsync: COUNT(1) over __BrighterMigrationHistory for '{schemaName ?? connection.Database}.{tableName}' returned null.");
         return count > 0;
     }
 

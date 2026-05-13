@@ -78,7 +78,11 @@ public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock
             command.Parameters.AddWithValue("@ns", BRIGHTER_LOCK_NAMESPACE);
             command.Parameters.AddWithValue("@key", lockKey);
 
-            var result = (bool)(await command.ExecuteScalarAsync(cancellationToken))!;
+            var raw = await command.ExecuteScalarAsync(cancellationToken);
+            var result = raw is bool b
+                ? b
+                : throw new InvalidOperationException(
+                    $"pg_try_advisory_lock for '{lockKey}' returned null (expected boolean).");
             if (result) return;
 
             if (_timeProvider.GetElapsedTime(startTimestamp) >= timeout)

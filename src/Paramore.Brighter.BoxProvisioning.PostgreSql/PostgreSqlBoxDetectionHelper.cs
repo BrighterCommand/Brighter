@@ -66,7 +66,14 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
         command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
         command.Parameters.AddWithValue("@TableName", tableName);
 
-        return (bool)(await command.ExecuteScalarAsync(cancellationToken))!;
+        // Pattern-match rather than (bool)raw! so a driver returning null surfaces as a named
+        // InvalidOperationException instead of a bare NullReferenceException — Npgsql has
+        // returned null from ExecuteScalarAsync under server-side errors in the wild.
+        var raw = await command.ExecuteScalarAsync(cancellationToken);
+        return raw is bool b
+            ? b
+            : throw new InvalidOperationException(
+                $"DoesTableExistAsync: EXISTS over information_schema.tables for '{schemaName ?? DefaultSchemaName}.{tableName}' returned null.");
     }
 
     /// <summary>
@@ -94,7 +101,11 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
 
         try
         {
-            var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
+            var raw = await command.ExecuteScalarAsync(cancellationToken);
+            var count = raw is long l
+                ? l
+                : throw new InvalidOperationException(
+                    $"DoesHistoryExistAsync: COUNT(1) over __BrighterMigrationHistory for '{schemaName ?? DefaultSchemaName}.{tableName}' returned null.");
             return count > 0;
         }
         catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
@@ -127,7 +138,11 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
 
-        return (int)(await command.ExecuteScalarAsync(cancellationToken))!;
+        var raw = await command.ExecuteScalarAsync(cancellationToken);
+        return raw is int i
+            ? i
+            : throw new InvalidOperationException(
+                $"GetMaxVersionAsync: COALESCE(MAX(\"MigrationVersion\"), 0) for '{schemaName ?? DefaultSchemaName}.{tableName}' returned null.");
     }
 
     /// <summary>

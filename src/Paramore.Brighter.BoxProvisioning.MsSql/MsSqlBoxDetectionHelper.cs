@@ -60,7 +60,15 @@ WHERE t.name = @TableName AND s.name = @SchemaName";
         command.Parameters.AddWithValue("@TableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
 
-        var count = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
+        // Pattern-match rather than (int)raw! so a driver returning null surfaces as a named
+        // InvalidOperationException instead of a bare NullReferenceException — Npgsql and
+        // MS.Data.SqlClient have both returned null from ExecuteScalarAsync under server-side
+        // errors in the wild, and the cast would otherwise paper over that.
+        var raw = await command.ExecuteScalarAsync(cancellationToken);
+        var count = raw is int i
+            ? i
+            : throw new InvalidOperationException(
+                $"DoesTableExistAsync: COUNT(1) over sys.tables for '{schemaName ?? DefaultSchemaName}.{tableName}' returned null.");
         return count > 0;
     }
 
@@ -87,7 +95,11 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
 
-        var count = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
+        var raw = await command.ExecuteScalarAsync(cancellationToken);
+        var count = raw is int i
+            ? i
+            : throw new InvalidOperationException(
+                $"DoesHistoryExistAsync: COUNT(1) over __BrighterMigrationHistory for '{schemaName ?? DefaultSchemaName}.{tableName}' returned null.");
         return count > 0;
     }
 
@@ -109,7 +121,11 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
 
-        return (int)(await command.ExecuteScalarAsync(cancellationToken))!;
+        var raw = await command.ExecuteScalarAsync(cancellationToken);
+        return raw is int i
+            ? i
+            : throw new InvalidOperationException(
+                $"GetMaxVersionAsync: ISNULL(MAX([MigrationVersion]), 0) for '{schemaName ?? DefaultSchemaName}.{tableName}' returned null.");
     }
 
     /// <summary>

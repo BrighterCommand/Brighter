@@ -79,9 +79,15 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
         command.Parameters.AddWithValue("@lockResourceName", lockResource);
         command.Parameters.AddWithValue("@lockTimeoutMs", (int)timeout.TotalMilliseconds);
 
+        // sp_getapplock returns an INT — never NULL per the documented contract. Pattern-match
+        // so a future provider/driver bug surfaces as a named InvalidOperationException rather
+        // than a bare NullReferenceException (e.g. MS.Data.SqlClient has been observed to
+        // return null from ExecuteScalarAsync under server-side errors).
         var raw = await command.ExecuteScalarAsync(cancellationToken);
-        var result = (int)raw!;
-        return result;
+        return raw is int i
+            ? i
+            : throw new InvalidOperationException(
+                $"sp_getapplock on '{lockResource}' returned null (expected INT result code).");
     }
 
     private static void EvaluateLockResponse(int result, string lockResource, TimeSpan timeout, CancellationToken cancellationToken)
