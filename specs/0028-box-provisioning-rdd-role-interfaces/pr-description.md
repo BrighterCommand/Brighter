@@ -17,6 +17,8 @@ This PR delivers **both** specifications together, so the bootstrap path is prod
 
   - **Sub-phase A (post-acceptance review response, 2026-05-12)** — `SqlBoxProvisioner<TConnection, TTransaction>` pull-up consolidating ~640 lines duplicated body across the eight relational provisioners into one ~120-line base. MySQL pre-lock negative-version clamp unified with MsSql/Postgres/Sqlite per F11. ADR 0058 §B.5 + `specs/0028-box-provisioning-rdd-role-interfaces/` sub-phase A appendix.
 
+  - **Sub-phase B (pre-merge rename, post-acceptance, 2026-05-13)** — per [ADR 0059](docs/adr/0059-box-provisioning-abstract-base-naming-symmetry.md) (Accepted 2026-05-13), renamed `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` for naming symmetry with sub-phase A's `SqlBoxProvisioner<TConnection, TTransaction>`. Pure Tidy First — zero behavioural delta; build clean on `netstandard2.0;net8.0;net9.0;net10.0`; all BoxProvisioning filters green at the post-13.D floor (MSSQL 64/64, PG 55/55, MySQL 67/67 net9.0-only, SQLite 46/46, Core 43/43, Spanner 26/26 per TFM). Pre-merge scope — see ADR 0059 §Context. Closes the "Naming asymmetry, time-bounded" risk in ADR 0058.
+
 Bundling these resolves review finding **R1** — without Spec 0027, the Spec 0023 bootstrap path treats any pre-V_latest table as unrecognised and the runner attempts a `CREATE TABLE` that fails. Spec 0027 also addresses **R2** (TOCTOU race on bootstrap insert), **R4** (Spanner concurrency), and **R5** (payload-mode validator test coverage on non-MSSQL backends).
 
 ## Breaking Changes
@@ -29,5 +31,5 @@ Bundling these resolves review finding **R1** — without Spec 0027, the Spec 00
 
 ## Post-merge follow-up
 
-- **Naming-symmetry rename ADR for the BoxProvisioning abstract bases.** Spec 0028 sub-phase A introduces `SqlBoxProvisioner<TConnection, TTransaction>` as the §B.5 abstract base for the eight relational provisioners (per ADR 0058 §B.5, post-acceptance amendment 2026-05-12). This name is asymmetric with the parent-spec §B.2 sibling base `SqlBoxMigrationRunner`. ADR 0058 §B.5 / NF8 chooses `Sql*` over `Relational*` on grounds of contract precision (`Sql` names the `DbConnection` lineage; `Relational` is a broader category that includes the exempt Spanner backend). To resolve the asymmetry, a successor ADR will be authored after this PR merges, renaming `SqlBoxMigrationRunner` to a `Sql*`-prefixed equivalent (e.g. `SqlBoxMigrationRunner`) so both abstract bases share the `Sql*` prefix. The follow-up ADR ships before any third-party adopter takes a hard dependency on either base. Tracked in ADR 0058 §B.5 Risks and Mitigations entry "Naming asymmetry, time-bounded".
+**(Resolved in-PR by sub-phase B — see Scope above.)** Originally this section committed to a post-merge successor ADR for the §B.2 / §B.5 naming asymmetry. The successor ADR ([0059](docs/adr/0059-box-provisioning-abstract-base-naming-symmetry.md)) and the rename it documents both ship inside PR #4039 itself, eliminating the post-merge migration cost. No outstanding post-merge follow-ups remain for spec 0028.
 
