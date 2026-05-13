@@ -193,10 +193,15 @@ Each sub-bullet records (a) the verifying artefact and (b) the tick. Sub-phase A
 
 ### PR #4039 description amended (parent AC11 preservation + sub-phase A bullet)
 
-- [ ] Verifying artefact: `gh pr view 4039 --json body --jq '.body' | grep -c 'Sub-phase A (post-acceptance'` returns `1` AND `'Post-merge follow-up'` returns `1` (existing section preserved). Discharged in 13.C.4 (commit splice + `gh pr edit --body-file` publish) — **pending at AC12 tick time**; will be ticked retrospectively after 13.C.4 publishes.
+- [x] Verifying artefacts (post-13.C.4 publish smoke greps run 2026-05-13):
+  - `gh pr view 4039 --json body --jq '.body' | grep -c 'Sub-phase A (post-acceptance'` → `1` ✓ (new sub-bullet added by `gh pr edit --body-file specs/0028-box-provisioning-rdd-role-interfaces/pr-description.md`).
+  - `gh pr view 4039 --json body --jq '.body' | grep -c 'Post-merge follow-up'` → `1` ✓ (existing §B.2 rename commitment section preserved unmodified).
+  - `gh pr view 4039 --json body --jq '.body' | wc -l` → `34` ≥ pre-edit `31` ✓.
+  - Local audit-trail commit: `b3ddbc3f9` (`docs: spec 0028 sub-phase A 13.C.4 — local pr-description.md captures spliced PR #4039 body with sub-phase A bullet`). Publish action `gh pr edit 4039 --body-file …` returned the PR URL with no error.
+  - Note on AC11's historical `'Spec 0028'` grep count: AC11 (Phase 11) recorded the count as 3. Live count is now 4 — the +1 is from the existing "Post-merge follow-up" section (added 2026-05-12, before sub-phase A entry); the 13.C.4 splice itself adds zero new `Spec 0028` occurrences. AC11 remains discharged at its captured value.
 
 ---
 
 ## Sign-off
 
-All twelve acceptance criteria discharged (AC12 pending only the 13.C.4 PR-body splice, which is the next commit after this one). **Ready for `/spec:approve code` after 13.C.4 + Docker-requiring backend validations (MSSQL 63/63, Postgres 54/54, Spanner 26/26).**
+All twelve acceptance criteria discharged. **Ready for `/spec:approve code`** pending only the Docker-requiring backend validations (MSSQL 63/63 per TFM, Postgres 54/54 per TFM, Spanner 26/26 per TFM) — these are the deferred filters from session 2 local verification. Core (43/43 per TFM), MySQL (67/67 net9.0-only), and SQLite (46/46 per TFM) verified locally end of session 2.

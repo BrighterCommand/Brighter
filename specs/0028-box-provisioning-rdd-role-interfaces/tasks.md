@@ -1126,7 +1126,7 @@ Per ADR §B.5 line 646 + requirements F11. The MySQL `ClampDetectedVersion` iden
   - **Do NOT** add any entry under Breaking Changes — sub-phase A is source-break-neutral per NF10 (both ctors on every derivation preserved; `base(...)` chaining is internal).
   - Commit: `docs: spec 0028 sub-phase A 13.C — release_notes.md additive entry for SqlBoxProvisioner`.
 
-- [ ] **TIDY FIRST: Add traceability rows for F10, F10.1, F11, F12, F13 to `traceability.md`**
+- [x] **TIDY FIRST: Add traceability rows for F10, F10.1, F11, F12, F13 to `traceability.md`**
   - File: `specs/0028-box-provisioning-rdd-role-interfaces/traceability.md`.
   - Add five rows (under a new "Sub-phase A" sub-section if the existing structure suggests one, or as appended rows to the existing functional-requirements table):
     - **F10** → ADR §B.5 → `src/Paramore.Brighter.BoxProvisioning/SqlBoxProvisioner.cs` + 8 derivation files at `src/Paramore.Brighter.BoxProvisioning.{MsSql,PostgreSql,MySql,Sqlite}/*BoxProvisioner.cs` + commits from 13.A.1..13.A.5.
@@ -1136,7 +1136,7 @@ Per ADR §B.5 line 646 + requirements F11. The MySQL `ClampDetectedVersion` iden
     - **F13** → ADR §B.4 (Candidate 5 row, post-acceptance amendment 2026-05-12) → forward link to ADR §B.5.
   - Commit: `docs: spec 0028 sub-phase A 13.C — traceability.md rows for F10/F10.1/F11/F12/F13`.
 
-- [ ] **TIDY FIRST: Tick AC12 in `acceptance.md`**
+- [x] **TIDY FIRST: Tick AC12 in `acceptance.md`**
   - File: `specs/0028-box-provisioning-rdd-role-interfaces/acceptance.md`.
   - Append a new section `## AC12 — Sub-phase A delivered` mirroring the existing AC1..AC11 structure. For each AC12 sub-bullet from requirements.md line 237-251 (F10, F10.1, F11, F12, F13, NF8, NF9, NF10, NF11, no-new-IVT, no-test-only-public, traceability rows, PR #4039 description), record (a) the verifying artefact (test name / file path / commit sha / ADR section reference / `gh pr view` output where applicable) and (b) the tick.
   - In particular:
@@ -1145,7 +1145,7 @@ Per ADR §B.5 line 646 + requirements F11. The MySQL `ClampDetectedVersion` iden
     - **F12 (disposition)**: cite `baseline.md` "Sub-phase A preliminaries" → F12 disposition table. No probe was run; precedent-discharged per round-2 ADR review.
   - Commit: `docs: spec 0028 sub-phase A 13.C — AC12 ticked`.
 
-- [ ] **TIDY FIRST: Capture PR #4039 description as a local artefact, splice in the sub-phase A bullet, commit, then publish via `gh pr edit --body-file`**
+- [x] **TIDY FIRST: Capture PR #4039 description as a local artefact, splice in the sub-phase A bullet, commit, then publish via `gh pr edit --body-file`**
 
   Two-step: (a) the spliced PR body is captured in a tracked file so the change has a git trail, then (b) `gh pr edit` publishes it from that file. This restores audit-trail discipline lost by the previous "no commit — GitHub state" framing.
 
