@@ -56,11 +56,19 @@ public static class Identifiers
     /// empty, or contains characters outside <c>[A-Za-z0-9_]</c> or starts with a digit.</exception>
     public static void AssertSafe(string identifier, string parameterName)
     {
-        if (identifier is not null && s_safeIdentifier.IsMatch(identifier)) return;
+        // Split missing-configuration (null) from malformed-identifier so operators see the real
+        // root cause. Pointing at the regex when no identifier was supplied at all sends them
+        // looking for an "invalid character" that does not exist.
+        if (identifier is null)
+        {
+            throw new ConfigurationException(
+                $"Required SQL identifier '{parameterName}' was null. A non-null value must be supplied.");
+        }
 
-        var rendered = identifier ?? "<null>";
+        if (s_safeIdentifier.IsMatch(identifier)) return;
+
         throw new ConfigurationException(
-            $"Unsafe SQL identifier supplied for '{parameterName}': '{rendered}'. " +
+            $"Unsafe SQL identifier supplied for '{parameterName}': '{identifier}'. " +
             $"Identifiers must match the regex ^[A-Za-z_][A-Za-z0-9_]*$.");
     }
 }

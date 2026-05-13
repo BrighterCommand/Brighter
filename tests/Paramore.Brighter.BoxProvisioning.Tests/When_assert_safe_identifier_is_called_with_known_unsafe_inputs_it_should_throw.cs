@@ -85,4 +85,23 @@ public class AssertSafeIdentifierTests
         // a null leak would surface as an actionable error rather than a downstream NRE.
         Assert.Contains("tableName", exception.Message);
     }
+
+    [Fact]
+    public void When_assert_safe_identifier_is_called_with_a_null_identifier_it_should_not_blame_the_regex()
+    {
+        // The null path is a missing-configuration failure, not a malformed-identifier failure.
+        // The original message conflated the two by rendering '<null>' against the regex hint,
+        // which sent operators looking for an "invalid character" in their config when the real
+        // problem was that no identifier was supplied at all.
+
+        //Act
+        var exception = Assert.Throws<ConfigurationException>(
+            () => Identifiers.AssertSafe(null!, "tableName"));
+
+        //Assert — the null path must surface as a named missing-configuration error, not
+        // a regex-pattern complaint. Mention the null-ness explicitly so operators see the
+        // real root cause.
+        Assert.DoesNotContain("regex", exception.Message);
+        Assert.Contains("null", exception.Message);
+    }
 }
