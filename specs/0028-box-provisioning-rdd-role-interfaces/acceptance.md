@@ -47,13 +47,17 @@ Each AC records (a) the verifying artefact and (b) the tick.
 |---|---|---|---|---|
 | Core BoxProvisioning.Tests | 43/43 [^ac6-core-sub-phase-a] | 43/43 [^ac6-core-sub-phase-a] | 23/23 | +20/+20 |
 | Core sub-filter | 5/5 | 5/5 | 5/5 | =/= |
-| MSSQL | 63/63 | 63/63 | 54/54 | +9/+9 |
-| Postgres | 54/54 | 54/54 | 46/46 | +8/+8 |
+| MSSQL | 64/64 [^ac6-mssql-drift] | 64/64 [^ac6-mssql-drift] | 54/54 | +10/+10 |
+| Postgres | 55/55 [^ac6-pg-drift] | 55/55 [^ac6-pg-drift] | 46/46 | +9/+9 |
 | MySQL | 67/67 | n/a | 50/50 | +17 |
 | SQLite | 46/46 | 46/46 | 40/40 | +6/+6 |
 | Spanner | 26/26 | 26/26 | 26/26 | =/= |
 
 [^ac6-core-sub-phase-a]: Post-Phase-13.B (sub-phase A complete). The Phase 6 precedent legitimises adding base-contract tests alongside an abstract base; Phase 13.A.1 added 8 `[Fact]` methods across three test files (orchestration 3 + schema 2 + clamp 3) at `tests/Paramore.Brighter.BoxProvisioning.Tests/` — recomputed Δ at 13.A.1: 44 − 23 = +21 per TFM (was +13 pre-13.A.0.5 amendment). Phase 13.B then moved Core from 44/44 +21/+21 → 43/43 +20/+20 (-1 deleted override-identity `[Fact]` once the transitional `ClampDetectedVersion` hook was removed) and MySQL from 61/61 +11 → 67/67 +17 (+2 unification `[Fact]`s in `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/` PLUS +4 pre-existing drift from three post-Phase-10.4 fix commits: `ba8813e6f` "harmonise MySql default lock timeout to 30 seconds" +1, `a8e99e1c4` "reject negative TimeSpan in MySqlAdvisoryLock.AcquireAsync" +1, `03bdd7455` "reject overflowing TimeSpan in MySqlAdvisoryLock.AcquireAsync" +2 net — same pattern as the SQLite +1 drift, reconciled here in lock-step). SQLite recorded a pre-existing +1 drift from commit `b14d76592` (default lock-timeout pin) — reconciled in lock-step at 13.B: 45/45 +5/+5 → 46/46 +6/+6.
+
+[^ac6-mssql-drift]: Post-sub-phase-A Docker-deferred floor pass on 2026-05-13. Pre-existing +1 drift from commit `acff5eb34` ("fix: harmonise MsSql default lock timeout to 30 seconds" — PR #4039 review item #1) which landed between Phase 10.4 gate (`94c822369`) and sub-phase A entry (`246ea6f13`). Reconciled here in lock-step: 63/63 +9/+9 → 64/64 +10/+10. Same four-backend lock-timeout harmonisation series as MySQL `ba8813e6f`, SQLite `b14d76592`, and Postgres `080e93c96` (next row's footnote); see `^ac6-core-sub-phase-a` above for the MySQL/SQLite drift reconciliation already recorded at 13.B.
+
+[^ac6-pg-drift]: Post-sub-phase-A Docker-deferred floor pass on 2026-05-13. Pre-existing +1 drift from commit `080e93c96` ("fix: harmonise PostgreSql default lock timeout to 30 seconds" — PR #4039 review item #1 continuation) which landed between Phase 10.4 gate (`94c822369`) and sub-phase A entry (`246ea6f13`). Reconciled here in lock-step: 54/54 +8/+8 → 55/55 +9/+9. Same four-backend lock-timeout harmonisation series as MySQL `ba8813e6f`, SQLite `b14d76592`, and MSSQL `acff5eb34` (preceding row's footnote); see `^ac6-core-sub-phase-a` above for the MySQL/SQLite drift reconciliation already recorded at 13.B.
 
 Spanner equal (degenerate, unchanged per ADR 0057 §6); all six other filters exceed baseline due to additive Phase 5/6/10 tests plus the sub-phase A base-contract additions on the Core row.
 
@@ -204,4 +208,4 @@ Each sub-bullet records (a) the verifying artefact and (b) the tick. Sub-phase A
 
 ## Sign-off
 
-All twelve acceptance criteria discharged. **Ready for `/spec:approve code`** pending only the Docker-requiring backend validations (MSSQL 63/63 per TFM, Postgres 54/54 per TFM, Spanner 26/26 per TFM) — these are the deferred filters from session 2 local verification. Core (43/43 per TFM), MySQL (67/67 net9.0-only), and SQLite (46/46 per TFM) verified locally end of session 2.
+All twelve acceptance criteria discharged. **Ready for `/spec:approve code`** — Docker-requiring backend validations completed 2026-05-13: MSSQL 64/64 per TFM (+1 drift from `acff5eb34`, reconciled), Postgres 55/55 per TFM (+1 drift from `080e93c96`, reconciled), Spanner 26/26 per TFM (no drift, exempt per ADR 0057 §6). Floor amendment applied in three-artefact lock-step (AC6 + baseline.md NF9 + requirements.md NF9; NF2 untouched) per the pattern documented in `^ac6-core-sub-phase-a`. Core (43/43 per TFM), MySQL (67/67 net9.0-only), and SQLite (46/46 per TFM) verified locally end of session 2.
