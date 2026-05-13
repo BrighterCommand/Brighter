@@ -131,18 +131,27 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
 
             _traceProvider.ForceFlush();
             
-            Assert.Equal(6, _exportedActivities.Count);
+            Assert.Equal(7, _exportedActivities.Count);
             Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
-            
-            //there should be a span for each message received by a pump
-            var createActivity = _exportedActivities.FirstOrDefault(a => 
+
+            //there should be a receive span (broker-call timing) and a process span (dispatch timing) for the serviceable message
+            var createActivity = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}"
                 && a.TagObjects.Any(to => to is { Value: not null, Key: BrighterSemanticConventions.MessageType } && Enum.Parse<MessageType>(to.Value.ToString() ?? string.Empty) == MessageType.MT_EVENT)
                 );
             Assert.NotNull(createActivity);
-            Assert.Equal(_message.Header.TraceParent?.Value, createActivity!.ParentId);
+
+            var processActivity = _exportedActivities.FirstOrDefault(a =>
+                a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Process.ToSpanName()}"
+                && a.TagObjects.Any(to => to is { Value: not null, Key: BrighterSemanticConventions.MessageType } && Enum.Parse<MessageType>(to.Value.ToString() ?? string.Empty) == MessageType.MT_EVENT)
+                );
+            Assert.NotNull(processActivity);
+
+            //the process span carries the producer's traceparent so handler spans descend from the producer trace
+            Assert.Equal(_message.Header.TraceParent?.Value, processActivity!.ParentId);
             Assert.Contains(Baggage.Current.GetBaggage(), b => b.Key == "mykey" && b.Value == "myvalue");
             Assert.Contains(createActivity.Tags, t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "receive" });
+            Assert.Contains(processActivity.Tags, t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "process" });
             Assert.Contains(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value == _message.Header.Topic);
             Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value == _message.Header.PartitionKey.Value);
             Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.MessageId && t.Value == _message.Id.Value);
