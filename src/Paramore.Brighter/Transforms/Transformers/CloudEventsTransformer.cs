@@ -15,19 +15,24 @@ namespace Paramore.Brighter.Transforms.Transformers;
 
 /// <summary>
 /// Provides support for the <see href="https://github.com/cloudevents/spec?tab=readme-ov-file">Cloud Events specification</see>
-/// by ensuring that our message has the required metadata to support Cloud Events
+/// by ensuring that our message has the required metadata to support Cloud Events.
+///
+/// All settable attributes follow the same precedence (highest priority first):
+///   1. <see cref="CloudEventsAttribute"/> parameters (hardcoded on the attribute)
+///   2. Message header values already set by the message mapper
+///   3. <see cref="Publication"/> properties (fallback defaults)
+///
 /// The following Cloud Events attributes are supported:
 /// REQUIRED
-///     id => the message id <see cref="MessageHeader"/>; you don't set this here, as we use the id from the <see cref="Request"/>
-///     source => uses the source Uri from the <see cref="CloudEventsAttribute"/>, or preserves the existing <see cref="MessageHeader"/> value, falling back to <see cref="Publication"/>
-///     specversion => uses the spec version <see cref="MessageHeader"/>; you don't set this and it defaults to 1.0
-///     type => uses the type <see cref="MessageHeader"/>; as we used type based routing, we recommend using the hostname
-///         scoped name of the request class you are sending
+///     id => the message id from <see cref="MessageHeader"/>; you don't set this here, as we use the id from the <see cref="Request"/>
+///     source => attribute > mapper > publication
+///     specversion => attribute > mapper; defaults to 1.0
+///     type => attribute > mapper > publication
 /// OPTIONAL
-///      datacontenttype => uses the content type from the <see cref="CloudEventsAttribute"/>, or preserves the existing <see cref="MessageHeader"/> value
-///      dataschema => sets the schema for <see cref="MessageBody"/> and <see cref="MessageHeader"/>
-///      subject => sets the subject for <see cref="MessageHeader"/>
-///      time => sets the timestamp for <see cref="MessageHeader"/>
+///     datacontenttype => attribute > mapper (no publication fallback)
+///     dataschema => attribute > mapper > publication
+///     subject => attribute > mapper > publication
+///     time => sets the timestamp for <see cref="MessageHeader"/>
 /// </summary>
 public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageTransformAsync
 {
@@ -216,7 +221,10 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
 
     private Message WritePublicationHeaders(Message message, Publication publication)
     {
-        // Precedence: attribute params > message header (set by mapper) > publication (fallback)
+        // Precedence for all attributes: attribute params > message header (set by mapper) > publication (fallback)
+        // Source and Type use sentinel checks (s_defaultSource / CloudEventsType.Empty) because their defaults
+        // are non-null, so we need a way to distinguish "mapper didn't set it" from "mapper set it explicitly."
+        // DataSchema, Subject, and DataContentType default to null, so plain null-coalescing suffices.
         message.Header.Source = _source
             ?? (!Equals(message.Header.Source, s_defaultSource) ? message.Header.Source : publication.Source);
         message.Header.Type = _type is not null

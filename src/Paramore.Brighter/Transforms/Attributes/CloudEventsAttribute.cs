@@ -66,7 +66,7 @@ public class CloudEventsAttribute : WrapWithAttribute
     /// When translating an event message with no "datacontenttype" attribute to a different format or protocol binding,
     /// the target datacontenttype SHOULD be set explicitly to the implied datacontenttype of the source. 
     /// </summary>
-    public string DataContentType { get; set; } = "application/json";
+    public string? DataContentType { get; set; }
     
     /// <summary>
     /// Identifies the schema that data adheres to. Incompatible changes to the schema SHOULD be reflected by a different URI.
