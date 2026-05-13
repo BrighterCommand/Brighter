@@ -51,7 +51,6 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
     // so any caller of the abstraction is protected. A bad timeout surfaces as
     // ArgumentOutOfRangeException on first MigrateAsync call rather than at construction.
     private readonly IMsSqlAdvisoryLock _advisoryLock;
-    private readonly ILogger _logger;
 
     /// <summary>
     /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
@@ -62,10 +61,10 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         IMsSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null)
-        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30), logger)
+        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
+            logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>())
     {
         _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
-        _logger = logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>();
     }
 
     /// <summary>
@@ -94,7 +93,7 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
     protected override Task<IAmAProvisioningUnitOfWork<SqlTransaction>> CreateUnitOfWorkAsync(
         SqlConnection connection, CancellationToken cancellationToken)
         => Task.FromResult<IAmAProvisioningUnitOfWork<SqlTransaction>>(
-            new MsSqlProvisioningUnitOfWork(connection, _advisoryLock, _logger));
+            new MsSqlProvisioningUnitOfWork(connection, _advisoryLock, Logger));
 
     // Include the schema name so that two same-named tables in different schemas
     // (e.g. dbo.Outbox and billing.Outbox) acquire distinct advisory locks. Without

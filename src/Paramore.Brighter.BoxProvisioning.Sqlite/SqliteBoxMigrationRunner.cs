@@ -80,7 +80,6 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
 
     private readonly bool _enableWalMode;
-    private readonly ILogger _logger;
 
     /// <summary>
     /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
@@ -91,10 +90,10 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         bool enableWalMode = true)
-        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30), logger)
+        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
+            logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>())
     {
         _enableWalMode = enableWalMode;
-        _logger = logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>();
     }
 
     /// <summary>
@@ -141,7 +140,7 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     {
         _ = cancellationToken;
         return Task.FromResult<IAmAProvisioningUnitOfWork<SqliteTransaction>>(
-            new SqliteProvisioningUnitOfWork(connection, _logger));
+            new SqliteProvisioningUnitOfWork(connection, Logger));
     }
 
     // SQLite has no schema concept, so the schema is folded out of the lock resource. The

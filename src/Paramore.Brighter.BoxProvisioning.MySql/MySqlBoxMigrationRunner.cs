@@ -52,7 +52,6 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
 
     private readonly IMySqlAdvisoryLock _advisoryLock;
-    private readonly ILogger _logger;
 
     // Threaded through the base's LockResourceFor → CreateUnitOfWorkAsync sequence so the
     // per-invocation tableName reaches MySqlProvisioningUnitOfWork's ctor for NF1-faithful
@@ -70,10 +69,10 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null)
-        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30), logger)
+        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
+            logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>())
     {
         _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
-        _logger = logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>();
     }
 
     /// <summary>
@@ -102,7 +101,7 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
     protected override Task<IAmAProvisioningUnitOfWork<MySqlTransaction>> CreateUnitOfWorkAsync(
         MySqlConnection connection, CancellationToken cancellationToken)
         => Task.FromResult<IAmAProvisioningUnitOfWork<MySqlTransaction>>(
-            new MySqlProvisioningUnitOfWork(connection, _advisoryLock, _logger, _activeTableName.Value));
+            new MySqlProvisioningUnitOfWork(connection, _advisoryLock, Logger, _activeTableName.Value));
 
     protected override string LockResourceFor(string? schemaName, string tableName)
     {

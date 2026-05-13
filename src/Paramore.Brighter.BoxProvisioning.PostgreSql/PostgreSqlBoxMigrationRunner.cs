@@ -50,7 +50,6 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     private const string HISTORY_TABLE_SCHEMA = "public";
 
     private readonly IPostgreSqlAdvisoryLock _advisoryLock;
-    private readonly ILogger _logger;
 
     /// <summary>
     /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
@@ -61,10 +60,10 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         IPostgreSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null)
-        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30), logger)
+        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
+            logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>())
     {
         _advisoryLock = advisoryLock ?? new PostgreSqlAdvisoryLock();
-        _logger = logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>();
     }
 
     /// <summary>
@@ -91,7 +90,7 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     protected override Task<IAmAProvisioningUnitOfWork<NpgsqlTransaction>> CreateUnitOfWorkAsync(
         NpgsqlConnection connection, CancellationToken cancellationToken)
         => Task.FromResult<IAmAProvisioningUnitOfWork<NpgsqlTransaction>>(
-            new PostgreSqlProvisioningUnitOfWork(connection, _advisoryLock, _logger));
+            new PostgreSqlProvisioningUnitOfWork(connection, _advisoryLock, Logger));
 
     // Include the schema in the lock key so two same-named tables in different schemas
     // (e.g. public.Outbox and billing.Outbox) acquire distinct advisory locks. Without
