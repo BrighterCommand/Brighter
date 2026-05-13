@@ -208,10 +208,13 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
 
     private Message WritePublicationHeaders(Message message, Publication publication)
     {
-        message.Header.Source = _source ?? publication.Source;
-        message.Header.Type = _type is not null ? new CloudEventsType(_type) : publication.Type;
-        message.Header.DataSchema = _dataSchema ?? publication.DataSchema;
-        message.Header.Subject = _subject ?? publication.Subject;
+        message.Header.Source = _source
+            ?? (message.Header.Source.AbsoluteUri != MessageHeader.DefaultSource ? message.Header.Source : publication.Source);
+        message.Header.Type = _type is not null
+            ? new CloudEventsType(_type)
+            : (message.Header.Type != CloudEventsType.Empty ? message.Header.Type : publication.Type);
+        message.Header.DataSchema = _dataSchema ?? message.Header.DataSchema ?? publication.DataSchema;
+        message.Header.Subject = _subject ?? message.Header.Subject ?? publication.Subject;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
         return message;
     }
