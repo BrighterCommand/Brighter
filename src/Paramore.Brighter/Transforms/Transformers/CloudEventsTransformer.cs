@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Transforms.Transformers;
 /// The following Cloud Events attributes are supported:
 /// REQUIRED
 ///     id => the message id <see cref="MessageHeader"/>; you don't set this here, as we use the id from the <see cref="Request"/>
-///     source => uses the source Uri from the <see cref="Publication"/> or <see cref="CloudEventsAttribute"/> and assigns to the message source <see cref="MessageHeader"/>
+///     source => uses the source Uri from the <see cref="CloudEventsAttribute"/>, or preserves the existing <see cref="MessageHeader"/> value, falling back to <see cref="Publication"/>
 ///     specversion => uses the spec version <see cref="MessageHeader"/>; you don't set this and it defaults to 1.0
 ///     type => uses the type <see cref="MessageHeader"/>; as we used type based routing, we recommend using the hostname
 ///         scoped name of the request class you are sending
@@ -32,6 +32,7 @@ namespace Paramore.Brighter.Transforms.Transformers;
 public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageTransformAsync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CloudEventsTransformer>();
+    private static readonly Uri s_defaultSource = new(MessageHeader.DefaultSource);
 
     private Uri? _source;
     private string? _type;
@@ -208,8 +209,9 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
 
     private Message WritePublicationHeaders(Message message, Publication publication)
     {
+        // Precedence: attribute params > message header (set by mapper) > publication (fallback)
         message.Header.Source = _source
-            ?? (message.Header.Source.AbsoluteUri != MessageHeader.DefaultSource ? message.Header.Source : publication.Source);
+            ?? (!Equals(message.Header.Source, s_defaultSource) ? message.Header.Source : publication.Source);
         message.Header.Type = _type is not null
             ? new CloudEventsType(_type)
             : (message.Header.Type != CloudEventsType.Empty ? message.Header.Type : publication.Type);
