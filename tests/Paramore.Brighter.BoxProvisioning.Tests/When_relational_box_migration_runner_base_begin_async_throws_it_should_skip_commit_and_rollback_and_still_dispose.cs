@@ -48,7 +48,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// mutation that wrapped BeginAsync in the try would call RollbackAsync on an unbegun
 /// UoW; this test would catch that regression.
 /// </remarks>
-public class RelationalBoxMigrationRunnerBaseBeginFailureTests
+public class SqlBoxMigrationRunnerBeginFailureTests
 {
     [Fact]
     public async Task When_begin_async_throws_runner_should_skip_commit_and_rollback_and_still_dispose()
@@ -94,13 +94,13 @@ public class RelationalBoxMigrationRunnerBaseBeginFailureTests
     }
 
     /// <summary>
-    /// Minimal derivative of <see cref="RelationalBoxMigrationRunnerBase{TConnection,TTransaction}"/>
+    /// Minimal derivative of <see cref="SqlBoxMigrationRunner{TConnection,TTransaction}"/>
     /// whose CreateUnitOfWorkAsync returns the supplied capturing spy; all post-Begin
     /// hooks throw <see cref="NotSupportedException"/> as defense-in-depth — if the
     /// runner ever called them despite Begin throwing, the test would observe the wrong
     /// exception type rather than the sentinel.
     /// </summary>
-    private sealed class BeginFailureTestRunner : RelationalBoxMigrationRunnerBase<FakeDbConnection, FakeDbTransaction>
+    private sealed class BeginFailureTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         private readonly CapturingProvisioningUnitOfWork _unitOfWork;
 

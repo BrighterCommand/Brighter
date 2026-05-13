@@ -37,7 +37,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// The third escape hatch documented in ADR 0058 §B.2: a derived runner whose backend has
 /// a non-standard detection model (e.g. a backend that combines the
 /// <c>DoesTableExistAsync</c>/<c>DoesHistoryExistAsync</c> probes into a single round-trip)
-/// can override <see cref="RelationalBoxMigrationRunnerBase{TConnection,TTransaction}.RedetectStateAsync"/>
+/// can override <see cref="SqlBoxMigrationRunner{TConnection,TTransaction}.RedetectStateAsync"/>
 /// without overriding any other hook. This test pins the contract by arranging a runner
 /// whose override returns a tuple inconsistent with what the injected detection helper
 /// would otherwise produce: the override drives <c>RunNormalPath</c> dispatch even though
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 ///   3. The injected detection helper is NOT touched (call counts both zero) — proves the
 ///      base default was completely bypassed by the override.
 /// </summary>
-public class RelationalBoxMigrationRunnerBaseRedetectStateOverrideTests
+public class SqlBoxMigrationRunnerRedetectStateOverrideTests
 {
     [Fact]
     public async Task When_redetect_state_is_overridden_migrate_should_use_the_override_and_bypass_the_default()
@@ -84,7 +84,7 @@ public class RelationalBoxMigrationRunnerBaseRedetectStateOverrideTests
     /// dispatched branch is <c>RunNormalPath</c> regardless of the injected helper's stub
     /// values. No other hook is overridden beyond the abstract minimum required to compile.
     /// </summary>
-    private sealed class OverrideTestRunner : RelationalBoxMigrationRunnerBase<FakeDbConnection, FakeDbTransaction>
+    private sealed class OverrideTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         public int RedetectOverrideCallCount { get; private set; }
         public string? PathInvoked { get; private set; }

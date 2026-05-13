@@ -40,7 +40,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// fresh, bootstrap, normal — by recording the sequence of hook invocations against a
 /// fake backend whose <c>RedetectStateAsync</c> override drives the dispatch directly.
 /// </summary>
-public class RelationalBoxMigrationRunnerBaseHookOrderTests
+public class SqlBoxMigrationRunnerHookOrderTests
 {
     [Fact]
     public async Task When_table_does_not_exist_migrate_should_invoke_hooks_in_fresh_path_order()
@@ -156,7 +156,7 @@ public class RelationalBoxMigrationRunnerBaseHookOrderTests
     /// Overrides <c>RedetectStateAsync</c> directly — this isolates the orchestration test
     /// from the detection helper's behaviour (which is exercised separately in Phase 6.4).
     /// </summary>
-    private sealed class RecordingTestRunner : RelationalBoxMigrationRunnerBase<FakeDbConnection, FakeDbTransaction>
+    private sealed class RecordingTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         private readonly RecordingProvisioningUnitOfWork _unitOfWork;
 

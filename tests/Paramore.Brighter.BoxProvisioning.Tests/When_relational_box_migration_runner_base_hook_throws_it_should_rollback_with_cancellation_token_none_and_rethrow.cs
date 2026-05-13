@@ -46,7 +46,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// (<c>EnsureHistoryTableAsync</c>, <c>RunFreshPathAsync</c>, <c>RunBootstrapPathAsync</c>,
 /// <c>RunNormalPathAsync</c>) — share an arrange/act/assert helper.
 /// </remarks>
-public class RelationalBoxMigrationRunnerBaseHookFailureTests
+public class SqlBoxMigrationRunnerHookFailureTests
 {
     [Fact]
     public Task When_ensure_history_table_throws_runner_should_rollback_with_cancellation_token_none_and_rethrow()
@@ -110,7 +110,7 @@ public class RelationalBoxMigrationRunnerBaseHookFailureTests
     /// from one configured hook; the other hooks complete successfully. <c>RedetectStateAsync</c>
     /// drives which path-hook is reached when the throw target is one of the path hooks.
     /// </summary>
-    private sealed class ThrowingHookTestRunner : RelationalBoxMigrationRunnerBase<FakeDbConnection, FakeDbTransaction>
+    private sealed class ThrowingHookTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         public const string SentinelMessage = "spec 0028 Phase 6.2 sentinel — hook failure";
 

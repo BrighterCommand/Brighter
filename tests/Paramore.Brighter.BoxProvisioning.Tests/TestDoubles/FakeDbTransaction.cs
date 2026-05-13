@@ -30,7 +30,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 
 /// <summary>
 /// Minimal <see cref="DbTransaction"/> stub used as the <c>TTransaction</c> type-argument
-/// when exercising <c>RelationalBoxMigrationRunnerBase</c> without a real database. The
+/// when exercising <c>SqlBoxMigrationRunner</c> without a real database. The
 /// runner base only forwards the transaction reference into hooks; <see cref="Commit"/>
 /// and <see cref="Rollback"/> are no-ops so a derived <c>FakeProvisioningUnitOfWork</c>
 /// can return one and have it threaded through the orchestration without side effects.

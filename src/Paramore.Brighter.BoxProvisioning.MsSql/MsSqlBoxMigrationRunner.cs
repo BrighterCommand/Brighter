@@ -33,13 +33,13 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 
 /// <summary>
 /// Runs box migrations against a MSSQL database. Derives from
-/// <see cref="RelationalBoxMigrationRunnerBase{TConnection,TTransaction}"/> for the
+/// <see cref="SqlBoxMigrationRunner{TConnection,TTransaction}"/> for the
 /// success/failure orchestration and supplies the per-backend hooks. Uses an injected
 /// <see cref="IMsSqlAdvisoryLock"/> (default <see cref="MsSqlAdvisoryLock"/>) for
 /// concurrency control via <see cref="MsSqlProvisioningUnitOfWork"/>; the dispatch into
 /// fresh / bootstrap / normal paths happens in the base after re-detection under the UoW.
 /// </summary>
-public class MsSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqlConnection, SqlTransaction>
+public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlTransaction>
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
     // The history table is global — one row per (SchemaName, BoxTableName, MigrationVersion)

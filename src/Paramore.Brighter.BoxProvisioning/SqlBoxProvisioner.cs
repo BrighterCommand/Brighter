@@ -39,7 +39,7 @@ namespace Paramore.Brighter.BoxProvisioning;
 /// derive from this base — the ctor requires
 /// <see cref="IAmAVersionDetectingMigrationHelper{TConnection,TTransaction}"/>, which Spanner
 /// cannot honestly implement (no V_k chain per ADR 0057 §6 / §A.1). Spanner stays free-standing
-/// with the same exemption shape used by <c>RelationalBoxMigrationRunnerBase</c>.
+/// with the same exemption shape used by <c>SqlBoxMigrationRunner</c>.
 /// </remarks>
 /// <typeparam name="TConnection">The backend-specific <see cref="DbConnection"/> subtype
 /// (e.g. <c>SqlConnection</c>, <c>NpgsqlConnection</c>, <c>MySqlConnection</c>, <c>SqliteConnection</c>).</typeparam>
@@ -112,7 +112,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     {
         // Sync `using` for the connection: DbConnection does not implement IAsyncDisposable
         // on netstandard2.0, so `await using` would not compile across the shared-assembly
-        // TFM matrix. Mirrors the §B.2 precedent at RelationalBoxMigrationRunnerBase.cs:112-116.
+        // TFM matrix. Mirrors the §B.2 precedent at SqlBoxMigrationRunner.cs:112-116.
         using var connection = CreateConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
@@ -145,7 +145,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     {
         // Sync `using` for the connection: DbConnection does not implement IAsyncDisposable
         // on netstandard2.0, so `await using` would not compile across the shared-assembly
-        // TFM matrix. Mirrors the §B.2 precedent at RelationalBoxMigrationRunnerBase.cs:112-116.
+        // TFM matrix. Mirrors the §B.2 precedent at SqlBoxMigrationRunner.cs:112-116.
         using var connection = CreateConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 

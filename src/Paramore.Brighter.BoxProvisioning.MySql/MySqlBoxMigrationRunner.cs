@@ -33,7 +33,7 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 
 /// <summary>
 /// Runs box migrations against a MySQL database. Derives from
-/// <see cref="RelationalBoxMigrationRunnerBase{TConnection,TTransaction}"/> for the
+/// <see cref="SqlBoxMigrationRunner{TConnection,TTransaction}"/> for the
 /// success/failure orchestration and supplies the per-backend hooks. Uses an injected
 /// <see cref="IMySqlAdvisoryLock"/> (default <see cref="MySqlAdvisoryLock"/>) for
 /// session-scoped concurrency control via <see cref="MySqlProvisioningUnitOfWork"/>; the
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// next invocation" rather than whole-chain rollback. The history table's PK on
 /// <c>(SchemaName, BoxTableName, MigrationVersion)</c> ensures concurrent racers cannot double-stamp.
 /// </remarks>
-public class MySqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<MySqlConnection, MySqlTransaction>
+public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, MySqlTransaction>
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
 

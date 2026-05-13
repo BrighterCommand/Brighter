@@ -49,7 +49,7 @@ namespace Paramore.Brighter.BoxProvisioning;
 /// </remarks>
 /// <typeparam name="TConnection">The backend-specific <see cref="DbConnection"/> subtype.</typeparam>
 /// <typeparam name="TTransaction">The backend-specific <see cref="DbTransaction"/> subtype.</typeparam>
-public abstract class RelationalBoxMigrationRunnerBase<TConnection, TTransaction>
+public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     : IAmABoxMigrationRunner
     where TConnection : DbConnection
     where TTransaction : DbTransaction
@@ -86,7 +86,7 @@ public abstract class RelationalBoxMigrationRunnerBase<TConnection, TTransaction
     /// <param name="lockTimeout">How long the per-backend UoW waits for the advisory lock
     /// before throwing.</param>
     /// <param name="logger">Optional logger. Defaults to <see cref="NullLogger.Instance"/>.</param>
-    protected RelationalBoxMigrationRunnerBase(
+    protected SqlBoxMigrationRunner(
         IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> detectionHelper,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,

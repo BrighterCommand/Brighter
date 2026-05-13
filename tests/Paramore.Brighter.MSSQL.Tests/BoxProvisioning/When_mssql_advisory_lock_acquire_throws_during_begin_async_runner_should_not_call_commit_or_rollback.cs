@@ -45,7 +45,7 @@ public class When_mssql_advisory_lock_acquire_throws_during_begin_async_runner_s
         //Arrange — fake IMsSqlAdvisoryLock whose AcquireAsync throws MigrationLockDeadlockException
         // (spec 0027 Item N -3 deadlock-victim path). The runner's CreateUnitOfWorkAsync hook is
         // overridden to wrap the real MsSqlProvisioningUnitOfWork with a spy that records whether
-        // CommitAsync, RollbackAsync, and DisposeAsync were invoked. Per RelationalBoxMigrationRunnerBase
+        // CommitAsync, RollbackAsync, and DisposeAsync were invoked. Per SqlBoxMigrationRunner
         // (ADR 0058 §B.3): the try-block is entered AFTER `await uow.BeginAsync(...)` returns, so
         // a throw from BeginAsync must propagate WITHOUT entering the try (CommitAsync) or its
         // catch (explicit RollbackAsync). The `await using uow = ...` declaration sits OUTSIDE

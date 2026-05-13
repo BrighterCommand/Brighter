@@ -45,7 +45,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// list must produce a <see cref="ConfigurationException"/> with that flag still <c>false</c>.
 /// </para>
 /// </summary>
-public class RelationalBoxMigrationRunnerBaseMonotonicityValidationTests
+public class SqlBoxMigrationRunnerMonotonicityValidationTests
 {
     [Fact]
     public async Task When_migration_list_has_a_version_gap_migrate_should_throw_before_opening_connection()
@@ -80,7 +80,7 @@ public class RelationalBoxMigrationRunnerBaseMonotonicityValidationTests
     /// either <see cref="OpenConnectionCalled"/> flips true or one of the post-Open hooks
     /// throws <see cref="NotSupportedException"/> instead of <see cref="ConfigurationException"/>.
     /// </summary>
-    private sealed class OrderProbeTestRunner : RelationalBoxMigrationRunnerBase<FakeDbConnection, FakeDbTransaction>
+    private sealed class OrderProbeTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         public bool OpenConnectionCalled { get; private set; }
 

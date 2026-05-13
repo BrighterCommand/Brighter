@@ -33,7 +33,7 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 
 /// <summary>
 /// Runs box migrations against a SQLite database. Derives from
-/// <see cref="RelationalBoxMigrationRunnerBase{TConnection,TTransaction}"/> for the
+/// <see cref="SqlBoxMigrationRunner{TConnection,TTransaction}"/> for the
 /// success/failure orchestration and supplies the per-backend hooks. Per ADR 0057 §4 /
 /// ADR 0058 §B.1, SQLite has no advisory-lock primitive — <c>BEGIN IMMEDIATE</c> atomically
 /// opens the transaction and reserves the database-wide writer slot, so
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// host application owns that decision.
 /// </para>
 /// </remarks>
-public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteConnection, SqliteTransaction>
+public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, SqliteTransaction>
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
 
@@ -108,7 +108,7 @@ public class SqliteBoxMigrationRunner : RelationalBoxMigrationRunnerBase<SqliteC
     {
     }
 
-    // ==== Per-backend hook overrides for RelationalBoxMigrationRunnerBase ====
+    // ==== Per-backend hook overrides for SqlBoxMigrationRunner ====
 
     protected override async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {

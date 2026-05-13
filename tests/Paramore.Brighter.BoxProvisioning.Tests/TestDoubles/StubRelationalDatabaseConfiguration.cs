@@ -27,7 +27,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 
 /// <summary>
 /// Minimal <see cref="IAmARelationalDatabaseConfiguration"/> stub used to satisfy the
-/// <c>RelationalBoxMigrationRunnerBase</c> ctor. Properties return empty strings; tests
+/// <c>SqlBoxMigrationRunner</c> ctor. Properties return empty strings; tests
 /// that exercise behaviour driven by configuration values should use a more specific
 /// double or set fields explicitly.
 /// </summary>

@@ -32,7 +32,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 
 /// <summary>
 /// Minimal <see cref="DbConnection"/> stub used as the <c>TConnection</c> type-argument
-/// when exercising <c>RelationalBoxMigrationRunnerBase</c> without a real database. The
+/// when exercising <c>SqlBoxMigrationRunner</c> without a real database. The
 /// runner base treats the connection as an opaque token threaded through hooks, so all
 /// data-access members throw <see cref="NotSupportedException"/>; lifecycle members
 /// (<see cref="Close"/>, <see cref="Open"/>) update an in-memory state field so

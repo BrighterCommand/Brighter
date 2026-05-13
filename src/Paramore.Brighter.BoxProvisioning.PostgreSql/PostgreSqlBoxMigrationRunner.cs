@@ -33,13 +33,13 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
 /// <summary>
 /// Runs box migrations against a PostgreSQL database. Derives from
-/// <see cref="RelationalBoxMigrationRunnerBase{TConnection,TTransaction}"/> for the
+/// <see cref="SqlBoxMigrationRunner{TConnection,TTransaction}"/> for the
 /// success/failure orchestration and supplies the per-backend hooks. Uses an injected
 /// <see cref="IPostgreSqlAdvisoryLock"/> (default <see cref="PostgreSqlAdvisoryLock"/>) for
 /// concurrency control via <see cref="PostgreSqlProvisioningUnitOfWork"/>; the dispatch into
 /// fresh / bootstrap / normal paths happens in the base after re-detection under the UoW.
 /// </summary>
-public class PostgreSqlBoxMigrationRunner : RelationalBoxMigrationRunnerBase<NpgsqlConnection, NpgsqlTransaction>
+public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnection, NpgsqlTransaction>
 {
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
     // The history table is global — one row per (SchemaName, BoxTableName, MigrationVersion)

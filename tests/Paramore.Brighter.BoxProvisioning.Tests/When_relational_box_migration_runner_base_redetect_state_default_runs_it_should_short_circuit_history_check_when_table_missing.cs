@@ -47,7 +47,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// <see cref="StubBoxDetectionHelper.DoesHistoryExistCallCount"/> counter, this pins both the
 /// short-circuit (Fact 1) and the return value (all three Facts).
 /// </summary>
-public class RelationalBoxMigrationRunnerBaseRedetectStateDefaultTests
+public class SqlBoxMigrationRunnerRedetectStateDefaultTests
 {
     [Fact]
     public async Task When_table_does_not_exist_default_redetect_should_skip_history_check_and_return_false_false()
@@ -132,7 +132,7 @@ public class RelationalBoxMigrationRunnerBaseRedetectStateDefaultTests
     /// absent. Path-dispatch is recorded into <see cref="PathInvoked"/> so the test can observe
     /// the value the default implementation returned via the branch <c>MigrateAsync</c> took.
     /// </summary>
-    private sealed class PathRecordingTestRunner : RelationalBoxMigrationRunnerBase<FakeDbConnection, FakeDbTransaction>
+    private sealed class PathRecordingTestRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>
     {
         public string? PathInvoked { get; private set; }
 
