@@ -24,7 +24,7 @@ namespace Paramore.Brighter.Transforms.Transformers;
 ///     type => uses the type <see cref="MessageHeader"/>; as we used type based routing, we recommend using the hostname
 ///         scoped name of the request class you are sending
 /// OPTIONAL
-///      datacontenttype => sets the content type for <see cref="MessageBody"/> and <see cref="MessageHeader"/>
+///      datacontenttype => uses the content type from the <see cref="CloudEventsAttribute"/>, or preserves the existing <see cref="MessageHeader"/> value
 ///      dataschema => sets the schema for <see cref="MessageBody"/> and <see cref="MessageHeader"/>
 ///      subject => sets the subject for <see cref="MessageHeader"/>
 ///      time => sets the timestamp for <see cref="MessageHeader"/>
@@ -37,6 +37,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     private Uri? _source;
     private string? _type;
     private string? _specVersion;
+    private ContentType? _dataContentType;
     private Uri? _dataSchema;
     private string? _subject;
     private CloudEventFormat _format;
@@ -60,9 +61,10 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     /// 0 - <see cref="CloudEventsAttribute.Source"/> as a string, which will be converted to a <see cref="Uri"/>.
     /// 1 - <see cref="CloudEventsAttribute.Type"/> as a string.
     /// 2 - <see cref="CloudEventsAttribute.SpecVersion"/> as a string, defaults to "1.0".
-    /// 3 - <see cref="CloudEventsAttribute.DataSchema"/> as a string, which will be converted to a <see cref="Uri"/>.
-    /// 4- <see cref="CloudEventsAttribute.Subject"/> as a string.
-    /// 5 - <see cref="CloudEventsAttribute.Format"/> as a <see cref="CloudEventFormat"/>.
+    /// 3 - <see cref="CloudEventsAttribute.DataContentType"/> as a string, which will be converted to a <see cref="ContentType"/>.
+    /// 4 - <see cref="CloudEventsAttribute.DataSchema"/> as a string, which will be converted to a <see cref="Uri"/>.
+    /// 5 - <see cref="CloudEventsAttribute.Subject"/> as a string.
+    /// 6 - <see cref="CloudEventsAttribute.Format"/> as a <see cref="CloudEventFormat"/>.
     /// </param>
     public void InitializeWrapFromAttributeParams(params object?[] initializerList)
     {
@@ -81,17 +83,22 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
             _specVersion = specVersion;
         }
 
-        if (initializerList[3] is string dataSchema)
+        if (initializerList[3] is string dataContentType)
+        {
+            _dataContentType = new ContentType(dataContentType);
+        }
+
+        if (initializerList[4] is string dataSchema)
         {
             _dataSchema = new Uri(dataSchema, UriKind.RelativeOrAbsolute);
         }
 
-        if (initializerList[4] is string subject)
+        if (initializerList[5] is string subject)
         {
             _subject = subject;
         }
 
-        if (initializerList[5] is CloudEventFormat format)
+        if (initializerList[6] is CloudEventFormat format)
         {
             _format = format;
         }
@@ -215,6 +222,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         message.Header.Type = _type is not null
             ? new CloudEventsType(_type)
             : (message.Header.Type != CloudEventsType.Empty ? message.Header.Type : publication.Type);
+        message.Header.ContentType = _dataContentType ?? message.Header.ContentType;
         message.Header.DataSchema = _dataSchema ?? message.Header.DataSchema ?? publication.DataSchema;
         message.Header.Subject = _subject ?? message.Header.Subject ?? publication.Subject;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;

@@ -56,10 +56,11 @@ public class CloudEventsPreservesExistingHeadersTests
         var message = CreateMessageWithMapperHeaders();
         const string attrSource = "http://goparamore.io/FromAttribute";
         const string attrType = "MyApp.FromAttribute";
+        const string attrDataContentType = MediaTypeNames.Text.Xml;
         const string attrDataSchema = "http://goparamore.io/FromAttribute/schema";
         const string attrSubject = "FromAttribute";
 
-        _transformer.InitializeWrapFromAttributeParams(attrSource, attrType, null, attrDataSchema, attrSubject, CloudEventFormat.Binary);
+        _transformer.InitializeWrapFromAttributeParams(attrSource, attrType, null, attrDataContentType, attrDataSchema, attrSubject, CloudEventFormat.Binary);
 
         var publication = new Publication
         {
@@ -75,6 +76,7 @@ public class CloudEventsPreservesExistingHeadersTests
         //Assert - attribute wins over both mapper and publication
         Assert.Equal(attrSource, wrapped.Header.Source.ToString());
         Assert.Equal(attrType, wrapped.Header.Type);
+        Assert.Equal(new ContentType(attrDataContentType), wrapped.Header.ContentType);
         Assert.Equal(attrDataSchema, wrapped.Header.DataSchema!.ToString());
         Assert.Equal(attrSubject, wrapped.Header.Subject);
     }
@@ -163,7 +165,7 @@ public class CloudEventsPreservesExistingHeadersTests
         var message = CreateMessageWithMapperHeaders();
         message.Header.ContentType = new ContentType(MediaTypeNames.Application.Json);
 
-        _transformer.InitializeWrapFromAttributeParams(null, null, null, null, null, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(null, null, null, null, null, null, CloudEventFormat.Json);
 
         var publication = new Publication();
 
