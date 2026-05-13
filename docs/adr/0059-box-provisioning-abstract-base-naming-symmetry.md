@@ -48,9 +48,10 @@ ADR 0058 §B.5 explicitly recorded the asymmetry as a transitional defect, with 
 
 The original plan was to ship the rename in a separate post-merge ADR. **This ADR is that successor, brought into the scope of PR #4039 itself** rather than landing post-merge. The rationale for in-PR scope (decided 2026-05-13):
 
-- **Single source-break window**. The rename is a public-surface source break (renamed public abstract class affects every downstream `: RelationalBoxMigrationRunnerBase` derivation and any explicit references in test doubles). Shipping it with the rest of the BoxProvisioning RDD refactor means downstream adopters absorb one rename in one release. Shipping it as a successor PR means two rename rounds across two releases — strictly worse for adopters.
-- **The new §B.5 base only just landed on origin**. PR #4039 has not merged yet. No adopter has shipped against `SqlBoxProvisioner` or against the existing `RelationalBoxMigrationRunnerBase` in its current name. Closing the asymmetry now costs the project nothing in adopter-migration noise.
-- **Coherent feature commit-set**. The whole BoxProvisioning RDD refactor lands as a single conceptual unit. The naming symmetry is part of the design's coherence, not an afterthought to be patched later.
+- **Pre-merge, nothing has shipped.** PR #4039 has not merged. Neither `SqlBoxProvisioner` nor the existing `RelationalBoxMigrationRunnerBase` (in its current name) exists in any released version of the package. All sub-phase A work — including both abstract bases — is still in code-review territory. Renaming the §B.2 base inside PR #4039 is therefore **not a source break for anyone**; it is a code-review improvement on an unreleased feature.
+- **Post-merge, the same rename becomes a breaking change.** If PR #4039 merges with the asymmetric pair intact, both names become public surface in the next release. A subsequent rename then *is* a real source break for any third-party adopter that has derived from either base. Fixing the asymmetry pre-merge costs the project a code-review iteration; fixing it post-merge costs adopters a forced migration on a release boundary.
+- **This is the last code-review opportunity.** Sub-phase A just closed (final-gate ticked, branch pushed). PR #4039 is in pre-merge review. We have a discrete window — measured in code-review rounds, not releases — to bring the §B.2 name into symmetry with §B.5 before anything ships. After merge, the cost asymmetry inverts permanently.
+- **Coherent feature commit-set.** The whole BoxProvisioning RDD refactor lands as a single conceptual unit. Symmetric naming of the two abstract bases is part of the design's coherence; carrying the asymmetry into the merged feature would be shipping a known defect we already have the diff in hand to correct.
 
 ### Constraints
 
@@ -63,7 +64,7 @@ The original plan was to ship the rename in a separate post-merge ADR. **This AD
 
 Rename the §B.2 sibling abstract base to align with the §B.5 naming convention:
 
-- **Class rename**: `RelationalBoxMigrationRunnerBase` → `SqlBoxMigrationRunner`.
+- **Class rename**: `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` (generic-parameter list unchanged; only the identifier moves).
 - **File rename**: `src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs` → `src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs`.
 
 The new name applies the exact policy ADR 0058 §B.5 / NF8 established for `SqlBoxProvisioner`:
@@ -75,8 +76,8 @@ The end-state pair becomes symmetric:
 
 | Role | New name | Lineage constraint |
 |---|---|---|
-| Provisioner template host | `SqlBoxProvisioner<TConnection, TTransaction>` | `where TConnection : DbConnection` |
-| Migration-runner template host | `SqlBoxMigrationRunner` | `where TConnection : DbConnection` (unchanged, surfaced in name) |
+| Provisioner template host | `SqlBoxProvisioner<TConnection, TTransaction>` | `where TConnection : DbConnection where TTransaction : DbTransaction` |
+| Migration-runner template host | `SqlBoxMigrationRunner<TConnection, TTransaction>` | `where TConnection : DbConnection where TTransaction : DbTransaction` (unchanged, surfaced in name) |
 
 ### Architecture overview
 
@@ -93,8 +94,8 @@ Paramore.Brighter.BoxProvisioning (shared assembly)
 │   └── IAmAVersionDetectingMigrationHelper
 │
 ├── §B.2 abstract base — RENAMED HERE
-│   ├── BEFORE: RelationalBoxMigrationRunnerBase   ← old
-│   └── AFTER:  SqlBoxMigrationRunner              ← new
+│   ├── BEFORE: RelationalBoxMigrationRunnerBase<TConnection, TTransaction>   ← old
+│   └── AFTER:  SqlBoxMigrationRunner<TConnection, TTransaction>              ← new
 │
 └── §B.5 abstract base (introduced sub-phase A — unchanged)
     └── SqlBoxProvisioner<TConnection, TTransaction>
@@ -131,7 +132,7 @@ Paramore.Brighter.BoxProvisioning.Spanner
 | Tests — per-backend tests referencing the base by name | every `tests/Paramore.Brighter.{Backend}.Tests/BoxProvisioning/*.cs` that mentions `RelationalBoxMigrationRunnerBase` | symbol references rebind |
 | xmldoc cross-references | any `/// <see cref="RelationalBoxMigrationRunnerBase"/>` | rebind to new name |
 | ADR 0058 prose | references throughout 0058 (especially §B.2 sub-section heading + §B.5 Risks-and-Mitigations) | update the §B.2 name in prose; mark the "Naming asymmetry, time-bounded" risk as resolved by ADR 0059 |
-| Spec 0028 prose | requirements.md NF8 + acceptance.md + traceability.md + baseline.md + release_notes.md | update the §B.2 name; record the rename's source-break in release_notes.md |
+| Spec 0028 prose | requirements.md NF8 + acceptance.md + traceability.md + baseline.md + release_notes.md | update the §B.2 name in place wherever the spec 0028 entries already mention it; no new "source break" annotation needed in release_notes.md since the old name never reached release |
 | Spanner runner | `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerBoxMigrationRunner.cs` | **NO CHANGE** (free-standing per ADR 0057 §6) |
 
 ### Technology choices
@@ -146,7 +147,7 @@ Pure Tidy First. The rename is mechanical and is best executed in this order (pe
 2. **Rebind derivations** — update the four relational runner derivations' `: base` declarations and any constructor `base(...)` calls (the constructor parameter list is unchanged, so `base(...)` argument lists are unaffected; only the class symbol changes).
 3. **Rebind tests** — update Phase 6 sibling-base contract tests (six files) and any per-backend tests that mention the base by name. Test bodies are unchanged; only the type reference rebinds.
 4. **Rebind xmldoc / prose** — `<see cref>` references, ADR 0058 prose, spec 0028 artefacts.
-5. **Release notes** — add a source-break entry to `release_notes.md` documenting the rename. Reuse the existing spec-0028 release-notes section; this is a Sub-phase B amendment to that section.
+5. **Release notes — rebind, do not annotate.** The spec-0028 entry in `release_notes.md` (lines ~179 and ~195 of `release_notes.md` as of this ADR) currently mentions `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` as the new abstract base introduced by the BoxProvisioning RDD refactor. Substitute the new name in place. No "source break" entry is needed because nothing has shipped under the old name — the first released form of this type is `SqlBoxMigrationRunner<TConnection, TTransaction>`.
 6. **Run tests at the end** — the user instructed that tests run **once** at the end, not at each step. The compiler enforces correctness during the rename; tests verify the end-state behaviour is preserved.
 
 The work fits in a small number of commits (likely 2-3): one Tidy First rename commit + one prose/release-notes commit + a final gate commit if needed.
@@ -157,18 +158,17 @@ The work fits in a small number of commits (likely 2-3): one Tidy First rename c
 
 - **Symmetric pair of abstract bases**. `SqlBoxProvisioner` ↔ `SqlBoxMigrationRunner` — both prefixed `Sql`, both without `*Base` suffix, both named for the precise `DbConnection` lineage. A contributor pattern-matching from one to the other finds them adjacent in the namespace and stylistically matched.
 - **Contract precision restored on §B.2**. The §B.2 name no longer suggests it admits Spanner-shaped derivations (it never did; the old name was misleading).
-- **One source-break window**. Downstream adopters see exactly one rename, in the release that ships the new §B.5 base. No staircase of breaking changes across successive releases.
-- **Resolves the documented "Naming asymmetry, time-bounded" risk in ADR 0058** — the risk's mitigation language ("authored before any third-party adopter ships against either base") is honoured by shipping the rename inside the same PR as the new base.
+- **Zero source-break window**. Nothing has shipped against either base name. The rename is therefore a code-review improvement on an unreleased feature, not a breaking change. The alternative — letting PR #4039 ship the asymmetric pair and renaming post-merge — would produce one real source break against released public surface.
+- **Resolves the documented "Naming asymmetry, time-bounded" risk in ADR 0058** strictly more conservatively than its own mitigation language envisaged. The risk's mitigation committed to "authored before any third-party adopter ships against either base" — i.e. a post-merge successor ADR shipped quickly enough to beat the first adopter. Bringing the rename in-PR makes that race trivially unwinnable for any adopter, because the asymmetric pair never reaches release at all.
 - **Naming convention enforced uniformly across the shared assembly**. Future BoxProvisioning abstract bases (if any) inherit the precedent.
 
 ### Negative
 
-- **Public-surface source break for the §B.2 base name**. Any third-party adopter that derives from `RelationalBoxMigrationRunnerBase` will see a compile-time break and must rebind their derivation. Mitigated by:
-  - PR #4039 has not merged; no adopter has shipped against either base yet.
-  - The rename is announced in `release_notes.md` alongside the rest of the spec-0028 source breaks.
-  - The rebind is mechanical (`: RelationalBoxMigrationRunnerBase` → `: SqlBoxMigrationRunner` and equivalents) — the kind of change an IDE rename refactor performs in seconds.
-- **Spec 0028 documentation churn**. NF8, AC9, and several prose references in ADR 0058 / acceptance.md / traceability.md / baseline.md / release_notes.md mention the §B.2 name. All need rebinding. Mitigated by `/spec:tasks` itemization and the Tidy First commit shape.
+- **Scope expansion of PR #4039 by one ADR + a sub-phase B commit chain**. The PR is already large (specs 0023 + 0027 + 0028 stacked, sub-phase A appended). Adding the rename grows the review surface further. Mitigated by the rename being mechanical, well-localised (one renamed symbol + four derivation rebinds + documentation cross-refs), and easily auditable via grep.
+- **Spec 0028 documentation churn**. NF8 and several prose references in ADR 0058 / acceptance.md / traceability.md / baseline.md / release_notes.md mention the §B.2 name. All need rebinding. Mitigated by `/spec:tasks` itemization and the Tidy First commit shape.
 - **One more entry in the spec's `.adr-list`**. Spec 0028 now lists two ADRs (0058 + 0059). Acceptable — the §B.5 amendment was itself a sub-phase A post-acceptance edit to ADR 0058, and 0059 sits naturally alongside as the symmetry-closing decision.
+
+(Notably absent from this list: a public-surface source break. There is none, because nothing with either base name has shipped. That is the whole point of doing this pre-merge — see Context above.)
 
 ### Risks and mitigations
 
@@ -182,8 +182,8 @@ The work fits in a small number of commits (likely 2-3): one Tidy First rename c
 
 **Rejected.** The original plan in ADR 0058 was exactly this — open a successor ADR after PR #4039 merges. Bringing the rename into PR #4039 is strictly better because:
 
-- It produces one source-break window instead of two.
-- It produces one set of release notes covering the whole RDD refactor (including the symmetry-closing rename) instead of splitting the rationale across two release notes.
+- **Zero source-break vs one.** Inside PR #4039, the rename is a code-review improvement on unreleased code — no adopter migration required, because no adopter is or could be on the affected surface. Post-merge, the same rename is a real source break for any third-party adopter that has derived from `RelationalBoxMigrationRunnerBase` in its now-public name. The original plan's "authored before any third-party adopter ships" mitigation was an attempt to *win* the race; doing it pre-merge eliminates the race entirely.
+- It produces one set of release notes covering the whole RDD refactor (including the symmetry-closing rename) instead of splitting the rationale across two release notes — one of which would be flagged "source break" for downstream readers.
 - It preserves the coherent feature commit-set on a single PR.
 - The original plan's only motivation was scope discipline ("don't widen sub-phase A"). That motivation no longer applies once sub-phase A is closed and we are deliberately opening sub-phase B to absorb the rename.
 
