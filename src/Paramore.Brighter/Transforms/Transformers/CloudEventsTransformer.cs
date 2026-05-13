@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Transforms.Transformers;
 /// REQUIRED
 ///     id => the message id from <see cref="MessageHeader"/>; you don't set this here, as we use the id from the <see cref="Request"/>
 ///     source => attribute > mapper > publication
-///     specversion => attribute > mapper; defaults to 1.0
+///     specversion => attribute > mapper; defaults to 1.0 (no publication fallback — <see cref="Publication"/> has no SpecVersion property)
 ///     type => attribute > mapper > publication
 /// OPTIONAL
 ///     datacontenttype => attribute > mapper (no publication fallback)
@@ -132,7 +132,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     /// <inheritdoc />
     public Message Wrap(Message message, Publication publication)
     {
-        var msg =  WritePublicationHeaders(message,  publication);
+        var msg =  ApplyCloudEventsPrecedence(message,  publication);
         return _format == CloudEventFormat.Binary ? msg : WriteJsonMessage(msg, publication);
     }
 
@@ -219,7 +219,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         }
     }
 
-    private Message WritePublicationHeaders(Message message, Publication publication)
+    private Message ApplyCloudEventsPrecedence(Message message, Publication publication)
     {
         // Precedence for all attributes: attribute params > message header (set by mapper) > publication (fallback)
         // Source and Type use sentinel checks (s_defaultSource / CloudEventsType.Empty) because their defaults
@@ -230,7 +230,8 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         message.Header.Type = _type is not null
             ? new CloudEventsType(_type)
             : (message.Header.Type != CloudEventsType.Empty ? message.Header.Type : publication.Type);
-        message.Header.ContentType = _dataContentType ?? message.Header.ContentType;
+        if (_dataContentType is not null)
+            message.Header.ContentType = _dataContentType;
         message.Header.DataSchema = _dataSchema ?? message.Header.DataSchema ?? publication.DataSchema;
         message.Header.Subject = _subject ?? message.Header.Subject ?? publication.Subject;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
