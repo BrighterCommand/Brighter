@@ -222,20 +222,30 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     private Message ApplyCloudEventsPrecedence(Message message, Publication publication)
     {
         // Precedence for all attributes: attribute params > message header (set by mapper) > publication (fallback)
-        // Source and Type use sentinel checks (s_defaultSource / CloudEventsType.Empty) because their defaults
-        // are non-null, so we need a way to distinguish "mapper didn't set it" from "mapper set it explicitly."
-        // DataSchema, Subject, and DataContentType default to null, so plain null-coalescing suffices.
-        message.Header.Source = _source
-            ?? (!Equals(message.Header.Source, s_defaultSource) ? message.Header.Source : publication.Source);
-        message.Header.Type = _type is not null
-            ? new CloudEventsType(_type)
-            : (message.Header.Type != CloudEventsType.Empty ? message.Header.Type : publication.Type);
+        message.Header.Source = ResolveWithSentinel(_source, message.Header.Source, s_defaultSource, publication.Source)!;
+        message.Header.Type = ResolveWithSentinel(
+            _type is not null ? new CloudEventsType(_type) : null,
+            message.Header.Type, CloudEventsType.Empty, publication.Type)!;
         if (_dataContentType is not null)
             message.Header.ContentType = _dataContentType;
         message.Header.DataSchema = _dataSchema ?? message.Header.DataSchema ?? publication.DataSchema;
         message.Header.Subject = _subject ?? message.Header.Subject ?? publication.Subject;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
         return message;
+    }
+
+    /// <summary>
+    /// Resolves a CloudEvents attribute value using 3-way precedence: attribute > mapper > publication.
+    /// Used for fields whose defaults are non-null (e.g. Source, Type), where we need a sentinel to
+    /// distinguish "mapper didn't set it" from "mapper set it explicitly." For nullable fields
+    /// (DataSchema, Subject, DataContentType), plain null-coalescing suffices instead.
+    /// </summary>
+    private static T? ResolveWithSentinel<T>(T? attrValue, T? headerValue, T sentinel, T? publicationValue)
+        where T : class
+    {
+        if (attrValue is not null) return attrValue;
+        if (!Equals(headerValue, sentinel)) return headerValue;
+        return publicationValue;
     }
     
     private Message WriteJsonMessage(Message message, Publication publication)

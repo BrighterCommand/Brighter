@@ -178,6 +178,7 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
         Assert.NotNull(json);
         Assert.Equal(_mapperSource, json.Source);
         Assert.Equal(_mapperType, json.Type);
+        Assert.Equal(MediaTypeNames.Application.Json, json.DataContentType);
         Assert.Equal(_mapperDataSchema, json.DataSchema);
         Assert.Equal(_mapperSubject, json.Subject);
     }
@@ -211,6 +212,33 @@ public class When_wrapping_a_message_that_already_has_cloud_event_headers_should
 
         //Assert - mapper's XML content type should be preserved, not overwritten with application/json
         Assert.Equal(xmlContentType, wrapped.Header.ContentType);
+    }
+
+    [Fact]
+    public void When_attribute_sets_data_content_type_should_override_mapper_content_type()
+    {
+        //Arrange - mapper sets XML, attribute explicitly sets JSON → attribute wins
+        var mapperContentType = new ContentType(MediaTypeNames.Text.Xml);
+        var message = new Message(
+            new MessageHeader(
+                Id.Random(),
+                new RoutingKey("Test.Topic"),
+                MessageType.MT_EVENT,
+                contentType: mapperContentType,
+                source: _mapperSource,
+                type: _mapperType),
+            new MessageBody("<order/>"));
+
+        const string attrDataContentType = MediaTypeNames.Application.Json;
+        _transformer.InitializeWrapFromAttributeParams(null, null, null, attrDataContentType, null, null, CloudEventFormat.Binary);
+
+        var publication = new Publication();
+
+        //Act
+        var wrapped = _transformer.Wrap(message, publication);
+
+        //Assert - attribute's DataContentType wins over mapper's XML
+        Assert.Equal(new ContentType(attrDataContentType), wrapped.Header.ContentType);
     }
 
     [Fact]
