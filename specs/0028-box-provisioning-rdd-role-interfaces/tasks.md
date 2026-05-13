@@ -1175,6 +1175,204 @@ Per ADR §B.5 line 646 + requirements F11. The MySQL `ClampDetectedVersion` iden
 
 ---
 
+## Phase 14 — `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` (sub-phase B; pre-merge Tidy First rename per ADR 0059)
+
+Per [ADR 0059](../../docs/adr/0059-box-provisioning-abstract-base-naming-symmetry.md) (post-acceptance amendment 2026-05-13; Accepted on the same date). Closes ADR 0058's "Naming asymmetry, time-bounded" risk by renaming the §B.2 sibling abstract base for `Sql*` symmetry with §B.5's `SqlBoxProvisioner<TConnection, TTransaction>` — pre-merge, while neither name has shipped. Pure Tidy First in the Beck sense: structural rename, zero behavioural delta. The rename is brought into PR #4039's scope rather than landing post-merge because (a) nothing under either base name has shipped, so the rename is a code-review improvement on unreleased code rather than a public-surface break, (b) doing it post-merge would force exactly the source break the in-PR rename avoids, and (c) symmetric naming of the two abstract bases is part of the design's coherence, not an afterthought to patch later. See ADR 0059 §Context for the full cost-ledger argument.
+
+**No `/test-first` tasks in Phase 14.** This is a name rebind, not new behaviour. Per Beck's Tidy First convention (and matching Phase 13.A's structural pull-up tasks), Phase 14.A–14.C use `**TIDY FIRST:**` prefixes; the compiler is the verification surface during the rename. Phase 14.D is the single end-to-end test-pass that confirms the rename is behaviour-preserving — verification, not test authoring. NF9 floors are unchanged from their post-13.D values (Core 43/43, MSSQL 64/64, PG 55/55, MySQL 67/67 net9.0-only, SQLite 46/46, Spanner 26/26) because the rename adds zero `[Fact]` methods.
+
+### 14.A — Pre-rename grep audit (read-only)
+
+- [ ] **TIDY FIRST: Enumerate every consumer of `RelationalBoxMigrationRunnerBase` and record the baseline count for post-rename completeness verification**
+  - This is a read-only anchor task. No commit. The goal is to know how many references exist *before* the rename, so post-rename we can verify the count dropped to the expected residual (zero in `src/` + `tests/`; non-zero only in ADR 0059 itself and any historical record in commit messages — git history is immutable).
+  - Run: `grep -rln 'RelationalBoxMigrationRunnerBase' src/ tests/ docs/ specs/ release_notes.md` — capture the file list.
+  - Run: `grep -rc 'RelationalBoxMigrationRunnerBase' src/ tests/ docs/ specs/ release_notes.md | grep -v ':0$'` — capture per-file occurrence counts.
+  - **Expected pre-rename baseline** (subject to verification at task execution): the class declaration (1 in `src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs`), four downstream derivations (1 each in `src/Paramore.Brighter.BoxProvisioning.{MsSql,PostgreSql,MySql,Sqlite}/*BoxMigrationRunner.cs`), Phase 6 sibling-base contract tests in `tests/Paramore.Brighter.BoxProvisioning.Tests/` (multiple), per-backend test references (multiple), ADR 0058 prose (multiple), spec 0028 artefacts (multiple), `release_notes.md` (2 — lines ~179 and ~195), and ADR 0059 itself (multiple — these stay).
+  - Record the file list inline as a comment block in the 14.B commit message (`Pre-rename baseline: N references across M files (see grep listing). Post-rename: zero in src/ and tests/; residual matches only in docs/adr/0059-*.md and release_notes.md's "what changed" prose. Verified.`). This is the audit trail that proves the rename swept the codebase cleanly.
+
+### 14.B — The rename atomic (one Tidy First commit covering source + tests)
+
+The rename must land atomically across `src/` and `tests/` because the compiler binds symbols at build time — a partial rename breaks the build for the next reader. One commit captures: file rename, class declaration, four downstream derivations, every test-code reference. Documentation/prose follows in 14.C (those references don't affect the build, so they can split off).
+
+- [ ] **TIDY FIRST: Rename `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` across `src/` and `tests/` in a single atomic commit**
+
+  - **File rename (git-aware)**: `git mv src/Paramore.Brighter.BoxProvisioning/RelationalBoxMigrationRunnerBase.cs src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs`. The `git mv` preserves rename detection in `git log` / `git blame`, so the file's history threads through the rename.
+
+  - **Class declaration**: in the renamed file, change `public abstract class RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` to `public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>`. Generic-parameter list, base interface list (`: IAmABoxMigrationRunner`), and type constraints (`where TConnection : DbConnection where TTransaction : DbTransaction`) unchanged. Ctor, sealed `MigrateAsync` body, abstract/virtual hook signatures, and `using` blocks unchanged.
+
+  - **Internal references inside the renamed file**: search for any remaining `RelationalBoxMigrationRunnerBase` in xmldoc comments inside the same file (e.g. `/// <see cref="RelationalBoxMigrationRunnerBase"/>` or prose mentioning the old name in xmldoc bodies). Rebind to `SqlBoxMigrationRunner`. Keep generic-parameter syntax in xmldoc as `SqlBoxMigrationRunner{TConnection, TTransaction}` (xmldoc curly-brace convention) where the original used the same shape for the old name.
+
+  - **Four downstream derivations** — for each of the following files, change `: RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` to `: SqlBoxMigrationRunner<TConnection, TTransaction>` (or whatever concrete type-argument list the derivation supplies — preserve the exact generic-argument shape, only swap the identifier):
+    - `src/Paramore.Brighter.BoxProvisioning.MsSql/MsSqlBoxMigrationRunner.cs`
+    - `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlBoxMigrationRunner.cs`
+    - `src/Paramore.Brighter.BoxProvisioning.MySql/MySqlBoxMigrationRunner.cs`
+    - `src/Paramore.Brighter.BoxProvisioning.Sqlite/SqliteBoxMigrationRunner.cs`
+    Constructor `base(...)` argument lists are unchanged (the constructor parameter list of the base is untouched), so only the type identifier moves.
+
+  - **xmldoc cross-references in each downstream file**: search for `RelationalBoxMigrationRunnerBase` inside each of the four files above and rebind.
+
+  - **Spanner runner — verify NO change**: `src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerBoxMigrationRunner.cs` is free-standing per ADR 0057 §6 (implements `IAmABoxMigrationRunner` directly). Run `grep -n 'RelationalBoxMigrationRunnerBase\|SqlBoxMigrationRunner' src/Paramore.Brighter.BoxProvisioning.Spanner/SpannerBoxMigrationRunner.cs` — expect **zero matches** both before and after the rename (Spanner doesn't derive from the base and shouldn't reference it).
+
+  - **Test-code symbol rebinds** — every test file that references the old base name by symbol must rebind in the same commit, else the test projects fail to build. The grep audit in 14.A produced the file list; expected locations:
+    - `tests/Paramore.Brighter.BoxProvisioning.Tests/` — the Phase 6 sibling-base contract tests (six files originally) and any base-contract tests added during sub-phase A (Phase 13.A.1, three files) that exercise the §B.2 base.
+    - `tests/Paramore.Brighter.{MsSql,PostgresSQL,MySQL,Sqlite}.Tests/BoxProvisioning/` — any per-backend test files that mention the base by name (e.g. fakes/stubs that derive from or generic-bound on the base).
+    - Test doubles: e.g. `FakeRelationalBoxMigrationRunner` (if such a fake exists) — rename to `FakeSqlBoxMigrationRunner` for stylistic consistency, AND grep-rebind any references. If renaming the fake is mechanical and isolated, fold it into this commit; if it has wider implications, defer the fake-class rename to a follow-up task (note in the commit message).
+
+  - **Build verification (per-TFM, NOT a test run)**: after all symbol rebinds, run `dotnet build src/Paramore.Brighter.BoxProvisioning -c Release` — expect 0 errors, 0 warnings on `netstandard2.0;net8.0;net9.0;net10.0`. Then `dotnet build` at the repository root (or the relevant solution) to verify every downstream project — `Paramore.Brighter.BoxProvisioning.{MsSql,PostgreSql,MySql,Sqlite,Spanner}` and the matching test projects — still compiles. If any project fails to build, the rename has a missed reference: re-run the grep, find it, fix in this same commit.
+
+  - **Validation greps (run as the last step before staging)**:
+    - `grep -rn 'RelationalBoxMigrationRunnerBase' src/ tests/` — expect **zero matches**. Any non-zero is a missed rebind.
+    - `grep -rn 'SqlBoxMigrationRunner' src/Paramore.Brighter.BoxProvisioning/` — expect the new class declaration plus any internal `<see cref>` cross-refs.
+    - `grep -rn 'SqlBoxMigrationRunner' src/Paramore.Brighter.BoxProvisioning.{MsSql,PostgreSql,MySql,Sqlite}/` — expect one occurrence per downstream project (the `: base` declaration; plus xmldoc cross-refs if any).
+    - `grep -rn 'SqlBoxMigrationRunner' src/Paramore.Brighter.BoxProvisioning.Spanner/` — expect **zero matches**. Spanner is exempt.
+
+  - **Commit message shape**:
+    ```
+    refactor: spec 0028 sub-phase B 14.B — rename RelationalBoxMigrationRunnerBase → SqlBoxMigrationRunner (Tidy First atomic; src/ + tests/)
+
+    [Per ADR 0059. Pre-merge rename — nothing has shipped under either name, so this is a code-review improvement on unreleased code, not a public-surface source break.]
+
+    Includes:
+    - File rename (git mv) in the shared assembly
+    - Class declaration rebind (generic-parameter list and constraints unchanged)
+    - Four downstream derivation rebinds (MSSQL / PostgreSQL / MySQL / SQLite)
+    - xmldoc cross-refs in src/
+    - Test-code symbol rebinds (Phase 6 + Phase 13.A.1 sibling-base contract tests; per-backend test files; test doubles if any)
+
+    Spanner runner UNCHANGED — free-standing per ADR 0057 §6.
+
+    Build: clean on netstandard2.0;net8.0;net9.0;net10.0 (Release, 0 warnings).
+    Tests: NOT run in this commit per /spec:tasks Phase 14 plan (Tidy First — verification deferred to 14.D end-to-end pass).
+    ```
+
+### 14.C — Documentation and prose rebinds (one docs commit)
+
+Prose references don't affect the build, so they split off into their own commit for review-friendliness. This includes ADR 0058 prose (including the "Naming asymmetry, time-bounded" risk being marked resolved), spec 0028 artefact prose, and `release_notes.md`.
+
+- [ ] **TIDY FIRST: Rebind documentation and prose references from `RelationalBoxMigrationRunnerBase` to `SqlBoxMigrationRunner`**
+
+  - **ADR 0058** (`docs/adr/0058-box-provisioning-rdd-role-interfaces.md`):
+    - Update every prose mention of the old name. The §B.2 sub-section heading and body refer to the old name throughout; rebind all to the new name. Preserve the generic-parameter list in xmldoc-style `<TConnection, TTransaction>` where the original used it.
+    - Update the Risks-and-Mitigations entry titled "Naming asymmetry between §B.2 (`RelationalBoxMigrationRunnerBase`) and §B.5 (`SqlBoxProvisioner`)" (line ~751 of ADR 0058). The risk is now **resolved**, not merely time-bounded. Append a closing paragraph:
+      > **Status: resolved by [ADR 0059](0059-box-provisioning-abstract-base-naming-symmetry.md) (Accepted 2026-05-13).** The successor ADR was originally planned as a post-merge follow-up; PR #4039 instead absorbs the rename pre-merge — neither the §B.2 base in its old name nor the §B.5 base has reached release, so the rename is a code-review improvement on unreleased code rather than a public-surface break. The asymmetry never makes it to a shipped release.
+    - Keep the historical record of *why* `SqlBoxProvisioner` was chosen over `Relational*` in §B.5 / NF8 — that rationale still stands and now applies symmetrically to both bases.
+
+  - **Spec 0028 NF8** (`specs/0028-box-provisioning-rdd-role-interfaces/requirements.md` line ~209) currently says:
+    > "the asymmetry is **time-bounded by PR #4039** via a "Post-merge follow-up" bullet on the PR description committing to a successor ADR that renames §B.2's class for symmetry"
+    Update to:
+    > "the asymmetry is **resolved in-PR** by sub-phase B (per [ADR 0059](../../docs/adr/0059-box-provisioning-abstract-base-naming-symmetry.md), Accepted 2026-05-13). The §B.2 base is renamed to `SqlBoxMigrationRunner<TConnection, TTransaction>` in the same PR as the §B.5 base's introduction; the asymmetry never reaches release."
+    Preserve the rest of NF8 (the rationale for `Sql*` over `Relational*` still applies).
+
+  - **Spec 0028 acceptance.md / traceability.md / baseline.md**: grep each file for `RelationalBoxMigrationRunnerBase`, rebind in place. Any AC text that referenced the old name updates to the new name. Any traceability rows that name the §B.2 base by symbol rebind. The post-13.D NF9 floor numbers do not change (the rename adds zero `[Fact]` methods); only the *name* in any prose mentioning the base updates.
+
+  - **`release_notes.md`** lines ~179 + ~195 — per ADR 0059's Implementation approach step 5, **substitute the new name in place**. Do NOT add a "source break" entry. The spec 0028 release-notes section is the only place this base is announced to adopters; substituting in place means the first released form of this type is `SqlBoxMigrationRunner<TConnection, TTransaction>`. If the existing prose mentions the old name in a "rationale" sentence (e.g. "We chose `*Base` suffix to mirror …"), update the rationale to align with the §B.5 / NF8 reasoning (drop `*Base` suffix, mirror `IAmA*` interface family). If the existing prose has no such rationale sentence and only mentions the type by name, a simple name substitution is sufficient.
+
+  - **xmldoc inside `*.csproj`-generated XML docs**: not directly editable (regenerated at build time). The `<see cref>` references in source code were already rebound in 14.B. This step covers only static markdown prose.
+
+  - **Validation greps**:
+    - `grep -rn 'RelationalBoxMigrationRunnerBase' docs/adr/ specs/ release_notes.md | grep -v '0059-box-provisioning-abstract-base-naming-symmetry'` — expect **zero matches**. The pipe-grep-v exclusion is because ADR 0059 itself documents the rename and deliberately mentions the old name as the "before" side. Every other reference must be rebound.
+    - `grep -n 'Post-merge follow-up' docs/adr/0058-box-provisioning-rdd-role-interfaces.md` — expect updated wording (now references in-PR resolution).
+
+  - **Commit message shape**:
+    ```
+    docs: spec 0028 sub-phase B 14.C — rebind documentation and prose references to SqlBoxMigrationRunner
+
+    Closes the prose side of the 14.B rename. ADR 0058's "Naming
+    asymmetry, time-bounded" risk now carries a Status: resolved
+    appendix citing ADR 0059. NF8 in requirements.md updated from
+    "time-bounded by PR #4039" to "resolved in-PR by sub-phase B".
+    Spec 0028 traceability/baseline/acceptance prose rebound.
+    release_notes.md spec-0028 section: substitute new name in place
+    (no source-break annotation — the old name never reached release).
+
+    ADR 0059 itself retains the old name in its "rename: before → after"
+    documentation — this is correct per the verification grep convention.
+    ```
+
+### 14.D — Final end-to-end test-pass (single verification gate)
+
+The user instructed that tests run **once** at the end, not at each rename step. This is the once. Every BoxProvisioning filter at every supported TFM, against the post-13.D floor (which Phase 14 does not alter — rename adds zero `[Fact]`s).
+
+- [ ] **TIDY FIRST: Verify behavioural neutrality of the 14.B rename via a single end-to-end test-pass**
+
+  - **Shared assembly Release build**: `dotnet build src/Paramore.Brighter.BoxProvisioning -c Release` — expect 0 errors, 0 warnings on `netstandard2.0;net8.0;net9.0;net10.0`. (Already verified in 14.B but re-verified here as the start of the gate, in case anything in 14.C inadvertently introduced a build break.)
+
+  - **Core BoxProvisioning.Tests** — in-process, no Docker required, both TFMs:
+    - `dotnet test tests/Paramore.Brighter.BoxProvisioning.Tests -f net9.0 --filter "FullyQualifiedName~BoxProvisioning"` — expect **43/43** PASSED.
+    - `dotnet test tests/Paramore.Brighter.BoxProvisioning.Tests -f net10.0 --filter "FullyQualifiedName~BoxProvisioning"` — expect **43/43** PASSED.
+
+  - **Core sub-filter in `Brighter.Core.Tests`** (BoxProvisioning slice — 5/5 unchanged since pre-13.A):
+    - `dotnet test tests/Paramore.Brighter.Core.Tests --filter "FullyQualifiedName~BoxProvisioning"` — expect **5/5** PASSED (uses default TFM matrix per the test project).
+
+  - **SQLite** — in-process, no Docker required, both TFMs (in-process WAL pattern per spec 0027):
+    - `dotnet test tests/Paramore.Brighter.Sqlite.Tests -f net9.0 --filter "FullyQualifiedName~BoxProvisioning"` — expect **46/46** PASSED.
+    - `dotnet test tests/Paramore.Brighter.Sqlite.Tests -f net10.0 --filter "FullyQualifiedName~BoxProvisioning"` — expect **46/46** PASSED.
+
+  - **MySQL** — Docker required, net9.0 only (`BrighterTestNineOnlyTargetFrameworks`):
+    - `docker compose -f docker-compose-mysql.yaml up -d`; wait for MySQL ready.
+    - `dotnet build tests/Paramore.Brighter.MySQL.Tests -f net9.0` BEFORE the test run, per baseline.md's "stale per-TFM DLL" gotcha.
+    - `dotnet test tests/Paramore.Brighter.MySQL.Tests -f net9.0 --filter "FullyQualifiedName~BoxProvisioning"` — expect **67/67** PASSED.
+    - `docker compose -f docker-compose-mysql.yaml down`.
+
+  - **MSSQL** — Docker required, both TFMs; **⛔ PARALLEL-TFM CONTENTION** per baseline.md (reproducible deadlock on `When_mssql_inbox_provisioner_detects_payload_mode_mismatch_it_should_throw` when net9.0 and net10.0 run concurrently). Run **separately**:
+    - `docker compose -f docker-compose-mssql.yaml up -d`; wait ~15-20s for `azure-sql-edge` to accept connections.
+    - `dotnet test tests/Paramore.Brighter.MSSQL.Tests -f net9.0 --filter "FullyQualifiedName~BoxProvisioning"` — expect **64/64** PASSED.
+    - `dotnet test tests/Paramore.Brighter.MSSQL.Tests -f net10.0 --filter "FullyQualifiedName~BoxProvisioning"` — expect **64/64** PASSED.
+    - `docker compose -f docker-compose-mssql.yaml down`.
+
+  - **PostgreSQL** — Docker required, both TFMs (parallel-safe):
+    - `docker compose -f docker-compose-postgres.yaml up -d`; wait ~5-10s.
+    - `dotnet test tests/Paramore.Brighter.PostgresSQL.Tests -f net9.0 --filter "FullyQualifiedName~BoxProvisioning"` — expect **55/55** PASSED.
+    - `dotnet test tests/Paramore.Brighter.PostgresSQL.Tests -f net10.0 --filter "FullyQualifiedName~BoxProvisioning"` — expect **55/55** PASSED.
+    - `docker compose -f docker-compose-postgres.yaml down`.
+
+  - **Spanner** — Docker (emulator) required, both TFMs; sanity-check the exemption (Spanner shouldn't be touched by the rename):
+    - `docker compose -f docker-compose-spanner.yaml up -d`; wait ~10-15s.
+    - `export SPANNER_EMULATOR_HOST=localhost:9010 && export GOOGLE_CLOUD_PROJECT=brighter-tests`.
+    - `dotnet test tests/Paramore.Brighter.Gcp.Tests -f net9.0 --filter "FullyQualifiedName~BoxProvisioning"` — expect **26/26** PASSED.
+    - `dotnet test tests/Paramore.Brighter.Gcp.Tests -f net10.0 --filter "FullyQualifiedName~BoxProvisioning"` — expect **26/26** PASSED.
+    - `docker compose -f docker-compose-spanner.yaml down`.
+
+  - **If any filter is OFF its expected count** — STOP and investigate. The rename is structural; behaviour was preserved by construction (the compiler can't change runtime behaviour through a symbol rename alone). A deviation is either (a) a missed reference that the compiler somehow tolerated and the runtime fails on, (b) drift in unrelated test code between session 4 (post-13.D) and the start of Phase 14, or (c) infrastructure flake. Bisect from the 14.B rename commit; if drift is pre-rename, follow the post-13.D floor-amendment pattern (NF9 / baseline.md / AC6 lock-step).
+
+  - **No commit on success**. This is a gate step — pass/fail. The result is recorded in the 14.E PR description splice and the Phase 14 final-gate tick.
+
+### 14.E — PR #4039 description splice (sub-phase B publish)
+
+The PR body currently has a "## Post-merge follow-up" section that committed to a successor ADR. Sub-phase B fulfils that commitment **in-PR**, so the section either gets rewritten as a "Sub-phase B (delivered in-PR)" entry or removed entirely. A new "Sub-phase B" bullet announces the rename.
+
+- [ ] **TIDY FIRST: Splice sub-phase B bullet into PR #4039 body; rewrite/remove the "Post-merge follow-up" section now that the commitment is honoured in-PR**
+
+  - **Local audit-trail update first**. Edit `specs/0028-box-provisioning-rdd-role-interfaces/pr-description.md` to splice in:
+    - A new sub-phase B bullet under the existing "Spec 0028 — Box Provisioning RDD Role Interfaces" Scope section, immediately after the sub-phase A bullet. Wording (draft):
+      > **Sub-phase B (pre-merge rename, post-acceptance):** per [ADR 0059](docs/adr/0059-box-provisioning-abstract-base-naming-symmetry.md) (Accepted 2026-05-13), renamed `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` → `SqlBoxMigrationRunner<TConnection, TTransaction>` for naming symmetry with sub-phase A's `SqlBoxProvisioner<TConnection, TTransaction>`. Pure Tidy First — zero behavioural delta; build clean on `netstandard2.0;net8.0;net9.0;net10.0`; all BoxProvisioning filters green at the post-13.D floor (MSSQL 64/64, PG 55/55, MySQL 67/67 net9.0-only, SQLite 46/46, Core 43/43, Spanner 26/26 per TFM). Pre-merge scope — see ADR 0059 §Context. Closes the "Naming asymmetry, time-bounded" risk in ADR 0058.
+    - Rewrite (or remove) the "## Post-merge follow-up" section. Recommended rewrite — keep the section heading but transform the content:
+      > **(Resolved in-PR by sub-phase B — see Scope above.)** Originally this section committed to a post-merge successor ADR for the §B.2 / §B.5 naming asymmetry. The successor ADR ([0059](docs/adr/0059-box-provisioning-abstract-base-naming-symmetry.md)) and the rename it documents both ship inside PR #4039 itself, eliminating the post-merge migration cost. No outstanding post-merge follow-ups remain for spec 0028.
+    Alternative: remove the section entirely. Recommended retention because the section preserves the audit trail of *why* the rename moved from post-merge to in-PR.
+
+  - **Commit the local audit-trail edit** as `docs: spec 0028 sub-phase B 14.E.1 — splice sub-phase B bullet into local pr-description.md` (or similar). One commit, audit-trail only — does not touch the live PR yet.
+
+  - **Publish to live PR**: `gh pr edit 4039 --body-file specs/0028-box-provisioning-rdd-role-interfaces/pr-description.md`. Verify the publish landed:
+    - `gh pr view 4039 --json body --jq '.body' | grep -c 'Sub-phase B'` — expect non-zero (the new bullet).
+    - `gh pr view 4039 --json body --jq '.body' | grep -c 'Resolved in-PR by sub-phase B'` — expect 1 (if you kept the rewritten Post-merge section) or 0 (if you removed it).
+    - `gh pr view 4039 --json body --jq '.body' | wc -l` — expect line count consistent with the splice (should be similar to post-13.C.4 = 34, give or take the +/- of the splice/rewrite).
+    - `gh pr view 4039 --json body --jq '.body' | grep -c 'Spec 0028'` — record the new count for AC11 thread continuity (currently 4 at end-of-session-3; the splice may move this by ±1 depending on whether the new bullet adds another "Spec 0028" occurrence).
+
+  - **No second commit for the publish step** — `gh pr edit` is a GitHub-side action. The local audit-trail commit is the historical record; the publish is the apply.
+
+### Phase 14 final gate
+
+- [ ] **Phase 14 gate: `/spec:approve code` ready — Phase 14 discharges ADR 0059 in full**
+  - 14.A grep audit captured the pre-rename baseline.
+  - 14.B rename commit landed atomically: zero `RelationalBoxMigrationRunnerBase` matches in `src/` + `tests/`; build clean on all TFMs.
+  - 14.C docs/prose rebound: zero matches in `docs/adr/` (excluding ADR 0059), `specs/`, `release_notes.md`.
+  - 14.D end-to-end test-pass confirmed behavioural neutrality: all seven filters at the post-13.D floor (Core 43/43, MSSQL 64/64, PG 55/55, MySQL 67/67 net9.0-only, SQLite 46/46, Spanner 26/26).
+  - 14.E PR #4039 body carries the sub-phase B bullet; the "Post-merge follow-up" section is rewritten (or removed) to reflect in-PR resolution. Local audit-trail `pr-description.md` mirrors the live PR.
+  - `.code-approved` re-stamped after `/spec:approve code` succeeds. Marker mtime moves; content unchanged (0-byte file).
+  - **Push**: `git push origin database_migration` to publish sub-phase B. Commit budget on top of post-session-4 origin (HEAD `3ffecc3ba`): ADR 0059 draft (1) + framing refinement (1) + design approval (1) + 14.B rename atomic (1) + 14.C docs (1) + 14.E.1 pr-description splice (1) + Phase 14 final gate (1 — the `/spec:approve code` re-stamp + this task tick) = ~7 new commits.
+
+---
+
 ## Appendix — Out-of-scope reminders
 
 These items are explicitly NOT in spec 0028 scope (per requirements §Out of Scope and §Removed):
