@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>MongoDB provider for Paramore.Brighter Command Processor. Provides base MongoDB connectivity and transaction management for inbox, outbox, and locking implementations.</Description>
     <Authors>Rafael Andrade</Authors>
-    <TargetFrameworks>net472;$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(BrighterMongoTargetFrameworks)</TargetFrameworks>
     <PackageTags>MongoDB;NoSQL;Database;Document Database;Command;Event;Command Processor;Brighter</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
