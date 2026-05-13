@@ -40,14 +40,16 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// <remarks>
 /// Microsoft.Data.Sqlite's <c>BeginTransactionAsync</c> overload does not expose the
 /// <c>deferred</c> flag, so the synchronous <see cref="SqliteConnection.BeginTransaction(IsolationLevel, bool)"/>
-/// form is used to guarantee <c>BEGIN IMMEDIATE</c> (<c>deferred: false</c>). The call is
-/// local-only and fast — any wait for a contended writer slot manifests as
-/// <c>SQLITE_BUSY</c> being returned from this call and surfaces to the runner's catch path.
-/// Concurrent provisioning against the same SQLite file is fail-fast by design: neither the
-/// UoW nor the runner retries (the runner's <c>PRAGMA busy_timeout = 0</c> deliberately
-/// suppresses the inherited driver wait — see ADR 0057 §4 / ADR 0058 §B.1). Typical
-/// single-host deployments will never see contention; multi-process scenarios (sidecar +
-/// main app each calling <c>UseBoxProvisioning</c>) should serialise startup externally.
+/// form is used to guarantee <c>BEGIN IMMEDIATE</c> (<c>deferred: false</c>). The wait under
+/// writer-slot contention is bounded by <see cref="SqliteConnection.DefaultTimeout"/>, which
+/// <see cref="SqliteBoxMigrationRunner"/> sets from the caller-supplied <c>lockTimeout</c>
+/// before opening the connection. The driver translates DefaultTimeout into
+/// sqlite3_busy_timeout on every internal statement (PRAGMA busy_timeout issued in SQL is
+/// silently overwritten by the next command), so the retry-with-backoff under SQLITE_BUSY is
+/// driver-side; if the budget expires the original <see cref="SqliteException"/> with
+/// <c>SqliteErrorCode == 5</c> propagates to the runner's catch path. Per ADR 0057 §4 /
+/// ADR 0058 §B.1 this replaces a separate advisory-lock primitive — BEGIN IMMEDIATE is itself
+/// the lock acquisition.
 /// </remarks>
 public class SqliteProvisioningUnitOfWork(
     SqliteConnection connection,
@@ -70,11 +72,14 @@ public class SqliteProvisioningUnitOfWork(
     /// unused — SQLite has no named-lock primitive (per ADR 0057 §4).
     /// </para>
     /// <para>
-    /// The <paramref name="lockTimeout"/> parameter is accepted for interface symmetry but is
-    /// not honoured: if the writer slot is contended, <c>BEGIN IMMEDIATE</c> throws
-    /// <see cref="SqliteException"/> with <c>SqliteErrorCode == 5</c> (<c>SQLITE_BUSY</c>)
-    /// immediately and propagates to the runner's catch path. Concurrent SQLite migration is
-    /// fail-fast by design — see the class-level remarks and ADR 0057 §4 / ADR 0058 §B.1.
+    /// The <paramref name="lockTimeout"/> parameter is honoured indirectly: the runner
+    /// translates it into <see cref="SqliteConnection.DefaultTimeout"/> on the connection
+    /// before this call, which the driver applies as sqlite3_busy_timeout on the synthesised
+    /// <c>BEGIN IMMEDIATE</c>. If the slot remains held past the budget the call throws
+    /// <see cref="SqliteException"/> with <c>SqliteErrorCode == 5</c> (<c>SQLITE_BUSY</c>) and
+    /// propagates to the runner's catch path. See the class-level remarks for the driver
+    /// quirk that makes DefaultTimeout the only reliable hook (PRAGMA busy_timeout is
+    /// overwritten per-command).
     /// </para>
     /// </remarks>
     public Task BeginAsync(string lockResource, TimeSpan lockTimeout, CancellationToken cancellationToken)

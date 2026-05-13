@@ -63,18 +63,18 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// host application owns that decision.
 /// </para>
 /// <para>
-/// <strong>busy_timeout side effect:</strong> the runner unconditionally issues
-/// <c>PRAGMA busy_timeout = 0</c> on its own connection at the start of every
-/// <see cref="MigrateAsync"/> call. The pragma is connection-scoped (it does not bleed into
-/// the host application's other connections), but it means contention from another writer
-/// surfaces as an immediate <c>SQLITE_BUSY</c> on <c>BEGIN IMMEDIATE</c> rather than the
-/// inherited wait. This is deliberate per ADR 0057: concurrent SQLite migration is fail-fast
-/// by design — there is no retry loop in the UoW or the runner, and contention propagates
-/// to the catch path so the operator sees it immediately. Typical single-host deployments
-/// will never see this; multi-process scenarios (sidecar + main app each calling
-/// <c>UseBoxProvisioning</c>) should serialise startup externally. Hosts running on a shared
-/// SQLite file that relied on a non-zero <c>busy_timeout</c> at provisioning time should be
-/// aware that the runner's connection will not wait.
+/// <strong>Writer-slot contention:</strong> <see cref="MigrateAsync"/> honours
+/// <paramref name="lockTimeout"/> as the maximum wait for the SQLite writer slot when another
+/// writer (Brighter or otherwise) holds it. The runner sets
+/// <c>SqliteConnection.DefaultTimeout</c> to the lockTimeout (rounded up to whole seconds —
+/// the driver's granularity), and Microsoft.Data.Sqlite drives sqlite3_busy_timeout from that
+/// value on every internal statement, including the synthesised <c>BEGIN IMMEDIATE</c>. The
+/// driver's built-in busy handler retries with backoff inside the call; we do not wrap a
+/// retry loop in C#. If the budget elapses while the slot is still held, the original
+/// <see cref="SqliteException"/> with <c>SqliteErrorCode == 5</c> (<c>SQLITE_BUSY</c>)
+/// propagates to the runner's catch path. Note: <c>PRAGMA busy_timeout</c> issued in SQL is
+/// silently overwritten by the next command's CommandTimeout-derived re-application, so
+/// DefaultTimeout is the only reliable hook.
 /// </para>
 /// </remarks>
 public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, SqliteTransaction>
@@ -82,6 +82,7 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     private const string MIGRATION_HISTORY_TABLE = "__BrighterMigrationHistory";
 
     private readonly bool _enableWalMode;
+    private readonly TimeSpan _lockTimeout;
 
     /// <summary>
     /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
@@ -96,6 +97,7 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
             logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>())
     {
         _enableWalMode = enableWalMode;
+        _lockTimeout = lockTimeout ?? TimeSpan.FromSeconds(30);
     }
 
     /// <summary>
@@ -126,9 +128,9 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     protected override async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
         var connection = new SqliteConnection(Configuration.ConnectionString);
+        connection.DefaultTimeout = ToDriverBusyTimeoutSeconds(_lockTimeout);
         await connection.OpenAsync(cancellationToken);
 
-        await SetSqliteBusyTimeoutToZeroAsync(connection, cancellationToken);
         if (_enableWalMode)
         {
             await EnsureWalModeAsync(connection, cancellationToken);
@@ -307,16 +309,16 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task SetSqliteBusyTimeoutToZeroAsync(
-        SqliteConnection connection, CancellationToken cancellationToken)
+    private static int ToDriverBusyTimeoutSeconds(TimeSpan lockTimeout)
     {
-        // Cancel any inherited PRAGMA busy_timeout so the connection enters BEGIN IMMEDIATE with
-        // no per-statement waiter — concurrent SQLite migration is fail-fast by design, so
-        // contention surfaces immediately to the runner's catch path rather than being absorbed
-        // silently here. See class-level remarks and ADR 0057 §4 / ADR 0058 §B.1.
-        using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA busy_timeout = 0;";
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        // Microsoft.Data.Sqlite drives sqlite3_busy_timeout from connection.DefaultTimeout
+        // (in seconds), re-applying it before every internal command — including the BEGIN
+        // command synthesised by BeginTransaction(IsolationLevel, deferred). PRAGMA busy_timeout
+        // would be silently overwritten by that re-application, so DefaultTimeout is the only
+        // reliable way to honour lockTimeout. Driver granularity is whole seconds; sub-second
+        // lockTimeouts floor to 1s. DefaultTimeout = 0 means "wait forever" in this driver
+        // (not "fail-fast"), so callers wanting fail-fast pass TimeSpan.Zero and get ~1s.
+        return (int)Math.Max(1, Math.Ceiling(lockTimeout.TotalSeconds));
     }
 
     private static async Task EnsureWalModeAsync(
