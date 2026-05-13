@@ -1164,7 +1164,7 @@ Per ADR §B.5 line 646 + requirements F11. The MySQL `ClampDetectedVersion` iden
 
 ### Phase 13 final gate
 
-- [ ] **Phase 13 gate: `/spec:approve code` ready — AC1..AC12 all ticked**
+- [x] **Phase 13 gate: `/spec:approve code` ready — AC1..AC12 all ticked**
   - All seven backend test filters at the post-13.B floor (Core BoxProvisioning.Tests `43/43`, Core sub-filter `5/5`, MSSQL `63/63`, PG `54/54`, MySQL `63/63` net9.0-only, SQLite `45/45`, Spanner `26/26`).
   - `dotnet build src/Paramore.Brighter.BoxProvisioning -c Release` clean on `netstandard2.0;net8.0;net9.0;net10.0`.
   - No new `InternalsVisibleTo` directives (parent AC8 preserved): `grep -r 'InternalsVisibleTo' src/Paramore.Brighter.BoxProvisioning*` returns zero new matches.
