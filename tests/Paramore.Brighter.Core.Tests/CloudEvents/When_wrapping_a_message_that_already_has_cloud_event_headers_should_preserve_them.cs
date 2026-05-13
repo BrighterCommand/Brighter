@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CloudEvents;
 
-public class CloudEventsPreservesExistingHeadersTests
+public class When_wrapping_a_message_that_already_has_cloud_event_headers_should_preserve_them
 {
     private readonly CloudEventsTransformer _transformer = new();
     private readonly Uri _mapperSource = new("http://goparamore.io/MyMapper");
@@ -32,7 +32,7 @@ public class CloudEventsPreservesExistingHeadersTests
     }
 
     [Fact]
-    public void When_wrapping_a_message_that_already_has_cloud_event_headers_should_preserve_them()
+    public void When_no_attribute_and_no_publication_should_preserve_mapper_headers()
     {
         //Arrange - a message with cloud event headers already set (e.g. by a message mapper)
         var message = CreateMessageWithMapperHeaders();
@@ -211,5 +211,34 @@ public class CloudEventsPreservesExistingHeadersTests
 
         //Assert - mapper's XML content type should be preserved, not overwritten with application/json
         Assert.Equal(xmlContentType, wrapped.Header.ContentType);
+    }
+
+    [Fact]
+    public void When_mapper_sets_source_to_default_uri_publication_wins_sentinel_collision()
+    {
+        //Arrange - mapper explicitly sets Source to the same URI as DefaultSource (http://goparamore.io).
+        // This is a known trade-off: we use the default URI as a sentinel for "mapper didn't set it,"
+        // so a mapper that intentionally picks the default URI will have its value replaced by publication.
+        var defaultSource = new Uri(MessageHeader.DefaultSource);
+        var publicationSource = new Uri("http://goparamore.io/FromPublication");
+
+        var message = new Message(
+            new MessageHeader(
+                Id.Random(),
+                new RoutingKey("Test.Topic"),
+                MessageType.MT_EVENT,
+                source: defaultSource),
+            new MessageBody("{\"orderId\": 123}"));
+
+        var publication = new Publication
+        {
+            Source = publicationSource
+        };
+
+        //Act
+        var wrapped = _transformer.Wrap(message, publication);
+
+        //Assert - publication wins because the mapper's value matches the sentinel
+        Assert.Equal(publicationSource, wrapped.Header.Source);
     }
 }
