@@ -57,7 +57,11 @@ public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
         //Must have credentials stored in the SDK Credentials store or shared credentials file
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SnsMessageProducer(_awsConnection,  new SnsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SnsMessageProducer(_awsConnection, new SnsPublication
+        {
+            MakeChannels = OnMissingChannel.Create,
+            TopicAttributes = new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }])
+        });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();
 
