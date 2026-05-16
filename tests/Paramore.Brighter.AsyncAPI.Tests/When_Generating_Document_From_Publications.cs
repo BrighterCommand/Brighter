@@ -169,7 +169,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var payload = (JsonElement)result.Components!.Messages!["TestOrderEvent"].Payload!.Schema;
             var rewrittenRef = payload.GetProperty("allOf")[0].GetProperty("$ref").GetString();
-            Assert.Equal("#/components/messages/TestOrderEvent/payload/definitions/Event", rewrittenRef);
+            Assert.Equal("#/components/schemas/Event", rewrittenRef);
+
+            Assert.False(payload.TryGetProperty("definitions", out _));
+            Assert.NotNull(result.Components.Schemas);
+            Assert.True(result.Components.Schemas!.ContainsKey("Event"));
         }
 
         public class TestOrderEvent : Event

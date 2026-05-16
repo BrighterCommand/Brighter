@@ -189,8 +189,7 @@ namespace Paramore.Brighter.AsyncAPI
             JsonValueKind.Array => ReadArray(element),
             JsonValueKind.String => element.GetString(),
             JsonValueKind.Number => ReadNumber(element),
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
+            JsonValueKind.True or JsonValueKind.False => element.GetBoolean(),
             _ => null,
         };
 

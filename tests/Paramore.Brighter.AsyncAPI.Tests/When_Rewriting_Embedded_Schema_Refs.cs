@@ -102,9 +102,15 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var message = result.Components.Messages["OrderWithAddress"];
             Assert.NotNull(message.Payload);
 
+            // Shared definitions are hoisted to components.schemas; the message's $ref points
+            // to the hoisted location and the inline definitions block is removed.
             var payload = (JsonElement)message.Payload.Schema;
             var addressRef = payload.GetProperty("properties").GetProperty("Address").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/messages/OrderWithAddress/payload/definitions/AddressInfo", addressRef);
+            Assert.Equal("#/components/schemas/AddressInfo", addressRef);
+            Assert.False(payload.TryGetProperty("definitions", out _));
+
+            Assert.NotNull(result.Components.Schemas);
+            Assert.True(result.Components.Schemas!.ContainsKey("AddressInfo"));
         }
 
         [Fact]
@@ -148,7 +154,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var payload = (JsonElement)message.Payload.Schema;
             var contactRef = payload.GetProperty("properties").GetProperty("Contact").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/messages/OrderWithContact/payload/$defs/ContactInfo", contactRef);
+            Assert.Equal("#/components/schemas/ContactInfo", contactRef);
+            Assert.False(payload.TryGetProperty("$defs", out _));
+
+            Assert.NotNull(result.Components.Schemas);
+            Assert.True(result.Components.Schemas!.ContainsKey("ContactInfo"));
         }
 
         [Fact]
@@ -242,19 +252,26 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var payload = (JsonElement)message.Payload.Schema;
 
-            // Top-level property ref
+            // Top-level property ref now points at the hoisted schema.
             var billingRef = payload.GetProperty("properties").GetProperty("Billing").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/messages/ComplexOrder/payload/definitions/BillingInfo", billingRef);
+            Assert.Equal("#/components/schemas/BillingInfo", billingRef);
 
-            // Nested refs inside definitions
-            var definitions = payload.GetProperty("definitions");
-            var addressRef = definitions.GetProperty("BillingInfo")
-                .GetProperty("properties").GetProperty("Address").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/messages/ComplexOrder/payload/definitions/AddressInfo", addressRef);
+            // The local definitions block is removed from the message; the nested refs now
+            // live inside the hoisted BillingInfo schema under components.schemas.
+            Assert.False(payload.TryGetProperty("definitions", out _));
 
-            var cardRef = definitions.GetProperty("BillingInfo")
-                .GetProperty("properties").GetProperty("Card").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/messages/ComplexOrder/payload/definitions/CardInfo", cardRef);
+            Assert.NotNull(result.Components.Schemas);
+            var schemas = result.Components.Schemas!;
+            Assert.True(schemas.ContainsKey("BillingInfo"));
+            Assert.True(schemas.ContainsKey("AddressInfo"));
+            Assert.True(schemas.ContainsKey("CardInfo"));
+
+            var billing = (JsonElement)schemas["BillingInfo"].Schema;
+            var addressRef = billing.GetProperty("properties").GetProperty("Address").GetProperty("$ref").GetString();
+            Assert.Equal("#/components/schemas/AddressInfo", addressRef);
+
+            var cardRef = billing.GetProperty("properties").GetProperty("Card").GetProperty("$ref").GetString();
+            Assert.Equal("#/components/schemas/CardInfo", cardRef);
         }
 
         [Fact]
@@ -298,7 +315,10 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var payload = (JsonElement)message.Payload.Schema;
             var itemsRef = payload.GetProperty("properties").GetProperty("Items")
                 .GetProperty("items").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/messages/OrderWithItems/payload/definitions/LineItem", itemsRef);
+            Assert.Equal("#/components/schemas/LineItem", itemsRef);
+
+            Assert.NotNull(result.Components.Schemas);
+            Assert.True(result.Components.Schemas!.ContainsKey("LineItem"));
         }
 
         [Fact]
