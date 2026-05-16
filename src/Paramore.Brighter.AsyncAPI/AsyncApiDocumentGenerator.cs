@@ -67,10 +67,6 @@ namespace Paramore.Brighter.AsyncAPI
         // The action + channel-id pair forms an operation's identity in the document.
         private readonly record struct OperationKey(string Action, string ChannelId);
 
-        // The two $ref prefixes used when rewriting NJsonSchema-generated refs to live under
-        // the AsyncAPI message payload.
-        private readonly record struct SchemaRefPrefixes(string DefinitionsPrefix, string DefsPrefix);
-
         private readonly AsyncApiOptions _options;
         private readonly IAmASchemaGenerator _schemaGenerator;
         private readonly IEnumerable<Subscription>? _subscriptions;
@@ -101,10 +97,10 @@ namespace Paramore.Brighter.AsyncAPI
             await AddFromAssemblyScanningAsync(context, ct).ConfigureAwait(false);
 
             // NJsonSchema emits inheritance as { definitions: { Base: {...} }, allOf: [{$ref: "#/definitions/Base"}, ...] }.
-            // Each message produced this way carries its own copy of the base type. Hoist those
-            // definitions to components.schemas so a shared base appears once, and rewrite refs
-            // to point at the shared copy.
-            var hoistedSchemas = HoistEmbeddedDefinitions(context.Messages);
+            // Each message produced this way carries its own copy of the base type. SchemaHoister
+            // lifts those definitions to components.schemas so a shared base appears once, and
+            // rewrites refs to point at the shared copy.
+            var hoistedSchemas = SchemaHoister.HoistEmbeddedDefinitions(context.Messages);
 
             var doc = new V3AsyncApiDocument
             {
@@ -383,153 +379,5 @@ namespace Paramore.Brighter.AsyncAPI
 
         private static string SanitizeChannelId(string value) => s_sanitizeRegex.Replace(value, "_");
 
-        // Lifts embedded { definitions: {...} } and { $defs: {...} } blocks from each message's
-        // payload schema into a single shared pool. Refs are rewritten in-place to point at
-        // the lifted location under #/components/schemas/. Definitions with the same name are
-        // deduplicated by first-seen content; if two messages share a name with different
-        // content the first wins (no rename), which is acceptable for the common case of a
-        // class-inheritance base type appearing under both messages.
-        private static Dictionary<string, V3SchemaDefinition> HoistEmbeddedDefinitions(
-            Dictionary<string, V3MessageDefinition> messages)
-        {
-            var hoisted = new Dictionary<string, V3SchemaDefinition>(StringComparer.Ordinal);
-
-            foreach (var key in messages.Keys.ToList())
-            {
-                var message = messages[key];
-                var rewrittenPayload = LiftMessageDefinitions(message.Payload, hoisted);
-                if (!ReferenceEquals(rewrittenPayload, message.Payload))
-                {
-                    messages[key] = new V3MessageDefinition
-                    {
-                        Name = message.Name,
-                        ContentType = message.ContentType,
-                        Reference = message.Reference,
-                        Payload = rewrittenPayload,
-                    };
-                }
-            }
-
-            return hoisted;
-        }
-
-        private static V3SchemaDefinition? LiftMessageDefinitions(
-            V3SchemaDefinition? schema,
-            Dictionary<string, V3SchemaDefinition> hoisted)
-        {
-            if (schema?.Schema is not JsonElement payload)
-            {
-                return schema;
-            }
-
-            var root = JsonNode.Parse(payload.GetRawText());
-            if (root is not JsonObject rootObject)
-            {
-                return schema;
-            }
-
-            ExtractDefinitionsInto(rootObject, "definitions", schema.SchemaFormat, hoisted);
-            ExtractDefinitionsInto(rootObject, "$defs", schema.SchemaFormat, hoisted);
-
-            var prefixes = new SchemaRefPrefixes("#/components/schemas/", "#/components/schemas/");
-            RewriteRefs(rootObject, prefixes);
-
-            using var rewritten = JsonDocument.Parse(rootObject.ToJsonString());
-            return new V3SchemaDefinition
-            {
-                SchemaFormat = schema.SchemaFormat,
-                Schema = rewritten.RootElement.Clone(),
-            };
-        }
-
-        private static void ExtractDefinitionsInto(
-            JsonObject rootObject,
-            string propertyName,
-            string? schemaFormat,
-            Dictionary<string, V3SchemaDefinition> hoisted)
-        {
-            if (!rootObject.TryGetPropertyValue(propertyName, out var defsNode) || defsNode is not JsonObject defs)
-            {
-                return;
-            }
-
-            var hoistPrefixes = new SchemaRefPrefixes("#/components/schemas/", "#/components/schemas/");
-
-            foreach (var entry in defs.ToList())
-            {
-                if (entry.Value is null) continue;
-                if (hoisted.ContainsKey(entry.Key)) continue;
-
-                // Rewrite refs inside the hoisted definition so cross-definition $refs (e.g.
-                // a BillingInfo schema referencing AddressInfo) resolve at the new location.
-                var entryNode = JsonNode.Parse(entry.Value.ToJsonString())!;
-                RewriteRefs(entryNode, hoistPrefixes);
-
-                using var entryDoc = JsonDocument.Parse(entryNode.ToJsonString());
-                hoisted[entry.Key] = new V3SchemaDefinition
-                {
-                    SchemaFormat = schemaFormat,
-                    Schema = entryDoc.RootElement.Clone(),
-                };
-            }
-
-            rootObject.Remove(propertyName);
-        }
-
-        private static void RewriteRefs(JsonNode node, SchemaRefPrefixes prefixes)
-        {
-            switch (node)
-            {
-                case JsonObject obj:
-                    RewriteRefsInObject(obj, prefixes);
-                    break;
-                case JsonArray array:
-                    RewriteRefsInArray(array, prefixes);
-                    break;
-            }
-        }
-
-        private static void RewriteRefsInObject(JsonObject obj, SchemaRefPrefixes prefixes)
-        {
-            RewriteRefProperty(obj, prefixes);
-
-            foreach (var property in obj)
-            {
-                if (property.Value != null)
-                {
-                    RewriteRefs(property.Value, prefixes);
-                }
-            }
-        }
-
-        private static void RewriteRefsInArray(JsonArray array, SchemaRefPrefixes prefixes)
-        {
-            foreach (var item in array)
-            {
-                if (item != null)
-                {
-                    RewriteRefs(item, prefixes);
-                }
-            }
-        }
-
-        private static void RewriteRefProperty(JsonObject obj, SchemaRefPrefixes prefixes)
-        {
-            if (!obj.TryGetPropertyValue("$ref", out var refNode) ||
-                refNode is not JsonValue refValue ||
-                !refValue.TryGetValue<string>(out var refString))
-            {
-                return;
-            }
-
-            if (refString.StartsWith("#/definitions/"))
-            {
-                obj["$ref"] = $"{prefixes.DefinitionsPrefix}{refString.Substring("#/definitions/".Length)}";
-            }
-            else if (refString.StartsWith("#/$defs/"))
-            {
-                obj["$ref"] = $"{prefixes.DefsPrefix}{refString.Substring("#/$defs/".Length)}";
-            }
-        }
     }
 }
