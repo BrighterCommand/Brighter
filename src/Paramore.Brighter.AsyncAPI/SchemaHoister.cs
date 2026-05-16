@@ -44,6 +44,8 @@ namespace Paramore.Brighter.AsyncAPI
     internal static class SchemaHoister
     {
         private const string HoistedRefPrefix = "#/components/schemas/";
+        private const string DefinitionsRefPrefix = "#/definitions/";
+        private const string DefsRefPrefix = "#/$defs/";
 
         internal static Dictionary<string, V3SchemaDefinition> HoistEmbeddedDefinitions(
             Dictionary<string, V3MessageDefinition> messages)
@@ -169,21 +171,27 @@ namespace Paramore.Brighter.AsyncAPI
 
         private static void RewriteRefProperty(JsonObject obj)
         {
-            if (!obj.TryGetPropertyValue("$ref", out var refNode) ||
-                refNode is not JsonValue refValue ||
-                !refValue.TryGetValue<string>(out var refString))
-            {
-                return;
-            }
+            if (!TryGetRefString(obj, out var refString)) return;
 
-            if (refString.StartsWith("#/definitions/"))
-            {
-                obj["$ref"] = HoistedRefPrefix + refString.Substring("#/definitions/".Length);
-            }
-            else if (refString.StartsWith("#/$defs/"))
-            {
-                obj["$ref"] = HoistedRefPrefix + refString.Substring("#/$defs/".Length);
-            }
+            var rewritten = TryHoistRef(refString);
+            if (rewritten != null) obj["$ref"] = rewritten;
+        }
+
+        private static bool TryGetRefString(JsonObject obj, out string refString)
+        {
+            refString = string.Empty;
+            return obj.TryGetPropertyValue("$ref", out var refNode)
+                && refNode is JsonValue refValue
+                && refValue.TryGetValue<string>(out refString!);
+        }
+
+        private static string? TryHoistRef(string refString)
+        {
+            if (refString.StartsWith(DefinitionsRefPrefix))
+                return HoistedRefPrefix + refString.Substring(DefinitionsRefPrefix.Length);
+            if (refString.StartsWith(DefsRefPrefix))
+                return HoistedRefPrefix + refString.Substring(DefsRefPrefix.Length);
+            return null;
         }
     }
 }

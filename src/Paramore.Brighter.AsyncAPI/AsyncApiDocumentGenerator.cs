@@ -213,49 +213,30 @@ namespace Paramore.Brighter.AsyncAPI
             };
         }
 
-        // codescene:ignore
-        // Rationale: assembly scanning has unavoidable branching to preserve error handling,
-        // deduplication, and null-safe reflection behavior without changing semantics.
         private async Task AddFromAssemblyScanningAsync(
             GenerationContext context,
             CancellationToken ct)
         {
             if (_options.DisableAssemblyScanning) return;
 
-            var assemblies = _options.AssembliesToScan;
-            if (assemblies == null)
-            {
-                var entryAssembly = Assembly.GetEntryAssembly();
-                if (entryAssembly == null) return;
-                assemblies = new[] { entryAssembly };
-            }
-
-            foreach (var assembly in assemblies)
+            foreach (var assembly in GetAssembliesToScan())
             {
                 foreach (var (type, topic) in GetPublicationTopicTypes(assembly))
                 {
-                    var channelId = SanitizeChannelId(topic);
+                    if (context.CoveredChannelActions.Contains((SanitizeChannelId(topic), "send"))) continue;
 
-                    if (context.CoveredChannelActions.Contains((channelId, "send"))) continue;
-
-                    EnsureChannel(context.Channels, new ChannelDescriptor(channelId, topic));
-
-                    var messageName = type.Name;
-                    await EnsureMessageAsync(context.Messages, messageName, type, ct).ConfigureAwait(false);
-                    AddChannelMessageRef(context.Channels, new ChannelMessageKey(channelId, messageName));
-
-                    var sendOpId = GetUniqueOperationId(context.Operations, new OperationKey("send", channelId));
-                    context.Operations[sendOpId] = new V3OperationDefinition
-                    {
-                        Action = V3OperationAction.Send,
-                        Channel = new V3ReferenceDefinition { Reference = $"#/channels/{channelId}" },
-                        Messages = new EquatableList<V3ReferenceDefinition>
-                        {
-                            new V3ReferenceDefinition { Reference = $"#/channels/{channelId}/messages/{messageName}" }
-                        }
-                    };
+                    await ProcessSourceAsync(
+                        new MessageSource(topic, V3OperationAction.Send, type),
+                        context, ct).ConfigureAwait(false);
                 }
             }
+        }
+
+        private IEnumerable<Assembly> GetAssembliesToScan()
+        {
+            if (_options.AssembliesToScan != null) return _options.AssembliesToScan;
+            var entry = Assembly.GetEntryAssembly();
+            return entry == null ? Array.Empty<Assembly>() : new[] { entry };
         }
 
         private static IEnumerable<(Type type, string topic)> GetPublicationTopicTypes(Assembly assembly)
