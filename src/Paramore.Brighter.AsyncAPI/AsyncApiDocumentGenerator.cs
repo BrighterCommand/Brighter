@@ -141,39 +141,35 @@ namespace Paramore.Brighter.AsyncAPI
             };
         }
 
-        private async Task AddSubscriptionsAsync(
+        private Task AddSubscriptionsAsync(GenerationContext context, CancellationToken ct) =>
+            AddMessageSourcesAsync(
+                _subscriptions,
+                s => TryBuildSource(s.RoutingKey?.Value, V3OperationAction.Receive, s.RequestType),
+                context, ct);
+
+        private Task AddPublicationsAsync(GenerationContext context, CancellationToken ct) =>
+            AddMessageSourcesAsync(
+                _publications,
+                p => TryBuildSource(p.Topic?.Value, V3OperationAction.Send, p.RequestType),
+                context, ct);
+
+        private async Task AddMessageSourcesAsync<T>(
+            IEnumerable<T>? items,
+            Func<T, MessageSource?> selector,
             GenerationContext context,
             CancellationToken ct)
         {
-            if (_subscriptions == null) return;
-
-            foreach (var subscription in _subscriptions)
+            if (items == null) return;
+            foreach (var item in items)
             {
-                if (subscription.RoutingKey == null || string.IsNullOrEmpty(subscription.RoutingKey.Value))
-                    continue;
-
-                await ProcessSourceAsync(
-                    new MessageSource(subscription.RoutingKey.Value, V3OperationAction.Receive, subscription.RequestType),
-                    context, ct).ConfigureAwait(false);
+                var source = selector(item);
+                if (source == null) continue;
+                await ProcessSourceAsync(source, context, ct).ConfigureAwait(false);
             }
         }
 
-        private async Task AddPublicationsAsync(
-            GenerationContext context,
-            CancellationToken ct)
-        {
-            if (_publications == null) return;
-
-            foreach (var publication in _publications)
-            {
-                if (publication.Topic == null || string.IsNullOrEmpty(publication.Topic.Value))
-                    continue;
-
-                await ProcessSourceAsync(
-                    new MessageSource(publication.Topic.Value, V3OperationAction.Send, publication.RequestType),
-                    context, ct).ConfigureAwait(false);
-            }
-        }
+        private static MessageSource? TryBuildSource(string? address, V3OperationAction action, Type? requestType) =>
+            string.IsNullOrEmpty(address) ? null : new MessageSource(address!, action, requestType);
 
         private async Task ProcessSourceAsync(
             MessageSource source,
@@ -181,37 +177,46 @@ namespace Paramore.Brighter.AsyncAPI
             CancellationToken ct)
         {
             var channelId = SanitizeChannelId(source.Address);
-
             EnsureChannel(context.Channels, new ChannelDescriptor(channelId, source.Address));
 
-            string messageName;
-            if (source.RequestType != null)
-            {
-                messageName = source.RequestType.Name;
-                await EnsureMessageAsync(context.Messages, messageName, source.RequestType, ct).ConfigureAwait(false);
-            }
-            else
-            {
-                messageName = $"{channelId}Message";
-                EnsurePlaceholderMessage(context.Messages, messageName);
-            }
-
+            var messageName = await EnsureMessageForSourceAsync(source, channelId, context.Messages, ct).ConfigureAwait(false);
             AddChannelMessageRef(context.Channels, new ChannelMessageKey(channelId, messageName));
 
             var actionString = source.Action == V3OperationAction.Send ? "send" : "receive";
             context.CoveredChannelActions.Add((channelId, actionString));
 
             var operationId = GetUniqueOperationId(context.Operations, new OperationKey(actionString, channelId));
-            context.Operations[operationId] = new V3OperationDefinition
+            context.Operations[operationId] = BuildOperation(source.Action, channelId, messageName);
+        }
+
+        private async Task<string> EnsureMessageForSourceAsync(
+            MessageSource source,
+            string channelId,
+            Dictionary<string, V3MessageDefinition> messages,
+            CancellationToken ct)
+        {
+            if (source.RequestType != null)
             {
-                Action = source.Action,
+                var name = source.RequestType.Name;
+                await EnsureMessageAsync(messages, name, source.RequestType, ct).ConfigureAwait(false);
+                return name;
+            }
+
+            var placeholderName = $"{channelId}Message";
+            EnsurePlaceholderMessage(messages, placeholderName);
+            return placeholderName;
+        }
+
+        private static V3OperationDefinition BuildOperation(V3OperationAction action, string channelId, string messageName) =>
+            new()
+            {
+                Action = action,
                 Channel = new V3ReferenceDefinition { Reference = $"#/channels/{channelId}" },
                 Messages = new EquatableList<V3ReferenceDefinition>
                 {
                     new V3ReferenceDefinition { Reference = $"#/channels/{channelId}/messages/{messageName}" }
                 }
             };
-        }
 
         private async Task AddFromAssemblyScanningAsync(
             GenerationContext context,
