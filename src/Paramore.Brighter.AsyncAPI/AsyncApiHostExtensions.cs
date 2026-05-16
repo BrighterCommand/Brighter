@@ -142,40 +142,38 @@ namespace Paramore.Brighter.AsyncAPI
             return yamlSerializer.Serialize(tree!);
         }
 
-        private static object? CleanObjectTree(object? node)
+        private static object? CleanObjectTree(object? node) => node switch
         {
-            switch (node)
+            Dictionary<string, object?> map => CleanMap(map),
+            List<object?> list => CleanList(list),
+            _ => node,
+        };
+
+        private static Dictionary<string, object?> CleanMap(Dictionary<string, object?> map)
+        {
+            var cleaned = new Dictionary<string, object?>(StringComparer.Ordinal);
+            foreach (var pair in map)
             {
-                case Dictionary<string, object?> map:
-                    var cleanedMap = new Dictionary<string, object?>(StringComparer.Ordinal);
-                    foreach (var pair in map)
-                    {
-                        if (s_propertiesToStrip.Contains(pair.Key))
-                        {
-                            continue;
-                        }
+                if (s_propertiesToStrip.Contains(pair.Key)) continue;
 
-                        var cleanedValue = CleanObjectTree(pair.Value);
-                        if (IsEmptyCollection(cleanedValue))
-                        {
-                            continue;
-                        }
+                var cleanedValue = CleanObjectTree(pair.Value);
+                if (IsEmptyCollection(cleanedValue)) continue;
 
-                        cleanedMap[pair.Key] = cleanedValue;
-                    }
-
-                    return cleanedMap;
-                case List<object?> list:
-                    var cleanedList = new List<object?>(list.Count);
-                    foreach (var item in list)
-                    {
-                        cleanedList.Add(CleanObjectTree(item));
-                    }
-
-                    return cleanedList;
-                default:
-                    return node;
+                cleaned[pair.Key] = cleanedValue;
             }
+
+            return cleaned;
+        }
+
+        private static List<object?> CleanList(List<object?> list)
+        {
+            var cleaned = new List<object?>(list.Count);
+            foreach (var item in list)
+            {
+                cleaned.Add(CleanObjectTree(item));
+            }
+
+            return cleaned;
         }
 
         private static bool IsEmptyCollection(object? value) => value switch
@@ -185,38 +183,32 @@ namespace Paramore.Brighter.AsyncAPI
             _ => false,
         };
 
-        private static object? JsonElementToObject(JsonElement element)
+        private static object? JsonElementToObject(JsonElement element) => element.ValueKind switch
         {
-            switch (element.ValueKind)
-            {
-                case JsonValueKind.Object:
-                    var map = new Dictionary<string, object?>(StringComparer.Ordinal);
-                    foreach (var property in element.EnumerateObject())
-                    {
-                        map[property.Name] = JsonElementToObject(property.Value);
-                    }
-                    return map;
-                case JsonValueKind.Array:
-                    return element.EnumerateArray().Select(JsonElementToObject).ToList();
-                case JsonValueKind.String:
-                    return element.GetString();
-                case JsonValueKind.Number:
-                    if (element.TryGetInt64(out var longValue))
-                    {
-                        return longValue;
-                    }
+            JsonValueKind.Object => ReadObject(element),
+            JsonValueKind.Array => ReadArray(element),
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Number => ReadNumber(element),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => null,
+        };
 
-                    return element.GetDouble();
-                case JsonValueKind.True:
-                    return true;
-                case JsonValueKind.False:
-                    return false;
-                case JsonValueKind.Null:
-                case JsonValueKind.Undefined:
-                    return null;
-                default:
-                    return null;
+        private static Dictionary<string, object?> ReadObject(JsonElement element)
+        {
+            var map = new Dictionary<string, object?>(StringComparer.Ordinal);
+            foreach (var property in element.EnumerateObject())
+            {
+                map[property.Name] = JsonElementToObject(property.Value);
             }
+
+            return map;
         }
+
+        private static List<object?> ReadArray(JsonElement element)
+            => element.EnumerateArray().Select(JsonElementToObject).ToList();
+
+        private static object ReadNumber(JsonElement element)
+            => element.TryGetInt64(out var longValue) ? longValue : element.GetDouble();
     }
 }

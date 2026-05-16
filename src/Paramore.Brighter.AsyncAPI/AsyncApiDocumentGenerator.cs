@@ -57,6 +57,20 @@ namespace Paramore.Brighter.AsyncAPI
             V3OperationAction Action,
             Type? RequestType);
 
+        // The sanitised channel id alongside its raw broker address.
+        private readonly record struct ChannelDescriptor(string ChannelId, string Address);
+
+        // The channel-id + message-name pair identifies where a message reference lives in
+        // the document and which message it points at.
+        private readonly record struct ChannelMessageKey(string ChannelId, string MessageName);
+
+        // The action + channel-id pair forms an operation's identity in the document.
+        private readonly record struct OperationKey(string Action, string ChannelId);
+
+        // The two $ref prefixes used when rewriting NJsonSchema-generated refs to live under
+        // the AsyncAPI message payload.
+        private readonly record struct SchemaRefPrefixes(string DefinitionsPrefix, string DefsPrefix);
+
         private readonly AsyncApiOptions _options;
         private readonly IAmASchemaGenerator _schemaGenerator;
         private readonly IEnumerable<Subscription>? _subscriptions;
@@ -151,7 +165,7 @@ namespace Paramore.Brighter.AsyncAPI
         {
             var channelId = SanitizeChannelId(source.Address);
 
-            EnsureChannel(context.Channels, channelId, source.Address);
+            EnsureChannel(context.Channels, new ChannelDescriptor(channelId, source.Address));
 
             string messageName;
             if (source.RequestType != null)
@@ -165,12 +179,12 @@ namespace Paramore.Brighter.AsyncAPI
                 EnsurePlaceholderMessage(context.Messages, messageName);
             }
 
-            AddChannelMessageRef(context.Channels, channelId, messageName);
+            AddChannelMessageRef(context.Channels, new ChannelMessageKey(channelId, messageName));
 
             var actionString = source.Action == V3OperationAction.Send ? "send" : "receive";
             context.CoveredChannelActions.Add((channelId, actionString));
 
-            var operationId = GetUniqueOperationId(context.Operations, actionString, channelId);
+            var operationId = GetUniqueOperationId(context.Operations, new OperationKey(actionString, channelId));
             context.Operations[operationId] = new V3OperationDefinition
             {
                 Action = source.Action,
@@ -207,13 +221,13 @@ namespace Paramore.Brighter.AsyncAPI
 
                     if (context.CoveredChannelActions.Contains((channelId, "send"))) continue;
 
-                    EnsureChannel(context.Channels, channelId, topic);
+                    EnsureChannel(context.Channels, new ChannelDescriptor(channelId, topic));
 
                     var messageName = type.Name;
                     await EnsureMessageAsync(context.Messages, messageName, type, ct).ConfigureAwait(false);
-                    AddChannelMessageRef(context.Channels, channelId, messageName);
+                    AddChannelMessageRef(context.Channels, new ChannelMessageKey(channelId, messageName));
 
-                    var sendOpId = GetUniqueOperationId(context.Operations, "send", channelId);
+                    var sendOpId = GetUniqueOperationId(context.Operations, new OperationKey("send", channelId));
                     context.Operations[sendOpId] = new V3OperationDefinition
                     {
                         Action = V3OperationAction.Send,
@@ -254,13 +268,13 @@ namespace Paramore.Brighter.AsyncAPI
             }
         }
 
-        private static void EnsureChannel(Dictionary<string, V3ChannelDefinition> channels, string channelId, string address)
+        private static void EnsureChannel(Dictionary<string, V3ChannelDefinition> channels, ChannelDescriptor descriptor)
         {
             channels.TryAdd(
-                channelId,
+                descriptor.ChannelId,
                 new V3ChannelDefinition
                 {
-                    Address = address,
+                    Address = descriptor.Address,
                     Messages = new EquatableDictionary<string, V3MessageDefinition>()
                 });
         }
@@ -303,24 +317,24 @@ namespace Paramore.Brighter.AsyncAPI
             }
         }
 
-        private static void AddChannelMessageRef(Dictionary<string, V3ChannelDefinition> channels, string channelId, string messageName)
+        private static void AddChannelMessageRef(Dictionary<string, V3ChannelDefinition> channels, ChannelMessageKey key)
         {
-            if (!channels.TryGetValue(channelId, out var channel) || channel.Messages == null)
+            if (!channels.TryGetValue(key.ChannelId, out var channel) || channel.Messages == null)
             {
                 return;
             }
 
             channel.Messages.TryAdd(
-                messageName,
+                key.MessageName,
                 new V3MessageDefinition
                 {
-                    Reference = $"#/components/messages/{messageName}"
+                    Reference = $"#/components/messages/{key.MessageName}"
                 });
         }
 
-        private static string GetUniqueOperationId(Dictionary<string, V3OperationDefinition> operations, string action, string channelId)
+        private static string GetUniqueOperationId(Dictionary<string, V3OperationDefinition> operations, OperationKey key)
         {
-            var baseId = $"{action}_{channelId}";
+            var baseId = $"{key.Action}_{key.ChannelId}";
             if (!operations.TryGetValue(baseId, out _))
                 return baseId;
 
@@ -358,9 +372,10 @@ namespace Paramore.Brighter.AsyncAPI
                 return schema;
             }
 
-            var definitionsPrefix = $"#/components/messages/{messageName}/payload/definitions/";
-            var defsPrefix = $"#/components/messages/{messageName}/payload/$defs/";
-            RewriteRefs(root, definitionsPrefix, defsPrefix);
+            var prefixes = new SchemaRefPrefixes(
+                $"#/components/messages/{messageName}/payload/definitions/",
+                $"#/components/messages/{messageName}/payload/$defs/");
+            RewriteRefs(root, prefixes);
 
             using var rewritten = JsonDocument.Parse(root.ToJsonString());
             return new V3SchemaDefinition
@@ -370,36 +385,44 @@ namespace Paramore.Brighter.AsyncAPI
             };
         }
 
-        // codescene:ignore
-        // Rationale: recursive JSON tree traversal is intentionally centralized here so
-        // ref-rewriting stays consistent for objects and arrays across all schema shapes.
-        private static void RewriteRefs(JsonNode node, string definitionsPrefix, string defsPrefix)
+        private static void RewriteRefs(JsonNode node, SchemaRefPrefixes prefixes)
         {
-            if (node is JsonObject obj)
+            switch (node)
             {
-                RewriteRefProperty(obj, definitionsPrefix, defsPrefix);
-
-                foreach (var property in obj)
-                {
-                    if (property.Value != null)
-                    {
-                        RewriteRefs(property.Value, definitionsPrefix, defsPrefix);
-                    }
-                }
+                case JsonObject obj:
+                    RewriteRefsInObject(obj, prefixes);
+                    break;
+                case JsonArray array:
+                    RewriteRefsInArray(array, prefixes);
+                    break;
             }
-            else if (node is JsonArray array)
+        }
+
+        private static void RewriteRefsInObject(JsonObject obj, SchemaRefPrefixes prefixes)
+        {
+            RewriteRefProperty(obj, prefixes);
+
+            foreach (var property in obj)
             {
-                foreach (var item in array)
+                if (property.Value != null)
                 {
-                    if (item != null)
-                    {
-                        RewriteRefs(item, definitionsPrefix, defsPrefix);
-                    }
+                    RewriteRefs(property.Value, prefixes);
                 }
             }
         }
 
-        private static void RewriteRefProperty(JsonObject obj, string definitionsPrefix, string defsPrefix)
+        private static void RewriteRefsInArray(JsonArray array, SchemaRefPrefixes prefixes)
+        {
+            foreach (var item in array)
+            {
+                if (item != null)
+                {
+                    RewriteRefs(item, prefixes);
+                }
+            }
+        }
+
+        private static void RewriteRefProperty(JsonObject obj, SchemaRefPrefixes prefixes)
         {
             if (!obj.TryGetPropertyValue("$ref", out var refNode) ||
                 refNode is not JsonValue refValue ||
@@ -410,11 +433,11 @@ namespace Paramore.Brighter.AsyncAPI
 
             if (refString.StartsWith("#/definitions/"))
             {
-                obj["$ref"] = $"{definitionsPrefix}{refString.Substring("#/definitions/".Length)}";
+                obj["$ref"] = $"{prefixes.DefinitionsPrefix}{refString.Substring("#/definitions/".Length)}";
             }
             else if (refString.StartsWith("#/$defs/"))
             {
-                obj["$ref"] = $"{defsPrefix}{refString.Substring("#/$defs/".Length)}";
+                obj["$ref"] = $"{prefixes.DefsPrefix}{refString.Substring("#/$defs/".Length)}";
             }
         }
     }
