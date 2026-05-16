@@ -39,6 +39,8 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
 
+var generateAsyncApi = args.Length > 0 && args[0] == "--generate-asyncapi";
+
 var kafkaConfig = new KafkaMessagingGatewayConfiguration
 {
     Name = "paramore.brighter.kafkaasyncapi",
@@ -47,43 +49,52 @@ var kafkaConfig = new KafkaMessagingGatewayConfiguration
 
 var kafkaMessageConsumerFactory = new KafkaMessageConsumerFactory(kafkaConfig);
 
-var producerRegistry = new KafkaProducerRegistryFactory(
-    kafkaConfig,
-    new KafkaPublication<OrderCreatedEvent>[]
-    {
-        new()
-        {
-            Topic = new RoutingKey("order.created"),
-            NumPartitions = 3,
-            MessageSendMaxRetries = 3,
-            MessageTimeoutMs = 1000,
-            MaxInFlightRequestsPerConnection = 1
-        }
-    }).Create();
-
+// KafkaProducerRegistryFactory.Create() opens a real broker connection at construction
+// time, so we only build the registry when actually starting the producer side. In
+// --generate-asyncapi mode the [PublicationTopic]-decorated event types are picked up
+// by assembly scanning, so the document still describes publications correctly.
 var host = new HostBuilder()
     .ConfigureServices((_, services) =>
     {
-        services.AddConsumers(options =>
+        var brighter = services.AddConsumers(options =>
+        {
+            options.Subscriptions = new Subscription[]
             {
-                options.Subscriptions = new Subscription[]
+                new KafkaSubscription<PaymentReceivedEvent>(
+                    new SubscriptionName("paramore.asyncapi.payment"),
+                    new ChannelName("payment.received"),
+                    new RoutingKey("payment.received"),
+                    groupId: "kafka-asyncapi-sample",
+                    timeOut: TimeSpan.FromMilliseconds(200),
+                    messagePumpType: MessagePumpType.Reactor,
+                    makeChannels: OnMissingChannel.Create)
+            };
+            options.DefaultChannelFactory = new ChannelFactory(kafkaMessageConsumerFactory);
+        });
+
+        if (!generateAsyncApi)
+        {
+            var producerRegistry = new KafkaProducerRegistryFactory(
+                kafkaConfig,
+                new KafkaPublication<OrderCreatedEvent>[]
                 {
-                    new KafkaSubscription<PaymentReceivedEvent>(
-                        new SubscriptionName("paramore.asyncapi.payment"),
-                        new ChannelName("payment.received"),
-                        new RoutingKey("payment.received"),
-                        groupId: "kafka-asyncapi-sample",
-                        timeOut: TimeSpan.FromMilliseconds(200),
-                        messagePumpType: MessagePumpType.Reactor,
-                        makeChannels: OnMissingChannel.Create)
-                };
-                options.DefaultChannelFactory = new ChannelFactory(kafkaMessageConsumerFactory);
-            })
-            .AddProducers(configure =>
+                    new()
+                    {
+                        Topic = new RoutingKey("order.created"),
+                        NumPartitions = 3,
+                        MessageSendMaxRetries = 3,
+                        MessageTimeoutMs = 1000,
+                        MaxInFlightRequestsPerConnection = 1
+                    }
+                }).Create();
+
+            brighter.AddProducers(configure =>
             {
                 configure.ProducerRegistry = producerRegistry;
-            })
-            .UseAsyncApi(opts =>
+            });
+        }
+
+        brighter.UseAsyncApi(opts =>
             {
                 opts.Title = "Kafka AsyncAPI Sample";
                 opts.Version = "1.0.0";
@@ -103,9 +114,7 @@ var host = new HostBuilder()
     .UseSerilog()
     .Build();
 
-// Generate AsyncAPI document if --generate-asyncapi argument is provided
-// This writes both asyncapi.json and asyncapi.yaml
-if (args.Length > 0 && args[0] == "--generate-asyncapi")
+if (generateAsyncApi)
 {
     var document = await host.GenerateAsyncApiDocumentAsync("asyncapi.json");
     Console.WriteLine($"AsyncAPI document generated: {document.Info.Title} v{document.Info.Version} (JSON + YAML)");

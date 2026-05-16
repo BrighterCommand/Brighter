@@ -24,18 +24,33 @@ THE SOFTWARE. */
 
 using System;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Neuroglia.AsyncApi.v3;
 using NJsonSchema;
+using NJsonSchema.Generation;
 
 namespace Paramore.Brighter.AsyncAPI.NJsonSchema
 {
+    /// <summary>
+    /// Default <see cref="IAmASchemaGenerator"/> implementation that produces JSON Schema definitions
+    /// using <c>NJsonSchema</c>. Property names are emitted in camelCase to match Brighter's default
+    /// <c>JsonMessageMapper</c> wire format, and enums are described as strings.
+    /// </summary>
+    /// <remarks>
+    /// NJsonSchema 11.x always serialises with a <c>$schema</c> dialect of
+    /// <c>http://json-schema.org/draft-04/schema#</c> (see <c>JsonSchema.ToJson()</c> in the
+    /// NJsonSchema source) — the dialect is hardcoded and not configurable. The
+    /// <see cref="SchemaFormat"/> we advertise to AsyncAPI is set to match what we actually emit
+    /// rather than declaring a draft the output does not conform to.
+    /// </remarks>
     public sealed class NJsonSchemaGenerator : IAmASchemaGenerator
     {
-        private const string SchemaFormat = "application/schema+json;version=draft-07";
+        private const string SchemaFormat = "application/schema+json;version=draft-04";
         private static readonly JsonElement s_emptyObject;
+        private static readonly SystemTextJsonSchemaGeneratorSettings s_settings = BuildSettings();
         private readonly ILogger<NJsonSchemaGenerator> _logger;
 
         static NJsonSchemaGenerator()
@@ -44,11 +59,16 @@ namespace Paramore.Brighter.AsyncAPI.NJsonSchema
             s_emptyObject = doc.RootElement.Clone();
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NJsonSchemaGenerator"/> class.
+        /// </summary>
+        /// <param name="logger">The logger used to record schema generation failures.</param>
         public NJsonSchemaGenerator(ILogger<NJsonSchemaGenerator> logger)
         {
             _logger = logger;
         }
 
+        /// <inheritdoc />
         public Task<V3SchemaDefinition?> GenerateAsync(Type? requestType, CancellationToken ct = default)
         {
             if (requestType == null)
@@ -56,7 +76,7 @@ namespace Paramore.Brighter.AsyncAPI.NJsonSchema
 
             try
             {
-                var schema = JsonSchema.FromType(requestType);
+                var schema = JsonSchema.FromType(requestType, s_settings);
                 var json = schema.ToJson();
                 using var doc = JsonDocument.Parse(json);
                 return Task.FromResult<V3SchemaDefinition?>(new V3SchemaDefinition { SchemaFormat = SchemaFormat, Schema = doc.RootElement.Clone() });
@@ -66,6 +86,24 @@ namespace Paramore.Brighter.AsyncAPI.NJsonSchema
                 _logger.LogWarning(ex, "Failed to generate JSON schema for type {TypeName}, returning empty object", requestType.FullName);
                 return Task.FromResult<V3SchemaDefinition?>(new V3SchemaDefinition { SchemaFormat = SchemaFormat, Schema = s_emptyObject });
             }
+        }
+
+        /// <summary>
+        /// Builds the NJsonSchema generator settings to mirror Brighter's default wire format:
+        /// camelCase property names and enums serialised as strings.
+        /// </summary>
+        private static SystemTextJsonSchemaGeneratorSettings BuildSettings()
+        {
+            var serializerOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            serializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+            return new SystemTextJsonSchemaGeneratorSettings
+            {
+                SerializerOptions = serializerOptions
+            };
         }
     }
 }

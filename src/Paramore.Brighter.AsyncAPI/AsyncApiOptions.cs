@@ -28,14 +28,43 @@ using Neuroglia.AsyncApi.v3;
 
 namespace Paramore.Brighter.AsyncAPI
 {
+    /// <summary>
+    /// Configuration options for AsyncAPI document generation. Configured via
+    /// <c>UseAsyncApi</c> on <c>IBrighterBuilder</c> during service registration.
+    /// </summary>
     public class AsyncApiOptions
     {
+        /// <summary>Gets or sets the title written to the AsyncAPI document's <c>info.title</c> field.</summary>
         public string Title { get; set; } = "Brighter Application";
+
+        /// <summary>Gets or sets the version written to the AsyncAPI document's <c>info.version</c> field.</summary>
         public string Version { get; set; } = "1.0.0";
+
+        /// <summary>Gets or sets the optional description written to the AsyncAPI document's <c>info.description</c> field.</summary>
         public string? Description { get; set; }
+
+        /// <summary>
+        /// Gets or sets the servers to include in the AsyncAPI document, keyed by server id.
+        /// </summary>
         public Dictionary<string, V3ServerDefinition>? Servers { get; set; }
+
+        /// <summary>
+        /// Gets or sets the assemblies to scan for <c>PublicationTopic</c>-decorated <c>IRequest</c> types
+        /// that should appear as publications in the generated document. When null, the default scan set is used.
+        /// Ignored if <see cref="DisableAssemblyScanning"/> is <c>true</c>.
+        /// </summary>
         public IEnumerable<Assembly>? AssembliesToScan { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether assembly scanning for publication discovery is disabled.
+        /// When <c>true</c>, only <see cref="SupplementalPublications"/> and explicitly registered producers contribute publications.
+        /// </summary>
         public bool DisableAssemblyScanning { get; set; }
+
+        /// <summary>
+        /// Gets or sets additional publications to include alongside those discovered via the producer registry
+        /// and assembly scanning. Useful for declaring publications that have no <c>PublicationTopic</c>-decorated type.
+        /// </summary>
         public IEnumerable<Publication>? SupplementalPublications { get; set; }
     }
 }

@@ -14,6 +14,7 @@
     <PackageReference Include="Neuroglia.AsyncApi.Core"/>
     <PackageReference Include="Neuroglia.AsyncApi.IO"/>
     <PackageReference Include="System.Text.Json"/>
+    <PackageReference Include="YamlDotNet"/>
   </ItemGroup>
 
   <ItemGroup>

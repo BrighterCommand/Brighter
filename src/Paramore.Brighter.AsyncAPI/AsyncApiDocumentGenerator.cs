@@ -49,6 +49,14 @@ namespace Paramore.Brighter.AsyncAPI
             Dictionary<string, V3MessageDefinition> Messages,
             HashSet<(string ChannelId, string Action)> CoveredChannelActions);
 
+        // Inputs that vary per call into ProcessSourceAsync. Grouping them keeps the method
+        // signature small (and satisfies the CodeScene "Excess Number of Function Arguments"
+        // check) without flattening the call sites with positional parameters.
+        private sealed record MessageSource(
+            string Address,
+            V3OperationAction Action,
+            Type? RequestType);
+
         private readonly AsyncApiOptions _options;
         private readonly IAmASchemaGenerator _schemaGenerator;
         private readonly IEnumerable<Subscription>? _subscriptions;
@@ -114,7 +122,7 @@ namespace Paramore.Brighter.AsyncAPI
                     continue;
 
                 await ProcessSourceAsync(
-                    subscription.RoutingKey.Value, V3OperationAction.Receive, subscription.RequestType,
+                    new MessageSource(subscription.RoutingKey.Value, V3OperationAction.Receive, subscription.RequestType),
                     context, ct).ConfigureAwait(false);
             }
         }
@@ -131,27 +139,25 @@ namespace Paramore.Brighter.AsyncAPI
                     continue;
 
                 await ProcessSourceAsync(
-                    publication.Topic.Value, V3OperationAction.Send, publication.RequestType,
+                    new MessageSource(publication.Topic.Value, V3OperationAction.Send, publication.RequestType),
                     context, ct).ConfigureAwait(false);
             }
         }
 
         private async Task ProcessSourceAsync(
-            string address,
-            V3OperationAction action,
-            Type? requestType,
+            MessageSource source,
             GenerationContext context,
             CancellationToken ct)
         {
-            var channelId = SanitizeChannelId(address);
+            var channelId = SanitizeChannelId(source.Address);
 
-            EnsureChannel(context.Channels, channelId, address);
+            EnsureChannel(context.Channels, channelId, source.Address);
 
             string messageName;
-            if (requestType != null)
+            if (source.RequestType != null)
             {
-                messageName = requestType.Name;
-                await EnsureMessageAsync(context.Messages, messageName, requestType, ct).ConfigureAwait(false);
+                messageName = source.RequestType.Name;
+                await EnsureMessageAsync(context.Messages, messageName, source.RequestType, ct).ConfigureAwait(false);
             }
             else
             {
@@ -161,13 +167,13 @@ namespace Paramore.Brighter.AsyncAPI
 
             AddChannelMessageRef(context.Channels, channelId, messageName);
 
-            var actionString = action == V3OperationAction.Send ? "send" : "receive";
+            var actionString = source.Action == V3OperationAction.Send ? "send" : "receive";
             context.CoveredChannelActions.Add((channelId, actionString));
 
             var operationId = GetUniqueOperationId(context.Operations, actionString, channelId);
             context.Operations[operationId] = new V3OperationDefinition
             {
-                Action = action,
+                Action = source.Action,
                 Channel = new V3ReferenceDefinition { Reference = $"#/channels/{channelId}" },
                 Messages = new EquatableList<V3ReferenceDefinition>
                 {
@@ -288,7 +294,7 @@ namespace Paramore.Brighter.AsyncAPI
                     ContentType = "application/json",
                     Payload = new V3SchemaDefinition
                     {
-                        SchemaFormat = "application/schema+json;version=draft-07",
+                        SchemaFormat = "application/schema+json;version=draft-04",
                         Schema = emptyDoc.RootElement.Clone()
                     }
                 };
@@ -330,7 +336,7 @@ namespace Paramore.Brighter.AsyncAPI
             using var doc = JsonDocument.Parse("{}");
             return new V3SchemaDefinition
             {
-                SchemaFormat = "application/schema+json;version=draft-07",
+                SchemaFormat = "application/schema+json;version=draft-04",
                 Schema = doc.RootElement.Clone()
             };
         }

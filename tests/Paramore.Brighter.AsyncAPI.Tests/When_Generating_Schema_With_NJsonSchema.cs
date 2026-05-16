@@ -42,13 +42,17 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             _generator = new NJsonSchemaGenerator(logger);
         }
 
+        // NJsonSchema 11.x hardcodes the JSON Schema dialect URL to draft-04 in
+        // JsonSchema.ToJson(); we declare the same dialect via SchemaFormat so the AsyncAPI
+        // envelope tells the truth about what we emit. Property names are camelCase to mirror
+        // Brighter's default JsonMessageMapper wire format (JsonSerialisationOptions.Options).
         [Fact]
         public async Task It_Should_Return_Empty_Object_For_Null_Type()
         {
             var result = await _generator.GenerateAsync(null);
 
             Assert.NotNull(result);
-            Assert.Equal("application/schema+json;version=draft-07", result.SchemaFormat);
+            Assert.Equal("application/schema+json;version=draft-04", result.SchemaFormat);
             var schema = (JsonElement)result.Schema;
             Assert.Equal(JsonValueKind.Object, schema.ValueKind);
             Assert.Equal("{}", schema.GetRawText());
@@ -60,12 +64,12 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var result = await _generator.GenerateAsync(typeof(TestSchemaType));
 
             Assert.NotNull(result);
-            Assert.Equal("application/schema+json;version=draft-07", result.SchemaFormat);
+            Assert.Equal("application/schema+json;version=draft-04", result.SchemaFormat);
             var schema = (JsonElement)result.Schema;
             Assert.Equal(JsonValueKind.Object, schema.ValueKind);
             Assert.True(schema.TryGetProperty("properties", out var properties));
-            Assert.True(properties.TryGetProperty("Name", out _));
-            Assert.True(properties.TryGetProperty("Age", out _));
+            Assert.True(properties.TryGetProperty("name", out _));
+            Assert.True(properties.TryGetProperty("age", out _));
         }
 
 

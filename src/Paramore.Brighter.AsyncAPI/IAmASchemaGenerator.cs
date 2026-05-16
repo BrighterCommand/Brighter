@@ -31,9 +31,9 @@ namespace Paramore.Brighter.AsyncAPI
 {
     /// <summary>
     /// Generates JSON Schema representations for message payload types used in AsyncAPI document generation.
-    /// Implementations should return a <see cref="V3SchemaDefinition"/> wrapping the schema.
-    /// When <paramref name="requestType"/> is null or schema generation fails, implementations should
-    /// return an empty object schema rather than null.
+    /// Implementations should return a <see cref="V3SchemaDefinition"/> wrapping the schema. When the
+    /// supplied type is null or schema generation fails, implementations should return an empty object
+    /// schema rather than null.
     /// </summary>
     public interface IAmASchemaGenerator
     {
