@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -151,6 +152,17 @@ END";
             // is a statement-terminating error with default XACT_ABORT OFF — the transaction is
             // not doomed, so we can ignore it and continue. The history table now exists with
             // the schema we intended (the racing session ran the same DDL).
+            //
+            // Surface the swallow so operators investigating "did two replicas race here?" have
+            // a signal — Debug-level log + Activity event on the migration span (when one is
+            // active). Silent swallow was the prior behaviour; per PR #4039 review item #7 the
+            // race is real and the swallow is intentional, but operators got no signal that
+            // two racers serialised here.
+            Logger.LogDebug(ex,
+                "{HistoryTable} already created by racing session (MsSql 2714)",
+                MIGRATION_HISTORY_TABLE);
+            Activity.Current?.AddEvent(new ActivityEvent(
+                BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
         }
     }
 

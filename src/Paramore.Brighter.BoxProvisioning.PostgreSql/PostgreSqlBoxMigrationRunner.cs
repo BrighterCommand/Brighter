@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -141,6 +142,18 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
             //   42710 (DuplicateObject) — type/constraint already exists
             // In every case the history table now exists with the schema we intended to create
             // (the racing session ran the same DDL), which is the post-condition we wanted.
+            //
+            // Surface the swallow so operators investigating "did two replicas race here?" have
+            // a signal — Debug-level log (carrying the actual SqlState so the three race shapes
+            // can be distinguished after the fact) + Activity event on the migration span (when
+            // one is active). Silent swallow was the prior behaviour; per PR #4039 review item #7
+            // the race is real and the swallow is intentional, but operators got no signal that
+            // two racers serialised here.
+            Logger.LogDebug(ex,
+                "{HistoryTable} already created by racing session (Postgres SqlState {SqlState})",
+                MIGRATION_HISTORY_TABLE, ex.SqlState);
+            Activity.Current?.AddEvent(new ActivityEvent(
+                BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
         }
     }
 

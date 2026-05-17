@@ -29,7 +29,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Inbox.Spanner;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Spanner;
 
@@ -71,6 +74,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     private readonly IAmARelationalDatabaseConfiguration _configuration;
     private readonly IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> _detectionHelper;
     private readonly IAmABrighterTracer? _tracer;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initialises the runner with an explicit detection helper. Spanner is degenerate per
@@ -80,11 +84,13 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     public SpannerBoxMigrationRunner(
         IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> detectionHelper,
         IAmARelationalDatabaseConfiguration configuration,
-        IAmABrighterTracer? tracer = null)
+        IAmABrighterTracer? tracer = null,
+        ILogger? logger = null)
     {
         _detectionHelper = detectionHelper;
         _configuration = configuration;
         _tracer = tracer;
+        _logger = logger ?? ApplicationLogging.CreateLogger<SpannerBoxMigrationRunner>();
     }
 
     /// <summary>
@@ -94,8 +100,9 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     /// </summary>
     public SpannerBoxMigrationRunner(
         IAmARelationalDatabaseConfiguration configuration,
-        IAmABrighterTracer? tracer = null)
-        : this(new SpannerBoxDetectionHelper(), configuration, tracer)
+        IAmABrighterTracer? tracer = null,
+        ILogger? logger = null)
+        : this(new SpannerBoxDetectionHelper(), configuration, tracer, logger)
     {
     }
 
@@ -253,6 +260,12 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             "Manual recovery required per ADR 0057 §6.");
     }
 
+    // Narrowed to AlreadyExists only per PR #4039 review item #7: FailedPrecondition is a
+    // catch-all on Spanner that covers schema drift, invalid options, and many cases beyond
+    // "table/column already exists". Swallowing it masked real configuration errors as benign
+    // race retries. The remaining AlreadyExists swallow covers the box-table DDL replay case
+    // (FreshInstall after a crash between DDL and history-row insert); ALREADY_EXISTS is a
+    // narrow, behaviour-equivalent signal that the post-condition we wanted already holds.
     private static async Task ExecuteDdlSafeAsync(
         SpannerConnection connection, string ddl,
         CancellationToken cancellationToken)
@@ -262,14 +275,16 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             var command = connection.CreateDdlCommand(ddl);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
-        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists
-                                         || ex.RpcException.StatusCode == StatusCode.FailedPrecondition)
+        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists)
         {
-            // Table/column already exists — safe to continue (crash between DDL and history write)
+            // Box table already exists — safe to continue (crash between DDL and history write).
+            // Operational visibility for the actual history-table race is provided by
+            // EnsureHistoryTableAsync's dedicated catch below.
+            _ = ex; // explicit no-op acknowledges the swallow
         }
     }
 
-    private static async Task EnsureHistoryTableAsync(
+    private async Task EnsureHistoryTableAsync(
         SpannerConnection connection, CancellationToken cancellationToken)
     {
         const string ddl = $"""
@@ -281,7 +296,31 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             ) PRIMARY KEY (`BoxTableName`, `MigrationVersion`)
             """;
 
-        await ExecuteDdlSafeAsync(connection, ddl, cancellationToken);
+        try
+        {
+            var command = connection.CreateDdlCommand(ddl);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists)
+        {
+            // TOCTOU on Spanner's information_schema: another connection raced our CREATE TABLE
+            // IF NOT EXISTS between Spanner's internal existence check and the DDL commit. The
+            // history table now exists with the schema we intended (the racing session ran the
+            // same DDL), which is the post-condition we wanted.
+            //
+            // Surface the swallow so operators investigating "did two replicas race here?" have
+            // a signal — Debug-level log + Activity event on the migration span (when one is
+            // active). Silent swallow was the prior behaviour; per PR #4039 review item #7 the
+            // race is real and the swallow is intentional, but operators got no signal that
+            // two racers serialised here. Catch narrowed from AlreadyExists||FailedPrecondition
+            // to AlreadyExists only — FailedPrecondition covers schema drift and invalid
+            // options and must not be silently absorbed.
+            _logger.LogDebug(ex,
+                "{HistoryTable} already created by racing session (Spanner ALREADY_EXISTS)",
+                MigrationHistoryTable);
+            Activity.Current?.AddEvent(new ActivityEvent(
+                BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
+        }
     }
 
     private static async Task<bool> IsMigrationAppliedAsync(
