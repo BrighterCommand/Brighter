@@ -14,6 +14,7 @@ public class MediatorOneStepFlowTests
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
+    private readonly InMemoryJobChannel<WorkflowTestData> _channel;
     private readonly Job<WorkflowTestData> _job;
     private bool _stepCompleted;
 
@@ -46,14 +47,14 @@ public class MediatorOneStepFlowTests
         _job.InitSteps(firstStep);
         
         InMemoryStateStoreAsync store = new();
-        InMemoryJobChannel<WorkflowTestData> channel = new();
-        
+        _channel = new InMemoryJobChannel<WorkflowTestData>();
+
         _scheduler = new Scheduler<WorkflowTestData>(
-            channel,
+            _channel,
             store
         );
-        
-        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor, _scheduler);
+
+        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
     }
     
     [Fact]
@@ -61,20 +62,21 @@ public class MediatorOneStepFlowTests
     {
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         
-        await _scheduler.ScheduleAsync(_job); 
-        
+        await _scheduler.ScheduleAsync(_job);
+        _channel.Stop();
+
         var ct = new CancellationTokenSource();
-        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+        ct.CancelAfter(TimeSpan.FromSeconds(1));
 
         try
         {
-            _runner.RunAsync(ct.Token);
+            await _runner.RunAsync(ct.Token);
         }
-        catch (Exception e)
+        catch (OperationCanceledException e)
         {
             _testOutputHelper.WriteLine(e.ToString());
         }
-        
+
         Assert.Contains(MyCommandHandlerAsync.ReceivedCommands, c => c.Value == "Test");
         Assert.Equal(JobState.Done, _job.State);
         Assert.True(_stepCompleted);

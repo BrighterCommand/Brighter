@@ -110,6 +110,44 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Resolves the sync mapper type for a given request type without creating an instance.
+        /// </summary>
+        /// <param name="requestType">The request type to look up.</param>
+        /// <returns>A tuple of (mapper type or null, whether it is a default mapper).</returns>
+        public (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType)
+        {
+            if (_messageMappers.TryGetValue(requestType, out var mapperType))
+                return (mapperType, false);
+
+            if (_defaultMessageMapper == null)
+                return (null, false);
+
+            if (!_defaultMessageMapper.IsGenericTypeDefinition)
+                return (null, true);
+
+            return (_defaultMessageMapper.MakeGenericType(requestType), true);
+        }
+
+        /// <summary>
+        /// Resolves the async mapper type for a given request type without creating an instance.
+        /// </summary>
+        /// <param name="requestType">The request type to look up.</param>
+        /// <returns>A tuple of (mapper type or null, whether it is a default mapper).</returns>
+        public (Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType)
+        {
+            if (_asyncMessageMappers.TryGetValue(requestType, out var mapperType))
+                return (mapperType, false);
+
+            if (_defaultMessageMapperAsync == null)
+                return (null, false);
+
+            if (!_defaultMessageMapperAsync.IsGenericTypeDefinition)
+                return (null, true);
+
+            return (_defaultMessageMapperAsync.MakeGenericType(requestType), true);
+        }
+
+        /// <summary>
         /// Registers this instance.
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>

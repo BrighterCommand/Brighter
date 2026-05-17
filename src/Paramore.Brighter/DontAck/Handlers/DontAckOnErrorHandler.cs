@@ -29,15 +29,15 @@ namespace Paramore.Brighter.DontAck.Handlers;
 
 /// <summary>
 /// Handler that catches unhandled exceptions and converts them to <see cref="DontAckAction"/>.
-/// When used with a message pump (Reactor or Proactor), this causes the message to remain unacknowledged
-/// on the channel, allowing the transport to re-deliver it after its visibility timeout expires.
+/// When used with a message pump (Reactor or Proactor), this asks the channel to apply its not-acknowledged
+/// disposition. The resulting redelivery behavior is transport-specific.
 /// </summary>
 /// <typeparam name="TRequest">The type of request being handled.</typeparam>
 /// <remarks>
 /// This handler should be positioned at the outermost layer of the pipeline (lowest step number)
 /// to act as a backstop for any exceptions that escape inner handlers.
 /// </remarks>
-public class DontAckOnErrorHandler<TRequest> : RequestHandler<TRequest>
+public class DontAckOnErrorHandler<TRequest> : RequestHandler<TRequest>, IAmABackstopHandler
     where TRequest : class, IRequest
 {
     /// <summary>

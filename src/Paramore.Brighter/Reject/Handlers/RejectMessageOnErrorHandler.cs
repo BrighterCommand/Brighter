@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Reject.Handlers;
 /// This handler should be positioned at the outermost layer of the pipeline (lowest step number)
 /// to act as a backstop for any exceptions that escape inner handlers.
 /// </remarks>
-public partial class RejectMessageOnErrorHandler<TRequest> : RequestHandler<TRequest>
+public partial class RejectMessageOnErrorHandler<TRequest> : RequestHandler<TRequest>, IAmABackstopHandler
     where TRequest : class, IRequest
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RejectMessageOnErrorHandler<TRequest>>();

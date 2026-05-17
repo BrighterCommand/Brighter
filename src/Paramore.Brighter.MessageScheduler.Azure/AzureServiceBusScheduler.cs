@@ -124,14 +124,16 @@ public class AzureServiceBusScheduler(
 
     private static ServiceBusMessage ConvertToServiceBusMessage(Message message)
     {
-        var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
+        var azureServiceBusMessage = new ServiceBusMessage(message.Body.Memory);
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey,
             message.Header.MessageType.ToString());
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey,
             message.Header.HandledCount);
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
 
-        foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
+        foreach (var header in message.Header.Bag.Where(h =>
+                     !ASBConstants.ReservedHeaders.Contains(h.Key)
+                     && !MessageHeader.IsLocalHeader(h.Key)))
         {
             azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
         }

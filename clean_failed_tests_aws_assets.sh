@@ -15,6 +15,25 @@ if [[ "${1:-}" == "--dry-run" ]]; then
     echo "[DRY RUN] No resources will be deleted"
 fi
 
+# --- Helper: delete all schedules in a given group ---
+# AWS CLI v2 auto-paginates by default, so all schedules are returned across pages.
+delete_schedules_in_group() {
+    local group_name="$1"
+    local schedules
+    schedules=$(aws scheduler list-schedules --group-name "$group_name" \
+        --query 'Schedules[*].Name' --output text 2>&1 || echo "")
+    for sched_name in $schedules; do
+        [[ -z "$sched_name" || "$sched_name" == "None" ]] && continue
+        if $DRY_RUN; then
+            echo "    [DRY RUN] Would delete schedule: $sched_name (group: $group_name)"
+        else
+            echo "    Deleting schedule: $sched_name (group: $group_name)"
+            aws scheduler delete-schedule --name "$sched_name" --group-name "$group_name" 2>&1 \
+                || echo "      WARNING: failed to delete schedule $sched_name"
+        fi
+    done
+}
+
 # --- Discover tagged resources via Resource Groups Tagging API ---
 # Note: AWS CLI v2 auto-paginates by default. The --query/--output flags are applied
 # after all pages are aggregated, so this handles >100 resources without manual pagination.
@@ -22,7 +41,7 @@ echo "Querying resources tagged Environment=Test ..."
 
 RESOURCE_ARNS=$(aws resourcegroupstaggingapi get-resources \
     --tag-filters Key=Environment,Values=Test \
-    --resource-type-filters sqs:queue sns:topic \
+    --resource-type-filters sqs:queue sns:topic scheduler:schedule-group \
     --query 'ResourceTagMappingList[*].ResourceARN' \
     --output text 2>&1)
 TAG_API_EXIT=$?
@@ -35,7 +54,6 @@ fi
 
 if [[ -z "$RESOURCE_ARNS" || "$RESOURCE_ARNS" == "None" ]]; then
     echo "No resources found with Environment=Test tag."
-    exit 0
 fi
 
 # --- Categorise ARNs by resource type ---
@@ -45,30 +63,36 @@ fi
 SUBSCRIPTIONS=()
 TOPICS=()
 QUEUES=()
+SCHEDULE_GROUPS=()
 
-for arn in $RESOURCE_ARNS; do
-    # Count colons to distinguish SNS topics (5 colons) from subscriptions (6 colons)
-    COLON_COUNT=$(echo "$arn" | tr -cd ':' | wc -c | tr -d ' ')
-    case "$arn" in
-        *:sns:*)
-            if [[ "$COLON_COUNT" -ge 6 ]]; then
-                SUBSCRIPTIONS+=("$arn")
-            else
-                TOPICS+=("$arn")
-            fi
-            ;;
-        *:sqs:*)
-            QUEUES+=("$arn")
-            ;;
-        *)
-            echo "  Skipping unknown resource type: $arn"
-            ;;
-    esac
-done
+if [[ -n "$RESOURCE_ARNS" && "$RESOURCE_ARNS" != "None" ]]; then
+    for arn in $RESOURCE_ARNS; do
+        # Count colons to distinguish SNS topics (5 colons) from subscriptions (6 colons)
+        COLON_COUNT=$(echo "$arn" | tr -cd ':' | wc -c | tr -d ' ')
+        case "$arn" in
+            *:sns:*)
+                if [[ "$COLON_COUNT" -ge 6 ]]; then
+                    SUBSCRIPTIONS+=("$arn")
+                else
+                    TOPICS+=("$arn")
+                fi
+                ;;
+            *:sqs:*)
+                QUEUES+=("$arn")
+                ;;
+            *:scheduler:*/schedule-group/*)
+                SCHEDULE_GROUPS+=("$arn")
+                ;;
+            *)
+                echo "  Skipping unknown resource type: $arn"
+                ;;
+        esac
+    done
+fi
 
-echo "Found: ${#SUBSCRIPTIONS[@]} subscription(s), ${#TOPICS[@]} topic(s), ${#QUEUES[@]} queue(s)"
+echo "Found: ${#SUBSCRIPTIONS[@]} subscription(s), ${#TOPICS[@]} topic(s), ${#QUEUES[@]} queue(s), ${#SCHEDULE_GROUPS[@]} schedule group(s)"
 
-# --- Delete in order: subscriptions, then topics, then queues ---
+# --- Delete in order: subscriptions, then topics, then queues, then schedule groups ---
 
 # 1. Subscriptions
 if [[ ${#SUBSCRIPTIONS[@]} -gt 0 ]]; then
@@ -125,5 +149,121 @@ if [[ ${#QUEUES[@]} -gt 0 ]]; then
     done
 fi
 
+# 4. EventBridge Scheduler — delete schedules within groups, then the groups themselves
+if [[ ${#SCHEDULE_GROUPS[@]} -gt 0 ]]; then
+    for arn in "${SCHEDULE_GROUPS[@]}"; do
+        # Extract group name from ARN (last segment after schedule-group/)
+        GROUP_NAME="${arn##*/}"
+
+        # Skip the 'default' group — it cannot be deleted, but we clean its schedules
+        if [[ "$GROUP_NAME" == "default" ]]; then
+            echo "  Cleaning schedules in default group (group itself cannot be deleted)"
+            delete_schedules_in_group "$GROUP_NAME"
+            continue
+        fi
+
+        echo "  Processing schedule group: $GROUP_NAME"
+        delete_schedules_in_group "$GROUP_NAME"
+
+        if $DRY_RUN; then
+            echo "  [DRY RUN] Would delete schedule group: $GROUP_NAME"
+        else
+            echo "  Deleting schedule group: $GROUP_NAME"
+            aws scheduler delete-schedule-group --name "$GROUP_NAME" 2>&1 \
+                || echo "    WARNING: failed to delete schedule group $GROUP_NAME"
+        fi
+    done
+fi
+
+# --- Also clean up Brighter-tagged schedule groups (Source=Brighter) not caught above ---
+# The AwsSchedulerFactory tags groups with Source=Brighter. We require both Source=Brighter
+# AND Environment=Test to avoid accidentally deleting non-test resources in shared accounts.
+echo "Checking for Brighter-tagged schedule groups ..."
+BRIGHTER_GROUPS=$(aws resourcegroupstaggingapi get-resources \
+    --tag-filters Key=Source,Values=Brighter Key=Environment,Values=Test \
+    --resource-type-filters scheduler:schedule-group \
+    --query 'ResourceTagMappingList[*].ResourceARN' \
+    --output text 2>&1 || echo "")
+
+if [[ -n "$BRIGHTER_GROUPS" && "$BRIGHTER_GROUPS" != "None" ]]; then
+    for arn in $BRIGHTER_GROUPS; do
+        GROUP_NAME="${arn##*/}"
+        [[ "$GROUP_NAME" == "default" ]] && continue
+
+        # Skip if already processed above
+        if [[ ${#SCHEDULE_GROUPS[@]} -gt 0 ]] && printf '%s\n' "${SCHEDULE_GROUPS[@]}" | grep -qF "$arn"; then
+            continue
+        fi
+
+        echo "  Processing Brighter schedule group: $GROUP_NAME"
+        delete_schedules_in_group "$GROUP_NAME"
+
+        if $DRY_RUN; then
+            echo "  [DRY RUN] Would delete Brighter schedule group: $GROUP_NAME"
+        else
+            echo "  Deleting Brighter schedule group: $GROUP_NAME"
+            aws scheduler delete-schedule-group --name "$GROUP_NAME" 2>&1 \
+                || echo "    WARNING: failed to delete schedule group $GROUP_NAME"
+        fi
+    done
+else
+    echo "  No additional Brighter schedule groups found."
+fi
+
+# --- Fallback: clean up untagged test resources by naming convention ---
+# Some test fixtures (particularly FIFO tests) were not tagged with Environment=Test.
+# These are identified by their naming pattern: <TestPrefix>-<GUID> (truncated to 45 chars).
+# This section lists all topics/queues and deletes those matching known test prefixes.
+TEST_PREFIXES="Producer-Send-Tests|Producer-Requeue-Tests|Producer-DLQ-Tests|Producer-Scheduler-Tests|Producer-Scheduler-Async-Tests|Producer-Fire-Scheduler-Tests|Producer-Fire-Scheduler-Async-Tests|Producer-Tag-Tests|Producer-FSR-Tests|Producer-FSRA-Tests|Consumer-Requeue-Tests|Consumer-DLQ-Tests|Consumer-DLQ-Fifo|Consumer-Fallback-Tests|Consumer-Invalid-Tests|Consumer-NoChan-Tests|Buffered-Consumer-Tests|Buffered-Scheduler-Tests|Buffered-Scheduler-Async-Tests|Buffered-FSR-Tests|Redrive-Tests|Redrive-DLQ-Tests|Raw-Msg-Delivery-Tests|DLQ-Reader|Invalid-Reader"
+
+echo ""
+echo "Scanning for untagged test resources by naming convention ..."
+
+# Clean untagged SNS topics
+ALL_TOPICS=$(aws sns list-topics --query 'Topics[*].TopicArn' --output text 2>&1 || echo "")
+UNTAGGED_TOPIC_COUNT=0
+if [[ -n "$ALL_TOPICS" && "$ALL_TOPICS" != "None" ]]; then
+    for topic_arn in $ALL_TOPICS; do
+        TOPIC_NAME="${topic_arn##*:}"
+        if echo "$TOPIC_NAME" | grep -qE "^($TEST_PREFIXES)"; then
+            UNTAGGED_TOPIC_COUNT=$((UNTAGGED_TOPIC_COUNT + 1))
+            if $DRY_RUN; then
+                echo "  [DRY RUN] Would delete untagged test topic: $TOPIC_NAME"
+            else
+                # Delete subscriptions first
+                TOPIC_SUBS=$(aws sns list-subscriptions-by-topic --topic-arn "$topic_arn" \
+                    --query 'Subscriptions[*].SubscriptionArn' --output text 2>&1 || echo "")
+                for sub_arn in $TOPIC_SUBS; do
+                    [[ "$sub_arn" == "PendingConfirmation" || -z "$sub_arn" || "$sub_arn" == "None" ]] && continue
+                    aws sns unsubscribe --subscription-arn "$sub_arn" 2>&1 || true
+                done
+                echo "  Deleting untagged test topic: $TOPIC_NAME"
+                aws sns delete-topic --topic-arn "$topic_arn" 2>&1 || echo "    WARNING: failed to delete topic $TOPIC_NAME"
+            fi
+        fi
+    done
+fi
+echo "  Found $UNTAGGED_TOPIC_COUNT untagged test topic(s)"
+
+# Clean untagged SQS queues
+ALL_QUEUES=$(aws sqs list-queues --query 'QueueUrls[*]' --output text 2>&1 || echo "")
+UNTAGGED_QUEUE_COUNT=0
+if [[ -n "$ALL_QUEUES" && "$ALL_QUEUES" != "None" ]]; then
+    for queue_url in $ALL_QUEUES; do
+        QUEUE_NAME="${queue_url##*/}"
+        if echo "$QUEUE_NAME" | grep -qE "^($TEST_PREFIXES)"; then
+            UNTAGGED_QUEUE_COUNT=$((UNTAGGED_QUEUE_COUNT + 1))
+            if $DRY_RUN; then
+                echo "  [DRY RUN] Would delete untagged test queue: $QUEUE_NAME"
+            else
+                echo "  Deleting untagged test queue: $QUEUE_NAME"
+                aws sqs delete-queue --queue-url "$queue_url" 2>&1 || echo "    WARNING: failed to delete queue $QUEUE_NAME"
+            fi
+        fi
+    done
+fi
+echo "  Found $UNTAGGED_QUEUE_COUNT untagged test queue(s)"
+
+echo ""
 echo "Cleanup complete."
 exit 0

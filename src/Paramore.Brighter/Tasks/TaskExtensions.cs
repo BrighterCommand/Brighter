@@ -1,3 +1,11 @@
+#region Sources
+
+// These extension methods are based on Stephen Cleary's Nito.AsyncEx synchronous task
+// extensions, see https://github.com/StephenCleary/AsyncEx/blob/master/src/Nito.AsyncEx.Tasks/SynchronousTaskExtensions.cs
+// The original code is licensed under the MIT License (MIT).
+
+#endregion
+
 using System;
 using System.Runtime.ExceptionServices;
 using System.Threading;
@@ -8,83 +16,96 @@ namespace Paramore.Brighter.Tasks;
 public static class TaskExtensions
 {
     /// <summary>
-    /// Waits for the task to complete, unwrapping any exceptions.
+    /// Waits for the task to complete, unwrapping any exception (the original exception is
+    /// rethrown directly, not wrapped in an <see cref="AggregateException"/>).
     /// </summary>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
     public static void WaitAndUnwrapException(this Task task)
     {
-        if (task == null)
-            throw new ArgumentNullException(nameof(task));
+#if NET
+        ArgumentNullException.ThrowIfNull(task);
+#else
+        if (task is null) throw new ArgumentNullException(nameof(task));
+#endif
         task.GetAwaiter().GetResult();
     }
 
     /// <summary>
-    /// Waits for the task to complete, unwrapping any exceptions.
+    /// Waits for the task to complete, unwrapping any exception. Observes the supplied
+    /// <paramref name="cancellationToken"/>.
     /// </summary>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
-    /// <param name="cancellationToken">A cancellation token to observe while waiting for the task to complete.</param>
-    /// <exception cref="OperationCanceledException">The <paramref name="cancellationToken"/> was cancelled before the <paramref name="task"/> completed, or the <paramref name="task"/> raised an <see cref="OperationCanceledException"/>.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// The <paramref name="cancellationToken"/> was cancelled before the task completed, or
+    /// the task itself raised an <see cref="OperationCanceledException"/>.
+    /// </exception>
     public static void WaitAndUnwrapException(this Task task, CancellationToken cancellationToken)
     {
-        if (task == null)
-            throw new ArgumentNullException(nameof(task));
+#if NET
+        ArgumentNullException.ThrowIfNull(task);
+        task.WaitAsync(cancellationToken).GetAwaiter().GetResult();
+#else
+        if (task is null) throw new ArgumentNullException(nameof(task));
         try
         {
             task.Wait(cancellationToken);
         }
-        catch (AggregateException ex)
+        catch (AggregateException ex) when (ex.InnerException is not null)
         {
-            ExceptionDispatchInfo.Capture(ex).Throw();
+            ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
         }
+#endif
     }
 
     /// <summary>
-    /// Waits for the task to complete, unwrapping any exceptions.
+    /// Waits for the task to complete, unwrapping any exception and returning its result.
     /// </summary>
-    /// <typeparam name="TResult">The type of the result of the task.</typeparam>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
-    /// <returns>The result of the task.</returns>
     public static TResult WaitAndUnwrapException<TResult>(this Task<TResult> task)
     {
-        if (task == null)
-            throw new ArgumentNullException(nameof(task));
+#if NET
+        ArgumentNullException.ThrowIfNull(task);
+#else
+        if (task is null) throw new ArgumentNullException(nameof(task));
+#endif
         return task.GetAwaiter().GetResult();
     }
 
     /// <summary>
-    /// Waits for the task to complete, unwrapping any exceptions.
+    /// Waits for the task to complete, unwrapping any exception and returning its result.
+    /// Observes the supplied <paramref name="cancellationToken"/>.
     /// </summary>
-    /// <typeparam name="TResult">The type of the result of the task.</typeparam>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
-    /// <param name="cancellationToken">A cancellation token to observe while waiting for the task to complete.</param>
-    /// <returns>The result of the task.</returns>
-    /// <exception cref="OperationCanceledException">The <paramref name="cancellationToken"/> was cancelled before the <paramref name="task"/> completed, or the <paramref name="task"/> raised an <see cref="OperationCanceledException"/>.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// The <paramref name="cancellationToken"/> was cancelled before the task completed, or
+    /// the task itself raised an <see cref="OperationCanceledException"/>.
+    /// </exception>
     public static TResult WaitAndUnwrapException<TResult>(this Task<TResult> task, CancellationToken cancellationToken)
     {
-        if (task == null)
-            throw new ArgumentNullException(nameof(task));
+#if NET
+        ArgumentNullException.ThrowIfNull(task);
+        return task.WaitAsync(cancellationToken).GetAwaiter().GetResult();
+#else
+        if (task is null) throw new ArgumentNullException(nameof(task));
         try
         {
             task.Wait(cancellationToken);
             return task.Result;
         }
-        catch (AggregateException ex)
+        catch (AggregateException ex) when (ex.InnerException is not null)
         {
-            ExceptionDispatchInfo.Capture(ex).Throw();
+            ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+            throw; // unreachable
         }
-
-        // This should never be reached
-        return task.Result;
+#endif
     }
 
     /// <summary>
-    /// Waits for the task to complete, but does not raise task exceptions. The task exception (if any) is unobserved.
+    /// Waits for the task to complete, silently observing and discarding any exception.
     /// </summary>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
     public static void WaitWithoutException(this Task task)
     {
-        if (task == null)
-            throw new ArgumentNullException(nameof(task));
+#if NET
+        ArgumentNullException.ThrowIfNull(task);
+#else
+        if (task is null) throw new ArgumentNullException(nameof(task));
+#endif
         try
         {
             task.Wait();
@@ -95,15 +116,19 @@ public static class TaskExtensions
     }
 
     /// <summary>
-    /// Waits for the task to complete, but does not raise task exceptions. The task exception (if any) is unobserved.
+    /// Waits for the task to complete, silently observing and discarding any exception.
+    /// Observes the supplied <paramref name="cancellationToken"/>.
     /// </summary>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
-    /// <param name="cancellationToken">A cancellation token to observe while waiting for the task to complete.</param>
-    /// <exception cref="OperationCanceledException">The <paramref name="cancellationToken"/> was cancelled before the <paramref name="task"/> completed.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// The <paramref name="cancellationToken"/> was cancelled before the task completed.
+    /// </exception>
     public static void WaitWithoutException(this Task task, CancellationToken cancellationToken)
     {
-        if (task == null)
-            throw new ArgumentNullException(nameof(task));
+#if NET
+        ArgumentNullException.ThrowIfNull(task);
+#else
+        if (task is null) throw new ArgumentNullException(nameof(task));
+#endif
         try
         {
             task.Wait(cancellationToken);

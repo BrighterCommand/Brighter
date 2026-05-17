@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -58,9 +59,13 @@ namespace Paramore.Brighter.ServiceActivator
         /// Runs this instance.
         /// </summary>
         /// <returns>Task.</returns>
-        public async Task Run()
+        public Task Run()
         {
-            await Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+            return Task.Factory.StartNew(
+                () => _messagePump.Run(),
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
         }
 
         /// <summary>

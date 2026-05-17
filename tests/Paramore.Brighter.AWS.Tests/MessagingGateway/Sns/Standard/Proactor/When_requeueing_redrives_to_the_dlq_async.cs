@@ -16,7 +16,6 @@ using Amazon.SimpleNotificationService.Model;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _sender;
@@ -59,7 +58,12 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SnsMessageProducer(_awsConnection,  new SnsPublication { Topic = routingKey, MakeChannels = OnMissingChannel.Create });
+        _sender = new SnsMessageProducer(_awsConnection, new SnsPublication
+        {
+            Topic = routingKey,
+            MakeChannels = OnMissingChannel.Create,
+            TopicAttributes = new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }])
+        });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();
 
