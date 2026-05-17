@@ -7,7 +7,7 @@ This sample demonstrates how to use [Quartz.NET](https://www.quartz-scheduler.ne
 - [.NET 6.0 SDK](https://dotnet.microsoft.com/download/dotnet/6.0)
 - [Quartz.NET](https://www.nuget.org/packages/Quartz) (added via NuGet)
 - AWS credentials (if using AWS SQS/SNS integration)
-- LocalStack (optional, for local AWS service emulation)
+- Moto (optional, for local AWS service emulation)
 
 ## Getting Started
 
@@ -36,38 +36,35 @@ This sample demonstrates how to use [Quartz.NET](https://www.quartz-scheduler.ne
 
 2. **Running the Application**
 
-To run with LocalStack for AWS SQS/SNS emulation:
+To run with Moto for AWS SQS/SNS emulation:
 
-- Start LocalStack:
+- Start Moto:
 
   ```sh
-  docker-compose -f docker-compose-localstack.yaml up
+  docker-compose -f docker-compose-aws.yaml up
   ```
 
-- Ensure the service URL is set to `http://localhost:4566/` in your configuration.
+- Ensure the service URL is set to `http://localhost:4566/` in your configuration, or set the `AWS_SERVICE_URL` environment variable.
 
-3. **Inspecting LocalStack**
+3. **Inspecting AWS Mock Services**
 
-To inspect the queues and topics in LocalStack, you can use the LocalStack web UI or AWS CLI commands pointed to the LocalStack endpoint.
+To inspect the queues and topics in Moto, you can use the AWS CLI pointed to the Moto endpoint:
 
-- Download https://github.com/localstack/awscli-local
-- Ensure that you set the region to useast-1
+- Ensure that you set the region to us-east-1
 
 ```sh
- awslocal configure set region us-east-1
+aws configure set region us-east-1
 ```
 
 - Use the following commands to list queues and topics:
 
   ```sh
-  awslocal sqs list-queues
-  awslocal sns list-topics
+  aws --endpoint-url http://localhost:4566 sqs list-queues
+  aws --endpoint-url http://localhost:4566 sns list-topics
   ```
 
 ## Resources
 
 - [Quartz.NET Documentation](https://www.quartz-scheduler.net/documentation/)
 - [Brighter Documentation](https://github.com/BrighterCommand/Brighter)
-- [LocalStack Documentation](https://docs.localstack.cloud/)
-
-
+- [Moto Documentation](https://docs.getmoto.org/)

@@ -39,7 +39,8 @@ public class AwsAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
         var producer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create
+                MakeChannels = OnMissingChannel.Create,
+                TopicAttributes = new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }])
             });
 
         producer.ConfirmTopicExistsAsync(topicName).Wait();

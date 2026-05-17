@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Claude Code session state
+PROMPT.md
+
 # User-specific files
 *.suo
 *.user
@@ -341,3 +344,6 @@ tests/certs/
 # Ralph loop
 RALPH_STOP
 ralph.log
+
+# AI agent session state
+PROMPT.md

@@ -91,11 +91,8 @@ public class Program
                 //create the gateway
                 if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                 {
-                    // var serviceURL = "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
-                    // var region = string.IsNullOrWhiteSpace(serviceURL)
-                    //     ? RegionEndpoint.EUWest1
-                    //     : RegionEndpoint.USEast1;
-
+                    // EventBridge Scheduler is not implemented by Moto, so this sample
+                    // always targets real AWS and ignores AWS_SERVICE_URL.
                     var serviceURL = string.Empty;
                     var region = RegionEndpoint.USEast1;
                     var awsConnection = new AWSMessagingGatewayConnection(credentials, region,

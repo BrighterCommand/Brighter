@@ -23,10 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using System.Net.Mime;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading;
 using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
@@ -37,10 +38,40 @@ namespace Paramore.Brighter
     /// </summary>
     public class MessageBody : IEquatable<MessageBody>
     {
+        private readonly ReadOnlyMemory<byte> _memory;
+        private string? _cachedValue;
+        private int _cachedHashCode;
+        private bool _hashCodeComputed;
+
         /// <summary>
         /// The message body as a byte array.
+        /// Allocates a new array on every call. Prefer <see cref="Memory"/> for zero-copy access.
         /// </summary>
-        public byte[] Bytes { get; private set; }
+        [Obsolete("Use Memory for zero-copy access. This property allocates on every call.")]
+        public byte[] Bytes => _memory.ToArray();
+
+        /// <summary>
+        /// The message body as a <see cref="ReadOnlyMemory{T}"/> of <see cref="byte"/>.
+        /// Zero-copy access to the body content.
+        /// </summary>
+        public ReadOnlyMemory<byte> Memory => _memory;
+
+        /// <summary>
+        /// Returns the underlying byte[] without copying when the memory is backed by an array.
+        /// Falls back to allocating a new array when the memory is not array-backed.
+        /// Use this when an API requires byte[] and <see cref="Memory"/> or Span cannot be used.
+        /// </summary>
+        public byte[] ToByteArray()
+        {
+            if (MemoryMarshal.TryGetArray(Memory, out ArraySegment<byte> segment)
+                && segment.Offset == 0
+                && segment.Count == segment.Array!.Length)
+            {
+                return segment.Array;
+            }
+
+            return Memory.ToArray();
+        }
 
         /// <summary>
         /// The type of message encoded into Bytes.  A hint for deserialization that 
@@ -64,19 +95,21 @@ namespace Paramore.Brighter
         {
             get
             {
-                switch (CharacterEncoding)
+                var cached = Volatile.Read(ref _cachedValue);
+                if (cached is not null) return cached;
+
+                var result = CharacterEncoding switch
                 {
-                    case CharacterEncoding.Base64:
-                    case CharacterEncoding.Raw:
-                        return Convert.ToBase64String(Bytes);
-                    case CharacterEncoding.UTF8:
-                        return Encoding.UTF8.GetString(Bytes);
-                    case CharacterEncoding.ASCII:
-                        return Encoding.ASCII.GetString(Bytes);
-                    default:
-                        throw new InvalidCastException(
-                            $"Message Body with {CharacterEncoding} is not available");
-                }
+                    CharacterEncoding.Base64 => ToBase64(),
+                    CharacterEncoding.Raw => ToBase64(),
+                    CharacterEncoding.UTF8 => DecodeString(Encoding.UTF8),
+                    CharacterEncoding.ASCII => DecodeString(Encoding.ASCII),
+                    _ => throw new InvalidCastException(
+                        $"Message Body with {CharacterEncoding} is not available")
+                };
+
+                Volatile.Write(ref _cachedValue, result);
+                return result;
             }
         }
 
@@ -103,17 +136,17 @@ namespace Paramore.Brighter
 
             if (body == null)
             {
-                Bytes = Array.Empty<byte>();
+                _memory = ReadOnlyMemory<byte>.Empty;
                 return;
             }
-            
-            Bytes = (CharacterEncoding switch
+
+            _memory = CharacterEncoding switch
             {
                 CharacterEncoding.Base64 => Convert.FromBase64String(body),
                 CharacterEncoding.UTF8 => Encoding.UTF8.GetBytes(body),
                 CharacterEncoding.ASCII => Encoding.ASCII.GetBytes(body),
-                _ => Bytes
-            })!;
+                _ => ReadOnlyMemory<byte>.Empty
+            };
         }
 
 
@@ -138,17 +171,16 @@ namespace Paramore.Brighter
             
             if (bytes is null)
             {
-                Bytes = [];
+                _memory = ReadOnlyMemory<byte>.Empty;
                 return;
             }
-            
-            Bytes = bytes;
+
+            _memory = bytes;
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
-        /// TODO: We don't support the range of options on Span on netstandard2.0 that let's us  flow through a ReadOnlyMemory
-        /// for serialization so we allocate here as well as in PullConsumer when we probably don't need this allocation.
+        /// Initializes a new instance of the <see cref="MessageBody"/> class using a <see cref="ReadOnlyMemory{T}"/> of <see cref="byte"/>.
+        /// Zero-copy: the memory is stored directly without allocation.
         /// </summary>
         /// <param name="body">The <see cref="ReadOnlyMemory{T}"/> of <see cref="byte"/> containing the body of the message.</param>
         /// <param name="contentType">The <see cref="ContentType"/> of the body.</param>
@@ -162,7 +194,7 @@ namespace Paramore.Brighter
             ContentType = contentType ?? new ContentType(MediaTypeNames.Application.Json);
             SetCharacterEncoding(ContentType, characterEncoding);
 #endif
-            Bytes = body.ToArray();
+            _memory = body;
             CharacterEncoding = characterEncoding;
         }
 
@@ -177,9 +209,9 @@ namespace Paramore.Brighter
         {
             return characterEncoding switch
             {
-                CharacterEncoding.Base64 => Convert.ToBase64String(Bytes),
-                CharacterEncoding.UTF8 => Encoding.UTF8.GetString(Bytes),
-                CharacterEncoding.ASCII => Encoding.ASCII.GetString(Bytes),
+                CharacterEncoding.Base64 => ToBase64(),
+                CharacterEncoding.UTF8 => DecodeString(Encoding.UTF8),
+                CharacterEncoding.ASCII => DecodeString(Encoding.ASCII),
                 _ => throw new InvalidOperationException($"Message Body with {CharacterEncoding} is not available")
             };
         }
@@ -192,8 +224,8 @@ namespace Paramore.Brighter
         public bool Equals(MessageBody? other)
         {
             if (other is null) return false;
-            var bodyEqual = Bytes.SequenceEqual(other.Bytes);
-            var sameContentType = ContentType is null || ContentType.Equals(other.ContentType); 
+            var bodyEqual = _memory.Span.SequenceEqual(other._memory.Span);
+            var sameContentType = ContentType is null || ContentType.Equals(other.ContentType);
             return bodyEqual && sameContentType ;
         }
 
@@ -216,7 +248,20 @@ namespace Paramore.Brighter
         /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
         public override int GetHashCode()
         {
-            return (Bytes is not null ? Bytes.GetHashCode() : 0);
+            if (Volatile.Read(ref _hashCodeComputed)) return _cachedHashCode;
+
+            var hash = new HashCode();
+#if NET6_0_OR_GREATER // AddBytes requires .NET 6+, not just non-netstandard2.0
+            hash.AddBytes(_memory.Span);
+#else
+            foreach (var b in _memory.Span)
+                hash.Add(b);
+#endif
+            hash.Add(ContentType?.ToString());
+            var result = hash.ToHashCode();
+            Volatile.Write(ref _cachedHashCode, result);
+            Volatile.Write(ref _hashCodeComputed, true);
+            return result;
         }
 
         /// <summary>
@@ -247,5 +292,13 @@ namespace Paramore.Brighter
             if (contentType is not null && characterEncodingString is not null)
                 contentType.CharSet = characterEncodingString;
         }
+
+#if NETSTANDARD2_0
+        private string ToBase64() => Convert.ToBase64String(_memory.ToArray());
+        private string DecodeString(Encoding encoding) => encoding.GetString(_memory.ToArray());
+#else
+        private string ToBase64() => Convert.ToBase64String(_memory.Span);
+        private string DecodeString(Encoding encoding) => encoding.GetString(_memory.Span);
+#endif
     }
 }

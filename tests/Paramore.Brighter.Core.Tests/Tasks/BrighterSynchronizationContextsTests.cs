@@ -455,4 +455,149 @@ public class BrighterSynchronizationContextsTests
         var context = new BrighterAsyncContext();
         Assert.Equal(context.TaskScheduler.Id, context.Id);
     }
+
+    [Fact]
+    public void Post_AfterContextDisposed_DoesNotThrow()
+    {
+        SynchronizationContext? captured = null;
+        BrighterAsyncContext.Run(() =>
+        {
+            captured = SynchronizationContext.Current;
+        });
+
+        // At this point the BrighterAsyncContext's 'using' scope has already disposed the
+        // underlying task queue. A stray callback that captured the SynchronizationContext
+        // during Run must not crash the posting thread.
+        Assert.NotNull(captured);
+        var exception = Record.Exception(() => captured!.Post(_ => { }, null));
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void Send_AfterContextDisposed_Throws()
+    {
+        SynchronizationContext? captured = null;
+        BrighterAsyncContext.Run(() =>
+        {
+            captured = SynchronizationContext.Current;
+        });
+
+        Assert.NotNull(captured);
+
+        // Send from a different thread than the one that ran the pump: must not hang.
+        // Post-shutdown, the pump is gone, so Send cannot deliver - it should throw.
+        var thrown = Task.Run(() =>
+        {
+            try
+            {
+                captured!.Send(_ => { }, null);
+                return (Exception?)null;
+            }
+            catch (Exception ex)
+            {
+                return ex;
+            }
+        });
+
+        Assert.True(thrown.Wait(TimeSpan.FromSeconds(5)), "Send hung after context disposal");
+        Assert.IsType<ObjectDisposedException>(thrown.Result);
+    }
+
+    [Fact]
+    public void Send_AfterShutdown_StressIterations_NeverHangsAndOnlyThrowsObjectDisposed()
+    {
+        // Stress the post-shutdown Send path: for many iterations, run and fully dispose
+        // a context, then fire a Send from a ThreadPool thread against the captured
+        // SynchronizationContext. Every Send must either complete normally or throw
+        // ObjectDisposedException within a bounded time - never hang, never surface
+        // a different exception type. A regression that re-introduces the Send-hang
+        // would blow the per-iteration timeout.
+        const int iterations = 1000;
+        for (var i = 0; i < iterations; i++)
+        {
+            SynchronizationContext? captured = null;
+            BrighterAsyncContext.Run(() =>
+            {
+                captured = SynchronizationContext.Current;
+            });
+
+            Assert.NotNull(captured);
+
+            var sent = Task.Run(() =>
+            {
+                try
+                {
+                    captured!.Send(_ => { }, null);
+                    return (Exception?)null;
+                }
+                catch (Exception e)
+                {
+                    return e;
+                }
+            });
+
+            Assert.True(sent.Wait(TimeSpan.FromSeconds(5)), $"Send hung on iteration {i}");
+            if (sent.Result is not null)
+                Assert.IsType<ObjectDisposedException>(sent.Result);
+        }
+    }
+
+    [Fact]
+    public void Dispose_CalledTwice_DoesNotThrow()
+    {
+        var context = new BrighterAsyncContext();
+        context.Dispose();
+        var exception = Record.Exception(() => context.Dispose());
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void Run_NestedInsideOuterRun_DoesNotDeadlock()
+    {
+        var innerThread = 0;
+        var outerThread = BrighterAsyncContext.Run(() =>
+        {
+            // HideScheduler on the outer factory means a nested Run creates a fresh
+            // context rather than piggy-backing the outer pump; this must not deadlock.
+            innerThread = BrighterAsyncContext.Run(() => Thread.CurrentThread.ManagedThreadId);
+            return Thread.CurrentThread.ManagedThreadId;
+        });
+
+        Assert.NotEqual(0, innerThread);
+        Assert.NotEqual(0, outerThread);
+    }
+
+    [Fact]
+    public void Execute_CalledConcurrently_ThrowsInvalidOperationException()
+    {
+        var context = new BrighterAsyncContext();
+
+        var firstStarted = new ManualResetEventSlim(false);
+        var releaseFirst = new ManualResetEventSlim(false);
+
+        var blockingTask = context.Factory.StartNew(
+            () =>
+            {
+                firstStarted.Set();
+                releaseFirst.Wait();
+            },
+            context.Factory.CancellationToken,
+            context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
+            context.TaskScheduler);
+
+        var firstExecute = Task.Run(() => context.Execute(blockingTask));
+
+        try
+        {
+            Assert.True(firstStarted.Wait(TimeSpan.FromSeconds(5)), "First Execute did not start");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => context.Execute(blockingTask));
+            Assert.Contains("not re-entrant", ex.Message);
+        }
+        finally
+        {
+            releaseFirst.Set();
+            firstExecute.Wait(TimeSpan.FromSeconds(5));
+        }
+    }
 }

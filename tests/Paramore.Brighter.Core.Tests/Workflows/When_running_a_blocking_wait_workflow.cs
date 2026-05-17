@@ -68,26 +68,31 @@ public class MediatorWaitStepFlowTests
     public async Task When_running_a_wait_workflow()
     {
         var ct = new CancellationTokenSource();
-        ct.CancelAfter( TimeSpan.FromSeconds(3));
+        ct.CancelAfter(TimeSpan.FromSeconds(3));
 
+        Task runnerTask = Task.CompletedTask;
+        Task wakerTask = Task.CompletedTask;
         try
         {
             await _scheduler.ScheduleAsync(_job);
-            
+
             _timeProvider.Advance(TimeSpan.FromMilliseconds(1000));
-            
-            _runner.RunAsync(ct.Token);
-            _waker.RunAsync(ct.Token);
 
-            await Task.Delay(5, ct.Token);
+            runnerTask = _runner.RunAsync(ct.Token);
+            wakerTask = _waker.RunAsync(ct.Token);
 
+            await Task.Delay(TimeSpan.FromMilliseconds(500), ct.Token);
         }
-        catch (Exception e)
+        catch (OperationCanceledException e)
         {
             _testOutputHelper.WriteLine(e.ToString());
         }
 
         Assert.True(_stepCompleted);
         Assert.Equal(JobState.Done, _job.State);
+
+        ct.Cancel();
+        try { await Task.WhenAll(runnerTask, wakerTask); }
+        catch (OperationCanceledException) { }
     }
 }

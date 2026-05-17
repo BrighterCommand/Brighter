@@ -121,11 +121,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>Task.</returns>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
-            if (s_pool is null)
-            {
-                throw new ChannelFailureException("RedisMessageProducer: Connection pool has not been initialized");
-            }
-            
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
@@ -145,7 +140,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     $"RedisMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
 
-            using var client = s_pool.Value.GetClient();
+            using var client = Pool.Value.GetClient();
             Topic = message.Header.Topic;
 
             BrighterTracer.WriteProducerEvent(Span, "redis", message, instrumentation);
@@ -175,11 +170,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>Task.</returns>
         public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
-            if (s_pool is null)
-            {
-                throw new ChannelFailureException("RedisMessageProducer: Connection pool has not been initialized");
-            }
-            
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
@@ -199,12 +189,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     $"RedisMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
 
-            await using var client = await s_pool.Value.GetClientAsync(token: cancellationToken);
+            await using var client = await Pool.Value.GetClientAsync(token: cancellationToken);
             Topic = message.Header.Topic;
 
             BrighterTracer.WriteProducerEvent(Span, "redis", message, instrumentation);
             Log.PreparingToSend(s_logger);
-  
+
             var redisMessage = CreateRedisMessage(message);
 
             Log.PublishingMessage(s_logger, message.Header.Topic, message.Id.ToString(), message.Body.Value);
