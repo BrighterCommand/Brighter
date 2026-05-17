@@ -246,29 +246,32 @@ namespace Paramore.Brighter.AsyncAPI
 
         private static IEnumerable<(Type type, string topic)> GetPublicationTopicTypes(Assembly assembly)
         {
-            Type[] types;
+            foreach (var type in LoadAssemblyTypes(assembly))
+            {
+                var topic = TryGetPublicationTopic(type);
+                if (topic != null) yield return (type, topic);
+            }
+        }
+
+        private static IEnumerable<Type> LoadAssemblyTypes(Assembly assembly)
+        {
             try
             {
-                types = assembly.GetTypes();
+                return assembly.GetTypes();
             }
             catch (ReflectionTypeLoadException ex)
             {
-                types = ex.Types.Where(t => t != null).ToArray()!;
+                return ex.Types.Where(t => t != null).ToArray()!;
             }
+        }
 
-            foreach (var type in types)
-            {
-                if (type.IsAbstract || type.IsInterface) continue;
-                if (!typeof(IRequest).IsAssignableFrom(type)) continue;
+        private static string? TryGetPublicationTopic(Type type)
+        {
+            if (type.IsAbstract || type.IsInterface) return null;
+            if (!typeof(IRequest).IsAssignableFrom(type)) return null;
 
-                var attr = type.GetCustomAttribute<PublicationTopicAttribute>();
-                if (attr == null) continue;
-
-                var topic = attr.Destination?.RoutingKey?.Value;
-                if (string.IsNullOrEmpty(topic)) continue;
-
-                yield return (type, topic);
-            }
+            var topic = type.GetCustomAttribute<PublicationTopicAttribute>()?.Destination?.RoutingKey?.Value;
+            return string.IsNullOrEmpty(topic) ? null : topic;
         }
 
         private static void EnsureChannel(Dictionary<string, V3ChannelDefinition> channels, ChannelDescriptor descriptor)
