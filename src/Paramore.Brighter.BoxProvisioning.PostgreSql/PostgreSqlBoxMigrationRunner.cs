@@ -125,9 +125,23 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
     ""AppliedAt"" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (""SchemaName"", ""BoxTableName"", ""MigrationVersion"")
 )";
+        // Postgres marks the outer transaction as aborted on a catalog-level duplicate-type
+        // error from CREATE TABLE IF NOT EXISTS regardless of whether we catch it. Without a
+        // savepoint the catch below leaves the transaction "poisoned" — RedetectStateAsync's
+        // next statement then fails with 25P02 even though our swallow was intentional. A
+        // SAVEPOINT around the CREATE narrows the abort to the inner sub-transaction, so
+        // ROLLBACK TO SAVEPOINT restores a usable transaction state on the racing path.
+        if (transaction is not null)
+        {
+            await transaction.SaveAsync(HistoryTableSavepoint, cancellationToken);
+        }
         try
         {
             await command.ExecuteNonQueryAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.ReleaseAsync(HistoryTableSavepoint, cancellationToken);
+            }
         }
         catch (PostgresException ex) when (
             ex.SqlState == PostgresErrorCodes.UniqueViolation
@@ -142,7 +156,14 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
             //   42710 (DuplicateObject) — type/constraint already exists
             // In every case the history table now exists with the schema we intended to create
             // (the racing session ran the same DDL), which is the post-condition we wanted.
-            //
+            if (transaction is not null)
+            {
+                // Restore the transaction from the aborted sub-transaction back to the pre-CREATE
+                // state. Subsequent statements (RedetectStateAsync etc.) then execute against a
+                // live transaction instead of failing with 25P02.
+                await transaction.RollbackAsync(HistoryTableSavepoint, cancellationToken);
+            }
+
             // Surface the swallow so operators investigating "did two replicas race here?" have
             // a signal — Debug-level log (carrying the actual SqlState so the three race shapes
             // can be distinguished after the fact) + Activity event on the migration span (when
@@ -156,6 +177,8 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
                 BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
         }
     }
+
+    private const string HistoryTableSavepoint = "ensure_history_table";
 
     protected override async Task RunFreshPathAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName, string tableName,
