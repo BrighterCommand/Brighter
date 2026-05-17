@@ -117,6 +117,18 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         {
             Identifiers.AssertSafe(schemaName, nameof(schemaName));
         }
+        // A null migrations list would surface inside ValidateMigrationsMonotonic as an opaque
+        // NRE on migrations.Count, or — if a future refactor short-circuits the empty path —
+        // as a misleading EnsureHistoryTableAsync call against the live DB. Replace both with
+        // a descriptive operator-facing diagnostic. Empty migrations lists are intentionally
+        // permitted: relational catalogs always return ≥V1, and internal tests use
+        // Array.Empty<IAmABoxMigration>() as a "don't care" payload when exercising hook-
+        // ordering, re-detection, or failure-path contracts.
+        if (migrations is null)
+        {
+            throw new ConfigurationException(
+                $"Migration list for '{(schemaName is null ? tableName : $"{schemaName}.{tableName}")}' was null. A non-null list must be supplied.");
+        }
 
         ValidateMigrationsMonotonic(schemaName, tableName, migrations);
 
