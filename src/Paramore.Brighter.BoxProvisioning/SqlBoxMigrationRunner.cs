@@ -107,6 +107,17 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
+        // Defence-in-depth at the framework chokepoint. Catalogs gate AssertSafe at the entry to
+        // All(...), but the runner is independently reachable (callers can construct a migration
+        // list and invoke MigrateAsync directly), so the public entry point must validate too.
+        // schemaName is nullable: SQLite has no schema concept per ADR 0057 §6, so a null value
+        // is legitimate and must not be rejected as "missing".
+        Identifiers.AssertSafe(tableName, nameof(tableName));
+        if (schemaName is not null)
+        {
+            Identifiers.AssertSafe(schemaName, nameof(schemaName));
+        }
+
         ValidateMigrationsMonotonic(schemaName, tableName, migrations);
 
         // Sync `using` for the connection: DbConnection does not implement IAsyncDisposable

@@ -89,6 +89,21 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
     {
+        // Defence-in-depth at the framework chokepoint. Catalogs gate AssertSafe at the entry to
+        // All(...), but the provisioner opens connections and runs detection BEFORE the catalog
+        // returns, so an unsafe identifier from configuration reaches the live DB connection
+        // unless the provisioner guards at its own entry. _configuration.SchemaName is nullable:
+        // SQLite has no schema concept per ADR 0057 §6, so a null value is legitimate.
+        var boxTableNameParam = BoxType == BoxType.Outbox
+            ? nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName)
+            : nameof(IAmARelationalDatabaseConfiguration.InBoxTableName);
+        Identifiers.AssertSafe(BoxTableName, boxTableNameParam);
+        if (_configuration.SchemaName is not null)
+        {
+            Identifiers.AssertSafe(
+                _configuration.SchemaName, nameof(IAmARelationalDatabaseConfiguration.SchemaName));
+        }
+
         var migrations = _catalog.All(_configuration);
         var tableState = await DetectTableStateAsync(migrations, cancellationToken);
 
