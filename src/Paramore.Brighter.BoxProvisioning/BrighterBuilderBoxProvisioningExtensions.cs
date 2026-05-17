@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -41,14 +42,36 @@ public static class BrighterBuilderBoxProvisioningExtensions
     /// <see cref="BoxProvisioningOptions.MigrationLockTimeout"/> inside the delegate — the
     /// timeout is read late, when the registrations actually run, so the order of statements
     /// inside the delegate does not matter.
+    /// <para>
+    /// <b>Single-call contract:</b> invoke this method exactly once per builder. The
+    /// hosted-service registration is guarded by <see cref="ServiceCollectionDescriptorExtensions.TryAddEnumerable(IServiceCollection, ServiceDescriptor)"/>,
+    /// but per-backend <c>Add{Backend}{Box}</c> registrations append plain
+    /// <see cref="ServiceCollectionServiceExtensions.AddSingleton{TService}(IServiceCollection, Func{IServiceProvider, TService})"/>
+    /// descriptors, so a second invocation would double-register every provisioner and
+    /// <see cref="BoxProvisioningHostedService"/> would run each migration twice. Configure
+    /// all outboxes and inboxes inside a single delegate; a second call throws
+    /// <see cref="ConfigurationException"/>.
+    /// </para>
     /// </summary>
     /// <param name="builder">The Brighter builder.</param>
     /// <param name="configure">A delegate to configure box provisioning options.</param>
     /// <returns>The builder for chaining.</returns>
+    /// <exception cref="ConfigurationException">Thrown when <c>UseBoxProvisioning</c> has
+    /// already been invoked on <paramref name="builder"/>.</exception>
     public static IBrighterBuilder UseBoxProvisioning(
         this IBrighterBuilder builder,
         Action<BoxProvisioningOptions> configure)
     {
+        if (builder.Services.Any(d => d.ServiceType == typeof(BoxProvisioningMarker)))
+        {
+            throw new ConfigurationException(
+                "UseBoxProvisioning has already been called on this builder. Configure all "
+                + "outboxes and inboxes inside a single UseBoxProvisioning(o => …) delegate; "
+                + "a second invocation would double-register every provisioner and the "
+                + "hosted service would run each migration twice.");
+        }
+        builder.Services.AddSingleton<BoxProvisioningMarker>();
+
         var options = new BoxProvisioningOptions();
         configure(options);
 
@@ -60,4 +83,9 @@ public static class BrighterBuilderBoxProvisioningExtensions
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, BoxProvisioningHostedService>());
         return builder;
     }
+
+    // Marker singleton used to detect a second UseBoxProvisioning call on the same builder.
+    // Internal because callers should never resolve or depend on it directly — its only role
+    // is to flip the "already invoked" check on subsequent calls.
+    internal sealed class BoxProvisioningMarker { }
 }
