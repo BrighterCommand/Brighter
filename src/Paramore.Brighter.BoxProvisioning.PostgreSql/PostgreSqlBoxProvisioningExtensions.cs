@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
@@ -27,7 +28,8 @@ public static class PostgreSqlBoxProvisioningExtensions
             services.TryAddSingleton<PostgreSqlOutboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
-                var runner = new PostgreSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                var runner = new PostgreSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new PostgreSqlOutboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     sp.GetRequiredService<PostgreSqlOutboxMigrationCatalog>(),
@@ -64,7 +66,8 @@ public static class PostgreSqlBoxProvisioningExtensions
                     outBoxTableName: outboxTableName ?? "Outbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new PostgreSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
+                var runner = new PostgreSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new PostgreSqlOutboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     sp.GetRequiredService<PostgreSqlOutboxMigrationCatalog>(),
@@ -89,7 +92,8 @@ public static class PostgreSqlBoxProvisioningExtensions
             services.TryAddSingleton<PostgreSqlInboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
-                var runner = new PostgreSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                var runner = new PostgreSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new PostgreSqlInboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     sp.GetRequiredService<PostgreSqlInboxMigrationCatalog>(),
@@ -126,7 +130,8 @@ public static class PostgreSqlBoxProvisioningExtensions
                     inboxTableName: inboxTableName ?? "Inbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new PostgreSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
+                var runner = new PostgreSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new PostgreSqlInboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     sp.GetRequiredService<PostgreSqlInboxMigrationCatalog>(),

@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 
@@ -33,7 +34,8 @@ public static class SqliteBoxProvisioningExtensions
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var runner = new SqliteBoxMigrationRunner(
-                    configuration, options.MigrationLockTimeout, enableWalMode);
+                    configuration, options.MigrationLockTimeout, enableWalMode,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new SqliteOutboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     sp.GetRequiredService<SqliteOutboxMigrationCatalog>(),
@@ -75,7 +77,8 @@ public static class SqliteBoxProvisioningExtensions
                     outBoxTableName: outboxTableName ?? "Outbox",
                     binaryMessagePayload: binaryMessagePayload);
                 var runner = new SqliteBoxMigrationRunner(
-                    dbConfig, options.MigrationLockTimeout, enableWalMode);
+                    dbConfig, options.MigrationLockTimeout, enableWalMode,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new SqliteOutboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     sp.GetRequiredService<SqliteOutboxMigrationCatalog>(),
@@ -107,7 +110,8 @@ public static class SqliteBoxProvisioningExtensions
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var runner = new SqliteBoxMigrationRunner(
-                    configuration, options.MigrationLockTimeout, enableWalMode);
+                    configuration, options.MigrationLockTimeout, enableWalMode,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new SqliteInboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     sp.GetRequiredService<SqliteInboxMigrationCatalog>(),
@@ -149,7 +153,8 @@ public static class SqliteBoxProvisioningExtensions
                     inboxTableName: inboxTableName ?? "Inbox",
                     binaryMessagePayload: binaryMessagePayload);
                 var runner = new SqliteBoxMigrationRunner(
-                    dbConfig, options.MigrationLockTimeout, enableWalMode);
+                    dbConfig, options.MigrationLockTimeout, enableWalMode,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new SqliteInboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     sp.GetRequiredService<SqliteInboxMigrationCatalog>(),

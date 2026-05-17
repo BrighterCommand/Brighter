@@ -28,6 +28,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.MySql;
 
@@ -68,9 +69,11 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         IAmARelationalDatabaseConfiguration configuration,
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
-        TimeSpan? lockTimeout = null)
+        TimeSpan? lockTimeout = null,
+        IAmABrighterTracer? tracer = null)
         : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>())
+            logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>(),
+            tracer)
     {
         _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
     }
@@ -84,10 +87,14 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         IMySqlAdvisoryLock? advisoryLock = null,
-        ILogger? logger = null)
-        : this(new MySqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout)
+        ILogger? logger = null,
+        IAmABrighterTracer? tracer = null)
+        : this(new MySqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout, tracer)
     {
     }
+
+    /// <inheritdoc />
+    protected override DbSystem DbSystem => DbSystem.MySql;
 
     // ==== Hook overrides — Phase 7.3a delegates to legacy helpers ====
 

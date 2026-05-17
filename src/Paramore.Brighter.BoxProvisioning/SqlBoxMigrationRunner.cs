@@ -24,10 +24,12 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning;
 
@@ -62,6 +64,15 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     protected ILogger Logger { get; }
 
     /// <summary>
+    /// Optional tracer for OpenTelemetry instrumentation. When supplied,
+    /// <see cref="MigrateAsync"/> wraps each call in a single <see cref="Activity"/> tagged
+    /// with backend / table / box-type / chosen-path, and emits child events for the
+    /// ensure-history step and whichever of fresh / bootstrap / normal was dispatched.
+    /// Null is the default — call-sites that have not opted into instrumentation pay no cost.
+    /// </summary>
+    protected IAmABrighterTracer? Tracer { get; }
+
+    /// <summary>
     /// The detection helper, exposed to derived classes so the bootstrap-path hook can call
     /// <see cref="IAmAVersionDetectingMigrationHelper{TConnection,TTransaction}.DetectCurrentVersionAsync"/>.
     /// The base itself uses this helper for the default <see cref="RedetectStateAsync"/> implementation.
@@ -76,6 +87,16 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     protected IAmARelationalDatabaseConfiguration Configuration => _configuration;
 
     /// <summary>
+    /// Per-backend <see cref="Observability.DbSystem"/> classifier surfaced on the migration
+    /// span's <see cref="BrighterSemanticConventions.DbSystem"/> tag. Derived production
+    /// runners override with the concrete enum value for their backend
+    /// (e.g. <see cref="Observability.DbSystem.MsSql"/>). The default
+    /// <see cref="Observability.DbSystem.OtherSql"/> keeps test-only subclasses that do not
+    /// emit telemetry from having to override; it surfaces as <c>"othersql"</c> on the span.
+    /// </summary>
+    protected virtual DbSystem DbSystem => DbSystem.OtherSql;
+
+    /// <summary>
     /// Initialises the base runner.
     /// </summary>
     /// <param name="detectionHelper">The version-detecting helper used for the default
@@ -86,16 +107,21 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// <param name="lockTimeout">How long the per-backend UoW waits for the advisory lock
     /// before throwing.</param>
     /// <param name="logger">Optional logger. Defaults to <see cref="NullLogger.Instance"/>.</param>
+    /// <param name="tracer">Optional <see cref="IAmABrighterTracer"/>. When supplied,
+    /// <see cref="MigrateAsync"/> emits a migration span on the tracer's
+    /// <see cref="System.Diagnostics.ActivitySource"/>. Defaults to null (no instrumentation).</param>
     protected SqlBoxMigrationRunner(
         IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> detectionHelper,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        IAmABrighterTracer? tracer = null)
     {
         _detectionHelper = detectionHelper;
         _configuration = configuration;
         _lockTimeout = lockTimeout;
         Logger = logger ?? NullLogger.Instance;
+        Tracer = tracer;
     }
 
     /// <inheritdoc />
@@ -132,6 +158,11 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
 
         ValidateMigrationsMonotonic(schemaName, tableName, migrations);
 
+        // Span name follows OTel DB convention "{operation} {target}" — the table name is the
+        // operator-meaningful target. Tags carry backend/schema/box-type so a multi-table
+        // startup trace can be filtered without re-parsing the display name.
+        using var activity = StartMigrationActivity(tableName, schemaName, boxType);
+
         // Sync `using` for the connection: DbConnection does not implement IAsyncDisposable
         // on netstandard2.0, so `await using` would not compile across the shared-assembly
         // TFM matrix. The UoW does implement IAsyncDisposable (see IAmAProvisioningUnitOfWork)
@@ -144,6 +175,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
 
         try
         {
+            activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventEnsureHistory));
             await EnsureHistoryTableAsync(connection, uow.Transaction, schemaName, cancellationToken);
 
             var (tableExists, historyExists) = await RedetectStateAsync(
@@ -151,29 +183,58 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
 
             if (!tableExists)
             {
+                activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "fresh");
+                activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventFreshInstall));
                 await RunFreshPathAsync(
                     connection, uow.Transaction, schemaName, tableName, migrations, cancellationToken);
             }
             else if (!historyExists)
             {
+                activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "bootstrap");
+                activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventBootstrap));
                 await RunBootstrapPathAsync(
                     connection, uow.Transaction, schemaName, tableName, boxType, migrations, cancellationToken);
             }
             else
             {
+                activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "normal");
+                activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventNormalUpdate));
                 await RunNormalPathAsync(
                     connection, uow.Transaction, schemaName, tableName, migrations, cancellationToken);
             }
 
             await uow.CommitAsync(cancellationToken);
+            activity?.SetStatus(ActivityStatusCode.Ok);
         }
-        catch
+        catch (Exception ex)
         {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            activity?.AddException(ex);
             // Pass CancellationToken.None: a signalled caller token must not abandon the unwind.
             // See ADR 0058 §B.3 cancellation contract.
             await uow.RollbackAsync(CancellationToken.None);
             throw;
         }
+    }
+
+    private Activity? StartMigrationActivity(string tableName, string? schemaName, BoxType boxType)
+    {
+        // ActivitySource.StartActivity returns null when no listener is registered or sampling
+        // discards — caller handles null gracefully via the `?.` chain on every Set/AddEvent.
+        var activity = Tracer?.ActivitySource.StartActivity(
+            $"{BrighterSemanticConventions.BoxMigration} {tableName}",
+            ActivityKind.Internal);
+        if (activity is null) return null;
+        activity.SetTag(BrighterSemanticConventions.DbSystem, DbSystem.ToDbName());
+        activity.SetTag(BrighterSemanticConventions.DbTable, tableName);
+        if (schemaName is not null)
+        {
+            // SQLite has no schema concept — leaving the tag out (vs. setting it to "null")
+            // keeps a "filter where db.namespace is missing" query meaningful.
+            activity.SetTag(BrighterSemanticConventions.DbNamespace, schemaName);
+        }
+        activity.SetTag(BrighterSemanticConventions.BoxType, boxType.ToString());
+        return activity;
     }
 
     /// <summary>

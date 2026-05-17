@@ -28,6 +28,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.MsSql;
 
@@ -60,9 +61,11 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         IAmARelationalDatabaseConfiguration configuration,
         IMsSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
-        TimeSpan? lockTimeout = null)
+        TimeSpan? lockTimeout = null,
+        IAmABrighterTracer? tracer = null)
         : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>())
+            logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>(),
+            tracer)
     {
         _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
     }
@@ -76,10 +79,14 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         IMsSqlAdvisoryLock? advisoryLock = null,
-        ILogger? logger = null)
-        : this(new MsSqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout)
+        ILogger? logger = null,
+        IAmABrighterTracer? tracer = null)
+        : this(new MsSqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout, tracer)
     {
     }
+
+    /// <inheritdoc />
+    protected override DbSystem DbSystem => DbSystem.MsSql;
 
     // ==== Hook overrides — Phase 7.1a delegates to legacy helpers ====
 

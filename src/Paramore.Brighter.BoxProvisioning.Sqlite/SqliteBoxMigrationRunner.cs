@@ -28,6 +28,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 
@@ -92,9 +93,11 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         IAmARelationalDatabaseConfiguration configuration,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
-        bool enableWalMode = true)
+        bool enableWalMode = true,
+        IAmABrighterTracer? tracer = null)
         : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>())
+            logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>(),
+            tracer)
     {
         _enableWalMode = enableWalMode;
         _lockTimeout = lockTimeout ?? TimeSpan.FromSeconds(30);
@@ -108,8 +111,9 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     public SqliteBoxMigrationRunner(
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
-        bool enableWalMode = true)
-        : this(new SqliteBoxDetectionHelper(), configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode)
+        bool enableWalMode = true,
+        IAmABrighterTracer? tracer = null)
+        : this(new SqliteBoxDetectionHelper(), configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer)
     {
     }
 
@@ -122,6 +126,9 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         : this(configuration, TimeSpan.FromSeconds(30))
     {
     }
+
+    /// <inheritdoc />
+    protected override DbSystem DbSystem => DbSystem.Sqlite;
 
     // ==== Per-backend hook overrides for SqlBoxMigrationRunner ====
 

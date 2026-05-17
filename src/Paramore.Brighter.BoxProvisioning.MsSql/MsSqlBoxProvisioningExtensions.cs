@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.MsSql;
 
@@ -27,7 +28,8 @@ public static class MsSqlBoxProvisioningExtensions
             services.TryAddSingleton<MsSqlOutboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
-                var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new MsSqlOutboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     sp.GetRequiredService<MsSqlOutboxMigrationCatalog>(),
@@ -64,7 +66,8 @@ public static class MsSqlBoxProvisioningExtensions
                     outBoxTableName: outboxTableName ?? "Outbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new MsSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
+                var runner = new MsSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new MsSqlOutboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     sp.GetRequiredService<MsSqlOutboxMigrationCatalog>(),
@@ -89,7 +92,8 @@ public static class MsSqlBoxProvisioningExtensions
             services.TryAddSingleton<MsSqlInboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
-                var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new MsSqlInboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     sp.GetRequiredService<MsSqlInboxMigrationCatalog>(),
@@ -126,7 +130,8 @@ public static class MsSqlBoxProvisioningExtensions
                     inboxTableName: inboxTableName ?? "Inbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new MsSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
+                var runner = new MsSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new MsSqlInboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     sp.GetRequiredService<MsSqlInboxMigrationCatalog>(),

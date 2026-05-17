@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.Spanner;
 
@@ -23,7 +24,8 @@ public static class SpannerBoxProvisioningExtensions
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
-                var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration);
+                var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new SpannerOutboxProvisioner(
                     detectionHelper,
                     sp.GetRequiredService<SpannerPayloadModeValidator>(),
@@ -57,7 +59,8 @@ public static class SpannerBoxProvisioningExtensions
                     outBoxTableName: outboxTableName ?? "Outbox",
                     binaryMessagePayload: binaryMessagePayload);
                 var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
-                var runner = new SpannerBoxMigrationRunner(detectionHelper, dbConfig);
+                var runner = new SpannerBoxMigrationRunner(detectionHelper, dbConfig,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new SpannerOutboxProvisioner(
                     detectionHelper,
                     sp.GetRequiredService<SpannerPayloadModeValidator>(),
@@ -81,7 +84,8 @@ public static class SpannerBoxProvisioningExtensions
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
                 var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
-                var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration);
+                var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new SpannerInboxProvisioner(
                     detectionHelper,
                     sp.GetRequiredService<SpannerPayloadModeValidator>(),
@@ -115,7 +119,8 @@ public static class SpannerBoxProvisioningExtensions
                     inboxTableName: inboxTableName ?? "Inbox",
                     binaryMessagePayload: binaryMessagePayload);
                 var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
-                var runner = new SpannerBoxMigrationRunner(detectionHelper, dbConfig);
+                var runner = new SpannerBoxMigrationRunner(detectionHelper, dbConfig,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new SpannerInboxProvisioner(
                     detectionHelper,
                     sp.GetRequiredService<SpannerPayloadModeValidator>(),

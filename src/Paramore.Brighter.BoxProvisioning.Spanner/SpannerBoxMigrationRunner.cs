@@ -23,12 +23,14 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
 using Grpc.Core;
 using Paramore.Brighter.Inbox.Spanner;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Spanner;
 
 namespace Paramore.Brighter.BoxProvisioning.Spanner;
@@ -68,6 +70,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
 
     private readonly IAmARelationalDatabaseConfiguration _configuration;
     private readonly IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> _detectionHelper;
+    private readonly IAmABrighterTracer? _tracer;
 
     /// <summary>
     /// Initialises the runner with an explicit detection helper. Spanner is degenerate per
@@ -76,10 +79,12 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     /// </summary>
     public SpannerBoxMigrationRunner(
         IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> detectionHelper,
-        IAmARelationalDatabaseConfiguration configuration)
+        IAmARelationalDatabaseConfiguration configuration,
+        IAmABrighterTracer? tracer = null)
     {
         _detectionHelper = detectionHelper;
         _configuration = configuration;
+        _tracer = tracer;
     }
 
     /// <summary>
@@ -87,8 +92,10 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     /// call-sites (extensions + integration tests). Synthesises a default
     /// <see cref="SpannerBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
     /// </summary>
-    public SpannerBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration)
-        : this(new SpannerBoxDetectionHelper(), configuration)
+    public SpannerBoxMigrationRunner(
+        IAmARelationalDatabaseConfiguration configuration,
+        IAmABrighterTracer? tracer = null)
+        : this(new SpannerBoxDetectionHelper(), configuration, tracer)
     {
     }
 
@@ -126,26 +133,64 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         _ = migrations; // Spanner is fresh-install-only — no V_k chain (ADR 0057 §6).
         _ = schemaName; // Spanner does not use schemas; the configuration's database is implicit.
 
+        // Mirror the relational base runner's instrumentation shape (per ADR 0057 §6 Spanner
+        // skips the advisory-lock / re-detection orchestration, but the operator-facing span
+        // still carries the same tag + child-event vocabulary so a multi-backend startup trace
+        // reads consistently).
+        using var activity = StartMigrationActivity(tableName, schemaName, boxType);
+
         using var connection = SpannerConnectionHelper.CreateConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
-        await EnsureHistoryTableAsync(connection, cancellationToken);
-
-        var vLatest = LatestVersionFor(boxType);
-
-        if (!tableState.TableExists)
+        try
         {
-            await FreshInstallAsync(connection, tableName, boxType, vLatest, cancellationToken);
-            return;
-        }
+            activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventEnsureHistory));
+            await EnsureHistoryTableAsync(connection, cancellationToken);
 
-        if (!tableState.HistoryExists)
+            var vLatest = LatestVersionFor(boxType);
+
+            if (!tableState.TableExists)
+            {
+                activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "fresh");
+                activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventFreshInstall));
+                await FreshInstallAsync(connection, tableName, boxType, vLatest, cancellationToken);
+            }
+            else if (!tableState.HistoryExists)
+            {
+                activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "bootstrap");
+                activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventBootstrap));
+                await BootstrapExistingTableAsync(connection, tableName, boxType, vLatest, cancellationToken);
+            }
+            else
+            {
+                activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "normal");
+                activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventNormalUpdate));
+                RunNormalPath(tableName, vLatest, tableState.CurrentVersion);
+            }
+            activity?.SetStatus(ActivityStatusCode.Ok);
+        }
+        catch (Exception ex)
         {
-            await BootstrapExistingTableAsync(connection, tableName, boxType, vLatest, cancellationToken);
-            return;
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            activity?.AddException(ex);
+            throw;
         }
+    }
 
-        RunNormalPath(tableName, vLatest, tableState.CurrentVersion);
+    private Activity? StartMigrationActivity(string tableName, string? schemaName, BoxType boxType)
+    {
+        var activity = _tracer?.ActivitySource.StartActivity(
+            $"{BrighterSemanticConventions.BoxMigration} {tableName}",
+            ActivityKind.Internal);
+        if (activity is null) return null;
+        activity.SetTag(BrighterSemanticConventions.DbSystem, DbSystem.Spanner.ToDbName());
+        activity.SetTag(BrighterSemanticConventions.DbTable, tableName);
+        if (schemaName is not null)
+        {
+            activity.SetTag(BrighterSemanticConventions.DbNamespace, schemaName);
+        }
+        activity.SetTag(BrighterSemanticConventions.BoxType, boxType.ToString());
+        return activity;
     }
 
     private static int LatestVersionFor(BoxType boxType) => boxType switch

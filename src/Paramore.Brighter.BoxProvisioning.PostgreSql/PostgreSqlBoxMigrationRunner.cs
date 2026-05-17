@@ -28,6 +28,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
@@ -59,9 +60,11 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         IAmARelationalDatabaseConfiguration configuration,
         IPostgreSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
-        TimeSpan? lockTimeout = null)
+        TimeSpan? lockTimeout = null,
+        IAmABrighterTracer? tracer = null)
         : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>())
+            logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>(),
+            tracer)
     {
         _advisoryLock = advisoryLock ?? new PostgreSqlAdvisoryLock();
     }
@@ -75,10 +78,14 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         IPostgreSqlAdvisoryLock? advisoryLock = null,
-        ILogger? logger = null)
-        : this(new PostgreSqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout)
+        ILogger? logger = null,
+        IAmABrighterTracer? tracer = null)
+        : this(new PostgreSqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout, tracer)
     {
     }
+
+    /// <inheritdoc />
+    protected override DbSystem DbSystem => DbSystem.Postgresql;
 
     protected override async Task<NpgsqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {

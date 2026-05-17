@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.MySql;
 
@@ -27,7 +28,8 @@ public static class MySqlBoxProvisioningExtensions
             services.TryAddSingleton<MySqlOutboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
-                var runner = new MySqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                var runner = new MySqlBoxMigrationRunner(configuration, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new MySqlOutboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     sp.GetRequiredService<MySqlOutboxMigrationCatalog>(),
@@ -64,7 +66,8 @@ public static class MySqlBoxProvisioningExtensions
                     outBoxTableName: outboxTableName ?? "Outbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new MySqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
+                var runner = new MySqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new MySqlOutboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     sp.GetRequiredService<MySqlOutboxMigrationCatalog>(),
@@ -89,7 +92,8 @@ public static class MySqlBoxProvisioningExtensions
             services.TryAddSingleton<MySqlInboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
-                var runner = new MySqlBoxMigrationRunner(configuration, options.MigrationLockTimeout);
+                var runner = new MySqlBoxMigrationRunner(configuration, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new MySqlInboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     sp.GetRequiredService<MySqlInboxMigrationCatalog>(),
@@ -126,7 +130,8 @@ public static class MySqlBoxProvisioningExtensions
                     inboxTableName: inboxTableName ?? "Inbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new MySqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout);
+                var runner = new MySqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout,
+                    tracer: sp.GetService<IAmABrighterTracer>());
                 return new MySqlInboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     sp.GetRequiredService<MySqlInboxMigrationCatalog>(),
