@@ -64,7 +64,36 @@ public class PostgreSqlProvisioningUnitOfWork(
         _logger.LogTrace("Beginning Postgres provisioning UoW for resource {LockResource}", lockResource);
         _lockResource = lockResource;
         await _advisoryLock.AcquireAsync(_connection, lockResource, lockTimeout, cancellationToken);
-        _transaction = (NpgsqlTransaction)await _connection.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            _transaction = (NpgsqlTransaction)await _connection.BeginTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            // Per ADR 0058 §B.3 atomic-Begin: BeginTransactionAsync threw AFTER the session-
+            // scoped lock was acquired. The §B.3 runner contract places BeginAsync OUTSIDE
+            // its try/catch (pinned by When_relational_box_migration_runner_base_begin_async_throws...),
+            // so RollbackAsync will not run — the lock would leak until connection close
+            // (bounded but messy). Release the lock at source so atomic-Begin holds: a
+            // BeginAsync that throws guarantees no resources are held. _lockResource is
+            // cleared so a subsequent best-effort RollbackAsync is a clean no-op.
+            try
+            {
+                await _advisoryLock.ReleaseAsync(_connection, lockResource, cancellationToken);
+            }
+            catch (Exception releaseEx)
+            {
+                // Release-on-cleanup MUST NOT replace the original BeginTransactionAsync
+                // exception. Log + swallow; the session-scoped lock is released by the server
+                // when the connection closes.
+                _logger.LogWarning(
+                    releaseEx,
+                    "Postgres provisioning UoW: pg_advisory_unlock threw while cleaning up after BeginTransactionAsync failure for lock resource '{LockResource}' — release skipped, the session will release the lock when the connection closes.",
+                    lockResource);
+            }
+            _lockResource = null;
+            throw;
+        }
     }
 
     /// <inheritdoc />
