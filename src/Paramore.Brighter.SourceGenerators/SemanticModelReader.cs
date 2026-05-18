@@ -37,20 +37,20 @@ public static class SemanticModelReader
 {
     private const string ExcludeAttributeName = "Paramore.Brighter.ExcludeFromBrighterRegistrationAttribute";
 
-    public static bool TryBuildModel(
-        IMethodSymbol method,
-        Compilation compilation,
-        MarkerSymbols symbols,
-        out RegistrationModel? model,
-        out Diagnostic? diagnostic)
+    public static BuildResult TryBuildModel(IMethodSymbol method, Compilation compilation, MarkerSymbols symbols)
     {
-        model = null;
-        if (!Validate(method, symbols, out diagnostic))
-            return false;
+        if (!Validate(method, symbols, out var diagnostic))
+            return BuildResult.Failure(diagnostic);
 
         var discovered = Discover(compilation, symbols);
-        model = Project(method, discovered);
-        return true;
+        return BuildResult.Ok(Project(method, discovered));
+    }
+
+    public readonly record struct BuildResult(RegistrationModel? Model, Diagnostic? Diagnostic)
+    {
+        public bool Success => Model is not null;
+        public static BuildResult Ok(RegistrationModel model) => new(model, null);
+        public static BuildResult Failure(Diagnostic? diagnostic) => new(null, diagnostic);
     }
 
     internal static bool Validate(IMethodSymbol method, MarkerSymbols symbols, out Diagnostic? diagnostic)
@@ -138,17 +138,31 @@ public static class SemanticModelReader
         var def = iface.OriginalDefinition;
         var requestType = iface.TypeArguments[0];
 
-        if (SymbolEqualityComparer.Default.Equals(def, symbols.HandleRequests))
+        if (Same(def, symbols.HandleRequests))
             result.Handlers.Add((requestType, type));
-        else if (SymbolEqualityComparer.Default.Equals(def, symbols.HandleRequestsAsync))
+        else if (Same(def, symbols.HandleRequestsAsync))
             result.AsyncHandlers.Add((requestType, type));
-        else if (SymbolEqualityComparer.Default.Equals(def, symbols.MessageMapper) && !type.IsGenericType)
-            result.Mappers.Add((requestType, type));
-        else if (SymbolEqualityComparer.Default.Equals(def, symbols.MessageMapperAsync) && !type.IsGenericType)
-            result.AsyncMappers.Add((requestType, type));
+        else if (!type.IsGenericType)
+            TryAddMapper(def, requestType, type, symbols, result);
 
         return true;
     }
+
+    private static void TryAddMapper(
+        INamedTypeSymbol def,
+        ITypeSymbol requestType,
+        INamedTypeSymbol type,
+        MarkerSymbols symbols,
+        DiscoveredSymbols result)
+    {
+        if (Same(def, symbols.MessageMapper))
+            result.Mappers.Add((requestType, type));
+        else if (Same(def, symbols.MessageMapperAsync))
+            result.AsyncMappers.Add((requestType, type));
+    }
+
+    private static bool Same(ISymbol? a, ISymbol? b) =>
+        SymbolEqualityComparer.Default.Equals(a, b);
 
     private static bool IsTransformInterface(INamedTypeSymbol iface, MarkerSymbols symbols) =>
         SymbolEqualityComparer.Default.Equals(iface, symbols.MessageTransform) ||

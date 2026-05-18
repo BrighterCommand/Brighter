@@ -102,15 +102,16 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
 
             foreach (var method in methods)
             {
-                if (!SemanticModelReader.TryBuildModel(method, compilation, symbols, out var model, out var diagnostic))
+                var result = SemanticModelReader.TryBuildModel(method, compilation, symbols);
+                if (!result.Success)
                 {
-                    if (diagnostic is not null)
-                        spc.ReportDiagnostic(diagnostic);
+                    if (result.Diagnostic is not null)
+                        spc.ReportDiagnostic(result.Diagnostic);
                     continue;
                 }
 
-                var source = RegistrationWriter.Write(model!);
-                spc.AddSource(model!.HintName, SourceText.From(source, Encoding.UTF8));
+                var model = result.Model!;
+                spc.AddSource(model.HintName, SourceText.From(RegistrationWriter.Write(model), Encoding.UTF8));
             }
         });
     }
