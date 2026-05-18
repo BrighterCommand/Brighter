@@ -343,7 +343,7 @@ namespace Paramore.Brighter.AsyncAPI
                 });
         }
 
-private static V3SchemaDefinition EmptyObjectSchema()
+        private static V3SchemaDefinition EmptyObjectSchema()
         {
             using var doc = JsonDocument.Parse("{}");
             return new V3SchemaDefinition
