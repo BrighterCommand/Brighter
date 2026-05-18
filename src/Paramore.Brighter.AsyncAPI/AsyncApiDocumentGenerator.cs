@@ -64,8 +64,6 @@ namespace Paramore.Brighter.AsyncAPI
         // the document and which message it points at.
         private readonly record struct ChannelMessageKey(string ChannelId, string MessageName);
 
-        // The action + channel-id pair forms an operation's identity in the document.
-        private readonly record struct OperationKey(string Action, string ChannelId);
 
         private readonly AsyncApiOptions _options;
         private readonly IAmASchemaGenerator _schemaGenerator;
@@ -177,15 +175,20 @@ namespace Paramore.Brighter.AsyncAPI
             CancellationToken ct)
         {
             var channelId = SanitizeChannelId(source.Address);
+            var actionString = source.Action == V3OperationAction.Send ? "send" : "receive";
+
+            // Dedup by (channel, action). First source wins — covers producer-registry vs
+            // SupplementalPublications collisions and assembly-scan vs producer-registry
+            // collisions alike. Same channel + different action (e.g. a subscription and
+            // a publication on the same routing key) is not a duplicate and proceeds.
+            if (!context.CoveredChannelActions.Add((channelId, actionString))) return;
+
             EnsureChannel(context.Channels, new ChannelDescriptor(channelId, source.Address));
 
             var messageName = await EnsureMessageForSourceAsync(source, channelId, context.Messages, ct).ConfigureAwait(false);
             AddChannelMessageRef(context.Channels, new ChannelMessageKey(channelId, messageName));
 
-            var actionString = source.Action == V3OperationAction.Send ? "send" : "receive";
-            context.CoveredChannelActions.Add((channelId, actionString));
-
-            var operationId = GetUniqueOperationId(context.Operations, new OperationKey(actionString, channelId));
+            var operationId = $"{actionString}_{channelId}";
             context.Operations[operationId] = BuildOperation(source.Action, channelId, messageName);
         }
 
@@ -228,8 +231,7 @@ namespace Paramore.Brighter.AsyncAPI
             {
                 foreach (var (type, topic) in GetPublicationTopicTypes(assembly))
                 {
-                    if (context.CoveredChannelActions.Contains((SanitizeChannelId(topic), "send"))) continue;
-
+                    // ProcessSourceAsync dedups by (channel, action) so no early-skip needed here.
                     await ProcessSourceAsync(
                         new MessageSource(topic, V3OperationAction.Send, type),
                         context, ct).ConfigureAwait(false);
@@ -341,20 +343,7 @@ namespace Paramore.Brighter.AsyncAPI
                 });
         }
 
-        private static string GetUniqueOperationId(Dictionary<string, V3OperationDefinition> operations, OperationKey key)
-        {
-            var baseId = $"{key.Action}_{key.ChannelId}";
-            if (!operations.TryGetValue(baseId, out _))
-                return baseId;
-
-            var counter = 2;
-            while (operations.TryGetValue($"{baseId}_{counter}", out _))
-                counter++;
-
-            return $"{baseId}_{counter}";
-        }
-
-        private static V3SchemaDefinition EmptyObjectSchema()
+private static V3SchemaDefinition EmptyObjectSchema()
         {
             using var doc = JsonDocument.Parse("{}");
             return new V3SchemaDefinition
