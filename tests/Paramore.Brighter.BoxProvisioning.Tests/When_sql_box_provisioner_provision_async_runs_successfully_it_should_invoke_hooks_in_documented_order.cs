@@ -65,7 +65,8 @@ public class SqlBoxProvisionerHookOrderTests
         await provisioner.ProvisionAsync();
 
         //Assert: normal-path order — detection takes the GetMaxVersion branch (history exists),
-        //        then a second connection is opened to run payload validation, then MigrateAsync.
+        //        payload validation runs on the SAME connection (item #11: prior shape opened a
+        //        second connection here and closed both back-to-back), then MigrateAsync.
         Assert.Equal(
             new[]
             {
@@ -74,9 +75,6 @@ public class SqlBoxProvisionerHookOrderTests
                 "DoesTableExistAsync",
                 "DoesHistoryExistAsync",
                 "GetMaxVersionAsync",
-                "Dispose",
-                "CreateConnection",
-                "OpenAsync",
                 "ValidateAsync",
                 "Dispose",
                 "MigrateAsync"
@@ -110,7 +108,8 @@ public class SqlBoxProvisionerHookOrderTests
         await provisioner.ProvisionAsync();
 
         //Assert: bootstrap-path order — detection takes the DetectCurrentVersion branch
-        //        (table present, no history), then payload validation, then MigrateAsync.
+        //        (table present, no history); payload validation runs on the SAME connection
+        //        (item #11: prior shape opened a second connection here), then MigrateAsync.
         Assert.Equal(
             new[]
             {
@@ -119,9 +118,6 @@ public class SqlBoxProvisionerHookOrderTests
                 "DoesTableExistAsync",
                 "DoesHistoryExistAsync",
                 "DetectCurrentVersionAsync",
-                "Dispose",
-                "CreateConnection",
-                "OpenAsync",
                 "ValidateAsync",
                 "Dispose",
                 "MigrateAsync"

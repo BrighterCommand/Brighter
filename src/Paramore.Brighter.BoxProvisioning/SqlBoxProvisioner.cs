@@ -105,11 +105,29 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         }
 
         var migrations = _catalog.All(_configuration);
-        var tableState = await DetectTableStateAsync(migrations, cancellationToken);
 
-        if (tableState.TableExists)
+        // Sync `using` for the connection: DbConnection does not implement IAsyncDisposable
+        // on netstandard2.0, so `await using` would not compile across the shared-assembly
+        // TFM matrix. Mirrors the §B.2 precedent at SqlBoxMigrationRunner.cs:112-116.
+        //
+        // Item #11 (PR #4039 third review): prior shape opened a fresh connection for the payload
+        // validator immediately after closing the detection connection. Fold both into a single
+        // connection lifecycle — detection and validation run sequentially against the same open
+        // connection, so we cut one connection round-trip per provisioning run (and avoid the
+        // connection-pool churn in deployments with strict per-pod connection caps).
+        BoxTableState tableState;
+        using (var connection = CreateConnection(_configuration.ConnectionString))
         {
-            await ValidatePayloadModeAsync(cancellationToken);
+            await connection.OpenAsync(cancellationToken);
+
+            tableState = await DetectTableStateAsync(connection, migrations, cancellationToken);
+
+            if (tableState.TableExists)
+            {
+                await _payloadValidator.ValidateAsync(
+                    connection, BoxTableName, EffectiveSchemaName,
+                    PayloadColumnName, _configuration.BinaryMessagePayload, cancellationToken);
+            }
         }
 
         await _migrationRunner.MigrateAsync(
@@ -122,15 +140,10 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     }
 
     private async Task<BoxTableState> DetectTableStateAsync(
+        TConnection connection,
         IReadOnlyList<IAmABoxMigration> migrations,
         CancellationToken cancellationToken)
     {
-        // Sync `using` for the connection: DbConnection does not implement IAsyncDisposable
-        // on netstandard2.0, so `await using` would not compile across the shared-assembly
-        // TFM matrix. Mirrors the §B.2 precedent at SqlBoxMigrationRunner.cs:112-116.
-        using var connection = CreateConnection(_configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-
         var tableExists = await _detectionHelper.DoesTableExistAsync(
             connection, BoxTableName, EffectiveSchemaName, cancellationToken);
         if (!tableExists)
@@ -154,19 +167,6 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         var maxVersion = await _detectionHelper.GetMaxVersionAsync(
             connection, BoxTableName, EffectiveSchemaName, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
-    }
-
-    private async Task ValidatePayloadModeAsync(CancellationToken cancellationToken)
-    {
-        // Sync `using` for the connection: DbConnection does not implement IAsyncDisposable
-        // on netstandard2.0, so `await using` would not compile across the shared-assembly
-        // TFM matrix. Mirrors the §B.2 precedent at SqlBoxMigrationRunner.cs:112-116.
-        using var connection = CreateConnection(_configuration.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
-
-        await _payloadValidator.ValidateAsync(
-            connection, BoxTableName, EffectiveSchemaName,
-            PayloadColumnName, _configuration.BinaryMessagePayload, cancellationToken);
     }
 
     /// <summary>
