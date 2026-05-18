@@ -217,7 +217,95 @@ public class BrighterTracer : IAmABrighterTracer
 
         return activity;
     }
-    
+
+    /// <summary>
+    /// Creates a receive span before the broker call so that the span's <see cref="Activity.Duration"/> reflects only
+    /// broker latency. Tags derived from the received <see cref="Message"/> are added later via
+    /// <see cref="EnrichReceiveSpan"/>.
+    /// </summary>
+    /// <param name="topic">The <see cref="RoutingKey"/> we are receiving from</param>
+    /// <param name="messagingSystem">The <see cref="MessagingSystem"/> we are receiving from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
+    /// <returns>The receive span, or null if the <see cref="ActivitySource"/> has no listeners</returns>
+    public Activity? CreateReceiveSpan(
+        RoutingKey topic,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        var operation = MessagePumpSpanOperation.Receive;
+        var tags = GetNewTagsCollection(options);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName());
+
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessagingDestination, topic);
+            tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
+            tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
+        }
+
+        var activity = ActivitySource.StartActivity(
+            name: $"{topic} {operation.ToSpanName()}",
+            kind: ActivityKind.Consumer,
+            tags: tags,
+            startTime: _timeProvider.GetUtcNow());
+
+        if (activity is not null)
+            Activity.Current = activity;
+
+        return activity;
+    }
+
+    /// <summary>
+    /// Enriches a receive span (created via <see cref="CreateReceiveSpan"/>) with tags derived from a received message,
+    /// and propagates the producer's tracestate and baggage onto the consumer side.
+    /// </summary>
+    /// <param name="span">The receive span to enrich; no-op if null</param>
+    /// <param name="message">The <see cref="Message"/> that was received</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
+    public void EnrichReceiveSpan(
+        Activity? span,
+        Message message,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        if (span is null) return;
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            span.AddTag(BrighterSemanticConventions.CeType, message.Header.Type.Value);
+            span.AddTag(BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo?.Value);
+            span.AddTag(BrighterSemanticConventions.HandledCount, message.Header.HandledCount);
+            span.AddTag(BrighterSemanticConventions.CeMessageId, message.Id.Value);
+            span.AddTag(BrighterSemanticConventions.CeSource, message.Header.Source);
+            span.AddTag(BrighterSemanticConventions.CeVersion, "1.0");
+            span.AddTag(BrighterSemanticConventions.CeSubject, message.Header.Subject);
+        }
+
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            span.AddTag(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
+            span.AddTag(BrighterSemanticConventions.MessageId, message.Id.Value);
+            span.AddTag(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+            span.AddTag(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
+            span.AddTag(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            span.AddTag(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
+        }
+
+        if (options.HasFlag(InstrumentationOptions.RequestBody))
+            span.AddTag(BrighterSemanticConventions.MessageBody, message.Body.Value);
+
+        // Propagate the producer's tracestate and baggage onto the consumer side. Done here (not in CreateReceiveSpan) because
+        // these values come from the message and aren't known until the broker call returns. Mirrors what CreateSpan(Process, ...)
+        // already does for serviceable messages — needed here so MT_UNACCEPTABLE rejections still carry the producer trace context.
+        if (!string.IsNullOrEmpty(message.Header.TraceState?.Value))
+            span.TraceStateString = message.Header.TraceState!.Value;
+
+        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
+            message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);
+        OpenTelemetry.Baggage.SetBaggage(message.Header.Baggage);
+    }
+
     /// <summary>
     /// Creates a span for an archive operation. Because a sweeper may not create an external bus, but just use the archiver directly, we
     /// check for this existing and then recreate directly in the archive provider if it does not exist

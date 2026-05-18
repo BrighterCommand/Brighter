@@ -53,6 +53,32 @@ public interface IAmABrighterTracer : IDisposable
     );
 
     /// <summary>
+    /// Creates a receive span before the broker call so that the span's <see cref="Activity.Duration"/> reflects only
+    /// broker latency. Tags derived from the received <see cref="Message"/> are added later via
+    /// <see cref="EnrichReceiveSpan"/>.
+    /// </summary>
+    /// <param name="topic">The <see cref="RoutingKey"/> we are receiving from</param>
+    /// <param name="messagingSystem">The <see cref="MessagingSystem"/> we are receiving from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
+    /// <returns>The receive span, or null if the <see cref="ActivitySource"/> has no listeners</returns>
+    Activity? CreateReceiveSpan(
+        RoutingKey topic,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions options = InstrumentationOptions.All);
+
+    /// <summary>
+    /// Enriches a receive span (created via <see cref="CreateReceiveSpan"/>) with tags derived from a received message,
+    /// and propagates the producer's tracestate and baggage onto the consumer side.
+    /// </summary>
+    /// <param name="span">The receive span to enrich; no-op if null</param>
+    /// <param name="message">The <see cref="Message"/> that was received</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
+    void EnrichReceiveSpan(
+        Activity? span,
+        Message message,
+        InstrumentationOptions options = InstrumentationOptions.All);
+
+    /// <summary>
     /// Create a span for a request in CommandProcessor
     /// </summary>
     /// <param name="operation">What type of span are we creating</param>

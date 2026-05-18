@@ -48,6 +48,7 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
     }
 
     /// <inheritdoc />
+    [JustSayingDecompress(0)]
     public Task<TMessage> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(MapToRequest(message));
@@ -218,7 +219,8 @@ public class JustSayingMessageMapper<TMessage> : IAmAMessageMapper<TMessage>, IA
     }
 
     /// <inheritdoc />
-    public TMessage MapToRequest(Message message) 
+    [JustSayingDecompress(0)]
+    public TMessage MapToRequest(Message message)
 #if NETSTANDARD2_0
         => JsonSerializer.Deserialize<TMessage>(message.Body.Memory.ToArray(), JsonSerialisationOptions.Options)!;
 #else

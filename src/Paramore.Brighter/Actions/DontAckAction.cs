@@ -27,16 +27,17 @@ using System;
 namespace Paramore.Brighter.Actions;
 
 /// <summary>
-/// Thrown to indicate that a message should not be acknowledged. The message remains on the channel and will be
-/// presented again on the next pump iteration. Call <c>throw new DontAckAction()</c> from within a
+/// Thrown to indicate that a message should not be acknowledged as successfully handled. A message pump translates
+/// this into the channel-specific not-acknowledged behavior. Call <c>throw new DontAckAction()</c> from within a
 /// <see cref="RequestHandler{TRequest}"/> or <see cref="RequestHandlerAsync{TRequest}"/> to prevent acknowledgment.
 /// </summary>
 /// <remarks>
-/// Unlike <see cref="DeferMessageAction"/> which requeues the message, and <see cref="RejectMessageAction"/> which
-/// moves the message to a dead letter queue, <see cref="DontAckAction"/> leaves the message completely unacknowledged
-/// on the channel. The message will be re-delivered by the transport after its visibility timeout expires.
-/// A configurable delay on the pump prevents tight-loop CPU burn. The unacceptable message count is incremented,
-/// allowing the pump to eventually stop if a limit is configured.
+/// Unlike <see cref="DeferMessageAction"/> which explicitly schedules a requeue, and <see cref="RejectMessageAction"/>
+/// which moves the message to a dead letter queue, <see cref="DontAckAction"/> asks the pump to use the transport's
+/// not-acknowledged disposition. For <see cref="InMemoryMessageConsumer"/> this nacks the message and immediately
+/// makes it available for redelivery; other transports may redeliver later or use their own offset or disposition
+/// semantics. A configurable delay on the pump prevents tight-loop CPU burn. The unacceptable message count is
+/// incremented, allowing the pump to eventually stop if a limit is configured.
 /// </remarks>
 public class DontAckAction : Exception
 {

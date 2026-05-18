@@ -15,7 +15,7 @@
 
 ## Checklist
 
-- [ ] I have read the [Contributing Guide](CONTRIBUTING.md)
+- [ ] I have read the [Contributing Guide](../blob/master/CONTRIBUTING.md)
 - [ ] I have checked the [documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation/) for relevant guidance
 - [ ] I have added/updated XML documentation for any public API changes
 - [ ] I have added/updated tests as appropriate

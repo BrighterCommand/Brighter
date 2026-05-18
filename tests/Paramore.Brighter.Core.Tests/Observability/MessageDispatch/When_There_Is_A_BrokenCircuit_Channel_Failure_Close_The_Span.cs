@@ -108,7 +108,7 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
 
         _traceProvider.ForceFlush();
             
-        Assert.Equal(7, _exportedActivities.Count);
+        Assert.Equal(8, _exportedActivities.Count);
         Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter")); 
         
         var errorMessageActivity = _exportedActivities.FirstOrDefault(a => 
