@@ -39,6 +39,20 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// (monotonic), so a wall-clock jump (NTP correction during a long lock wait, leap-second
 /// smear, container clock skew on VM resume) cannot collapse or extend the budget. Tests
 /// inject a fake provider to drive the deadline check deterministically.
+/// <para>
+/// Lock-key hashing: the per-call key (typically <c>BrighterMigration_&lt;schema&gt;.&lt;table&gt;</c>
+/// from the runner) is fed through Postgres <c>hashtext(text) → int4</c> to fit the 32-bit
+/// second argument of the <c>(int4, int4)</c> overload of <c>pg_try_advisory_lock</c>. The
+/// birthday-bound collision probability across distinct lock keys is therefore ~1 in 2^32
+/// (~4 billion), mirroring the MySQL lock-name truncation note in
+/// <c>MySqlMigrationLockName</c> — accepted as negligible given the per-deployment
+/// population is typically &lt; 100 box tables, and any collision merely serialises two
+/// migrations on a shared advisory lock (correctness preserved, only the concurrency boundary
+/// widens). The <c>(bigint)</c> overload of <c>pg_try_advisory_lock</c> with a SHA-256-derived
+/// 64-bit key would push this to ~1 in 2^64 — left as a future hardening if collisions ever
+/// surface in practice; switching changes the lock-key namespace and requires a coordinated
+/// rollout across replicas.
+/// </para>
 /// </remarks>
 public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock
 {
