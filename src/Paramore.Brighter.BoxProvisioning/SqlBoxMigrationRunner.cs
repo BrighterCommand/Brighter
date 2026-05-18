@@ -163,74 +163,107 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         // startup trace can be filtered without re-parsing the display name.
         using var activity = StartMigrationActivity(tableName, schemaName, boxType);
 
-        // Sync `using` for the connection: DbConnection does not implement IAsyncDisposable
-        // on netstandard2.0, so `await using` would not compile across the shared-assembly
-        // TFM matrix. The UoW does implement IAsyncDisposable (see IAmAProvisioningUnitOfWork)
-        // and is declared with `await using` below.
-        using var connection = await OpenConnectionAsync(cancellationToken);
-
-        var lockResource = LockResourceFor(schemaName, tableName);
-        await using var uow = await CreateUnitOfWorkAsync(connection, cancellationToken);
-        await uow.BeginAsync(lockResource, _lockTimeout, cancellationToken);
-
+        // Bootstrap resources are held in locals so the outer try/finally can guarantee
+        // disposal whether the body succeeds, the body throws, or the bootstrap itself
+        // fails before any disposer would have run. The inner bootstrap try/catch records
+        // bootstrap failures (connection refused, lock timeout from BeginAsync per
+        // ADR 0058 §B.3) onto the migration activity — without this narrow handler those
+        // failures escape with ActivityStatusCode.Unset because the success-path catch
+        // only wraps the body.
+        // Sync Dispose for the connection: DbConnection does not implement IAsyncDisposable
+        // on netstandard2.0, so DisposeAsync is unavailable across the shared-assembly TFM
+        // matrix. The UoW implements IAsyncDisposable (see IAmAProvisioningUnitOfWork) and
+        // is awaited explicitly in the finally.
+        TConnection? connection = null;
+        IAmAProvisioningUnitOfWork<TTransaction>? uow = null;
         try
         {
-            activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventEnsureHistory));
-            await EnsureHistoryTableAsync(connection, uow.Transaction, schemaName, cancellationToken);
-
-            var (tableExists, historyExists) = await RedetectStateAsync(
-                connection, uow.Transaction, schemaName, tableName, cancellationToken);
-
-            if (!tableExists)
-            {
-                activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "fresh");
-                activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventFreshInstall));
-                await RunFreshPathAsync(
-                    connection, uow.Transaction, schemaName, tableName, migrations, cancellationToken);
-            }
-            else if (!historyExists)
-            {
-                activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "bootstrap");
-                activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventBootstrap));
-                await RunBootstrapPathAsync(
-                    connection, uow.Transaction, schemaName, tableName, boxType, migrations, cancellationToken);
-            }
-            else
-            {
-                activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "normal");
-                activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventNormalUpdate));
-                await RunNormalPathAsync(
-                    connection, uow.Transaction, schemaName, tableName, migrations, cancellationToken);
-            }
-
-            await uow.CommitAsync(cancellationToken);
-            activity?.SetStatus(ActivityStatusCode.Ok);
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            // Pass CancellationToken.None: a signalled caller token must not abandon the unwind.
-            // See ADR 0058 §B.3 cancellation contract.
             try
             {
-                await uow.RollbackAsync(CancellationToken.None);
+                connection = await OpenConnectionAsync(cancellationToken);
+                var lockResource = LockResourceFor(schemaName, tableName);
+                uow = await CreateUnitOfWorkAsync(connection, cancellationToken);
+                await uow.BeginAsync(lockResource, _lockTimeout, cancellationToken);
             }
-            catch (Exception rollbackEx)
+            catch (Exception ex)
             {
-                // Defense in depth: the IAmAProvisioningUnitOfWork contract says RollbackAsync
-                // MUST NOT throw, and the four per-backend impls comply (PG and MySQL tightened
-                // explicitly in 3c8417fd6). If a future regression breaks that, do NOT let the
-                // rollback exception mask the original triggering exception — the primary cause
-                // is more diagnostically valuable than a defect in our own unwind, and callers
-                // pattern-match on the type they actually threw. Log the rollback failure at
-                // Error level so operators see both: the primary failure surfaces via rethrow,
-                // the rollback defect surfaces via the log.
-                Logger.LogError(rollbackEx,
-                    "Box migration unit-of-work RollbackAsync threw while unwinding from a primary failure for table '{Table}'; rollback exception is logged, primary exception is rethrown.",
-                    tableName);
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                activity?.AddException(ex);
+                throw;
             }
-            throw;
+
+            try
+            {
+                activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventEnsureHistory));
+                await EnsureHistoryTableAsync(connection, uow.Transaction, schemaName, cancellationToken);
+
+                var (tableExists, historyExists) = await RedetectStateAsync(
+                    connection, uow.Transaction, schemaName, tableName, cancellationToken);
+
+                if (!tableExists)
+                {
+                    activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "fresh");
+                    activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventFreshInstall));
+                    await RunFreshPathAsync(
+                        connection, uow.Transaction, schemaName, tableName, migrations, cancellationToken);
+                }
+                else if (!historyExists)
+                {
+                    activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "bootstrap");
+                    activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventBootstrap));
+                    await RunBootstrapPathAsync(
+                        connection, uow.Transaction, schemaName, tableName, boxType, migrations, cancellationToken);
+                }
+                else
+                {
+                    activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "normal");
+                    activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventNormalUpdate));
+                    await RunNormalPathAsync(
+                        connection, uow.Transaction, schemaName, tableName, migrations, cancellationToken);
+                }
+
+                await uow.CommitAsync(cancellationToken);
+                activity?.SetStatus(ActivityStatusCode.Ok);
+            }
+            catch (Exception ex)
+            {
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                activity?.AddException(ex);
+                // Pass CancellationToken.None: a signalled caller token must not abandon the unwind.
+                // See ADR 0058 §B.3 cancellation contract.
+                try
+                {
+                    await uow.RollbackAsync(CancellationToken.None);
+                }
+                catch (Exception rollbackEx)
+                {
+                    // Defense in depth: the IAmAProvisioningUnitOfWork contract says RollbackAsync
+                    // MUST NOT throw, and the four per-backend impls comply (PG and MySQL tightened
+                    // explicitly in 3c8417fd6). If a future regression breaks that, do NOT let the
+                    // rollback exception mask the original triggering exception — the primary cause
+                    // is more diagnostically valuable than a defect in our own unwind, and callers
+                    // pattern-match on the type they actually threw. Log the rollback failure at
+                    // Error level so operators see both: the primary failure surfaces via rethrow,
+                    // the rollback defect surfaces via the log.
+                    Logger.LogError(rollbackEx,
+                        "Box migration unit-of-work RollbackAsync threw while unwinding from a primary failure for table '{Table}'; rollback exception is logged, primary exception is rethrown.",
+                        tableName);
+                }
+                throw;
+            }
+        }
+        finally
+        {
+            // Disposal order mirrors the previous `await using var uow` / `using var connection`
+            // pair: UoW first (releases any per-backend advisory lock + transaction state),
+            // then the connection. Null checks defend the bootstrap-failure-before-assignment
+            // case: if OpenConnectionAsync threw, both locals stay null; if BeginAsync threw,
+            // both are assigned and need disposal.
+            if (uow is not null)
+            {
+                await uow.DisposeAsync();
+            }
+            connection?.Dispose();
         }
     }
 
