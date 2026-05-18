@@ -45,6 +45,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// per call carrying backend / table / box-type / chosen-path tags AND one child event per
 /// branch taken so the trace tells the full story on its own.
 /// </summary>
+[Collection("BoxProvisioningObservability")]
 public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
 {
     private readonly List<Activity> _exportedActivities = new();

@@ -50,6 +50,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// status = Error AND the thrown exception is attached as an event. One [Fact] per
 /// bootstrap call site so the regression points are individually addressable.
 /// </summary>
+[Collection("BoxProvisioningObservability")]
 public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposable
 {
     private readonly List<Activity> _exportedActivities = new();
