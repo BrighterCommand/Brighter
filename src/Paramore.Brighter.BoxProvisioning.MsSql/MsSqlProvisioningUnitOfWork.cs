@@ -88,8 +88,13 @@ public class MsSqlProvisioningUnitOfWork(
         // RollbackAsync after the underlying transaction has already been finalised
         // (committed-but-client-side-failed, or zombied by a broken connection); in those
         // cases SqlTransaction.Rollback throws InvalidOperationException ("This SqlTransaction
-        // has completed; it is no longer usable."). RollbackAsync MUST NOT throw — log a
-        // Warning and return so the runner's unwind continues.
+        // has completed; it is no longer usable."). A zombied connection or async
+        // cancellation can surface as SqlException / ObjectDisposedException /
+        // OperationCanceledException too. RollbackAsync MUST NOT throw for any of these —
+        // the runner's catch path (catch { uow.RollbackAsync(...); throw; }) cannot have its
+        // primary migration exception masked by a cleanup-side failure. Catch Exception
+        // (matching the PG UoW stance at PostgreSqlProvisioningUnitOfWork.cs:157) and log a
+        // Warning so the unwind continues.
         if (_transaction is null) return;
         try
         {
@@ -100,11 +105,11 @@ public class MsSqlProvisioningUnitOfWork(
             await Task.CompletedTask;
 #endif
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
             _logger.LogWarning(
                 ex,
-                "MSSQL provisioning UoW: rollback skipped — transaction already finalised");
+                "MSSQL provisioning UoW: rollback skipped — transaction already finalised or unwind failed (lock resource bound to transaction lifetime; SQL Server releases sp_getapplock on transaction completion regardless)");
         }
     }
 
