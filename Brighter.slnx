@@ -192,6 +192,7 @@
   <Folder Name="/tests/">
     <File Path="tests/README.md" />
     <Project Path="tests/Paramore.Brighter.Analyzer.Tests/Paramore.Brighter.Analyzer.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.SourceGenerators.Tests/Paramore.Brighter.SourceGenerators.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj" />
