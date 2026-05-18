@@ -71,19 +71,23 @@ public static class BrighterBuilderBoxProvisioningExtensions
                 + "hosted service would run each migration twice.");
         }
 
-        // Run configure(options) BEFORE registering the marker. A throwing configure must
-        // leave the service collection in the same state as the never-invoked case so the
-        // operator's natural retry succeeds; registering the marker first would leak it on a
-        // failed configure and trip the duplicate-call guard above with a misleading message.
+        // Run configure(options) AND apply the queued registrations BEFORE registering the
+        // marker. Any throw — from configure itself or from a per-backend registration callback
+        // inside the foreach (e.g. an NRE in an Add{Backend}{Box} extension) — must NOT leak
+        // the marker, so the operator's natural retry surfaces the actual underlying error
+        // rather than the misleading "UseBoxProvisioning has already been called" diagnostic
+        // from the duplicate-call guard above. (Partial registrations from a half-applied
+        // foreach can still leak into builder.Services on failure; the contract here is
+        // narrower — marker isolation, not full transactional rollback.)
         var options = new BoxProvisioningOptions();
         configure(options);
-
-        builder.Services.AddSingleton<BoxProvisioningMarker>();
 
         foreach (var registration in options.Registrations)
         {
             registration(builder.Services);
         }
+
+        builder.Services.AddSingleton<BoxProvisioningMarker>();
 
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, BoxProvisioningHostedService>());
         return builder;
