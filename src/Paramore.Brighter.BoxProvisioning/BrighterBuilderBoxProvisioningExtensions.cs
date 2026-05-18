@@ -70,10 +70,15 @@ public static class BrighterBuilderBoxProvisioningExtensions
                 + "a second invocation would double-register every provisioner and the "
                 + "hosted service would run each migration twice.");
         }
-        builder.Services.AddSingleton<BoxProvisioningMarker>();
 
+        // Run configure(options) BEFORE registering the marker. A throwing configure must
+        // leave the service collection in the same state as the never-invoked case so the
+        // operator's natural retry succeeds; registering the marker first would leak it on a
+        // failed configure and trip the duplicate-call guard above with a misleading message.
         var options = new BoxProvisioningOptions();
         configure(options);
+
+        builder.Services.AddSingleton<BoxProvisioningMarker>();
 
         foreach (var registration in options.Registrations)
         {

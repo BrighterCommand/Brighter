@@ -76,6 +76,35 @@ public class UseBoxProvisioningIdempotencyTests
     }
 
     /// <summary>
+    /// Companion to the double-call guard: when <c>configure(options)</c> throws on the FIRST
+    /// invocation, the marker MUST NOT be registered — otherwise the operator's natural
+    /// retry hits the "already invoked" guard with a misleading message. The marker
+    /// registration must therefore land AFTER <c>configure(options)</c> returns
+    /// successfully, so a throwing configure leaves the service collection in the same
+    /// state as the never-invoked case.
+    /// </summary>
+    [Fact]
+    public void When_first_call_configure_throws_then_retry_with_succeeding_configure_it_should_not_throw()
+    {
+        //Arrange
+        var services = new ServiceCollection();
+        var builder = new StubBrighterBuilder(services);
+
+        //First call — configure throws. The "already invoked" guard must not be tripped by
+        //this attempt because the configure delegate failed before any registrations ran.
+        var firstThrown = Record.Exception(() => builder.UseBoxProvisioning(_ => throw new InvalidOperationException("configure-side failure")));
+        Assert.IsType<InvalidOperationException>(firstThrown);
+
+        //Act — retry with a successful configure delegate.
+        var retryThrown = Record.Exception(() => builder.UseBoxProvisioning(_ => { }));
+
+        //Assert — retry succeeds. RED with marker-registered-before-configure: retry
+        //would see the leaked marker and throw the ConfigurationException "already invoked"
+        //message even though the first invocation never completed.
+        Assert.Null(retryThrown);
+    }
+
+    /// <summary>
     /// Inline stub for <see cref="IBrighterBuilder"/>; mirrors the per-backend test stubs
     /// (e.g. <c>tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/StubBrighterBuilder.cs</c>)
     /// but lives inside the core BoxProvisioning test project so the framework-level
