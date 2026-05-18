@@ -112,9 +112,15 @@ public class SqliteProvisioningUnitOfWork(
     /// transaction may already be finalised (committed-but-client-side-failed, or zombied by
     /// a closed connection); in those cases <see cref="SqliteTransaction.Rollback"/> throws
     /// <see cref="InvalidOperationException"/> ("Transaction has completed; it is no longer
-    /// usable."). <see cref="RollbackAsync"/> MUST NOT throw — log a Warning and return so the
-    /// runner's unwind continues. SQLite has no advisory-lock primitive to release separately;
-    /// completing the transaction (or a zombied tx being disposed) releases the writer slot.
+    /// usable."). A zombied connection or async cancellation can surface as
+    /// <see cref="ObjectDisposedException"/> / <see cref="OperationCanceledException"/> too.
+    /// <see cref="RollbackAsync"/> MUST NOT throw for any of these — the runner's catch path
+    /// (<c>catch { uow.RollbackAsync(...); throw; }</c>) cannot have its primary migration
+    /// exception masked by a cleanup-side failure. Catch <see cref="Exception"/> (matching the
+    /// MSSQL UoW stance at MsSqlProvisioningUnitOfWork.cs:108 and the PG UoW stance at
+    /// PostgreSqlProvisioningUnitOfWork.cs:165) and log a Warning so the unwind continues.
+    /// SQLite has no advisory-lock primitive to release separately; completing the transaction
+    /// (or a zombied tx being disposed) releases the writer slot regardless of rollback success.
     /// </remarks>
     public async Task RollbackAsync(CancellationToken cancellationToken)
     {
@@ -123,11 +129,11 @@ public class SqliteProvisioningUnitOfWork(
         {
             await _transaction.RollbackAsync(cancellationToken);
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
             _logger.LogWarning(
                 ex,
-                "SQLite provisioning UoW: rollback skipped — transaction already finalised");
+                "SQLite provisioning UoW: rollback skipped — transaction already finalised or unwind failed (writer slot released on transaction completion regardless of rollback success)");
         }
     }
 
