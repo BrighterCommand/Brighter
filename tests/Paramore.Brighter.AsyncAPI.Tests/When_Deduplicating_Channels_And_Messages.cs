@@ -58,8 +58,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public async Task It_Should_Produce_One_Channel_And_Two_Operations_For_Duplicate_Subscriptions()
+        public async Task It_Should_Dedup_Duplicate_Subscriptions_On_The_Same_Topic()
         {
+            // Two subscriptions for the same routing key collapse into one channel + one
+            // receive operation. The first subscription wins; the duplicate is dropped
+            // rather than emitted as a misleading "_2"-suffixed second operation.
             var subscriptions = new[]
             {
                 new Subscription(
@@ -79,16 +82,13 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            // One channel for the shared topic
             Assert.NotNull(result.Channels);
             Assert.Single(result.Channels);
             Assert.True(result.Channels.ContainsKey("shared_topic"));
 
-            // Two receive operations with unique IDs
             Assert.NotNull(result.Operations);
-            Assert.Equal(2, result.Operations.Count);
+            Assert.Single(result.Operations);
             Assert.True(result.Operations.ContainsKey("receive_shared_topic"));
-            Assert.True(result.Operations.ContainsKey("receive_shared_topic_2"));
 
             // Only one message component
             Assert.NotNull(result.Components?.Messages);
@@ -155,7 +155,9 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         [Fact]
         public async Task It_Should_Dedup_Producer_Registry_Over_Supplemental_Publications()
         {
-            // Both producer registry and supplemental have the same topic
+            // Both producer registry and supplemental declare the same (topic, action). The
+            // producer-registry entry comes first and wins; the supplemental duplicate is
+            // dropped rather than emitted as a misleading "_2"-suffixed second operation.
             var producerPubs = new[]
             {
                 new Publication { Topic = new RoutingKey("dedup.topic"), RequestType = typeof(SharedEvent) }
@@ -166,16 +168,14 @@ namespace Paramore.Brighter.AsyncAPI.Tests
                 new Publication { Topic = new RoutingKey("dedup.topic"), RequestType = typeof(SharedEvent) }
             };
 
-            // Combine: producer registry publications first, supplemental second
             var allPubs = producerPubs.Concat(supplementalPubs).ToArray();
 
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, allPubs);
             var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Operations);
-            // Should have send_dedup_topic and send_dedup_topic_2 since both get added
-            // The producer registry "wins" by being first; the supplemental gets a unique ID
-            Assert.Equal(2, result.Operations.Count);
+            Assert.Single(result.Operations);
+            Assert.True(result.Operations.ContainsKey("send_dedup_topic"));
         }
 
         public class SharedEvent : Event
