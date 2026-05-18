@@ -119,15 +119,21 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     //                   other three add at V2; the cross-backend test excludes it.)
     // Spanner has no V_k chain (ADR 0057 §6 — fresh-install-only), so the latest version is
     // effectively a stamp on a freshly-built table. When a relational backend advances to
-    // V8/V3 etc., bump these constants so Spanner's history row keeps the same V_latest as
+    // V8/V3 etc., bump these values so Spanner's history row keeps the same V_latest as
     // its relational siblings — the cross-backend drift test in
     // tests/Paramore.Brighter.Gcp.Tests/Spanner/BoxProvisioning enforces this parity.
     //
     // Exposed as public to allow the cross-backend drift test (which lives in the Spanner test
     // assembly, not the BoxProvisioning.Spanner assembly) to compare against the relational
     // catalog counts without strong-name InternalsVisibleTo gymnastics.
-    public const int VLatestOutbox = 7;
-    public const int VLatestInbox = 2;
+    //
+    // static readonly (not const): the value is read at runtime from this assembly rather than
+    // baked into IL at every call site at compile time, so downstream consumers that reference
+    // this assembly pick up a new V_latest after a recompile of *this* assembly alone. With
+    // `const` the old value would persist in downstream IL until every consumer also rebuilt,
+    // letting an out-of-date V_latest silently flow through a partial-rebuild deployment.
+    public static readonly int VLatestOutbox = 7;
+    public static readonly int VLatestInbox = 2;
 
     private const string BootstrapDescription =
         "bootstrap: spanner-assumed-current (no known legacy installations, A-2)";
