@@ -111,14 +111,23 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     //                 === new MsSqlOutboxMigrationCatalog().All(...).Count
     //                 === new PostgreSqlOutboxMigrationCatalog().All(...).Count
     //                 === new SqliteOutboxMigrationCatalog().All(...).Count
-    //   VLatestInbox  === new <Backend>InboxMigrationCatalog().All(...).Count (across all four relational backends)
+    //   VLatestInbox === new MsSqlInboxMigrationCatalog().All(...).Count
+    //                === new MySqlInboxMigrationCatalog().All(...).Count
+    //                === new SqliteInboxMigrationCatalog().All(...).Count
+    //                  (PostgreSQL inbox is V1-only by design — ADR 0057 §E, the PG inbox was
+    //                   born post-ContextKey-era so its V1 already includes the column the
+    //                   other three add at V2; the cross-backend test excludes it.)
     // Spanner has no V_k chain (ADR 0057 §6 — fresh-install-only), so the latest version is
     // effectively a stamp on a freshly-built table. When a relational backend advances to
     // V8/V3 etc., bump these constants so Spanner's history row keeps the same V_latest as
-    // its relational siblings — the per-backend drift tests in
-    // tests/Paramore.Brighter.Spanner.Tests/BoxProvisioning will fail otherwise.
-    internal const int VLatestOutbox = 7;
-    internal const int VLatestInbox = 2;
+    // its relational siblings — the cross-backend drift test in
+    // tests/Paramore.Brighter.Gcp.Tests/Spanner/BoxProvisioning enforces this parity.
+    //
+    // Exposed as public to allow the cross-backend drift test (which lives in the Spanner test
+    // assembly, not the BoxProvisioning.Spanner assembly) to compare against the relational
+    // catalog counts without strong-name InternalsVisibleTo gymnastics.
+    public const int VLatestOutbox = 7;
+    public const int VLatestInbox = 2;
 
     private const string BootstrapDescription =
         "bootstrap: spanner-assumed-current (no known legacy installations, A-2)";
