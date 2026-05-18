@@ -33,17 +33,19 @@ namespace Paramore.Brighter.BoxProvisioning;
 /// allowed set is an injection vector for any host that builds the table name from external input.
 /// </summary>
 /// <remarks>
-/// The allowed regex <c>^[A-Za-z_][A-Za-z0-9_]*$</c> matches the bare-identifier rules common to
+/// The allowed regex <c>^[A-Za-z][A-Za-z0-9_]*$</c> matches the bare-identifier rules common to
 /// every supported backend (MSSQL, PostgreSQL, MySQL, SQLite, Spanner) and is a strict subset of
 /// what each backend permits inside quoted/backticked identifiers. The over-restriction is
-/// deliberate: the helper rejects unusual but legal identifiers (e.g. names containing spaces or
-/// non-ASCII characters that would otherwise need quoting) before they reach a code path where a
-/// future contributor might forget to escape them.
+/// deliberate: the helper rejects unusual but legal identifiers (e.g. names containing spaces,
+/// non-ASCII characters, or a leading underscore — Spanner rejects <c>_</c>-prefixed names as
+/// reserved while every other backend accepts them, so the regex picks the strictest backend's
+/// rule to keep portable configuration safe) before they reach a code path where a future
+/// contributor might forget to escape them.
 /// </remarks>
 public static class Identifiers
 {
     private static readonly Regex s_safeIdentifier = new(
-        "^[A-Za-z_][A-Za-z0-9_]*$",
+        "^[A-Za-z][A-Za-z0-9_]*$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>
@@ -53,7 +55,8 @@ public static class Identifiers
     /// <param name="parameterName">The name of the caller's parameter — included in the exception
     /// message so contributors can see which call-site rejected the value.</param>
     /// <exception cref="ConfigurationException">Thrown when <paramref name="identifier"/> is null,
-    /// empty, or contains characters outside <c>[A-Za-z0-9_]</c> or starts with a digit.</exception>
+    /// empty, or contains characters outside <c>[A-Za-z0-9_]</c>, starts with a digit, or starts
+    /// with an underscore.</exception>
     public static void AssertSafe(string identifier, string parameterName)
     {
         // Split missing-configuration (null) from malformed-identifier so operators see the real
@@ -69,6 +72,6 @@ public static class Identifiers
 
         throw new ConfigurationException(
             $"Unsafe SQL identifier supplied for '{parameterName}': '{identifier}'. " +
-            $"Identifiers must match the regex ^[A-Za-z_][A-Za-z0-9_]*$.");
+            $"Identifiers must match the regex ^[A-Za-z][A-Za-z0-9_]*$.");
     }
 }

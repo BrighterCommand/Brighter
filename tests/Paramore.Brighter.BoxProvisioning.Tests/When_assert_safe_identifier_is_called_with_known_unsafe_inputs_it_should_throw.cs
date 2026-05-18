@@ -42,11 +42,12 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 public class AssertSafeIdentifierTests
 {
     [Theory]
-    [InlineData("O'Brien")]      // single quote — breaks information_schema probe at MySqlOutboxMigrationCatalog.cs:165
-    [InlineData("Outbox; DROP")] // semicolon — statement terminator
-    [InlineData("my-outbox")]    // hyphen — invalid in bare identifiers
-    [InlineData("1Outbox")]      // leading digit — invalid as bare identifier across all backends
-    [InlineData("")]             // empty
+    [InlineData("O'Brien")]              // single quote — breaks information_schema probe at MySqlOutboxMigrationCatalog.cs:165
+    [InlineData("Outbox; DROP")]         // semicolon — statement terminator
+    [InlineData("my-outbox")]            // hyphen — invalid in bare identifiers
+    [InlineData("1Outbox")]              // leading digit — invalid as bare identifier across all backends
+    [InlineData("")]                     // empty
+    [InlineData("_underscore_leading")]  // leading underscore — Spanner rejects `_`-prefixed identifiers as reserved (PR #4039 review item E4)
     public void When_assert_safe_identifier_is_called_with_known_unsafe_inputs_it_should_throw(string unsafeIdentifier)
     {
         //Arrange
@@ -65,7 +66,6 @@ public class AssertSafeIdentifierTests
     [Theory]
     [InlineData("Outbox")]
     [InlineData("my_outbox_v2")]
-    [InlineData("_underscore_leading")]
     [InlineData("Outbox123")]
     public void When_assert_safe_identifier_is_called_with_safe_inputs_it_should_not_throw(string safeIdentifier)
     {
