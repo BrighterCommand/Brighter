@@ -33,6 +33,16 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// and <c>RELEASE_LOCK(name)</c>. Acquire blocks server-side for up to the supplied timeout
 /// and throws <see cref="TimeoutException"/> on failure.
 /// </summary>
+/// <remarks>
+/// Operator note — fail-fast is unavailable on MySQL. <c>GET_LOCK</c> takes whole seconds
+/// (SQL <c>INT</c> bind), and a sub-second wait of <c>TimeSpan.Zero</c> would round to a
+/// non-blocking acquire that races the migration. <see cref="AcquireAsync"/> floors the wait
+/// at 1 second instead, so a configured <c>TimeSpan.Zero</c> still produces a server-side
+/// blocking acquire of one second — not the "try once and fail immediately" semantics
+/// available on MSSQL (<c>sp_getapplock</c> with <c>LockTimeout = 0</c>) or PostgreSQL
+/// (<c>pg_try_advisory_lock</c>). Callers needing strict fail-fast should detect this
+/// constraint at configuration time on the MySQL backend.
+/// </remarks>
 public class MySqlAdvisoryLock : IMySqlAdvisoryLock
 {
     /// <inheritdoc />

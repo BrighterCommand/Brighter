@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <!--
+            Net9-only TFM via BrighterTestNineOnlyTargetFrameworks. MSSQL / PG / SQLite tests
+            target net9.0+net10.0; MySQL deliberately follows the Paramore.Brighter.Analyzer.Tests
+            precedent and runs net9.0 only. Revisit when the matrix is next reviewed.
+        -->
         <TargetFrameworks>$(BrighterTestNineOnlyTargetFrameworks)</TargetFrameworks>
         <IsPackable>false</IsPackable>
     </PropertyGroup>

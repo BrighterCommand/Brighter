@@ -53,6 +53,17 @@ namespace Paramore.Brighter.BoxProvisioning;
 /// Backends that do not consume a transaction (MySQL — DDL auto-commits per ADR 0057 §5a;
 /// Spanner — single-statement DDL) accept and ignore the parameter; the implementing class
 /// states this on its XML-doc.</typeparam>
+/// <remarks>
+/// Parameter ordering note — the per-method probe methods place
+/// <c>cancellationToken</c> before the optional <c>transaction</c>, departing from the .NET
+/// "trailing CancellationToken" convention. The ordering is deliberate: the transaction
+/// argument is the rarely-supplied optional (only the runner's under-lock re-detection path
+/// passes one — every other call site is transactionless), and putting it last lets the
+/// transactionless call sites use positional <c>cancellationToken</c> arguments without
+/// naming a <c>transaction: null</c> parameter. Trailing CT would force every transactionless
+/// caller to name <c>cancellationToken:</c> or supply <c>null</c> for the transaction
+/// positionally, both of which read worse. The convention deviation is acknowledged.
+/// </remarks>
 public interface IAmABoxMigrationDetectionHelper<TConnection, TTransaction>
     where TConnection : DbConnection
     where TTransaction : DbTransaction

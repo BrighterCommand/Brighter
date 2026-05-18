@@ -33,10 +33,21 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// <remarks>
 /// V1 is the pre-October-2018 baseline (before <c>ContextKey</c> was added in commit
 /// <c>787c31c52</c>); V2 adds <c>ContextKey</c> via the MySQL <c>information_schema.columns</c>
-/// + prepared-statement idempotency pattern from ADR 0057 §5. V1.UpScript stays the live
-/// <see cref="MySqlInboxBuilder"/> DDL (per ADR §3 fresh-install fast path) — only V1's
-/// <see cref="IAmABoxMigration.LogicalColumns"/> reflects the historical 4-column shape used
-/// for detection.
+/// + prepared-statement idempotency pattern from ADR 0057 §5.
+/// <para>
+/// Note that the per-version <see cref="IAmABoxMigration.UpScript"/> and
+/// <see cref="IAmABoxMigration.LogicalColumns"/> play different roles:
+/// </para>
+/// <list type="bullet">
+/// <item><description><see cref="IAmABoxMigration.UpScript"/> on V1 is the live
+/// <see cref="MySqlInboxBuilder"/> DDL — V_latest shape — because the fresh-install fast path
+/// (ADR 0057 §3) stamps V_latest from V1's UpScript rather than walking V1 → V2 → … on a new
+/// install. V_k's UpScript for k &gt; 1 is the incremental ALTER that takes V_{k-1} to V_k,
+/// and is only applied on the bootstrap / normal-update branches.</description></item>
+/// <item><description><see cref="IAmABoxMigration.LogicalColumns"/> on V1 reflects the
+/// historical 4-column shape (no <c>ContextKey</c>); it is the detection contract used by
+/// the bootstrap branch to infer which V_k a legacy table sits at.</description></item>
+/// </list>
 /// <para>
 /// LogicalColumns are PascalCase with <see cref="StringComparer.OrdinalIgnoreCase"/> — MySQL
 /// identifiers are case-insensitive on lookup. Comparer mirrors

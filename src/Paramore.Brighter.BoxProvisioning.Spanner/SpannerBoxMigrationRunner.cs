@@ -344,6 +344,12 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
                 { "Version", SpannerDbType.Int64, version }
             });
 
+        // SELECT COUNT(1) is one of the few SQL expressions guaranteed never to return NULL
+        // (per ANSI SQL — COUNT over zero rows returns 0, not NULL). The null-forgiving operator
+        // therefore documents an invariant the driver cannot violate without breaking
+        // standards compliance. If a Spanner driver ever does return null here, the resulting
+        // NullReferenceException is preferable to a silent "0" interpretation, which would
+        // misclassify an applied migration as missing and re-stamp the history row.
         var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
         return count > 0;
     }

@@ -334,9 +334,11 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// Rejects duplicate, gap, or out-of-order migration versions before any work begins.
     /// A malformed list corrupts every path branch (PK violation on history insert, skipped
     /// ALTERs, double-applied DDL), so the validation sits at <see cref="MigrateAsync"/> entry.
-    /// Lifted from spec 0027 Items H/I/Q.
+    /// Lifted from spec 0027 Items H/I/Q. Private because the orchestration is owned by the
+    /// base; derived classes implement only the per-backend hooks and have no reason to
+    /// re-invoke (or override the algorithm of) the pre-flight monotonicity check.
     /// </summary>
-    protected static void ValidateMigrationsMonotonic(
+    private static void ValidateMigrationsMonotonic(
         string? schemaName, string tableName, IReadOnlyList<IAmABoxMigration> migrations)
     {
         for (var i = 1; i < migrations.Count; i++)

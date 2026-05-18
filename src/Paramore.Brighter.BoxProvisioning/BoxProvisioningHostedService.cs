@@ -70,6 +70,15 @@ public class BoxProvisioningHostedService : IHostedService
     /// The original failure is preserved as the inner exception.</exception>
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        // OrderBy is stable, but the upstream IEnumerable<IAmABoxProvisioner> resolution order
+        // is not guaranteed across DI containers — Microsoft.Extensions.DependencyInjection
+        // preserves registration order today, but third-party containers (Autofac with
+        // resolve-by-tag, Lamar, etc.) may not. Within an outbox/inbox group, ordering across
+        // multiple provisioners (e.g. one tenant per provisioner) is intentionally
+        // implementation-defined: the per-table startup log ("Provisioning Outbox '{BoxTableName}'…")
+        // disambiguates which provisioner is running, so a non-deterministic intra-group order
+        // is operationally tolerable and a deterministic secondary sort by BoxTableName would
+        // entrench an ordering callers cannot influence today.
         var ordered = _provisioners.OrderBy(p => OrderingOrdinal(p.BoxType));
 
         foreach (var provisioner in ordered)

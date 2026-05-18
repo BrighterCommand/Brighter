@@ -49,6 +49,15 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// full <c>schema.table</c> input to keep the result within the limit while remaining
 /// collision-resistant across distinct (schema, table) pairs that share a long common prefix.
 /// </para>
+/// <para>
+/// Hash truncation: the suffix is the first 8 bytes (16 hex characters) of the SHA-256 digest.
+/// Birthday-bound collision probability is ~1 in 2^32 (~4 billion) over distinct
+/// (schema, table) pairs that share the same long prefix — accepted as negligible given the
+/// per-deployment population is typically &lt; 100 box tables, and any collision merely
+/// serialises two migrations on a shared advisory lock (correctness preserved, only the
+/// concurrency boundary widens). Full SHA-256 will not fit inside the 64-char GET_LOCK limit
+/// after the diagnostic prefix.
+/// </para>
 /// </remarks>
 public static class MySqlMigrationLockName
 {
