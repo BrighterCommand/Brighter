@@ -79,7 +79,15 @@ public class PostgreSqlProvisioningUnitOfWork(
             // cleared so a subsequent best-effort RollbackAsync is a clean no-op.
             try
             {
-                await _advisoryLock.ReleaseAsync(_connection, lockResource, cancellationToken);
+                // Pass CancellationToken.None — NOT the caller's token — mirroring §B.3
+                // rollback semantics: if BeginTransactionAsync threw because the caller's
+                // token was cancelled (or cancelled during this catch block), reusing that
+                // token here short-circuits pg_advisory_unlock with OperationCanceledException
+                // before the SQL is dispatched, and the session-scoped lock leaks to
+                // connection close. The release SQL is a single round-trip and bounded by the
+                // connection state; running it untokened guarantees the unlock attempt reaches
+                // the server even when the caller has already abandoned the operation.
+                await _advisoryLock.ReleaseAsync(_connection, lockResource, CancellationToken.None);
             }
             catch (Exception releaseEx)
             {

@@ -61,6 +61,15 @@ internal sealed class FakePostgreSqlAdvisoryLock(
     public TimeSpan? AcquiredTimeout { get; private set; }
 
     /// <summary>
+    /// Cancellation token captured at the moment <see cref="ReleaseAsync"/> was invoked.
+    /// Used by the partial-init cleanup-release test (ADR 0058 §B.3 atomic-Begin) to pin
+    /// that the UoW passes <see cref="CancellationToken.None"/> to <see cref="ReleaseAsync"/>
+    /// in its <c>BeginTransactionAsync</c>-failed catch path — otherwise a caller-cancelled
+    /// token would short-circuit the unlock and leak the session-scoped lock.
+    /// </summary>
+    public CancellationToken? ReleasedCancellationToken { get; private set; }
+
+    /// <summary>
     /// Captured at the moment <see cref="AcquireAsync"/> was first invoked, if
     /// <c>senseTransactionStateAtAcquire</c> was true. <c>null</c> until first invocation;
     /// <c>false</c> if no transaction was active on the connection at the time of the call;
@@ -94,6 +103,7 @@ internal sealed class FakePostgreSqlAdvisoryLock(
         CancellationToken cancellationToken)
     {
         ReleasedKey = lockKey;
+        ReleasedCancellationToken = cancellationToken;
         if (throwOnRelease is not null) throw throwOnRelease;
         return Task.FromResult(releaseResult);
     }
