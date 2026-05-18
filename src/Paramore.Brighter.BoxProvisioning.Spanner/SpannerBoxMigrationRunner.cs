@@ -263,10 +263,22 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     {
         if (currentVersion == vLatest) return;
 
+        // Per ADR 0057 §6: Spanner has no advisory-lock concept and no in-place migration
+        // chain — fresh-install is the only forward path, and the relational backends'
+        // bootstrap-at-V_k re-run is intentionally not available here. Surface the exact
+        // recovery action in the message so the operator does not have to cross-reference
+        // the ADR and reverse-engineer the history-table shape.
         throw new ConfigurationException(
             $"Migration list out of sync for table '{tableName}': " +
             $"installed V={currentVersion}, expected V={vLatest}. " +
-            "Manual recovery required per ADR 0057 §6.");
+            $"Spanner does not support in-place migration (ADR 0057 §6). Recovery: after " +
+            $"verifying the table schema matches V={vLatest} in the relevant builder " +
+            $"(SqlSpannerOutboxBuilder / SqlSpannerInboxBuilder — see Drift tests), insert " +
+            $"a synthetic history row into `{MigrationHistoryTable}` for this table so the " +
+            $"next provisioner run no-ops, e.g.: " +
+            $"INSERT INTO `{MigrationHistoryTable}` (`BoxTableName`, `MigrationVersion`, " +
+            $"`Description`, `AppliedAt`) VALUES ('{tableName}', {vLatest}, " +
+            $"'Manual recovery — schema verified at V={vLatest}', PENDING_COMMIT_TIMESTAMP()).");
     }
 
     // Narrowed to AlreadyExists only per PR #4039 review item #7: FailedPrecondition is a
