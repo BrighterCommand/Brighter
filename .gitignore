@@ -344,10 +344,3 @@ tests/certs/
 # Ralph loop
 RALPH_STOP
 ralph.log
-
-<<<<<<< database_migration
-# Claude Code per-session scratch state (CLAUDE.md-sanctioned local file)
-=======
-# AI agent session state
->>>>>>> master
-PROMPT.md
