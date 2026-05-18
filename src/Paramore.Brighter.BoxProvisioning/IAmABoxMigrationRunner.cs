@@ -40,7 +40,14 @@ public interface IAmABoxMigrationRunner
     /// <param name="schemaName">The database schema name (e.g. "dbo" for MSSQL).</param>
     /// <param name="boxType">The type of box being migrated; used to pick the discriminator column for under-lock re-detection.</param>
     /// <param name="migrations">The ordered list of migrations to apply.</param>
-    /// <param name="tableState">The pre-lock state of the box table, treated as a hint only — the runner re-reads state under the lock to defeat TOCTOU races.</param>
+    /// <param name="tableState">The pre-lock state of the box table. Consumption is
+    /// asymmetric across backends and intentionally so: the four relational runners
+    /// (<see cref="SqlBoxMigrationRunner{TConnection,TTransaction}"/>) treat the entire
+    /// record as a hint and discard it — re-detection under the advisory-lock-bearing UoW
+    /// supplies the authoritative state (ADR 0057 §3 TOCTOU defence). The Spanner runner,
+    /// which has no advisory-lock concept (ADR 0057 §6), reads
+    /// <see cref="BoxTableState.CurrentVersion"/> directly to decide the normal-update path.
+    /// See <see cref="BoxTableState"/> for the per-field disposition.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task MigrateAsync(
         string tableName,
