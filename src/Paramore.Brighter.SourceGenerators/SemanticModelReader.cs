@@ -23,150 +23,193 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Paramore.Brighter.SourceGenerators.Model;
 
 namespace Paramore.Brighter.SourceGenerators;
 
 /// <summary>
-/// Single point in the generator that touches the semantic model. Validates the user's
-/// partial method, walks the source module to discover handlers/mappers/transforms, and
-/// projects everything into the Roslyn-free <see cref="RegistrationModel"/>.
+/// Holds the two transform entry points that touch Roslyn semantic-model objects. Both produce
+/// value-equatable records so the incremental pipeline can cache their output by value rather
+/// than by symbol identity (which is never stable across compilations).
 /// </summary>
 public static class SemanticModelReader
 {
-    private const string ExcludeAttributeName = "Paramore.Brighter.ExcludeFromBrighterRegistrationAttribute";
-
-    public static BuildResult TryBuildModel(IMethodSymbol method, Compilation compilation, MarkerSymbols symbols)
+    /// <summary>
+    /// Transform for <see cref="IncrementalGeneratorInitializationContext.SyntaxProvider"/>
+    /// <c>.ForAttributeWithMetadataName</c>: validates the attributed method and projects it
+    /// to a Roslyn-free <see cref="MethodCandidate"/>.
+    /// </summary>
+    public static MethodCandidate ReadMethod(GeneratorAttributeSyntaxContext ctx, CancellationToken cancellationToken)
     {
-        if (!Validate(method, symbols, out var diagnostic))
-            return BuildResult.Failure(diagnostic);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        var discovered = Discover(compilation, symbols);
-        return BuildResult.Ok(Project(method, discovered));
+        if (ctx.TargetSymbol is not IMethodSymbol method)
+            return new MethodCandidate(null, null);
+
+        var markers = MarkerSymbols.Resolve(ctx.SemanticModel.Compilation);
+        if (!markers.IsValid)
+            return new MethodCandidate(null, null);
+
+        var diagnostic = ValidateMethod(method, markers);
+        if (diagnostic is not null)
+            return new MethodCandidate(null, diagnostic);
+
+        var target = ProjectMethod(method);
+        return new MethodCandidate(target, null);
     }
 
-    public readonly record struct BuildResult(RegistrationModel? Model, Diagnostic? Diagnostic)
+    /// <summary>
+    /// Transform for <see cref="IncrementalGeneratorInitializationContext.SyntaxProvider"/>
+    /// <c>.CreateSyntaxProvider</c>: inspects a single class declaration and projects any
+    /// Brighter-related interface implementations to value-equatable records.
+    /// </summary>
+    public static EquatableArray<DiscoveredEntry> ReadClass(GeneratorSyntaxContext ctx, CancellationToken cancellationToken)
     {
-        public bool Success => Model is not null;
-        public static BuildResult Ok(RegistrationModel model) => new(model, null);
-        public static BuildResult Failure(Diagnostic? diagnostic) => new(null, diagnostic);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (ctx.Node is not ClassDeclarationSyntax cls)
+            return EquatableArray<DiscoveredEntry>.Empty;
+
+        if (ctx.SemanticModel.GetDeclaredSymbol(cls, cancellationToken) is not INamedTypeSymbol type)
+            return EquatableArray<DiscoveredEntry>.Empty;
+
+        if (!IsClassifiable(type))
+            return EquatableArray<DiscoveredEntry>.Empty;
+
+        // Only emit from the "primary" partial declaration so partial classes don't get
+        // discovered N times. Roslyn orders DeclaringSyntaxReferences deterministically.
+        if (!IsPrimaryDeclaration(type, cls))
+            return EquatableArray<DiscoveredEntry>.Empty;
+
+        var markers = MarkerSymbols.Resolve(ctx.SemanticModel.Compilation);
+        if (!markers.IsValid)
+            return EquatableArray<DiscoveredEntry>.Empty;
+
+        if (HasExcludeAttribute(type, ctx.SemanticModel.Compilation))
+            return EquatableArray<DiscoveredEntry>.Empty;
+
+        return new EquatableArray<DiscoveredEntry>(ClassifyEntries(type, markers));
     }
 
-    internal static bool Validate(IMethodSymbol method, MarkerSymbols symbols, out Diagnostic? diagnostic)
+    private static DiagnosticInfo? ValidateMethod(IMethodSymbol method, MarkerSymbols markers)
     {
-        diagnostic = null;
-        var location = method.Locations.FirstOrDefault();
+        var location = LocationInfo.From(method.Locations.FirstOrDefault());
 
         if (!method.IsPartialDefinition)
-            return Fail(Diagnostics.MustBePartial, location, method.Name, out diagnostic);
+            return new DiagnosticInfo(Diagnostics.MustBePartial.Id, location, method.Name);
 
         if (!method.IsStatic)
-            return Fail(Diagnostics.MustBeStatic, location, method.Name, out diagnostic);
+            return new DiagnosticInfo(Diagnostics.MustBeStatic.Id, location, method.Name);
 
-        if (!SymbolEqualityComparer.Default.Equals(method.ReturnType, symbols.BrighterBuilder))
-            return Fail(Diagnostics.WrongReturnType, location, method.Name, out diagnostic);
+        if (!Same(method.ReturnType, markers.BrighterBuilder))
+            return new DiagnosticInfo(Diagnostics.WrongReturnType.Id, location, method.Name);
 
-        if (method.Parameters.Length != 1 ||
-            !SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, symbols.BrighterBuilder))
-            return Fail(Diagnostics.WrongSignature, location, method.Name, out diagnostic);
+        if (method.Parameters.Length != 1 || !Same(method.Parameters[0].Type, markers.BrighterBuilder))
+            return new DiagnosticInfo(Diagnostics.WrongSignature.Id, location, method.Name);
 
-        return true;
+        return null;
     }
 
-    private static bool Fail(DiagnosticDescriptor descriptor, Location? location, string methodName, out Diagnostic? diagnostic)
+    private static MethodTarget ProjectMethod(IMethodSymbol method)
     {
-        diagnostic = Diagnostic.Create(descriptor, location, methodName);
-        return false;
+        var containingType = method.ContainingType;
+        var ns = containingType.ContainingNamespace;
+        var hasNamespace = ns is { IsGlobalNamespace: false };
+
+        return new MethodTarget(
+            Namespace: hasNamespace ? ns!.ToDisplayString() : null,
+            ContainingTypeAccessibility: AccessibilityModifier(containingType.DeclaredAccessibility),
+            ContainingTypeName: containingType.Name,
+            ContainingTypeIsStatic: containingType.IsStatic,
+            MethodAccessibility: AccessibilityModifier(method.DeclaredAccessibility),
+            MethodName: method.Name,
+            ReturnTypeFullyQualified: FullyQualified(method.ReturnType),
+            ParameterTypeFullyQualified: FullyQualified(method.Parameters[0].Type),
+            ParameterName: method.Parameters[0].Name,
+            IsExtensionMethod: method.IsExtensionMethod,
+            HintName: BuildHintName(containingType, method.Name));
     }
 
-    private static DiscoveredSymbols Discover(Compilation compilation, MarkerSymbols symbols)
+    private static IEnumerable<DiscoveredEntry> ClassifyEntries(INamedTypeSymbol type, MarkerSymbols markers)
     {
-        var result = new DiscoveredSymbols();
-        var excludeAttr = compilation.GetTypeByMetadataName(ExcludeAttributeName);
-
-        foreach (var type in EnumerateNamedTypes(compilation.SourceModule.GlobalNamespace))
+        var seenTransform = false;
+        foreach (var iface in type.AllInterfaces)
         {
-            if (!IsRegistrationCandidate(type, excludeAttr))
-                continue;
-            ClassifyType(type, symbols, result);
+            var entry = TryClassifyInterface(type, iface, markers, ref seenTransform);
+            if (entry is not null)
+                yield return entry;
         }
 
-        return result;
+        if (seenTransform && !type.IsGenericType)
+            yield return new DiscoveredEntry(DiscoveredKind.Transform, string.Empty, FullyQualified(type), IsOpenGeneric: false);
     }
 
-    private static bool IsRegistrationCandidate(INamedTypeSymbol type, INamedTypeSymbol? excludeAttr)
+    private static DiscoveredEntry? TryClassifyInterface(
+        INamedTypeSymbol type,
+        INamedTypeSymbol iface,
+        MarkerSymbols markers,
+        ref bool seenTransform)
+    {
+        if (Same(iface, markers.MessageTransform) || Same(iface, markers.MessageTransformAsync))
+        {
+            seenTransform = true;
+            return null;
+        }
+
+        if (!iface.IsGenericType || iface.TypeArguments.Length != 1)
+            return null;
+
+        var def = iface.OriginalDefinition;
+        var requestType = iface.TypeArguments[0];
+
+        if (Same(def, markers.HandleRequests))
+            return MakeHandlerEntry(DiscoveredKind.SyncHandler, type, requestType);
+        if (Same(def, markers.HandleRequestsAsync))
+            return MakeHandlerEntry(DiscoveredKind.AsyncHandler, type, requestType);
+        if (Same(def, markers.MessageMapper) && !type.IsGenericType)
+            return new DiscoveredEntry(DiscoveredKind.Mapper, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
+        if (Same(def, markers.MessageMapperAsync) && !type.IsGenericType)
+            return new DiscoveredEntry(DiscoveredKind.AsyncMapper, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
+
+        return null;
+    }
+
+    private static DiscoveredEntry MakeHandlerEntry(DiscoveredKind kind, INamedTypeSymbol type, ITypeSymbol requestType)
+    {
+        if (IsOpenGeneric(type))
+            return new DiscoveredEntry(kind, string.Empty, UnboundGenericName(type), IsOpenGeneric: true);
+        return new DiscoveredEntry(kind, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
+    }
+
+    private static bool IsClassifiable(INamedTypeSymbol type)
     {
         if (type.TypeKind != TypeKind.Class)
             return false;
         if (type.IsAbstract || type.IsImplicitClass || type.IsAnonymousType)
             return false;
-        if (!IsReachableFromGeneratedCode(type))
-            return false;
-        if (excludeAttr is not null && HasAttribute(type, excludeAttr))
-            return false;
-        return true;
+        return IsReachableFromGeneratedCode(type);
     }
 
-    private static bool HasAttribute(INamedTypeSymbol type, INamedTypeSymbol attribute) =>
-        type.GetAttributes().Any(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, attribute));
-
-    private static void ClassifyType(INamedTypeSymbol type, MarkerSymbols symbols, DiscoveredSymbols result)
+    private static bool IsPrimaryDeclaration(INamedTypeSymbol type, ClassDeclarationSyntax cls)
     {
-        var isTransform = false;
-        foreach (var iface in type.AllInterfaces)
-        {
-            if (TryClassifyGenericInterface(type, iface, symbols, result))
-                continue;
-            if (IsTransformInterface(iface, symbols))
-                isTransform = true;
-        }
-
-        if (isTransform && !type.IsGenericType)
-            result.Transforms.Add(type);
+        var refs = type.DeclaringSyntaxReferences;
+        if (refs.Length <= 1)
+            return true;
+        var primary = refs[0];
+        return primary.SyntaxTree == cls.SyntaxTree && primary.Span == cls.Span;
     }
 
-    private static bool TryClassifyGenericInterface(
-        INamedTypeSymbol type,
-        INamedTypeSymbol iface,
-        MarkerSymbols symbols,
-        DiscoveredSymbols result)
+    private static bool HasExcludeAttribute(INamedTypeSymbol type, Compilation compilation)
     {
-        if (!iface.IsGenericType || iface.TypeArguments.Length != 1)
+        var attr = compilation.GetTypeByMetadataName("Paramore.Brighter.ExcludeFromBrighterRegistrationAttribute");
+        if (attr is null)
             return false;
-
-        var def = iface.OriginalDefinition;
-        var requestType = iface.TypeArguments[0];
-
-        if (Same(def, symbols.HandleRequests))
-            result.Handlers.Add((requestType, type));
-        else if (Same(def, symbols.HandleRequestsAsync))
-            result.AsyncHandlers.Add((requestType, type));
-        else if (!type.IsGenericType)
-            TryAddMapper(def, requestType, type, symbols, result);
-
-        return true;
+        return type.GetAttributes().Any(a => Same(a.AttributeClass, attr));
     }
-
-    private static void TryAddMapper(
-        INamedTypeSymbol def,
-        ITypeSymbol requestType,
-        INamedTypeSymbol type,
-        MarkerSymbols symbols,
-        DiscoveredSymbols result)
-    {
-        if (Same(def, symbols.MessageMapper))
-            result.Mappers.Add((requestType, type));
-        else if (Same(def, symbols.MessageMapperAsync))
-            result.AsyncMappers.Add((requestType, type));
-    }
-
-    private static bool Same(ISymbol? a, ISymbol? b) =>
-        SymbolEqualityComparer.Default.Equals(a, b);
-
-    private static bool IsTransformInterface(INamedTypeSymbol iface, MarkerSymbols symbols) =>
-        SymbolEqualityComparer.Default.Equals(iface, symbols.MessageTransform) ||
-        SymbolEqualityComparer.Default.Equals(iface, symbols.MessageTransformAsync);
 
     private static bool IsReachableFromGeneratedCode(INamedTypeSymbol type)
     {
@@ -178,82 +221,10 @@ public static class SemanticModelReader
         return true;
     }
 
-    private static IEnumerable<INamedTypeSymbol> EnumerateNamedTypes(INamespaceSymbol ns)
-    {
-        foreach (var member in ns.GetMembers())
-        {
-            switch (member)
-            {
-                case INamespaceSymbol child:
-                    foreach (var t in EnumerateNamedTypes(child))
-                        yield return t;
-                    break;
-                case INamedTypeSymbol type:
-                    yield return type;
-                    foreach (var nested in EnumerateNested(type))
-                        yield return nested;
-                    break;
-            }
-        }
-    }
-
-    private static IEnumerable<INamedTypeSymbol> EnumerateNested(INamedTypeSymbol type)
-    {
-        foreach (var nested in type.GetTypeMembers())
-        {
-            yield return nested;
-            foreach (var n in EnumerateNested(nested))
-                yield return n;
-        }
-    }
-
-    private static RegistrationModel Project(IMethodSymbol method, DiscoveredSymbols discovered)
-    {
-        var containingType = method.ContainingType;
-        var ns = containingType.ContainingNamespace;
-        var hasNamespace = ns is { IsGlobalNamespace: false };
-
-        return new RegistrationModel(
-            Namespace: hasNamespace ? ns!.ToDisplayString() : null,
-            ContainingTypeAccessibility: AccessibilityModifier(containingType.DeclaredAccessibility),
-            ContainingTypeName: containingType.Name,
-            ContainingTypeIsStatic: containingType.IsStatic,
-            MethodAccessibility: AccessibilityModifier(method.DeclaredAccessibility),
-            MethodName: method.Name,
-            ReturnTypeFullyQualified: FullyQualified(method.ReturnType),
-            ParameterTypeFullyQualified: FullyQualified(method.Parameters[0].Type),
-            ParameterName: method.Parameters[0].Name,
-            IsExtensionMethod: method.IsExtensionMethod,
-            Handlers: new EquatableArray<HandlerEntry>(discovered.Handlers.Select(MapHandler)),
-            AsyncHandlers: new EquatableArray<HandlerEntry>(discovered.AsyncHandlers.Select(MapHandler)),
-            Mappers: new EquatableArray<MapperEntry>(discovered.Mappers.Select(MapMapper)),
-            AsyncMappers: new EquatableArray<MapperEntry>(discovered.AsyncMappers.Select(MapMapper)),
-            Transforms: new EquatableArray<string>(discovered.Transforms.Select(FullyQualified)),
-            HintName: BuildHintName(containingType, method.Name));
-    }
-
-    private static HandlerEntry MapHandler((ITypeSymbol Request, INamedTypeSymbol Handler) entry)
-    {
-        if (IsOpenGeneric(entry.Handler))
-        {
-            return new HandlerEntry(
-                RequestTypeFullyQualified: string.Empty,
-                HandlerTypeFullyQualified: UnboundGenericName(entry.Handler),
-                IsOpenGeneric: true);
-        }
-        return new HandlerEntry(
-            RequestTypeFullyQualified: FullyQualified(entry.Request),
-            HandlerTypeFullyQualified: FullyQualified(entry.Handler),
-            IsOpenGeneric: false);
-    }
-
-    private static MapperEntry MapMapper((ITypeSymbol Request, INamedTypeSymbol Mapper) entry) =>
-        new(FullyQualified(entry.Request), FullyQualified(entry.Mapper));
-
     private static string BuildHintName(INamedTypeSymbol containingType, string methodName)
     {
         var raw = containingType.ToDisplayString();
-        var sanitized = new System.Text.StringBuilder(raw.Length);
+        var sanitized = new StringBuilder(raw.Length);
         foreach (var ch in raw)
             sanitized.Append(char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_');
         return $"{sanitized}__{methodName}.g.cs";
@@ -275,6 +246,9 @@ public static class SemanticModelReader
         return name.Substring(0, lt + 1) + new string(',', arity - 1) + ">";
     }
 
+    private static bool Same(ISymbol? a, ISymbol? b) =>
+        SymbolEqualityComparer.Default.Equals(a, b);
+
     private static string AccessibilityModifier(Accessibility accessibility) => accessibility switch
     {
         Accessibility.Public => "public",
@@ -285,13 +259,4 @@ public static class SemanticModelReader
         Accessibility.ProtectedAndInternal => "private protected",
         _ => "internal"
     };
-
-    private sealed class DiscoveredSymbols
-    {
-        public List<(ITypeSymbol Request, INamedTypeSymbol Handler)> Handlers { get; } = new();
-        public List<(ITypeSymbol Request, INamedTypeSymbol Handler)> AsyncHandlers { get; } = new();
-        public List<(ITypeSymbol Request, INamedTypeSymbol Mapper)> Mappers { get; } = new();
-        public List<(ITypeSymbol Request, INamedTypeSymbol Mapper)> AsyncMappers { get; } = new();
-        public List<INamedTypeSymbol> Transforms { get; } = new();
-    }
 }

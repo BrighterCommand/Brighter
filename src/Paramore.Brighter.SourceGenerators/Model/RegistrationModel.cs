@@ -21,6 +21,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Paramore.Brighter.SourceGenerators.Model;
 
 /// <summary>
@@ -43,7 +46,61 @@ public sealed record RegistrationModel(
     EquatableArray<MapperEntry> Mappers,
     EquatableArray<MapperEntry> AsyncMappers,
     EquatableArray<string> Transforms,
-    string HintName);
+    string HintName)
+{
+    /// <summary>
+    /// Assemble a model from a per-method target and the flat list of discovered registration
+    /// candidates. Pure function over value-equatable inputs.
+    /// </summary>
+    public static RegistrationModel From(MethodTarget target, EquatableArray<DiscoveredEntry> discovered)
+    {
+        var sync = new List<HandlerEntry>();
+        var async = new List<HandlerEntry>();
+        var mappers = new List<MapperEntry>();
+        var asyncMappers = new List<MapperEntry>();
+        var transforms = new List<string>();
+
+        foreach (var entry in discovered.Distinct())
+        {
+            switch (entry.Kind)
+            {
+                case DiscoveredKind.SyncHandler:
+                    sync.Add(new HandlerEntry(entry.RequestTypeFullyQualified, entry.TypeFullyQualified, entry.IsOpenGeneric));
+                    break;
+                case DiscoveredKind.AsyncHandler:
+                    async.Add(new HandlerEntry(entry.RequestTypeFullyQualified, entry.TypeFullyQualified, entry.IsOpenGeneric));
+                    break;
+                case DiscoveredKind.Mapper:
+                    mappers.Add(new MapperEntry(entry.RequestTypeFullyQualified, entry.TypeFullyQualified));
+                    break;
+                case DiscoveredKind.AsyncMapper:
+                    asyncMappers.Add(new MapperEntry(entry.RequestTypeFullyQualified, entry.TypeFullyQualified));
+                    break;
+                case DiscoveredKind.Transform:
+                    transforms.Add(entry.TypeFullyQualified);
+                    break;
+            }
+        }
+
+        return new RegistrationModel(
+            target.Namespace,
+            target.ContainingTypeAccessibility,
+            target.ContainingTypeName,
+            target.ContainingTypeIsStatic,
+            target.MethodAccessibility,
+            target.MethodName,
+            target.ReturnTypeFullyQualified,
+            target.ParameterTypeFullyQualified,
+            target.ParameterName,
+            target.IsExtensionMethod,
+            new EquatableArray<HandlerEntry>(sync),
+            new EquatableArray<HandlerEntry>(async),
+            new EquatableArray<MapperEntry>(mappers),
+            new EquatableArray<MapperEntry>(asyncMappers),
+            new EquatableArray<string>(transforms),
+            target.HintName);
+    }
+}
 
 /// <summary>
 /// A handler registration. For closed-generic handlers, both type names are fully qualified

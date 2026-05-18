@@ -21,26 +21,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using Paramore.Brighter.SourceGenerators.Model;
 
 namespace Paramore.Brighter.SourceGenerators;
 
 /// <summary>
 /// Emits a partial implementation of a user-declared method that registers Brighter handlers,
-/// message mappers and transforms from the current compilation. Replaces runtime
-/// <c>AutoFromAssemblies</c> reflection scanning with compile-time generated registrations.
+/// message mappers and transforms from the current compilation.
 /// </summary>
 /// <remarks>
-/// The generator follows a three-stage pipeline:
+/// The pipeline is structured so that no Roslyn semantic-model object ever escapes a transform —
+/// every value flowing through the incremental graph is a value-equatable record. That is what
+/// lets the generator skip work when an edit doesn't change the semantically relevant shape of
+/// the compilation:
 /// <list type="bullet">
-///   <item><see cref="SemanticModelReader"/> turns Roslyn symbols into a <see cref="Model.RegistrationModel"/>.</item>
-///   <item><see cref="RegistrationWriter"/> turns the model into source text (pure function).</item>
-///   <item>This class wires those stages into the incremental pipeline.</item>
+///   <item><b>Method stream</b>: <see cref="SemanticModelReader.ReadMethod"/> projects each
+///   <c>[BrighterRegistrations]</c>-attributed method to a <see cref="MethodCandidate"/>.</item>
+///   <item><b>Discovery stream</b>: <see cref="SemanticModelReader.ReadClass"/> projects each
+///   class declaration with a base list to zero or more <see cref="DiscoveredEntry"/> records,
+///   collected and flattened into a single equatable array.</item>
+///   <item><b>Combine + emit</b>: each method is combined with the discovery snapshot, the
+///   resulting <see cref="RegistrationModel"/> is built from pure data, and
+///   <see cref="RegistrationWriter"/> turns it into source text.</item>
 /// </list>
-/// Separating read from write keeps the writer unit-testable without a Compilation.
 /// </remarks>
 [Generator(LanguageNames.CSharp)]
 public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
@@ -75,44 +85,68 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        context.RegisterPostInitializationOutput(ctx =>
+        context.RegisterPostInitializationOutput(static ctx =>
             ctx.AddSource("BrighterRegistrationsAttributes.g.cs", SourceText.From(AttributeSource, Encoding.UTF8)));
 
-        var methodTargets = context.SyntaxProvider
+        var methodCandidates = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 AttributeName,
                 predicate: static (node, _) => node is MethodDeclarationSyntax,
-                transform: static (ctx, _) => (IMethodSymbol)ctx.TargetSymbol)
-            .Where(static m => m is not null)
-            .Collect();
+                transform: static (ctx, ct) => SemanticModelReader.ReadMethod(ctx, ct));
 
-        var combined = methodTargets.Combine(context.CompilationProvider);
+        var discovered = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: static (node, _) => node is ClassDeclarationSyntax cls && cls.BaseList is not null,
+                transform: static (ctx, ct) => SemanticModelReader.ReadClass(ctx, ct))
+            .Where(static entries => entries.Count > 0)
+            .Collect()
+            .Select(static (batches, _) => FlattenAndSort(batches));
+
+        var combined = methodCandidates.Combine(discovered);
 
         context.RegisterSourceOutput(combined, static (spc, pair) =>
         {
-            var methods = pair.Left;
-            var compilation = pair.Right;
+            var (candidate, entries) = pair;
 
-            if (methods.IsDefaultOrEmpty)
-                return;
-
-            var symbols = MarkerSymbols.Resolve(compilation);
-            if (!symbols.IsValid)
-                return;
-
-            foreach (var method in methods)
+            if (candidate.Diagnostic is not null)
             {
-                var result = SemanticModelReader.TryBuildModel(method, compilation, symbols);
-                if (!result.Success)
-                {
-                    if (result.Diagnostic is not null)
-                        spc.ReportDiagnostic(result.Diagnostic);
-                    continue;
-                }
-
-                var model = result.Model!;
-                spc.AddSource(model.HintName, SourceText.From(RegistrationWriter.Write(model), Encoding.UTF8));
+                spc.ReportDiagnostic(ToDiagnostic(candidate.Diagnostic));
+                return;
             }
+
+            if (candidate.Method is null)
+                return;
+
+            var model = RegistrationModel.From(candidate.Method, entries);
+            spc.AddSource(model.HintName, SourceText.From(RegistrationWriter.Write(model), Encoding.UTF8));
         });
     }
+
+    /// <summary>
+    /// Concatenate the per-file discovery batches into one equatable array, sorted for stable
+    /// emit order across runs.
+    /// </summary>
+    private static EquatableArray<DiscoveredEntry> FlattenAndSort(ImmutableArray<EquatableArray<DiscoveredEntry>> batches)
+    {
+        IEnumerable<DiscoveredEntry> flat = batches.SelectMany(static b => b);
+        var ordered = flat
+            .OrderBy(static e => e.Kind)
+            .ThenBy(static e => e.TypeFullyQualified, System.StringComparer.Ordinal)
+            .ThenBy(static e => e.RequestTypeFullyQualified, System.StringComparer.Ordinal);
+        return new EquatableArray<DiscoveredEntry>(ordered);
+    }
+
+    private static Diagnostic ToDiagnostic(DiagnosticInfo info) => Diagnostic.Create(
+        DescriptorFor(info.Id),
+        info.Location?.ToLocation() ?? Location.None,
+        info.Argument);
+
+    private static DiagnosticDescriptor DescriptorFor(string id) => id switch
+    {
+        "BRGEN001" => Diagnostics.MustBePartial,
+        "BRGEN002" => Diagnostics.MustBeStatic,
+        "BRGEN003" => Diagnostics.WrongReturnType,
+        "BRGEN004" => Diagnostics.WrongSignature,
+        _ => Diagnostics.MustBePartial,
+    };
 }
