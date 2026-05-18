@@ -48,6 +48,9 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.Spanner\Paramore.Brighter.Outbox.Spanner.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Transformers.Gcp\Paramore.Brighter.Transformers.Gcp.csproj" />
     <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
+    <!-- Drift-test helpers (DdlColumnExtractor, QuoteStyle) live here so the Spanner builder
+         drift test can reuse the same column-extraction parser as the relational drift tests. -->
+    <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>

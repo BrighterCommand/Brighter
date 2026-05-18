@@ -172,6 +172,7 @@ public static class DdlColumnExtractor
                                  ?? TryMatch(s_doubleQuoted, trimmed)
                                  ?? TryMatch(s_unquoted, trimmed),
             QuoteStyle.MySql => TryMatch(s_backticked, trimmed) ?? TryMatch(s_unquoted, trimmed),
+            QuoteStyle.Spanner => TryMatch(s_backticked, trimmed) ?? TryMatch(s_unquoted, trimmed),
             QuoteStyle.Postgres => TryMatch(s_doubleQuoted, trimmed) ?? TryMatch(s_unquoted, trimmed),
             _ => null
         };

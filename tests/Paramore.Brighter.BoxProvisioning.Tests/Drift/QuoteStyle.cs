@@ -18,5 +18,11 @@ public enum QuoteStyle
     MySql,
 
     /// <summary>SQLite: identifiers wrapped in <c>[brackets]</c> or <c>"double quotes"</c>; case-insensitive.</summary>
-    Sqlite
+    Sqlite,
+
+    /// <summary>Spanner (GoogleSQL dialect): identifiers wrapped in <c>`backticks`</c>; case-insensitive.
+    /// Wire-equivalent to <see cref="MySql"/> today, but kept as a distinct enum value so the
+    /// Spanner drift test reads as Spanner-specific and so a future GoogleSQL-only quoting quirk
+    /// has a place to live without touching MySQL extraction.</summary>
+    Spanner
 }
