@@ -50,4 +50,10 @@ public static class Diagnostics
         "Brighter registration method has wrong signature",
         "Method '{0}' must accept a single IBrighterBuilder parameter",
         "Brighter", DiagnosticSeverity.Error, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor GenericMapperOrTransformIgnored = new(
+        "BRGEN005",
+        "Generic message mappers and transforms are not registered",
+        "Generic type '{0}' implements a Brighter mapper or transform interface but won't be auto-registered; close the generic, write a non-generic wrapper, or mark it with [ExcludeFromBrighterRegistration]",
+        "Brighter", DiagnosticSeverity.Warning, isEnabledByDefault: true);
 }

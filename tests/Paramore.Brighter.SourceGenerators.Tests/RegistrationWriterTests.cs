@@ -44,7 +44,7 @@ public class RegistrationWriterTests
     }
 
     [Fact]
-    public void ClosedHandler_EmitsRegistryAddWithFullyQualifiedTypes()
+    public void ClosedHandler_UsesGenericRegisterAndOmitsImplementationCast()
     {
         var model = EmptyModel(handlers: new EquatableArray<HandlerEntry>(new[]
         {
@@ -54,8 +54,8 @@ public class RegistrationWriterTests
         var output = RegistrationWriter.Write(model);
 
         Assert.Contains("builder.Handlers(r =>", output);
-        Assert.Contains("var registry = (global::Paramore.Brighter.Extensions.DependencyInjection.ServiceCollectionSubscriberRegistry)r;", output);
-        Assert.Contains("registry.Add(typeof(global::MyApp.GreetingCommand), typeof(global::MyApp.GreetingCommandHandler));", output);
+        Assert.Contains("r.Register<global::MyApp.GreetingCommand, global::MyApp.GreetingCommandHandler>();", output);
+        Assert.DoesNotContain("ServiceCollectionSubscriberRegistry", output);
     }
 
     [Fact]
@@ -68,8 +68,26 @@ public class RegistrationWriterTests
 
         var output = RegistrationWriter.Write(model);
 
+        Assert.Contains("var registry = (global::Paramore.Brighter.Extensions.DependencyInjection.ServiceCollectionSubscriberRegistry)r;", output);
         Assert.Contains("registry.EnsureHandlerIsRegistered(typeof(global::MyApp.PolicyHandler<>));", output);
-        Assert.DoesNotContain("registry.Add(typeof(", output);
+    }
+
+    [Fact]
+    public void MixedClosedAndOpenHandlers_EmitsCastOnlyOnce()
+    {
+        var model = EmptyModel(handlers: new EquatableArray<HandlerEntry>(new[]
+        {
+            new HandlerEntry("global::MyApp.GreetingCommand", "global::MyApp.GreetingCommandHandler", IsOpenGeneric: false),
+            new HandlerEntry(string.Empty, "global::MyApp.PolicyHandler<>", IsOpenGeneric: true),
+        }));
+
+        var output = RegistrationWriter.Write(model);
+
+        Assert.Contains("r.Register<global::MyApp.GreetingCommand, global::MyApp.GreetingCommandHandler>();", output);
+        Assert.Contains("registry.EnsureHandlerIsRegistered(typeof(global::MyApp.PolicyHandler<>));", output);
+        // Cast appears exactly once.
+        var castOccurrences = output.Split(new[] { "ServiceCollectionSubscriberRegistry)r" }, System.StringSplitOptions.None).Length - 1;
+        Assert.Equal(1, castOccurrences);
     }
 
     [Fact]
@@ -116,7 +134,7 @@ public class RegistrationWriterTests
 
         var output = RegistrationWriter.Write(model);
 
-        Assert.Contains("builder.Transforms(r =>", output);
+        Assert.Contains("global::Paramore.Brighter.Extensions.DependencyInjection.BrighterBuilderExtensions.Transforms(builder, r =>", output);
         Assert.Contains("r.Add(typeof(global::MyApp.NoOpTransformer));", output);
     }
 

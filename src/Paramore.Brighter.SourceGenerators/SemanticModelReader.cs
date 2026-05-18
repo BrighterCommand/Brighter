@@ -67,33 +67,43 @@ public static class SemanticModelReader
     /// <c>.CreateSyntaxProvider</c>: inspects a single class declaration and projects any
     /// Brighter-related interface implementations to value-equatable records.
     /// </summary>
-    public static EquatableArray<DiscoveredEntry> ReadClass(GeneratorSyntaxContext ctx, CancellationToken cancellationToken)
+    public static DiscoveryBatch ReadClass(GeneratorSyntaxContext ctx, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         if (ctx.Node is not ClassDeclarationSyntax cls)
-            return EquatableArray<DiscoveredEntry>.Empty;
+            return DiscoveryBatch.Empty;
 
         if (ctx.SemanticModel.GetDeclaredSymbol(cls, cancellationToken) is not INamedTypeSymbol type)
-            return EquatableArray<DiscoveredEntry>.Empty;
+            return DiscoveryBatch.Empty;
 
         if (!IsClassifiable(type))
-            return EquatableArray<DiscoveredEntry>.Empty;
+            return DiscoveryBatch.Empty;
 
         // Only emit from the "primary" partial declaration so partial classes don't get
-        // discovered N times. Roslyn orders DeclaringSyntaxReferences deterministically.
+        // discovered N times. Order explicitly so the choice is self-evidently stable.
         if (!IsPrimaryDeclaration(type, cls))
-            return EquatableArray<DiscoveredEntry>.Empty;
+            return DiscoveryBatch.Empty;
 
         var markers = MarkerSymbols.Resolve(ctx.SemanticModel.Compilation);
         if (!markers.IsValid)
-            return EquatableArray<DiscoveredEntry>.Empty;
+            return DiscoveryBatch.Empty;
 
-        if (HasExcludeAttribute(type, ctx.SemanticModel.Compilation))
-            return EquatableArray<DiscoveredEntry>.Empty;
+        if (markers.ExcludeAttribute is not null && HasAttribute(type, markers.ExcludeAttribute))
+            return DiscoveryBatch.Empty;
 
-        return new EquatableArray<DiscoveredEntry>(ClassifyEntries(type, markers));
+        var entries = new List<DiscoveredEntry>();
+        var diagnostics = new List<DiagnosticInfo>();
+        ClassifyEntries(type, markers, entries, diagnostics);
+        if (entries.Count == 0 && diagnostics.Count == 0)
+            return DiscoveryBatch.Empty;
+        return new DiscoveryBatch(
+            new EquatableArray<DiscoveredEntry>(entries),
+            new EquatableArray<DiagnosticInfo>(diagnostics));
     }
+
+    private static bool HasAttribute(INamedTypeSymbol type, INamedTypeSymbol attribute) =>
+        type.GetAttributes().Any(a => Same(a.AttributeClass, attribute));
 
     private static DiagnosticInfo? ValidateMethod(IMethodSymbol method, MarkerSymbols markers)
     {
@@ -134,29 +144,48 @@ public static class SemanticModelReader
             HintName: BuildHintName(containingType, method.Name));
     }
 
-    private static IEnumerable<DiscoveredEntry> ClassifyEntries(INamedTypeSymbol type, MarkerSymbols markers)
+    private static void ClassifyEntries(
+        INamedTypeSymbol type,
+        MarkerSymbols markers,
+        List<DiscoveredEntry> entries,
+        List<DiagnosticInfo> diagnostics)
     {
         var seenTransform = false;
+        var unsupportedGenericMapperOrTransform = false;
+
         foreach (var iface in type.AllInterfaces)
         {
-            var entry = TryClassifyInterface(type, iface, markers, ref seenTransform);
+            var entry = TryClassifyInterface(type, iface, markers, ref seenTransform, ref unsupportedGenericMapperOrTransform);
             if (entry is not null)
-                yield return entry;
+                entries.Add(entry);
         }
 
         if (seenTransform && !type.IsGenericType)
-            yield return new DiscoveredEntry(DiscoveredKind.Transform, string.Empty, FullyQualified(type), IsOpenGeneric: false);
+            entries.Add(new DiscoveredEntry(DiscoveredKind.Transform, string.Empty, FullyQualified(type), IsOpenGeneric: false));
+
+        if (unsupportedGenericMapperOrTransform)
+        {
+            var location = LocationInfo.From(type.Locations.FirstOrDefault());
+            diagnostics.Add(new DiagnosticInfo(
+                Diagnostics.GenericMapperOrTransformIgnored.Id,
+                location,
+                FullyQualified(type)));
+        }
     }
 
     private static DiscoveredEntry? TryClassifyInterface(
         INamedTypeSymbol type,
         INamedTypeSymbol iface,
         MarkerSymbols markers,
-        ref bool seenTransform)
+        ref bool seenTransform,
+        ref bool unsupportedGenericMapperOrTransform)
     {
         if (Same(iface, markers.MessageTransform) || Same(iface, markers.MessageTransformAsync))
         {
-            seenTransform = true;
+            if (type.IsGenericType)
+                unsupportedGenericMapperOrTransform = true;
+            else
+                seenTransform = true;
             return null;
         }
 
@@ -170,10 +199,16 @@ public static class SemanticModelReader
             return MakeHandlerEntry(DiscoveredKind.SyncHandler, type, requestType);
         if (Same(def, markers.HandleRequestsAsync))
             return MakeHandlerEntry(DiscoveredKind.AsyncHandler, type, requestType);
-        if (Same(def, markers.MessageMapper) && !type.IsGenericType)
+        if (Same(def, markers.MessageMapper))
+        {
+            if (type.IsGenericType) { unsupportedGenericMapperOrTransform = true; return null; }
             return new DiscoveredEntry(DiscoveredKind.Mapper, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
-        if (Same(def, markers.MessageMapperAsync) && !type.IsGenericType)
+        }
+        if (Same(def, markers.MessageMapperAsync))
+        {
+            if (type.IsGenericType) { unsupportedGenericMapperOrTransform = true; return null; }
             return new DiscoveredEntry(DiscoveredKind.AsyncMapper, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
+        }
 
         return null;
     }
@@ -199,16 +234,12 @@ public static class SemanticModelReader
         var refs = type.DeclaringSyntaxReferences;
         if (refs.Length <= 1)
             return true;
-        var primary = refs[0];
+        // Deterministic primary pick that doesn't rely on undocumented Roslyn ordering.
+        var primary = refs
+            .OrderBy(r => r.SyntaxTree.FilePath, System.StringComparer.Ordinal)
+            .ThenBy(r => r.Span.Start)
+            .First();
         return primary.SyntaxTree == cls.SyntaxTree && primary.Span == cls.Span;
-    }
-
-    private static bool HasExcludeAttribute(INamedTypeSymbol type, Compilation compilation)
-    {
-        var attr = compilation.GetTypeByMetadataName("Paramore.Brighter.ExcludeFromBrighterRegistrationAttribute");
-        if (attr is null)
-            return false;
-        return type.GetAttributes().Any(a => Same(a.AttributeClass, attr));
     }
 
     private static bool IsReachableFromGeneratedCode(INamedTypeSymbol type)
@@ -227,7 +258,22 @@ public static class SemanticModelReader
         var sanitized = new StringBuilder(raw.Length);
         foreach (var ch in raw)
             sanitized.Append(char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_');
-        return $"{sanitized}__{methodName}.g.cs";
+        // Append a short stable hash of the original display string so that types differing only
+        // in non-identifier characters (e.g. "Foo.Bar" vs "Foo_Bar") don't collide.
+        return $"{sanitized}_{Fnv1aHex(raw)}__{methodName}.g.cs";
+    }
+
+    private static string Fnv1aHex(string text)
+    {
+        const uint offset = 2166136261;
+        const uint prime = 16777619;
+        var hash = offset;
+        foreach (var ch in text)
+        {
+            hash ^= ch;
+            hash *= prime;
+        }
+        return hash.ToString("x8");
     }
 
     private static string FullyQualified(ITypeSymbol type) =>

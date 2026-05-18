@@ -101,16 +101,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         IBrighterBuilder TransformsFromAssemblies(IEnumerable<Assembly> assemblies);
 
         /// <summary>
-        /// Register transforms with the built-in transformer registry. Symmetric with
-        /// <see cref="Handlers(Action{IAmASubscriberRegistry})"/> and
-        /// <see cref="MapperRegistry"/>, intended for callers that want to add transforms
-        /// explicitly (for example from a source generator) rather than via assembly scanning.
-        /// </summary>
-        /// <param name="registerTransforms">A callback to register transforms</param>
-        /// <returns>This builder, allows chaining calls</returns>
-        IBrighterBuilder Transforms(Action<ServiceCollectionTransformerRegistry> registerTransforms);
-
-        /// <summary>
         /// [Obsolete] Gets or sets the legacy policy registry used for the command processor and event bus.
         /// </summary>
         /// <value>

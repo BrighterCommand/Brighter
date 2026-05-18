@@ -93,3 +93,16 @@ public sealed record DiagnosticInfo(string Id, LocationInfo? Location, string Ar
 /// <see cref="MethodTarget"/>, or a diagnostic describing why the method was rejected.
 /// </summary>
 public sealed record MethodCandidate(MethodTarget? Method, DiagnosticInfo? Diagnostic);
+
+/// <summary>
+/// Per-class output from the discovery transform: zero or more registration entries, plus zero
+/// or more diagnostics (e.g. <c>BRGEN005</c> when a generic mapper/transform is observed).
+/// </summary>
+public sealed record DiscoveryBatch(
+    EquatableArray<DiscoveredEntry> Entries,
+    EquatableArray<DiagnosticInfo> Diagnostics)
+{
+    public static readonly DiscoveryBatch Empty = new(EquatableArray<DiscoveredEntry>.Empty, EquatableArray<DiagnosticInfo>.Empty);
+
+    public bool IsEmpty => Entries.Count == 0 && Diagnostics.Count == 0;
+}

@@ -67,14 +67,17 @@ public class AutoRegistrationTests
     {
         var result = Run(UserSource, "true");
 
-        var generated = result.Results.Single().GeneratedSources
+        var single = result.Results.Single();
+        Assert.Empty(single.Diagnostics);
+
+        var generated = single.GeneratedSources
             .Single(g => g.HintName == "BrighterAssemblyRegistrations__AddFromThisAssembly.g.cs")
             .SourceText.ToString();
 
         Assert.Contains("namespace Paramore.Brighter.Extensions.DependencyInjection", generated);
         Assert.Contains("internal static class BrighterAssemblyRegistrations", generated);
-        Assert.Contains("public static global::Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder AddFromThisAssembly", generated);
-        Assert.Contains("registry.Add(typeof(global::App.GreetingCommand), typeof(global::App.GreetingHandler));", generated);
+        Assert.Contains("internal static global::Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder AddFromThisAssembly", generated);
+        Assert.Contains("r.Register<global::App.GreetingCommand, global::App.GreetingHandler>();", generated);
         Assert.DoesNotContain("partial", generated);
     }
 

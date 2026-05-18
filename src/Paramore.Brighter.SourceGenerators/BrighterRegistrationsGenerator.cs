@@ -98,13 +98,24 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
                 predicate: static (node, _) => node is MethodDeclarationSyntax,
                 transform: static (ctx, ct) => SemanticModelReader.ReadMethod(ctx, ct));
 
-        var discovered = context.SyntaxProvider
+        var discoveryBatches = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is ClassDeclarationSyntax cls && cls.BaseList is not null,
                 transform: static (ctx, ct) => SemanticModelReader.ReadClass(ctx, ct))
-            .Where(static entries => entries.Count > 0)
-            .Collect()
-            .Select(static (batches, _) => FlattenAndSort(batches));
+            .Where(static batch => !batch.IsEmpty)
+            .Collect();
+
+        var discovered = discoveryBatches.Select(static (batches, _) =>
+            FlattenAndSort(batches.Select(static b => b.Entries)));
+
+        var discoveryDiagnostics = discoveryBatches.Select(static (batches, _) =>
+            new EquatableArray<DiagnosticInfo>(batches.SelectMany(static b => (IEnumerable<DiagnosticInfo>)b.Diagnostics)));
+
+        context.RegisterSourceOutput(discoveryDiagnostics, static (spc, diagnostics) =>
+        {
+            foreach (var info in diagnostics)
+                spc.ReportDiagnostic(ToDiagnostic(info));
+        });
 
         var combined = methodCandidates.Combine(discovered);
 
@@ -166,7 +177,7 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
         ContainingTypeAccessibility: "internal",
         ContainingTypeName: AutoClassName,
         ContainingTypeIsStatic: true,
-        MethodAccessibility: "public",
+        MethodAccessibility: "internal",
         MethodName: AutoMethodName,
         ReturnTypeFullyQualified: "global::Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder",
         ParameterTypeFullyQualified: "global::Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder",
@@ -179,9 +190,9 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
     /// Concatenate the per-file discovery batches into one equatable array, sorted for stable
     /// emit order across runs.
     /// </summary>
-    private static EquatableArray<DiscoveredEntry> FlattenAndSort(ImmutableArray<EquatableArray<DiscoveredEntry>> batches)
+    private static EquatableArray<DiscoveredEntry> FlattenAndSort(IEnumerable<EquatableArray<DiscoveredEntry>> batches)
     {
-        IEnumerable<DiscoveredEntry> flat = batches.SelectMany(static b => b);
+        IEnumerable<DiscoveredEntry> flat = batches.SelectMany(static b => (IEnumerable<DiscoveredEntry>)b);
         var ordered = flat
             .OrderBy(static e => e.Kind)
             .ThenBy(static e => e.TypeFullyQualified, System.StringComparer.Ordinal)
@@ -200,6 +211,7 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
         "BRGEN002" => Diagnostics.MustBeStatic,
         "BRGEN003" => Diagnostics.WrongReturnType,
         "BRGEN004" => Diagnostics.WrongSignature,
-        _ => Diagnostics.MustBePartial,
+        "BRGEN005" => Diagnostics.GenericMapperOrTransformIgnored,
+        _ => throw new System.InvalidOperationException($"Unknown Brighter diagnostic id '{id}' — DescriptorFor needs updating."),
     };
 }

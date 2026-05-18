@@ -38,6 +38,7 @@ public sealed class MarkerSymbols
     public INamedTypeSymbol? MessageMapperAsync { get; private set; }
     public INamedTypeSymbol? MessageTransform { get; private set; }
     public INamedTypeSymbol? MessageTransformAsync { get; private set; }
+    public INamedTypeSymbol? ExcludeAttribute { get; private set; }
 
     public bool IsValid =>
         BrighterBuilder is not null &&
@@ -57,5 +58,6 @@ public sealed class MarkerSymbols
         MessageMapperAsync = c.GetTypeByMetadataName("Paramore.Brighter.IAmAMessageMapperAsync`1"),
         MessageTransform = c.GetTypeByMetadataName("Paramore.Brighter.IAmAMessageTransform"),
         MessageTransformAsync = c.GetTypeByMetadataName("Paramore.Brighter.IAmAMessageTransformAsync"),
+        ExcludeAttribute = c.GetTypeByMetadataName("Paramore.Brighter.ExcludeFromBrighterRegistrationAttribute"),
     };
 }

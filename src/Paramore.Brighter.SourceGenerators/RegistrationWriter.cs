@@ -106,23 +106,37 @@ public static class RegistrationWriter
             return;
 
         var callbackMethod = isAsync ? "AsyncHandlers" : "Handlers";
-        sb.Append("            ").Append(paramName).Append('.').Append(callbackMethod).AppendLine("(r =>");
-        sb.AppendLine("            {");
-        sb.AppendLine("                var registry = (global::Paramore.Brighter.Extensions.DependencyInjection.ServiceCollectionSubscriberRegistry)r;");
-
+        var registerMethod = isAsync ? "RegisterAsync" : "Register";
+        var hasOpenGeneric = false;
         foreach (var entry in entries)
         {
-            if (entry.IsOpenGeneric)
+            if (entry.IsOpenGeneric) { hasOpenGeneric = true; break; }
+        }
+
+        sb.Append("            ").Append(paramName).Append('.').Append(callbackMethod).AppendLine("(r =>");
+        sb.AppendLine("            {");
+
+        // For closed-generic handlers, use the strongly-typed Register<TRequest, TImpl>() method
+        // available on the public interface — no implementation cast needed.
+        foreach (var entry in entries)
+        {
+            if (entry.IsOpenGeneric) continue;
+            sb.Append("                r.").Append(registerMethod).Append('<')
+                .Append(entry.RequestTypeFullyQualified).Append(", ")
+                .Append(entry.HandlerTypeFullyQualified)
+                .AppendLine(">();");
+        }
+
+        // Open-generic handlers need EnsureHandlerIsRegistered, which only exists on the DI
+        // extension's concrete ServiceCollectionSubscriberRegistry. Emit the cast only when at
+        // least one open generic is present, so the common case stays interface-only.
+        if (hasOpenGeneric)
+        {
+            sb.AppendLine("                var registry = (global::Paramore.Brighter.Extensions.DependencyInjection.ServiceCollectionSubscriberRegistry)r;");
+            foreach (var entry in entries)
             {
+                if (!entry.IsOpenGeneric) continue;
                 sb.Append("                registry.EnsureHandlerIsRegistered(typeof(")
-                    .Append(entry.HandlerTypeFullyQualified)
-                    .AppendLine("));");
-            }
-            else
-            {
-                sb.Append("                registry.Add(typeof(")
-                    .Append(entry.RequestTypeFullyQualified)
-                    .Append("), typeof(")
                     .Append(entry.HandlerTypeFullyQualified)
                     .AppendLine("));");
             }
@@ -172,7 +186,11 @@ public static class RegistrationWriter
         if (transforms.Count == 0)
             return;
 
-        sb.Append("            ").Append(paramName).AppendLine(".Transforms(r =>");
+        // Transforms is an extension method on IBrighterBuilder; call statically so the
+        // generated source doesn't depend on a `using` being added by the consumer.
+        sb.Append("            global::Paramore.Brighter.Extensions.DependencyInjection.BrighterBuilderExtensions.Transforms(")
+            .Append(paramName)
+            .AppendLine(", r =>");
         sb.AppendLine("            {");
 
         foreach (var transform in transforms)

@@ -50,9 +50,10 @@ public sealed class EquatableArray<T> : IEquatable<EquatableArray<T>>, IReadOnly
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
         if (_items.Length != other._items.Length) return false;
+        var comparer = EqualityComparer<T>.Default;
         for (var i = 0; i < _items.Length; i++)
         {
-            if (!_items[i].Equals(other._items[i])) return false;
+            if (!comparer.Equals(_items[i], other._items[i])) return false;
         }
         return true;
     }
@@ -63,9 +64,10 @@ public sealed class EquatableArray<T> : IEquatable<EquatableArray<T>>, IReadOnly
     {
         unchecked
         {
+            var comparer = EqualityComparer<T>.Default;
             var hash = 17;
             foreach (var item in _items)
-                hash = hash * 31 + (item is null ? 0 : item.GetHashCode());
+                hash = hash * 31 + (item is null ? 0 : comparer.GetHashCode(item));
             return hash;
         }
     }
