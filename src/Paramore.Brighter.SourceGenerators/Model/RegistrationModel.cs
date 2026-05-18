@@ -46,7 +46,8 @@ public sealed record RegistrationModel(
     EquatableArray<MapperEntry> Mappers,
     EquatableArray<MapperEntry> AsyncMappers,
     EquatableArray<string> Transforms,
-    string HintName)
+    string HintName,
+    bool IsPartial = true)
 {
     /// <summary>
     /// Assemble a model from a per-method target and the flat list of discovered registration
@@ -98,7 +99,8 @@ public sealed record RegistrationModel(
             new EquatableArray<MapperEntry>(mappers),
             new EquatableArray<MapperEntry>(asyncMappers),
             new EquatableArray<string>(transforms),
-            target.HintName);
+            target.HintName,
+            target.IsPartial);
     }
 }
 

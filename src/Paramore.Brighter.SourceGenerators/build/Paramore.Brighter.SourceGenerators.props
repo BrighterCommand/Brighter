@@ -1,0 +1,19 @@
+<Project>
+
+  <!--
+    Shipped in build/ (not buildTransitive/) so it ONLY applies when a project takes a direct
+    PackageReference on Paramore.Brighter.SourceGenerators. Libraries that pick up the package
+    transitively will not see these properties, and therefore won't auto-generate the
+    BrighterAssemblyRegistrations class.
+  -->
+
+  <PropertyGroup>
+    <!-- Turn on auto-generation for direct PackageReferences. Set to false in your csproj to opt out. -->
+    <BrighterAutoRegistration Condition="'$(BrighterAutoRegistration)' == ''">true</BrighterAutoRegistration>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="BrighterAutoRegistration" />
+  </ItemGroup>
+
+</Project>

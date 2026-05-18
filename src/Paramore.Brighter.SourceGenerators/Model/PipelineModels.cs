@@ -41,7 +41,8 @@ public sealed record MethodTarget(
     string ParameterTypeFullyQualified,
     string ParameterName,
     bool IsExtensionMethod,
-    string HintName);
+    string HintName,
+    bool IsPartial = true);
 
 /// <summary>The category of a discovered Brighter registration candidate.</summary>
 public enum DiscoveredKind

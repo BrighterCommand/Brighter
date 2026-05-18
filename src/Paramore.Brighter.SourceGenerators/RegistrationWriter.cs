@@ -67,7 +67,13 @@ public static class RegistrationWriter
 
     private static void WriteContainingTypeOpen(StringBuilder sb, RegistrationModel model)
     {
-        var typeKeyword = model.ContainingTypeIsStatic ? "static partial class" : "partial class";
+        var typeKeyword = (model.ContainingTypeIsStatic, model.IsPartial) switch
+        {
+            (true, true) => "static partial class",
+            (true, false) => "static class",
+            (false, true) => "partial class",
+            (false, false) => "class",
+        };
         sb.Append("    ")
             .Append(model.ContainingTypeAccessibility)
             .Append(' ')
@@ -79,7 +85,9 @@ public static class RegistrationWriter
 
     private static void WriteMethodSignature(StringBuilder sb, RegistrationModel model)
     {
-        sb.Append("        ").Append(model.MethodAccessibility).Append(" static partial ");
+        sb.Append("        ").Append(model.MethodAccessibility).Append(" static ");
+        if (model.IsPartial)
+            sb.Append("partial ");
         sb.Append(model.ReturnTypeFullyQualified).Append(' ').Append(model.MethodName).Append('(');
         if (model.IsExtensionMethod)
             sb.Append("this ");

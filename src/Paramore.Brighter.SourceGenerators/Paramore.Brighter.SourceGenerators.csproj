@@ -21,4 +21,9 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Pack the props into build/ so it applies only to direct PackageReferences (not transitive). -->
+    <None Include="build\Paramore.Brighter.SourceGenerators.props" Pack="true" PackagePath="build\" />
+  </ItemGroup>
+
 </Project>

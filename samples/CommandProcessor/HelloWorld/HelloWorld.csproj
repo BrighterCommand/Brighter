@@ -2,7 +2,17 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <OutputType>Exe</OutputType>
+    <!--
+      With the NuGet package, build/Paramore.Brighter.SourceGenerators.props sets this and makes
+      it CompilerVisible for direct PackageReferences only (so it doesn't flow to transitive
+      consumers). The sample uses a ProjectReference, so we opt in by hand.
+    -->
+    <BrighterAutoRegistration>true</BrighterAutoRegistration>
   </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="BrighterAutoRegistration" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
