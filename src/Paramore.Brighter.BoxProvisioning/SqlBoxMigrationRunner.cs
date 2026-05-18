@@ -212,7 +212,24 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
             activity?.AddException(ex);
             // Pass CancellationToken.None: a signalled caller token must not abandon the unwind.
             // See ADR 0058 §B.3 cancellation contract.
-            await uow.RollbackAsync(CancellationToken.None);
+            try
+            {
+                await uow.RollbackAsync(CancellationToken.None);
+            }
+            catch (Exception rollbackEx)
+            {
+                // Defense in depth: the IAmAProvisioningUnitOfWork contract says RollbackAsync
+                // MUST NOT throw, and the four per-backend impls comply (PG and MySQL tightened
+                // explicitly in 3c8417fd6). If a future regression breaks that, do NOT let the
+                // rollback exception mask the original triggering exception — the primary cause
+                // is more diagnostically valuable than a defect in our own unwind, and callers
+                // pattern-match on the type they actually threw. Log the rollback failure at
+                // Error level so operators see both: the primary failure surfaces via rethrow,
+                // the rollback defect surfaces via the log.
+                Logger.LogError(rollbackEx,
+                    "Box migration unit-of-work RollbackAsync threw while unwinding from a primary failure for table '{Table}'; rollback exception is logged, primary exception is rethrown.",
+                    tableName);
+            }
             throw;
         }
     }
