@@ -97,7 +97,21 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.OutBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
-        return MySqlOutboxBuilder.GetDDL(configuration.OutBoxTableName, configuration.BinaryMessagePayload);
+        // In MySQL "schema" is synonymous with "database". When SchemaName is set, the
+        // builder schema-qualifies the CREATE TABLE so the table lands in the configured
+        // database rather than the connection's bound DATABASE(). V2..V7 ALTERs below pick
+        // up the same qualification via the `schema` parameter on AddColumns. Per PR #4039
+        // reviewer item M4-1 (F1c).
+        if (configuration.SchemaName is not null)
+        {
+            Identifiers.AssertSafe(
+                configuration.SchemaName,
+                nameof(IAmARelationalDatabaseConfiguration.SchemaName));
+        }
+        return MySqlOutboxBuilder.GetDDL(
+            configuration.OutBoxTableName,
+            configuration.BinaryMessagePayload,
+            configuration.SchemaName);
     }
 
     /// <summary>
@@ -108,8 +122,13 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
     {
         var table = configuration.OutBoxTableName;
+        var schema = configuration.SchemaName;
 
         Identifiers.AssertSafe(table, nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
+        if (schema is not null)
+        {
+            Identifiers.AssertSafe(schema, nameof(IAmARelationalDatabaseConfiguration.SchemaName));
+        }
 
         return
         [
@@ -122,14 +141,14 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 2,
                 Description: "Add Dispatched column",
-                UpScript: AddColumns(table, ("Dispatched", "TIMESTAMP(3)")),
+                UpScript: AddColumns(schema, table, ("Dispatched", "TIMESTAMP(3)")),
                 LogicalColumns: Cumulative(2),
                 SourceReference: "3c30343fa"),
 
             new BoxMigration(
                 Version: 3,
                 Description: "Add CorrelationId, ReplyTo, ContentType columns",
-                UpScript: AddColumns(table,
+                UpScript: AddColumns(schema, table,
                     ("CorrelationId", "VARCHAR(255)"),
                     ("ReplyTo", "VARCHAR(255)"),
                     ("ContentType", "VARCHAR(128)")),
@@ -139,14 +158,14 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 4,
                 Description: "Add PartitionKey column",
-                UpScript: AddColumns(table, ("PartitionKey", "VARCHAR(128)")),
+                UpScript: AddColumns(schema, table, ("PartitionKey", "VARCHAR(128)")),
                 LogicalColumns: Cumulative(4),
                 SourceReference: "1cdc04b60 / #2560"),
 
             new BoxMigration(
                 Version: 5,
                 Description: "Add CloudEvents columns (Source, Type, DataSchema, Subject, TraceParent, TraceState, Baggage)",
-                UpScript: AddColumns(table,
+                UpScript: AddColumns(schema, table,
                     ("Source", "VARCHAR(255)"),
                     ("Type", "VARCHAR(255)"),
                     ("DataSchema", "VARCHAR(255)"),
@@ -160,7 +179,7 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 6,
                 Description: "Add WorkflowId, JobId columns",
-                UpScript: AddColumns(table,
+                UpScript: AddColumns(schema, table,
                     ("WorkflowId", "VARCHAR(255)"),
                     ("JobId", "VARCHAR(255)")),
                 LogicalColumns: Cumulative(6),
@@ -169,7 +188,7 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 7,
                 Description: "Add DataRef, SpecVersion columns",
-                UpScript: AddColumns(table,
+                UpScript: AddColumns(schema, table,
                     ("DataRef", "VARCHAR(255)"),
                     ("SpecVersion", "VARCHAR(255)")),
                 LogicalColumns: Cumulative(7),
@@ -190,24 +209,32 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         return set;
     }
 
-    private static string AddColumns(string table, params (string Column, string Type)[] columns) =>
-        string.Join(Environment.NewLine, columns.Select(c => AddColumn(table, c.Column, c.Type)));
+    private static string AddColumns(string? schema, string table, params (string Column, string Type)[] columns) =>
+        string.Join(Environment.NewLine, columns.Select(c => AddColumn(schema, table, c.Column, c.Type)));
 
     /// <summary>
     /// MySQL 5.7+ idempotent ADD COLUMN — runtime <c>information_schema.columns</c> probe drives
-    /// a prepared-statement that conditionally emits the ALTER. Runs against
-    /// <c>DATABASE()</c> (the connection's bound schema), matching the un-qualified ALTER target.
+    /// a prepared-statement that conditionally emits the ALTER. When <paramref name="schema"/>
+    /// is null, the probe targets <c>DATABASE()</c> (the connection's bound database) and the
+    /// ALTER is unqualified — original behaviour preserved. When <paramref name="schema"/> is
+    /// non-null, both the probe's <c>table_schema</c> filter and the ALTER target are pinned
+    /// to that schema, so the chain reaches the box table created in the configured database
+    /// (per PR #4039 reviewer item M4-1 / F1c).
     /// All added columns are <c>NULL</c>-able — required because MySQL ADD COLUMN against a
     /// non-empty table must permit NULL or supply a DEFAULT, and we make no assumption about
     /// emptiness during bootstrap.
     /// </summary>
-    private static string AddColumn(string table, string column, string type) =>
-        $@"SET @q = (SELECT IF(
+    private static string AddColumn(string? schema, string table, string column, string type)
+    {
+        var tableScopeForProbe = schema is null ? "DATABASE()" : $"'{schema}'";
+        var qualifiedAlterTarget = schema is null ? $"`{table}`" : $"`{schema}`.`{table}`";
+        return $@"SET @q = (SELECT IF(
     (SELECT COUNT(*) FROM information_schema.columns
-     WHERE table_schema = DATABASE() AND table_name = '{table}' AND column_name = '{column}') = 0,
-    'ALTER TABLE `{table}` ADD COLUMN `{column}` {type} NULL',
+     WHERE table_schema = {tableScopeForProbe} AND table_name = '{table}' AND column_name = '{column}') = 0,
+    'ALTER TABLE {qualifiedAlterTarget} ADD COLUMN `{column}` {type} NULL',
     'SELECT 1'));
 PREPARE stmt FROM @q;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;";
+    }
 }

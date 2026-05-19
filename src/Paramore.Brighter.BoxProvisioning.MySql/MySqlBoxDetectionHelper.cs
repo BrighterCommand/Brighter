@@ -75,15 +75,26 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
     /// Returns true if the migration history table exists and has at least one row for the given
     /// box table.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">
+    /// Optional. Filters the history rows by their <c>SchemaName</c> column. Null is substituted
+    /// with <c>connection.Database</c> per ADR 0057 §A.1. Note: this parameter scopes the
+    /// content lookup, NOT the existence check for the history table itself — the history table
+    /// always lives in the connection's bound database, even when the box table is provisioned
+    /// in a different schema (per PR #4039 F1c).
+    /// </param>
     /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
     public async Task<bool> DoesHistoryExistAsync(
         MySqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
         MySqlTransaction? transaction = null)
     {
+        // The history table always resides in connection.Database (the MySQL runner's
+        // EnsureHistoryTableAsync emits an unqualified CREATE TABLE IF NOT EXISTS targeting
+        // DATABASE()). Probe its existence against connection.Database — not the
+        // box-table SchemaName — so a non-default SchemaName configuration (F1c) does not
+        // misreport HistoryAbsent and trigger a redundant bootstrap path.
         var historyTableExists = await DoesTableExistAsync(
-            connection, "__BrighterMigrationHistory", schemaName, cancellationToken);
+            connection, "__BrighterMigrationHistory", connection.Database, cancellationToken);
         if (!historyTableExists)
             return false;
 

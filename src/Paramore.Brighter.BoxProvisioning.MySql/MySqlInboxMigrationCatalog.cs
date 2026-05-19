@@ -96,7 +96,19 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.InBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
-        return MySqlInboxBuilder.GetDDL(configuration.InBoxTableName, configuration.BinaryMessagePayload);
+        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE. Per PR #4039
+        // reviewer item M4-1 (F1c). See MySqlOutboxMigrationCatalog for the full rationale.
+        if (configuration.SchemaName is not null)
+        {
+            Identifiers.AssertSafe(
+                configuration.SchemaName,
+                nameof(IAmARelationalDatabaseConfiguration.SchemaName));
+        }
+        return MySqlInboxBuilder.GetDDL(
+            configuration.InBoxTableName,
+            configuration.BinaryMessagePayload,
+            jsonMessage: false,
+            schemaName: configuration.SchemaName);
     }
 
     /// <summary>
@@ -107,8 +119,13 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
     public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
     {
         var table = configuration.InBoxTableName;
+        var schema = configuration.SchemaName;
 
         Identifiers.AssertSafe(table, nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
+        if (schema is not null)
+        {
+            Identifiers.AssertSafe(schema, nameof(IAmARelationalDatabaseConfiguration.SchemaName));
+        }
 
         return
         [
@@ -121,7 +138,7 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 2,
                 Description: "Add ContextKey column",
-                UpScript: AddColumn(table, "ContextKey", "VARCHAR(256)"),
+                UpScript: AddColumn(schema, table, "ContextKey", "VARCHAR(256)"),
                 LogicalColumns: Cumulative(2),
                 SourceReference: "787c31c52")
         ];
@@ -137,19 +154,24 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
 
     /// <summary>
     /// MySQL 5.7+ idempotent ADD COLUMN — runtime <c>information_schema.columns</c> probe drives
-    /// a prepared-statement that conditionally emits the ALTER. Runs against
-    /// <c>DATABASE()</c> (the connection's bound schema), matching the un-qualified ALTER target.
-    /// The added column is <c>NULL</c>-able — required because MySQL ADD COLUMN against a
-    /// non-empty table must permit NULL or supply a DEFAULT, and we make no assumption about
-    /// emptiness during bootstrap.
+    /// a prepared-statement that conditionally emits the ALTER. When <paramref name="schema"/>
+    /// is null, the probe targets <c>DATABASE()</c> and the ALTER is unqualified — original
+    /// behaviour preserved. When non-null, both probe and ALTER are pinned to the configured
+    /// schema (per PR #4039 reviewer item M4-1 / F1c). The added column is <c>NULL</c>-able —
+    /// required because MySQL ADD COLUMN against a non-empty table must permit NULL or supply
+    /// a DEFAULT, and we make no assumption about emptiness during bootstrap.
     /// </summary>
-    private static string AddColumn(string table, string column, string type) =>
-        $@"SET @q = (SELECT IF(
+    private static string AddColumn(string? schema, string table, string column, string type)
+    {
+        var tableScopeForProbe = schema is null ? "DATABASE()" : $"'{schema}'";
+        var qualifiedAlterTarget = schema is null ? $"`{table}`" : $"`{schema}`.`{table}`";
+        return $@"SET @q = (SELECT IF(
     (SELECT COUNT(*) FROM information_schema.columns
-     WHERE table_schema = DATABASE() AND table_name = '{table}' AND column_name = '{column}') = 0,
-    'ALTER TABLE `{table}` ADD COLUMN `{column}` {type} NULL',
+     WHERE table_schema = {tableScopeForProbe} AND table_name = '{table}' AND column_name = '{column}') = 0,
+    'ALTER TABLE {qualifiedAlterTarget} ADD COLUMN `{column}` {type} NULL',
     'SELECT 1'));
 PREPARE stmt FROM @q;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;";
+    }
 }
