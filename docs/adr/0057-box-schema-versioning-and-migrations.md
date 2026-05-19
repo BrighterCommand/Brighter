@@ -142,7 +142,14 @@ The bootstrap-path error message branches on this: `-1` → "Table *{name}* exis
 
 ### 3. Three-path provisioner (under the advisory lock)
 
-`ProvisionAsync` branches into three paths based on `BoxTableState`. The branching lives inside each runner's existing `MigrateAsync(tableName, schemaName, migrations, tableState, ct)` signature — **no new interface methods are added**. The advisory lock wraps the entire path (not just the history insert) to close the concurrent-CREATE-TABLE race that bare `CREATE TABLE` would otherwise cause.
+`ProvisionAsync` branches into three paths based on `BoxTableState`. The branching lives inside each runner's existing `MigrateAsync(tableName, schemaName, tableState, ct)` signature — **no new interface methods are added** beyond the catalog already injected into the runner via constructor (per spec 0027 R1). The advisory lock wraps the entire path (not just the history insert) to close the concurrent-CREATE-TABLE race that bare `CREATE TABLE` would otherwise cause.
+
+**Fresh-install DDL vs V1.UpScript — two distinct strings, sourced separately**: the fresh path needs the *current* live-builder DDL (so a fresh database matches the running Brighter version exactly); chain replay needs the *historical* V1 DDL (so a legacy table that was first-shipped at some earlier code revision sees the same starting shape it always saw). Spec 0027 R1 (Parts 1–4) splits these:
+
+- `IAmABoxMigrationCatalog.FreshInstallDdl(configuration)` — returns the live builder's `CREATE TABLE` (`*Builder.GetDDL(table, binaryMessagePayload)`). This is what the fresh path executes.
+- `migrations[0].UpScript` — returns the literal historical first-shipped DDL for that backend (the string extracted from the first commit that introduced the box, asymmetric per backend). This is **never re-executed** by the runner — bootstrap stamps V1 into history directly when detection says V≥1, and normal-path replay only applies V2..V_latest. V1.UpScript exists for archaeology, auditability, and as the canonical baseline that V2+ idempotency guards (`IF COL_LENGTH IS NULL`, `ADD COLUMN IF NOT EXISTS`, `information_schema` probe, `pragma_table_info`) reason against.
+
+The asymmetry across backends is documented per-catalog: MSSQL/MySQL/SQLite outboxes are pre-Dispatched (true V1 baselines); PostgreSQL outbox and all four inboxes are "born past V1" (shipped with V2-equivalent columns from the first commit). See spec 0027 [README archaeology](../../specs/0027-box-schema-versioning-and-migrations/README.md) and each `*MigrationCatalog` class-level `<remarks>` for the per-backend literal DDL.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -162,19 +169,19 @@ The bootstrap-path error message branches on this: `-1` → "Table *{name}* exis
               │             │             │
               ▼             ▼             ▼
          Acquire lock   Acquire lock  Acquire lock
-         Run V1 UpScript Detect V →    Read MAX(V)
-         Insert history    -1: throw   Run migs above MAX
-         at V_latest       0: throw    (each idempotent)
-         Release lock     ≥1: stamp    Release lock
-                         V; run
-                         V+1..V_latest
-                         Release lock
+         Run            Detect V →    Read MAX(V)
+         FreshInstallDdl  -1: throw   Run migs above MAX
+         Insert history   0: throw    (each idempotent)
+         at V_latest    ≥1: stamp     Release lock
+         Release lock   V; run
+                        V+1..V_latest
+                        Release lock
 ```
 
 **Fresh path** (`!TableExists`):
 - Acquire serialization primitive (MSSQL `sp_getapplock` + `BeginTransaction`; Postgres `pg_try_advisory_lock` + `BEGIN`; MySQL `GET_LOCK`; SQLite `BEGIN IMMEDIATE TRANSACTION` with `SQLITE_BUSY` retry; Spanner uses degenerate runner — see §6)
 - Re-check table existence under the lock (closes the detect→create race; if the table now exists, fall through to bootstrap)
-- Execute V1 UpScript (current builder DDL) — safe because we've verified under lock that the table doesn't exist
+- Execute `IAmABoxMigrationCatalog.FreshInstallDdl(configuration)` — the live builder's `CREATE TABLE` (per-backend, with payload-mode forking) — safe because we've verified under lock that the table doesn't exist. This is *distinct* from `migrations[0].UpScript`: the runner does not re-execute the historical V1 DDL on fresh install. See the "Fresh-install DDL vs V1.UpScript" note above
 - Insert one history row: `(SchemaName, BoxTableName, V_latest, "fresh install at V_latest")`
 - Release lock
 
@@ -194,7 +201,7 @@ The bootstrap-path error message branches on this: `-1` → "Table *{name}* exis
 - Run migrations above MAX (each UpScript idempotent — see §5; the `migration.Version <= maxVersion` filter is the sole gate. With monotonically-ascending contiguous migrations enforced at runner construction, `maxVersion` was just read inside the lock-bearing transaction, and nothing greater than `maxVersion` can be in history, so a per-migration `IsMigrationAppliedAsync` check is redundant and not run)
 - Release lock
 
-**Why V1 does not need to be idempotent**: V1 is the full `CREATE TABLE` from the current builder, and the three-path logic guarantees it runs only when `!TableExists` *and* no concurrent instance has since created it (re-checked under lock). V2+ UpScripts MUST be idempotent per §5 because they may run on any intermediate schema state — including post-bootstrap and post-failed-partial-migration.
+**Why the fresh-install DDL does not need to be idempotent**: `FreshInstallDdl` is a plain `CREATE TABLE` (no `IF NOT EXISTS` wrapping) and the three-path logic guarantees it runs only when `!TableExists` *and* no concurrent instance has since created it (re-checked under lock). V2+ UpScripts MUST be idempotent per §5 because they may run on any intermediate schema state — including post-bootstrap and post-failed-partial-migration. V1.UpScript inherits the same correctness without being idempotent itself: the bootstrap path stamps detected V1 directly into history without re-executing V1.UpScript, so the historical DDL is never replayed against an existing table. On chain replay against a born-past-V1 backend (PostgreSQL outbox; MSSQL/MySQL/SQLite/PostgreSQL inboxes — see per-backend catalog `<remarks>`), V2's idempotency guard sees the column already present in V1 and skips the ADD COLUMN cleanly.
 
 **Cross-box history-table race**: the advisory lock above scopes per-box (`BrighterMigration_{schema}.{table}`), but `__BrighterMigrationHistory` is shared across every box in the database. Concurrent provisioners targeting different boxes (e.g. outbox + inbox at host startup) hold *different* advisory locks and can both reach `EnsureHistoryTableAsync` simultaneously. The history-table DDL is intentionally outside any global lock; cross-backend resolution falls to the database's own duplicate-object handling:
 
@@ -354,28 +361,34 @@ No `IAmABoxMigration` list is exposed by Spanner. The provisioner holds its own 
 │                    Per-backend Provisioner                    │
 │  (MsSqlOutboxProvisioner, PostgreSqlInboxProvisioner, etc.)   │
 │                                                                │
-│  holds: migrations: IReadOnlyList<IAmABoxMigration>           │
-│         (V1..V_latest, generated via *Migrations.All(config)) │
 │  holds: runner: IAmABoxMigrationRunner                        │
+│         (runner is constructed with an injected               │
+│          IAmABoxMigrationCatalog per spec 0027 R1)            │
 │                                                                │
 │  ProvisionAsync:                                              │
 │   1. DetectTableStateAsync — calls *BoxDetectionHelpers       │
 │      .DetectCurrentVersionAsync (pre-lock pass, populates     │
 │      BoxTableState.CurrentVersion)                            │
-│   2. runner.MigrateAsync(table, schema, migrations, state, ct)│
-│      — runner branches on state.TableExists/HistoryExists    │
+│   2. runner.MigrateAsync(table, schema, state, ct)            │
+│      — runner pulls migrations and FreshInstallDdl from       │
+│        its injected catalog; branches on state.TableExists    │
+│        / HistoryExists internally                             │
 └───────────────────┬───────────────────────────────────────────┘
                     │
                     ▼
 ┌───────────────────────────────────────────────────────────────┐
 │              IAmABoxMigrationRunner.MigrateAsync              │
-│  (same signature as spec 0023; branching logic internal)      │
+│  (state-only signature post-R1; chain + fresh-install DDL     │
+│   sourced from the injected IAmABoxMigrationCatalog)          │
+│                                                                │
+│  let migrations = catalog.All(configuration)                  │
+│  let freshInstallDdl = catalog.FreshInstallDdl(configuration) │
 │                                                                │
 │  Acquire advisory lock (backend-specific);                    │
 │  TOCTOU re-check table / history existence under the lock;    │
 │                                                                │
 │  if !tableExistsNow:                                          │
-│      execute V1.UpScript (full CREATE TABLE from builder)     │
+│      execute freshInstallDdl (live builder CREATE)            │
 │      insert history row at V_latest                           │
 │                                                                │
 │  elif !historyExistsNow:                                      │
@@ -404,8 +417,9 @@ No `IAmABoxMigration` list is exposed by Spanner. The provisioner holds its own 
 
 - **`IAmABoxMigration`** (existing, **extended**): gains `LogicalColumns` (required), `SourceReference` (nullable), and `IdempotencyCheckSql` (nullable — used by SQLite only). Source-breaking.
 - **`BoxMigration`** (existing, **extended**): positional record adds three parameters matching the interface additions.
-- **`IAmABoxMigrationRunner`** (existing, unchanged signature): implementations gain three-path branching inside `MigrateAsync`; no new methods.
-- **`*OutboxMigrations` / `*InboxMigrations`** (existing, **expanded**): per-backend static classes return `V1..V_latest` lists via `All(config)` factory.
+- **`IAmABoxMigrationRunner`** (existing, **reshaped post-R1**): `MigrateAsync` drops the `IReadOnlyList<IAmABoxMigration>` parameter; the runner is constructed with an injected `IAmABoxMigrationCatalog` and retrieves the migration chain *and* `FreshInstallDdl` from it. Implementations gain three-path branching inside `MigrateAsync`.
+- **`IAmABoxMigrationCatalog`** (new in R1): per-backend interface exposing `All(configuration)` (the V1..V_latest chain) and `FreshInstallDdl(configuration)` (the live builder DDL used by the fresh path). Splits the historical baseline DDL (which lives on `migrations[0].UpScript`) from the current-builder DDL (which lives on `FreshInstallDdl`), addressing the spec 0027 R1 readability concern that V1.UpScript was previously asked to play both roles.
+- **`*OutboxMigrationCatalog` / `*InboxMigrationCatalog`** (per-backend, formerly `*Migrations`, **expanded**): implement `IAmABoxMigrationCatalog` — return `V1..V_latest` lists via `All(config)` and the live builder DDL via `FreshInstallDdl(config)`. Each catalog also documents the per-backend V1 archaeology in its class-level `<remarks>`.
 - **`*OutboxProvisioner` / `*InboxProvisioner`** (existing, **simplified**): `DetectTableStateAsync` now delegates to `*BoxDetectionHelpers.DetectCurrentVersionAsync` (added in Phase 1.5/2.5/3.5/4.5); the previously-private detection methods and `V1Columns` static sets are deleted from the provisioners. Detection logic no longer lives in the provisioner.
 - **`*BoxDetectionHelpers`** (existing, **extended**): per-backend static classes (`MsSqlBoxDetectionHelpers`, `PostgreSqlBoxDetectionHelpers`, `MySqlBoxDetectionHelpers`, `SqliteBoxDetectionHelpers`, `SpannerBoxDetectionHelpers`) currently host only schema-introspection primitives (`DoesTableExistAsync`, `DoesHistoryExistAsync`, `GetMaxVersionAsync`, `GetTableColumnsAsync`). Spec 0027 adds a new `DetectCurrentVersionAsync(connection, txn, tableName, schemaName, migrations, discriminatorColumn, ct)` static method to each, walking the migration list top-down with a discriminator gate per §2. This is the **single source of detection truth** — invoked by both the provisioner (pre-lock) and the runner (post-lock TOCTOU re-check).
 - **`SpannerBoxMigrationRunner`** (existing, **reworked**): fresh-only strategy; no migration list; adds `IsMigrationAppliedAsync` gate on history INSERT (addresses spec 0023 R4).

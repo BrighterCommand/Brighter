@@ -67,6 +67,54 @@ public class MySqlOutboxBuilderDriftTests
             $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
             $"V_latest ∪ housekeeping: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void When_mysql_outbox_v1_upscript_is_inspected_it_should_carry_pre_dispatched_historical_baseline(
+        bool hasBinaryMessagePayload)
+    {
+        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
+        //695522367, March 2019 — pre-Dispatched). The Dispatched column was introduced in V2
+        //(3c30343fa, July 2019). This tripwire prevents a future "helpful" refactor from
+        //quietly rewriting V1.UpScript back to live-builder shape: chain replay against a
+        //legacy installation that bootstrapped at V1 must see the same starting DDL it always
+        //saw. See spec 0027 README archaeology and ADR 0057 §3.
+        const string tableName = "outbox_test";
+        var config = new RelationalDatabaseConfiguration(
+            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            outBoxTableName: tableName,
+            binaryMessagePayload: hasBinaryMessagePayload);
+
+        var migrations = new MySqlOutboxMigrationCatalog().All(config);
+        var v1 = migrations[0];
+
+        Assert.Equal(1, v1.Version);
+        Assert.DoesNotContain("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("HeaderBag", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void When_mysql_outbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
+        bool hasBinaryMessagePayload)
+    {
+        //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
+        //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
+        //carries the historical baseline (Part 4). This tripwire holds the fast-path DDL
+        //identical to the live builder so the two cannot diverge silently.
+        const string tableName = "outbox_test";
+        var config = new RelationalDatabaseConfiguration(
+            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            outBoxTableName: tableName,
+            binaryMessagePayload: hasBinaryMessagePayload);
+
+        var expected = MySqlOutboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
+        var actual = new MySqlOutboxMigrationCatalog().FreshInstallDdl(config);
+
+        Assert.Equal(expected, actual);
+    }
 }
 
 public class MySqlInboxBuilderDriftTests
@@ -97,5 +145,45 @@ public class MySqlInboxBuilderDriftTests
             builderColumns.SetEquals(migrationColumns),
             $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
             $"V_latest ∪ housekeeping: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+    }
+
+    [Fact]
+    public void When_mysql_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey()
+    {
+        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
+        //b7f96957b, March 2019). The MySQL inbox is one of the five "born past V1" backends:
+        //it shipped with ContextKey from the first commit, so V1.UpScript already contains it
+        //and V2's information_schema-prepared-statement guard skips the ALTER on chain replay.
+        //This tripwire prevents a future "helpful" rewrite from dropping ContextKey out of V1.
+        //See spec 0027 README archaeology and ADR 0057 §3.
+        const string tableName = "inbox_test";
+        var config = new RelationalDatabaseConfiguration(
+            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            inboxTableName: tableName);
+
+        var migrations = new MySqlInboxMigrationCatalog().All(config);
+        var v1 = migrations[0];
+
+        Assert.Equal(1, v1.Version);
+        Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void When_mysql_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder()
+    {
+        //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
+        //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
+        //carries the historical baseline (Part 4). This tripwire holds the fast-path DDL
+        //identical to the live builder so the two cannot diverge silently.
+        const string tableName = "inbox_test";
+        var config = new RelationalDatabaseConfiguration(
+            "Server=ignored;Database=ignored;Uid=ignored;Pwd=ignored;",
+            inboxTableName: tableName);
+
+        var expected = MySqlInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);
+        var actual = new MySqlInboxMigrationCatalog().FreshInstallDdl(config);
+
+        Assert.Equal(expected, actual);
     }
 }

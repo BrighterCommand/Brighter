@@ -68,6 +68,54 @@ public class SqliteOutboxBuilderDriftTests
             $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
             $"V_latest ∪ housekeeping: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void When_sqlite_outbox_v1_upscript_is_inspected_it_should_carry_pre_dispatched_historical_baseline(
+        bool hasBinaryMessagePayload)
+    {
+        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
+        //695522367, March 2019 — pre-Dispatched). The Dispatched column was introduced in V2
+        //(3c30343fa, July 2019). This tripwire prevents a future "helpful" refactor from
+        //quietly rewriting V1.UpScript back to live-builder shape: chain replay against a
+        //legacy installation that bootstrapped at V1 must see the same starting DDL it always
+        //saw. See spec 0027 README archaeology and ADR 0057 §3.
+        const string tableName = "outbox_test";
+        var config = new RelationalDatabaseConfiguration(
+            "Data Source=:memory:",
+            outBoxTableName: tableName,
+            binaryMessagePayload: hasBinaryMessagePayload);
+
+        var migrations = new SqliteOutboxMigrationCatalog().All(config);
+        var v1 = migrations[0];
+
+        Assert.Equal(1, v1.Version);
+        Assert.DoesNotContain("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("HeaderBag", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void When_sqlite_outbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
+        bool hasBinaryMessagePayload)
+    {
+        //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
+        //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
+        //carries the historical baseline (Part 4). This tripwire holds the fast-path DDL
+        //identical to the live builder so the two cannot diverge silently.
+        const string tableName = "outbox_test";
+        var config = new RelationalDatabaseConfiguration(
+            "Data Source=:memory:",
+            outBoxTableName: tableName,
+            binaryMessagePayload: hasBinaryMessagePayload);
+
+        var expected = SqliteOutboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
+        var actual = new SqliteOutboxMigrationCatalog().FreshInstallDdl(config);
+
+        Assert.Equal(expected, actual);
+    }
 }
 
 public class SqliteInboxBuilderDriftTests
@@ -100,5 +148,45 @@ public class SqliteInboxBuilderDriftTests
             builderColumns.SetEquals(migrationColumns),
             $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
             $"V_latest ∪ housekeeping: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+    }
+
+    [Fact]
+    public void When_sqlite_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey()
+    {
+        //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
+        //695522367, March 2019). The SQLite inbox is one of the five "born past V1" backends:
+        //it shipped with ContextKey from the first commit, so V1.UpScript already contains it
+        //and V2's IdempotencyCheckSql (pragma_table_info probe) skips the ALTER on chain
+        //replay. This tripwire prevents a future "helpful" rewrite from dropping ContextKey
+        //out of V1. See spec 0027 README archaeology and ADR 0057 §3.
+        const string tableName = "inbox_test";
+        var config = new RelationalDatabaseConfiguration(
+            "Data Source=:memory:",
+            inboxTableName: tableName);
+
+        var migrations = new SqliteInboxMigrationCatalog().All(config);
+        var v1 = migrations[0];
+
+        Assert.Equal(1, v1.Version);
+        Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void When_sqlite_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder()
+    {
+        //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
+        //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
+        //carries the historical baseline (Part 4). This tripwire holds the fast-path DDL
+        //identical to the live builder so the two cannot diverge silently.
+        const string tableName = "inbox_test";
+        var config = new RelationalDatabaseConfiguration(
+            "Data Source=:memory:",
+            inboxTableName: tableName);
+
+        var expected = SqliteInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);
+        var actual = new SqliteInboxMigrationCatalog().FreshInstallDdl(config);
+
+        Assert.Equal(expected, actual);
     }
 }
