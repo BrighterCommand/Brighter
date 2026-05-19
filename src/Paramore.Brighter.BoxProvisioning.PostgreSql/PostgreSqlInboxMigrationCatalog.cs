@@ -75,7 +75,20 @@ public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.InBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
-        return PostgreSqlInboxBuilder.GetDDL(configuration.InBoxTableName, configuration.BinaryMessagePayload);
+        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE IF NOT EXISTS.
+        // Per PR #4039 reviewer item M4-1 (F1b). See the outbox catalog for the full
+        // rationale — the same fix applies symmetrically to the inbox.
+        if (configuration.SchemaName is not null)
+        {
+            Identifiers.AssertSafe(
+                configuration.SchemaName,
+                nameof(IAmARelationalDatabaseConfiguration.SchemaName));
+        }
+        return PostgreSqlInboxBuilder.GetDDL(
+            configuration.InBoxTableName,
+            configuration.BinaryMessagePayload,
+            jsonMessagePayload: false,
+            schemaName: configuration.SchemaName);
     }
 
     /// <summary>

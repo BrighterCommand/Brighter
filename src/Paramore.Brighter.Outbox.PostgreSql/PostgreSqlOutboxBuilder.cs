@@ -96,10 +96,24 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// </summary>
         /// <param name="outboxTableName">The name you want to use for the table</param>
         /// <param name="binaryMessagePayload"></param>
+        /// <param name="schemaName">
+        /// Optional Postgres schema name. When non-null, the emitted DDL schema-qualifies the
+        /// table as <c>{schemaName}.{outboxTableName}</c> (unquoted, matching the existing
+        /// V2..V7 ALTER convention in PostgreSqlOutboxMigrationCatalog); otherwise the table
+        /// is emitted unqualified and lands in the connection's search_path default (typically
+        /// <c>public</c>). Per PR #4039 reviewer item M4-1 (F1b): callers configuring
+        /// <see cref="Paramore.Brighter.IAmARelationalDatabaseConfiguration.SchemaName"/> rely
+        /// on the table actually landing in that schema, which the unqualified form cannot
+        /// guarantee. PG ADR 0057 §1 requires lowercase identifiers; the catalog enforces
+        /// this via <c>Identifiers.AssertSafe</c> before reaching this builder.
+        /// </param>
         /// <returns>The required DDL</returns>
-        public static string GetDDL(string outboxTableName, bool binaryMessagePayload = false)
+        public static string GetDDL(string outboxTableName, bool binaryMessagePayload = false, string? schemaName = null)
         {
-            return binaryMessagePayload ? string.Format(BinaryOutboxDdl, outboxTableName) : string.Format(TextOutboxDdl, outboxTableName);
+            var qualifiedTable = schemaName is null
+                ? outboxTableName
+                : $"{schemaName}.{outboxTableName}";
+            return binaryMessagePayload ? string.Format(BinaryOutboxDdl, qualifiedTable) : string.Format(TextOutboxDdl, qualifiedTable);
         }
 
         /// <summary>

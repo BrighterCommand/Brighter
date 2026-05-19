@@ -96,7 +96,21 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.OutBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
-        return PostgreSqlOutboxBuilder.GetDDL(configuration.OutBoxTableName, configuration.BinaryMessagePayload);
+        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE IF NOT EXISTS —
+        // otherwise the table lands in the connection's search_path default (typically
+        // `public`) regardless of the configured SchemaName, leaving V2..V7 ALTERs (which
+        // use `{schema}.{table}`) targeting a table that does not exist on subsequent runs.
+        // Per PR #4039 reviewer item M4-1 (F1b).
+        if (configuration.SchemaName is not null)
+        {
+            Identifiers.AssertSafe(
+                configuration.SchemaName,
+                nameof(IAmARelationalDatabaseConfiguration.SchemaName));
+        }
+        return PostgreSqlOutboxBuilder.GetDDL(
+            configuration.OutBoxTableName,
+            configuration.BinaryMessagePayload,
+            configuration.SchemaName);
     }
 
     /// <summary>
