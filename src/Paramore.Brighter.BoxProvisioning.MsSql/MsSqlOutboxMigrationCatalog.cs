@@ -88,7 +88,23 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.OutBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
-        return SqlOutboxBuilder.GetDDL(configuration.OutBoxTableName, configuration.BinaryMessagePayload);
+        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE — otherwise the
+        // table lands in the connection's default schema (typically [dbo]) regardless of
+        // SchemaName, and the V2..V7 chain ALTERs (which use [schema].[table]) cannot find
+        // it on a subsequent run. Per PR #4039 reviewer item M4-1 (F1a). Schema identifier
+        // safety is enforced at the All(...) catalog entry below; FreshInstallDdl's contract
+        // is "pass through what the configuration provides", so the identifier check is
+        // re-applied here for defence in depth.
+        if (configuration.SchemaName is not null)
+        {
+            Identifiers.AssertSafe(
+                configuration.SchemaName,
+                nameof(IAmARelationalDatabaseConfiguration.SchemaName));
+        }
+        return SqlOutboxBuilder.GetDDL(
+            configuration.OutBoxTableName,
+            configuration.BinaryMessagePayload,
+            configuration.SchemaName);
     }
 
     /// <summary>

@@ -85,7 +85,20 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.InBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
-        return SqlInboxBuilder.GetDDL(configuration.InBoxTableName, configuration.BinaryMessagePayload);
+        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE — otherwise the
+        // table lands in the connection's default schema (typically [dbo]) regardless of
+        // SchemaName. Per PR #4039 reviewer item M4-1 (F1a). See the outbox catalog for
+        // the full rationale; the same fix applies symmetrically here.
+        if (configuration.SchemaName is not null)
+        {
+            Identifiers.AssertSafe(
+                configuration.SchemaName,
+                nameof(IAmARelationalDatabaseConfiguration.SchemaName));
+        }
+        return SqlInboxBuilder.GetDDL(
+            configuration.InBoxTableName,
+            configuration.BinaryMessagePayload,
+            configuration.SchemaName);
     }
 
     /// <summary>
