@@ -109,8 +109,24 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
 
     protected override Task<IAmAProvisioningUnitOfWork<MySqlTransaction>> CreateUnitOfWorkAsync(
         MySqlConnection connection, CancellationToken cancellationToken)
-        => Task.FromResult<IAmAProvisioningUnitOfWork<MySqlTransaction>>(
-            new MySqlProvisioningUnitOfWork(connection, _advisoryLock, Logger, _activeTableName.Value));
+    {
+        // Capture _activeTableName.Value into the UoW ctor and immediately clear the
+        // AsyncLocal so the value does not leak onto the ExecutionContext of any continuation
+        // observed after MigrateAsync returns — per PR #4039 reviewer item M4-4. The base
+        // runner's hook sequence guarantees LockResourceFor (which sets the value) runs
+        // exactly once before CreateUnitOfWorkAsync (which reads it), so clearing here is
+        // safe: no other hook reads _activeTableName, and the UoW has already captured the
+        // string into its `_tableName` field by the time the AsyncLocal is reset.
+        try
+        {
+            return Task.FromResult<IAmAProvisioningUnitOfWork<MySqlTransaction>>(
+                new MySqlProvisioningUnitOfWork(connection, _advisoryLock, Logger, _activeTableName.Value));
+        }
+        finally
+        {
+            _activeTableName.Value = null;
+        }
+    }
 
     protected override string LockResourceFor(string? schemaName, string tableName)
     {
