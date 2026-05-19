@@ -56,12 +56,13 @@ public static class SqliteBoxProvisioningExtensions
             services.TryAddSingleton<SqliteOutboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
+                var catalog = sp.GetRequiredService<SqliteOutboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
-                    configuration, options.MigrationLockTimeout, enableWalMode,
+                    catalog, configuration, options.MigrationLockTimeout, enableWalMode,
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new SqliteOutboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
-                    sp.GetRequiredService<SqliteOutboxMigrationCatalog>(),
+                    catalog,
                     sp.GetRequiredService<SqlitePayloadModeValidator>(),
                     configuration,
                     runner);
@@ -99,12 +100,13 @@ public static class SqliteBoxProvisioningExtensions
                     connectionString,
                     outBoxTableName: outboxTableName ?? "Outbox",
                     binaryMessagePayload: binaryMessagePayload);
+                var catalog = sp.GetRequiredService<SqliteOutboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
-                    dbConfig, options.MigrationLockTimeout, enableWalMode,
+                    catalog, dbConfig, options.MigrationLockTimeout, enableWalMode,
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new SqliteOutboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
-                    sp.GetRequiredService<SqliteOutboxMigrationCatalog>(),
+                    catalog,
                     sp.GetRequiredService<SqlitePayloadModeValidator>(),
                     dbConfig,
                     runner);
@@ -132,12 +134,13 @@ public static class SqliteBoxProvisioningExtensions
             services.TryAddSingleton<SqliteInboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
+                var catalog = sp.GetRequiredService<SqliteInboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
-                    configuration, options.MigrationLockTimeout, enableWalMode,
+                    catalog, configuration, options.MigrationLockTimeout, enableWalMode,
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new SqliteInboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
-                    sp.GetRequiredService<SqliteInboxMigrationCatalog>(),
+                    catalog,
                     sp.GetRequiredService<SqlitePayloadModeValidator>(),
                     configuration,
                     runner);
@@ -175,12 +178,13 @@ public static class SqliteBoxProvisioningExtensions
                     connectionString,
                     inboxTableName: inboxTableName ?? "Inbox",
                     binaryMessagePayload: binaryMessagePayload);
+                var catalog = sp.GetRequiredService<SqliteInboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
-                    dbConfig, options.MigrationLockTimeout, enableWalMode,
+                    catalog, dbConfig, options.MigrationLockTimeout, enableWalMode,
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new SqliteInboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
-                    sp.GetRequiredService<SqliteInboxMigrationCatalog>(),
+                    catalog,
                     sp.GetRequiredService<SqlitePayloadModeValidator>(),
                     dbConfig,
                     runner);

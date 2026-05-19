@@ -21,7 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,6 +30,13 @@ namespace Paramore.Brighter.BoxProvisioning;
 /// Knows how to run migration steps against a database and track which
 /// versions have been applied.
 /// </summary>
+/// <remarks>
+/// Spec 0027 R1 (PR #4039 part 2): the runner retrieves its migration chain and
+/// fresh-install DDL from an injected <see cref="IAmABoxMigrationCatalog"/>, so the
+/// caller no longer threads the migration list through every invocation. The Spanner
+/// runner is exempt from <see cref="IAmABoxMigrationCatalog"/> per ADR 0057 §6 and
+/// implements this interface directly with its own per-backend fresh-install logic.
+/// </remarks>
 public interface IAmABoxMigrationRunner
 {
     /// <summary>
@@ -39,7 +45,6 @@ public interface IAmABoxMigrationRunner
     /// <param name="tableName">The box table name.</param>
     /// <param name="schemaName">The database schema name (e.g. "dbo" for MSSQL).</param>
     /// <param name="boxType">The type of box being migrated; used to pick the discriminator column for under-lock re-detection.</param>
-    /// <param name="migrations">The ordered list of migrations to apply.</param>
     /// <param name="tableState">The pre-lock state of the box table. Consumption is
     /// asymmetric across backends and intentionally so: the four relational runners
     /// (<see cref="SqlBoxMigrationRunner{TConnection,TTransaction}"/>) treat the entire
@@ -53,7 +58,6 @@ public interface IAmABoxMigrationRunner
         string tableName,
         string? schemaName,
         BoxType boxType,
-        IReadOnlyList<IAmABoxMigration> migrations,
         BoxTableState tableState,
         CancellationToken cancellationToken = default);
 }

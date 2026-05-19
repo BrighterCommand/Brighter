@@ -28,11 +28,12 @@ public static class MsSqlBoxProvisioningExtensions
             services.TryAddSingleton<MsSqlOutboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
-                var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout,
+                var catalog = sp.GetRequiredService<MsSqlOutboxMigrationCatalog>();
+                var runner = new MsSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new MsSqlOutboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
-                    sp.GetRequiredService<MsSqlOutboxMigrationCatalog>(),
+                    catalog,
                     sp.GetRequiredService<MsSqlPayloadModeValidator>(),
                     configuration,
                     runner);
@@ -66,11 +67,12 @@ public static class MsSqlBoxProvisioningExtensions
                     outBoxTableName: outboxTableName ?? "Outbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new MsSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout,
+                var catalog = sp.GetRequiredService<MsSqlOutboxMigrationCatalog>();
+                var runner = new MsSqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new MsSqlOutboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
-                    sp.GetRequiredService<MsSqlOutboxMigrationCatalog>(),
+                    catalog,
                     sp.GetRequiredService<MsSqlPayloadModeValidator>(),
                     dbConfig,
                     runner);
@@ -92,11 +94,12 @@ public static class MsSqlBoxProvisioningExtensions
             services.TryAddSingleton<MsSqlInboxMigrationCatalog>();
             services.AddSingleton<IAmABoxProvisioner>(sp =>
             {
-                var runner = new MsSqlBoxMigrationRunner(configuration, options.MigrationLockTimeout,
+                var catalog = sp.GetRequiredService<MsSqlInboxMigrationCatalog>();
+                var runner = new MsSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new MsSqlInboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
-                    sp.GetRequiredService<MsSqlInboxMigrationCatalog>(),
+                    catalog,
                     sp.GetRequiredService<MsSqlPayloadModeValidator>(),
                     configuration,
                     runner);
@@ -130,11 +133,12 @@ public static class MsSqlBoxProvisioningExtensions
                     inboxTableName: inboxTableName ?? "Inbox",
                     schemaName: schemaName,
                     binaryMessagePayload: binaryMessagePayload);
-                var runner = new MsSqlBoxMigrationRunner(dbConfig, options.MigrationLockTimeout,
+                var catalog = sp.GetRequiredService<MsSqlInboxMigrationCatalog>();
+                var runner = new MsSqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new MsSqlInboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
-                    sp.GetRequiredService<MsSqlInboxMigrationCatalog>(),
+                    catalog,
                     sp.GetRequiredService<MsSqlPayloadModeValidator>(),
                     dbConfig,
                     runner);

@@ -90,12 +90,13 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     /// </summary>
     public SqliteBoxMigrationRunner(
         SqliteBoxDetectionHelper detectionHelper,
+        IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         bool enableWalMode = true,
         IAmABrighterTracer? tracer = null)
-        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
+        : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
             logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>(),
             tracer)
     {
@@ -109,11 +110,12 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     /// <see cref="SqliteBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
     /// </summary>
     public SqliteBoxMigrationRunner(
+        IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         bool enableWalMode = true,
         IAmABrighterTracer? tracer = null)
-        : this(new SqliteBoxDetectionHelper(), configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer)
+        : this(new SqliteBoxDetectionHelper(), catalog, configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer)
     {
     }
 
@@ -122,8 +124,10 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     /// of 30 seconds and WAL journal mode enabled. Tests and callers that need a custom timeout
     /// or want to skip the WAL pragma should use the multi-argument form.
     /// </summary>
-    public SqliteBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration)
-        : this(configuration, TimeSpan.FromSeconds(30))
+    public SqliteBoxMigrationRunner(
+        IAmABoxMigrationCatalog catalog,
+        IAmARelationalDatabaseConfiguration configuration)
+        : this(catalog, configuration, TimeSpan.FromSeconds(30))
     {
     }
 
@@ -189,29 +193,20 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
 
     protected override async Task RunFreshPathAsync(
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
     {
         _ = schemaName; // SQLite has no schema concept.
 
-        if (migrations.Count == 0) return;
+        // Execute the V_latest-shape DDL sourced from IAmABoxMigrationCatalog.FreshInstallDdl
+        // (the live SqliteOutboxBuilder.GetDDL / SqliteInboxBuilder.GetDDL output). Stamp
+        // directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs would all be
+        // no-ops (and would in fact throw "duplicate column name" without the IdempotencyCheckSql
+        // skip), so we elide the chain entirely (spec 0027 R1 fresh-install fast path).
+        await ExecuteUpScriptAsync(connection, transaction!, freshInstallDdl, cancellationToken);
 
-        // V1's UpScript IS the live builder DDL (V_latest-shape per ADR §3 fresh-install fast
-        // path). A list whose first entry is anything other than V1 would silently install the
-        // wrong schema, so reject it before any DDL fires.
-        if (migrations[0].Version != 1)
-            throw new ConfigurationException(
-                $"Cannot install '{tableName}' from a fresh state: " +
-                $"the first migration must be V1, but the supplied migrations list starts at V{migrations[0].Version}.");
-
-        // Stamp directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs
-        // would all be no-ops (and would in fact throw "duplicate column name" without the
-        // IdempotencyCheckSql skip), so we elide the chain.
-        await ExecuteUpScriptAsync(connection, transaction!, migrations[0].UpScript, cancellationToken);
-
-        var latest = migrations[migrations.Count - 1];
         await InsertHistoryRowAsync(
             connection, transaction!, tableName,
-            latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
+            latestVersion, $"fresh install at V{latestVersion}", cancellationToken);
     }
 
     protected override async Task RunBootstrapPathAsync(

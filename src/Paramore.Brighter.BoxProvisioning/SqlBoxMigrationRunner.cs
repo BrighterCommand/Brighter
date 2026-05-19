@@ -57,6 +57,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     where TTransaction : DbTransaction
 {
     private readonly IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> _detectionHelper;
+    private readonly IAmABoxMigrationCatalog _catalog;
     private readonly IAmARelationalDatabaseConfiguration _configuration;
     private readonly TimeSpan _lockTimeout;
 
@@ -102,8 +103,14 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// <param name="detectionHelper">The version-detecting helper used for the default
     /// <see cref="RedetectStateAsync"/> implementation and exposed to derived classes for
     /// version inference during bootstrap.</param>
+    /// <param name="catalog">The migration catalog whose <see cref="IAmABoxMigrationCatalog.All"/>
+    /// chain feeds the bootstrap/normal paths and whose
+    /// <see cref="IAmABoxMigrationCatalog.FreshInstallDdl"/> feeds the fresh-install fast path.
+    /// One catalog per (backend, box-type) — the runner instance is therefore bound to a single
+    /// box-type at construction.</param>
     /// <param name="configuration">The relational database configuration, exposed to derived
-    /// classes via the <see cref="Configuration"/> property.</param>
+    /// classes via the <see cref="Configuration"/> property and used to materialise the catalog
+    /// chain and fresh-install DDL on each <see cref="MigrateAsync"/> call.</param>
     /// <param name="lockTimeout">How long the per-backend UoW waits for the advisory lock
     /// before throwing.</param>
     /// <param name="logger">Optional logger. Defaults to <see cref="NullLogger.Instance"/>.</param>
@@ -112,12 +119,14 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// <see cref="System.Diagnostics.ActivitySource"/>. Defaults to null (no instrumentation).</param>
     protected SqlBoxMigrationRunner(
         IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> detectionHelper,
+        IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         ILogger? logger = null,
         IAmABrighterTracer? tracer = null)
     {
         _detectionHelper = detectionHelper;
+        _catalog = catalog;
         _configuration = configuration;
         _lockTimeout = lockTimeout;
         Logger = logger ?? NullLogger.Instance;
@@ -129,7 +138,6 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         string tableName,
         string? schemaName,
         BoxType boxType,
-        IReadOnlyList<IAmABoxMigration> migrations,
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
@@ -143,17 +151,19 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         {
             Identifiers.AssertSafe(schemaName, nameof(schemaName));
         }
-        // A null migrations list would surface inside ValidateMigrationsMonotonic as an opaque
-        // NRE on migrations.Count, or — if a future refactor short-circuits the empty path —
-        // as a misleading EnsureHistoryTableAsync call against the live DB. Replace both with
-        // a descriptive operator-facing diagnostic. Empty migrations lists are intentionally
-        // permitted: relational catalogs always return ≥V1, and internal tests use
-        // Array.Empty<IAmABoxMigration>() as a "don't care" payload when exercising hook-
-        // ordering, re-detection, or failure-path contracts.
+
+        // Spec 0027 R1 part 2: the runner sources its migration chain and fresh-install DDL
+        // from the injected catalog rather than via parameter. A catalog returning null for
+        // either would surface inside ValidateMigrationsMonotonic / ExecuteFreshInstallAsync as
+        // an opaque NRE; replace with a descriptive operator-facing diagnostic. Empty migration
+        // lists are intentionally permitted: relational catalogs always return ≥V1, and
+        // internal tests use Array.Empty<IAmABoxMigration>() as a "don't care" payload when
+        // exercising hook-ordering, re-detection, or failure-path contracts.
+        var migrations = _catalog.All(_configuration);
         if (migrations is null)
         {
             throw new ConfigurationException(
-                $"Migration list for '{(schemaName is null ? tableName : $"{schemaName}.{tableName}")}' was null. A non-null list must be supplied.");
+                $"Migration list for '{(schemaName is null ? tableName : $"{schemaName}.{tableName}")}' was null. The injected IAmABoxMigrationCatalog must return a non-null list from All(...).");
         }
 
         ValidateMigrationsMonotonic(schemaName, tableName, migrations);
@@ -204,8 +214,16 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
                 {
                     activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "fresh");
                     activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventFreshInstall));
+                    // The fresh-install fast path no longer reads migrations[0].UpScript — V1 in
+                    // the chain now carries its honest historical baseline DDL (spec 0027 R1).
+                    // The live builder DDL comes from the catalog's FreshInstallDdl hook so the
+                    // post-install column set always matches V_latest regardless of how the
+                    // historical V1 looked.
+                    var freshInstallDdl = _catalog.FreshInstallDdl(_configuration);
+                    var latestVersion = migrations.Count == 0 ? 0 : migrations[migrations.Count - 1].Version;
                     await RunFreshPathAsync(
-                        connection, uow.Transaction, schemaName, tableName, migrations, cancellationToken);
+                        connection, uow.Transaction, schemaName, tableName,
+                        freshInstallDdl, latestVersion, cancellationToken);
                 }
                 else if (!historyExists)
                 {
@@ -319,12 +337,16 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Applies the fresh-install path: stamps the table at V_latest using V1's UpScript.
-    /// Invoked when re-detection inside the UoW reports no table.
+    /// Applies the fresh-install path: executes <paramref name="freshInstallDdl"/> (the live
+    /// V_latest-shape DDL sourced from <see cref="IAmABoxMigrationCatalog.FreshInstallDdl"/>)
+    /// and stamps history at <paramref name="latestVersion"/>. Invoked when re-detection inside
+    /// the UoW reports no table. The fresh path no longer reads the migration chain — the
+    /// historical V1 in <see cref="IAmABoxMigrationCatalog.All"/> may carry a pre-V_latest
+    /// baseline that does not match the current builder (spec 0027 R1).
     /// </summary>
     protected abstract Task RunFreshPathAsync(
         TConnection connection, TTransaction? transaction, string? schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken);
+        string freshInstallDdl, int latestVersion, CancellationToken cancellationToken);
 
     /// <summary>
     /// Applies the bootstrap (legacy-table) path: infers the in-place version via

@@ -130,11 +130,14 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
             }
         }
 
+        // Spec 0027 R1 part 2: the runner sources its migration chain from its own injected
+        // IAmABoxMigrationCatalog (see SqlBoxMigrationRunner ctor) — the provisioner no longer
+        // forwards the list. The provisioner still calls _catalog.All(...) above so the pre-lock
+        // detection helper can infer current version from the column set.
         await _migrationRunner.MigrateAsync(
             BoxTableName,
             _configuration.SchemaName,
             BoxType,
-            migrations,
             tableState,
             cancellationToken);
     }

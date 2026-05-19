@@ -97,14 +97,13 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
             await ValidatePayloadModeAsync(cancellationToken);
         }
 
-        // Per ADR 0057 §6 the Spanner runner is degenerate (fresh-only), so it
-        // ignores the migrations parameter; pass an empty list to satisfy the
-        // IAmABoxMigrationRunner contract.
+        // Spec 0027 R1 part 2: IAmABoxMigrationRunner.MigrateAsync no longer takes a migrations
+        // list — relational runners source the chain from their injected catalog and Spanner is
+        // degenerate (fresh-only, no V_k chain — ADR 0057 §6).
         await _migrationRunner.MigrateAsync(
             _configuration.InBoxTableName,
             _configuration.SchemaName,
             BoxType.Inbox,
-            Array.Empty<IAmABoxMigration>(),
             tableState,
             cancellationToken);
     }

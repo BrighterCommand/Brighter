@@ -22,7 +22,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -45,8 +44,10 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 /// "Already exists" errors on DDL are caught for crash safety.
 /// </summary>
 /// <remarks>
-/// Per ADR 0057 §6 the Spanner runner is degenerate (fresh-only) — no V_k chain,
-/// so the <c>migrations</c> parameter on <see cref="MigrateAsync"/> is ignored.
+/// Per ADR 0057 §6 the Spanner runner is degenerate (fresh-only) — no V_k chain and no
+/// <see cref="IAmABoxMigrationCatalog"/>; V_latest is hard-coded via <see cref="VLatestOutbox"/> /
+/// <see cref="VLatestInbox"/> in sync with the relational chains, and the fresh-install DDL
+/// comes from the per-backend builders rather than a catalog hook.
 /// Three paths:
 /// <list type="bullet">
 ///   <item><description>Fresh install: executes the live builder DDL and stamps history at <c>V_latest</c> under an <c>IsMigrationAppliedAsync</c> gate.</description></item>
@@ -143,7 +144,6 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         string tableName,
         string? schemaName,
         BoxType boxType,
-        IReadOnlyList<IAmABoxMigration> migrations,
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
     {
@@ -152,7 +152,6 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         // before they reach BuildBoxDdl / BootstrapExistingTableAsync's information_schema probe.
         Identifiers.AssertSafe(tableName, nameof(tableName));
 
-        _ = migrations; // Spanner is fresh-install-only — no V_k chain (ADR 0057 §6).
         _ = schemaName; // Spanner does not use schemas; the configuration's database is implicit.
 
         // Mirror the relational base runner's instrumentation shape (per ADR 0057 §6 Spanner

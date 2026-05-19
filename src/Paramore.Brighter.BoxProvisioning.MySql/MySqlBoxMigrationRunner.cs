@@ -66,12 +66,13 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
     /// </summary>
     public MySqlBoxMigrationRunner(
         MySqlBoxDetectionHelper detectionHelper,
+        IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         IAmABrighterTracer? tracer = null)
-        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
+        : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
             logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>(),
             tracer)
     {
@@ -84,12 +85,13 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
     /// <see cref="MySqlBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
     /// </summary>
     public MySqlBoxMigrationRunner(
+        IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         IAmABrighterTracer? tracer = null)
-        : this(new MySqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout, tracer)
+        : this(new MySqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer)
     {
     }
 
@@ -147,27 +149,21 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
 
     protected override async Task RunFreshPathAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
     {
         var effectiveSchema = schemaName ?? DatabaseName();
-        if (migrations.Count == 0) return;
 
-        // V1's UpScript IS the live builder DDL (V_latest-shape per ADR §3 fresh-install fast
-        // path). A list whose first entry is anything other than V1 would silently install the
-        // wrong schema, so reject it before any DDL fires.
-        if (migrations[0].Version != 1)
-            throw new ConfigurationException(
-                $"Cannot install '{effectiveSchema}.{tableName}' from a fresh state: " +
-                $"the first migration must be V1, but the supplied migrations list starts at V{migrations[0].Version}.");
+        // Execute the V_latest-shape DDL sourced from IAmABoxMigrationCatalog.FreshInstallDdl
+        // (the live builder DDL — typically <Backend>OutboxBuilder.GetDDL(...) for outbox /
+        // <Backend>InboxBuilder.GetDDL(...) for inbox). We stamp directly at V_latest with a
+        // "fresh install" marker — the V2..V_latest ALTERs in the chain would be no-ops on the
+        // V_latest-shape table, so we skip the chain entirely (spec 0027 R1 fresh-install fast
+        // path per ADR §3).
+        await ExecuteDdlAsync(connection, freshInstallDdl, cancellationToken);
 
-        // We stamp directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs
-        // would be no-ops on the V_latest-shape table, so we skip them.
-        await ExecuteUpScriptAsync(connection, migrations[0], cancellationToken);
-
-        var latest = migrations[migrations.Count - 1];
         await InsertHistoryRowAsync(
             connection, effectiveSchema, tableName,
-            latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
+            latestVersion, $"fresh install at V{latestVersion}", cancellationToken);
     }
 
     protected override async Task RunBootstrapPathAsync(
@@ -229,12 +225,17 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
         }
     }
 
-    private static async Task ExecuteUpScriptAsync(
+    private static Task ExecuteUpScriptAsync(
         MySqlConnection connection, IAmABoxMigration migration,
+        CancellationToken cancellationToken)
+        => ExecuteDdlAsync(connection, migration.UpScript, cancellationToken);
+
+    private static async Task ExecuteDdlAsync(
+        MySqlConnection connection, string ddl,
         CancellationToken cancellationToken)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = migration.UpScript;
+        command.CommandText = ddl;
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 

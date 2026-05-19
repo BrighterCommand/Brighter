@@ -58,12 +58,13 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     /// </summary>
     public PostgreSqlBoxMigrationRunner(
         PostgreSqlBoxDetectionHelper detectionHelper,
+        IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         IPostgreSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         IAmABrighterTracer? tracer = null)
-        : base(detectionHelper, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
+        : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
             logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>(),
             tracer)
     {
@@ -76,12 +77,13 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     /// <see cref="PostgreSqlBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
     /// </summary>
     public PostgreSqlBoxMigrationRunner(
+        IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         IPostgreSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         IAmABrighterTracer? tracer = null)
-        : this(new PostgreSqlBoxDetectionHelper(), configuration, advisoryLock, logger, lockTimeout, tracer)
+        : this(new PostgreSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer)
     {
     }
 
@@ -182,28 +184,21 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
 
     protected override async Task RunFreshPathAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
     {
-        if (migrations.Count == 0) return;
-
         var effectiveSchema = schemaName ?? HISTORY_TABLE_SCHEMA;
 
-        // V1's UpScript IS the live builder DDL (V_latest-shape per ADR §3 fresh-install fast
-        // path). A list whose first entry is anything other than V1 would silently install the
-        // wrong schema, so reject it before any DDL fires.
-        if (migrations[0].Version != 1)
-            throw new ConfigurationException(
-                $"Cannot install '{effectiveSchema}.{tableName}' from a fresh state: " +
-                $"the first migration must be V1, but the supplied migrations list starts at V{migrations[0].Version}.");
+        // Execute the V_latest-shape DDL sourced from IAmABoxMigrationCatalog.FreshInstallDdl
+        // (the live builder DDL — typically <Backend>OutboxBuilder.GetDDL(...) for outbox /
+        // <Backend>InboxBuilder.GetDDL(...) for inbox). We stamp directly at V_latest with a
+        // "fresh install" marker — the V2..V_latest ALTERs in the chain would be no-ops on the
+        // V_latest-shape table, so we skip the chain entirely (spec 0027 R1 fresh-install fast
+        // path per ADR §3).
+        await ExecuteDdlAsync(connection, transaction!, freshInstallDdl, cancellationToken);
 
-        // We stamp directly at V_latest with a "fresh install" marker — V2..V_latest ALTERs
-        // would be no-ops on the V_latest-shape table, so we skip them.
-        await ExecuteUpScriptAsync(connection, transaction!, migrations[0], cancellationToken);
-
-        var latest = migrations[migrations.Count - 1];
         await InsertHistoryRowAsync(
             connection, transaction!, effectiveSchema, tableName,
-            latest.Version, $"fresh install at V{latest.Version}", cancellationToken);
+            latestVersion, $"fresh install at V{latestVersion}", cancellationToken);
     }
 
     protected override async Task RunBootstrapPathAsync(
@@ -266,13 +261,18 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
         }
     }
 
-    private static async Task ExecuteUpScriptAsync(
+    private static Task ExecuteUpScriptAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction,
         IAmABoxMigration migration, CancellationToken cancellationToken)
+        => ExecuteDdlAsync(connection, transaction, migration.UpScript, cancellationToken);
+
+    private static async Task ExecuteDdlAsync(
+        NpgsqlConnection connection, NpgsqlTransaction transaction,
+        string ddl, CancellationToken cancellationToken)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = migration.UpScript;
+        command.CommandText = ddl;
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
