@@ -119,7 +119,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
         }
 
         [Fact]
-        public async Task It_Should_Skip_Assembly_Scanned_Type_When_DI_Has_Uniqueified_Operation_Id()
+        public async Task It_Should_Collapse_Duplicate_DI_And_Scanned_Publications_To_One_Operation()
         {
             var options = new AsyncApiOptions
             {
@@ -128,10 +128,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
                 AssembliesToScan = new[] { typeof(ScannableEvent).Assembly }
             };
 
-            // Two DI publications on the same topic as the [PublicationTopic]-decorated ScannableEvent.
-            // The first gets send_scannable_topic, the second gets send_scannable_topic_2.
-            // Assembly scanning must still detect that a send operation for scannable_topic
-            // already exists from DI and skip the scanned type.
+            // Two DI publications on the same topic as the [PublicationTopic]-decorated
+            // ScannableEvent. Deduplication is by (channel, action): the first DI
+            // publication wins, the second DI publication is dropped, and the
+            // assembly-scanned type is also dropped. The document ends up with a single
+            // send operation rather than misleading "_2"-suffixed duplicates.
             var publications = new[]
             {
                 new Publication
@@ -150,11 +151,8 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var result = await generator.GenerateAsync();
 
             Assert.NotNull(result.Operations);
-            // Only the two DI publications should produce operations (send_scannable_topic and send_scannable_topic_2)
-            // The assembly-scanned type must NOT add a third operation
-            Assert.Equal(2, result.Operations.Count);
+            Assert.Single(result.Operations);
             Assert.True(result.Operations.ContainsKey("send_scannable_topic"));
-            Assert.True(result.Operations.ContainsKey("send_scannable_topic_2"));
         }
 
         [PublicationTopic("scannable.topic")]
