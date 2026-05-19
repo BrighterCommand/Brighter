@@ -129,6 +129,16 @@ public class MsSqlAdvisoryLock : IMsSqlAdvisoryLock
 
     private static void ValidateLockParameters(string lockResource, TimeSpan timeout)
     {
+        // Defensive null guard so a future change passing a null lockResource (which the
+        // runner's LockResourceFor never does today, but the ValidateLockParameters contract
+        // doesn't formally rely on that) surfaces an ArgumentNullException rather than a
+        // bare NullReferenceException at the lockResource.Length check below. Per PR #4039
+        // reviewer item M4-3.
+        if (lockResource is null)
+        {
+            throw new ArgumentNullException(nameof(lockResource));
+        }
+
         // sp_getapplock takes @LockTimeout as a SQL Server INT (milliseconds). A negative
         // TimeSpan has no meaningful interpretation for an exclusive application lock, and a
         // value whose TotalMilliseconds exceeds int.MaxValue (~24.85 days) silently overflows
