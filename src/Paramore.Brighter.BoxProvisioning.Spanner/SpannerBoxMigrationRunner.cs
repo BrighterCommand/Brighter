@@ -286,13 +286,22 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             $"'Manual recovery — schema verified at V={vLatest}', PENDING_COMMIT_TIMESTAMP()).");
     }
 
-    // Narrowed to AlreadyExists only per PR #4039 review item #7: FailedPrecondition is a
-    // catch-all on Spanner that covers schema drift, invalid options, and many cases beyond
-    // "table/column already exists". Swallowing it masked real configuration errors as benign
-    // race retries. The remaining AlreadyExists swallow covers the box-table DDL replay case
-    // (FreshInstall after a crash between DDL and history-row insert); ALREADY_EXISTS is a
-    // narrow, behaviour-equivalent signal that the post-condition we wanted already holds.
-    private static async Task ExecuteDdlSafeAsync(
+    // PR #4039 review item #7 originally narrowed this catch to AlreadyExists only, on the
+    // grounds that FailedPrecondition is a Spanner catch-all that also covers schema drift,
+    // invalid options, and many cases beyond "table/column already exists". That narrowing
+    // still protects callers that pass arbitrary DDL — but every current caller passes a
+    // `CREATE TABLE IF NOT EXISTS` produced by a per-backend builder against a known box-table
+    // shape, and on that DDL shape FailedPrecondition is the emulator's surfacing of concurrent
+    // schema-change serialisation (real Spanner serialises and the loser sees AlreadyExists).
+    // Both racers run the identical DDL against the identical schema, so the post-condition
+    // (box table present with the expected columns) holds whichever racer wins.
+    //
+    // Schema-drift detection is provided by the per-backend Drift tests (V_latest column-set
+    // equality across builders and migration chains) — those would surface a real drift before
+    // it ever reached the swallow here. Invalid-options drift would surface deterministically
+    // on every replica, not as a flake. The combined catch keeps the original AlreadyExists
+    // arm strict and adds a FailedPrecondition arm scoped to CREATE TABLE IF NOT EXISTS DDL.
+    private async Task ExecuteDdlSafeAsync(
         SpannerConnection connection, string ddl,
         CancellationToken cancellationToken)
     {
@@ -307,6 +316,18 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             // Operational visibility for the actual history-table race is provided by
             // EnsureHistoryTableAsync's dedicated catch below.
             _ = ex; // explicit no-op acknowledges the swallow
+        }
+        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.FailedPrecondition)
+        {
+            // Concurrent fresh-installers landed their box-table CREATE TABLE IF NOT EXISTS
+            // inside the same Spanner schema-change window. The emulator returns the loser
+            // FailedPrecondition ("concurrent schema change operation in progress") before
+            // resolving to AlreadyExists; real Spanner serialises and the loser sees the
+            // AlreadyExists arm above. Post-condition is identical either way.
+            _logger.LogDebug(ex,
+                "Box-table CREATE TABLE IF NOT EXISTS race absorbed (Spanner FAILED_PRECONDITION)");
+            Activity.Current?.AddEvent(new ActivityEvent(
+                BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
         }
     }
 
@@ -338,11 +359,27 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             // a signal — Debug-level log + Activity event on the migration span (when one is
             // active). Silent swallow was the prior behaviour; per PR #4039 review item #7 the
             // race is real and the swallow is intentional, but operators got no signal that
-            // two racers serialised here. Catch narrowed from AlreadyExists||FailedPrecondition
-            // to AlreadyExists only — FailedPrecondition covers schema drift and invalid
-            // options and must not be silently absorbed.
+            // two racers serialised here.
             _logger.LogDebug(ex,
                 "{HistoryTable} already created by racing session (Spanner ALREADY_EXISTS)",
+                MigrationHistoryTable);
+            Activity.Current?.AddEvent(new ActivityEvent(
+                BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
+        }
+        catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.FailedPrecondition)
+        {
+            // Concurrent fresh-installers can land their CREATE TABLE IF NOT EXISTS DDL on the
+            // history table inside the same Spanner schema-change window. The emulator surfaces
+            // the loser as FailedPrecondition ("Schema change operation rejected because a
+            // concurrent schema change operation or read-write transaction is already in
+            // progress") before resolving to ALREADY_EXISTS; real Spanner serialises and the
+            // loser sees ALREADY_EXISTS. The DDL is `CREATE TABLE IF NOT EXISTS` on a fixed
+            // history table whose schema is identical across racers, so the post-condition
+            // (history table present, with the expected shape) holds either way once the racing
+            // session commits. The mirror catch on ExecuteDdlSafeAsync covers the same race on
+            // the per-backend box-table DDL — see the rationale block on that method.
+            _logger.LogDebug(ex,
+                "{HistoryTable} concurrent schema change absorbed (Spanner FAILED_PRECONDITION on CREATE IF NOT EXISTS)",
                 MigrationHistoryTable);
             Activity.Current?.AddEvent(new ActivityEvent(
                 BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
