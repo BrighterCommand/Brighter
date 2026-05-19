@@ -49,8 +49,8 @@ public class When_two_mysql_provisioners_race_on_legacy_table_they_should_produc
         await SeedOutboxMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _outboxTableName);
-        var provisionerA = new MySqlOutboxProvisioner(config, new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
-        var provisionerB = new MySqlOutboxProvisioner(config, new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+        var provisionerA = new MySqlOutboxProvisioner(config, new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+        var provisionerB = new MySqlOutboxProvisioner(config, new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
@@ -84,8 +84,8 @@ public class When_two_mysql_provisioners_race_on_legacy_table_they_should_produc
         await SeedInboxMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _inboxTableName);
-        var provisionerA = new MySqlInboxProvisioner(config, new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
-        var provisionerB = new MySqlInboxProvisioner(config, new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+        var provisionerA = new MySqlInboxProvisioner(config, new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+        var provisionerB = new MySqlInboxProvisioner(config, new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());

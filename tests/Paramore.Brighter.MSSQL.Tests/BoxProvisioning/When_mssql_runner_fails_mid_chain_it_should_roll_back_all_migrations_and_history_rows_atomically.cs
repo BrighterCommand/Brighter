@@ -52,16 +52,18 @@ public class When_mssql_runner_fails_mid_chain_it_should_roll_back_all_migration
         SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var realMigrations = new MsSqlOutboxMigrationCatalog().All(config);
+        var realCatalog = new MsSqlOutboxMigrationCatalog();
+        var realMigrations = realCatalog.All(config);
         var brokenMigrations = BrokenMigrationFactory.WithBrokenVersion(
             realMigrations, BrokenVersion, BrokenUpScript);
+        var brokenCatalog = new BrokenChainCatalog(brokenMigrations, realCatalog.FreshInstallDdl(config));
 
-        var runner = new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var brokenRunner = new MsSqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30));
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert (1) — broken V6 in chain: runner throws and rolls back everything.
-        await Assert.ThrowsAsync<SqlException>(() => runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, brokenMigrations, staleHint));
+        await Assert.ThrowsAsync<SqlException>(() => brokenRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint));
 
         //Assert — no history rows for this box (synthetic V3 + V4/V5 applied rows all rolled back).
         Assert.Empty(GetHistoryRowsByVersion());
@@ -76,7 +78,8 @@ public class When_mssql_runner_fails_mid_chain_it_should_roll_back_all_migration
         Assert.Equal(1, GetMarkerRowCount());
 
         //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
-        var provisioner = new MsSqlOutboxProvisioner(config, runner);
+        var realRunner = new MsSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
+        var provisioner = new MsSqlOutboxProvisioner(config, realRunner);
         await provisioner.ProvisionAsync();
 
         //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
@@ -189,5 +192,20 @@ IF OBJECT_ID(N'[__BrighterMigrationHistory]', N'U') IS NOT NULL
             // Best effort cleanup
         }
         await Task.CompletedTask;
+    }
+
+    private sealed class BrokenChainCatalog : IAmABoxMigrationCatalog
+    {
+        private readonly IReadOnlyList<IAmABoxMigration> _migrations;
+        private readonly string _freshInstallDdl;
+
+        public BrokenChainCatalog(IReadOnlyList<IAmABoxMigration> migrations, string freshInstallDdl)
+        {
+            _migrations = migrations;
+            _freshInstallDdl = freshInstallDdl;
+        }
+
+        public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration) => _migrations;
+        public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration) => _freshInstallDdl;
     }
 }

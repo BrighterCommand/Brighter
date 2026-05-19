@@ -40,6 +40,11 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// DDL — see spec 0027 Items H/I/Q), so the validation sits at <see cref="MigrateAsync"/>
 /// entry per ADR 0058 §B.2.
 /// <para>
+/// Spec 0027 R1 (PR #4039 part 2): the chain is sourced from the injected catalog, so a
+/// malformed list is wired in via <see cref="StubBoxMigrationCatalog.Migrations"/> rather
+/// than passed as a <c>MigrateAsync</c> argument.
+/// </para>
+/// <para>
 /// This test pins the ordering by recording <see cref="OrderProbeTestRunner.OpenConnectionCalled"/>
 /// inside the <see cref="OrderProbeTestRunner.OpenConnectionAsync"/> override. A non-monotonic
 /// list must produce a <see cref="ConfigurationException"/> with that flag still <c>false</c>.
@@ -51,20 +56,22 @@ public class SqlBoxMigrationRunnerMonotonicityValidationTests
     public async Task When_migration_list_has_a_version_gap_migrate_should_throw_before_opening_connection()
     {
         //Arrange
-        var runner = new OrderProbeTestRunner();
         // Gap discriminator: V1 → V3 skips V2. ValidateMigrationsMonotonic enforces curr == prev + 1.
-        var migrations = new IAmABoxMigration[]
+        var catalog = new StubBoxMigrationCatalog
         {
-            new StubBoxMigration(version: 1),
-            new StubBoxMigration(version: 3)
+            Migrations = new IAmABoxMigration[]
+            {
+                new StubBoxMigration(version: 1),
+                new StubBoxMigration(version: 3)
+            }
         };
+        var runner = new OrderProbeTestRunner(catalog);
 
         //Act
         var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: migrations,
             tableState: new BoxTableState(false, false, 0)));
 
         //Assert
@@ -84,9 +91,10 @@ public class SqlBoxMigrationRunnerMonotonicityValidationTests
     {
         public bool OpenConnectionCalled { get; private set; }
 
-        public OrderProbeTestRunner()
+        public OrderProbeTestRunner(IAmABoxMigrationCatalog catalog)
             : base(
                 new StubBoxDetectionHelper(),
+                catalog,
                 new StubRelationalDatabaseConfiguration(),
                 TimeSpan.FromSeconds(30),
                 NullLogger.Instance)
@@ -113,7 +121,7 @@ public class SqlBoxMigrationRunnerMonotonicityValidationTests
 
         protected override Task RunFreshPathAsync(
             FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
-            IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+            string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
             => throw new NotSupportedException("RunFreshPathAsync must not be reached when validation throws.");
 
         protected override Task RunBootstrapPathAsync(

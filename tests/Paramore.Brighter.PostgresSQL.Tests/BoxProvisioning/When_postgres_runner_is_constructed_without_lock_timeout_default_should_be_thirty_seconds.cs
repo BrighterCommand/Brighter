@@ -51,7 +51,6 @@ public class When_postgres_runner_is_constructed_without_lock_timeout_default_sh
         // loop (ADR 0058 §B.1) that value collapses to a single failed pg_try_advisory_lock
         // attempt followed by an immediate TimeoutException, an operational footgun.
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
         var shortCircuit = new TimeoutException("short-circuit to read captured timeout");
         var fakeLock = new FakePostgreSqlAdvisoryLock(releaseResult: true, throwOnAcquire: shortCircuit);
@@ -59,12 +58,12 @@ public class When_postgres_runner_is_constructed_without_lock_timeout_default_sh
         // Detection-helper ctor is the ONLY one that exposes `lockTimeout` as optional. The
         // backward-compat ctor (PostgreSqlBoxMigrationRunner.cs:76) takes it as required, so it
         // cannot exercise the default path.
-        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlBoxDetectionHelper(), config, advisoryLock: fakeLock);
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlBoxDetectionHelper(), new PostgreSqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
         await Assert.ThrowsAsync<TimeoutException>(() => runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, freshHint));
+            _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
         //Assert — the omitted `lockTimeout` resolves to the 30-second default rather than
         // TimeSpan.Zero. The default is now consistent with SqliteBoxMigrationRunner's existing

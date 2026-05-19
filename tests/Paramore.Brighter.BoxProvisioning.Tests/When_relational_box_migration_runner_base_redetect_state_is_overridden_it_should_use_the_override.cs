@@ -69,7 +69,6 @@ public class SqlBoxMigrationRunnerRedetectStateOverrideTests
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: Array.Empty<IAmABoxMigration>(),
             tableState: new BoxTableState(false, false, 0));
 
         //Assert
@@ -92,6 +91,7 @@ public class SqlBoxMigrationRunnerRedetectStateOverrideTests
         public OverrideTestRunner(StubBoxDetectionHelper detectionHelper)
             : base(
                 detectionHelper,
+                new StubBoxMigrationCatalog(),
                 new StubRelationalDatabaseConfiguration(),
                 TimeSpan.FromSeconds(30),
                 NullLogger.Instance)
@@ -123,7 +123,7 @@ public class SqlBoxMigrationRunnerRedetectStateOverrideTests
 
         protected override Task RunFreshPathAsync(
             FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
-            IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+            string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
         {
             PathInvoked = "RunFreshPath";
             return Task.CompletedTask;

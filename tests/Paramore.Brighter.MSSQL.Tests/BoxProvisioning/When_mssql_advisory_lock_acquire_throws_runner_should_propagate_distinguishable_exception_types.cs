@@ -94,17 +94,17 @@ public class When_mssql_advisory_lock_acquire_throws_runner_should_propagate_dis
         Configuration.EnsureDatabaseExists(_connectionString);
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
+        var catalog = new MsSqlOutboxMigrationCatalog();
 
         var fakeLock = new FakeMsSqlAdvisoryLock(throwOnAcquire: null);
 
         var runner = new MsSqlBoxMigrationRunner(
-            config, TimeSpan.FromSeconds(30), fakeLock);
+            catalog, config, TimeSpan.FromSeconds(30), fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
         await runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, freshHint);
+            _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert — migration committed normally and the fake observed the acquire under the
         //         expected lock resource (BrighterMigration_<schema>.<table> per ADR §5b —
@@ -120,18 +120,18 @@ public class When_mssql_advisory_lock_acquire_throws_runner_should_propagate_dis
         //          to set up the database here because the runner must throw before any DDL
         //          fires; the parameterised assertion below proves no half-state was left.
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
+        var catalog = new MsSqlOutboxMigrationCatalog();
 
         var fakeLock = new FakeMsSqlAdvisoryLock(throwOnAcquire: toThrow);
 
         var runner = new MsSqlBoxMigrationRunner(
-            config, TimeSpan.FromSeconds(30), fakeLock);
+            catalog, config, TimeSpan.FromSeconds(30), fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert — runner surfaces the same exception type without wrapping.
         var thrown = await Assert.ThrowsAsync(toThrow.GetType(), () =>
             runner.MigrateAsync(
-                _tableName, schemaName: null, BoxType.Outbox, migrations, freshHint));
+                _tableName, schemaName: null, BoxType.Outbox, freshHint));
         Assert.Same(toThrow, thrown);
 
         //Assert — the fake observed the acquire attempt under the expected lock resource

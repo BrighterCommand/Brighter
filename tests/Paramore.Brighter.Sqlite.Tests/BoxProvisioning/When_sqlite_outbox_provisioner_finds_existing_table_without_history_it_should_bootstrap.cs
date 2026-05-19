@@ -20,7 +20,7 @@ public class When_sqlite_outbox_provisioner_finds_existing_table_without_history
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName);
-        var runner = new SqliteBoxMigrationRunner(config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
         _provisioner = new SqliteOutboxProvisioner(config, runner);
     }
 

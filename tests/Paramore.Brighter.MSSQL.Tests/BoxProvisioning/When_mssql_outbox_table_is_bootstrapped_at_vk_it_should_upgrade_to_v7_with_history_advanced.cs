@@ -57,7 +57,7 @@ public class When_mssql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_
         SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var runner = new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MsSqlOutboxProvisioner(config, runner);
 
         //Act

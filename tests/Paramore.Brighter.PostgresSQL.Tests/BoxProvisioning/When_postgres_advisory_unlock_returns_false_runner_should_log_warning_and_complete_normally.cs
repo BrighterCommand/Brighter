@@ -56,18 +56,17 @@ public class When_postgres_advisory_unlock_returns_false_runner_should_log_warni
         new PostgresSqlTestHelper().SetupDatabase();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
         var fakeLock = new FakePostgreSqlAdvisoryLock(releaseResult: false);
         var capturingLogger = new CapturingLogger();
 
         var runner = new PostgreSqlBoxMigrationRunner(
-            config, TimeSpan.FromSeconds(30), fakeLock, capturingLogger);
+            new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), fakeLock, capturingLogger);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act — runner must not throw despite the false release result.
         await runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, freshHint);
+            _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert — migration committed normally: box table created, history populated.
         Assert.Equal(1, await GetBoxTableCount());

@@ -69,18 +69,17 @@ public class When_mysql_advisory_release_lock_returns_non_true_runner_should_log
     {
         //Arrange — happy-path fake returns 1 (released by us).
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new MySqlOutboxMigrationCatalog().All(config);
 
         var fakeLock = new FakeMySqlAdvisoryLock(releaseResult: true);
         var capturingLogger = new CapturingLogger();
 
         var runner = new MySqlBoxMigrationRunner(
-            config, TimeSpan.FromSeconds(30), fakeLock, capturingLogger);
+            new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), fakeLock, capturingLogger);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
         await runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, freshHint);
+            _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert — migration committed normally and no warning was emitted.
         Assert.Equal(1, await GetBoxTableCount());
@@ -93,18 +92,17 @@ public class When_mysql_advisory_release_lock_returns_non_true_runner_should_log
         //          returns the parameterised non-true result from Release, and a capturing
         //          logger so we can assert the warning emission.
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new MySqlOutboxMigrationCatalog().All(config);
 
         var fakeLock = new FakeMySqlAdvisoryLock(releaseResult);
         var capturingLogger = new CapturingLogger();
 
         var runner = new MySqlBoxMigrationRunner(
-            config, TimeSpan.FromSeconds(30), fakeLock, capturingLogger);
+            new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), fakeLock, capturingLogger);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act — runner must not throw despite the non-true release result.
         await runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, freshHint);
+            _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert — migration committed normally: box table created.
         Assert.Equal(1, await GetBoxTableCount());

@@ -57,7 +57,7 @@ public class When_postgres_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_
         SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var runner = new PostgreSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new PostgreSqlOutboxProvisioner(config, runner);
 
         //Act

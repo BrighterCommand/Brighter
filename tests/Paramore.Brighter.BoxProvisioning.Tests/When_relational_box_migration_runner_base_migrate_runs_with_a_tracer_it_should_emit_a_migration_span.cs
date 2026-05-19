@@ -88,8 +88,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: "dbo",
             boxType: BoxType.Outbox,
-            migrations: Array.Empty<IAmABoxMigration>(),
-            tableState: new BoxTableState(false, false, 0));
+            tableState:new BoxTableState(false, false, 0));
 
         _tracerProvider.ForceFlush();
 
@@ -134,8 +133,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Inbox,
-            migrations: Array.Empty<IAmABoxMigration>(),
-            tableState: new BoxTableState(true, false, 0));
+            tableState:new BoxTableState(true, false, 0));
 
         _tracerProvider.ForceFlush();
 
@@ -173,8 +171,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: "dbo",
             boxType: BoxType.Outbox,
-            migrations: Array.Empty<IAmABoxMigration>(),
-            tableState: new BoxTableState(true, true, 7));
+            tableState:new BoxTableState(true, true, 7));
 
         _tracerProvider.ForceFlush();
 
@@ -213,8 +210,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: Array.Empty<IAmABoxMigration>(),
-            tableState: new BoxTableState(false, false, 0));
+            tableState:new BoxTableState(false, false, 0));
 
         _tracerProvider.ForceFlush();
 
@@ -241,8 +237,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: Array.Empty<IAmABoxMigration>(),
-            tableState: new BoxTableState(false, false, 0));
+            tableState:new BoxTableState(false, false, 0));
 
         _tracerProvider.ForceFlush();
 
@@ -260,6 +255,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
         public ObservabilityTestRunner(ObservabilityTestUnitOfWork unitOfWork, IAmABrighterTracer? tracer)
             : base(
                 new StubBoxDetectionHelper(),
+                new StubBoxMigrationCatalog(),
                 new StubRelationalDatabaseConfiguration(),
                 TimeSpan.FromSeconds(30),
                 logger: null,
@@ -293,7 +289,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
 
         protected override Task RunFreshPathAsync(
             FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
-            IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+            string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
             => Task.CompletedTask;
 
         protected override Task RunBootstrapPathAsync(

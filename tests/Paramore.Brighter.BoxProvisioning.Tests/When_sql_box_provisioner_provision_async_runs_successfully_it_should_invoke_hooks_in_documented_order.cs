@@ -333,7 +333,6 @@ public class SqlBoxProvisionerHookOrderTests
             string tableName,
             string? schemaName,
             BoxType boxType,
-            IReadOnlyList<IAmABoxMigration> migrations,
             BoxTableState tableState,
             CancellationToken cancellationToken = default)
         {
@@ -347,6 +346,9 @@ public class SqlBoxProvisionerHookOrderTests
     {
         public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
             => System.Array.Empty<IAmABoxMigration>();
+
+        public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
+            => string.Empty;
     }
 
     /// <summary>

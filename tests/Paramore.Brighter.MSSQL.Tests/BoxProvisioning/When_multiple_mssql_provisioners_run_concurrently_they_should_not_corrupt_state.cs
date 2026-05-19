@@ -33,9 +33,9 @@ public class When_multiple_mssql_provisioners_run_concurrently_they_should_not_c
             outBoxTableName: _tableName);
 
         var provisioner1 = new MsSqlOutboxProvisioner(
-            config, new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+            config, new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
         var provisioner2 = new MsSqlOutboxProvisioner(
-            config, new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+            config, new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act
         await Task.WhenAll(

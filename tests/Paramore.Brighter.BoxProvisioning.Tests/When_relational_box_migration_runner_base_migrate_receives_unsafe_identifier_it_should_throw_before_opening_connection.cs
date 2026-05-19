@@ -51,14 +51,12 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
     {
         //Arrange
         var runner = new IdentifierProbeTestRunner();
-        var migrations = new IAmABoxMigration[] { new StubBoxMigration(version: 1) };
 
         //Act: classic injection vector — quoted identifier with embedded statement.
         var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
             tableName: "Outbox; DROP TABLE x",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: migrations,
             tableState: new BoxTableState(false, false, 0)));
 
         //Assert
@@ -71,14 +69,12 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
     {
         //Arrange
         var runner = new IdentifierProbeTestRunner();
-        var migrations = new IAmABoxMigration[] { new StubBoxMigration(version: 1) };
 
         //Act
         var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
             tableName: "Outbox",
             schemaName: "dbo; --",
             boxType: BoxType.Outbox,
-            migrations: migrations,
             tableState: new BoxTableState(false, false, 0)));
 
         //Assert
@@ -93,14 +89,12 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
         //         identifier validation. Pinning this prevents an over-eager AssertSafe(null)
         //         from regressing the SQLite path.
         var runner = new IdentifierProbeTestRunner();
-        var migrations = new IAmABoxMigration[] { new StubBoxMigration(version: 1) };
 
         //Act
         var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
             tableName: "Outbox",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: migrations,
             tableState: new BoxTableState(false, false, 0)));
 
         //Assert: not a ConfigurationException about identifiers — the runner gets past the
@@ -126,6 +120,10 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
         public IdentifierProbeTestRunner()
             : base(
                 new StubBoxDetectionHelper(),
+                new StubBoxMigrationCatalog
+                {
+                    Migrations = new IAmABoxMigration[] { new StubBoxMigration(version: 1) }
+                },
                 new StubRelationalDatabaseConfiguration(),
                 TimeSpan.FromSeconds(30),
                 NullLogger.Instance)
@@ -152,7 +150,7 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
 
         protected override Task RunFreshPathAsync(
             FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
-            IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+            string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
             => throw new NotSupportedException("RunFreshPathAsync must not be reached when identifier validation throws.");
 
         protected override Task RunBootstrapPathAsync(

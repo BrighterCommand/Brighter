@@ -86,7 +86,6 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
                 tableName: "Orders",
                 schemaName: "dbo",
                 boxType: BoxType.Outbox,
-                migrations: Array.Empty<IAmABoxMigration>(),
                 tableState: new BoxTableState(false, false, 0)));
         Assert.Same(thrown, caught);
 
@@ -112,7 +111,6 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
                 tableName: "Orders",
                 schemaName: "dbo",
                 boxType: BoxType.Outbox,
-                migrations: Array.Empty<IAmABoxMigration>(),
                 tableState: new BoxTableState(false, false, 0)));
         Assert.Same(thrown, caught);
 
@@ -138,7 +136,6 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
                 tableName: "Orders",
                 schemaName: "dbo",
                 boxType: BoxType.Outbox,
-                migrations: Array.Empty<IAmABoxMigration>(),
                 tableState: new BoxTableState(false, false, 0)));
         Assert.Same(thrown, caught);
 
@@ -163,6 +160,7 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
             Exception? beginAsyncThrow = null)
             : base(
                 new StubBoxDetectionHelper(),
+                new StubBoxMigrationCatalog(),
                 new StubRelationalDatabaseConfiguration(),
                 TimeSpan.FromSeconds(30),
                 logger: null,
@@ -201,7 +199,7 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
 
         protected override Task RunFreshPathAsync(
             FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
-            IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken) => Task.CompletedTask;
+            string freshInstallDdl, int latestVersion, CancellationToken cancellationToken) => Task.CompletedTask;
 
         protected override Task RunBootstrapPathAsync(
             FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,

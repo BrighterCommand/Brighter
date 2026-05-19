@@ -57,8 +57,7 @@ public class SpannerRunnerUnsafeIdentifierTests
 
         //Act + Assert
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => runner.MigrateAsync(
-            unsafeTable, schemaName: null, BoxType.Outbox,
-            Array.Empty<IAmABoxMigration>(), tableState));
+            unsafeTable, schemaName: null, BoxType.Outbox, tableState));
         Assert.Contains(unsafeTable, ex.Message);
     }
 
@@ -75,8 +74,7 @@ public class SpannerRunnerUnsafeIdentifierTests
 
         //Act + Assert
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => runner.MigrateAsync(
-            unsafeTable, schemaName: null, BoxType.Inbox,
-            Array.Empty<IAmABoxMigration>(), tableState));
+            unsafeTable, schemaName: null, BoxType.Inbox, tableState));
         Assert.Contains(unsafeTable, ex.Message);
     }
 }

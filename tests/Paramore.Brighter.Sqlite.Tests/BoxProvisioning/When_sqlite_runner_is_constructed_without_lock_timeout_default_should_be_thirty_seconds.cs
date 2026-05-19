@@ -64,14 +64,13 @@ public class When_sqlite_runner_is_constructed_without_lock_timeout_default_shou
         // this pin, a future change that reverts SQLite to `?? default` would re-introduce the
         // divergence silently.
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new SqliteOutboxMigrationCatalog().All(config);
 
         var capturingRunner = new TimeoutCapturingSqliteBoxMigrationRunner(config);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
         await Assert.ThrowsAsync<TimeoutException>(() => capturingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, freshHint));
+            _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
         //Assert — the omitted `lockTimeout` resolves to the 30-second default flowed into the
         // UoW's BeginAsync(lockTimeout: ...) call. SqliteBoxMigrationRunner is the reference
@@ -104,7 +103,7 @@ file sealed class TimeoutCapturingSqliteBoxMigrationRunner : SqliteBoxMigrationR
 
     // Uses the detection-helper ctor with `lockTimeout` OMITTED — the path under regression-pin.
     public TimeoutCapturingSqliteBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration)
-        : base(new SqliteBoxDetectionHelper(), configuration)
+        : base(new SqliteBoxDetectionHelper(), new SqliteOutboxMigrationCatalog(), configuration)
     {
     }
 

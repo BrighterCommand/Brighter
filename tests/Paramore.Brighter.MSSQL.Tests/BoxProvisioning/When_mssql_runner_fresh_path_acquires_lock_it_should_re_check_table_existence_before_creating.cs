@@ -41,7 +41,7 @@ public class When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table
     public When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating()
     {
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        _runner = new MsSqlBoxMigrationRunner(_config, TimeSpan.FromSeconds(30));
+        _runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
     }
 
     [Fact]
@@ -55,7 +55,6 @@ public class When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table
         Configuration.CreateTable(_connectionString, SqlOutboxBuilder.GetDDL(_tableName));
         SeedMarkerRow();
 
-        var migrations = new MsSqlOutboxMigrationCatalog().All(_config);
         var staleState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act — the runner must NOT throw a duplicate-CREATE-TABLE exception. The TOCTOU re-check
@@ -65,7 +64,6 @@ public class When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table
             _tableName,
             schemaName: "dbo",
             BoxType.Outbox,
-            migrations,
             staleState);
 
         var ex = await Record.ExceptionAsync(act);

@@ -26,7 +26,7 @@ public class InboxProvisionerTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             inboxTableName: _freshTableName);
-        var runner = new SqliteBoxMigrationRunner(config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
         var provisioner = new SqliteInboxProvisioner(config, runner);
 
         // Act
@@ -71,7 +71,7 @@ WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @ExpectedVersion";
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             inboxTableName: _existingTableName);
-        var runner = new SqliteBoxMigrationRunner(config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
         var provisioner = new SqliteInboxProvisioner(config, runner);
 
         // Act

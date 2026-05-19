@@ -20,7 +20,7 @@ public class When_postgresql_outbox_provisioner_finds_existing_table_without_his
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName);
-        var runner = new PostgreSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         _provisioner = new PostgreSqlOutboxProvisioner(config, runner);
     }
 

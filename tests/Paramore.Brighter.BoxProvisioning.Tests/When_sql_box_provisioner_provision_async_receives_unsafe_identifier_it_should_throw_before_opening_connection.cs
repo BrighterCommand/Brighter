@@ -144,6 +144,9 @@ public class SqlBoxProvisionerIdentifierValidationTests
     {
         public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
             => Array.Empty<IAmABoxMigration>();
+
+        public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
+            => string.Empty;
     }
 
     private sealed class ThrowingPayloadValidator : IAmABoxPayloadModeValidator<FakeDbConnection>
@@ -164,7 +167,6 @@ public class SqlBoxProvisionerIdentifierValidationTests
             string tableName,
             string? schemaName,
             BoxType boxType,
-            IReadOnlyList<IAmABoxMigration> migrations,
             BoxTableState tableState,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException("MigrateAsync must not be reached when identifier validation throws.");

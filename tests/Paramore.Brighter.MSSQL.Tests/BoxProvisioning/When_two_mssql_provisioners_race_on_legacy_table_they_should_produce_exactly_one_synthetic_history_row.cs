@@ -50,8 +50,8 @@ public class When_two_mssql_provisioners_race_on_legacy_table_they_should_produc
         SeedOutboxMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _outboxTableName);
-        var provisionerA = new MsSqlOutboxProvisioner(config, new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
-        var provisionerB = new MsSqlOutboxProvisioner(config, new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+        var provisionerA = new MsSqlOutboxProvisioner(config, new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+        var provisionerB = new MsSqlOutboxProvisioner(config, new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
@@ -86,8 +86,8 @@ public class When_two_mssql_provisioners_race_on_legacy_table_they_should_produc
         SeedInboxMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _inboxTableName);
-        var provisionerA = new MsSqlInboxProvisioner(config, new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
-        var provisionerB = new MsSqlInboxProvisioner(config, new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+        var provisionerA = new MsSqlInboxProvisioner(config, new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+        var provisionerB = new MsSqlInboxProvisioner(config, new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());

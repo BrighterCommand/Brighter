@@ -75,7 +75,8 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
     {
         _connectionString = $"Data Source={_dbPath}";
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        _runner = new SqliteBoxMigrationRunner(_config, lockTimeout: TightLockTimeout);
+        _runner = new SqliteBoxMigrationRunner(
+            new SingleV1Catalog(_config), _config, TightLockTimeout);
     }
 
     [Fact]
@@ -87,7 +88,6 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
         // SQLITE_BUSY before the writer releases.
         await EnsureWalModeAsync(_connectionString);
 
-        var migrations = SingleV1Migration(_config);
         var freshState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         var writer = new SqliteConnection(_connectionString);
@@ -113,7 +113,6 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
             _tableName,
             schemaName: null,
             BoxType.Outbox,
-            migrations,
             freshState));
         stopwatch.Stop();
         await releaseWriter;
@@ -135,19 +134,25 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
             $"and inherited the driver's 30s default.");
     }
 
-    private static IReadOnlyList<IAmABoxMigration> SingleV1Migration(IAmARelationalDatabaseConfiguration config)
+    private sealed class SingleV1Catalog : IAmABoxMigrationCatalog
     {
-        return
+        private readonly IAmARelationalDatabaseConfiguration _config;
+        public SingleV1Catalog(IAmARelationalDatabaseConfiguration config) => _config = config;
+
+        public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration) =>
         [
             new BoxMigration(
                 Version: 1,
                 Description: "Create outbox table",
-                UpScript: SqliteOutboxBuilder.GetDDL(config.OutBoxTableName, config.BinaryMessagePayload),
+                UpScript: SqliteOutboxBuilder.GetDDL(configuration.OutBoxTableName, configuration.BinaryMessagePayload),
                 LogicalColumns: new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
                     "MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body"
                 })
         ];
+
+        public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration) =>
+            SqliteOutboxBuilder.GetDDL(configuration.OutBoxTableName, configuration.BinaryMessagePayload);
     }
 
     private static async Task EnsureWalModeAsync(string connectionString)

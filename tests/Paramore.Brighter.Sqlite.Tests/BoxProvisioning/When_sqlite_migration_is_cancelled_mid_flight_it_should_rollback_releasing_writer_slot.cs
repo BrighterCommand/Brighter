@@ -57,9 +57,9 @@ public class When_sqlite_migration_is_cancelled_mid_flight_it_should_rollback_re
         // base calls CommitAsync. The UoW is wrapped by a spy that captures the token passed
         // to RollbackAsync from the runner's catch path.
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new SqliteOutboxMigrationCatalog().All(config);
+        var catalog = new SqliteOutboxMigrationCatalog();
 
-        var cancellingRunner = new CancellingSqliteBoxMigrationRunner(config);
+        var cancellingRunner = new CancellingSqliteBoxMigrationRunner(catalog, config);
         var staleHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         using var cts = new CancellationTokenSource();
@@ -68,7 +68,7 @@ public class When_sqlite_migration_is_cancelled_mid_flight_it_should_rollback_re
         //Act — caller's CancellationToken is signalled while the runner is mid-flight inside
         // the (substituted) fresh-path hook.
         var thrown = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancellingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, staleHint, cts.Token));
+            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token));
 
         //Assert — the original OperationCanceledException propagates to the caller (per ADR §B.3).
         Assert.NotNull(thrown);
@@ -92,9 +92,9 @@ public class When_sqlite_migration_is_cancelled_mid_flight_it_should_rollback_re
         // BeginAsync issues BEGIN IMMEDIATE on the same database completes the migration
         // normally; the 5s lock timeout would expire and surface as SQLITE_BUSY (wrapped as
         // MigrationLockDeadlockException) if the writer slot were still held.
-        var freshRunner = new SqliteBoxMigrationRunner(config, TimeSpan.FromSeconds(5));
+        var freshRunner = new SqliteBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
         await freshRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, staleHint, CancellationToken.None);
+            _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
         Assert.True(await TableExistsAsync(),
             "Subsequent migration should have created the outbox table after the writer slot was released.");
@@ -131,8 +131,10 @@ file sealed class CancellingSqliteBoxMigrationRunner : SqliteBoxMigrationRunner
 {
     public RollbackTokenCapturingUnitOfWork? LastUnitOfWork { get; private set; }
 
-    public CancellingSqliteBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration)
-        : base(configuration)
+    public CancellingSqliteBoxMigrationRunner(
+        IAmABoxMigrationCatalog catalog,
+        IAmARelationalDatabaseConfiguration configuration)
+        : base(catalog, configuration)
     {
     }
 
@@ -150,7 +152,7 @@ file sealed class CancellingSqliteBoxMigrationRunner : SqliteBoxMigrationRunner
     // runner's catch path — which is the contract under test.
     protected override Task RunFreshPathAsync(
         SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
         => Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
 }
 

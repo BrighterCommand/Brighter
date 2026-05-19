@@ -69,17 +69,26 @@ public class When_mysql_runner_is_called_with_non_monotonic_migrations_it_should
     {
         //Arrange — do NOT create the box table (so fresh path is selected).
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var runner = new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var malformedCatalog = new MalformedListCatalog(malformed);
+        var runner = new MySqlBoxMigrationRunner(malformedCatalog, config, TimeSpan.FromSeconds(30));
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert — runner refuses to begin migration when the version sequence is malformed.
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, malformed, freshHint));
+            _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
         Assert.Contains(expectedMarker, ex.Message, StringComparison.Ordinal);
 
         //Assert — guard fired before any DDL: the box table was not created.
         Assert.Equal(0, await GetTableCount());
+    }
+
+    private sealed class MalformedListCatalog : IAmABoxMigrationCatalog
+    {
+        private readonly IReadOnlyList<IAmABoxMigration> _migrations;
+        public MalformedListCatalog(IReadOnlyList<IAmABoxMigration> migrations) => _migrations = migrations;
+        public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration) => _migrations;
+        public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration) => string.Empty;
     }
 
     private async Task<int> GetTableCount()

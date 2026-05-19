@@ -44,7 +44,7 @@ public class When_history_table_exists_in_a_non_dbo_schema_runner_should_still_c
     public When_history_table_exists_in_a_non_dbo_schema_runner_should_still_create_it_in_dbo()
     {
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var runner = new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         _provisioner = new MsSqlOutboxProvisioner(config, runner);
     }
 

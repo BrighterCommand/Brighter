@@ -62,7 +62,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(-1, detected);
 
         //Act — provisioner end-to-end
-        var runner = new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MsSqlOutboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
@@ -96,7 +96,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(-1, detected);
 
         //Act — provisioner end-to-end
-        var runner = new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MsSqlInboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
@@ -131,7 +131,7 @@ public class MsSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(0, detected);
 
         //Act — provisioner end-to-end
-        var runner = new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MsSqlOutboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 

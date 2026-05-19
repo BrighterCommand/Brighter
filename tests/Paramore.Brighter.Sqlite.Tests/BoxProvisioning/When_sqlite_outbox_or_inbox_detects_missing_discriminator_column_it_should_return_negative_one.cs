@@ -61,7 +61,7 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(-1, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new SqliteBoxMigrationRunner(config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
         var provisioner = new SqliteOutboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
@@ -94,7 +94,7 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(-1, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new SqliteBoxMigrationRunner(config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
         var provisioner = new SqliteInboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
@@ -128,7 +128,7 @@ public class SqliteBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(0, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new SqliteBoxMigrationRunner(config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
         var provisioner = new SqliteOutboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 

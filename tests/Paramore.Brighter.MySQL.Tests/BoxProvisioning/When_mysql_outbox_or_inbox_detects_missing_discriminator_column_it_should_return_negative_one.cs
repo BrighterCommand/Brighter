@@ -61,7 +61,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(-1, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MySqlOutboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
@@ -94,7 +94,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(-1, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MySqlInboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
@@ -128,7 +128,7 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(0, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MySqlOutboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 

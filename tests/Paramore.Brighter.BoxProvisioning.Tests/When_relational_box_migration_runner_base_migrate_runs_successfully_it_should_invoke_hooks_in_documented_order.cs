@@ -59,7 +59,6 @@ public class SqlBoxMigrationRunnerHookOrderTests
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: Array.Empty<IAmABoxMigration>(),
             tableState: new BoxTableState(false, false, 0));
 
         //Assert
@@ -95,7 +94,6 @@ public class SqlBoxMigrationRunnerHookOrderTests
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: Array.Empty<IAmABoxMigration>(),
             tableState: new BoxTableState(true, false, 0));
 
         //Assert
@@ -131,7 +129,6 @@ public class SqlBoxMigrationRunnerHookOrderTests
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: Array.Empty<IAmABoxMigration>(),
             tableState: new BoxTableState(true, true, 0));
 
         //Assert
@@ -166,6 +163,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
         public RecordingTestRunner(RecordingProvisioningUnitOfWork unitOfWork)
             : base(
                 new StubBoxDetectionHelper(),
+                new StubBoxMigrationCatalog(),
                 new StubRelationalDatabaseConfiguration(),
                 TimeSpan.FromSeconds(30),
                 NullLogger.Instance)
@@ -207,7 +205,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
 
         protected override Task RunFreshPathAsync(
             FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
-            IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+            string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
         {
             _unitOfWork.Log.Add("RunFreshPath");
             return Task.CompletedTask;

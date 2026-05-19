@@ -43,7 +43,7 @@ public class When_mysql_runner_fresh_path_acquires_lock_it_should_re_check_table
     public When_mysql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating()
     {
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        _runner = new MySqlBoxMigrationRunner(_config, TimeSpan.FromSeconds(30));
+        _runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
     }
 
     [Fact]
@@ -56,7 +56,6 @@ public class When_mysql_runner_fresh_path_acquires_lock_it_should_re_check_table
         await ExecuteDdl(MySqlOutboxBuilder.GetDDL(_tableName));
         await SeedMarkerRow();
 
-        var migrations = new MySqlOutboxMigrationCatalog().All(_config);
         var staleState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act — the runner must NOT throw a duplicate-CREATE-TABLE exception. The TOCTOU re-check
@@ -66,7 +65,6 @@ public class When_mysql_runner_fresh_path_acquires_lock_it_should_re_check_table
             _tableName,
             schemaName: null,
             BoxType.Outbox,
-            migrations,
             staleState);
 
         var ex = await Record.ExceptionAsync(act);

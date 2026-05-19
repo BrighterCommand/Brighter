@@ -58,7 +58,7 @@ public class When_mysql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var runner = new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MySqlOutboxProvisioner(config, runner);
 
         //Act

@@ -53,14 +53,14 @@ public class When_mssql_commit_throws_rollback_should_be_best_effort_without_thr
         Configuration.EnsureDatabaseExists(_connectionString);
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
+        var catalog = new MsSqlOutboxMigrationCatalog();
         var capturingLogger = new CapturingLogger();
 
         var commitFailure = new InvalidOperationException(
             "forced post-finalisation commit failure for spec 0028 Phase 10.3 contract test");
 
         var commitThrowingRunner = new CommitThrowingMsSqlBoxMigrationRunner(
-            config, TimeSpan.FromSeconds(30), capturingLogger, commitFailure);
+            catalog, config, TimeSpan.FromSeconds(30), capturingLogger, commitFailure);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act — runner enters the try-block, succeeds through DDL, then the spy's CommitAsync
@@ -71,7 +71,7 @@ public class When_mssql_commit_throws_rollback_should_be_best_effort_without_thr
         // spy. The real UoW catches that, logs a Warning, and returns cleanly. The catch-block's
         // `throw;` then rethrows the original commitFailure — NOT the swallowed rollback IOE.
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => commitThrowingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, freshHint));
+            _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
         //Assert — the SAME instance of commitFailure surfaces to the caller (per ADR §B.3).
         // If a different IOE were rethrown, this assertion catches that — for example, if the
@@ -156,11 +156,12 @@ file sealed class CommitThrowingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunne
     public CommitFinalisingThrowingUnitOfWork? LastUnitOfWork { get; private set; }
 
     public CommitThrowingMsSqlBoxMigrationRunner(
+        IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         ILogger logger,
         Exception commitFailure)
-        : base(configuration, lockTimeout, advisoryLock: null, logger: logger)
+        : base(catalog, configuration, lockTimeout, advisoryLock: null, logger: logger)
     {
         _commitFailure = commitFailure;
     }

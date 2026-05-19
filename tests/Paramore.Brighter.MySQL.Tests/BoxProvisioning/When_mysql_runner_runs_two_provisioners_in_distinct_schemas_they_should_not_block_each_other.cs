@@ -64,10 +64,10 @@ public class When_mysql_runner_runs_two_provisioners_in_distinct_schemas_they_sh
 
         var provisionerA = new MySqlOutboxProvisioner(
             configA,
-            new MySqlBoxMigrationRunner(configA, TimeSpan.FromSeconds(30), holdingLock));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), holdingLock));
         var provisionerB = new MySqlOutboxProvisioner(
             configB,
-            new MySqlBoxMigrationRunner(configB, TimeSpan.FromSeconds(1)));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configB, TimeSpan.FromSeconds(1)));
 
         //Act
         var taskA = Task.Run(() => provisionerA.ProvisionAsync());

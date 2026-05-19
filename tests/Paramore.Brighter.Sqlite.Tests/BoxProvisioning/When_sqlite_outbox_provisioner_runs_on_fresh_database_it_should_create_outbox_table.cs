@@ -20,7 +20,7 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName);
-        var runner = new SqliteBoxMigrationRunner(config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
         _provisioner = new SqliteOutboxProvisioner(config, runner);
     }
 

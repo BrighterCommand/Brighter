@@ -160,7 +160,6 @@ public class MySqlPreLockNegativeVersionClampTests
             string tableName,
             string? schemaName,
             BoxType boxType,
-            IReadOnlyList<IAmABoxMigration> migrations,
             BoxTableState tableState,
             CancellationToken cancellationToken = default)
         {

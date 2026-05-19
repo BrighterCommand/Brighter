@@ -62,7 +62,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(-1, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new PostgreSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new PostgreSqlOutboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
@@ -96,7 +96,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(-1, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new PostgreSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new PostgreSqlInboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
@@ -131,7 +131,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(0, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new PostgreSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new PostgreSqlOutboxProvisioner(config, runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 

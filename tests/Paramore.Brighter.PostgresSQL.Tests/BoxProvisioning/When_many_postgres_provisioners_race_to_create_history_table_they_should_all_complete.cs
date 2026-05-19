@@ -84,7 +84,7 @@ public class When_many_postgres_provisioners_race_to_create_history_table_they_s
             var config = new RelationalDatabaseConfiguration(
                 _connectionString, outBoxTableName: tableName);
             var runner = new PostgreSqlBoxMigrationRunner(
-                config, TimeSpan.FromSeconds(30), tracer: tracer);
+                new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), tracer: tracer);
             var provisioner = new PostgreSqlOutboxProvisioner(config, runner);
             await provisioner.ProvisionAsync();
         })).ToArray();

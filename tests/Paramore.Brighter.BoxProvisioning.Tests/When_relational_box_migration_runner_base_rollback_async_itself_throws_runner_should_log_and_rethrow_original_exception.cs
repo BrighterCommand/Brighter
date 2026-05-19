@@ -59,7 +59,6 @@ public class SqlBoxMigrationRunnerRollbackFailureTests
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: Array.Empty<IAmABoxMigration>(),
             tableState: new BoxTableState(false, false, 0),
             cancellationToken: CancellationToken.None));
 
@@ -91,6 +90,7 @@ public class SqlBoxMigrationRunnerRollbackFailureTests
             ILogger<TestableRollbackFailureRunner> logger)
             : base(
                 new StubBoxDetectionHelper(),
+                new StubBoxMigrationCatalog(),
                 new StubRelationalDatabaseConfiguration(),
                 TimeSpan.FromSeconds(30),
                 logger)
@@ -115,7 +115,7 @@ public class SqlBoxMigrationRunnerRollbackFailureTests
 
         protected override Task RunFreshPathAsync(
             FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
-            IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+            string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
             => Task.CompletedTask;
 
         protected override Task RunBootstrapPathAsync(

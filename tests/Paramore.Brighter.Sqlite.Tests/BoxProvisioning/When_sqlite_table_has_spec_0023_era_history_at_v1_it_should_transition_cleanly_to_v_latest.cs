@@ -52,7 +52,7 @@ public class When_sqlite_table_has_spec_0023_era_history_at_v1_it_should_transit
         var columnsBefore = await GetTableColumns();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var runner = new SqliteBoxMigrationRunner(config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
         var provisioner = new SqliteOutboxProvisioner(config, runner);
 
         //Act

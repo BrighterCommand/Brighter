@@ -53,16 +53,18 @@ public class When_postgres_runner_fails_mid_chain_it_should_roll_back_all_migrat
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var realMigrations = new PostgreSqlOutboxMigrationCatalog().All(config);
+        var realCatalog = new PostgreSqlOutboxMigrationCatalog();
+        var realMigrations = realCatalog.All(config);
         var brokenMigrations = BrokenMigrationFactory.WithBrokenVersion(
             realMigrations, BrokenVersion, BrokenUpScript);
+        var brokenCatalog = new BrokenChainCatalog(brokenMigrations, realCatalog.FreshInstallDdl(config));
 
-        var runner = new PostgreSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var brokenRunner = new PostgreSqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30));
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert (1) — broken V6 in chain: runner throws and rolls back everything.
-        await Assert.ThrowsAsync<PostgresException>(() => runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, brokenMigrations, staleHint));
+        await Assert.ThrowsAsync<PostgresException>(() => brokenRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint));
 
         //Assert — no history rows for this box (synthetic V3 + V4/V5 applied rows all rolled back).
         Assert.Empty(await GetHistoryRowsByVersion());
@@ -77,7 +79,8 @@ public class When_postgres_runner_fails_mid_chain_it_should_roll_back_all_migrat
         Assert.Equal(1, await GetMarkerRowCount());
 
         //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
-        var provisioner = new PostgreSqlOutboxProvisioner(config, runner);
+        var realRunner = new PostgreSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
+        var provisioner = new PostgreSqlOutboxProvisioner(config, realRunner);
         await provisioner.ProvisionAsync();
 
         //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
@@ -193,5 +196,20 @@ DELETE FROM ""__BrighterMigrationHistory"" WHERE ""BoxTableName"" = @BoxTableNam
         {
             // Best effort cleanup
         }
+    }
+
+    private sealed class BrokenChainCatalog : IAmABoxMigrationCatalog
+    {
+        private readonly IReadOnlyList<IAmABoxMigration> _migrations;
+        private readonly string _freshInstallDdl;
+
+        public BrokenChainCatalog(IReadOnlyList<IAmABoxMigration> migrations, string freshInstallDdl)
+        {
+            _migrations = migrations;
+            _freshInstallDdl = freshInstallDdl;
+        }
+
+        public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration) => _migrations;
+        public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration) => _freshInstallDdl;
     }
 }

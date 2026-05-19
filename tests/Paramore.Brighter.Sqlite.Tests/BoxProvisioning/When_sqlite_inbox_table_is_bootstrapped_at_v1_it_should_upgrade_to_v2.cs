@@ -51,7 +51,7 @@ public class When_sqlite_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _tableName);
-        var runner = new SqliteBoxMigrationRunner(config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
         var provisioner = new SqliteInboxProvisioner(config, runner);
 
         //Act

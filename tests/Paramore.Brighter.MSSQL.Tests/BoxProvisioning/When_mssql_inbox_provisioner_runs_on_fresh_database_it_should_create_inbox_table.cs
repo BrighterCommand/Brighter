@@ -25,7 +25,7 @@ public class When_mssql_inbox_provisioner_runs_on_fresh_database_it_should_creat
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             inboxTableName: _tableName);
-        var runner = new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         _provisioner = new MsSqlInboxProvisioner(config, runner);
     }
 

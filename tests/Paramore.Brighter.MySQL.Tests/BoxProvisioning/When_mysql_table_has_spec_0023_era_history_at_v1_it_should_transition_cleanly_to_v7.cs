@@ -49,7 +49,7 @@ public class When_mysql_table_has_spec_0023_era_history_at_v1_it_should_transiti
         var columnsBefore = await GetTableColumns();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var runner = new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         var provisioner = new MySqlOutboxProvisioner(config, runner);
 
         //Act

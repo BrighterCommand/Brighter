@@ -34,36 +34,42 @@ using Xunit;
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 /// <summary>
-/// A null <c>migrations</c> argument at the runner's framework chokepoint must surface as
-/// <see cref="ConfigurationException"/> with a descriptive message BEFORE any connection is
-/// opened. The legacy failure mode was an opaque NRE inside
+/// A catalog whose <see cref="IAmABoxMigrationCatalog.All"/> returns null at the runner's
+/// framework chokepoint must surface as <see cref="ConfigurationException"/> with a
+/// descriptive message BEFORE any connection is opened. The legacy failure mode was an
+/// opaque NRE inside
 /// <see cref="SqlBoxMigrationRunner{TConnection, TTransaction}.ValidateMigrationsMonotonic"/>
 /// (<c>migrations[i - 1].Version</c>) or, on an empty list that snuck past, a misleading
 /// <c>EnsureHistoryTableAsync</c> call against the live DB. Defence at the boundary is one
 /// line and replaces both with a clear operator-facing diagnostic.
 /// <para>
+/// Spec 0027 R1 (PR #4039 part 2): the runner sources the chain from the injected catalog
+/// rather than via a <c>MigrateAsync</c> argument; this test wires a null-returning catalog
+/// via <see cref="StubBoxMigrationCatalog.AllReturnsNull"/>.
+/// </para>
+/// <para>
 /// The empty-list case is intentionally NOT guarded — relational catalogs always return
-/// at least a V1 migration, and many internal tests deliberately use
-/// <c>Array.Empty&lt;IAmABoxMigration&gt;()</c> as a "don't care" payload when exercising
-/// hook-ordering, re-detection, or failure-path contracts. Adding an empty-list guard
-/// would churn 8+ tests for no operational gain (a misconfigured catalog already surfaces
-/// in catalog-construction tests).
+/// at least a V1 migration, and many internal tests deliberately use an empty
+/// <see cref="StubBoxMigrationCatalog.Migrations"/> as a "don't care" payload when
+/// exercising hook-ordering, re-detection, or failure-path contracts. Adding an empty-list
+/// guard would churn 8+ tests for no operational gain (a misconfigured catalog already
+/// surfaces in catalog-construction tests).
 /// </para>
 /// </summary>
 public class SqlBoxMigrationRunnerNullMigrationsValidationTests
 {
     [Fact]
-    public async Task When_migrations_is_null_migrate_should_throw_configuration_exception_before_opening_connection()
+    public async Task When_catalog_returns_null_migrate_should_throw_configuration_exception_before_opening_connection()
     {
         //Arrange
-        var runner = new NullMigrationsProbeTestRunner();
+        var catalog = new StubBoxMigrationCatalog { AllReturnsNull = true };
+        var runner = new NullMigrationsProbeTestRunner(catalog);
 
         //Act
         var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
             tableName: "Outbox",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: null!,
             tableState: new BoxTableState(false, false, 0)));
 
         //Assert
@@ -82,9 +88,10 @@ public class SqlBoxMigrationRunnerNullMigrationsValidationTests
     {
         public bool OpenConnectionCalled { get; private set; }
 
-        public NullMigrationsProbeTestRunner()
+        public NullMigrationsProbeTestRunner(IAmABoxMigrationCatalog catalog)
             : base(
                 new StubBoxDetectionHelper(),
+                catalog,
                 new StubRelationalDatabaseConfiguration(),
                 TimeSpan.FromSeconds(30),
                 NullLogger.Instance)
@@ -111,7 +118,7 @@ public class SqlBoxMigrationRunnerNullMigrationsValidationTests
 
         protected override Task RunFreshPathAsync(
             FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
-            IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+            string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
             => throw new NotSupportedException("RunFreshPathAsync must not be reached when null-migrations validation throws.");
 
         protected override Task RunBootstrapPathAsync(

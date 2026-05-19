@@ -52,8 +52,8 @@ public class When_two_sqlite_provisioners_race_on_legacy_table_they_should_produ
         await SeedOutboxMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _outboxTableName);
-        var provisionerA = new SqliteOutboxProvisioner(config, new SqliteBoxMigrationRunner(config));
-        var provisionerB = new SqliteOutboxProvisioner(config, new SqliteBoxMigrationRunner(config));
+        var provisionerA = new SqliteOutboxProvisioner(config, new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
+        var provisionerB = new SqliteOutboxProvisioner(config, new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
@@ -90,8 +90,8 @@ public class When_two_sqlite_provisioners_race_on_legacy_table_they_should_produ
         await SeedInboxMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _inboxTableName);
-        var provisionerA = new SqliteInboxProvisioner(config, new SqliteBoxMigrationRunner(config));
-        var provisionerB = new SqliteInboxProvisioner(config, new SqliteBoxMigrationRunner(config));
+        var provisionerA = new SqliteInboxProvisioner(config, new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config));
+        var provisionerB = new SqliteInboxProvisioner(config, new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config));
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());

@@ -26,7 +26,7 @@ public class When_mssql_outbox_provisioner_finds_existing_table_without_history_
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName);
-        var runner = new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         _provisioner = new MsSqlOutboxProvisioner(config, runner);
     }
 

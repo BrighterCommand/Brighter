@@ -48,9 +48,9 @@ public class When_mssql_migration_is_cancelled_mid_flight_it_should_rollback_wit
         Configuration.EnsureDatabaseExists(_connectionString);
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
+        var catalog = new MsSqlOutboxMigrationCatalog();
 
-        var cancellingRunner = new CancellingMsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var cancellingRunner = new CancellingMsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(30));
         var staleHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         using var cts = new CancellationTokenSource();
@@ -59,7 +59,7 @@ public class When_mssql_migration_is_cancelled_mid_flight_it_should_rollback_wit
         //Act — caller's CancellationToken is signalled while the runner is mid-flight inside
         // the (substituted) fresh-path hook.
         var thrown = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancellingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, staleHint, cts.Token));
+            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token));
 
         //Assert — the original OperationCanceledException propagates to the caller (per ADR §B.3).
         Assert.NotNull(thrown);
@@ -84,9 +84,9 @@ public class When_mssql_migration_is_cancelled_mid_flight_it_should_rollback_wit
         // short-circuited by a signalled CT the sp_getapplock would still be held by the
         // zombied transaction and the second BeginAsync would block until the 5s timeout
         // elapsed and throw MigrationLockDeadlockException.
-        var freshRunner = new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(5));
+        var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
         await freshRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, staleHint, CancellationToken.None);
+            _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
         Assert.True(TableExists(),
             "Subsequent migration should have created the outbox table after the lock was released.");
@@ -135,8 +135,11 @@ file sealed class CancellingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunner
 {
     public RollbackTokenCapturingUnitOfWork? LastUnitOfWork { get; private set; }
 
-    public CancellingMsSqlBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration, TimeSpan lockTimeout)
-        : base(configuration, lockTimeout)
+    public CancellingMsSqlBoxMigrationRunner(
+        IAmABoxMigrationCatalog catalog,
+        IAmARelationalDatabaseConfiguration configuration,
+        TimeSpan lockTimeout)
+        : base(catalog, configuration, lockTimeout)
     {
     }
 
@@ -154,7 +157,7 @@ file sealed class CancellingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunner
     // base runner's catch path — which is the contract under test.
     protected override Task RunFreshPathAsync(
         SqlConnection connection, SqlTransaction? transaction, string? schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
         => Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
 }
 

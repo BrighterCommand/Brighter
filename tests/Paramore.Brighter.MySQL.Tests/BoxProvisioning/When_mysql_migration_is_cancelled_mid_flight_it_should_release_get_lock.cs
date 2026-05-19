@@ -45,9 +45,9 @@ public class When_mysql_migration_is_cancelled_mid_flight_it_should_release_get_
         // GET_LOCK, AND BEFORE the base calls CommitAsync. The UoW is wrapped by a spy that
         // captures the token passed to RollbackAsync from the runner's catch path.
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new MySqlOutboxMigrationCatalog().All(config);
+        var catalog = new MySqlOutboxMigrationCatalog();
 
-        var cancellingRunner = new CancellingMySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var cancellingRunner = new CancellingMySqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(30));
         var staleHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         using var cts = new CancellationTokenSource();
@@ -56,7 +56,7 @@ public class When_mysql_migration_is_cancelled_mid_flight_it_should_release_get_
         //Act — caller's CancellationToken is signalled while the runner is mid-flight inside
         // the (substituted) fresh-path hook.
         var thrown = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancellingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, staleHint, cts.Token));
+            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token));
 
         //Assert — the original OperationCanceledException propagates to the caller (per ADR §B.3).
         Assert.NotNull(thrown);
@@ -81,9 +81,9 @@ public class When_mysql_migration_is_cancelled_mid_flight_it_should_release_get_
         // BeginAsync calls GET_LOCK on the same per-table lock resource completes the migration
         // normally; the 5s lock timeout would expire and surface as MigrationLockDeadlockException
         // if the lock were still held.
-        var freshRunner = new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(5));
+        var freshRunner = new MySqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
         await freshRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, staleHint, CancellationToken.None);
+            _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
         Assert.True(await TableExistsAsync(),
             "Subsequent migration should have created the outbox table after the lock was released.");
@@ -132,8 +132,11 @@ file sealed class CancellingMySqlBoxMigrationRunner : MySqlBoxMigrationRunner
 {
     public RollbackTokenCapturingUnitOfWork? LastUnitOfWork { get; private set; }
 
-    public CancellingMySqlBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration, TimeSpan lockTimeout)
-        : base(configuration, lockTimeout)
+    public CancellingMySqlBoxMigrationRunner(
+        IAmABoxMigrationCatalog catalog,
+        IAmARelationalDatabaseConfiguration configuration,
+        TimeSpan lockTimeout)
+        : base(catalog, configuration, lockTimeout)
     {
     }
 
@@ -151,7 +154,7 @@ file sealed class CancellingMySqlBoxMigrationRunner : MySqlBoxMigrationRunner
     // runner's catch path — which is the contract under test.
     protected override Task RunFreshPathAsync(
         MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
-        IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+        string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
         => Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
 }
 

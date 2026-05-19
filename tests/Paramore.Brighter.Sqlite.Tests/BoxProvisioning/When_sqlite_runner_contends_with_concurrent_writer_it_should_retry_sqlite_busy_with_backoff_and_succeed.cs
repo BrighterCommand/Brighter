@@ -53,7 +53,7 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
     {
         _connectionString = $"Data Source={_dbPath}";
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        _runner = new SqliteBoxMigrationRunner(_config);
+        _runner = new SqliteBoxMigrationRunner(new SingleV1Catalog(), _config);
     }
 
     [Fact]
@@ -71,7 +71,6 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
         //concern. Multi-version V1..V7 migrations bring in IdempotencyCheckSql skip / TOCTOU
         //re-check / bootstrap branching — those are verified by Tasks 4.6 / 4.7 / 4.8 / 4.9
         //per spec line 684. Here we just want: "runner can wait for a writer to release".
-        var migrations = SingleV1Migration(_config);
         var freshState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         var writer = new SqliteConnection(_connectionString);
@@ -100,7 +99,6 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
             _tableName,
             schemaName: null,
             BoxType.Outbox,
-            migrations,
             freshState);
 
         var thrown = await Record.ExceptionAsync(async () => await migrateTask);
@@ -121,19 +119,22 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
             $"least {minimumExpectedWait.TotalMilliseconds:F0}ms while retrying SQLITE_BUSY.");
     }
 
-    private static IReadOnlyList<IAmABoxMigration> SingleV1Migration(IAmARelationalDatabaseConfiguration config)
+    private sealed class SingleV1Catalog : IAmABoxMigrationCatalog
     {
-        return
+        public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration) =>
         [
             new BoxMigration(
                 Version: 1,
                 Description: "Create outbox table",
-                UpScript: SqliteOutboxBuilder.GetDDL(config.OutBoxTableName, config.BinaryMessagePayload),
+                UpScript: SqliteOutboxBuilder.GetDDL(configuration.OutBoxTableName, configuration.BinaryMessagePayload),
                 LogicalColumns: new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
                     "MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body"
                 })
         ];
+
+        public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration) =>
+            SqliteOutboxBuilder.GetDDL(configuration.OutBoxTableName, configuration.BinaryMessagePayload);
     }
 
     private static async Task EnsureWalModeAsync(string connectionString)

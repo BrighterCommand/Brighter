@@ -245,7 +245,6 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
             string tableName,
             string? schemaName,
             BoxType boxType,
-            IReadOnlyList<IAmABoxMigration> migrations,
             BoxTableState tableState,
             CancellationToken cancellationToken = default)
         {
@@ -258,6 +257,9 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
     {
         public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
             => System.Array.Empty<IAmABoxMigration>();
+
+        public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
+            => string.Empty;
     }
 
     private sealed class RecordingConfiguration : IAmARelationalDatabaseConfiguration

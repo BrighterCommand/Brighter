@@ -53,19 +53,19 @@ public class When_mssql_advisory_lock_acquire_throws_during_begin_async_runner_s
         Configuration.EnsureDatabaseExists(_connectionString);
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
+        var catalog = new MsSqlOutboxMigrationCatalog();
 
         var deadlock = new MigrationLockDeadlockException(
             "forced -3 deadlock victim for spec 0028 Phase 10.2 BeginAsync-throws contract test");
         var fakeLock = new FakeMsSqlAdvisoryLock(throwOnAcquire: deadlock);
 
-        var spyingRunner = new SpyingMsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30), fakeLock);
+        var spyingRunner = new SpyingMsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(30), fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act — runner's BeginAsync throws because AcquireAsync throws; per ADR §B.3 the throw
         // propagates from MigrateAsync without the runner's try-block ever executing.
         var thrown = await Assert.ThrowsAsync<MigrationLockDeadlockException>(() => spyingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, freshHint));
+            _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
         //Assert — the original deadlock exception propagates unwrapped (per spec 0027 Item N
         // distinguishable-exception contract — the operator must see the typed exception so
@@ -103,9 +103,9 @@ public class When_mssql_advisory_lock_acquire_throws_during_begin_async_runner_s
         // resource, proving the failed acquire left no lingering server-side state. If the
         // partial transaction had been left undisposed, the next BeginTransaction on the same
         // connection-pool slot would block or error.
-        var freshRunner = new MsSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(5));
+        var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
         await freshRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, migrations, freshHint, CancellationToken.None);
+            _tableName, schemaName: null, BoxType.Outbox, freshHint, CancellationToken.None);
 
         Assert.True(TableExists(),
             "A fresh runner with no failing lock must complete the migration against the same resource after the failed acquire was cleaned up.");
@@ -155,10 +155,11 @@ file sealed class SpyingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunner
     public LifecycleSpyingUnitOfWork? LastUnitOfWork { get; private set; }
 
     public SpyingMsSqlBoxMigrationRunner(
+        IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         IMsSqlAdvisoryLock advisoryLock)
-        : base(configuration, lockTimeout, advisoryLock)
+        : base(catalog, configuration, lockTimeout, advisoryLock)
     {
     }
 

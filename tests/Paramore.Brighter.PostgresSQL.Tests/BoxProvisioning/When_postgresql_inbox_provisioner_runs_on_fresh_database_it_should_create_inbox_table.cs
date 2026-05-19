@@ -19,7 +19,7 @@ public class When_postgresql_inbox_provisioner_runs_on_fresh_database_it_should_
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             inboxTableName: _tableName);
-        var runner = new PostgreSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         _provisioner = new PostgreSqlInboxProvisioner(config, runner);
     }
 

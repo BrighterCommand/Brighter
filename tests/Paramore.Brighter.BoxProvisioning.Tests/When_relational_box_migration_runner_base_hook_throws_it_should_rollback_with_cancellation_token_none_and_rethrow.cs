@@ -80,7 +80,6 @@ public class SqlBoxMigrationRunnerHookFailureTests
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
-            migrations: Array.Empty<IAmABoxMigration>(),
             tableState: new BoxTableState(false, false, 0),
             cancellationToken: cts.Token));
 
@@ -120,6 +119,7 @@ public class SqlBoxMigrationRunnerHookFailureTests
         public ThrowingHookTestRunner(CapturingProvisioningUnitOfWork unitOfWork, ThrowFromHook hookToThrow)
             : base(
                 new StubBoxDetectionHelper(),
+                new StubBoxMigrationCatalog(),
                 new StubRelationalDatabaseConfiguration(),
                 TimeSpan.FromSeconds(30),
                 NullLogger.Instance)
@@ -161,7 +161,7 @@ public class SqlBoxMigrationRunnerHookFailureTests
 
         protected override Task RunFreshPathAsync(
             FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
-            IReadOnlyList<IAmABoxMigration> migrations, CancellationToken cancellationToken)
+            string freshInstallDdl, int latestVersion, CancellationToken cancellationToken)
         {
             if (_hookToThrow == ThrowFromHook.RunFreshPath)
                 throw new InvalidOperationException(SentinelMessage);

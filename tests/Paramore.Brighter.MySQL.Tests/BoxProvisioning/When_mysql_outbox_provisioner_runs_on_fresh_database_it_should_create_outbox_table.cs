@@ -19,7 +19,7 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName);
-        var runner = new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
         _provisioner = new MySqlOutboxProvisioner(config, runner);
     }
 

@@ -61,12 +61,11 @@ public class When_sqlite_runner_is_constructed_with_enable_wal_mode_false_it_sho
         var config = new RelationalDatabaseConfiguration(
             ConnectionString, outBoxTableName: tableName);
         var runner = new SqliteBoxMigrationRunner(
-            config, TimeSpan.FromSeconds(30), enableWalMode: false);
+            new SqliteOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), enableWalMode: false);
 
         //Act — let the runner provision a fresh outbox.
-        var migrations = new SqliteOutboxMigrationCatalog().All(config);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
-        await runner.MigrateAsync(tableName, schemaName: null, BoxType.Outbox, migrations, freshHint);
+        await runner.MigrateAsync(tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert — journal mode is still DELETE (the runner did not run the WAL pragma).
         Assert.Equal("delete", await GetJournalModeAsync(ConnectionString));
@@ -84,12 +83,11 @@ public class When_sqlite_runner_is_constructed_with_enable_wal_mode_false_it_sho
         var config = new RelationalDatabaseConfiguration(
             ConnectionString, outBoxTableName: tableName);
         var runner = new SqliteBoxMigrationRunner(
-            config, TimeSpan.FromSeconds(30), enableWalMode: true);
+            new SqliteOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), enableWalMode: true);
 
         //Act
-        var migrations = new SqliteOutboxMigrationCatalog().All(config);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
-        await runner.MigrateAsync(tableName, schemaName: null, BoxType.Outbox, migrations, freshHint);
+        await runner.MigrateAsync(tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert — journal mode is now WAL.
         Assert.Equal("wal", await GetJournalModeAsync(ConnectionString));

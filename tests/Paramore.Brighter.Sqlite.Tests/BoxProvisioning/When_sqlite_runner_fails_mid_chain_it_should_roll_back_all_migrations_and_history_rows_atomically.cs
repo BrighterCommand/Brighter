@@ -58,11 +58,13 @@ public class When_sqlite_runner_fails_mid_chain_it_should_roll_back_all_migratio
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var realMigrations = new SqliteOutboxMigrationCatalog().All(config);
+        var realCatalog = new SqliteOutboxMigrationCatalog();
+        var realMigrations = realCatalog.All(config);
         var brokenMigrations = BrokenMigrationFactory.WithBrokenVersion(
             realMigrations, BrokenVersion, BrokenUpScript);
+        var brokenCatalog = new BrokenChainCatalog(brokenMigrations, realCatalog.FreshInstallDdl(config));
 
-        var runner = new SqliteBoxMigrationRunner(config);
+        var brokenRunner = new SqliteBoxMigrationRunner(brokenCatalog, config);
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert (1) — broken V6 in chain: runner throws and rolls back everything.
@@ -70,8 +72,8 @@ public class When_sqlite_runner_fails_mid_chain_it_should_roll_back_all_migratio
         //transaction wraps EnsureHistoryTableAsync + bootstrap path + per-migration ALTER+history,
         //so a mid-chain failure rolls back V4 ALTER + V5 ALTER + their history rows + the
         //synthetic V3 history row + (if newly-created in this tx) the history table itself.
-        await Assert.ThrowsAsync<SqliteException>(() => runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, brokenMigrations, staleHint));
+        await Assert.ThrowsAsync<SqliteException>(() => brokenRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint));
 
         //Assert — no history rows for this box (synthetic V3 + V4/V5 applied rows all rolled back).
         Assert.Empty(await GetHistoryRowsByVersion());
@@ -86,7 +88,8 @@ public class When_sqlite_runner_fails_mid_chain_it_should_roll_back_all_migratio
         Assert.Equal(1, await GetMarkerRowCount());
 
         //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
-        var provisioner = new SqliteOutboxProvisioner(config, runner);
+        var realRunner = new SqliteBoxMigrationRunner(realCatalog, config);
+        var provisioner = new SqliteOutboxProvisioner(config, realRunner);
         await provisioner.ProvisionAsync();
 
         //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
@@ -200,5 +203,20 @@ ORDER BY [MigrationVersion]";
         {
             // Best effort cleanup
         }
+    }
+
+    private sealed class BrokenChainCatalog : IAmABoxMigrationCatalog
+    {
+        private readonly IReadOnlyList<IAmABoxMigration> _migrations;
+        private readonly string _freshInstallDdl;
+
+        public BrokenChainCatalog(IReadOnlyList<IAmABoxMigration> migrations, string freshInstallDdl)
+        {
+            _migrations = migrations;
+            _freshInstallDdl = freshInstallDdl;
+        }
+
+        public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration) => _migrations;
+        public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration) => _freshInstallDdl;
     }
 }

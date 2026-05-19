@@ -52,17 +52,19 @@ public class When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var realMigrations = new MySqlOutboxMigrationCatalog().All(config);
+        var realCatalog = new MySqlOutboxMigrationCatalog();
+        var realMigrations = realCatalog.All(config);
         var brokenMigrations = BrokenMigrationFactory.WithBrokenVersion(
             realMigrations, BrokenVersion, BrokenUpScript);
+        var brokenCatalog = new BrokenChainCatalog(brokenMigrations, realCatalog.FreshInstallDdl(config));
 
-        var runner = new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30));
+        var brokenRunner = new MySqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30));
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert (1) — broken V6 in chain: runner throws, but per ADR §5a MySQL implicit-DDL
         //commit means the V4/V5 ALTERs and history INSERTs already committed before V6 failed.
-        await Assert.ThrowsAsync<MySqlException>(() => runner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, brokenMigrations, staleHint));
+        await Assert.ThrowsAsync<MySqlException>(() => brokenRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint));
 
         //Assert — exactly 3 history rows survive: synthetic V3 (bootstrap) + applied V4 + applied V5.
         //The runner's three-path branching emits ONE synthetic row at the detected version (V3),
@@ -90,7 +92,8 @@ public class When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied
         Assert.Equal(1, await GetMarkerRowCount());
 
         //Act + Assert (2) — retry with the real migration list via the provisioner.
-        var provisioner = new MySqlOutboxProvisioner(config, runner);
+        var realRunner = new MySqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
+        var provisioner = new MySqlOutboxProvisioner(config, realRunner);
         await provisioner.ProvisionAsync();
 
         //Assert — V6 + V7 now applied; total exactly 5 history rows (V3 synthetic + V4..V7 applied).
@@ -204,5 +207,20 @@ ORDER BY `MigrationVersion`";
         {
             // Best effort cleanup
         }
+    }
+
+    private sealed class BrokenChainCatalog : IAmABoxMigrationCatalog
+    {
+        private readonly IReadOnlyList<IAmABoxMigration> _migrations;
+        private readonly string _freshInstallDdl;
+
+        public BrokenChainCatalog(IReadOnlyList<IAmABoxMigration> migrations, string freshInstallDdl)
+        {
+            _migrations = migrations;
+            _freshInstallDdl = freshInstallDdl;
+        }
+
+        public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration) => _migrations;
+        public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration) => _freshInstallDdl;
     }
 }

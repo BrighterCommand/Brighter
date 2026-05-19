@@ -66,14 +66,13 @@ public class When_mssql_runner_acquires_lock_resource_should_be_qualified_by_sch
             throwOnAcquire: new InvalidOperationException("acquire-then-stop probe for lock-resource assertion"));
 
         var runner = new MsSqlBoxMigrationRunner(
-            config, TimeSpan.FromSeconds(30), fakeLock);
-        var migrations = new MsSqlOutboxMigrationCatalog().All(config);
+            new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             runner.MigrateAsync(
-                tableName, configuredSchema, BoxType.Outbox, migrations, freshHint));
+                tableName, configuredSchema, BoxType.Outbox, freshHint));
 
         //Assert
         Assert.Equal(

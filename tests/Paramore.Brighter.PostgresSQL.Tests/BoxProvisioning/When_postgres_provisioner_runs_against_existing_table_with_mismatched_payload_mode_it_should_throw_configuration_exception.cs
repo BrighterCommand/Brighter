@@ -49,7 +49,7 @@ public class When_postgres_provisioner_runs_against_existing_table_with_mismatch
             outBoxTableName: _outboxTableName,
             binaryMessagePayload: true);
         var provisioner = new PostgreSqlOutboxProvisioner(
-            config, new PostgreSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+            config, new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
@@ -68,7 +68,7 @@ public class When_postgres_provisioner_runs_against_existing_table_with_mismatch
             outBoxTableName: _outboxTableName,
             binaryMessagePayload: false);
         var provisioner = new PostgreSqlOutboxProvisioner(
-            config, new PostgreSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+            config, new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
@@ -87,7 +87,7 @@ public class When_postgres_provisioner_runs_against_existing_table_with_mismatch
             inboxTableName: _inboxTableName,
             binaryMessagePayload: true);
         var provisioner = new PostgreSqlInboxProvisioner(
-            config, new PostgreSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+            config, new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
@@ -106,7 +106,7 @@ public class When_postgres_provisioner_runs_against_existing_table_with_mismatch
             inboxTableName: _inboxTableName,
             binaryMessagePayload: false);
         var provisioner = new PostgreSqlInboxProvisioner(
-            config, new PostgreSqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+            config, new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());

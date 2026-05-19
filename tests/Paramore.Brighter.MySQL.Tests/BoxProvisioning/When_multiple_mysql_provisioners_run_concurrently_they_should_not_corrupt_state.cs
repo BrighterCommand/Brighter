@@ -25,9 +25,9 @@ public class ConcurrentProvisionerTests : IAsyncLifetime
             outBoxTableName: _tableName);
 
         var provisioner1 = new MySqlOutboxProvisioner(
-            config, new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+            config, new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
         var provisioner2 = new MySqlOutboxProvisioner(
-            config, new MySqlBoxMigrationRunner(config, TimeSpan.FromSeconds(30)));
+            config, new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         // Act
         await Task.WhenAll(

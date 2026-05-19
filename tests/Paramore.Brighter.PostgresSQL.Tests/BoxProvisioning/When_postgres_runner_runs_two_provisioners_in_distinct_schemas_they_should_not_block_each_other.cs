@@ -63,10 +63,10 @@ public class When_postgres_runner_runs_two_provisioners_in_distinct_schemas_they
 
         var provisionerA = new PostgreSqlOutboxProvisioner(
             configA,
-            new PostgreSqlBoxMigrationRunner(configA, TimeSpan.FromSeconds(30), holdingLock));
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), holdingLock));
         var provisionerB = new PostgreSqlOutboxProvisioner(
             configB,
-            new PostgreSqlBoxMigrationRunner(configB, TimeSpan.FromSeconds(1)));
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), configB, TimeSpan.FromSeconds(1)));
 
         //Act
         var taskA = Task.Run(() => provisionerA.ProvisionAsync());

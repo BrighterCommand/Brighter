@@ -59,7 +59,7 @@ public class When_sqlite_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var runner = new SqliteBoxMigrationRunner(config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
         var provisioner = new SqliteOutboxProvisioner(config, runner);
 
         //Act
