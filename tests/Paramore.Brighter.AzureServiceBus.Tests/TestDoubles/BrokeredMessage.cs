@@ -10,6 +10,7 @@ public class BrokeredMessage : IBrokeredMessageWrapper
     public ReadOnlyMemory<byte> MessageBodyMemory => (MessageBodyValue ?? Array.Empty<byte>()).AsMemory();
     public IReadOnlyDictionary<string, object> ApplicationProperties { get; init; }
     public string LockToken { get;  init;}
+    public long SequenceNumber { get; init; }
     public string Id { get;  init;}
     public string CorrelationId { get;  init;}
     public string ContentType { get;  init;}
