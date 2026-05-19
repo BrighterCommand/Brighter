@@ -186,7 +186,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             {
                 activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "normal");
                 activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventNormalUpdate));
-                RunNormalPath(tableName, vLatest, tableState.CurrentVersion);
+                VerifyAtLatestVersionOrThrow(tableName, vLatest, tableState.CurrentVersion);
             }
             activity?.SetStatus(ActivityStatusCode.Ok);
         }
@@ -264,7 +264,13 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             connection, tableName, vLatest, BootstrapDescription, cancellationToken);
     }
 
-    private static void RunNormalPath(string tableName, int vLatest, int currentVersion)
+    // Per PR #4039 reviewer item M2-10: the previous name `RunNormalPath` read oddly inside
+    // MigrateAsync because the method only validates (and throws on mismatch) — it does not
+    // "run" anything when the version is current. The rename makes the may-throw semantics
+    // explicit at the call site. The early `currentVersion == vLatest` return is the
+    // expected post-bootstrap steady state; the throw is reserved for the strict
+    // history-divergence case Spanner has no in-place migration path to fix.
+    private static void VerifyAtLatestVersionOrThrow(string tableName, int vLatest, int currentVersion)
     {
         if (currentVersion == vLatest) return;
 
