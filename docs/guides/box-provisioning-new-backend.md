@@ -251,6 +251,22 @@ Mirror the per-backend test suites under `tests/Paramore.Brighter.{Existing Back
 
 Add a `docker-compose-{backend}.yaml` to the repo root if your backend has a local image. Document its startup pattern (and any state-wipe quirks) in your test project's README. The existing PG / MySQL / MSSQL / Spanner compose files are reference examples.
 
+## Operational notes (backend-specific surprises)
+
+A handful of backend-specific behaviours are intentional but not obvious from the code — operators tuning a Brighter deployment should know about them upfront.
+
+### MySQL — runner enables `AllowUserVariables` on its own connection
+
+The MySQL migration runner mutates its own connection string to set `AllowUserVariables=true` if the caller-supplied connection string disabled it. V2..V7 outbox/inbox migrations (per ADR 0057 §5a) use the MySQL `information_schema.columns` probe + prepared-statement idempotency pattern, which depends on session-scoped user variables (`SET @q = ...; PREPARE stmt FROM @q;`) — without `AllowUserVariables=true` the prepared form fails because MySqlConnector treats `@variable` tokens as parameter markers by default. The flip is **scoped to the runner's own `MySqlConnection`** and does not affect the caller-supplied connection string instance. An `Information`-level log records the mutation so a security-conscious operator who deliberately disabled user variables (the documented prepared-statement-injection surface) can correlate it against migration activity without enabling Debug-level logging.
+
+### Migration history is global, not per-tenant
+
+`__BrighterMigrationHistory` (or `BrighterMigrationHistory` on Spanner) is created in the backend's default schema (`dbo` on MSSQL, `public` on PG, the connection-bound `DATABASE()` on MySQL). The PK `(SchemaName, BoxTableName, MigrationVersion)` keeps multi-tenant rows unambiguous, so deployments using a separate schema per tenant remain correct — but the **history rows for all tenants share a single physical table**. Per-tenant isolation of the history table is not supported; if your operating model needs it, file an issue. Tracked at <https://github.com/BrighterCommand/Brighter/issues/4144>.
+
+### MySQL/SQLite advisory-lock timeout is floored at 1 second
+
+`BoxProvisioningOptions.MigrationLockTimeout` is honoured at millisecond resolution on MSSQL (`sp_getapplock`) and PG (`pg_try_advisory_lock` retry loop with a monotonic deadline), but MySQL's `GET_LOCK` takes an integer-second argument and SQLite's runner falls back to the same whole-second granularity. Sub-second timeouts on MySQL/SQLite are rounded **up** to 1 second — `TimeSpan.Zero` is **not** fail-fast on these backends. Cross-backend callers expecting fail-fast semantics should size their probe/deploy budgets accordingly.
+
 ## Identifier safety
 
 Brighter's `Identifiers.AssertSafe` chokepoint validates table and schema names against `^[A-Za-z][A-Za-z0-9_]*$`. This is the **strictest backend's** rule (Spanner rejects `_`-prefixed names as reserved) applied framework-wide. If your new backend allows characters outside this set inside quoted/backticked identifiers, the chokepoint will still reject them — this is deliberate defence-in-depth. Do not loosen the regex; if your backend has a legitimate use case for an unusual identifier shape, rename the configuration value or document the constraint.

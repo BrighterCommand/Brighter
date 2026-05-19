@@ -75,6 +75,12 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     // Literal historical PostgreSQL outbox DDL extracted from commit 3c30343fa (July 2019).
     // First-shipped state already carried Dispatched — see the born-past-V1 note in the
     // class remarks. {0} = table name (validated).
+    // Intentionally NOT double-quoted — V2..V7 ALTERs in this catalog also use unquoted
+    // identifiers and rely on PG's identifier case-folding. Adding "{0}" to V1 would create
+    // a case-sensitive table that the unquoted V2..V7 ALTERs could not reach, so V1 stays
+    // symmetric with the rest of the chain. Reserved-keyword identifiers (e.g. "Order") are
+    // a chain-wide limitation on PG, not a V1-specific gap — discussed under PR #4039
+    // reviewer item F2-1 and tracked separately if it ever becomes a real constraint.
     private const string V1HistoricalDdl =
         """
         CREATE TABLE {0}

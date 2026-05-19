@@ -57,9 +57,12 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     // Literal historical MSSQL outbox DDL extracted from commit 695522367 (March 2019). The
     // exact pre-Dispatched shape that shipped as "V1" — preserved here so chain replay against
     // a legacy table sees the same starting DDL it always saw. {0} = table name (validated).
+    // The table identifier is bracket-quoted so legal-but-reserved T-SQL keyword names
+    // (User, Order, Group, …) bootstrap correctly — V2..V7 already bracket-quote, so V1
+    // is the only asymmetric step. Per PR #4039 reviewer item F2-1.
     private const string V1HistoricalDdl =
         """
-        CREATE TABLE {0}
+        CREATE TABLE [{0}]
             (
               [Id] [BIGINT] NOT NULL IDENTITY ,
               [MessageId] UNIQUEIDENTIFIER NOT NULL ,

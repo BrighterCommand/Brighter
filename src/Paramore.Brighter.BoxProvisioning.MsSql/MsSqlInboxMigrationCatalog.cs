@@ -65,9 +65,12 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
     // Literal historical MSSQL inbox DDL extracted from commit b7f96957b (March 2019). The
     // table first shipped with ContextKey already present — see the born-past-V1 note in the
     // class remarks. {0} = table name (validated).
+    // The table identifier is bracket-quoted so legal-but-reserved T-SQL keyword names
+    // (User, Order, Group, …) bootstrap correctly — V2 already bracket-quotes, so V1
+    // is the only asymmetric step. Per PR #4039 reviewer item F2-1.
     private const string V1HistoricalDdl =
         """
-        CREATE TABLE {0}
+        CREATE TABLE [{0}]
             (
                 [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
                 [CommandId] [UNIQUEIDENTIFIER] NOT NULL ,

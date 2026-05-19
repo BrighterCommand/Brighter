@@ -75,9 +75,12 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     // exact pre-Dispatched shape that shipped as "V1" — preserved here so chain replay against
     // a legacy table sees the same starting DDL it always saw. {0} = table name (validated).
     // Created/CreatedID are MySQL housekeeping columns present from V1.
+    // The table identifier is backtick-quoted so legal-but-reserved MySQL keyword names
+    // (User, Order, Group, …) bootstrap correctly — V2..V7 already backtick-quote, so V1
+    // is the only asymmetric step. Per PR #4039 reviewer item F2-1.
     private const string V1HistoricalDdl =
         """
-        CREATE TABLE {0} (
+        CREATE TABLE `{0}` (
             `MessageId` CHAR(36) NOT NULL ,
             `Topic` VARCHAR(255) NOT NULL ,
             `MessageType` VARCHAR(32) NOT NULL ,

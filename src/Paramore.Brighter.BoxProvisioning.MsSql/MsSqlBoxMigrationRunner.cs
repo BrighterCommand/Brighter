@@ -123,7 +123,14 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         // The WHERE values are parameterised (matching DoesTableExistAsync); the bracketed
         // identifiers in the CREATE TABLE body must remain inline because T-SQL DDL does not
         // accept bind parameters for object names.
+        // SET XACT_ABORT OFF is issued defensively so the 2714 swallow below works for callers
+        // who pre-enable XACT_ABORT ON on their connection pool (some ORM defaults, startup
+        // scripts). With XACT_ABORT ON, 2714 dooms the transaction rather than being statement-
+        // terminating, and RedetectStateAsync would fail with state error 3930. We restore the
+        // session default OFF for the runner's own connection only — scope is bounded to this
+        // command. Per PR #4039 reviewer item F2-3.
         command.CommandText = $@"
+SET XACT_ABORT OFF;
 IF NOT EXISTS (
     SELECT 1 FROM sys.tables
     WHERE name = @HistoryTableName AND schema_id = SCHEMA_ID(@HistorySchema)

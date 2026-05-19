@@ -58,9 +58,13 @@ public class SqliteOutboxMigrationCatalog : IAmABoxMigrationCatalog
     // Literal historical SQLite outbox DDL extracted from commit 695522367 (March 2019). The
     // exact pre-Dispatched shape that shipped as "V1" — preserved here so chain replay against
     // a legacy table sees the same starting DDL it always saw. {0} = table name (validated).
+    // The table identifier is bracket-quoted so legal-but-reserved SQLite keyword names
+    // bootstrap correctly — V2..V7 already bracket-quote the table identifier (and SQLite
+    // accepts brackets, backticks, or double-quotes for identifier quoting), so V1 is the
+    // only asymmetric step. Per PR #4039 reviewer item F2-1.
     private const string V1HistoricalDdl =
         """
-        CREATE TABLE {0} (
+        CREATE TABLE [{0}] (
             [MessageId] uniqueidentifier NOT NULL
           , [Topic] nvarchar(255) NULL
           , [MessageType] nvarchar(32) NULL

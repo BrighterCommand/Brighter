@@ -49,9 +49,8 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// population is typically &lt; 100 box tables, and any collision merely serialises two
 /// migrations on a shared advisory lock (correctness preserved, only the concurrency boundary
 /// widens). The <c>(bigint)</c> overload of <c>pg_try_advisory_lock</c> with a SHA-256-derived
-/// 64-bit key would push this to ~1 in 2^64 — left as a future hardening if collisions ever
-/// surface in practice; switching changes the lock-key namespace and requires a coordinated
-/// rollout across replicas.
+/// 64-bit key would push this to ~1 in 2^64 — tracked as a follow-up at
+/// <see href="https://github.com/BrighterCommand/Brighter/issues/4145"/>.
 /// </para>
 /// </remarks>
 public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock

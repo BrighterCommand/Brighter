@@ -59,14 +59,16 @@ public class BoxProvisioningOptions
     /// per-phase loop is tracked at <see href="https://github.com/BrighterCommand/Brighter/issues/4140"/>.
     /// </para>
     /// <para>
-    /// MySQL-specific caveat: <c>GET_LOCK</c> takes a timeout argument as an INTEGER number of
-    /// seconds. <see cref="TimeSpan"/> values smaller than 1 second are rounded UP to 1 second
-    /// before being passed to <c>GET_LOCK</c>; sub-second precision is therefore unavailable on
-    /// MySQL — the lock will block for at least 1 second on contention even if a shorter
-    /// timeout is configured. This is necessary divergence from MSSQL (<c>sp_getapplock</c>
-    /// accepts milliseconds and supports fail-fast 0-ms) and PostgreSQL (<c>pg_try_advisory_lock</c>
+    /// MySQL/SQLite-specific caveat: MySQL's <c>GET_LOCK</c> takes a timeout argument as an
+    /// INTEGER number of seconds, and the SQLite runner uses the same whole-second granularity.
+    /// <see cref="TimeSpan"/> values smaller than 1 second are rounded UP to 1 second on both
+    /// backends before being passed to the underlying lock primitive; sub-second precision is
+    /// therefore unavailable on MySQL and SQLite — the lock will block for at least 1 second
+    /// on contention even if a shorter timeout is configured, and <see cref="TimeSpan.Zero"/>
+    /// is NOT fail-fast. This is necessary divergence from MSSQL (<c>sp_getapplock</c> accepts
+    /// milliseconds and supports fail-fast 0-ms) and PostgreSQL (<c>pg_try_advisory_lock</c>
     /// is non-blocking and the runner loops with a monotonic deadline). Per PR #4039 reviewer
-    /// item M2-6.
+    /// items M2-6 and F2-6.
     /// </para>
     /// </remarks>
     public TimeSpan MigrationLockTimeout { get; set; } = TimeSpan.FromSeconds(30);

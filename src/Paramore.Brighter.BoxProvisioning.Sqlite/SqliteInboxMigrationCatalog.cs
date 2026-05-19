@@ -65,8 +65,11 @@ public class SqliteInboxMigrationCatalog : IAmABoxMigrationCatalog
     // The original source was a concatenated string literal — preserved verbatim here. The
     // table first shipped with ContextKey already present — see the born-past-V1 note in
     // the class remarks. {0} = table name (validated).
+    // The table identifier is bracket-quoted so legal-but-reserved SQLite keyword names
+    // bootstrap correctly — V2 already bracket-quotes the table identifier, so V1 is the
+    // only asymmetric step. Per PR #4039 reviewer item F2-1.
     private const string V1HistoricalDdl =
-        "CREATE TABLE {0} ("
+        "CREATE TABLE [{0}] ("
         + "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY,"
         + "CommandType nvarchar(256),"
         + "CommandBody ntext,"

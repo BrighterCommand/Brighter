@@ -59,7 +59,7 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 /// table and history state under an advisory lock, this runner consumes the caller-supplied
 /// <see cref="BoxTableState"/> directly. TOCTOU protection is provided by three Spanner-native
 /// mechanisms: (a) Spanner serializes DDL internally so concurrent <c>CREATE TABLE</c> calls do
-/// not interleave; (b) <c>ExecuteDdlSafeAsync</c> swallows <c>AlreadyExists</c> /
+/// not interleave; (b) <c>ExecuteCreateTableIfNotExistsSafeAsync</c> swallows <c>AlreadyExists</c> /
 /// <c>FailedPrecondition</c> on DDL replay (crash safety); (c) the history insert is gated by
 /// <c>IsMigrationAppliedAsync</c> against the PK <c>(BoxTableName, MigrationVersion)</c>, so a
 /// racing process cannot double-stamp. No application-level lock is therefore required.
@@ -226,7 +226,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         CancellationToken cancellationToken)
     {
         var builderDdl = BuildBoxDdl(boxType, tableName);
-        await ExecuteDdlSafeAsync(connection, builderDdl, cancellationToken);
+        await ExecuteCreateTableIfNotExistsSafeAsync(connection, builderDdl, cancellationToken);
 
         if (await IsMigrationAppliedAsync(connection, tableName, vLatest, cancellationToken))
             return;
@@ -307,7 +307,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     // it ever reached the swallow here. Invalid-options drift would surface deterministically
     // on every replica, not as a flake. The combined catch keeps the original AlreadyExists
     // arm strict and adds a FailedPrecondition arm scoped to CREATE TABLE IF NOT EXISTS DDL.
-    private async Task ExecuteDdlSafeAsync(
+    private async Task ExecuteCreateTableIfNotExistsSafeAsync(
         SpannerConnection connection, string ddl,
         CancellationToken cancellationToken)
     {
@@ -382,7 +382,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             // loser sees ALREADY_EXISTS. The DDL is `CREATE TABLE IF NOT EXISTS` on a fixed
             // history table whose schema is identical across racers, so the post-condition
             // (history table present, with the expected shape) holds either way once the racing
-            // session commits. The mirror catch on ExecuteDdlSafeAsync covers the same race on
+            // session commits. The mirror catch on ExecuteCreateTableIfNotExistsSafeAsync covers the same race on
             // the per-backend box-table DDL — see the rationale block on that method.
             _logger.LogDebug(ex,
                 "{HistoryTable} concurrent schema change absorbed (Spanner FAILED_PRECONDITION on CREATE IF NOT EXISTS)",
@@ -405,12 +405,15 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             });
 
         // SELECT COUNT(1) is one of the few SQL expressions guaranteed never to return NULL
-        // (per ANSI SQL — COUNT over zero rows returns 0, not NULL). The null-forgiving operator
-        // therefore documents an invariant the driver cannot violate without breaking
-        // standards compliance. If a Spanner driver ever does return null here, the resulting
-        // NullReferenceException is preferable to a silent "0" interpretation, which would
-        // misclassify an applied migration as missing and re-stamp the history row.
-        var count = (long)(await command.ExecuteScalarAsync(cancellationToken))!;
+        // (per ANSI SQL — COUNT over zero rows returns 0, not NULL). The pattern-match form
+        // mirrors the MSSQL/PG detection-helper style: a future driver bug returning null
+        // surfaces as a named InvalidOperationException rather than a bare NRE. Per PR #4039
+        // reviewer item F2-8.
+        var raw = await command.ExecuteScalarAsync(cancellationToken);
+        var count = raw is long n
+            ? n
+            : throw new InvalidOperationException(
+                $"IsMigrationAppliedAsync: COUNT(1) over {MigrationHistoryTable} for table '{tableName}' version {version} returned null.");
         return count > 0;
     }
 
@@ -438,7 +441,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     // from the winner's eventual insert have not yet propagated to the loser's read snapshot
     // — Spanner's history-row insert uses SpannerParameter.CommitTimestamp, so visibility
     // lags), then both attempt the insert; the loser hits AlreadyExists on the PK
-    // (BoxTableName, MigrationVersion). Mirror ExecuteDdlSafeAsync's filter shape and absorb
+    // (BoxTableName, MigrationVersion). Mirror ExecuteCreateTableIfNotExistsSafeAsync's filter shape and absorb
     // the benign race.
     private static async Task InsertHistoryRowToleratingDuplicateAsync(
         SpannerConnection connection, string tableName,

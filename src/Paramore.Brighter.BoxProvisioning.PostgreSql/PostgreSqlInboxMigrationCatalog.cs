@@ -56,6 +56,11 @@ public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
     // #2560). First-shipped state already carried ContextKey with a composite PRIMARY KEY on
     // (CommandId, ContextKey) — see the V1-only/born-past-V1 note in the class remarks.
     // {0} = table name (validated).
+    // Intentionally NOT double-quoted — PG identifiers are case-folded when unquoted and the
+    // PG inbox is V1-only (no V2+ chain). Quoting V1 here would change runtime semantics for
+    // existing deployments (case-folded `outbox`-style lookups would miss a now case-sensitive
+    // table). Reserved-keyword identifiers (e.g. "Order") are a chain-wide PG limitation, not
+    // a V1-specific gap. Per PR #4039 reviewer item F2-1.
     private const string V1HistoricalDdl =
         """
         CREATE TABLE {0}

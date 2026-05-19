@@ -52,7 +52,7 @@ public class SpannerConcurrentFreshInstallTests : IAsyncLifetime
     {
         //Arrange — two independent provisioners against the same empty table. Both will
         //take the fresh-install path; both will run CREATE TABLE (Spanner's DDL is serialised
-        //internally — ExecuteDdlSafeAsync swallows the loser's AlreadyExists), then both
+        //internally — ExecuteCreateTableIfNotExistsSafeAsync swallows the loser's AlreadyExists), then both
         //will check IsMigrationAppliedAsync (which can read at a snapshot before the winner's
         //history-row commit timestamp lands), and both will attempt InsertHistoryRowAsync —
         //the loser hits a Spanner AlreadyExists on the PK (BoxTableName, MigrationVersion)
