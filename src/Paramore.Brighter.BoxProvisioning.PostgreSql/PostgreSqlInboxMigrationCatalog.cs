@@ -34,9 +34,17 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// PostgreSQL inbox is V1-only by design. Unlike MSSQL/MySQL/SQLite — which have a V1 baseline
 /// followed by a V2 that adds <c>ContextKey</c> (commit <c>787c31c52</c>, Oct 2018) — the
 /// PostgreSQL inbox was born with <c>ContextKey</c> + composite primary key
-/// <c>(CommandId, ContextKey)</c> in PR #1401 (Feb 2021). No pre-ContextKey PostgreSQL inbox
-/// ever shipped (ADR 0057 "Alternatives → E"), so V1's <see cref="IAmABoxMigration.LogicalColumns"/>
-/// already includes <c>contextkey</c>.
+/// <c>(CommandId, ContextKey)</c> in PR #1401 (Nov 2023, commit <c>1cdc04b60</c>). No
+/// pre-ContextKey PostgreSQL inbox ever shipped (ADR 0057 "Alternatives → E"), so V1's
+/// <see cref="IAmABoxMigration.LogicalColumns"/> already includes <c>contextkey</c>.
+/// <para>
+/// V1's <c>UpScript</c> is the literal historical baseline DDL extracted from commit
+/// <c>1cdc04b60</c> — the first PostgreSQL inbox builder shape. Spec 0027 R1 split "live
+/// builder DDL" away from V1.UpScript: the fresh-install fast path (ADR 0057 §3) now
+/// sources its DDL from <see cref="FreshInstallDdl"/>. Because the PostgreSQL inbox chain
+/// is V1-only there is no chain replay to worry about; V1.UpScript is purely a historical
+/// reference for legacy bootstrap.
+/// </para>
 /// <para>
 /// LogicalColumns are lowercase per ADR 0057 §1 to match PostgreSQL's <c>information_schema.columns</c>
 /// folding at runtime; comparer is <see cref="StringComparer.Ordinal"/> to enforce that contract.
@@ -44,6 +52,23 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// </remarks>
 public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
 {
+    // Literal historical PostgreSQL inbox DDL extracted from commit 1cdc04b60 (Nov 2023, PR
+    // #2560). First-shipped state already carried ContextKey with a composite PRIMARY KEY on
+    // (CommandId, ContextKey) — see the V1-only/born-past-V1 note in the class remarks.
+    // {0} = table name (validated).
+    private const string V1HistoricalDdl =
+        """
+        CREATE TABLE {0}
+            (
+                CommandId uuid NOT NULL ,
+                CommandType VARCHAR(256) NULL ,
+                CommandBody TEXT NULL ,
+                Timestamp timestamptz  NULL ,
+                ContextKey VARCHAR(256) NULL,
+                PRIMARY KEY (CommandId, ContextKey)
+            );
+        """;
+
     /// <inheritdoc />
     public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
     {
@@ -55,7 +80,8 @@ public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
 
     /// <summary>
     /// Returns the migration list for the PostgreSQL inbox: a single V1 entry whose
-    /// <c>UpScript</c> is the live <see cref="PostgreSqlInboxBuilder"/> DDL.
+    /// <c>UpScript</c> is the literal historical PostgreSQL inbox DDL (composite primary
+    /// key on <c>(CommandId, ContextKey)</c>).
     /// </summary>
     /// <param name="configuration">The relational database configuration.</param>
     /// <returns>An ordered list with a single V1 migration.</returns>
@@ -70,9 +96,7 @@ public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 1,
                 Description: "Create inbox table",
-                UpScript: PostgreSqlInboxBuilder.GetDDL(
-                    configuration.InBoxTableName,
-                    configuration.BinaryMessagePayload),
+                UpScript: string.Format(V1HistoricalDdl, configuration.InBoxTableName),
                 LogicalColumns: new HashSet<string>(StringComparer.Ordinal)
                 {
                     "commandid", "commandtype", "commandbody", "timestamp", "contextkey"

@@ -32,12 +32,26 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// Defines the migration history for MSSQL inbox tables.
 /// </summary>
 /// <remarks>
-/// V1 is the fresh-install baseline whose <c>UpScript</c> is the live <see cref="SqlInboxBuilder"/>
-/// DDL (per ADR 0057 §3 fresh-install fast path). V2 adds <c>ContextKey</c> as a conditional
-/// <c>ALTER TABLE ADD</c> guarded by <c>IF COL_LENGTH(...) IS NULL</c> per ADR 0057 §5, so it is
-/// idempotent and safe to re-execute. The accumulated <c>LogicalColumns</c> across V1..V2 plus
-/// the MSSQL inbox housekeeping <c>Id</c> column equals the live builder's column set — verified
-/// by the drift test in <c>tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning</c>.
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MSSQL inbox
+/// builder shape (commit <c>b7f96957b</c>, March 2019). Spec 0027 R1 split "live builder
+/// DDL" away from V1.UpScript: the fresh-install fast path (ADR 0057 §3) now sources its
+/// DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is free to carry the honest
+/// historical shape. V2 adds <c>ContextKey</c> as a conditional <c>ALTER TABLE ADD</c>
+/// guarded by <c>IF COL_LENGTH(...) IS NULL</c> per ADR 0057 §5.
+/// <para>
+/// Born-past-V1 asymmetry: the MSSQL inbox first shipped <em>with</em> <c>ContextKey</c> —
+/// there is no pre-ContextKey MSSQL inbox in the wild. V1.UpScript therefore creates a
+/// table whose physical column set is the union of V1.LogicalColumns + V2's additions
+/// (plus the <c>Id</c> housekeeping column). On chain replay V2's idempotency guard sees
+/// the existing column and skips the ALTER. V1.LogicalColumns remains the "logical
+/// pre-V2" set (no ContextKey) so the bootstrap-detection contract (ADR 0057 §4) can
+/// still distinguish a hypothetical pre-V2 table.
+/// </para>
+/// <para>
+/// The accumulated <c>LogicalColumns</c> across V1..V2 plus the MSSQL inbox housekeeping
+/// <c>Id</c> column equals the live builder's column set — verified by the drift test in
+/// <c>tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning</c>.
+/// </para>
 /// </remarks>
 public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
 {
@@ -47,6 +61,23 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         ["CommandId", "CommandType", "CommandBody", "Timestamp"];
 
     private static readonly string[] s_v2AddedColumns = ["ContextKey"];
+
+    // Literal historical MSSQL inbox DDL extracted from commit b7f96957b (March 2019). The
+    // table first shipped with ContextKey already present — see the born-past-V1 note in the
+    // class remarks. {0} = table name (validated).
+    private const string V1HistoricalDdl =
+        """
+        CREATE TABLE {0}
+            (
+                [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
+                [CommandId] [UNIQUEIDENTIFIER] NOT NULL ,
+                [CommandType] [NVARCHAR](256) NULL ,
+                [CommandBody] [NTEXT] NULL ,
+                [Timestamp] [DATETIME] NULL ,
+                [ContextKey] [NVARCHAR](256) NULL,
+                PRIMARY KEY ( [Id] )
+            );
+        """;
 
     /// <inheritdoc />
     public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
@@ -75,7 +106,7 @@ public class MsSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 1,
                 Description: "Create inbox table",
-                UpScript: SqlInboxBuilder.GetDDL(table, configuration.BinaryMessagePayload),
+                UpScript: string.Format(V1HistoricalDdl, table),
                 LogicalColumns: Cumulative(1)),
 
             new BoxMigration(

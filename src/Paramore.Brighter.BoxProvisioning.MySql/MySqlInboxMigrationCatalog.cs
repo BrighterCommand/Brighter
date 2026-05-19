@@ -31,22 +31,35 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// Defines the migration history for MySQL inbox tables.
 /// </summary>
 /// <remarks>
-/// V1 is the pre-October-2018 baseline (before <c>ContextKey</c> was added in commit
-/// <c>787c31c52</c>); V2 adds <c>ContextKey</c> via the MySQL <c>information_schema.columns</c>
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MySQL inbox
+/// builder shape (commit <c>b7f96957b</c>, March 2019). Spec 0027 R1 split "live builder
+/// DDL" away from V1.UpScript: the fresh-install fast path (ADR 0057 §3) now sources its
+/// DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is free to carry the honest
+/// historical shape. V2 adds <c>ContextKey</c> via the MySQL <c>information_schema.columns</c>
 /// + prepared-statement idempotency pattern from ADR 0057 §5.
 /// <para>
+/// Born-past-V1 asymmetry: the MySQL inbox first shipped <em>with</em> <c>ContextKey</c>
+/// already present — there is no pre-ContextKey MySQL inbox in the wild despite the
+/// October-2018 spec version stamp on V2 (the catch-up exists for cross-backend
+/// consistency, not because pre-ContextKey rows ever shipped on MySQL). V1.UpScript
+/// therefore creates a table whose physical column set already includes <c>ContextKey</c>;
+/// V2's runtime idempotency probe sees the column and short-circuits to <c>SELECT 1</c> on
+/// chain replay. V1.LogicalColumns remains the "logical pre-V2" set (no <c>ContextKey</c>)
+/// so the bootstrap-detection contract (ADR 0057 §4) can still distinguish a hypothetical
+/// pre-V2 table.
+/// </para>
+/// <para>
 /// Note that the per-version <see cref="IAmABoxMigration.UpScript"/> and
-/// <see cref="IAmABoxMigration.LogicalColumns"/> play different roles:
+/// <see cref="IAmABoxMigration.LogicalColumns"/> play different roles after Spec 0027 R1:
 /// </para>
 /// <list type="bullet">
-/// <item><description><see cref="IAmABoxMigration.UpScript"/> on V1 is the live
-/// <see cref="MySqlInboxBuilder"/> DDL — V_latest shape — because the fresh-install fast path
-/// (ADR 0057 §3) stamps V_latest from V1's UpScript rather than walking V1 → V2 → … on a new
-/// install. V_k's UpScript for k &gt; 1 is the incremental ALTER that takes V_{k-1} to V_k,
-/// and is only applied on the bootstrap / normal-update branches.</description></item>
+/// <item><description><see cref="IAmABoxMigration.UpScript"/> on V1 is the historical
+/// pre-V_latest DDL — used by the bootstrap and normal-update branches, NOT by the
+/// fresh-install fast path. V_k's UpScript for k &gt; 1 is the incremental ALTER that
+/// takes V_{k-1} to V_k.</description></item>
 /// <item><description><see cref="IAmABoxMigration.LogicalColumns"/> on V1 reflects the
-/// historical 4-column shape (no <c>ContextKey</c>); it is the detection contract used by
-/// the bootstrap branch to infer which V_k a legacy table sits at.</description></item>
+/// "logical pre-V2" 4-column shape (no <c>ContextKey</c>); it is the detection contract
+/// used by the bootstrap branch to infer which V_k a legacy table sits at.</description></item>
 /// </list>
 /// <para>
 /// LogicalColumns are PascalCase with <see cref="StringComparer.OrdinalIgnoreCase"/> — MySQL
@@ -60,6 +73,22 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         ["CommandId", "CommandType", "CommandBody", "Timestamp"];
 
     private static readonly string[] s_v2AddedColumns = ["ContextKey"];
+
+    // Literal historical MySQL inbox DDL extracted from commit b7f96957b (March 2019). The
+    // table first shipped with ContextKey already present — see the born-past-V1 note in
+    // the class remarks. {0} = table name (validated).
+    private const string V1HistoricalDdl =
+        """
+        CREATE TABLE {0}
+            (
+                `CommandId` CHAR(36) NOT NULL ,
+                `CommandType` VARCHAR(256) NOT NULL ,
+                `CommandBody` TEXT NOT NULL ,
+                `Timestamp` TIMESTAMP(4) NOT NULL ,
+                `ContextKey` VARCHAR(256)  NULL ,
+                PRIMARY KEY (`CommandId`)
+            ) ENGINE = InnoDB;
+        """;
 
     /// <inheritdoc />
     public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
@@ -86,7 +115,7 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 1,
                 Description: "Create inbox table",
-                UpScript: MySqlInboxBuilder.GetDDL(table, configuration.BinaryMessagePayload),
+                UpScript: string.Format(V1HistoricalDdl, table),
                 LogicalColumns: Cumulative(1)),
 
             new BoxMigration(

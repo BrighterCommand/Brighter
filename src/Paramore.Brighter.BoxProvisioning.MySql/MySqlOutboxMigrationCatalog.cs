@@ -32,15 +32,23 @@ namespace Paramore.Brighter.BoxProvisioning.MySql;
 /// Defines the migration history for MySQL outbox tables.
 /// </summary>
 /// <remarks>
-/// V1 is the fresh-install baseline whose <c>UpScript</c> is the live
-/// <see cref="MySqlOutboxBuilder"/> DDL (per ADR 0057 §3 fresh-install fast path).
-/// V2..V7 use the MySQL <c>information_schema.columns</c> + prepared-statement idempotency
-/// pattern (ADR 0057 §5) — MySQL 5.7 lacks native <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c>
-/// (it landed in MySQL 8.0.29), so each ALTER is wrapped in a runtime conditional that emits
-/// the ALTER only when the column is absent. The <c>table_schema</c> filter uses
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MySQL outbox
+/// builder shape (commit <c>695522367</c>, March 2019; pre-Dispatched). Spec 0027 R1
+/// split "live builder DDL" away from V1.UpScript: the fresh-install fast path (ADR
+/// 0057 §3) now sources its DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is
+/// free to carry the honest historical shape. V2..V7 use the MySQL
+/// <c>information_schema.columns</c> + prepared-statement idempotency pattern (ADR 0057
+/// §5) — MySQL 5.7 lacks native <c>ALTER TABLE ADD COLUMN IF NOT EXISTS</c> (it landed
+/// in MySQL 8.0.29), so each ALTER is wrapped in a runtime conditional that emits the
+/// ALTER only when the column is absent. The <c>table_schema</c> filter uses
 /// <see cref="https://dev.mysql.com/doc/refman/8.0/en/information-functions.html#function_database">
 /// the runtime <c>DATABASE()</c> function</see> — same DB the runner's connection is bound to,
 /// matching the ALTER's implicit schema target.
+/// <para>
+/// MySQL outbox V1 is one of three relational outboxes whose first-shipped state matches
+/// the "logical pre-V2 baseline" (alongside MSSQL and SQLite). The PostgreSQL outbox is
+/// the lone exception — see the born-past-V1 note in <see cref="PostgreSqlOutboxMigrationCatalog"/>.
+/// </para>
 /// <para>
 /// LogicalColumns are stored PascalCase with <see cref="StringComparer.OrdinalIgnoreCase"/> —
 /// MySQL identifiers are case-insensitive on lookup. The accumulated columns across V1..V7 plus
@@ -62,6 +70,26 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v6AddedColumns = ["WorkflowId", "JobId"];
     private static readonly string[] s_v7AddedColumns = ["DataRef", "SpecVersion"];
+
+    // Literal historical MySQL outbox DDL extracted from commit 695522367 (March 2019). The
+    // exact pre-Dispatched shape that shipped as "V1" — preserved here so chain replay against
+    // a legacy table sees the same starting DDL it always saw. {0} = table name (validated).
+    // Created/CreatedID are MySQL housekeeping columns present from V1.
+    private const string V1HistoricalDdl =
+        """
+        CREATE TABLE {0} (
+            `MessageId` CHAR(36) NOT NULL ,
+            `Topic` VARCHAR(255) NOT NULL ,
+            `MessageType` VARCHAR(32) NOT NULL ,
+            `Timestamp` TIMESTAMP(3) NOT NULL ,
+            `HeaderBag` TEXT NOT NULL ,
+            `Body` TEXT NOT NULL ,
+            `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
+            `CreatedID` INT(11) NOT NULL AUTO_INCREMENT,
+            UNIQUE(`CreatedID`),
+            PRIMARY KEY (`MessageId`)
+        ) ENGINE = InnoDB;
+        """;
 
     /// <inheritdoc />
     public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
@@ -88,7 +116,7 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 1,
                 Description: "Create outbox table",
-                UpScript: MySqlOutboxBuilder.GetDDL(table, configuration.BinaryMessagePayload),
+                UpScript: string.Format(V1HistoricalDdl, table),
                 LogicalColumns: Cumulative(1)),
 
             new BoxMigration(

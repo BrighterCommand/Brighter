@@ -32,10 +32,21 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// Defines the migration history for PostgreSQL outbox tables.
 /// </summary>
 /// <remarks>
-/// V1 is the fresh-install baseline whose <c>UpScript</c> is the live
-/// <see cref="PostgreSqlOutboxBuilder"/> DDL (per ADR 0057 §3 fresh-install fast path).
-/// V2..V7 are conditional <c>ALTER TABLE ... ADD COLUMN IF NOT EXISTS</c> statements per
-/// ADR 0057 §5 — Postgres's native idempotency clause keeps each migration safe to re-execute.
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first PostgreSQL
+/// outbox builder shape (commit <c>3c30343fa</c>, July 2019). Spec 0027 R1 split "live
+/// builder DDL" away from V1.UpScript: the fresh-install fast path (ADR 0057 §3) now
+/// sources its DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is free to carry the
+/// honest historical shape. V2..V7 are conditional <c>ALTER TABLE ... ADD COLUMN IF NOT
+/// EXISTS</c> statements per ADR 0057 §5 — Postgres's native idempotency clause keeps each
+/// migration safe to re-execute on chain replay.
+/// <para>
+/// Born-past-V1 asymmetry: the PostgreSQL outbox first shipped <em>with</em>
+/// <c>Dispatched</c> — no pre-Dispatched PostgreSQL outbox ever existed in the wild.
+/// V1.UpScript therefore creates <c>dispatched</c> alongside the rest; V2's
+/// <c>ADD COLUMN IF NOT EXISTS dispatched</c> is a no-op on chain replay. V1.LogicalColumns
+/// remains the "logical pre-V2" set (no <c>dispatched</c>) so the bootstrap-detection
+/// contract (ADR 0057 §4) preserves the cross-backend logical V1 shape.
+/// </para>
 /// <para>
 /// <see cref="IAmABoxMigration.LogicalColumns"/> are lowercase per ADR 0057 §1 so that
 /// detection-by-<c>information_schema.columns</c> (which returns Postgres's folded lowercase
@@ -60,6 +71,24 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v6AddedColumns = ["workflowid", "jobid"];
     private static readonly string[] s_v7AddedColumns = ["dataref", "specversion"];
+
+    // Literal historical PostgreSQL outbox DDL extracted from commit 3c30343fa (July 2019).
+    // First-shipped state already carried Dispatched — see the born-past-V1 note in the
+    // class remarks. {0} = table name (validated).
+    private const string V1HistoricalDdl =
+        """
+        CREATE TABLE {0}
+            (
+                Id BIGSERIAL PRIMARY KEY,
+                MessageId UUID UNIQUE NOT NULL,
+                Topic VARCHAR(255) NULL,
+                MessageType VARCHAR(32) NULL,
+                Timestamp timestamptz NULL,
+                Dispatched timestamptz NULL,
+                HeaderBag TEXT NULL,
+                Body TEXT NULL
+            );
+        """;
 
     /// <inheritdoc />
     public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
@@ -88,7 +117,7 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 1,
                 Description: "Create outbox table",
-                UpScript: PostgreSqlOutboxBuilder.GetDDL(table, configuration.BinaryMessagePayload),
+                UpScript: string.Format(V1HistoricalDdl, table),
                 LogicalColumns: Cumulative(1)),
 
             new BoxMigration(

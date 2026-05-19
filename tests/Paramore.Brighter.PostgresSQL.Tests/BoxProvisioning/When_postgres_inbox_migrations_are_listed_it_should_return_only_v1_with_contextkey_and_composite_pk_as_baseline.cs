@@ -62,12 +62,26 @@ public class PostgreSqlInboxMigrationsTests
             $"V1 LogicalColumns mismatch — expected: [{string.Join(", ", expectedV1)}], " +
             $"got: [{string.Join(", ", migrations[0].LogicalColumns)}]");
 
-        //Assert — V1 UpScript is the live builder DDL with composite PRIMARY KEY (CommandId, ContextKey).
-        var expectedUpScript = PostgreSqlInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);
-        Assert.Equal(expectedUpScript, migrations[0].UpScript);
+        //Assert — V1 UpScript is the literal historical Postgres inbox DDL (Spec 0027 R1),
+        //not the live builder DDL. The fresh-install fast path takes its DDL from
+        //FreshInstallDdl now; V1.UpScript carries the honest first-shipped baseline. The
+        //composite PRIMARY KEY (CommandId, ContextKey) that PR #2560 (Nov 2023) shipped is
+        //asserted structurally — the historical literal is enclosed in the catalog and
+        //should not be duplicated here.
+        Assert.Contains("CommandId", migrations[0].UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ContextKey", migrations[0].UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(
-            "PRIMARY KEY",
+            "PRIMARY KEY (CommandId, ContextKey)",
             migrations[0].UpScript,
             StringComparison.OrdinalIgnoreCase);
+
+        //Assert — FreshInstallDdl now sources the live builder DDL (Spec 0027 R1 part 1
+        //added this hook). This is the post-Part-1 contract: V1.UpScript is historical;
+        //FreshInstallDdl is current.
+        var expectedFreshInstallDdl =
+            PostgreSqlInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);
+        Assert.Equal(
+            expectedFreshInstallDdl,
+            new PostgreSqlInboxMigrationCatalog().FreshInstallDdl(config));
     }
 }

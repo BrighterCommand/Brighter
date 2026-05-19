@@ -32,12 +32,20 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// Defines the migration history for MSSQL outbox tables.
 /// </summary>
 /// <remarks>
-/// V1 is the fresh-install baseline whose <c>UpScript</c> is the live <see cref="SqlOutboxBuilder"/>
-/// DDL (per ADR 0057 §3 fresh-install fast path). V2..V7 are conditional <c>ALTER TABLE ADD</c>
-/// statements guarded by <c>IF COL_LENGTH(...) IS NULL</c> per ADR 0057 §5, so each one is
-/// idempotent and safe to re-execute. The accumulated <c>LogicalColumns</c> across V1..V7 plus
-/// the MSSQL housekeeping <c>Id</c> column equals the live builder's column set — verified by
-/// the drift test in <c>tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning</c>.
+/// V1's <c>UpScript</c> is the literal historical baseline DDL — the first MSSQL outbox
+/// builder shape (commit <c>695522367</c>, March 2019; pre-Dispatched, pre-CloudEvents).
+/// Spec 0027 R1 split "live builder DDL" away from V1.UpScript: the fresh-install fast path
+/// (ADR 0057 §3) now sources its DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is
+/// free to carry the honest historical shape it always represented. V2..V7 are conditional
+/// <c>ALTER TABLE ADD</c> statements guarded by <c>IF COL_LENGTH(...) IS NULL</c> per ADR
+/// 0057 §5, so each one is idempotent and safe to re-execute on chain replay.
+/// <para>
+/// The MSSQL outbox is the only one of the four relational outboxes whose first-shipped
+/// state matches the "logical pre-V2 baseline" — see the asymmetry note in the
+/// PostgreSQL/MySQL/SQLite outbox catalogs. The accumulated <c>LogicalColumns</c> across
+/// V1..V7 plus the MSSQL housekeeping <c>Id</c> column equals the live builder's column set
+/// — verified by the drift test in <c>tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning</c>.
+/// </para>
 /// </remarks>
 public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
 {
@@ -45,6 +53,24 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v1Columns =
         ["MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body"];
+
+    // Literal historical MSSQL outbox DDL extracted from commit 695522367 (March 2019). The
+    // exact pre-Dispatched shape that shipped as "V1" — preserved here so chain replay against
+    // a legacy table sees the same starting DDL it always saw. {0} = table name (validated).
+    private const string V1HistoricalDdl =
+        """
+        CREATE TABLE {0}
+            (
+              [Id] [BIGINT] NOT NULL IDENTITY ,
+              [MessageId] UNIQUEIDENTIFIER NOT NULL ,
+              [Topic] NVARCHAR(255) NULL ,
+              [MessageType] NVARCHAR(32) NULL ,
+              [Timestamp] DATETIME NULL ,
+              [HeaderBag] NTEXT NULL ,
+              [Body] NTEXT NULL ,
+              PRIMARY KEY ( [Id] )
+            );
+        """;
 
     private static readonly string[] s_v2AddedColumns = ["Dispatched"];
     private static readonly string[] s_v3AddedColumns = ["CorrelationId", "ReplyTo", "ContentType"];
@@ -83,7 +109,7 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 1,
                 Description: "Create outbox table",
-                UpScript: SqlOutboxBuilder.GetDDL(table, configuration.BinaryMessagePayload),
+                UpScript: string.Format(V1HistoricalDdl, table),
                 LogicalColumns: Cumulative(1)),
 
             new BoxMigration(
