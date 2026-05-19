@@ -25,7 +25,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
@@ -48,6 +51,20 @@ public class PostgreSqlBoxDetectionHelper :
     IAmAVersionDetectingMigrationHelper<NpgsqlConnection, NpgsqlTransaction>
 {
     private const string DefaultSchemaName = "public";
+
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initialises the detection helper with an optional logger. When unspecified, falls back
+    /// to <see cref="ApplicationLogging.CreateLogger{T}"/>. Existing callers that use the
+    /// parameterless form continue to work — the logger is currently only consumed for the
+    /// rare <c>UndefinedTable</c>-swallow Debug emission in
+    /// <see cref="DoesHistoryExistAsync"/>; the helper remains a safe DI singleton.
+    /// </summary>
+    public PostgreSqlBoxDetectionHelper(ILogger? logger = null)
+    {
+        _logger = logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxDetectionHelper>();
+    }
 
     /// <summary>
     /// Returns true if a table with the given name exists in the given schema.
@@ -116,6 +133,14 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
             // it deliberately, and a "table dropped between two queries" outcome is
             // semantically equivalent to "no history". Returning false lets the caller fall
             // through to the runner, which re-creates the history table under its lock.
+            //
+            // Per PR #4039 reviewer Nit (item 4485697019): Debug-level log so the swallow is
+            // observable if a future contributor adds a DROP-history operation outside test
+            // setup. Production should never see this; if it does, the deployment has a
+            // history-table-management bug worth surfacing.
+            _logger.LogDebug(
+                ex,
+                "PostgreSqlBoxDetectionHelper.DoesHistoryExistAsync: swallowed UndefinedTable on COUNT(1) after positive existence check — __BrighterMigrationHistory was dropped between the two queries. Returning false. In production this indicates a history-table-management bug; in parallel tests it is expected because tests drop the table deliberately.");
             return false;
         }
     }
