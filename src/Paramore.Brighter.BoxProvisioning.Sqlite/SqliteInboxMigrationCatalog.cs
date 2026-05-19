@@ -47,6 +47,15 @@ public class SqliteInboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v2AddedColumns = ["ContextKey"];
 
+    /// <inheritdoc />
+    public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
+    {
+        Identifiers.AssertSafe(
+            configuration.InBoxTableName,
+            nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
+        return SqliteInboxBuilder.GetDDL(configuration.InBoxTableName, configuration.BinaryMessagePayload);
+    }
+
     /// <summary>
     /// Returns all migrations for the SQLite inbox, ordered by version.
     /// </summary>

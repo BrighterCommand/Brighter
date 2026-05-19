@@ -44,6 +44,15 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// </remarks>
 public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
 {
+    /// <inheritdoc />
+    public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
+    {
+        Identifiers.AssertSafe(
+            configuration.InBoxTableName,
+            nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
+        return PostgreSqlInboxBuilder.GetDDL(configuration.InBoxTableName, configuration.BinaryMessagePayload);
+    }
+
     /// <summary>
     /// Returns the migration list for the PostgreSQL inbox: a single V1 entry whose
     /// <c>UpScript</c> is the live <see cref="PostgreSqlInboxBuilder"/> DDL.

@@ -61,6 +61,15 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static readonly string[] s_v6AddedColumns = ["workflowid", "jobid"];
     private static readonly string[] s_v7AddedColumns = ["dataref", "specversion"];
 
+    /// <inheritdoc />
+    public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
+    {
+        Identifiers.AssertSafe(
+            configuration.OutBoxTableName,
+            nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
+        return PostgreSqlOutboxBuilder.GetDDL(configuration.OutBoxTableName, configuration.BinaryMessagePayload);
+    }
+
     /// <summary>
     /// Returns all migrations for the PostgreSQL outbox, ordered by version.
     /// </summary>

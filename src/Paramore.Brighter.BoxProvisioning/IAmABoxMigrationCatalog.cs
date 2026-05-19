@@ -56,4 +56,28 @@ public interface IAmABoxMigrationCatalog
     /// interpolate values from configuration (e.g. table names, payload-mode flags) into
     /// their generated SQL scripts.</param>
     IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration);
+
+    /// <summary>
+    /// The V_latest-shape CREATE TABLE DDL used by the runner's fresh-install fast path
+    /// (per ADR 0057 §3): on an absent box table, the runner executes this single DDL and
+    /// stamps history at V_latest, bypassing the V1..V_latest ALTER chain entirely.
+    /// </summary>
+    /// <remarks>
+    /// This is intentionally a separate concern from <see cref="All"/>: <see cref="All"/>
+    /// describes the historical migration chain that a legacy installation walks
+    /// incrementally; <see cref="FreshInstallDdl"/> describes the current-shape DDL that a
+    /// fresh installation runs once. Implementations typically return their backend's live
+    /// builder DDL (e.g. <c>SqlOutboxBuilder.GetDDL(...)</c>) — the same source from which
+    /// the V_latest column set is derived.
+    /// <para>
+    /// Keeping fresh-install separate from <c>migrations[0].UpScript</c> means V1 in
+    /// <see cref="All"/> can carry its true historical baseline DDL (the 2015-era
+    /// 6-column outbox, the pre-CloudEvents inbox, etc.) without lying about what runs
+    /// on a fresh install. The two views never need to agree on column types or shape;
+    /// they only need to agree on logical column names, enforced by the drift test.
+    /// </para>
+    /// </remarks>
+    /// <param name="configuration">The relational database configuration. Implementations
+    /// interpolate the table name and payload-mode flag from configuration into the DDL.</param>
+    string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration);
 }

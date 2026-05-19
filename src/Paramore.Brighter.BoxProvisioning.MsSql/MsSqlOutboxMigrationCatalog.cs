@@ -56,6 +56,15 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static readonly string[] s_v6AddedColumns = ["WorkflowId", "JobId"];
     private static readonly string[] s_v7AddedColumns = ["DataRef", "SpecVersion"];
 
+    /// <inheritdoc />
+    public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
+    {
+        Identifiers.AssertSafe(
+            configuration.OutBoxTableName,
+            nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
+        return SqlOutboxBuilder.GetDDL(configuration.OutBoxTableName, configuration.BinaryMessagePayload);
+    }
+
     /// <summary>
     /// Returns all migrations for the MSSQL outbox, ordered by version.
     /// </summary>

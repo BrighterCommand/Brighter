@@ -58,6 +58,15 @@ public class SqliteOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static readonly string[] s_v6AddedColumns = ["WorkflowId", "JobId"];
     private static readonly string[] s_v7AddedColumns = ["DataRef", "SpecVersion"];
 
+    /// <inheritdoc />
+    public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
+    {
+        Identifiers.AssertSafe(
+            configuration.OutBoxTableName,
+            nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
+        return SqliteOutboxBuilder.GetDDL(configuration.OutBoxTableName, configuration.BinaryMessagePayload);
+    }
+
     /// <summary>
     /// Returns all migrations for the SQLite outbox, ordered by version.
     /// </summary>

@@ -63,6 +63,15 @@ public class MySqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static readonly string[] s_v6AddedColumns = ["WorkflowId", "JobId"];
     private static readonly string[] s_v7AddedColumns = ["DataRef", "SpecVersion"];
 
+    /// <inheritdoc />
+    public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
+    {
+        Identifiers.AssertSafe(
+            configuration.OutBoxTableName,
+            nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName));
+        return MySqlOutboxBuilder.GetDDL(configuration.OutBoxTableName, configuration.BinaryMessagePayload);
+    }
+
     /// <summary>
     /// Returns all migrations for the MySQL outbox, ordered by version.
     /// </summary>
