@@ -67,9 +67,16 @@ public class MySqlProvisioningUnitOfWork(
         // migration run in a BEGIN/COMMIT yields nothing useful. The UoW therefore only
         // acquires the session-level GET_LOCK and stores the lock resource for explicit
         // RELEASE_LOCK on Commit/Rollback (Phase 5.3.b/5.3.c). No transaction is opened.
+        //
+        // _lockResource is assigned ONLY AFTER AcquireAsync returns successfully — PR #4039
+        // reviewer fix F2 (item M2-3). If Acquire throws, _lockResource remains null so a
+        // defensive direct Rollback (e.g. from a future runner change) is a clean no-op via
+        // the `if (_lockResource is null) return;` short-circuit in ReleaseLockAndLogTriStateAsync.
+        // Releasing a never-acquired lock would return NULL and emit a misleading
+        // "Brighter defect" Warning masking the real lock-acquisition failure.
         _logger.LogTrace("Beginning MySQL provisioning UoW for resource {LockResource}", lockResource);
-        _lockResource = lockResource;
         await _advisoryLock.AcquireAsync(_connection, lockResource, lockTimeout, cancellationToken);
+        _lockResource = lockResource;
     }
 
     /// <inheritdoc />

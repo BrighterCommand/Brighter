@@ -39,13 +39,12 @@ public class When_mysql_provisioning_uow_begin_throws_it_should_dispose_without_
     // Per ADR 0058 §B.3: the runner declares the UoW with `await using`, so DisposeAsync runs
     // on every exit path — including when BeginAsync itself throws. MySQL-specific subtlety:
     // the UoW is transactionless (ADR 0057 §5a), so the only state BeginAsync touches is the
-    // _lockResource field — captured BEFORE the AcquireAsync call (see MySqlProvisioningUnitOfWork
-    // BeginAsync line 69-70). When AcquireAsync throws, the UoW therefore ends up in a
-    // partial-init state where _lockResource is non-null BUT the lock was NEVER acquired.
-    // DisposeAsync MUST tolerate this state without throwing AND MUST NOT call ReleaseAsync —
-    // because issuing RELEASE_LOCK on a never-acquired lock would return NULL (no lock by that
-    // name) and produce a misleading tri-state Warning suggesting a Brighter defect when the
-    // real failure was lock acquisition.
+    // _lockResource field. Per F2 (PR #4039 reviewer item M2-3), _lockResource is assigned
+    // only AFTER AcquireAsync returns successfully — so when AcquireAsync throws, _lockResource
+    // remains null. DisposeAsync MUST tolerate that partial-init state without throwing AND
+    // MUST NOT call ReleaseAsync — because issuing RELEASE_LOCK on a never-acquired lock would
+    // return NULL (no lock by that name) and produce a misleading tri-state Warning suggesting
+    // a Brighter defect when the real failure was lock acquisition.
     //
     // The test wires a FakeMySqlAdvisoryLock that throws TimeoutException on AcquireAsync. The
     // whole `await using` block is wrapped in Record.ExceptionAsync. Because `await using` is
