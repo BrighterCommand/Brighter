@@ -41,6 +41,7 @@ public class BoxProvisioningOptions
     /// Timeout for acquiring a database-level migration lock. Default: 30 seconds.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// In a rolling deploy with N replicas, contended migrations serialize behind the lock — worst
     /// case <c>StartAsync</c> blocks for up to <c>MigrationLockTimeout × (N − 1)</c> per replica.
     /// In Kubernetes this can collide with readiness probes: if
@@ -48,6 +49,25 @@ public class BoxProvisioningOptions
     /// window, the pod is killed before migrations complete and the deployment churns. Either size
     /// the probe's tolerance to cover the worst-case window, or shorten this timeout (at the cost
     /// of more retries on contention).
+    /// </para>
+    /// <para>
+    /// Per-replica, <see cref="BoxProvisioningHostedService"/> provisions each backend phase
+    /// sequentially (one outbox/inbox table at a time per registered backend). For a deployment
+    /// with T provisioned tables on a single replica, the cumulative wall-clock window in the
+    /// contended worst case is <c>MigrationLockTimeout × T</c>. Multi-tenant deployments with
+    /// many tables should size their readiness-probe tolerance accordingly. Parallelising the
+    /// per-phase loop is tracked at <see href="https://github.com/BrighterCommand/Brighter/issues/4140"/>.
+    /// </para>
+    /// <para>
+    /// MySQL-specific caveat: <c>GET_LOCK</c> takes a timeout argument as an INTEGER number of
+    /// seconds. <see cref="TimeSpan"/> values smaller than 1 second are rounded UP to 1 second
+    /// before being passed to <c>GET_LOCK</c>; sub-second precision is therefore unavailable on
+    /// MySQL — the lock will block for at least 1 second on contention even if a shorter
+    /// timeout is configured. This is necessary divergence from MSSQL (<c>sp_getapplock</c>
+    /// accepts milliseconds and supports fail-fast 0-ms) and PostgreSQL (<c>pg_try_advisory_lock</c>
+    /// is non-blocking and the runner loops with a monotonic deadline). Per PR #4039 reviewer
+    /// item M2-6.
+    /// </para>
     /// </remarks>
     public TimeSpan MigrationLockTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
