@@ -115,7 +115,10 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     {
         // schemaName is accepted for symmetry with the abstract signature but ignored — the
         // history table always lives in [public] regardless of the configured box schema (see
-        // HISTORY_TABLE_SCHEMA constant comment).
+        // HISTORY_TABLE_SCHEMA constant comment). Explicit discard suppresses unused-parameter
+        // IDE warnings without changing the signature. Per PR #4039 reviewer Nit (item 4485697019).
+        _ = schemaName;
+
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
