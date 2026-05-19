@@ -269,15 +269,17 @@ VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
     /// as parameter markers by default and rejects them; this flag flips that behaviour so the
     /// prepared-statement form executes correctly. Transparent to caller-supplied connection
     /// strings — adds the flag if missing, preserves it if already set. When the flag is
-    /// flipped, a debug log records the mutation so a security-conscious caller who
-    /// deliberately disabled user variables can correlate it against migration activity.
+    /// flipped, an Information log records the mutation so a security-conscious operator who
+    /// deliberately disabled user variables (user-variable abuse via prepared-statement
+    /// injection is a documented threat surface) can correlate it against migration activity
+    /// without needing to enable Debug-level logging. Per PR #4039 reviewer items M2-4 / M4-2.
     /// </summary>
     private string EnsureAllowUserVariables(string connectionString)
     {
         var builder = new MySqlConnectionStringBuilder(connectionString);
         if (builder.AllowUserVariables) return builder.ConnectionString;
 
-        Logger.LogDebug(
+        Logger.LogInformation(
             "MySQL box-migration runner: enabling AllowUserVariables=true on the migration connection (caller's connection string had it disabled). Required by the V2..V7 prepared-statement idempotency pattern per ADR 0057 §5a; the mutation is scoped to the runner's own MySqlConnection and does not affect the caller-supplied connection string instance.");
         builder.AllowUserVariables = true;
         return builder.ConnectionString;
