@@ -151,8 +151,10 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     }
 
     protected override Task<IAmAProvisioningUnitOfWork<SqliteTransaction>> CreateUnitOfWorkAsync(
-        SqliteConnection connection, CancellationToken cancellationToken)
+        SqliteConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
     {
+        _ = schemaName;
+        _ = tableName;
         _ = cancellationToken;
         return Task.FromResult<IAmAProvisioningUnitOfWork<SqliteTransaction>>(
             new SqliteProvisioningUnitOfWork(connection, Logger));

@@ -180,7 +180,7 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
         }
 
         protected override Task<IAmAProvisioningUnitOfWork<FakeDbTransaction>> CreateUnitOfWorkAsync(
-            FakeDbConnection connection, CancellationToken cancellationToken)
+            FakeDbConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
         {
             if (_createUnitOfWorkThrow is not null) throw _createUnitOfWorkThrow;
             return Task.FromResult<IAmAProvisioningUnitOfWork<FakeDbTransaction>>(

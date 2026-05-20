@@ -118,7 +118,7 @@ public class SqlBoxMigrationRunnerBeginFailureTests
             => Task.FromResult(new FakeDbConnection());
 
         protected override Task<IAmAProvisioningUnitOfWork<FakeDbTransaction>> CreateUnitOfWorkAsync(
-            FakeDbConnection connection, CancellationToken cancellationToken)
+            FakeDbConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
             => Task.FromResult<IAmAProvisioningUnitOfWork<FakeDbTransaction>>(_unitOfWork);
 
         protected override string LockResourceFor(string? schemaName, string tableName)

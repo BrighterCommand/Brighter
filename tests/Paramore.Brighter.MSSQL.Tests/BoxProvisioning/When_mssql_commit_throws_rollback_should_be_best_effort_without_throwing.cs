@@ -167,9 +167,9 @@ file sealed class CommitThrowingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunne
     }
 
     protected override async Task<IAmAProvisioningUnitOfWork<SqlTransaction>> CreateUnitOfWorkAsync(
-        SqlConnection connection, CancellationToken cancellationToken)
+        SqlConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
     {
-        var inner = await base.CreateUnitOfWorkAsync(connection, cancellationToken);
+        var inner = await base.CreateUnitOfWorkAsync(connection, schemaName, tableName, cancellationToken);
         LastUnitOfWork = new CommitFinalisingThrowingUnitOfWork(inner, _commitFailure);
         return LastUnitOfWork;
     }

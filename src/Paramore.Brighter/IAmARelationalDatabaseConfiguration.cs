@@ -46,15 +46,17 @@
         /// </summary>
         /// <value>The schema name, or <c>null</c> for the backend's default schema.</value>
         /// <remarks>
-        /// Box-provisioning enforces a strict regex on identifier inputs (table, column, and
-        /// schema names) at the framework chokepoint via <c>Paramore.Brighter.BoxProvisioning.Identifiers.AssertSafe</c>:
-        /// the accepted character class is <c>[A-Za-z][A-Za-z0-9_]*</c> with length ≤ 64, no
-        /// leading underscore, and no reserved-prefix collisions. The rule is intentionally
-        /// over-restrictive — it applies the strictest-backend rule (Spanner's reserved
-        /// <c>_</c> prefix) uniformly so identifier validation is platform-portable. Schema
-        /// names that fail the regex will surface as <see cref="ConfigurationException"/>
-        /// at provisioning entry rather than as a downstream SQL error. Per PR #4039
-        /// reviewer item M2-7.
+        /// Box-provisioning enforces a regex on identifier inputs (table, column, and schema
+        /// names) at the framework chokepoint via
+        /// <c>Paramore.Brighter.BoxProvisioning.Identifiers.AssertSafe</c>: the accepted pattern
+        /// is <c>^[A-Za-z][A-Za-z0-9_]*$</c> (must start with an ASCII letter; remaining
+        /// characters are ASCII letters, digits, or underscore). The first-character letter
+        /// class excludes leading underscores — Spanner reserves <c>_</c>-prefixed names while
+        /// other backends accept them, so the regex picks the strictest backend's rule to keep
+        /// portable configuration safe. Schema names that fail the regex surface as
+        /// <see cref="ConfigurationException"/> at provisioning entry rather than as a
+        /// downstream SQL error. Per PR #4039 reviewer items M2-7 and the multi-part 2026-05-20
+        /// review item 1.
         /// </remarks>
         string? SchemaName { get; }
     }

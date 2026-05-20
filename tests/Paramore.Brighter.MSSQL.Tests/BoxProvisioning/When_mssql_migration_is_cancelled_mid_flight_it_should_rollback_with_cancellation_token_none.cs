@@ -144,9 +144,9 @@ file sealed class CancellingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunner
     }
 
     protected override async Task<IAmAProvisioningUnitOfWork<SqlTransaction>> CreateUnitOfWorkAsync(
-        SqlConnection connection, CancellationToken cancellationToken)
+        SqlConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
     {
-        var inner = await base.CreateUnitOfWorkAsync(connection, cancellationToken);
+        var inner = await base.CreateUnitOfWorkAsync(connection, schemaName, tableName, cancellationToken);
         LastUnitOfWork = new RollbackTokenCapturingUnitOfWork(inner);
         return LastUnitOfWork;
     }

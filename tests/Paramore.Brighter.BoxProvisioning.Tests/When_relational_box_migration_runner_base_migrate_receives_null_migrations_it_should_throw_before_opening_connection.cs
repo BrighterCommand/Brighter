@@ -105,7 +105,7 @@ public class SqlBoxMigrationRunnerNullMigrationsValidationTests
         }
 
         protected override Task<IAmAProvisioningUnitOfWork<FakeDbTransaction>> CreateUnitOfWorkAsync(
-            FakeDbConnection connection, CancellationToken cancellationToken)
+            FakeDbConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
             => throw new NotSupportedException("CreateUnitOfWorkAsync must not be reached when null-migrations validation throws.");
 
         protected override string LockResourceFor(string? schemaName, string tableName)

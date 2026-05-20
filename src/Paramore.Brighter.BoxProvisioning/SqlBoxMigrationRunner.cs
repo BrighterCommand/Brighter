@@ -192,7 +192,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
             {
                 connection = await OpenConnectionAsync(cancellationToken);
                 var lockResource = LockResourceFor(schemaName, tableName);
-                uow = await CreateUnitOfWorkAsync(connection, cancellationToken);
+                uow = await CreateUnitOfWorkAsync(connection, schemaName, tableName, cancellationToken);
                 await uow.BeginAsync(lockResource, _lockTimeout, cancellationToken);
             }
             catch (Exception ex)
@@ -316,10 +316,14 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// Constructs the per-backend <see cref="IAmAProvisioningUnitOfWork{TTransaction}"/> over
     /// <paramref name="connection"/>. The runner declares the result with <c>await using</c>
     /// and immediately calls <c>BeginAsync</c>; the implementation should NOT begin the
-    /// lock+transaction here, only construct the UoW.
+    /// lock+transaction here, only construct the UoW. The per-invocation
+    /// <paramref name="schemaName"/> and <paramref name="tableName"/> are passed explicitly
+    /// so backend UoWs that need them at construction (e.g. MySQL's tri-state RELEASE_LOCK
+    /// warning emission, which surfaces the raw table name lost to MySqlMigrationLockName.For's
+    /// hash-truncation) can capture them directly instead of via cross-hook state.
     /// </summary>
     protected abstract Task<IAmAProvisioningUnitOfWork<TTransaction>> CreateUnitOfWorkAsync(
-        TConnection connection, CancellationToken cancellationToken);
+        TConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken);
 
     /// <summary>
     /// Computes the backend-specific advisory lock resource string for the given table.

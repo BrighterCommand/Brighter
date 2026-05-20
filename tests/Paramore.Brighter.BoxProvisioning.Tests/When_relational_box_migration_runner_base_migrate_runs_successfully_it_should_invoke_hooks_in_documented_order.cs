@@ -178,7 +178,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
         }
 
         protected override Task<IAmAProvisioningUnitOfWork<FakeDbTransaction>> CreateUnitOfWorkAsync(
-            FakeDbConnection connection, CancellationToken cancellationToken)
+            FakeDbConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
         {
             _unitOfWork.Log.Add("CreateUnitOfWork");
             return Task.FromResult<IAmAProvisioningUnitOfWork<FakeDbTransaction>>(_unitOfWork);

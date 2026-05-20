@@ -147,7 +147,7 @@ public class SqlBoxMigrationRunnerRedetectStateDefaultTests
             => Task.FromResult(new FakeDbConnection());
 
         protected override Task<IAmAProvisioningUnitOfWork<FakeDbTransaction>> CreateUnitOfWorkAsync(
-            FakeDbConnection connection, CancellationToken cancellationToken)
+            FakeDbConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
             => Task.FromResult<IAmAProvisioningUnitOfWork<FakeDbTransaction>>(new NoOpProvisioningUnitOfWork());
 
         protected override string LockResourceFor(string? schemaName, string tableName)

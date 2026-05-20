@@ -54,13 +54,6 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
 
     private readonly IMySqlAdvisoryLock _advisoryLock;
 
-    // Threaded through the base's LockResourceFor → CreateUnitOfWorkAsync sequence so the
-    // per-invocation tableName reaches MySqlProvisioningUnitOfWork's ctor for NF1-faithful
-    // tri-state RELEASE_LOCK Warning emission (MySqlMigrationLockName.For hash-truncates the
-    // raw tableName for long composites, so lockResource alone cannot surface it). AsyncLocal
-    // preserves correctness under concurrent MigrateAsync invocations on the same instance.
-    private readonly AsyncLocal<string?> _activeTableName = new();
-
     /// <summary>
     /// Initialises the runner with an explicit detection helper and optional UoW dependencies.
     /// </summary>
@@ -108,32 +101,20 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
     }
 
     protected override Task<IAmAProvisioningUnitOfWork<MySqlTransaction>> CreateUnitOfWorkAsync(
-        MySqlConnection connection, CancellationToken cancellationToken)
+        MySqlConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
     {
-        // Capture _activeTableName.Value into the UoW ctor and immediately clear the
-        // AsyncLocal so the value does not leak onto the ExecutionContext of any continuation
-        // observed after MigrateAsync returns — per PR #4039 reviewer item M4-4. The base
-        // runner's hook sequence guarantees LockResourceFor (which sets the value) runs
-        // exactly once before CreateUnitOfWorkAsync (which reads it), so clearing here is
-        // safe: no other hook reads _activeTableName, and the UoW has already captured the
-        // string into its `_tableName` field by the time the AsyncLocal is reset.
-        try
-        {
-            return Task.FromResult<IAmAProvisioningUnitOfWork<MySqlTransaction>>(
-                new MySqlProvisioningUnitOfWork(connection, _advisoryLock, Logger, _activeTableName.Value));
-        }
-        finally
-        {
-            _activeTableName.Value = null;
-        }
+        _ = schemaName;
+        // The raw tableName threads into the UoW ctor for NF1-faithful tri-state RELEASE_LOCK
+        // Warning emission — MySqlMigrationLockName.For hash-truncates long composites for the
+        // GET_LOCK 64-char limit, so the lockResource string alone cannot surface the original
+        // name. The base runner passes it explicitly per the LockResourceFor → CreateUnitOfWorkAsync
+        // sequence; no cross-hook state is needed.
+        return Task.FromResult<IAmAProvisioningUnitOfWork<MySqlTransaction>>(
+            new MySqlProvisioningUnitOfWork(connection, _advisoryLock, Logger, tableName));
     }
 
     protected override string LockResourceFor(string? schemaName, string tableName)
     {
-        // Capture the per-invocation table name so CreateUnitOfWorkAsync can thread it into
-        // the UoW ctor for NF1-faithful tri-state Warning emission — MySqlMigrationLockName.For
-        // hash-truncates long composites and would otherwise lose the raw tableName.
-        _activeTableName.Value = tableName;
         // The schema is folded into the lock name so two same-named tables in different schemas
         // acquire distinct advisory locks. MySQL's GET_LOCK has a 64-char limit; the helper
         // hashes names exceeding it (long form) and otherwise preserves the simple form for

@@ -99,7 +99,7 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     }
 
     protected override Task<IAmAProvisioningUnitOfWork<NpgsqlTransaction>> CreateUnitOfWorkAsync(
-        NpgsqlConnection connection, CancellationToken cancellationToken)
+        NpgsqlConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
         => Task.FromResult<IAmAProvisioningUnitOfWork<NpgsqlTransaction>>(
             new PostgreSqlProvisioningUnitOfWork(connection, _advisoryLock, Logger));
 

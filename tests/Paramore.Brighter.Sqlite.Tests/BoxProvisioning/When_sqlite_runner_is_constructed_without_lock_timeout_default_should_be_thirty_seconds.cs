@@ -108,9 +108,9 @@ file sealed class TimeoutCapturingSqliteBoxMigrationRunner : SqliteBoxMigrationR
     }
 
     protected override async Task<IAmAProvisioningUnitOfWork<SqliteTransaction>> CreateUnitOfWorkAsync(
-        SqliteConnection connection, CancellationToken cancellationToken)
+        SqliteConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
     {
-        var inner = await base.CreateUnitOfWorkAsync(connection, cancellationToken);
+        var inner = await base.CreateUnitOfWorkAsync(connection, schemaName, tableName, cancellationToken);
         LastUnitOfWork = new TimeoutCapturingSqliteUnitOfWork(inner);
         return LastUnitOfWork;
     }

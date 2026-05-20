@@ -142,9 +142,9 @@ file sealed class CancellingPostgreSqlBoxMigrationRunner : PostgreSqlBoxMigratio
     }
 
     protected override async Task<IAmAProvisioningUnitOfWork<NpgsqlTransaction>> CreateUnitOfWorkAsync(
-        NpgsqlConnection connection, CancellationToken cancellationToken)
+        NpgsqlConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
     {
-        var inner = await base.CreateUnitOfWorkAsync(connection, cancellationToken);
+        var inner = await base.CreateUnitOfWorkAsync(connection, schemaName, tableName, cancellationToken);
         LastUnitOfWork = new RollbackTokenCapturingUnitOfWork(inner);
         return LastUnitOfWork;
     }

@@ -101,7 +101,7 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
     }
 
     protected override Task<IAmAProvisioningUnitOfWork<SqlTransaction>> CreateUnitOfWorkAsync(
-        SqlConnection connection, CancellationToken cancellationToken)
+        SqlConnection connection, string? schemaName, string tableName, CancellationToken cancellationToken)
         => Task.FromResult<IAmAProvisioningUnitOfWork<SqlTransaction>>(
             new MsSqlProvisioningUnitOfWork(connection, _advisoryLock, Logger));
 
