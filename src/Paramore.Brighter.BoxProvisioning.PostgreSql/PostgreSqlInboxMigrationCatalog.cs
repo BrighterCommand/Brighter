@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Paramore.Brighter.Inbox.Postgres;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
@@ -55,12 +56,12 @@ public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
     // Literal historical PostgreSQL inbox DDL extracted from commit 1cdc04b60 (Nov 2023, PR
     // #2560). First-shipped state already carried ContextKey with a composite PRIMARY KEY on
     // (CommandId, ContextKey) — see the V1-only/born-past-V1 note in the class remarks.
-    // {0} = table name (validated).
-    // Intentionally NOT double-quoted — PG identifiers are case-folded when unquoted and the
-    // PG inbox is V1-only (no V2+ chain). Quoting V1 here would change runtime semantics for
-    // existing deployments (case-folded `outbox`-style lookups would miss a now case-sensitive
-    // table). Reserved-keyword identifiers (e.g. "Order") are a chain-wide PG limitation, not
-    // a V1-specific gap. Per PR #4039 reviewer item F2-1.
+    // {0} = quoted, lowercased table identifier (via PgIdentifier).
+    // Lowercase-then-quote: PG case-folds unquoted identifiers to lowercase at parse time, so
+    // the legacy unquoted form created e.g. `inbox` from a configured `"Inbox"`. Quoting the
+    // already-lowercased form ("inbox") resolves to the same physical table as the legacy
+    // unquoted form, AND lets reserved-keyword names (User, Order, …) parse cleanly. All
+    // PG catalogs and builders share this fold-then-quote convention via PgIdentifier.
     private const string V1HistoricalDdl =
         """
         CREATE TABLE {0}
@@ -114,7 +115,7 @@ public class PostgreSqlInboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 1,
                 Description: "Create inbox table",
-                UpScript: string.Format(V1HistoricalDdl, configuration.InBoxTableName),
+                UpScript: string.Format(V1HistoricalDdl, PgIdentifier.Quote(configuration.InBoxTableName)),
                 LogicalColumns: new HashSet<string>(StringComparer.Ordinal)
                 {
                     "commandid", "commandtype", "commandbody", "timestamp", "contextkey"

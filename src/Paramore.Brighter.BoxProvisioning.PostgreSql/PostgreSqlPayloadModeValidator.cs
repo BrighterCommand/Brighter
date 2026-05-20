@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
@@ -60,9 +61,11 @@ public class PostgreSqlPayloadModeValidator : IAmABoxPayloadModeValidator<Npgsql
         command.CommandText = @"
 SELECT data_type FROM information_schema.columns
 WHERE table_schema = @SchemaName AND table_name = @TableName AND column_name = @ColumnName";
-        command.Parameters.AddWithValue("@SchemaName", resolvedSchema);
-        command.Parameters.AddWithValue("@TableName", tableName);
-        command.Parameters.AddWithValue("@ColumnName", columnName);
+        // information_schema.columns stores PG-folded (lowercase) identifiers. Normalize
+        // configured values so mixed-case defaults match the stored folded form.
+        command.Parameters.AddWithValue("@SchemaName", PgIdentifier.Normalize(resolvedSchema));
+        command.Parameters.AddWithValue("@TableName", PgIdentifier.Normalize(tableName));
+        command.Parameters.AddWithValue("@ColumnName", PgIdentifier.Normalize(columnName));
 
         var dataType = (string?)await command.ExecuteScalarAsync(cancellationToken);
         if (dataType == null) return;

@@ -30,6 +30,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
@@ -105,9 +106,12 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     // Include the schema in the lock key so two same-named tables in different schemas
     // (e.g. public.Outbox and billing.Outbox) acquire distinct advisory locks. Without
     // the schema qualifier they would share a lock and serialize unnecessarily — matches
-    // the MSSQL runner's lockResource shape.
+    // the MSSQL runner's lockResource shape. Lowercase the identifiers so callers that
+    // configure the same physical table with different casings (e.g. "Outbox" vs
+    // "outbox" — both folded to `outbox` by PG) hash to the same lock key.
     protected override string LockResourceFor(string? schemaName, string tableName)
-        => $"BrighterMigration_{schemaName ?? HISTORY_TABLE_SCHEMA}.{tableName}";
+        => $"BrighterMigration_{PgIdentifier.Normalize(schemaName ?? HISTORY_TABLE_SCHEMA)}.{PgIdentifier.Normalize(tableName)}";
+
 
     protected override async Task EnsureHistoryTableAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName,
@@ -290,8 +294,14 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
 INSERT INTO ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE}"" (""MigrationVersion"", ""SchemaName"", ""BoxTableName"", ""Description"")
 VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
         command.Parameters.AddWithValue("@Version", version);
-        command.Parameters.AddWithValue("@SchemaName", schemaName);
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
+        // Store PG-folded (lowercase) identifiers so history rows match the case of the
+        // physical table PG actually created — and so lookups via the detection helper
+        // (which normalizes the same way) hit the same row regardless of the configured
+        // casing. Existing rows written before this normalization remain in the table but
+        // become unreachable on read; the ALTER chain is idempotent (`ADD COLUMN IF NOT
+        // EXISTS`) so a re-run against an existing table is a no-op.
+        command.Parameters.AddWithValue("@SchemaName", PgIdentifier.Normalize(schemaName));
+        command.Parameters.AddWithValue("@BoxTableName", PgIdentifier.Normalize(tableName));
         command.Parameters.AddWithValue("@Description", description);
 
         await command.ExecuteNonQueryAsync(cancellationToken);

@@ -25,6 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Outbox.PostgreSql;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
@@ -74,13 +75,14 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
 
     // Literal historical PostgreSQL outbox DDL extracted from commit 3c30343fa (July 2019).
     // First-shipped state already carried Dispatched — see the born-past-V1 note in the
-    // class remarks. {0} = table name (validated).
-    // Intentionally NOT double-quoted — V2..V7 ALTERs in this catalog also use unquoted
-    // identifiers and rely on PG's identifier case-folding. Adding "{0}" to V1 would create
-    // a case-sensitive table that the unquoted V2..V7 ALTERs could not reach, so V1 stays
-    // symmetric with the rest of the chain. Reserved-keyword identifiers (e.g. "Order") are
-    // a chain-wide limitation on PG, not a V1-specific gap — discussed under PR #4039
-    // reviewer item F2-1 and tracked separately if it ever becomes a real constraint.
+    // class remarks. {0} = quoted, lowercased table identifier (via PgIdentifier).
+    // Lowercase-then-quote: PG case-folds unquoted identifiers to lowercase at parse time,
+    // so historical tables created via the unquoted builder DDL live as e.g. `outbox` in
+    // pg_class regardless of the configured `OutBoxTableName = "Outbox"`. Quoting the
+    // already-lowercased form ("outbox") resolves to the same physical table as the legacy
+    // unquoted form would have, AND unlocks reserved-keyword names (Order, User, Group, …)
+    // that the unquoted V2..V7 ALTERs would otherwise reject as syntax errors. All catalogs
+    // and builders in this chain apply the same fold-then-quote rule via PgIdentifier.
     private const string V1HistoricalDdl =
         """
         CREATE TABLE {0}
@@ -137,7 +139,7 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
             new BoxMigration(
                 Version: 1,
                 Description: "Create outbox table",
-                UpScript: string.Format(V1HistoricalDdl, table),
+                UpScript: string.Format(V1HistoricalDdl, PgIdentifier.Quote(table)),
                 LogicalColumns: Cumulative(1)),
 
             new BoxMigration(
@@ -215,5 +217,9 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         string.Join(Environment.NewLine, columns.Select(c => AddColumn(schema, table, c.Column, c.Type)));
 
     private static string AddColumn(string schema, string table, string column, string type) =>
-        $"ALTER TABLE {schema}.{table} ADD COLUMN IF NOT EXISTS {column} {type} NULL;";
+        // schema/table are lowercase-then-quoted via PgIdentifier so the ALTER targets the
+        // same physical table that V1's CREATE produced — and so reserved-keyword names
+        // (Order, User, Group, …) parse cleanly. Column names are sourced from the catalog
+        // and are already ADR 0057 §1 lowercase, so they are emitted bare.
+        $"ALTER TABLE {PgIdentifier.QuoteQualified(schema, table)} ADD COLUMN IF NOT EXISTS {column} {type} NULL;";
 }

@@ -29,6 +29,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
@@ -80,8 +81,14 @@ public class PostgreSqlBoxDetectionHelper :
         command.CommandText = @"
 SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
-        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
-        command.Parameters.AddWithValue("@TableName", tableName);
+        // information_schema.tables stores PG-folded (lowercase) names. Normalize so a
+        // mixed-case configured value (e.g. default "Outbox") matches the stored "outbox".
+        // The internal __BrighterMigrationHistory system-table existence check does NOT
+        // route through this method — its CREATE DDL quotes the name and therefore
+        // case-preserves it in pg_class, so DoesHistoryExistAsync inlines a literal-name
+        // lookup that bypasses the fold normalization done here.
+        command.Parameters.AddWithValue("@SchemaName", PgIdentifier.Normalize(schemaName ?? DefaultSchemaName));
+        command.Parameters.AddWithValue("@TableName", PgIdentifier.Normalize(tableName));
 
         // Pattern-match rather than (bool)raw! so a driver returning null surfaces as a named
         // InvalidOperationException instead of a bare NullReferenceException — Npgsql has
@@ -103,18 +110,32 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
         CancellationToken cancellationToken = default,
         NpgsqlTransaction? transaction = null)
     {
-        var historyTableExists = await DoesTableExistAsync(
-            connection, "__BrighterMigrationHistory", DefaultSchemaName, cancellationToken, transaction);
-        if (!historyTableExists)
-            return false;
+        // System-table existence: __BrighterMigrationHistory is created via quoted DDL
+        // (`CREATE TABLE IF NOT EXISTS "public"."__BrighterMigrationHistory"`), so its name
+        // is case-PRESERVED in pg_class. Routing through DoesTableExistAsync would lowercase
+        // the lookup to `'__brightermigrationhistory'` and miss. Inline the literal check.
+        using (var existsCmd = connection.CreateCommand())
+        {
+            if (transaction != null) existsCmd.Transaction = transaction;
+            existsCmd.CommandText = @"
+SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = '__BrighterMigrationHistory')";
+            var existsRaw = await existsCmd.ExecuteScalarAsync(cancellationToken);
+            var historyTableExists = existsRaw is bool b && b;
+            if (!historyTableExists)
+                return false;
+        }
 
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
         command.CommandText = @"
 SELECT COUNT(1) FROM ""public"".""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
+        // History rows are stored with PG-folded (lowercase) identifiers by the runner so
+        // that lookups remain consistent across mixed-case configured values; normalize
+        // here too. See PostgreSqlBoxMigrationRunner.InsertHistory.
+        command.Parameters.AddWithValue("@BoxTableName", PgIdentifier.Normalize(tableName));
+        command.Parameters.AddWithValue("@SchemaName", PgIdentifier.Normalize(schemaName ?? DefaultSchemaName));
 
         try
         {
@@ -160,8 +181,8 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         command.CommandText = @"
 SELECT COALESCE(MAX(""MigrationVersion""), 0) FROM ""public"".""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
-        command.Parameters.AddWithValue("@BoxTableName", tableName);
-        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
+        command.Parameters.AddWithValue("@BoxTableName", PgIdentifier.Normalize(tableName));
+        command.Parameters.AddWithValue("@SchemaName", PgIdentifier.Normalize(schemaName ?? DefaultSchemaName));
 
         var raw = await command.ExecuteScalarAsync(cancellationToken);
         return raw is int i
@@ -242,8 +263,8 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         command.CommandText = @"
 SELECT column_name FROM information_schema.columns
 WHERE table_schema = @SchemaName AND table_name = @TableName";
-        command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
-        command.Parameters.AddWithValue("@TableName", tableName);
+        command.Parameters.AddWithValue("@SchemaName", PgIdentifier.Normalize(schemaName ?? DefaultSchemaName));
+        command.Parameters.AddWithValue("@TableName", PgIdentifier.Normalize(tableName));
 
         var columns = new HashSet<string>(StringComparer.Ordinal);
         using var reader = await command.ExecuteReaderAsync(cancellationToken);

@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Paramore.Brighter.PostgreSql;
+
 namespace Paramore.Brighter.Inbox.Postgres
 {
     /// <summary>
@@ -92,16 +94,15 @@ namespace Paramore.Brighter.Inbox.Postgres
         /// <param name="jsonMessagePayload">Should the command body be stored using the JSON/JSONB type.</param>
         /// <param name="schemaName">
         /// Optional Postgres schema name. When non-null, the emitted DDL schema-qualifies the
-        /// table as <c>{schemaName}.{inboxTableName}</c>; otherwise the table is emitted
-        /// unqualified and lands in the connection's search_path default. Per PR #4039
-        /// reviewer item M4-1 (F1b). See the outbox builder for the full rationale.
+        /// table as <c>"schemaname"."inboxtablename"</c> (lowercase-then-quote via
+        /// <see cref="PgIdentifier"/>) so reserved-keyword names parse cleanly while still
+        /// resolving to the same physical table that PG's natural case-fold of unquoted
+        /// identifiers would have produced. See the outbox builder for the full rationale.
         /// </param>
         /// <returns>The required DDL</returns>
         public static string GetDDL(string inboxTableName, bool binaryMessagePayload = false, bool jsonMessagePayload = false, string? schemaName = null)
         {
-            var qualifiedTable = schemaName is null
-                ? inboxTableName
-                : $"{schemaName}.{inboxTableName}";
+            var qualifiedTable = PgIdentifier.QuoteQualified(schemaName, inboxTableName);
             if (binaryMessagePayload)
             {
                 return string.Format(jsonMessagePayload ? JsonbOutboxDDL : BinaryOutboxDDL, qualifiedTable);
@@ -118,7 +119,12 @@ namespace Paramore.Brighter.Inbox.Postgres
         /// <returns>The required SQL</returns>
         public static string GetExistsQuery(string tableSchema, string inboxTableName)
         {
-            return string.Format(InboxExistsSQL, tableSchema, inboxTableName);
+            // information_schema.tables stores PG-folded (lowercase) names. Normalize both
+            // configured values so mixed-case defaults match the stored folded form.
+            return string.Format(
+                InboxExistsSQL,
+                PgIdentifier.Normalize(tableSchema),
+                PgIdentifier.Normalize(inboxTableName));
         }
     }
 }
