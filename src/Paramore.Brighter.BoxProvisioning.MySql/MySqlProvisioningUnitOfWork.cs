@@ -48,10 +48,6 @@ public class MySqlProvisioningUnitOfWork(
     ILogger logger,
     string? tableName = null) : IAmAProvisioningUnitOfWork<MySqlTransaction>
 {
-    private readonly MySqlConnection _connection = connection;
-    private readonly IMySqlAdvisoryLock _advisoryLock = advisoryLock;
-    private readonly ILogger _logger = logger;
-    private readonly string? _tableName = tableName;
     private string? _lockResource;
 
     /// <inheritdoc />
@@ -74,8 +70,8 @@ public class MySqlProvisioningUnitOfWork(
         // the `if (_lockResource is null) return;` short-circuit in ReleaseLockAndLogTriStateAsync.
         // Releasing a never-acquired lock would return NULL and emit a misleading
         // "Brighter defect" Warning masking the real lock-acquisition failure.
-        _logger.LogTrace("Beginning MySQL provisioning UoW for resource {LockResource}", lockResource);
-        await _advisoryLock.AcquireAsync(_connection, lockResource, lockTimeout, cancellationToken);
+        logger.LogTrace("Beginning MySQL provisioning UoW for resource {LockResource}", lockResource);
+        await advisoryLock.AcquireAsync(connection, lockResource, lockTimeout, cancellationToken);
         _lockResource = lockResource;
     }
 
@@ -116,7 +112,7 @@ public class MySqlProvisioningUnitOfWork(
         bool? releaseResult;
         try
         {
-            releaseResult = await _advisoryLock.ReleaseAsync(_connection, _lockResource, cancellationToken);
+            releaseResult = await advisoryLock.ReleaseAsync(connection, _lockResource, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -126,7 +122,7 @@ public class MySqlProvisioningUnitOfWork(
             // (catch { RollbackAsync(...); throw; }) replaces the original migration exception
             // with this cleanup-side failure, masking the real cause. The session-scoped
             // GET_LOCK is released by the server when the connection closes.
-            _logger.LogWarning(
+            logger.LogWarning(
                 ex,
                 "MySQL provisioning UoW: RELEASE_LOCK threw for lock resource '{LockResource}' — release skipped, the session will release the lock when the connection closes.",
                 _lockResource);
@@ -137,7 +133,7 @@ public class MySqlProvisioningUnitOfWork(
 
         var marker = releaseResult is null ? "NULL" : "0";
         var meaning = releaseResult is null ? "lock did not exist" : "lock held by another session";
-        if (_tableName is not null)
+        if (tableName is not null)
         {
             // Phase 5.3 regression fix: restore the legacy runner's TableName+LockKey emission
             // shape per NF1 (no information loss). MySqlMigrationLockName.For hashes long
@@ -145,13 +141,13 @@ public class MySqlProvisioningUnitOfWork(
             // surface the raw table name in long-name cases. The runner threads tableName
             // through the UoW ctor so this Warning preserves diagnostic context regardless
             // of name length.
-            _logger.LogWarning(
+            logger.LogWarning(
                 "MySQL advisory lock for migration of '{TableName}' (key '{LockKey}') was not released by this session: RELEASE_LOCK returned {Result} ({Marker} = {Meaning}). This is likely a Brighter defect — please report it.",
-                _tableName, _lockResource, releaseResult, marker, meaning);
+                tableName, _lockResource, releaseResult, marker, meaning);
         }
         else
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 "MySQL advisory lock '{LockResource}' was not released by this session: RELEASE_LOCK returned {Result} ({Marker} = {Meaning}). This is likely a Brighter defect — please report it.",
                 _lockResource, releaseResult, marker, meaning);
         }

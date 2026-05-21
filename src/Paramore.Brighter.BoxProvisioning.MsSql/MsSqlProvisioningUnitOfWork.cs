@@ -40,9 +40,6 @@ public class MsSqlProvisioningUnitOfWork(
     IMsSqlAdvisoryLock advisoryLock,
     ILogger logger) : IAmAProvisioningUnitOfWork<SqlTransaction>
 {
-    private readonly SqlConnection _connection = connection;
-    private readonly IMsSqlAdvisoryLock _advisoryLock = advisoryLock;
-    private readonly ILogger _logger = logger;
     private SqlTransaction? _transaction;
 
     /// <inheritdoc />
@@ -55,14 +52,14 @@ public class MsSqlProvisioningUnitOfWork(
         // requested because sp_getapplock with @LockOwner='Transaction' binds the lock to the
         // surrounding transaction's lifetime. AcquireAsync requires the SqlTransaction as a
         // parameter — the only valid order is BeginTransaction → AcquireAsync.
-        _logger.LogTrace("Beginning MSSQL provisioning UoW for resource {LockResource}", lockResource);
+        logger.LogTrace("Beginning MSSQL provisioning UoW for resource {LockResource}", lockResource);
 #if NET8_0_OR_GREATER
-        _transaction = (SqlTransaction)await _connection.BeginTransactionAsync(cancellationToken);
+        _transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
 #else
-        _transaction = _connection.BeginTransaction();
+        _transaction = connection.BeginTransaction();
 #endif
-        await _advisoryLock.AcquireAsync(
-            _connection, _transaction, lockResource, lockTimeout, cancellationToken);
+        await advisoryLock.AcquireAsync(
+            connection, _transaction, lockResource, lockTimeout, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -107,7 +104,7 @@ public class MsSqlProvisioningUnitOfWork(
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 ex,
                 "MSSQL provisioning UoW: rollback skipped — transaction already finalised or unwind failed (lock resource bound to transaction lifetime; SQL Server releases sp_getapplock on transaction completion regardless)");
         }

@@ -43,8 +43,7 @@ public class MsSqlOutboxProvisioner : SqlBoxProvisioner<SqlConnection, SqlTransa
     }
 
     /// <inheritdoc />
-    protected override SqlConnection CreateConnection(string connectionString)
-        => new SqlConnection(connectionString);
+    protected override SqlConnection CreateConnection(string connectionString) => new(connectionString);
 
     /// <inheritdoc />
     protected override string PayloadColumnName => "Body";

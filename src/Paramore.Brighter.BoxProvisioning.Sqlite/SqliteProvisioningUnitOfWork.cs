@@ -55,8 +55,6 @@ public class SqliteProvisioningUnitOfWork(
     SqliteConnection connection,
     ILogger logger) : IAmAProvisioningUnitOfWork<SqliteTransaction>
 {
-    private readonly SqliteConnection _connection = connection;
-    private readonly ILogger _logger = logger;
     private SqliteTransaction? _transaction;
 
     /// <inheritdoc />
@@ -85,8 +83,8 @@ public class SqliteProvisioningUnitOfWork(
     public Task BeginAsync(string lockResource, TimeSpan lockTimeout, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        _logger.LogTrace("Beginning SQLite provisioning UoW for resource {LockResource}", lockResource);
-        _transaction = _connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        logger.LogTrace("Beginning SQLite provisioning UoW for resource {LockResource}", lockResource);
+        _transaction = connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
         return Task.CompletedTask;
     }
 
@@ -131,7 +129,7 @@ public class SqliteProvisioningUnitOfWork(
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 ex,
                 "SQLite provisioning UoW: rollback skipped — transaction already finalised or unwind failed (writer slot released on transaction completion regardless of rollback success)");
         }
