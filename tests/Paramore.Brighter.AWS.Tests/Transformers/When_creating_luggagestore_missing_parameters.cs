@@ -71,7 +71,7 @@ public class S3LuggageUploadMissingParametersTests
     }
     
     [Fact]
-    public async Task When_creating_luggagestore_missing_ACL() 
+    public async Task When_creating_luggagestore_missing_ACL()
     {
         //arrange
         var exception = await Catch.ExceptionAsync(async () =>

@@ -450,14 +450,12 @@ jobs:
       AWS_SERVICE_URL: http://localhost:4566
 
     services:
-      moto:
-        image: motoserver/moto:5.1.22
+      floci:
+        image: floci/floci:latest
         ports:
           - 4566:4566
-        env:
-          MOTO_PORT: "4566"
         options: >-
-          --health-cmd "curl -sf http://localhost:4566/moto-api/"
+          --health-cmd "curl -sf http://localhost:4566/_localstack/health"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
