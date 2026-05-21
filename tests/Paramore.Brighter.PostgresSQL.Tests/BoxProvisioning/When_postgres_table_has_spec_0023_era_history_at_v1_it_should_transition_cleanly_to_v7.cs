@@ -50,7 +50,12 @@ public class When_postgres_table_has_spec_0023_era_history_at_v1_it_should_trans
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new PostgreSqlOutboxProvisioner(config, runner);
+        var provisioner = new PostgreSqlOutboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlOutboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            runner);
 
         //Act
         await provisioner.ProvisionAsync();

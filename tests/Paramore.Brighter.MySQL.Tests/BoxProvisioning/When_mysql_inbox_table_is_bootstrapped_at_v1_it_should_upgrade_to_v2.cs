@@ -52,7 +52,12 @@ public class When_mysql_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _tableName);
         var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new MySqlInboxProvisioner(config, runner);
+        var provisioner = new MySqlInboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlInboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            runner);
 
         //Act
         await provisioner.ProvisionAsync();

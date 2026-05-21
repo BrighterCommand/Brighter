@@ -36,7 +36,12 @@ public class When_postgres_outbox_provisioner_runs_with_reserved_keyword_table_n
             outBoxTableName: ReservedKeywordTableName);
         _runner = new PostgreSqlBoxMigrationRunner(
             new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
-        _provisioner = new PostgreSqlOutboxProvisioner(_config, _runner);
+        _provisioner = new PostgreSqlOutboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlOutboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            _config,
+            _runner);
     }
 
     [Fact]

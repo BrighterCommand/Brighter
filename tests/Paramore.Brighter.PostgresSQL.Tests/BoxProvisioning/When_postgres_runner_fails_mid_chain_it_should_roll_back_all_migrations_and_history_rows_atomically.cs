@@ -80,7 +80,12 @@ public class When_postgres_runner_fails_mid_chain_it_should_roll_back_all_migrat
 
         //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
         var realRunner = new PostgreSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
-        var provisioner = new PostgreSqlOutboxProvisioner(config, realRunner);
+        var provisioner = new PostgreSqlOutboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlOutboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            realRunner);
         await provisioner.ProvisionAsync();
 
         //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).

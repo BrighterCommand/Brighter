@@ -21,7 +21,12 @@ public class When_postgresql_inbox_provisioner_finds_existing_table_without_hist
             _connectionString,
             inboxTableName: _tableName);
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        _provisioner = new PostgreSqlInboxProvisioner(config, runner);
+        _provisioner = new PostgreSqlInboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlInboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

@@ -77,10 +77,9 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
     /// </summary>
     /// <param name="schemaName">
     /// Optional. Filters the history rows by their <c>SchemaName</c> column. Null is substituted
-    /// with <c>connection.Database</c> per ADR 0057 §A.1. Note: this parameter scopes the
-    /// content lookup, NOT the existence check for the history table itself — the history table
-    /// always lives in the connection's bound database, even when the box table is provisioned
-    /// in a different schema (per PR #4039 F1c).
+    /// with <c>connection.Database</c> Note: this parameter scopes the content lookup, NOT the
+    /// existence check for the history table itself — the history table always lives in the
+    /// connection's bound database, even when the box table is provisioned in a different schema 
     /// </param>
     /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
     public async Task<bool> DoesHistoryExistAsync(
@@ -91,7 +90,7 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
         // The history table always resides in connection.Database (the MySQL runner's
         // EnsureHistoryTableAsync emits an unqualified CREATE TABLE IF NOT EXISTS targeting
         // DATABASE()). Probe its existence against connection.Database — not the
-        // box-table SchemaName — so a non-default SchemaName configuration (F1c) does not
+        // box-table SchemaName — so a non-default SchemaName configuration does not
         // misreport HistoryAbsent and trigger a redundant bootstrap path.
         var historyTableExists = await DoesTableExistAsync(
             connection, "__BrighterMigrationHistory", connection.Database, cancellationToken);
@@ -117,8 +116,8 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
     /// Returns the highest migration version recorded in history for the given box table, or 0
     /// if no rows exist.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c> per ADR 0057 §A.1.</param>
-    /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c></param>
+    /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits.</param>
     public async Task<int> GetMaxVersionAsync(
         MySqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -138,8 +137,8 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
     /// Reads the column name set for the given table from <c>information_schema.columns</c>,
     /// case-insensitively (MySQL identifiers are case-insensitive on lookup).
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c> per ADR 0057 §A.1.</param>
-    /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c></param>
+    /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits</param>
     public async Task<IReadOnlyCollection<string>> GetTableColumnsAsync(
         MySqlConnection connection, string tableName, string? schemaName,
         CancellationToken cancellationToken = default,
@@ -159,8 +158,8 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
     /// </list>
     /// </summary>
     /// <param name="boxType">Selects the discriminator: <c>HeaderBag</c> for outbox, <c>CommandBody</c> for inbox.</param>
-    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c> per ADR 0057 §A.1.</param>
-    /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
+    /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c></param>
+    /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits</param>
     public async Task<int> DetectCurrentVersionAsync(
         MySqlConnection connection, string tableName, string? schemaName,
         BoxType boxType, IReadOnlyList<IAmABoxMigration> migrations,

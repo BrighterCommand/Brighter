@@ -54,9 +54,7 @@ public class SpannerOutboxProvisioner : IAmABoxProvisioner
     private readonly IAmABoxMigrationRunner _migrationRunner;
 
     /// <summary>
-    /// Canonical ctor — Phase 8.5 of spec 0028. Takes the role-interface dependencies
-    /// explicitly so the provisioner does not reach for backend statics. Spanner is
-    /// degenerate per ADR 0057 §6, so the role interface is the BASE
+    /// Spanner is degenerate per ADR 0057 §6, so the role interface is the BASE
     /// <see cref="IAmABoxMigrationDetectionHelper{TConnection,TTransaction}"/> and no
     /// <see cref="IAmABoxMigrationCatalog"/> is injected.
     /// </summary>
@@ -70,22 +68,6 @@ public class SpannerOutboxProvisioner : IAmABoxProvisioner
         _payloadValidator = payloadValidator;
         _configuration = configuration;
         _migrationRunner = migrationRunner;
-    }
-
-    /// <summary>
-    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
-    /// call-sites (extensions + integration tests). Synthesises default singletons for the
-    /// two role-interface dependencies; removed when the DI cascade lands in Phase 9.
-    /// </summary>
-    public SpannerOutboxProvisioner(
-        IAmARelationalDatabaseConfiguration configuration,
-        IAmABoxMigrationRunner migrationRunner)
-        : this(
-            new SpannerBoxDetectionHelper(),
-            new SpannerPayloadModeValidator(),
-            configuration,
-            migrationRunner)
-    {
     }
 
     public BoxType BoxType => BoxType.Outbox;

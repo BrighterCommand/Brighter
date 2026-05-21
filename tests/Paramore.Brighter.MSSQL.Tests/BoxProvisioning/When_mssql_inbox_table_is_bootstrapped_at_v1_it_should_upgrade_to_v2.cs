@@ -53,7 +53,12 @@ public class When_mssql_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _tableName);
         var runner = new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new MsSqlInboxProvisioner(config, runner);
+        var provisioner = new MsSqlInboxProvisioner(
+            new MsSqlBoxDetectionHelper(),
+            new MsSqlInboxMigrationCatalog(),
+            new MsSqlPayloadModeValidator(),
+            config,
+            runner);
 
         //Act
         await provisioner.ProvisionAsync();

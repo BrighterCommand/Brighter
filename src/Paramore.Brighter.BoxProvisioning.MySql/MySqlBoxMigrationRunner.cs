@@ -73,9 +73,10 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
     }
 
     /// <summary>
-    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
-    /// call-sites (extensions + integration tests). Synthesises a default
-    /// <see cref="MySqlBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
+    /// Convenience ctor used by the <c>AddMySqlOutbox</c>/<c>AddMySqlInbox</c> registration
+    /// extensions: synthesises a default <see cref="MySqlBoxDetectionHelper"/> so the
+    /// extension method doesn't have to resolve it from the container before the catalog
+    /// is in scope.
     /// </summary>
     public MySqlBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,
@@ -154,8 +155,7 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
         // (the live builder DDL — typically <Backend>OutboxBuilder.GetDDL(...) for outbox /
         // <Backend>InboxBuilder.GetDDL(...) for inbox). We stamp directly at V_latest with a
         // "fresh install" marker — the V2..V_latest ALTERs in the chain would be no-ops on the
-        // V_latest-shape table, so we skip the chain entirely (spec 0027 R1 fresh-install fast
-        // path per ADR §3).
+        // V_latest-shape table, so we skip the chain entirely 
         await ExecuteDdlAsync(connection, freshInstallDdl, cancellationToken);
 
         await InsertHistoryRowAsync(
@@ -260,16 +260,15 @@ VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
 
     /// <summary>
     /// Ensures the connection string sets <c>AllowUserVariables=true</c>. The V2..V7 outbox/inbox
-    /// migrations (per ADR 0057 §5) use the MySQL <c>information_schema.columns</c> +
-    /// prepared-statement idempotency pattern, which depends on session-scoped user variables
-    /// (<c>SET @q = ...; PREPARE stmt FROM @q;</c>). MySqlConnector treats <c>@variable</c> tokens
-    /// as parameter markers by default and rejects them; this flag flips that behaviour so the
-    /// prepared-statement form executes correctly. Transparent to caller-supplied connection
-    /// strings — adds the flag if missing, preserves it if already set. When the flag is
+    /// migrations use the MySQL <c>information_schema.columns</c> +  prepared-statement idempotency
+    /// pattern, which depends on session-scoped user variables  (<c>SET @q = ...; PREPARE stmt FROM @q;</c>).
+    /// MySqlConnector treats <c>@variable</c> tokens as parameter markers by default and rejects them;
+    /// this flag flips that behaviour so the  prepared-statement form executes correctly. Transparent to
+    /// caller-supplied connection  strings — adds the flag if missing, preserves it if already set. When the flag is
     /// flipped, an Information log records the mutation so a security-conscious operator who
     /// deliberately disabled user variables (user-variable abuse via prepared-statement
     /// injection is a documented threat surface) can correlate it against migration activity
-    /// without needing to enable Debug-level logging. Per PR #4039 reviewer items M2-4 / M4-2.
+    /// without needing to enable Debug-level logging. 
     /// </summary>
     private string EnsureAllowUserVariables(string connectionString)
     {

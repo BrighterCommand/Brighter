@@ -79,7 +79,12 @@ public class When_mssql_runner_fails_mid_chain_it_should_roll_back_all_migration
 
         //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
         var realRunner = new MsSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
-        var provisioner = new MsSqlOutboxProvisioner(config, realRunner);
+        var provisioner = new MsSqlOutboxProvisioner(
+            new MsSqlBoxDetectionHelper(),
+            new MsSqlOutboxMigrationCatalog(),
+            new MsSqlPayloadModeValidator(),
+            config,
+            realRunner);
         await provisioner.ProvisionAsync();
 
         //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).

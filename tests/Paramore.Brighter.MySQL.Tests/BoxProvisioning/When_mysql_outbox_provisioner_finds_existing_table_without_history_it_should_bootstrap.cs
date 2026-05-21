@@ -21,7 +21,12 @@ public class When_mysql_outbox_provisioner_finds_existing_table_without_history_
             _connectionString,
             outBoxTableName: _tableName);
         var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        _provisioner = new MySqlOutboxProvisioner(config, runner);
+        _provisioner = new MySqlOutboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlOutboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

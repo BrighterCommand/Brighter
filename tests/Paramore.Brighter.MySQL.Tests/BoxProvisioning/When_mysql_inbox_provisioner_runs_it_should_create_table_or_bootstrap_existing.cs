@@ -27,7 +27,12 @@ public class InboxProvisionerTests : IAsyncLifetime
             _connectionString,
             inboxTableName: _freshTableName);
         var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new MySqlInboxProvisioner(config, runner);
+        var provisioner = new MySqlInboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlInboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            runner);
 
         // Act
         await provisioner.ProvisionAsync();
@@ -70,7 +75,12 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
             _connectionString,
             inboxTableName: _existingTableName);
         var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new MySqlInboxProvisioner(config, runner);
+        var provisioner = new MySqlInboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlInboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            runner);
 
         // Act
         await provisioner.ProvisionAsync();

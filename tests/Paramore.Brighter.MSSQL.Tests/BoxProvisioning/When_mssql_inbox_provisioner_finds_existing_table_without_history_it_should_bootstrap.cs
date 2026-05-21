@@ -27,7 +27,12 @@ public class When_mssql_inbox_provisioner_finds_existing_table_without_history_i
             _connectionString,
             inboxTableName: _tableName);
         var runner = new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        _provisioner = new MsSqlInboxProvisioner(config, runner);
+        _provisioner = new MsSqlInboxProvisioner(
+            new MsSqlBoxDetectionHelper(),
+            new MsSqlInboxMigrationCatalog(),
+            new MsSqlPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

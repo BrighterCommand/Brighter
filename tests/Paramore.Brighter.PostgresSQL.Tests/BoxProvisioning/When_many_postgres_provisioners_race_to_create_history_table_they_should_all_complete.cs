@@ -85,7 +85,12 @@ public class When_many_postgres_provisioners_race_to_create_history_table_they_s
                 _connectionString, outBoxTableName: tableName);
             var runner = new PostgreSqlBoxMigrationRunner(
                 new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), tracer: tracer);
-            var provisioner = new PostgreSqlOutboxProvisioner(config, runner);
+            var provisioner = new PostgreSqlOutboxProvisioner(
+                new PostgreSqlBoxDetectionHelper(),
+                new PostgreSqlOutboxMigrationCatalog(),
+                new PostgreSqlPayloadModeValidator(),
+                config,
+                runner);
             await provisioner.ProvisionAsync();
         })).ToArray();
 

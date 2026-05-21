@@ -62,7 +62,12 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
 
         //Act — provisioner end-to-end.
         var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new MySqlOutboxProvisioner(config, runner);
+        var provisioner = new MySqlOutboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlOutboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert — message identifies this as not a Brighter outbox and names the discriminator.
@@ -95,7 +100,12 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
 
         //Act — provisioner end-to-end.
         var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new MySqlInboxProvisioner(config, runner);
+        var provisioner = new MySqlInboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlInboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert — message identifies this as not a Brighter inbox and names the discriminator.
@@ -129,7 +139,12 @@ public class MySqlBoxDiscriminatorDetectionTests : IAsyncLifetime
 
         //Act — provisioner end-to-end.
         var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new MySqlOutboxProvisioner(config, runner);
+        var provisioner = new MySqlOutboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlOutboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert — message identifies the table as not matching any known schema version.

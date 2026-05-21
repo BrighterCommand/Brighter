@@ -105,9 +105,10 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     }
 
     /// <summary>
-    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
-    /// call-sites (extensions + integration tests). Synthesises a default
-    /// <see cref="SqliteBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
+    /// Convenience ctor used by the <c>AddSqliteOutbox</c>/<c>AddSqliteInbox</c> registration
+    /// extensions: synthesises a default <see cref="SqliteBoxDetectionHelper"/> so the
+    /// extension method doesn't have to resolve it from the container before the catalog
+    /// is in scope.
     /// </summary>
     public SqliteBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,

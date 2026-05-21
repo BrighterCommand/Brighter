@@ -95,9 +95,9 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     }
 
     /// <summary>
-    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
-    /// call-sites (extensions + integration tests). Synthesises a default
-    /// <see cref="SpannerBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
+    /// Convenience ctor used by integration tests: synthesises a default
+    /// <see cref="SpannerBoxDetectionHelper"/> so test arrange blocks don't have to
+    /// construct one explicitly.
     /// </summary>
     public SpannerBoxMigrationRunner(
         IAmARelationalDatabaseConfiguration configuration,

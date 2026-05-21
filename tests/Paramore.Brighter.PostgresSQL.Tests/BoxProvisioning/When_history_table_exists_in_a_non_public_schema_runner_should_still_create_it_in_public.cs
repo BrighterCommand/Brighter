@@ -51,7 +51,12 @@ public class When_history_table_exists_in_a_non_public_schema_runner_should_stil
         _runnerConnectionString = _setupConnectionString.TrimEnd(';') + $";Search Path={CollidingSchema},public";
         var config = new RelationalDatabaseConfiguration(_runnerConnectionString, outBoxTableName: _tableName);
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        _provisioner = new PostgreSqlOutboxProvisioner(config, runner);
+        _provisioner = new PostgreSqlOutboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlOutboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

@@ -34,10 +34,6 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// </summary>
 public class SqliteInboxProvisioner : SqlBoxProvisioner<SqliteConnection, SqliteTransaction>
 {
-    /// <summary>
-    /// Canonical ctor — Phase 8.4 of spec 0028. Takes the role-interface dependencies
-    /// explicitly so the provisioner does not reach for backend statics.
-    /// </summary>
     public SqliteInboxProvisioner(
         IAmAVersionDetectingMigrationHelper<SqliteConnection, SqliteTransaction> detectionHelper,
         IAmABoxMigrationCatalog catalog,
@@ -45,23 +41,6 @@ public class SqliteInboxProvisioner : SqlBoxProvisioner<SqliteConnection, Sqlite
         IAmARelationalDatabaseConfiguration configuration,
         IAmABoxMigrationRunner migrationRunner)
         : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Inbox)
-    {
-    }
-
-    /// <summary>
-    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
-    /// call-sites (extensions + integration tests). Synthesises default singletons for the
-    /// three role-interface dependencies; removed when the DI cascade lands in Phase 9.
-    /// </summary>
-    public SqliteInboxProvisioner(
-        IAmARelationalDatabaseConfiguration configuration,
-        IAmABoxMigrationRunner migrationRunner)
-        : this(
-            new SqliteBoxDetectionHelper(),
-            new SqliteInboxMigrationCatalog(),
-            new SqlitePayloadModeValidator(),
-            configuration,
-            migrationRunner)
     {
     }
 

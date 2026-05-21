@@ -27,7 +27,12 @@ public class InboxProvisionerTests : IAsyncLifetime
             _connectionString,
             inboxTableName: _freshTableName);
         var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
-        var provisioner = new SqliteInboxProvisioner(config, runner);
+        var provisioner = new SqliteInboxProvisioner(
+            new SqliteBoxDetectionHelper(),
+            new SqliteInboxMigrationCatalog(),
+            new SqlitePayloadModeValidator(),
+            config,
+            runner);
 
         // Act
         await provisioner.ProvisionAsync();
@@ -72,7 +77,12 @@ WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @ExpectedVersion";
             _connectionString,
             inboxTableName: _existingTableName);
         var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
-        var provisioner = new SqliteInboxProvisioner(config, runner);
+        var provisioner = new SqliteInboxProvisioner(
+            new SqliteBoxDetectionHelper(),
+            new SqliteInboxMigrationCatalog(),
+            new SqlitePayloadModeValidator(),
+            config,
+            runner);
 
         // Act
         await provisioner.ProvisionAsync();

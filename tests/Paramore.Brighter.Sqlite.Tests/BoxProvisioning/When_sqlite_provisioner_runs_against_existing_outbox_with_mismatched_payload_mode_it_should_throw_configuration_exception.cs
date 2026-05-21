@@ -45,7 +45,12 @@ public class When_sqlite_provisioner_runs_against_existing_outbox_with_mismatche
             _connectionString,
             outBoxTableName: _tableName,
             binaryMessagePayload: true);
-        var provisioner = new SqliteOutboxProvisioner(config, new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
+        var provisioner = new SqliteOutboxProvisioner(
+            new SqliteBoxDetectionHelper(),
+            new SqliteOutboxMigrationCatalog(),
+            new SqlitePayloadModeValidator(),
+            config,
+            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
@@ -62,7 +67,12 @@ public class When_sqlite_provisioner_runs_against_existing_outbox_with_mismatche
             _connectionString,
             outBoxTableName: _tableName,
             binaryMessagePayload: false);
-        var provisioner = new SqliteOutboxProvisioner(config, new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
+        var provisioner = new SqliteOutboxProvisioner(
+            new SqliteBoxDetectionHelper(),
+            new SqliteOutboxMigrationCatalog(),
+            new SqlitePayloadModeValidator(),
+            config,
+            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());

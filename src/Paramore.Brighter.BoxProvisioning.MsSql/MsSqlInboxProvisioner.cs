@@ -32,10 +32,6 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// </summary>
 public class MsSqlInboxProvisioner : SqlBoxProvisioner<SqlConnection, SqlTransaction>
 {
-    /// <summary>
-    /// Canonical ctor — Phase 8.1 of spec 0028. Takes the role-interface dependencies
-    /// explicitly so the provisioner does not reach for backend statics.
-    /// </summary>
     public MsSqlInboxProvisioner(
         IAmAVersionDetectingMigrationHelper<SqlConnection, SqlTransaction> detectionHelper,
         IAmABoxMigrationCatalog catalog,
@@ -43,23 +39,6 @@ public class MsSqlInboxProvisioner : SqlBoxProvisioner<SqlConnection, SqlTransac
         IAmARelationalDatabaseConfiguration configuration,
         IAmABoxMigrationRunner migrationRunner)
         : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Inbox)
-    {
-    }
-
-    /// <summary>
-    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
-    /// call-sites (extensions + integration tests). Synthesises default singletons for the
-    /// three role-interface dependencies; removed when the DI cascade lands in Phase 9.
-    /// </summary>
-    public MsSqlInboxProvisioner(
-        IAmARelationalDatabaseConfiguration configuration,
-        IAmABoxMigrationRunner migrationRunner)
-        : this(
-            new MsSqlBoxDetectionHelper(),
-            new MsSqlInboxMigrationCatalog(),
-            new MsSqlPayloadModeValidator(),
-            configuration,
-            migrationRunner)
     {
     }
 

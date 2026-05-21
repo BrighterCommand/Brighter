@@ -52,7 +52,12 @@ public class When_sqlite_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _tableName);
         var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
-        var provisioner = new SqliteInboxProvisioner(config, runner);
+        var provisioner = new SqliteInboxProvisioner(
+            new SqliteBoxDetectionHelper(),
+            new SqliteInboxMigrationCatalog(),
+            new SqlitePayloadModeValidator(),
+            config,
+            runner);
 
         //Act
         await provisioner.ProvisionAsync();

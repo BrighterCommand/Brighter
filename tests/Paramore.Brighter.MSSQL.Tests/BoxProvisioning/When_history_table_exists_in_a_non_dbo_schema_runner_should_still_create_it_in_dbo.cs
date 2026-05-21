@@ -45,7 +45,12 @@ public class When_history_table_exists_in_a_non_dbo_schema_runner_should_still_c
     {
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        _provisioner = new MsSqlOutboxProvisioner(config, runner);
+        _provisioner = new MsSqlOutboxProvisioner(
+            new MsSqlBoxDetectionHelper(),
+            new MsSqlOutboxMigrationCatalog(),
+            new MsSqlPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

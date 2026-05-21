@@ -57,10 +57,8 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     private readonly IAmABoxMigrationRunner _migrationRunner;
 
     /// <summary>
-    /// Initialises the base. Derived classes forward their canonical 5-arg ctor (from the Phase 8
-    /// ctor cascade) plus the per-derivation <see cref="BoxProvisioning.BoxType"/> value to this
-    /// ctor; the back-compat 2-arg ctor on each derivation continues to chain via <c>this(...)</c>
-    /// to the 5-arg ctor (NF10 — no call-site change).
+    /// Initialises the base. Derived classes forward their 5-arg ctor plus the per-derivation
+    /// <see cref="BoxProvisioning.BoxType"/> value to this ctor.
     /// </summary>
     protected SqlBoxProvisioner(
         IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> detectionHelper,
@@ -110,9 +108,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         // on netstandard2.0, so `await using` would not compile across the shared-assembly
         // TFM matrix. Mirrors the §B.2 precedent at SqlBoxMigrationRunner.cs:112-116.
         //
-        // Item #11 (PR #4039 third review): prior shape opened a fresh connection for the payload
-        // validator immediately after closing the detection connection. Fold both into a single
-        // connection lifecycle — detection and validation run sequentially against the same open
+        // Detection and validation run sequentially against the same open
         // connection, so we cut one connection round-trip per provisioning run (and avoid the
         // connection-pool churn in deployments with strict per-pod connection caps).
         BoxTableState tableState;
@@ -130,7 +126,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
             }
         }
 
-        // Spec 0027 R1 part 2: the runner sources its migration chain from its own injected
+        // The runner sources its migration chain from its own injected
         // IAmABoxMigrationCatalog (see SqlBoxMigrationRunner ctor) — the provisioner no longer
         // forwards the list. The provisioner still calls _catalog.All(...) above so the pre-lock
         // detection helper can infer current version from the column set.

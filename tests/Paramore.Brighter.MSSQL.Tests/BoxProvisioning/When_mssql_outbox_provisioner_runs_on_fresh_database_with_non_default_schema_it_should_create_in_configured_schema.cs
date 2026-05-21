@@ -60,7 +60,12 @@ public class When_mssql_outbox_provisioner_runs_on_fresh_database_with_non_defau
             outBoxTableName: _tableName,
             schemaName: NonDefaultSchema);
         var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        _provisioner = new MsSqlOutboxProvisioner(config, runner);
+        _provisioner = new MsSqlOutboxProvisioner(
+            new MsSqlBoxDetectionHelper(),
+            new MsSqlOutboxMigrationCatalog(),
+            new MsSqlPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

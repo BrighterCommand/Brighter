@@ -24,7 +24,11 @@ public class InboxProvisionerFreshDatabaseTests : IAsyncLifetime
             _connectionString,
             inboxTableName: _tableName);
         var runner = new SpannerBoxMigrationRunner(config);
-        _provisioner = new SpannerInboxProvisioner(config, runner);
+        _provisioner = new SpannerInboxProvisioner(
+            new SpannerBoxDetectionHelper(),
+            new SpannerPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

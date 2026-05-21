@@ -48,7 +48,11 @@ public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatch
             _connectionString,
             outBoxTableName: _tableName,
             binaryMessagePayload: true);
-        var provisioner = new SpannerOutboxProvisioner(config, new SpannerBoxMigrationRunner(config));
+        var provisioner = new SpannerOutboxProvisioner(
+            new SpannerBoxDetectionHelper(),
+            new SpannerPayloadModeValidator(),
+            config,
+            new SpannerBoxMigrationRunner(config));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
@@ -65,7 +69,11 @@ public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatch
             _connectionString,
             outBoxTableName: _tableName,
             binaryMessagePayload: false);
-        var provisioner = new SpannerOutboxProvisioner(config, new SpannerBoxMigrationRunner(config));
+        var provisioner = new SpannerOutboxProvisioner(
+            new SpannerBoxDetectionHelper(),
+            new SpannerPayloadModeValidator(),
+            config,
+            new SpannerBoxMigrationRunner(config));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());

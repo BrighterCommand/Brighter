@@ -21,7 +21,12 @@ public class When_sqlite_outbox_provisioner_finds_existing_table_without_history
             _connectionString,
             outBoxTableName: _tableName);
         var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
-        _provisioner = new SqliteOutboxProvisioner(config, runner);
+        _provisioner = new SqliteOutboxProvisioner(
+            new SqliteBoxDetectionHelper(),
+            new SqliteOutboxMigrationCatalog(),
+            new SqlitePayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

@@ -89,7 +89,12 @@ public class When_sqlite_runner_fails_mid_chain_it_should_roll_back_all_migratio
 
         //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
         var realRunner = new SqliteBoxMigrationRunner(realCatalog, config);
-        var provisioner = new SqliteOutboxProvisioner(config, realRunner);
+        var provisioner = new SqliteOutboxProvisioner(
+            new SqliteBoxDetectionHelper(),
+            new SqliteOutboxMigrationCatalog(),
+            new SqlitePayloadModeValidator(),
+            config,
+            realRunner);
         await provisioner.ProvisionAsync();
 
         //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).

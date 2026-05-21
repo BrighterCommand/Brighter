@@ -79,7 +79,7 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
     // the class remarks. {0} = table name (validated).
     // The table identifier is backtick-quoted so legal-but-reserved MySQL keyword names
     // (User, Order, Group, …) bootstrap correctly — V2 already backtick-quotes, so V1
-    // is the only asymmetric step. Per PR #4039 reviewer item F2-1.
+    // is the only asymmetric step. 
     private const string V1HistoricalDdl =
         """
         CREATE TABLE `{0}`
@@ -99,8 +99,7 @@ public class MySqlInboxMigrationCatalog : IAmABoxMigrationCatalog
         Identifiers.AssertSafe(
             configuration.InBoxTableName,
             nameof(IAmARelationalDatabaseConfiguration.InBoxTableName));
-        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE. Per PR #4039
-        // reviewer item M4-1 (F1c). See MySqlOutboxMigrationCatalog for the full rationale.
+        // Pass SchemaName so the builder schema-qualifies the CREATE TABLE. 
         if (configuration.SchemaName is not null)
         {
             Identifiers.AssertSafe(

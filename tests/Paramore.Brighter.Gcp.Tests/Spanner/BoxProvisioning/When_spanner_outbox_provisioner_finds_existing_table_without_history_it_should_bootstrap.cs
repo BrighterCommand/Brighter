@@ -25,7 +25,11 @@ public class When_spanner_outbox_provisioner_finds_existing_table_without_histor
             _connectionString,
             outBoxTableName: _tableName);
         var runner = new SpannerBoxMigrationRunner(config);
-        _provisioner = new SpannerOutboxProvisioner(config, runner);
+        _provisioner = new SpannerOutboxProvisioner(
+            new SpannerBoxDetectionHelper(),
+            new SpannerPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

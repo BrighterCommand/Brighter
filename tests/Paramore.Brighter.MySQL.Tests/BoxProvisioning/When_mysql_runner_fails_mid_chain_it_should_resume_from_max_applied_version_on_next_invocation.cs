@@ -93,7 +93,12 @@ public class When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied
 
         //Act + Assert (2) — retry with the real migration list via the provisioner.
         var realRunner = new MySqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
-        var provisioner = new MySqlOutboxProvisioner(config, realRunner);
+        var provisioner = new MySqlOutboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlOutboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            realRunner);
         await provisioner.ProvisionAsync();
 
         //Assert — V6 + V7 now applied; total exactly 5 history rows (V3 synthetic + V4..V7 applied).

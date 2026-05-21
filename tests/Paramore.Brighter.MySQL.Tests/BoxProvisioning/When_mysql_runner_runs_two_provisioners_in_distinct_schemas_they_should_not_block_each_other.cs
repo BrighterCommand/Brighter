@@ -63,9 +63,15 @@ public class When_mysql_runner_runs_two_provisioners_in_distinct_schemas_they_sh
             ConnectionStringFor(_billingDatabase), outBoxTableName: _tableName);
 
         var provisionerA = new MySqlOutboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlOutboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
             configA,
             new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), holdingLock));
         var provisionerB = new MySqlOutboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlOutboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
             configB,
             new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configB, TimeSpan.FromSeconds(1)));
 

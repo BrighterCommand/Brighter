@@ -33,10 +33,6 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// </summary>
 public class PostgreSqlOutboxProvisioner : SqlBoxProvisioner<NpgsqlConnection, NpgsqlTransaction>
 {
-    /// <summary>
-    /// Canonical ctor — Phase 8.2 of spec 0028. Takes the role-interface dependencies
-    /// explicitly so the provisioner does not reach for backend statics.
-    /// </summary>
     public PostgreSqlOutboxProvisioner(
         IAmAVersionDetectingMigrationHelper<NpgsqlConnection, NpgsqlTransaction> detectionHelper,
         IAmABoxMigrationCatalog catalog,
@@ -44,23 +40,6 @@ public class PostgreSqlOutboxProvisioner : SqlBoxProvisioner<NpgsqlConnection, N
         IAmARelationalDatabaseConfiguration configuration,
         IAmABoxMigrationRunner migrationRunner)
         : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Outbox)
-    {
-    }
-
-    /// <summary>
-    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
-    /// call-sites (extensions + integration tests). Synthesises default singletons for the
-    /// three role-interface dependencies; removed when the DI cascade lands in Phase 9.
-    /// </summary>
-    public PostgreSqlOutboxProvisioner(
-        IAmARelationalDatabaseConfiguration configuration,
-        IAmABoxMigrationRunner migrationRunner)
-        : this(
-            new PostgreSqlBoxDetectionHelper(),
-            new PostgreSqlOutboxMigrationCatalog(),
-            new PostgreSqlPayloadModeValidator(),
-            configuration,
-            migrationRunner)
     {
     }
 

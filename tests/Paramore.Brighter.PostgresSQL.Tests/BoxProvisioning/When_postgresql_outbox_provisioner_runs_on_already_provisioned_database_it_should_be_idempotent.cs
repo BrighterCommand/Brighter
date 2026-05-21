@@ -20,7 +20,12 @@ public class When_postgresql_outbox_provisioner_runs_on_already_provisioned_data
             _connectionString,
             outBoxTableName: _tableName);
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        _provisioner = new PostgreSqlOutboxProvisioner(config, runner);
+        _provisioner = new PostgreSqlOutboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlOutboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

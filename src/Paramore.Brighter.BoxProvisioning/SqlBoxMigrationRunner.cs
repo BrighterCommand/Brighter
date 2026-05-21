@@ -152,7 +152,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
             Identifiers.AssertSafe(schemaName, nameof(schemaName));
         }
 
-        // Spec 0027 R1 part 2: the runner sources its migration chain and fresh-install DDL
+        // The runner sources its migration chain and fresh-install DDL
         // from the injected catalog rather than via parameter. A catalog returning null for
         // either would surface inside ValidateMigrationsMonotonic / ExecuteFreshInstallAsync as
         // an opaque NRE; replace with a descriptive operator-facing diagnostic. Empty migration

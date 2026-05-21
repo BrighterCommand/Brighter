@@ -73,9 +73,10 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
     }
 
     /// <summary>
-    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
-    /// call-sites (extensions + integration tests). Synthesises a default
-    /// <see cref="MsSqlBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
+    /// Convenience ctor used by the <c>AddMsSqlOutbox</c>/<c>AddMsSqlInbox</c> registration
+    /// extensions: synthesises a default <see cref="MsSqlBoxDetectionHelper"/> so the
+    /// extension method doesn't have to resolve it from the container before the catalog
+    /// is in scope.
     /// </summary>
     public MsSqlBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,

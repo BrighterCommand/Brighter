@@ -50,7 +50,12 @@ public class When_mssql_table_has_spec_0023_era_history_at_v1_it_should_transiti
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new MsSqlOutboxProvisioner(config, runner);
+        var provisioner = new MsSqlOutboxProvisioner(
+            new MsSqlBoxDetectionHelper(),
+            new MsSqlOutboxMigrationCatalog(),
+            new MsSqlPayloadModeValidator(),
+            config,
+            runner);
 
         //Act
         await provisioner.ProvisionAsync();

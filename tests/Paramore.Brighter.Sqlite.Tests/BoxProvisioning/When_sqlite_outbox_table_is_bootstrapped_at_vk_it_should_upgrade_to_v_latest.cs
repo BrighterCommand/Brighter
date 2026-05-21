@@ -60,7 +60,12 @@ public class When_sqlite_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
-        var provisioner = new SqliteOutboxProvisioner(config, runner);
+        var provisioner = new SqliteOutboxProvisioner(
+            new SqliteBoxDetectionHelper(),
+            new SqliteOutboxMigrationCatalog(),
+            new SqlitePayloadModeValidator(),
+            config,
+            runner);
 
         //Act
         await provisioner.ProvisionAsync();

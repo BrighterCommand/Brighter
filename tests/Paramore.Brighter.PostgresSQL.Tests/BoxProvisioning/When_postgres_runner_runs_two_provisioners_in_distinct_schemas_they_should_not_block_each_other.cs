@@ -62,9 +62,15 @@ public class When_postgres_runner_runs_two_provisioners_in_distinct_schemas_they
             _connectionString, outBoxTableName: _tableName, schemaName: _billingSchema);
 
         var provisionerA = new PostgreSqlOutboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlOutboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
             configA,
             new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), holdingLock));
         var provisionerB = new PostgreSqlOutboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlOutboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
             configB,
             new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), configB, TimeSpan.FromSeconds(1)));
 

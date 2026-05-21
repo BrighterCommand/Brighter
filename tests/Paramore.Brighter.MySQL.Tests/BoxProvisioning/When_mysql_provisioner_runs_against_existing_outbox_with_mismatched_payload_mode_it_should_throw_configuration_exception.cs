@@ -46,7 +46,11 @@ public class When_mysql_provisioner_runs_against_existing_outbox_with_mismatched
             outBoxTableName: _tableName,
             binaryMessagePayload: true);
         var provisioner = new MySqlOutboxProvisioner(
-            config, new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MySqlBoxDetectionHelper(),
+            new MySqlOutboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
@@ -64,7 +68,11 @@ public class When_mysql_provisioner_runs_against_existing_outbox_with_mismatched
             outBoxTableName: _tableName,
             binaryMessagePayload: false);
         var provisioner = new MySqlOutboxProvisioner(
-            config, new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MySqlBoxDetectionHelper(),
+            new MySqlOutboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());

@@ -51,7 +51,12 @@ public class When_mysql_inbox_provisioner_runs_on_fresh_database_with_non_defaul
             inboxTableName: _tableName,
             schemaName: _nonDefaultDatabase);
         var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        _provisioner = new MySqlInboxProvisioner(config, runner);
+        _provisioner = new MySqlInboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlInboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

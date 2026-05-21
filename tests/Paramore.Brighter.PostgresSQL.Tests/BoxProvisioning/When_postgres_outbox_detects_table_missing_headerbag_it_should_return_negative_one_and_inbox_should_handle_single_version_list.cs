@@ -63,7 +63,12 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
 
         //Act — provisioner end-to-end.
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new PostgreSqlOutboxProvisioner(config, runner);
+        var provisioner = new PostgreSqlOutboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlOutboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert — message identifies this as not a Brighter outbox and names the discriminator.
@@ -97,7 +102,12 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
 
         //Act — provisioner end-to-end.
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new PostgreSqlInboxProvisioner(config, runner);
+        var provisioner = new PostgreSqlInboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlInboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert — message identifies this as not a Brighter inbox and names the discriminator.
@@ -132,7 +142,12 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
 
         //Act — provisioner end-to-end.
         var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new PostgreSqlOutboxProvisioner(config, runner);
+        var provisioner = new PostgreSqlOutboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlOutboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            runner);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert — message identifies the table as not matching any known schema version.

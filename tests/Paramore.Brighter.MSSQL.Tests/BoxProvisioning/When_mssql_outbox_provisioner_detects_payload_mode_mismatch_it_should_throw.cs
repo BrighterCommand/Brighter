@@ -39,7 +39,12 @@ public class When_mssql_outbox_provisioner_detects_payload_mode_mismatch_it_shou
             outBoxTableName: _tableName,
             binaryMessagePayload: true);
         var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        var provisioner = new MsSqlOutboxProvisioner(config, runner);
+        var provisioner = new MsSqlOutboxProvisioner(
+            new MsSqlBoxDetectionHelper(),
+            new MsSqlOutboxMigrationCatalog(),
+            new MsSqlPayloadModeValidator(),
+            config,
+            runner);
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(

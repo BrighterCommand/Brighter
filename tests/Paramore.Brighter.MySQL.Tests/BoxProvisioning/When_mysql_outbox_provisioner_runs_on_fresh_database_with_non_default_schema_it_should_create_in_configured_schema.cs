@@ -64,7 +64,12 @@ public class When_mysql_outbox_provisioner_runs_on_fresh_database_with_non_defau
             outBoxTableName: _tableName,
             schemaName: _nonDefaultDatabase);
         var runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
-        _provisioner = new MySqlOutboxProvisioner(config, runner);
+        _provisioner = new MySqlOutboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlOutboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

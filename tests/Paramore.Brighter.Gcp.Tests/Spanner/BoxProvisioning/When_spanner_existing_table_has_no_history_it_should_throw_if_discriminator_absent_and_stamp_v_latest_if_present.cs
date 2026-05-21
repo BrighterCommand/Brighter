@@ -51,7 +51,11 @@ public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
             _connectionString,
             outBoxTableName: _tableName);
         var runner = new SpannerBoxMigrationRunner(config);
-        _provisioner = new SpannerOutboxProvisioner(config, runner);
+        _provisioner = new SpannerOutboxProvisioner(
+            new SpannerBoxDetectionHelper(),
+            new SpannerPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]
@@ -168,7 +172,11 @@ public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
             _connectionString,
             inboxTableName: _tableName);
         var runner = new SpannerBoxMigrationRunner(config);
-        _provisioner = new SpannerInboxProvisioner(config, runner);
+        _provisioner = new SpannerInboxProvisioner(
+            new SpannerBoxDetectionHelper(),
+            new SpannerPayloadModeValidator(),
+            config,
+            runner);
     }
 
     [Fact]

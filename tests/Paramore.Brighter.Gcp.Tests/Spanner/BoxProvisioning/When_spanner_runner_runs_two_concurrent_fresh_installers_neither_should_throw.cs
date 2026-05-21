@@ -58,9 +58,15 @@ public class SpannerConcurrentFreshInstallTests : IAsyncLifetime
         //the loser hits a Spanner AlreadyExists on the PK (BoxTableName, MigrationVersion)
         //which currently surfaces as an unrecoverable startup error.
         var provisionerA = new SpannerOutboxProvisioner(
-            _config, new SpannerBoxMigrationRunner(_config));
+            new SpannerBoxDetectionHelper(),
+            new SpannerPayloadModeValidator(),
+            _config,
+            new SpannerBoxMigrationRunner(_config));
         var provisionerB = new SpannerOutboxProvisioner(
-            _config, new SpannerBoxMigrationRunner(_config));
+            new SpannerBoxDetectionHelper(),
+            new SpannerPayloadModeValidator(),
+            _config,
+            new SpannerBoxMigrationRunner(_config));
 
         //Act
         var act = async () => await Task.WhenAll(

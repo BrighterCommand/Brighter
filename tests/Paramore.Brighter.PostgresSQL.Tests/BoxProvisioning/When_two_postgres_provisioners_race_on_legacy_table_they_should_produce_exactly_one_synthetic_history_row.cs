@@ -51,8 +51,18 @@ public class When_two_postgres_provisioners_race_on_legacy_table_they_should_pro
         await SeedOutboxMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _outboxTableName);
-        var provisionerA = new PostgreSqlOutboxProvisioner(config, new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
-        var provisionerB = new PostgreSqlOutboxProvisioner(config, new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+        var provisionerA = new PostgreSqlOutboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlOutboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+        var provisionerB = new PostgreSqlOutboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlOutboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
@@ -87,8 +97,18 @@ public class When_two_postgres_provisioners_race_on_legacy_table_they_should_pro
         await SeedInboxMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _inboxTableName);
-        var provisionerA = new PostgreSqlInboxProvisioner(config, new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
-        var provisionerB = new PostgreSqlInboxProvisioner(config, new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+        var provisionerA = new PostgreSqlInboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlInboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+        var provisionerB = new PostgreSqlInboxProvisioner(
+            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlInboxMigrationCatalog(),
+            new PostgreSqlPayloadModeValidator(),
+            config,
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());

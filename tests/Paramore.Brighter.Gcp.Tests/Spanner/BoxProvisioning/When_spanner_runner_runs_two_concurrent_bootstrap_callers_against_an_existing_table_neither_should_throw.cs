@@ -69,8 +69,16 @@ public class SpannerConcurrentBootstrapTests : IAsyncLifetime
             await ddl.ExecuteNonQueryAsync();
         }
 
-        var provisionerA = new SpannerOutboxProvisioner(_config, new SpannerBoxMigrationRunner(_config));
-        var provisionerB = new SpannerOutboxProvisioner(_config, new SpannerBoxMigrationRunner(_config));
+        var provisionerA = new SpannerOutboxProvisioner(
+            new SpannerBoxDetectionHelper(),
+            new SpannerPayloadModeValidator(),
+            _config,
+            new SpannerBoxMigrationRunner(_config));
+        var provisionerB = new SpannerOutboxProvisioner(
+            new SpannerBoxDetectionHelper(),
+            new SpannerPayloadModeValidator(),
+            _config,
+            new SpannerBoxMigrationRunner(_config));
 
         //Act
         var act = async () => await Task.WhenAll(

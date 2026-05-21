@@ -50,7 +50,12 @@ public class When_mssql_bootstraps_legacy_v1_outbox_to_v7_it_should_complete_wit
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, MigrationLockTimeout);
-        var provisioner = new MsSqlOutboxProvisioner(config, runner);
+        var provisioner = new MsSqlOutboxProvisioner(
+            new MsSqlBoxDetectionHelper(),
+            new MsSqlOutboxMigrationCatalog(),
+            new MsSqlPayloadModeValidator(),
+            config,
+            runner);
 
         //Act — measure the wall-clock time of the public ProvisionAsync entry point.
         var stopwatch = Stopwatch.StartNew();

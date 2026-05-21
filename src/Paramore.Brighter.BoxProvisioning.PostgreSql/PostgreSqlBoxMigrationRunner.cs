@@ -73,9 +73,10 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     }
 
     /// <summary>
-    /// Backward-compatible ctor preserving the spec 0027 public surface — used by existing
-    /// call-sites (extensions + integration tests). Synthesises a default
-    /// <see cref="PostgreSqlBoxDetectionHelper"/>; removed when DI cascade lands in Phase 9.
+    /// Convenience ctor used by the <c>AddPostgreSqlOutbox</c>/<c>AddPostgreSqlInbox</c>
+    /// registration extensions: synthesises a default <see cref="PostgreSqlBoxDetectionHelper"/>
+    /// so the extension method doesn't have to resolve it from the container before the catalog
+    /// is in scope.
     /// </summary>
     public PostgreSqlBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,
