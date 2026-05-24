@@ -107,6 +107,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         );
 
         headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
+        headers.Bag.Add(ASBConstants.SequenceNumberBagKey, azureServiceBusMessage.SequenceNumber);
             
         foreach (var property in azureServiceBusMessage.ApplicationProperties)
         {

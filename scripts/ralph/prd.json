@@ -1,0 +1,252 @@
+{
+  "project": "Paramore.Brighter",
+  "branchName": "feature/3828-AsyncAPI-Neuroglia-SDK",
+  "description": "Migrate AsyncAPI 3.0 document generation from custom POCOs to Neuroglia AsyncAPI .NET SDK (asyncapi/net-sdk), adopting SDK types, fluent builders, validation, DI, and serialization",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add Neuroglia SDK packages and update target frameworks",
+      "description": "As a maintainer, I need the Neuroglia AsyncAPI SDK packages added to the solution so all subsequent stories can reference SDK types.",
+      "acceptanceCriteria": [
+        "Neuroglia.AsyncApi.Core version 3.0.6 added to Directory.Packages.props",
+        "Neuroglia.AsyncApi.IO version 3.0.6 added to Directory.Packages.props",
+        "Paramore.Brighter.AsyncAPI.csproj references both Neuroglia.AsyncApi.Core and Neuroglia.AsyncApi.IO",
+        "Paramore.Brighter.AsyncAPI.csproj targets net8.0;net9.0;net10.0 (drops net6.0, net7.0)",
+        "Paramore.Brighter.AsyncAPI.NJsonSchema.csproj targets net8.0;net9.0;net10.0",
+        "Direct YamlDotNet PackageReference removed from Paramore.Brighter.AsyncAPI.csproj (comes transitively via SDK)",
+        "dotnet restore succeeds with no version conflict warnings",
+        "dotnet build succeeds for both AsyncAPI projects (existing code still compiles alongside new packages)",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "CRITICAL CODEBASE FACTS:\n1. This repo uses central package management via Directory.Packages.props — do NOT specify versions on PackageReference in csproj files\n2. Source targets previously used $(BrighterCoreTargetFrameworks) but for this package we need explicit TFMs since the SDK only supports net8.0+\n3. The SDK targets net8.0 and net9.0; net10.0 references net9.0 libs via forward compatibility\n4. YamlDotNet 16.3.0 is already in Directory.Packages.props — the SDK brings it transitively so we can remove the direct reference\n5. Keep System.Text.Json reference for now — NJsonSchemaGenerator still uses it\n6. The SDK also transitively brings FluentValidation, JsonSchema.Net, and 15+ Neuroglia.* packages — this is acceptable"
+    },
+    {
+      "id": "US-002",
+      "title": "Change IAmASchemaGenerator to return V3SchemaDefinition",
+      "description": "As a developer extending Brighter, I want the schema generator interface to return the SDK's schema type directly so there's no conversion layer.",
+      "acceptanceCriteria": [
+        "IAmASchemaGenerator.GenerateAsync returns Task<Neuroglia.AsyncApi.v3.V3SchemaDefinition?> instead of Task<JsonElement?>",
+        "Using directive for Neuroglia.AsyncApi.v3 added to IAmASchemaGenerator.cs",
+        "System.Text.Json using removed from IAmASchemaGenerator.cs if no longer needed",
+        "XML documentation on the interface updated to describe the new return type",
+        "dotnet build succeeds for Paramore.Brighter.AsyncAPI (NJsonSchemaGenerator and generator will have compile errors — that's expected, fixed in US-003 and US-004)",
+        "Typecheck passes for Paramore.Brighter.AsyncAPI project only"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "V3SchemaDefinition is a record in Neuroglia.AsyncApi.v3 with:\n- SchemaFormat (string?) — e.g. 'application/schema+json;version=draft-07'\n- Schema (object) — the actual schema content, accepts JsonElement, JsonNode, or any serializable object\n- Reference (string?) — for $ref usage\n\nThe interface change is intentionally done first so that US-003 and US-004 can implement against the new contract.\n\nIMPORTANT: Only modify IAmASchemaGenerator.cs in this story. Do NOT fix compile errors in other files — those are handled in subsequent stories."
+    },
+    {
+      "id": "US-003",
+      "title": "Update NJsonSchemaGenerator to return V3SchemaDefinition",
+      "description": "As a developer, I need the NJsonSchema implementation to return the SDK's schema type so it satisfies the updated interface.",
+      "acceptanceCriteria": [
+        "NJsonSchemaGenerator.GenerateAsync returns Task<V3SchemaDefinition?> matching the updated IAmASchemaGenerator interface",
+        "For null requestType: returns a V3SchemaDefinition with SchemaFormat='application/schema+json;version=draft-07' and Schema set to a JsonElement representing {}",
+        "For valid requestType: returns V3SchemaDefinition with SchemaFormat='application/schema+json;version=draft-07' and Schema set to the JsonElement from NJsonSchema",
+        "On exception: logs warning and returns V3SchemaDefinition with empty object schema (same graceful degradation as before)",
+        "Paramore.Brighter.AsyncAPI.NJsonSchema.csproj has a reference to Neuroglia.AsyncApi.Core (for V3SchemaDefinition type)",
+        "dotnet build succeeds for Paramore.Brighter.AsyncAPI.NJsonSchema",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "NJsonSchemaGenerator is in a separate project (Paramore.Brighter.AsyncAPI.NJsonSchema) to isolate the NJsonSchema dependency.\n\nThe Schema property on V3SchemaDefinition is typed as object, so JsonElement works directly.\n\nKeep using NJsonSchema.JsonSchema.FromType(requestType).ToJson() → JsonDocument.Parse → Clone() pattern. Wrap the resulting JsonElement in a V3SchemaDefinition.\n\nThe NJsonSchema project needs a PackageReference to Neuroglia.AsyncApi.Core (add to csproj without version — central package management)."
+    },
+    {
+      "id": "US-004",
+      "title": "Replace custom POCOs with SDK types in AsyncApiDocumentGenerator",
+      "description": "As a maintainer, I want the generator to construct V3AsyncApiDocument using SDK types so we eliminate the custom model layer.",
+      "acceptanceCriteria": [
+        "AsyncApiDocumentGenerator constructs V3AsyncApiDocument instead of custom AsyncApiDocument",
+        "Channels use V3ChannelDefinition with Address property",
+        "Operations use V3OperationDefinition with V3OperationAction.Send / V3OperationAction.Receive enum",
+        "Messages use V3MessageDefinition with Name, ContentType, Payload (V3SchemaDefinition)",
+        "References use V3ReferenceDefinition instead of custom AsyncApiRef",
+        "Components use V3ComponentDefinitionCollection",
+        "Servers use V3ServerDefinition instead of custom AsyncApiServer",
+        "Info uses V3ApiInfo instead of custom AsyncApiInfo",
+        "GenerationContext record updated to use SDK dictionary types",
+        "All 8 files under Model/ directory are deleted",
+        "IAmAnAsyncApiDocumentGenerator.GenerateAsync return type changed to Task<V3AsyncApiDocument>",
+        "dotnet build succeeds for Paramore.Brighter.AsyncAPI",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "CRITICAL SDK TYPE MAPPINGS:\n- AsyncApiDocument → V3AsyncApiDocument (namespace: Neuroglia.AsyncApi.v3)\n- AsyncApiInfo → V3ApiInfo\n- AsyncApiChannel → V3ChannelDefinition\n- AsyncApiOperation → V3OperationDefinition\n- AsyncApiMessage → V3MessageDefinition\n- AsyncApiServer → V3ServerDefinition\n- AsyncApiComponents → V3ComponentDefinitionCollection\n- AsyncApiRef → V3ReferenceDefinition (has Reference property for $ref string)\n- Operation action strings 'send'/'receive' → V3OperationAction.Send / V3OperationAction.Receive enum\n\nV3OperationDefinition.Channel is a V3ChannelDefinition (not a ref) — set its Reference property for $ref behavior.\nV3OperationDefinition.Messages is a list of V3MessageDefinition (not refs) — set Reference property on each.\nV3ChannelDefinition.Messages is a dictionary of V3MessageDefinition.\nV3ComponentDefinitionCollection.Messages is a dictionary of V3MessageDefinition.\n\nThe GenerationContext record currently bundles Dictionary<string, AsyncApiChannel> etc. — update to Dictionary<string, V3ChannelDefinition> etc.\n\nDo NOT update tests in this story — they will fail. Tests are updated in US-006."
+    },
+    {
+      "id": "US-005",
+      "title": "Update AsyncApiOptions to use SDK server type",
+      "description": "As a developer, I need AsyncApiOptions.Servers to use V3ServerDefinition so configuration matches the SDK types.",
+      "acceptanceCriteria": [
+        "AsyncApiOptions.Servers property type changed from Dictionary<string, AsyncApiServer>? to Dictionary<string, V3ServerDefinition>?",
+        "AsyncApiDocumentGenerator defensive copy of Servers updated for V3ServerDefinition",
+        "dotnet build succeeds for Paramore.Brighter.AsyncAPI",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Simple type swap. V3ServerDefinition has Host, Protocol, ProtocolVersion, Description, and many more properties (PathName, Variables, Security, Tags, Bindings, etc.).\n\nThe defensive copy in GenerateAsync() currently does:\n  Servers = _options.Servers != null ? new Dictionary<string, AsyncApiServer>(_options.Servers) : null\nChange AsyncApiServer to V3ServerDefinition."
+    },
+    {
+      "id": "US-006",
+      "title": "Replace serialization with SDK IAsyncApiDocumentWriter",
+      "description": "As a maintainer, I want to use the SDK's built-in serializer for spec-compliant JSON and YAML output.",
+      "acceptanceCriteria": [
+        "AsyncApiHostExtensions resolves IAsyncApiDocumentWriter from DI",
+        "JSON output uses IAsyncApiDocumentWriter.WriteAsync with AsyncApiDocumentFormat.Json",
+        "YAML output uses IAsyncApiDocumentWriter.WriteAsync with AsyncApiDocumentFormat.Yaml",
+        "Custom System.Text.Json serialization code removed (static JsonSerializerOptions, JsonSerializer.Serialize calls)",
+        "Custom YamlDotNet JSON-to-YAML conversion code removed",
+        "JSON file written to {outputPath}.json (or outputPath if it already ends in .json)",
+        "YAML file written alongside with .yaml extension",
+        "Parent directory created if it doesn't exist",
+        "Method still returns V3AsyncApiDocument",
+        "dotnet build succeeds",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "SDK serialization API:\n- IAsyncApiDocumentWriter is registered via services.AddAsyncApiIO() (see US-007)\n- Method: Task WriteAsync(IAsyncApiDocument document, Stream stream, AsyncApiDocumentFormat format, CancellationToken cancellationToken)\n- AsyncApiDocumentFormat enum: Yaml = 1, Json = 2\n- V3AsyncApiDocument implements IAsyncApiDocument\n\nUse MemoryStream + StreamWriter to capture output, then write to file. Or use FileStream directly.\n\nRemove the static s_serializerOptions field and the JSON→YAML conversion logic."
+    },
+    {
+      "id": "US-007",
+      "title": "Update DI registration to include SDK services",
+      "description": "As a developer, I want UseAsyncApi() to wire up all SDK services automatically so I don't need manual registration.",
+      "acceptanceCriteria": [
+        "UseAsyncApi() calls AddAsyncApiIO() (from Neuroglia.AsyncApi.IO) to register IAsyncApiDocumentWriter and IAsyncApiDocumentReader",
+        "IAmAnAsyncApiDocumentGenerator still registered as singleton with factory resolving IAmConsumerOptions and IAmAProducerRegistry",
+        "NJsonSchemaGenerator auto-discovery via reflection still works",
+        "IBrighterBuilder returned for chaining",
+        "dotnet build succeeds",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "AddAsyncApiIO() is an extension method on IServiceCollection from the Neuroglia.AsyncApi.IO package. It registers:\n- IAsyncApiDocumentWriter\n- IAsyncApiDocumentReader\n- Various serialization/deserialization services\n\nCall it inside UseAsyncApi() before the existing registrations:\n  services.AddAsyncApiIO();\n\nKeep the existing TryAddSingleton for NJsonSchemaGenerator via reflection.\nKeep the existing factory for IAmAnAsyncApiDocumentGenerator."
+    },
+    {
+      "id": "US-008",
+      "title": "Evaluate and update $ref rewriting for SDK schema types",
+      "description": "As a developer, I need embedded JSON Schema $ref values to resolve correctly when using SDK types.",
+      "acceptanceCriteria": [
+        "Determine if V3SchemaDefinition.Schema (containing JsonElement from NJsonSchema) preserves internal $ref paths through SDK serialization",
+        "If $ref rewriting is still needed: adapt RewriteEmbeddedSchemaRefs and RewriteRefs to work with V3SchemaDefinition (Schema property is object — cast to JsonElement)",
+        "If SDK handles it automatically: remove RewriteEmbeddedSchemaRefs, RewriteRefs, and RewriteRefProperty methods",
+        "A message with a complex type containing nested $ref references produces valid output",
+        "A message with a simple type has its payload unchanged",
+        "dotnet build succeeds",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "The current RewriteEmbeddedSchemaRefs method walks JsonElement payloads and rewrites #/definitions/Foo → #/components/messages/{name}/payload/definitions/Foo.\n\nWith the SDK, V3SchemaDefinition.Schema is typed as object. NJsonSchemaGenerator sets it to a JsonElement. The SDK serializer may or may not walk into that JsonElement to resolve refs.\n\nTest approach:\n1. Generate a document with a complex type that produces $ref in NJsonSchema output\n2. Serialize via SDK writer\n3. Check if $refs in the serialized output resolve correctly\n4. If not, keep the rewriting logic but adapt it to extract JsonElement from V3SchemaDefinition.Schema\n\nThe RewriteRefs currently uses System.Text.Json.Nodes (JsonObject, JsonArray, JsonNode) — these should still work since we're converting JsonElement to JsonNode for rewriting."
+    },
+    {
+      "id": "US-009",
+      "title": "Rewrite all unit tests for SDK types",
+      "description": "As a maintainer, I need all tests updated to assert against SDK types so the test suite passes.",
+      "acceptanceCriteria": [
+        "When_Creating_AsyncApi_Options tests updated for V3ServerDefinition",
+        "When_Registering_AsyncApi_Via_DI tests updated for SDK service types and V3SchemaDefinition",
+        "When_Generating_Document_From_Subscriptions tests updated for V3AsyncApiDocument, V3ChannelDefinition, V3OperationDefinition, V3MessageDefinition",
+        "When_Generating_Document_From_Publications tests updated similarly",
+        "When_Generating_Document_From_Assembly_Scanning tests updated similarly",
+        "When_Deduplicating_Channels_And_Messages tests updated similarly",
+        "When_Generating_Document_Multiple_Times tests updated similarly",
+        "When_Generating_Schema_With_NJsonSchema tests updated for V3SchemaDefinition return type",
+        "All tests pass: dotnet test tests/Paramore.Brighter.AsyncAPI.Tests/",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "This is the largest story but it's purely mechanical — update type names and property access patterns.\n\nKey SDK property differences:\n- V3AsyncApiDocument.Info is V3ApiInfo (not AsyncApiInfo)\n- V3AsyncApiDocument.Channels is IDictionary<string, V3ChannelDefinition>\n- V3ChannelDefinition.Address is string\n- V3OperationDefinition.Action is V3OperationAction enum (not string) — compare with V3OperationAction.Send / .Receive\n- V3OperationDefinition.Channel is V3ChannelDefinition with Reference property for $ref\n- V3MessageDefinition.Payload is V3SchemaDefinition (not JsonElement?)\n- V3ReferenceDefinition.Reference is the $ref string\n\nFor assertions on operation action: Assert.Equal(V3OperationAction.Send, op.Action) instead of Assert.Equal(\"send\", op.Action)\nFor assertions on $ref: check the Reference property on V3ReferenceDefinition or V3ChannelDefinition\n\nTest project needs PackageReference to Neuroglia.AsyncApi.Core (for type access in assertions).\n\nFakeItEasy mocks of IAmASchemaGenerator need updating: A.CallTo(() => schema.GenerateAsync(...)).Returns(new V3SchemaDefinition { ... }) instead of returning JsonElement."
+    },
+    {
+      "id": "US-010",
+      "title": "Rewrite serialization and file output tests",
+      "description": "As a maintainer, I need the file generation and serialization tests to work with the SDK writer.",
+      "acceptanceCriteria": [
+        "When_Generating_AsyncApi_Document_File tests updated to use SDK serialization output",
+        "When_Rewriting_Embedded_Schema_Refs tests updated for V3SchemaDefinition (or removed if SDK handles refs)",
+        "Model/When_Serializing_AsyncApi_Document tests removed (custom POCOs no longer exist)",
+        "Tests verify JSON file is valid AsyncAPI 3.0 document",
+        "Tests verify YAML file is valid and parseable",
+        "Tests verify parent directory creation",
+        "All tests pass: dotnet test tests/Paramore.Brighter.AsyncAPI.Tests/",
+        "Tests pass"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "The serialization tests need the most rework because:\n1. Custom POCO serialization tests (Model/When_Serializing_AsyncApi_Document.cs) should be deleted entirely\n2. File output tests need IAsyncApiDocumentWriter registered in the test DI container\n3. SDK serialization output format may differ from the custom System.Text.Json output (different property ordering, whitespace, null handling)\n4. Tests should validate semantic correctness (parse and check structure) rather than exact string comparison\n\nFor test DI setup: call services.AddAsyncApiIO() in the test service provider to get a real IAsyncApiDocumentWriter.\n\nThe ref rewriting tests depend on US-008 outcome — if refs are handled by SDK, delete When_Rewriting_Embedded_Schema_Refs.cs entirely."
+    },
+    {
+      "id": "US-011",
+      "title": "Update sample applications for SDK types",
+      "description": "As a developer learning Brighter, I want the sample apps to demonstrate the SDK-based API.",
+      "acceptanceCriteria": [
+        "RMQAsyncAPI/Program.cs updated: server configuration uses V3ServerDefinition instead of custom AsyncApiServer",
+        "KafkaAsyncAPI/Program.cs updated: server configuration uses V3ServerDefinition instead of custom AsyncApiServer",
+        "Both samples build successfully: dotnet build samples/AsyncAPI/RMQAsyncAPI/ and dotnet build samples/AsyncAPI/KafkaAsyncAPI/",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "Simple type swap in sample Program.cs files. Change:\n  Servers = new Dictionary<string, AsyncApiServer>\n  {\n      [\"production\"] = new AsyncApiServer { Host = \"...\", Protocol = \"...\" }\n  }\nTo:\n  Servers = new Dictionary<string, V3ServerDefinition>\n  {\n      [\"production\"] = new V3ServerDefinition { Host = \"...\", Protocol = \"...\" }\n  }\n\nAdd using Neuroglia.AsyncApi.v3; to both files.\nRemove using for the old Model namespace."
+    },
+    {
+      "id": "US-012",
+      "title": "Adopt SDK fluent builders for document construction",
+      "description": "As a developer, I want to use the SDK's fluent builder API for cleaner document construction.",
+      "acceptanceCriteria": [
+        "AsyncApiDocumentGenerator uses SDK fluent builders (V3AsyncApiDocumentBuilder or equivalent) for document construction where available",
+        "Channel, operation, message, and component construction uses builder pattern if SDK provides one",
+        "If SDK builders don't fit the dynamic generation pattern, document why in a code comment and keep direct construction",
+        "No behavioral changes — all existing tests still pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "The SDK provides fluent builders in Neuroglia.AsyncApi.FluentBuilders namespace (comes transitively via IO package). Key builders:\n- V3AsyncApiDocumentBuilder\n- V3ChannelDefinitionBuilder\n- V3OperationDefinitionBuilder\n- V3MessageDefinitionBuilder\n\nHowever, the current generator builds documents dynamically (iterating subscriptions/publications, deduplicating, etc.). Fluent builders may not fit well with this dynamic pattern. If builders are awkward for this use case, it's acceptable to keep direct object construction and document the rationale.\n\nEvaluate honestly — don't force builders if they make the code harder to understand."
+    },
+    {
+      "id": "US-013",
+      "title": "Add SDK validation for generated documents",
+      "description": "As a developer, I want generated documents validated by the SDK to catch structural errors early.",
+      "acceptanceCriteria": [
+        "Generated V3AsyncApiDocument is validated after construction, before serialization",
+        "Validation errors are logged as warnings (not thrown) to maintain graceful degradation",
+        "Invalid documents are still written to disk (validation is advisory)",
+        "A test verifies validation runs without errors for a well-formed document",
+        "All tests pass",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "The SDK includes FluentValidation validators. Check if there's a V3AsyncApiDocumentValidator or similar that can be resolved from DI or instantiated directly.\n\nIf validation is available, add it in AsyncApiHostExtensions.GenerateAsyncApiDocumentAsync() between generation and serialization.\n\nIf the SDK doesn't expose validation as a simple call, skip this story and note it as not applicable."
+    },
+    {
+      "id": "US-014",
+      "title": "Clean up: remove unused imports, update README, verify full test suite",
+      "description": "As a maintainer, I want the migration fully cleaned up with no leftover references to custom types.",
+      "acceptanceCriteria": [
+        "No remaining references to custom AsyncApiDocument, AsyncApiInfo, AsyncApiChannel, AsyncApiOperation, AsyncApiMessage, AsyncApiComponents, AsyncApiRef, AsyncApiServer types",
+        "No remaining using directives for the old Model namespace",
+        "README.md in src/Paramore.Brighter.AsyncAPI/ updated to mention Neuroglia SDK",
+        "Full test suite passes: dotnet test tests/Paramore.Brighter.AsyncAPI.Tests/",
+        "Full build passes: dotnet build Brighter.slnx",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "Final cleanup story. Grep the entire codebase for references to the old custom types. Check:\n- using Paramore.Brighter.AsyncAPI.Model;\n- Any remaining AsyncApiRef, AsyncApiServer, etc. references\n- Old comments referencing custom POCOs\n- The README.md in the AsyncAPI package should describe SDK usage\n\nRun the full solution build (dotnet build Brighter.slnx) to catch any cross-project issues."
+    }
+  ]
+}
