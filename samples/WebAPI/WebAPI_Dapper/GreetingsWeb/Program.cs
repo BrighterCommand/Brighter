@@ -11,13 +11,11 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Extensions.Diagnostics;
-using TransportMaker;
 
 IHost host = CreateHostBuilder(args).Build();
 
 host.CheckDbIsUp(ApplicationType.Greetings);
 host.MigrateDatabase();
-host.CreateOutbox(ApplicationType.Greetings, "Greetings", ConfigureTransport.HasBinaryMessagePayload());
 
 host.Run();
 return;

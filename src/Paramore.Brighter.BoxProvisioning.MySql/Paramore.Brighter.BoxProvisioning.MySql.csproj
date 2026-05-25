@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>MySQL box provisioning for Paramore.Brighter. Provides automatic creation and migration of inbox and outbox tables in MySQL at application startup.</Description>
+    <Authors>Ian Cooper</Authors>
+    <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>MySQL;Database;Outbox;Inbox;Provisioning;Migration;Command;Event;Command Processor;Messaging;Brighter</PackageTags>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning\Paramore.Brighter.BoxProvisioning.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Inbox.MySql\Paramore.Brighter.Inbox.MySql.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Outbox.MySql\Paramore.Brighter.Outbox.MySql.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MySqlConnector"/>
+  </ItemGroup>
+
+</Project>

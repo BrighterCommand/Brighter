@@ -403,7 +403,7 @@ namespace Paramore.Brighter
         private DbCommand CreateGetCommand(DbConnection connection, int inboxTimeout, IDbDataParameter[] parameters)
             => CreateCommand(connection, GenerateSqlText(queries.GetCommand), inboxTimeout, parameters);
 
-        private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
+        protected virtual string GenerateSqlText(string sqlFormat, params string[] orderedParams)
             => string.Format(sqlFormat, orderedParams.Prepend(DatabaseConfiguration.InBoxTableName).ToArray());
 
         protected virtual DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout,

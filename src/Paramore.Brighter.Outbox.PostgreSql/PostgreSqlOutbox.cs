@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Data;
+using System.Linq;
 using Npgsql;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -81,4 +82,15 @@ public class PostgreSqlOutbox : RelationDatabaseOutbox
     {
         return new NpgsqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value, DbType = dbType };
     }
+
+    /// <summary>
+    /// Lowercase-then-quote the configured outbox table name so reserved-keyword names
+    /// (Order, User, Group, …) parse cleanly and mixed-case configured values resolve to
+    /// the same physical table as PG's natural case-fold of the legacy unquoted form would
+    /// have produced.
+    /// </summary>
+    protected override string GenerateSqlText(string sqlFormat, params string[] orderedParams)
+        => string.Format(
+            sqlFormat,
+            orderedParams.Prepend(PgIdentifier.Quote(DatabaseConfiguration.OutBoxTableName)).ToArray());
 }
