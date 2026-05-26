@@ -33,9 +33,7 @@ public static class CredentialsChain
         var serviceUrl = Environment.GetEnvironmentVariable("AWS_SERVICE_URL");
         if (!string.IsNullOrEmpty(serviceUrl) && Uri.TryCreate(serviceUrl, UriKind.Absolute, out var uri))
         {
-            // Short vhost form ({bucket}.{authority}) works on Floci where the full
-            // region-qualified form ({bucket}.s3.{region}.{authority}) does not — see floci-io/floci#977.
-            return $"{uri.Scheme}://{{BucketName}}.{uri.Authority}";
+            return $"http://{{BucketName}}.s3.{{BucketRegion}}.{uri.Authority}";
         }
 
         return S3LuggageOptions.DefaultBucketAddressTemplate;

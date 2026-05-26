@@ -451,7 +451,7 @@ jobs:
 
     services:
       floci:
-        image: floci/floci:latest
+        image: floci/floci:1.5.19
         ports:
           - 4566:4566
         options: >-
