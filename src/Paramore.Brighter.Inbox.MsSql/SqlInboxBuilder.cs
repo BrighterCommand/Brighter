@@ -70,15 +70,22 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// Get the DDL statements to create an Inbox in MSSQL
         /// </summary>
         /// <param name="inboxTableName">The name you want to use for the table</param>
+        /// <param name="binaryMessagePayload">Should the command body be stored as binary.</param>
+        /// <param name="schemaName">
+        /// Optional MSSQL schema name. When non-null, the emitted DDL schema-qualifies the
+        /// table as <c>[schemaName].[inboxTableName]</c>; otherwise the table is emitted
+        /// unqualified and lands in the connection's default schema. Per PR #4039 reviewer
+        /// item M4-1 (F1a): callers configuring <see cref="Paramore.Brighter.IAmARelationalDatabaseConfiguration.SchemaName"/>
+        /// rely on the table actually landing in that schema, which the unqualified form
+        /// cannot guarantee.
+        /// </param>
         /// <returns>The required DDL</returns>
-        public static string GetDDL(string inboxTableName, bool binaryMessagePayload = false)
+        public static string GetDDL(string inboxTableName, bool binaryMessagePayload = false, string? schemaName = null)
         {
-            if (binaryMessagePayload)
-            {
-                return string.Format(BinaryInboxDDL, inboxTableName);
-            }
-
-            return string.Format(TextInboxDDL, inboxTableName);
+            var qualifiedTable = schemaName is null
+                ? inboxTableName
+                : $"[{schemaName}].[{inboxTableName}]";
+            return string.Format(binaryMessagePayload ? BinaryInboxDDL : TextInboxDDL, qualifiedTable);
         }
 
         /// <summary>

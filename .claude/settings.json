@@ -14,20 +14,6 @@
     ],
     "ask": []
   },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "slopwatch analyze -d . --hook",
-            "timeout": 60000
-          }
-        ]
-      }
-    ]
-  },
   "enabledPlugins": {
     "commit-commands@claude-plugins-official": true,
     "code-review@claude-plugins-official": true,

@@ -32,7 +32,7 @@ public class CloudEventsTransformerTests
     {
         //act
         var body = _message.Body;
-        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
+        _transformer.InitializeWrapFromAttributeParams(_source.ToString(), _type, null, null, _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
         var cloudEvents = _transformer.Wrap(_message, new Publication
         {
             DataSchema = _dataSchema,
@@ -55,7 +55,7 @@ public class CloudEventsTransformerTests
     {
         //act
         var body = _message.Body;
-        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
         var cloudEvents = _transformer.Wrap(_message, new Publication
         {
             DataSchema = _dataSchema,
@@ -91,7 +91,7 @@ public class CloudEventsTransformerTests
             new MessageBody([]) );
         
         var body = _message.Body;
-        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null,  _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
         var cloudEvents = _transformer.Wrap(_message, new Publication
         {
             DataSchema = _dataSchema,
@@ -127,7 +127,7 @@ public class CloudEventsTransformerTests
             new MessageBody("teste"));
         
         var body = _message.Body;
-        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
         var cloudEvents = _transformer.Wrap(_message, new Publication
         {
             DataSchema = _dataSchema,
@@ -185,7 +185,7 @@ public class CloudEventsTransformerTests
         const string subject = "CloudEventsTransformerAlternative"; 
 
         //act
-        _transformer.InitializeWrapFromAttributeParams(source, type, null,  dataSchema, subject, CloudEventFormat.Binary);
+        _transformer.InitializeWrapFromAttributeParams(source, type, null, null, dataSchema, subject, CloudEventFormat.Binary);
 
         var cloudEvents = _transformer.Wrap(_message, publication);
         
@@ -222,7 +222,7 @@ public class CloudEventsTransformerTests
         var body = _message.Body;
 
         //act
-        _transformer.InitializeWrapFromAttributeParams(source, type, null,  dataSchema, subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(source, type, null, null, dataSchema, subject, CloudEventFormat.Json);
 
         var cloudEvents = _transformer.Wrap(_message, publication);
         
@@ -258,19 +258,19 @@ public class CloudEventsTransformerTests
         //act
         var cloudEvents = _transformer.Wrap(_message, publication);
         
-        //assert
-        Assert.Equal(new Uri("http://goparamore.io"), cloudEvents.Header.Source);
-        Assert.Equal( CloudEventsType.Empty, cloudEvents.Header.Type);
+        //assert - message header values should be preserved when publication has no explicit cloud event properties
+        Assert.Equal(_source, cloudEvents.Header.Source);
+        Assert.Equal(_type, cloudEvents.Header.Type);
         Assert.Equal(new ContentType(MediaTypeNames.Text.Plain), cloudEvents.Header.ContentType);
-        Assert.Null(cloudEvents.Header.DataSchema);
-        Assert.Null(cloudEvents.Header.Subject);
+        Assert.Equal(_dataSchema, cloudEvents.Header.DataSchema);
+        Assert.Equal(_subject, cloudEvents.Header.Subject);
     }
     
     [Fact]
     public void When_unwrap_a_message_with_binary_format()
     {
         //arrange
-        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null,  _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, null, _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
        
         // act
         var message = _transformer.Unwrap(_message);
@@ -292,14 +292,14 @@ public class CloudEventsTransformerTests
             //no cloud events properties set
         };
         
-       _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
+       _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, null, _dataSchema.ToString(), _subject, CloudEventFormat.Binary);
        var cloudEvents = _transformer.Wrap(_message, publication);
        
        // act
        var message = _transformer.Unwrap(cloudEvents);
        
        Assert.Equal(_source, message.Header.Source);
-       Assert.Equal(CloudEventsType.Empty, message.Header.Type);
+       Assert.Equal(_type, message.Header.Type);
        Assert.Equal(_dataSchema, message.Header.DataSchema);
        Assert.Equal(_subject, message.Header.Subject);
        Assert.Equal(_message.Body.Bytes, message.Body.Bytes);
@@ -309,7 +309,7 @@ public class CloudEventsTransformerTests
     public void When_unwrap_a_message_with_json_format_and_provided_message_is_not_json()
     {
         //arrange
-        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null,  _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test Topic"), MessageType.MT_COMMAND), 
             new MessageBody("teste"));
@@ -329,7 +329,7 @@ public class CloudEventsTransformerTests
     public void When_unwrap_a_message_with_json_format_and_provided_message_is_not_cloud_event_json()
     {
         //arrange
-        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
        
         // act
         var message = _transformer.Unwrap(_message);
@@ -346,7 +346,7 @@ public class CloudEventsTransformerTests
     public void When_unwrap_a_message_with_json_format_and_provided_message_has_no_body()
     {
         //arrange
-        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null,  _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test Topic"), MessageType.MT_COMMAND), 
             new MessageBody([]) );
@@ -374,7 +374,7 @@ public class CloudEventsTransformerTests
     public void When_unwrap_a_message_with_json_format()
     {
         //arrange
-        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
         var body = _message.Body;
         var cloudEventsMessage = _transformer.Wrap(_message, new Publication
         {

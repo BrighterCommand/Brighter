@@ -1,0 +1,361 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Jonny Olliff-Lee <jonny.ollifflee@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using Neuroglia;
+using Neuroglia.AsyncApi.v3;
+
+namespace Paramore.Brighter.AsyncAPI
+{
+    // SDK fluent builders (V3AsyncApiDocumentBuilder etc.) were evaluated but are not used here.
+    // This generator builds documents dynamically: channels, operations, and messages are added
+    // incrementally across multiple loops (subscriptions, publications, assembly scanning) with
+    // deduplication via dictionary TryAdd. The fluent builder's nested Action<> delegates don't
+    // simplify this pattern and would obscure the deduplication logic.
+    public sealed class AsyncApiDocumentGenerator : IAmAnAsyncApiDocumentGenerator
+    {
+        private sealed record GenerationContext(
+            Dictionary<string, V3ChannelDefinition> Channels,
+            Dictionary<string, V3OperationDefinition> Operations,
+            Dictionary<string, V3MessageDefinition> Messages,
+            HashSet<(string ChannelId, string Action)> CoveredChannelActions);
+
+        // Inputs that vary per call into ProcessSourceAsync. Grouping them keeps the method
+        // signature small (and satisfies the CodeScene "Excess Number of Function Arguments"
+        // check) without flattening the call sites with positional parameters.
+        private sealed record MessageSource(
+            string Address,
+            V3OperationAction Action,
+            Type? RequestType);
+
+        // The sanitised channel id alongside its raw broker address.
+        private readonly record struct ChannelDescriptor(string ChannelId, string Address);
+
+        // The channel-id + message-name pair identifies where a message reference lives in
+        // the document and which message it points at.
+        private readonly record struct ChannelMessageKey(string ChannelId, string MessageName);
+
+
+        private readonly AsyncApiOptions _options;
+        private readonly IAmASchemaGenerator _schemaGenerator;
+        private readonly IEnumerable<Subscription>? _subscriptions;
+        private readonly IEnumerable<Publication>? _publications;
+
+        public AsyncApiDocumentGenerator(
+            AsyncApiOptions options,
+            IAmASchemaGenerator schemaGenerator,
+            IEnumerable<Subscription>? subscriptions,
+            IEnumerable<Publication>? publications)
+        {
+            _options = options;
+            _schemaGenerator = schemaGenerator;
+            _subscriptions = subscriptions;
+            _publications = publications;
+        }
+
+        public async Task<V3AsyncApiDocument> GenerateAsync(CancellationToken ct = default)
+        {
+            var context = new GenerationContext(
+                new Dictionary<string, V3ChannelDefinition>(),
+                new Dictionary<string, V3OperationDefinition>(),
+                new Dictionary<string, V3MessageDefinition>(),
+                new HashSet<(string ChannelId, string Action)>());
+
+            await AddSubscriptionsAsync(context, ct).ConfigureAwait(false);
+            await AddPublicationsAsync(context, ct).ConfigureAwait(false);
+            await AddFromAssemblyScanningAsync(context, ct).ConfigureAwait(false);
+
+            // NJsonSchema emits inheritance as { definitions: { Base: {...} }, allOf: [{$ref: "#/definitions/Base"}, ...] }.
+            // Each message produced this way carries its own copy of the base type. SchemaHoister
+            // lifts those definitions to components.schemas so a shared base appears once, and
+            // rewrites refs to point at the shared copy.
+            var hoistedSchemas = SchemaHoister.HoistEmbeddedDefinitions(context.Messages);
+
+            var doc = new V3AsyncApiDocument
+            {
+                Info = new V3ApiInfo
+                {
+                    Title = _options.Title,
+                    Version = _options.Version,
+                    Description = _options.Description
+                },
+                Servers = _options.Servers != null
+                    ? new EquatableDictionary<string, V3ServerDefinition>(_options.Servers)
+                    : null,
+                Channels = new EquatableDictionary<string, V3ChannelDefinition>(context.Channels),
+                Operations = new EquatableDictionary<string, V3OperationDefinition>(context.Operations),
+                Components = BuildComponents(context.Messages, hoistedSchemas)
+            };
+
+            return doc;
+        }
+
+        private static V3ComponentDefinitionCollection? BuildComponents(
+            Dictionary<string, V3MessageDefinition> messages,
+            Dictionary<string, V3SchemaDefinition> hoistedSchemas)
+        {
+            if (messages.Count == 0 && hoistedSchemas.Count == 0)
+            {
+                return null;
+            }
+
+            return new V3ComponentDefinitionCollection
+            {
+                Messages = messages.Count > 0
+                    ? new EquatableDictionary<string, V3MessageDefinition>(messages)
+                    : null,
+                Schemas = hoistedSchemas.Count > 0
+                    ? new EquatableDictionary<string, V3SchemaDefinition>(hoistedSchemas)
+                    : null,
+            };
+        }
+
+        private Task AddSubscriptionsAsync(GenerationContext context, CancellationToken ct) =>
+            AddMessageSourcesAsync(
+                _subscriptions,
+                s => TryBuildSource(s.RoutingKey?.Value, V3OperationAction.Receive, s.RequestType),
+                context, ct);
+
+        private Task AddPublicationsAsync(GenerationContext context, CancellationToken ct) =>
+            AddMessageSourcesAsync(
+                _publications,
+                p => TryBuildSource(p.Topic?.Value, V3OperationAction.Send, p.RequestType),
+                context, ct);
+
+        private async Task AddMessageSourcesAsync<T>(
+            IEnumerable<T>? items,
+            Func<T, MessageSource?> selector,
+            GenerationContext context,
+            CancellationToken ct)
+        {
+            if (items == null) return;
+            foreach (var item in items)
+            {
+                var source = selector(item);
+                if (source == null) continue;
+                await ProcessSourceAsync(source, context, ct).ConfigureAwait(false);
+            }
+        }
+
+        private static MessageSource? TryBuildSource(string? address, V3OperationAction action, Type? requestType) =>
+            string.IsNullOrEmpty(address) ? null : new MessageSource(address!, action, requestType);
+
+        private async Task ProcessSourceAsync(
+            MessageSource source,
+            GenerationContext context,
+            CancellationToken ct)
+        {
+            var channelId = SanitizeChannelId(source.Address);
+            var actionString = source.Action == V3OperationAction.Send ? "send" : "receive";
+
+            // Dedup by (channel, action). First source wins — covers producer-registry vs
+            // SupplementalPublications collisions and assembly-scan vs producer-registry
+            // collisions alike. Same channel + different action (e.g. a subscription and
+            // a publication on the same routing key) is not a duplicate and proceeds.
+            if (!context.CoveredChannelActions.Add((channelId, actionString))) return;
+
+            EnsureChannel(context.Channels, new ChannelDescriptor(channelId, source.Address));
+
+            var messageName = await EnsureMessageForSourceAsync(source, channelId, context.Messages, ct).ConfigureAwait(false);
+            AddChannelMessageRef(context.Channels, new ChannelMessageKey(channelId, messageName));
+
+            var operationId = $"{actionString}_{channelId}";
+            context.Operations[operationId] = BuildOperation(source.Action, channelId, messageName);
+        }
+
+        private async Task<string> EnsureMessageForSourceAsync(
+            MessageSource source,
+            string channelId,
+            Dictionary<string, V3MessageDefinition> messages,
+            CancellationToken ct)
+        {
+            if (source.RequestType != null)
+            {
+                var name = source.RequestType.Name;
+                await EnsureMessageAsync(messages, name, source.RequestType, ct).ConfigureAwait(false);
+                return name;
+            }
+
+            var placeholderName = $"{channelId}Message";
+            EnsurePlaceholderMessage(messages, placeholderName);
+            return placeholderName;
+        }
+
+        private static V3OperationDefinition BuildOperation(V3OperationAction action, string channelId, string messageName) =>
+            new()
+            {
+                Action = action,
+                Channel = new V3ReferenceDefinition { Reference = $"#/channels/{channelId}" },
+                Messages = new EquatableList<V3ReferenceDefinition>
+                {
+                    new V3ReferenceDefinition { Reference = $"#/channels/{channelId}/messages/{messageName}" }
+                }
+            };
+
+        private async Task AddFromAssemblyScanningAsync(
+            GenerationContext context,
+            CancellationToken ct)
+        {
+            if (_options.DisableAssemblyScanning) return;
+
+            foreach (var assembly in GetAssembliesToScan())
+            {
+                foreach (var (type, topic) in GetPublicationTopicTypes(assembly))
+                {
+                    // ProcessSourceAsync dedups by (channel, action) so no early-skip needed here.
+                    await ProcessSourceAsync(
+                        new MessageSource(topic, V3OperationAction.Send, type),
+                        context, ct).ConfigureAwait(false);
+                }
+            }
+        }
+
+        private IEnumerable<Assembly> GetAssembliesToScan()
+        {
+            if (_options.AssembliesToScan != null) return _options.AssembliesToScan;
+            var entry = Assembly.GetEntryAssembly();
+            return entry == null ? Array.Empty<Assembly>() : new[] { entry };
+        }
+
+        private static IEnumerable<(Type type, string topic)> GetPublicationTopicTypes(Assembly assembly)
+        {
+            foreach (var type in LoadAssemblyTypes(assembly))
+            {
+                var topic = TryGetPublicationTopic(type);
+                if (topic != null) yield return (type, topic);
+            }
+        }
+
+        private static IEnumerable<Type> LoadAssemblyTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                return ex.Types.Where(t => t != null).ToArray()!;
+            }
+        }
+
+        private static string? TryGetPublicationTopic(Type type)
+        {
+            if (type.IsAbstract || type.IsInterface) return null;
+            if (!typeof(IRequest).IsAssignableFrom(type)) return null;
+
+            var topic = type.GetCustomAttribute<PublicationTopicAttribute>()?.Destination?.RoutingKey?.Value;
+            return string.IsNullOrEmpty(topic) ? null : topic;
+        }
+
+        private static void EnsureChannel(Dictionary<string, V3ChannelDefinition> channels, ChannelDescriptor descriptor)
+        {
+            channels.TryAdd(
+                descriptor.ChannelId,
+                new V3ChannelDefinition
+                {
+                    Address = descriptor.Address,
+                    Messages = new EquatableDictionary<string, V3MessageDefinition>()
+                });
+        }
+
+        private async Task EnsureMessageAsync(Dictionary<string, V3MessageDefinition> messages, string messageName, Type requestType, CancellationToken ct)
+        {
+            if (!messages.TryGetValue(messageName, out _))
+            {
+                var schema = await _schemaGenerator.GenerateAsync(requestType, ct).ConfigureAwait(false)
+                    ?? EmptyObjectSchema();
+
+                // Refs and embedded definitions are left as the schema generator emitted them
+                // (e.g. #/definitions/X). The global HoistEmbeddedDefinitions pass lifts the
+                // shared definitions to components.schemas and rewrites refs across all messages.
+                var message = new V3MessageDefinition
+                {
+                    Name = messageName,
+                    ContentType = "application/json",
+                    Payload = schema
+                };
+
+                messages.TryAdd(messageName, message);
+            }
+        }
+
+        private static void EnsurePlaceholderMessage(Dictionary<string, V3MessageDefinition> messages, string messageName)
+        {
+            if (!messages.TryGetValue(messageName, out _))
+            {
+                using var emptyDoc = JsonDocument.Parse("{}");
+                var message = new V3MessageDefinition
+                {
+                    Name = messageName,
+                    ContentType = "application/json",
+                    Payload = new V3SchemaDefinition
+                    {
+                        SchemaFormat = "application/schema+json;version=draft-04",
+                        Schema = emptyDoc.RootElement.Clone()
+                    }
+                };
+
+                messages.TryAdd(messageName, message);
+            }
+        }
+
+        private static void AddChannelMessageRef(Dictionary<string, V3ChannelDefinition> channels, ChannelMessageKey key)
+        {
+            if (!channels.TryGetValue(key.ChannelId, out var channel) || channel.Messages == null)
+            {
+                return;
+            }
+
+            channel.Messages.TryAdd(
+                key.MessageName,
+                new V3MessageDefinition
+                {
+                    Reference = $"#/components/messages/{key.MessageName}"
+                });
+        }
+
+        private static V3SchemaDefinition EmptyObjectSchema()
+        {
+            using var doc = JsonDocument.Parse("{}");
+            return new V3SchemaDefinition
+            {
+                SchemaFormat = "application/schema+json;version=draft-04",
+                Schema = doc.RootElement.Clone()
+            };
+        }
+
+        private static readonly Regex s_sanitizeRegex = new("[^a-zA-Z0-9]", RegexOptions.Compiled);
+
+        private static string SanitizeChannelId(string value) => s_sanitizeRegex.Replace(value, "_");
+
+    }
+}

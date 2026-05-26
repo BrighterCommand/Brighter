@@ -15,6 +15,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter;
+using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Darker.AspNetCore;
@@ -112,6 +113,10 @@ public class Startup
                 configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
             })
             .AutoFromAssemblies([typeof(AddPersonHandlerAsync).Assembly])
+            .UseBoxProvisioning(options =>
+            {
+                BoxProvisioningFactory.AddOutbox(options, rdbms, outboxConfiguration);
+            })
             .ValidatePipelines()
             .DescribePipelines();
     }
