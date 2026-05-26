@@ -36,10 +36,11 @@ public class AwsValidateQueuesTests  : IDisposable, IAsyncDisposable
         _awsConnection = GatewayFactory.CreateFactory();
             
         //We need to create the topic at least, to check the queues
-        var producer = new SnsMessageProducer(_awsConnection, 
+        var producer = new SnsMessageProducer(_awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create 
+                MakeChannels = OnMissingChannel.Create,
+                TopicAttributes = new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }])
             });
         producer.ConfirmTopicExistsAsync(topicName).Wait(); 
             

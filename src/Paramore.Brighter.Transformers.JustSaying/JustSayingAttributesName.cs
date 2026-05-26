@@ -41,4 +41,17 @@ public static class JustSayingAttributesName
     /// Format: "{HeaderPrefix}-Raising-Component"
     /// </summary>
     public const string Conversation = $"{HeaderPrefix}-Conversation";
+
+    /// <summary>
+    /// Identifies the body encoding applied by JustSaying when publish-side compression is enabled.
+    /// JustSaying sets this as an SNS/SQS message attribute (key: <c>"Content-Encoding"</c>) with a value
+    /// of <see cref="GzipBase64ContentEncoding"/> when the payload exceeds the configured threshold.
+    /// </summary>
+    public const string ContentEncoding = "Content-Encoding";
+
+    /// <summary>
+    /// JustSaying's gzip + base64 content-encoding marker. Matches
+    /// <c>JustSaying.Messaging.Compression.ContentEncodings.GzipBase64</c>.
+    /// </summary>
+    public const string GzipBase64ContentEncoding = "gzip,base64";
 }

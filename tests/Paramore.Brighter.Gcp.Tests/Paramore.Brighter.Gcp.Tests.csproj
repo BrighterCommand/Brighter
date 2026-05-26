@@ -31,6 +31,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Relational box-provisioning catalogs are referenced solely so the Spanner V_latest
+         drift test can compare its VLatestOutbox / VLatestInbox constants against
+         <Backend>OutboxMigrationCatalog.All(cfg).Count for every relational backend. The
+         transitive DB drivers are not exercised at runtime. -->
+    <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.MsSql\Paramore.Brighter.BoxProvisioning.MsSql.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.MySql\Paramore.Brighter.BoxProvisioning.MySql.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.PostgreSql\Paramore.Brighter.BoxProvisioning.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.Sqlite\Paramore.Brighter.BoxProvisioning.Sqlite.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.Spanner\Paramore.Brighter.BoxProvisioning.Spanner.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Firestore\Paramore.Brighter.Inbox.Firestore.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Spanner\Paramore.Brighter.Inbox.Spanner.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.Firestore\Paramore.Brighter.Locking.Firestore.csproj" />
@@ -39,6 +48,9 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.Spanner\Paramore.Brighter.Outbox.Spanner.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Transformers.Gcp\Paramore.Brighter.Transformers.Gcp.csproj" />
     <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
+    <!-- Drift-test helpers (DdlColumnExtractor, QuoteStyle) live here so the Spanner builder
+         drift test can reuse the same column-extraction parser as the relational drift tests. -->
+    <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>

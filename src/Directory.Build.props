@@ -43,6 +43,8 @@
     <BrighterTargetFrameworks>netstandard2.0;net8.0;net9.0;net10.0</BrighterTargetFrameworks>
     <BrighterFrameworkAndCoreTargetFrameworks>net462;net8.0;net9.0;net10.0</BrighterFrameworkAndCoreTargetFrameworks>
     <BrighterCoreTargetFrameworks>net8.0;net9.0;net10.0</BrighterCoreTargetFrameworks>
+    <BrighterMongoTargetFrameworks>net472;$(BrighterCoreTargetFrameworks)</BrighterMongoTargetFrameworks>
+    <!-- Retained for MySql.EntityFrameworkCore until Pomelo.EntityFrameworkCore.MySql supports net10.0 -->
     <BrighterNetNineEarlierTargetFrameworks>net8.0;net9.0</BrighterNetNineEarlierTargetFrameworks>
   </PropertyGroup>
 

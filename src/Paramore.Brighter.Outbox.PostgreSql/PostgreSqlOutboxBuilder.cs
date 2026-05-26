@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Paramore.Brighter.PostgreSql;
+
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
     /// <summary>
@@ -96,10 +98,20 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// </summary>
         /// <param name="outboxTableName">The name you want to use for the table</param>
         /// <param name="binaryMessagePayload"></param>
+        /// <param name="schemaName">
+        /// Optional Postgres schema name. When non-null, the emitted DDL schema-qualifies the
+        /// table as <c>"schemaname"."outboxtablename"</c> (lowercase-then-quote via
+        /// <see cref="PgIdentifier"/>) so reserved-keyword names parse cleanly while still
+        /// resolving to the same physical table that PG's natural case-fold of unquoted
+        /// identifiers would have produced. Otherwise the table is emitted unqualified and
+        /// lands in the connection's search_path default (typically <c>public</c>). Identifier
+        /// safety is enforced upstream via <c>Identifiers.AssertSafe</c>.
+        /// </param>
         /// <returns>The required DDL</returns>
-        public static string GetDDL(string outboxTableName, bool binaryMessagePayload = false)
+        public static string GetDDL(string outboxTableName, bool binaryMessagePayload = false, string? schemaName = null)
         {
-            return binaryMessagePayload ? string.Format(BinaryOutboxDdl, outboxTableName) : string.Format(TextOutboxDdl, outboxTableName);
+            var qualifiedTable = PgIdentifier.QuoteQualified(schemaName, outboxTableName);
+            return binaryMessagePayload ? string.Format(BinaryOutboxDdl, qualifiedTable) : string.Format(TextOutboxDdl, qualifiedTable);
         }
 
         /// <summary>
@@ -110,7 +122,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <returns>The required SQL</returns>
         public static string GetExistsQuery(string tableCatalog, string outboxTableName)
         {
-            return string.Format(OutboxExistsSQL, tableCatalog, outboxTableName);
+            // information_schema.tables stores PG-folded (lowercase) names. Normalize the
+            // configured name so a mixed-case default like "Outbox" matches the stored "outbox".
+            return string.Format(OutboxExistsSQL, tableCatalog, PgIdentifier.Normalize(outboxTableName));
         }
     }
 }

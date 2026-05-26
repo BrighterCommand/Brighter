@@ -25,11 +25,13 @@ public class SpannerOutboxBuilder
           `TraceState` STRING(255),
           `Baggage` STRING(MAX),
           `WorkflowId` STRING(255),
-          `JobId` STRING(255)
+          `JobId` STRING(255),
+          `DataRef` STRING(255),
+          `SpecVersion` STRING(10)
         ) PRIMARY KEY (`MessageId`)
         """;
 
-    private const string BinaryOutboxDdl = 
+    private const string BinaryOutboxDdl =
         """
         CREATE TABLE IF NOT EXISTS `{0}`
         (
@@ -52,10 +54,12 @@ public class SpannerOutboxBuilder
           `TraceState` STRING(255),
           `Baggage` STRING(MAX),
           `WorkflowId` STRING(255),
-          `JobId` STRING(255)
+          `JobId` STRING(255),
+          `DataRef` STRING(255),
+          `SpecVersion` STRING(10)
         ) PRIMARY KEY (`MessageId`)
         """;
-        
+
     /// <summary>
    /// Get the DDL required to create the Outbox in Postgres
    /// </summary>

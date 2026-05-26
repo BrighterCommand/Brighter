@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Microsoft SQL Server box provisioning for Paramore.Brighter. Provides automatic creation and migration of inbox and outbox tables in SQL Server at application startup.</Description>
+    <Authors>Ian Cooper</Authors>
+    <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>SQL Server;MSSQL;Database;Outbox;Inbox;Provisioning;Migration;Command;Event;Command Processor;Messaging;Brighter</PackageTags>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning\Paramore.Brighter.BoxProvisioning.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Inbox.MsSql\Paramore.Brighter.Inbox.MsSql.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Outbox.MsSql\Paramore.Brighter.Outbox.MsSql.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient"/>
+  </ItemGroup>
+
+</Project>
