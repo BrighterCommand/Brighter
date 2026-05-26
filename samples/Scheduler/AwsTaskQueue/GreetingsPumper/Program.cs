@@ -32,9 +32,7 @@ static class Program
                 {
                     if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                     {
-                        // EventBridge Scheduler is not implemented by Moto, so this sample
-                        // always targets real AWS and ignores AWS_SERVICE_URL.
-                        var serviceURL = string.Empty;
+                        var serviceURL = Environment.GetEnvironmentVariable("AWS_SERVICE_URL") ?? string.Empty;
                         var region = RegionEndpoint.USEast1;
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, region,
                             cfg =>
