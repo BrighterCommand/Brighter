@@ -117,7 +117,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
     - **Write side** (`MsSqlBoxMigrationRunner`): replace hardcoded `HISTORY_TABLE_SCHEMA`/`[dbo]` in `EnsureHistoryTableAsync` CREATE DDL (`:140-148`) and the history-row INSERT (`:281`) with `ResolveHistorySchema()`, quoted via `Identifiers.AssertSafe` + brackets.
     - **Read side** (`MsSqlBoxDetectionHelper`): use the passed `historySchema` (bracket-quoted, `AssertSafe`) in **both** the history-existence delegation (`:85-86` — pass `historySchema` to the inner `DoesTableExistAsync` instead of `DefaultSchemaName`; see S1 gotcha) **and** the COUNT query (`:93`), and likewise in `GetMaxVersionAsync` (`:119`). The runner passes `ResolveHistorySchema()` to `DoesHistoryExistAsync`/`GetMaxVersionAsync` on its under-lock reads. (`DetectCurrentVersionAsync` is untouched — box-table columns.)
 
-- [ ] **TEST + IMPLEMENT: PostgreSQL PerSchema places history in the configured schema, with detection and writes consistent (case-folded identically both sides)**
+- [x] **TEST + IMPLEMENT: PostgreSQL PerSchema places history in the configured schema, with detection and writes consistent (case-folded identically both sides)**
   - **USE COMMAND**: `/test-first when postgres migration runner uses PerSchema scope with a non-null SchemaName it should create detect and write history in that schema with identical identifier folding`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning`
   - Test file: `When_postgres_per_schema_scope_is_selected_it_should_create_history_table_in_configured_schema.cs`

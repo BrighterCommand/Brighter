@@ -122,20 +122,36 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         => $"BrighterMigration_{PgIdentifier.Normalize(schemaName ?? HISTORY_TABLE_SCHEMA)}.{PgIdentifier.Normalize(tableName)}";
 
 
+    /// <summary>
+    /// Resolves and quotes the schema that physically holds the history table for this run, folded
+    /// via <see cref="PgIdentifier.Quote"/> so it matches the case PostgreSQL stores. Under
+    /// <see cref="MigrationHistoryScope.Global"/> this is <c>"public"</c> (today's behaviour); under
+    /// <see cref="MigrationHistoryScope.PerSchema"/> it is the configured (non-null) SchemaName. The
+    /// detection helper folds the same value the same way, so write and read never diverge.
+    /// </summary>
+    private string QuotedHistorySchema()
+    {
+        var schema = ResolveHistorySchema() ?? HISTORY_TABLE_SCHEMA;
+        Identifiers.AssertSafe(schema, nameof(schema));
+        return PgIdentifier.Quote(schema);
+    }
+
     protected override async Task EnsureHistoryTableAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName,
         CancellationToken cancellationToken)
     {
-        // schemaName is accepted for symmetry with the abstract signature but ignored — the
-        // history table always lives in [public] regardless of the configured box schema (see
-        // HISTORY_TABLE_SCHEMA constant comment). Explicit discard suppresses unused-parameter
-        // IDE warnings without changing the signature. Per PR #4039 reviewer Nit (item 4485697019).
+        // schemaName is accepted for symmetry with the abstract signature but ignored here — the
+        // physical history schema comes from QuotedHistorySchema() (Global → "public"; PerSchema →
+        // the configured SchemaName), the single source of truth shared with the INSERT path and
+        // the detection helper. Explicit discard suppresses unused-parameter IDE warnings.
         _ = schemaName;
+
+        var historySchema = QuotedHistorySchema();
 
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
-CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE}"" (
+CREATE TABLE IF NOT EXISTS {historySchema}.""{MIGRATION_HISTORY_TABLE}"" (
     ""MigrationVersion"" INT NOT NULL,
     ""SchemaName"" VARCHAR(256) NOT NULL DEFAULT 'public',
     ""BoxTableName"" VARCHAR(256) NOT NULL,
@@ -292,7 +308,7 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task InsertHistoryRowAsync(
+    private async Task InsertHistoryRowAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction,
         string schemaName, string tableName,
         int version, string description, CancellationToken cancellationToken)
@@ -300,7 +316,7 @@ CREATE TABLE IF NOT EXISTS ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
-INSERT INTO ""{HISTORY_TABLE_SCHEMA}"".""{MIGRATION_HISTORY_TABLE}"" (""MigrationVersion"", ""SchemaName"", ""BoxTableName"", ""Description"")
+INSERT INTO {QuotedHistorySchema()}.""{MIGRATION_HISTORY_TABLE}"" (""MigrationVersion"", ""SchemaName"", ""BoxTableName"", ""Description"")
 VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
         command.Parameters.AddWithValue("@Version", version);
         // Store PG-folded (lowercase) identifiers so history rows match the case of the

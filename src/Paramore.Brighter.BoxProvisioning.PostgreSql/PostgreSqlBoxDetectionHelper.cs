@@ -56,6 +56,21 @@ public class PostgreSqlBoxDetectionHelper :
     private readonly ILogger _logger;
 
     /// <summary>
+    /// Resolves and quotes the schema that physically holds the history table for a read: null
+    /// (Global default) → <c>"public"</c>; otherwise the configured SchemaName supplied by the
+    /// runner under <see cref="MigrationHistoryScope.PerSchema"/>. Folded via
+    /// <see cref="PgIdentifier.Quote"/> so it matches the case the runner created, after
+    /// <c>Identifiers.AssertSafe</c> validation since the result is interpolated into the query
+    /// text (no parameterisation of identifiers in SQL).
+    /// </summary>
+    private static string QuotedHistorySchema(string? historySchema)
+    {
+        var schema = historySchema ?? DefaultSchemaName;
+        Identifiers.AssertSafe(schema, nameof(historySchema));
+        return PgIdentifier.Quote(schema);
+    }
+
+    /// <summary>
     /// Initialises the detection helper with an optional logger. When unspecified, falls back
     /// to <see cref="ApplicationLogging.CreateLogger{T}"/>. Existing callers that use the
     /// parameterless form continue to work — the logger is currently only consumed for the
@@ -113,17 +128,25 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
         CancellationToken cancellationToken = default,
         NpgsqlTransaction? transaction = null)
     {
-        _ = historySchema; // S1: history physically in "public"; per-schema qualification arrives in T4.
+        // The physical history schema: Global → "public" (today's behaviour); PerSchema → the
+        // configured SchemaName passed by the runner. Both sides fold the same way (Normalize for
+        // the information_schema param, Quote for the qualified table ref) so a mixed-case configured
+        // value reaches the same physical schema the runner created.
+        var foldedHistorySchema = PgIdentifier.Normalize(historySchema ?? DefaultSchemaName);
+        var quotedHistorySchema = QuotedHistorySchema(historySchema);
+
         // System-table existence: __BrighterMigrationHistory is created via quoted DDL
-        // (`CREATE TABLE IF NOT EXISTS "public"."__BrighterMigrationHistory"`), so its name
+        // (`CREATE TABLE IF NOT EXISTS <schema>."__BrighterMigrationHistory"`), so its name
         // is case-PRESERVED in pg_class. Routing through DoesTableExistAsync would lowercase
-        // the lookup to `'__brightermigrationhistory'` and miss. Inline the literal check.
+        // the lookup to `'__brightermigrationhistory'` and miss. Inline the literal-name check,
+        // parameterising only the (folded) schema.
         using (var existsCmd = connection.CreateCommand())
         {
             if (transaction != null) existsCmd.Transaction = transaction;
             existsCmd.CommandText = @"
 SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = '__BrighterMigrationHistory')";
+WHERE TABLE_SCHEMA = @HistorySchema AND TABLE_NAME = '__BrighterMigrationHistory')";
+            existsCmd.Parameters.AddWithValue("@HistorySchema", foldedHistorySchema);
             var existsRaw = await existsCmd.ExecuteScalarAsync(cancellationToken);
             var historyTableExists = existsRaw is bool b && b;
             if (!historyTableExists)
@@ -132,8 +155,8 @@ WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = '__BrighterMigrationHistory')";
 
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
-        command.CommandText = @"
-SELECT COUNT(1) FROM ""public"".""__BrighterMigrationHistory""
+        command.CommandText = $@"
+SELECT COUNT(1) FROM {quotedHistorySchema}.""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         // History rows are stored with PG-folded (lowercase) identifiers by the runner so
         // that lookups remain consistent across mixed-case configured values; normalize
@@ -183,11 +206,13 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         CancellationToken cancellationToken = default,
         NpgsqlTransaction? transaction = null)
     {
-        _ = historySchema; // S1: history physically in "public"; per-schema qualification arrives in T4.
+        // Read max version from the same physical history schema the runner writes to: Global →
+        // "public"; PerSchema → the configured SchemaName, folded identically via PgIdentifier.Quote.
+        var quotedHistorySchema = QuotedHistorySchema(historySchema);
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
-        command.CommandText = @"
-SELECT COALESCE(MAX(""MigrationVersion""), 0) FROM ""public"".""__BrighterMigrationHistory""
+        command.CommandText = $@"
+SELECT COALESCE(MAX(""MigrationVersion""), 0) FROM {quotedHistorySchema}.""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", PgIdentifier.Normalize(tableName));
         command.Parameters.AddWithValue("@SchemaName", PgIdentifier.Normalize(schemaName ?? DefaultSchemaName));
