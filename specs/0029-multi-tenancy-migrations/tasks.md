@@ -160,7 +160,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
 
 ### D5 — Existing-deployment seed on first per-schema creation (FR5, NF2, AC3, AC5)
 
-- [ ] **TEST + IMPLEMENT: Repeated PerSchema provisioning is idempotent**
+- [x] **TEST + IMPLEMENT: Repeated PerSchema provisioning is idempotent**
   - **USE COMMAND**: `/test-first when per-schema provisioning runs a second time it should apply no migrations and insert no duplicate history rows`
   - Test location: one file per backend —
     - `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/When_mssql_per_schema_provisioning_runs_twice_it_should_be_idempotent.cs`
