@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
+using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,11 +31,10 @@ static class Program
             .ConfigureServices((hostContext, services) =>
 
                 {
-                    if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+                    var serviceURL = Environment.GetEnvironmentVariable("AWS_SERVICE_URL") ?? string.Empty;
+                    var credentials = ResolveCredentials(serviceURL);
+                    if (credentials != null)
                     {
-                        // EventBridge Scheduler is not implemented by Moto, so this sample
-                        // always targets real AWS and ignores AWS_SERVICE_URL.
-                        var serviceURL = string.Empty;
                         var region = RegionEndpoint.USEast1;
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, region,
                             cfg =>
@@ -77,7 +77,8 @@ static class Program
                             .UseScheduler(new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
                             {
                                 SchedulerTopicOrQueue = new RoutingKey("message-scheduler-topic"),
-                                OnConflict = OnSchedulerConflict.Overwrite
+                                OnConflict = OnSchedulerConflict.Overwrite,
+                                MakeRole = OnMissingRole.Create
                             })
                             .AutoFromAssemblies([typeof(GreetingEvent).Assembly]);
                     }
@@ -90,6 +91,22 @@ static class Program
             .Build();
 
         await host.RunAsync();
+    }
+
+    // When AWS_SERVICE_URL points at a local AWS emulator (Floci) we use a random
+    // 12-digit access key, which Floci interprets as the account ID for per-account
+    // namespace isolation — so this sample's resources stay separate from anything
+    // else running against the same emulator. Without AWS_SERVICE_URL we fall back
+    // to the default profile in the local credential chain.
+    private static AWSCredentials ResolveCredentials(string serviceURL)
+    {
+        if (!string.IsNullOrWhiteSpace(serviceURL))
+        {
+            var accountId = Random.Shared.NextInt64(100_000_000_000L, 999_999_999_999L + 1).ToString();
+            return new BasicAWSCredentials(accountId, "test");
+        }
+
+        return new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var creds) ? creds : null;
     }
 
     internal sealed class RunCommandProcessor(IAmACommandProcessor commandProcessor, ILogger<RunCommandProcessor> logger) : IHostedService
