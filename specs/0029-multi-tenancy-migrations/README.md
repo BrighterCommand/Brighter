@@ -13,6 +13,6 @@ Let operators isolate the box-provisioning migration-history table (`__BrighterM
 
 - [x] Requirements (`requirements.md`) — approved 2026-05-27 (PASS after 4 adversarial review rounds)
 - [x] Design (ADR 0060) — Accepted & approved 2026-05-27 (PASS after 2 adversarial review rounds; `docs/adr/0060-multi-tenancy-migration-history-scope.md`)
-- [ ] Tasks (`tasks.md`) — to be drafted post-ADR-approval
+- [x] Tasks (`tasks.md`) — drafted 2026-05-27 (1 structural + 13 behavioural TDD slices incl. T-PERM + closeout). `/spec:review tasks` **PASS round 2** (`review-tasks.md`; round 1 had 3 blockers, all fixed + ADR 0060 D4 errata). Awaiting `/spec:approve tasks`.
 - [ ] Implementation — TDD per task; STOP for approval after each `/test-first` test before the GREEN
 - [ ] Review
