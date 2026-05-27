@@ -97,6 +97,9 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     /// <inheritdoc />
     protected override string? DefaultHistorySchema => HISTORY_TABLE_SCHEMA;
 
+    /// <inheritdoc />
+    protected override bool SupportsPerSchemaHistory => true;
+
     protected override async Task<NpgsqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
     {
         var connection = new NpgsqlConnection(Configuration.ConnectionString);

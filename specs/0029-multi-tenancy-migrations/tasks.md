@@ -89,7 +89,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
     - **Deliver MSSQL's `SupportsPerSchemaHistory => true` override here** — the guard is gated on `SupportsPerSchemaHistory`, so it cannot fire (and this test cannot go GREEN) without it. This is the first test that requires the override; T3 then *consumes* it. (`DefaultHistorySchema => "dbo"` already exists from S1.)
     - Reuse the existing config-guard pattern (`SqlBoxMigrationRunner.cs:165/410`). Guard placed on the base so it applies uniformly; gating on `SupportsPerSchemaHistory` keeps MySQL/SQLite out (T5).
 
-- [ ] **TEST + IMPLEMENT: PostgreSQL PerSchema with null SchemaName is rejected at provisioning entry**
+- [x] **TEST + IMPLEMENT: PostgreSQL PerSchema with null SchemaName is rejected at provisioning entry**
   - **USE COMMAND**: `/test-first when postgres migration runner is invoked with PerSchema scope and a null SchemaName it should throw ConfigurationException and create no history table`
   - Test location: `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning`
   - Test file: `When_postgres_per_schema_scope_is_selected_with_null_schema_name_it_should_throw_configuration_exception.cs`
