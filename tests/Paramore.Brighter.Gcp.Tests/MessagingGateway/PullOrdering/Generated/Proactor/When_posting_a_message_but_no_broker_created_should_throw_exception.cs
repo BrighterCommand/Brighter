@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering.Proactor;
 
-[Trait("Category", "GcpPubSub")]
+[Trait("Category", "GcpPubSubPullOrdering")]
 [Collection("PullOrdering")]
 public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IAsyncLifetime
 {

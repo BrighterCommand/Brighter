@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Reactor;
 
-[Trait("Category", "GcpPubSub")]
+[Trait("Category", "GcpPubSubPull")]
 [Collection("Pull")]
 public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowException : IDisposable
 {

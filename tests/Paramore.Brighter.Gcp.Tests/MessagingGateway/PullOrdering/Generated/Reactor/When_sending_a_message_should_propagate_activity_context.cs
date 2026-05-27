@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering.Reactor;
 
-[Trait("Category", "GcpPubSub")]
+[Trait("Category", "GcpPubSubPullOrdering")]
 [Collection("PullOrdering")]
 public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
 {

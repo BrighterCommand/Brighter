@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull.Proactor;
 
-[Trait("Category", "GcpPubSub")]
+[Trait("Category", "GcpPubSubPull")]
 [Collection("Pull")]
 public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLifetime
 {

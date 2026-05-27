@@ -13,7 +13,7 @@ using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.PullOrdering.Proactor;
 
-[Trait("Category", "GcpPubSub")]
+[Trait("Category", "GcpPubSubPullOrdering")]
 [Collection("PullOrdering")]
 public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
