@@ -173,6 +173,8 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
 
         protected override DbSystem DbSystem => DbSystem.OtherSql;
 
+        protected override string? DefaultHistorySchema => null;
+
         protected override Task<FakeDbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
         {
             if (_openConnectionThrow is not null) throw _openConnectionThrow;

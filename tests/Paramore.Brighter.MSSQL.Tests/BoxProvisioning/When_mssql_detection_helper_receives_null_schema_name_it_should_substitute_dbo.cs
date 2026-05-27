@@ -61,14 +61,15 @@ public class MsSqlDetectionHelperNullSchemaTests : IAsyncLifetime
         Assert.True(existsWithNull);
 
         // Act + Assert — DoesHistoryExistAsync: null must locate the row recorded against 'dbo'.
-        var historyWithDbo = await helper.DoesHistoryExistAsync(connection, tableName, "dbo");
-        var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null);
+        // historySchema: null keeps the history table in the backend default ('dbo') — today's behaviour.
+        var historyWithDbo = await helper.DoesHistoryExistAsync(connection, tableName, "dbo", historySchema: null);
+        var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null, historySchema: null);
         Assert.True(historyWithDbo);
         Assert.True(historyWithNull);
 
         // Act + Assert — GetMaxVersionAsync: null must read the same version recorded under 'dbo'.
-        var maxWithDbo = await helper.GetMaxVersionAsync(connection, tableName, "dbo");
-        var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null);
+        var maxWithDbo = await helper.GetMaxVersionAsync(connection, tableName, "dbo", historySchema: null);
+        var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null, historySchema: null);
         Assert.Equal(3, maxWithDbo);
         Assert.Equal(3, maxWithNull);
 

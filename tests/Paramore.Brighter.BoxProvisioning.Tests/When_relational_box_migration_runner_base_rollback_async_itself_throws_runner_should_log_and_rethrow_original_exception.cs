@@ -98,6 +98,8 @@ public class SqlBoxMigrationRunnerRollbackFailureTests
             _unitOfWork = unitOfWork;
         }
 
+        protected override string? DefaultHistorySchema => null;
+
         protected override Task<FakeDbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
             => Task.FromResult(new FakeDbConnection());
 

@@ -130,6 +130,8 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
         {
         }
 
+        protected override string? DefaultHistorySchema => null;
+
         protected override Task<FakeDbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
         {
             OpenConnectionCalled = true;

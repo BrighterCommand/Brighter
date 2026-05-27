@@ -171,6 +171,8 @@ public class SqlBoxMigrationRunnerHookOrderTests
             _unitOfWork = unitOfWork;
         }
 
+        protected override string? DefaultHistorySchema => null;
+
         protected override Task<FakeDbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
         {
             _unitOfWork.Log.Add("OpenConnection");

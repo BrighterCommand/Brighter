@@ -63,14 +63,15 @@ public class MySqlDetectionHelperNullSchemaTests : IAsyncLifetime
         Assert.True(existsWithNull);
 
         // Act + Assert — DoesHistoryExistAsync: null must locate the row recorded against the database.
-        var historyWithDatabase = await helper.DoesHistoryExistAsync(connection, tableName, databaseName);
-        var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null);
+        // historySchema is ignored on MySQL (history lives in connection.Database); pass null.
+        var historyWithDatabase = await helper.DoesHistoryExistAsync(connection, tableName, databaseName, historySchema: null);
+        var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null, historySchema: null);
         Assert.True(historyWithDatabase);
         Assert.True(historyWithNull);
 
         // Act + Assert — GetMaxVersionAsync: null must read the same version recorded under the database.
-        var maxWithDatabase = await helper.GetMaxVersionAsync(connection, tableName, databaseName);
-        var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null);
+        var maxWithDatabase = await helper.GetMaxVersionAsync(connection, tableName, databaseName, historySchema: null);
+        var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null, historySchema: null);
         Assert.Equal(3, maxWithDatabase);
         Assert.Equal(3, maxWithNull);
 

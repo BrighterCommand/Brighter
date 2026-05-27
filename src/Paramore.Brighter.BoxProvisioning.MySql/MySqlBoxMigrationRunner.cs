@@ -64,10 +64,11 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
-        IAmABrighterTracer? tracer = null)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
             logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>(),
-            tracer)
+            tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
     }
@@ -84,13 +85,19 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         TimeSpan lockTimeout,
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
-        IAmABrighterTracer? tracer = null)
-        : this(new MySqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
+        : this(new MySqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope)
     {
     }
 
     /// <inheritdoc />
     protected override DbSystem DbSystem => DbSystem.MySql;
+
+    /// <inheritdoc />
+    /// <remarks>MySQL's history table lives in the connection-bound database, not a static schema,
+    /// so there is no constant default and <see cref="MigrationHistoryScope.PerSchema"/> is a no-op.</remarks>
+    protected override string? DefaultHistorySchema => null;
 
     // ==== Hook overrides — Phase 7.3a delegates to legacy helpers ====
 
@@ -209,7 +216,7 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
     {
         var effectiveSchema = schemaName ?? DatabaseName();
         var maxVersion = await DetectionHelper.GetMaxVersionAsync(
-            connection, tableName, effectiveSchema, cancellationToken);
+            connection, tableName, effectiveSchema, ResolveHistorySchema(), cancellationToken);
 
         foreach (var migration in migrations)
         {

@@ -95,10 +95,11 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         bool enableWalMode = true,
-        IAmABrighterTracer? tracer = null)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
             logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>(),
-            tracer)
+            tracer, scope)
     {
         _enableWalMode = enableWalMode;
         _lockTimeout = lockTimeout ?? TimeSpan.FromSeconds(30);
@@ -115,8 +116,9 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         bool enableWalMode = true,
-        IAmABrighterTracer? tracer = null)
-        : this(new SqliteBoxDetectionHelper(), catalog, configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
+        : this(new SqliteBoxDetectionHelper(), catalog, configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer, scope: scope)
     {
     }
 
@@ -134,6 +136,11 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
 
     /// <inheritdoc />
     protected override DbSystem DbSystem => DbSystem.Sqlite;
+
+    /// <inheritdoc />
+    /// <remarks>SQLite has no schema concept, so history has no qualifying schema and
+    /// <see cref="MigrationHistoryScope.PerSchema"/> is a no-op.</remarks>
+    protected override string? DefaultHistorySchema => null;
 
     // ==== Per-backend hook overrides for SqlBoxMigrationRunner ====
 
@@ -256,7 +263,7 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         _ = schemaName; // SQLite has no schema concept.
 
         var maxVersion = await DetectionHelper.GetMaxVersionAsync(
-            connection, tableName, null, cancellationToken, transaction);
+            connection, tableName, null, ResolveHistorySchema(), cancellationToken, transaction);
 
         foreach (var migration in migrations)
         {

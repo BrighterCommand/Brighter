@@ -59,7 +59,7 @@ public static class SqliteBoxProvisioningExtensions
                 var catalog = sp.GetRequiredService<SqliteOutboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
                     catalog, configuration, options.MigrationLockTimeout, enableWalMode,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new SqliteOutboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     catalog,
@@ -103,7 +103,7 @@ public static class SqliteBoxProvisioningExtensions
                 var catalog = sp.GetRequiredService<SqliteOutboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
                     catalog, dbConfig, options.MigrationLockTimeout, enableWalMode,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new SqliteOutboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     catalog,
@@ -137,7 +137,7 @@ public static class SqliteBoxProvisioningExtensions
                 var catalog = sp.GetRequiredService<SqliteInboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
                     catalog, configuration, options.MigrationLockTimeout, enableWalMode,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new SqliteInboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     catalog,
@@ -181,7 +181,7 @@ public static class SqliteBoxProvisioningExtensions
                 var catalog = sp.GetRequiredService<SqliteInboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
                     catalog, dbConfig, options.MigrationLockTimeout, enableWalMode,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new SqliteInboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     catalog,

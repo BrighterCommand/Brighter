@@ -104,12 +104,16 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
     /// Returns true if the migration history table exists and has at least one row for the
     /// given box table.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. The box-table schema used to filter history rows. Null
+    /// is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
+    /// <param name="historySchema">Optional. The physical schema holding the history table; null
+    /// resolves to <c>"public"</c> (today's behaviour).</param>
     public async Task<bool> DoesHistoryExistAsync(
-        NpgsqlConnection connection, string tableName, string? schemaName,
+        NpgsqlConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         NpgsqlTransaction? transaction = null)
     {
+        _ = historySchema; // S1: history physically in "public"; per-schema qualification arrives in T4.
         // System-table existence: __BrighterMigrationHistory is created via quoted DDL
         // (`CREATE TABLE IF NOT EXISTS "public"."__BrighterMigrationHistory"`), so its name
         // is case-PRESERVED in pg_class. Routing through DoesTableExistAsync would lowercase
@@ -170,12 +174,16 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
     /// Returns the highest migration version recorded in history for the given box table,
     /// or 0 if no rows exist.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. The box-table schema used to filter history rows. Null
+    /// is substituted with <c>"public"</c> per ADR 0057 §A.1.</param>
+    /// <param name="historySchema">Optional. The physical schema holding the history table; null
+    /// resolves to <c>"public"</c> (today's behaviour).</param>
     public async Task<int> GetMaxVersionAsync(
-        NpgsqlConnection connection, string tableName, string? schemaName,
+        NpgsqlConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         NpgsqlTransaction? transaction = null)
     {
+        _ = historySchema; // S1: history physically in "public"; per-schema qualification arrives in T4.
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
         command.CommandText = @"

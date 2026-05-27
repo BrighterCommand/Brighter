@@ -74,6 +74,20 @@ public class BoxProvisioningOptions
     public TimeSpan MigrationLockTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// Controls where the box migration-history table is physically placed. Default:
+    /// <see cref="MigrationHistoryScope.Global"/> — identical to behaviour prior to this feature.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="MigrationHistoryScope.PerSchema"/> places history in the configured
+    /// <see cref="IAmARelationalDatabaseConfiguration.SchemaName"/> on MSSQL and PostgreSQL; it is
+    /// a no-op on MySQL, SQLite and Spanner (no distinct schema concept), where history stays in
+    /// the default location. Selecting <see cref="MigrationHistoryScope.PerSchema"/> with a null
+    /// <see cref="IAmARelationalDatabaseConfiguration.SchemaName"/> on a placement backend throws
+    /// <see cref="ConfigurationException"/>.
+    /// </remarks>
+    public MigrationHistoryScope MigrationHistoryScope { get; set; } = MigrationHistoryScope.Global;
+
+    /// <summary>
     /// Add a registration action that will be applied to the service collection.
     /// </summary>
     /// <param name="registration">The registration action.</param>

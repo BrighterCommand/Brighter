@@ -60,6 +60,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     private readonly IAmABoxMigrationCatalog _catalog;
     private readonly IAmARelationalDatabaseConfiguration _configuration;
     private readonly TimeSpan _lockTimeout;
+    private readonly MigrationHistoryScope _scope;
 
     /// <summary>Logger for the runner base AND for derived classes to forward into per-backend UoW construction.</summary>
     protected ILogger Logger { get; }
@@ -117,21 +118,62 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// <param name="tracer">Optional <see cref="IAmABrighterTracer"/>. When supplied,
     /// <see cref="MigrateAsync"/> emits a migration span on the tracer's
     /// <see cref="System.Diagnostics.ActivitySource"/>. Defaults to null (no instrumentation).</param>
+    /// <param name="scope">Controls where the migration-history table is physically placed.
+    /// Defaults to <see cref="MigrationHistoryScope.Global"/> (today's behaviour). Threaded on
+    /// the same call path as <paramref name="lockTimeout"/>.</param>
     protected SqlBoxMigrationRunner(
         IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> detectionHelper,
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         ILogger? logger = null,
-        IAmABrighterTracer? tracer = null)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
     {
         _detectionHelper = detectionHelper;
         _catalog = catalog;
         _configuration = configuration;
         _lockTimeout = lockTimeout;
+        _scope = scope;
         Logger = logger ?? NullLogger.Instance;
         Tracer = tracer;
     }
+
+    /// <summary>
+    /// The configured placement scope for the migration-history table. Exposed to derived classes
+    /// for the misconfiguration guard, schema resolution and observability.
+    /// </summary>
+    protected MigrationHistoryScope Scope => _scope;
+
+    /// <summary>
+    /// The backend default schema in which history lives under
+    /// <see cref="MigrationHistoryScope.Global"/>: MSSQL <c>"dbo"</c>, PostgreSQL <c>"public"</c>,
+    /// or <c>null</c> for backends with no distinct schema concept (MySQL — history lives in the
+    /// connection-bound database; SQLite). This is the value the runner used unconditionally
+    /// prior to this feature.
+    /// </summary>
+    protected abstract string? DefaultHistorySchema { get; }
+
+    /// <summary>
+    /// Whether this backend honours <see cref="MigrationHistoryScope.PerSchema"/> by placing
+    /// history in the configured schema. Overridden to <c>true</c> on MSSQL and PostgreSQL; stays
+    /// <c>false</c> on MySQL and SQLite, where <see cref="MigrationHistoryScope.PerSchema"/> is a
+    /// no-op (no exception). Spanner does not derive from this base (ADR 0057 §6).
+    /// </summary>
+    protected virtual bool SupportsPerSchemaHistory => false;
+
+    /// <summary>
+    /// Resolves the physical schema that holds the migration-history table for this run. Under
+    /// <see cref="MigrationHistoryScope.PerSchema"/> on a placement backend it is the configured
+    /// <see cref="IAmARelationalDatabaseConfiguration.SchemaName"/> (guaranteed non-null by the
+    /// misconfiguration guard); otherwise it is <see cref="DefaultHistorySchema"/> — i.e. today's
+    /// behaviour. This is the single source of truth handed to both the write side (CREATE/INSERT)
+    /// and the read side (detection helper), so they cannot diverge.
+    /// </summary>
+    protected string? ResolveHistorySchema() =>
+        _scope == MigrationHistoryScope.PerSchema && SupportsPerSchemaHistory
+            ? Configuration.SchemaName
+            : DefaultHistorySchema;
 
     /// <inheritdoc />
     public async Task MigrateAsync(
@@ -385,7 +427,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         var tableExists = await _detectionHelper.DoesTableExistAsync(
             connection, tableName, schemaName, cancellationToken, transaction);
         var historyExists = tableExists && await _detectionHelper.DoesHistoryExistAsync(
-            connection, tableName, schemaName, cancellationToken, transaction);
+            connection, tableName, schemaName, ResolveHistorySchema(), cancellationToken, transaction);
         return (tableExists, historyExists);
     }
 

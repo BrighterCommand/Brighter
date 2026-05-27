@@ -64,10 +64,11 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         IMsSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
-        IAmABrighterTracer? tracer = null)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
             logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>(),
-            tracer)
+            tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
     }
@@ -84,13 +85,17 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         TimeSpan lockTimeout,
         IMsSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
-        IAmABrighterTracer? tracer = null)
-        : this(new MsSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
+        : this(new MsSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope)
     {
     }
 
     /// <inheritdoc />
     protected override DbSystem DbSystem => DbSystem.MsSql;
+
+    /// <inheritdoc />
+    protected override string? DefaultHistorySchema => HISTORY_TABLE_SCHEMA;
 
     // ==== Hook overrides — Phase 7.1a delegates to legacy helpers ====
 
@@ -242,7 +247,7 @@ END";
         var effectiveSchema = schemaName ?? HISTORY_TABLE_SCHEMA;
 
         var maxVersion = await DetectionHelper.GetMaxVersionAsync(
-            connection, tableName, effectiveSchema, cancellationToken, transaction);
+            connection, tableName, effectiveSchema, ResolveHistorySchema(), cancellationToken, transaction);
 
         foreach (var migration in migrations)
         {

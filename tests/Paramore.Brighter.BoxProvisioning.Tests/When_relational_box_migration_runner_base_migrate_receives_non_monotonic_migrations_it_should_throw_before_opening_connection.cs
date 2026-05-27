@@ -101,6 +101,8 @@ public class SqlBoxMigrationRunnerMonotonicityValidationTests
         {
         }
 
+        protected override string? DefaultHistorySchema => null;
+
         protected override Task<FakeDbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
         {
             OpenConnectionCalled = true;

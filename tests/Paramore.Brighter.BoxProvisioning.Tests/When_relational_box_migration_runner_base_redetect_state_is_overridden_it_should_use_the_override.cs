@@ -106,6 +106,8 @@ public class SqlBoxMigrationRunnerRedetectStateOverrideTests
             return Task.FromResult((tableExists: true, historyExists: true));
         }
 
+        protected override string? DefaultHistorySchema => null;
+
         protected override Task<FakeDbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
             => Task.FromResult(new FakeDbConnection());
 

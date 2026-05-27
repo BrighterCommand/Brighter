@@ -148,8 +148,11 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
+        // Pre-lock read is an explicitly discarded hint (the runner re-detects authoritatively
+        // under the lock and resolves the history schema there), so this site passes
+        // historySchema: null = backend default — see ADR 0060 D4.
         var historyExists = await _detectionHelper.DoesHistoryExistAsync(
-            connection, BoxTableName, EffectiveSchemaName, cancellationToken);
+            connection, BoxTableName, EffectiveSchemaName, historySchema: null, cancellationToken);
         if (!historyExists)
         {
             // Pre-lock detection is a hint for the caller; the runner re-detects under the lock.
@@ -164,7 +167,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         }
 
         var maxVersion = await _detectionHelper.GetMaxVersionAsync(
-            connection, BoxTableName, EffectiveSchemaName, cancellationToken);
+            connection, BoxTableName, EffectiveSchemaName, historySchema: null, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 
