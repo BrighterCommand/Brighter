@@ -43,4 +43,17 @@ public class BaggageStjNewtonsoftParityTests
         Assert.Equal("alice", entries["user"]);
         Assert.Equal("acme", entries["tenant"]);
     }
+
+    [Fact]
+    public void When_Baggage_Is_Serialised_The_Bytes_Are_Identical_On_Both_Stacks()
+    {
+        var original = new Baggage();
+        original.Add("user", "alice");
+        original.Add("tenant", "acme");
+
+        var stjJson = System.Text.Json.JsonSerializer.Serialize(original, JsonSerialisationOptions.Options);
+        var newtonsoftJson = JsonConvert.SerializeObject(original);
+
+        Assert.Equal(stjJson, newtonsoftJson);
+    }
 }
