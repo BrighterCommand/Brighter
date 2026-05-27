@@ -126,9 +126,15 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
+        // Under PerSchema the history table is placed in the configured schema; under Global it is
+        // the backend default (dbo). ResolveHistoryTableSchema() is the single source of truth
+        // shared with the read side so they cannot diverge. AssertSafe + bracket-quote because
+        // T-SQL DDL cannot parameterize the schema in CREATE TABLE; the @HistorySchema bind param
+        // still drives the SCHEMA_ID(...) existence probe.
+        var historySchema = ResolveHistoryTableSchema();
         // Filter sys.tables by both name AND schema_id — without the schema_id filter the
         // existence check misfires when any other schema happens to contain a table by that name,
-        // skipping the [dbo] create and breaking subsequent INSERT/SELECT statements.
+        // skipping the create and breaking subsequent INSERT/SELECT statements.
         // The WHERE values are parameterised (matching DoesTableExistAsync); the bracketed
         // identifiers in the CREATE TABLE body must remain inline because T-SQL DDL does not
         // accept bind parameters for object names.
@@ -145,7 +151,7 @@ IF NOT EXISTS (
     WHERE name = @HistoryTableName AND schema_id = SCHEMA_ID(@HistorySchema)
 )
 BEGIN
-    CREATE TABLE [{HISTORY_TABLE_SCHEMA}].[{MIGRATION_HISTORY_TABLE}] (
+    CREATE TABLE [{historySchema}].[{MIGRATION_HISTORY_TABLE}] (
         [MigrationVersion] INT NOT NULL,
         [SchemaName] VARCHAR(256) NOT NULL DEFAULT 'dbo',
         [BoxTableName] VARCHAR(256) NOT NULL,
@@ -156,7 +162,7 @@ BEGIN
     );
 END";
         command.Parameters.AddWithValue("@HistoryTableName", MIGRATION_HISTORY_TABLE);
-        command.Parameters.AddWithValue("@HistorySchema", HISTORY_TABLE_SCHEMA);
+        command.Parameters.AddWithValue("@HistorySchema", historySchema);
         try
         {
             await command.ExecuteNonQueryAsync(cancellationToken);
@@ -278,15 +284,27 @@ END";
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task InsertHistoryRowAsync(
+    // Resolves the physical schema that holds the history table for this run, validated for safe
+    // inline interpolation into DDL/DML. PerSchema → configured schema; otherwise the backend
+    // default (dbo). Shared by EnsureHistoryTableAsync (CREATE) and InsertHistoryRowAsync (INSERT)
+    // so the write side never diverges from the read side's ResolveHistorySchema().
+    private string ResolveHistoryTableSchema()
+    {
+        var historySchema = ResolveHistorySchema() ?? HISTORY_TABLE_SCHEMA;
+        Identifiers.AssertSafe(historySchema, nameof(historySchema));
+        return historySchema;
+    }
+
+    private async Task InsertHistoryRowAsync(
         SqlConnection connection, SqlTransaction transaction,
         string schemaName, string tableName,
         int version, string description, CancellationToken cancellationToken)
     {
+        var historySchema = ResolveHistoryTableSchema();
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
-INSERT INTO [{HISTORY_TABLE_SCHEMA}].[{MIGRATION_HISTORY_TABLE}] ([MigrationVersion], [SchemaName], [BoxTableName], [Description])
+INSERT INTO [{historySchema}].[{MIGRATION_HISTORY_TABLE}] ([MigrationVersion], [SchemaName], [BoxTableName], [Description])
 VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
         command.Parameters.AddWithValue("@Version", version);
         command.Parameters.AddWithValue("@SchemaName", schemaName);

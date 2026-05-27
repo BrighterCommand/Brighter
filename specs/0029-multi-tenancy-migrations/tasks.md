@@ -102,7 +102,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
 
 ### D2 + D4 — Schema-aware placement, end-to-end (FR2, FR3, NF3, NF4, AC1)
 
-- [ ] **TEST + IMPLEMENT: MSSQL PerSchema places history in the configured schema, with detection and writes consistent**
+- [x] **TEST + IMPLEMENT: MSSQL PerSchema places history in the configured schema, with detection and writes consistent**
   - **USE COMMAND**: `/test-first when mssql migration runner uses PerSchema scope with a non-null SchemaName it should create the history table in that schema and detect and write history there`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_mssql_per_schema_scope_is_selected_it_should_create_history_table_in_configured_schema.cs`
