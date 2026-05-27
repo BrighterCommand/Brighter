@@ -146,7 +146,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
 
 ### Global default — regression guard (FR4, NF1, AC2, AC2a)
 
-- [ ] **TEST + IMPLEMENT: Global scope with a non-default SchemaName still places history in the backend default schema**
+- [x] **TEST + IMPLEMENT: Global scope with a non-default SchemaName still places history in the backend default schema**
   - **USE COMMAND**: `/test-first when global scope is used with a non-default SchemaName the history table should remain in the backend default schema while box tables go to the configured schema`
   - Test location: one file per backend —
     - `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/When_global_scope_is_used_with_a_non_default_schema_mssql_history_should_remain_in_dbo.cs`
