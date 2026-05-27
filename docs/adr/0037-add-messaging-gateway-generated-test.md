@@ -27,7 +27,7 @@ Added `MessagingGatewayConfiguration` class to configure gateway test generation
 
 - `Prefix`: Test class name prefix
 - `Namespace`: Target namespace for generated tests
-- `MessageFactory`: Factory for creating test messages
+- `MessageBuilder`: Builder for creating test messages
 - `MessageAssertion`: Assertion helpers for validating messages
 - `MessageGatewayProvider`: Provider implementation for the specific gateway
 - `Category`: Test category for filtering
@@ -38,7 +38,7 @@ Added configuration support in `TestConfiguration`:
 
 - `MessageAssertion`: Default assertion helper (defaults to `DefaultMessageAssertion`)
 - `MessagingGateway`: Single gateway configuration
-- `MessagingGatewaies`: Dictionary of named gateway configurations
+- `MessagingGateways`: Dictionary of named gateway configurations
 
 ### 2. New Generator Implementation
 
@@ -133,7 +133,7 @@ The generator creates tests based on configuration in `test-configuration.json`:
 {
   "namespace": "Paramore.Brighter.RMQ.Async.Tests",
   "destinationFolder": "tests/Paramore.Brighter.RMQ.Async.Tests",
-  "messageFactory": "DefaultMessageFactory",
+  "messageBuilder": "DefaultMessageBuilder",
   "messageAssertion": "DefaultMessageAssertion",
   "messagingGateway": {
     "prefix": "Rmq",

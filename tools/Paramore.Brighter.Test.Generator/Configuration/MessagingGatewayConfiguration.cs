@@ -60,6 +60,9 @@ public class MessagingGatewayConfiguration
     /// </summary>
     public string? Category { get; set; }
 
+    /// <summary>
+    /// Gets or sets the test collection name for controlling test execution grouping.
+    /// </summary>
     public string? CollectionName { get; set; }
 
     /// <summary>
@@ -107,8 +110,14 @@ public class MessagingGatewayConfiguration
     /// </summary>
     public bool HasSupportToRequeue { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway supports validating infrastructure existence.
+    /// </summary>
     public bool HasSupportToValidateInfrastructure { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets the maximum time to wait when receiving a message in milliseconds.
+    /// </summary>
     public int ReceiveMessageTimeoutInMilliseconds { get; set; } = 300;
 
     /// <summary>
