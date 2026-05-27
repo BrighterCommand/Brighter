@@ -53,7 +53,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
 
 ## S1 — STRUCTURAL (Tidy First, one commit, NO behaviour change)
 
-- [ ] **STRUCTURAL: Introduce the scope option and the schema-resolution seam, behaviour-preserving**
+- [x] **STRUCTURAL: Introduce the scope option and the schema-resolution seam, behaviour-preserving**
   - **NOT a `/test-first` task.** Use `/tidy-first` framing. Run the **existing** box-provisioning suite green **before** starting and **after** finishing — zero behavioural diff. Commit separately from all behavioural work.
   - Sub-steps (all in this one structural commit):
     - **D1 option:** add `public enum MigrationHistoryScope { Global = 0, PerSchema = 1 }` in namespace `Paramore.Brighter.BoxProvisioning` (XML-doc both values). Add `public MigrationHistoryScope MigrationHistoryScope { get; set; } = MigrationHistoryScope.Global;` to `BoxProvisioningOptions` (alongside `MigrationLockTimeout`, `BoxProvisioningOptions.cs:74`). `Global = 0` so existing construction sites compile unchanged (C2).
