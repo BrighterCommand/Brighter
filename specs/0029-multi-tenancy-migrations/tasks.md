@@ -131,7 +131,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
     - **Write side** (`PostgreSqlBoxMigrationRunner`): every `"public"`-qualified history reference (CREATE `:130-137`, INSERT `:295`) uses `PgIdentifier.Quote(ResolveHistorySchema())`.
     - **Read side** (`PostgreSqlBoxDetectionHelper`): COUNT qualifier (`:132`) and `GetMaxVersionAsync` qualifier use `PgIdentifier.Quote(historySchema)`; the `information_schema` existence-check param (`TABLE_SCHEMA = 'public'`, `:122`) uses `PgIdentifier.Normalize(historySchema)`. Both `Quote` and `Normalize` lower-case (`PgIdentifier.cs:57/77`) — fold identically on both sides. No new injection surface (NF3): the schema is the already-validated `SchemaName`.
 
-- [ ] **TEST + IMPLEMENT: PerSchema is a no-op on MySQL, SQLite, and Spanner (no placement, no throw)**
+- [x] **TEST + IMPLEMENT: PerSchema is a no-op on MySQL, SQLite, and Spanner (no placement, no throw)**
   - **USE COMMAND**: `/test-first when PerSchema scope is selected on mysql sqlite or spanner it should keep history in the default location and not throw`
   - Test location: one file per backend —
     - `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/When_mysql_per_schema_scope_is_selected_it_should_keep_history_in_connection_database_and_not_throw.cs`
