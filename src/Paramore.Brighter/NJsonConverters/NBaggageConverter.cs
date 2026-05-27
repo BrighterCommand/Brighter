@@ -55,49 +55,49 @@ public class NBaggageConverter : JsonConverter<Baggage>
             throw new JsonSerializationException($"Expected StartArray for Baggage, got {reader.TokenType}");
         }
 
-        while (reader.Read())
+        while (reader.Read() && reader.TokenType != JsonToken.EndArray)
         {
-            if (reader.TokenType == JsonToken.EndArray)
-            {
-                break;
-            }
-
-            if (reader.TokenType != JsonToken.StartObject)
-            {
-                throw new JsonSerializationException($"Expected StartObject for Baggage entry, got {reader.TokenType}");
-            }
-
-            string? key = null;
-            string? value = null;
-
-            while (reader.Read() && reader.TokenType != JsonToken.EndObject)
-            {
-                if (reader.TokenType != JsonToken.PropertyName)
-                {
-                    continue;
-                }
-
-                var propertyName = (string)reader.Value!;
-                reader.Read();
-
-                switch (propertyName)
-                {
-                    case "Key":
-                        key = reader.Value as string;
-                        break;
-                    case "Value":
-                        value = reader.Value as string;
-                        break;
-                }
-            }
-
-            if (key != null && value != null)
-            {
-                baggage.Add(key, value);
-            }
+            ReadEntry(reader, baggage);
         }
 
         return baggage;
+    }
+
+    private static void ReadEntry(JsonReader reader, Baggage baggage)
+    {
+        if (reader.TokenType != JsonToken.StartObject)
+        {
+            throw new JsonSerializationException($"Expected StartObject for Baggage entry, got {reader.TokenType}");
+        }
+
+        string? key = null;
+        string? value = null;
+
+        while (reader.Read() && reader.TokenType != JsonToken.EndObject)
+        {
+            if (reader.TokenType != JsonToken.PropertyName)
+            {
+                continue;
+            }
+
+            var propertyName = (string)reader.Value!;
+            reader.Read();
+
+            switch (propertyName)
+            {
+                case "Key":
+                    key = reader.Value as string;
+                    break;
+                case "Value":
+                    value = reader.Value as string;
+                    break;
+            }
+        }
+
+        if (key != null && value != null)
+        {
+            baggage.Add(key, value);
+        }
     }
 
     public override void WriteJson(JsonWriter writer, Baggage? value, JsonSerializer serializer)
