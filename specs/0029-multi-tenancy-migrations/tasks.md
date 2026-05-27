@@ -75,7 +75,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
 
 ### D3 — Misconfiguration guard (FR1a, AC1a)
 
-- [ ] **TEST + IMPLEMENT: MSSQL PerSchema with null SchemaName is rejected at provisioning entry**
+- [x] **TEST + IMPLEMENT: MSSQL PerSchema with null SchemaName is rejected at provisioning entry**
   - **USE COMMAND**: `/test-first when mssql migration runner is invoked with PerSchema scope and a null SchemaName it should throw ConfigurationException and create no history table`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_mssql_per_schema_scope_is_selected_with_null_schema_name_it_should_throw_configuration_exception.cs`

@@ -194,6 +194,16 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
             Identifiers.AssertSafe(schemaName, nameof(schemaName));
         }
 
+        // D3 misconfiguration guard (FR1a/AC1a): on a placement backend, PerSchema needs a schema
+        // to place history in. A null SchemaName is an operator misconfiguration — reject it at the
+        // entry point rather than silently falling back to Global. Backends that do not support
+        // PerSchema (MySQL/SQLite) never trip this; for them PerSchema is a no-op.
+        if (Scope == MigrationHistoryScope.PerSchema && SupportsPerSchemaHistory && Configuration.SchemaName is null)
+        {
+            throw new ConfigurationException(
+                "MigrationHistoryScope.PerSchema requires a non-null SchemaName; there is no schema to place history in.");
+        }
+
         // The runner sources its migration chain and fresh-install DDL
         // from the injected catalog rather than via parameter. A catalog returning null for
         // either would surface inside ValidateMigrationsMonotonic / ExecuteFreshInstallAsync as

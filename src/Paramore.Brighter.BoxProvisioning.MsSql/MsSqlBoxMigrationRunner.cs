@@ -97,6 +97,9 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
     /// <inheritdoc />
     protected override string? DefaultHistorySchema => HISTORY_TABLE_SCHEMA;
 
+    /// <inheritdoc />
+    protected override bool SupportsPerSchemaHistory => true;
+
     // ==== Hook overrides — Phase 7.1a delegates to legacy helpers ====
 
     protected override async Task<SqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
