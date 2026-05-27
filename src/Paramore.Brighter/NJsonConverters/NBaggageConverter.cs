@@ -70,6 +70,16 @@ public class NBaggageConverter : JsonConverter<Baggage>
             throw new JsonSerializationException($"Expected StartObject for Baggage entry, got {reader.TokenType}");
         }
 
+        var (key, value) = ReadKeyValuePair(reader);
+
+        if (key != null && value != null)
+        {
+            baggage.Add(key, value);
+        }
+    }
+
+    private static (string? Key, string? Value) ReadKeyValuePair(JsonReader reader)
+    {
         string? key = null;
         string? value = null;
 
@@ -83,21 +93,17 @@ public class NBaggageConverter : JsonConverter<Baggage>
             var propertyName = (string)reader.Value!;
             reader.Read();
 
-            switch (propertyName)
+            if (propertyName == "Key")
             {
-                case "Key":
-                    key = reader.Value as string;
-                    break;
-                case "Value":
-                    value = reader.Value as string;
-                    break;
+                key = reader.Value as string;
+            }
+            else if (propertyName == "Value")
+            {
+                value = reader.Value as string;
             }
         }
 
-        if (key != null && value != null)
-        {
-            baggage.Add(key, value);
-        }
+        return (key, value);
     }
 
     public override void WriteJson(JsonWriter writer, Baggage? value, JsonSerializer serializer)
