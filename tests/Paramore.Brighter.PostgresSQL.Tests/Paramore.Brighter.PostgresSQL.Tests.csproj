@@ -16,7 +16,10 @@
       </PackageReference>
       <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
       <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+      <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" />
+      <PackageReference Include="OpenTelemetry" />
+      <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
       <PackageReference Include="xunit" />
       <PackageReference Include="xunit.runner.visualstudio">
         <PrivateAssets>all</PrivateAssets>
@@ -27,10 +30,18 @@
     </ItemGroup>
 
     <ItemGroup>
+      <None Update="xunit.runner.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.PostgreSql\Paramore.Brighter.BoxProvisioning.PostgreSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Postgres\Paramore.Brighter.Inbox.Postgres.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.PostgresSql\Paramore.Brighter.Locking.PostgresSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.Postgres\Paramore.Brighter.MessagingGateway.Postgres.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.PostgreSql\Paramore.Brighter.Outbox.PostgreSql.csproj" />
       <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
+      <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />
     </ItemGroup>
 </Project>

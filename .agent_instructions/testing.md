@@ -5,6 +5,7 @@
 - Name test methods in the format: When_[condition]_should_[expected_behavior].
 - Name test classes `[Behavior]Tests` — the `When_` convention is for method names and file names only, never class names. For example `PipelineValidatorErrorAggregationTests`, `CommandProcessorPostBoxBulkClearAsyncTests`.
 - Prefer a test case per file.
+- If you have multiple test cases per file (e.g. shared complex set up), the class name should describe the behavior being tested across all tests, for example `CommandProcessorPostBoxBulkClearAsyncTests`.
 - Name test files for the test method in the file i.e. When_[condition]_should_[expected_behavior].cs
 - If you decide to use multiple test cases per file, for example shared complex set up, name the file after the happy path test method and the class after the shared behavior.
 - Ensure all new features and bug fixes include appropriate test coverage.

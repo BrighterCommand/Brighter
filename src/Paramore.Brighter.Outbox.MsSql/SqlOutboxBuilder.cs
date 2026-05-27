@@ -109,13 +109,24 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <param name="outboxTableName">The name of the Outbox table</param>
         /// <param name="hasBinaryMessagePayload">Should the message body be stored as binary? Conversion of binary data to/from UTF-8 is lossy</param>
+        /// <param name="schemaName">
+        /// Optional MSSQL schema name. When non-null, the emitted DDL schema-qualifies the
+        /// table as <c>[schemaName].[outboxTableName]</c>; otherwise the table is emitted
+        /// unqualified and lands in the connection's default schema. Per PR #4039 reviewer
+        /// item M4-1 (F1a): callers configuring <see cref="IAmARelationalDatabaseConfiguration.SchemaName"/>
+        /// rely on the table actually landing in that schema, which the unqualified form
+        /// cannot guarantee.
+        /// </param>
         /// <returns>The required DDL</returns>
-        public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false)
+        public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false, string? schemaName = null)
         {
             if (string.IsNullOrEmpty(outboxTableName))
                 throw new ArgumentNullException(outboxTableName, $"You must provide a tablename for the OutBox table");
 
-            return string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, outboxTableName);
+            var qualifiedTable = schemaName is null
+                ? outboxTableName
+                : $"[{schemaName}].[{outboxTableName}]";
+            return string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, qualifiedTable);
         }
 
         /// <summary>

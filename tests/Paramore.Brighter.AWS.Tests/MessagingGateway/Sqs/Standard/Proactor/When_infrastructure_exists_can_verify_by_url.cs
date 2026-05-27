@@ -55,7 +55,7 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         //Now change the subscription to validate, just check what we made
         subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
-            channelName: channel.Name,
+            channelName: new ChannelName(queueUrl),
             routingKey: routingKey,
             findQueueBy: QueueFindBy.Url,
             messagePumpType: MessagePumpType.Reactor,

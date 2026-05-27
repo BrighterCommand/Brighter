@@ -1,16 +1,18 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Read, Write, Glob, Grep, Agent
-description: Review current specification phase
-argument-hint: [requirements|design [adr-number]|tasks] [threshold]
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git show:*), Read, Write, Glob, Grep, Agent
+description: Review current specification phase (requirements, design, tasks, or code)
+argument-hint: [requirements|design [adr-number]|tasks|code [base-ref]] [threshold]
 ---
 
 ## Adversarial Specification Review
 
 Current spec directory: specs/
 
-**Workflow**: Issue → Requirements → ADR(s) → Tasks → Tests → Code
+**Workflow**: Issue → Requirements → ADR(s) → Tasks → Tests → Code → **Code Review**
 
 **Philosophy**: The first draft is never good enough. This review is skeptical and adversarial — it assumes problems exist and looks for them. The goal is to force iteration towards quality.
+
+**Phases reviewable here**: `requirements`, `design`, `tasks`, and `code`. The first three review specification documents. `code` reviews the actual implementation against the approved specs — diff vs. base branch, cross-referenced against requirements.md + ADRs + tasks.md.
 
 ## Your Task
 
@@ -21,12 +23,13 @@ Read `specs/.current-spec` to determine the active specification directory.
 **Error handling**: If `.current-spec` does not exist, tell the user to run `/spec:new` first and stop. If the spec directory doesn't exist, tell the user and stop. If the document for the requested phase doesn't exist (e.g., no `requirements.md`), tell the user to run the appropriate creation command first (e.g., `/spec:requirements`) and stop. Do NOT launch the sub-agent with missing documents.
 
 Parse $ARGUMENTS:
-- Extract **phase**: first word — `requirements`, `design`, or `tasks`
+- Extract **phase**: first word — `requirements`, `design`, `tasks`, or `code`
 - Extract **adr-number**: for `design` phase, a zero-padded 4-digit number (e.g., `0053`). **Precedence rule**: a 4-digit zero-padded number is ALWAYS an ADR number, never a threshold.
+- Extract **base-ref**: for `code` phase, a token starting with `--base=` (e.g., `--base=origin/master`). Default base is `master`.
 - Extract **threshold**: any other numeric value (default: **60**)
-- If phase is empty: auto-detect (first unapproved phase by checking `.requirements-approved`, `.design-approved`, `.tasks-approved` markers). If ALL phases are approved, tell the user all phases are approved and suggest `/spec:status` or `/spec:implement` instead.
+- If phase is empty: auto-detect. Check approval markers in order: `.requirements-approved`, `.design-approved`, `.tasks-approved`. The first missing marker is the phase to review. If all three are approved, default to `code` (review the implementation against the approved specs). If no branch is checked out or there is no diff vs. base, tell the user there is nothing to review and suggest `/spec:status`.
 
-**Approved phase warning**: If the user explicitly requests review of an already-approved phase, note this in the sub-agent prompt and include a note in the output: "This phase is already approved. Findings are informational — consider whether any warrant re-opening the phase."
+**Approved phase warning**: If the user explicitly requests review of an already-approved phase, note this in the sub-agent prompt and include a note in the output: "This phase is already approved. Findings are informational — consider whether any warrant re-opening the phase." (Not applicable to `code` — code is never "approved" by the spec system.)
 
 Examples:
 - `/spec:review` → auto-detect phase, threshold 60
@@ -36,6 +39,9 @@ Examples:
 - `/spec:review design 0053 80` → review ADR 0053, threshold 80
 - `/spec:review design 70` → review all ADRs, threshold 70 (not 4-digit, so it's a threshold)
 - `/spec:review tasks 50` → review tasks, threshold 50
+- `/spec:review code` → review branch diff vs. master, threshold 60
+- `/spec:review code 70` → review branch diff vs. master, threshold 70
+- `/spec:review code --base=origin/main 70` → diff vs. origin/main, threshold 70
 
 ### Step 2: Gather Documents for the Sub-Agent
 
@@ -55,6 +61,17 @@ Read ALL documents the sub-agent will need. The sub-agent gets a clean context �
 - Read `specs/{current-spec}/requirements.md` (for cross-referencing)
 - Read `specs/{current-spec}/.adr-list` and each ADR (for cross-referencing)
 
+**For code review:**
+- Resolve `{base-ref}` (default `master`). Run `git rev-parse --verify {base-ref}` — if it fails, tell the user the base ref doesn't exist and stop.
+- Run `git merge-base {base-ref} HEAD` to find the divergence point.
+- Run `git diff --stat {base-ref}...HEAD` to get the summary of changed files.
+- Run `git log --oneline {base-ref}..HEAD` to get the commit list.
+- Run `git status --porcelain` to check for uncommitted changes (flag in findings if present).
+- If the diff is empty, tell the user there is nothing to review vs. `{base-ref}` and stop.
+- Read `specs/{current-spec}/requirements.md`, all ADRs from `.adr-list`, and `specs/{current-spec}/tasks.md`. These are the contracts the code must satisfy.
+- Read `.agent_instructions/code_style.md`, `.agent_instructions/testing.md`, and `.agent_instructions/design_principles.md` if they exist — these encode project conventions the sub-agent must check against.
+- The sub-agent itself will use `Bash(git diff:* / git show:*)`, `Read`, `Glob`, and `Grep` to pull specific file-level diffs and surrounding context. Do NOT attempt to inline the full diff in the sub-agent prompt — pass the file list, commit list, stats, and base ref, and let the sub-agent drill in where it needs to.
+
 ### Step 3: Launch Sub-Agent for Adversarial Review
 
 Launch an Agent (subagent_type: "general-purpose") with the prompt below.
@@ -63,7 +80,14 @@ Launch an Agent (subagent_type: "general-purpose") with the prompt below.
 
 **For design and tasks reviews**: Tell the sub-agent the file paths to read — it should read the files itself. This handles large documents (ADRs can be very long) and allows the sub-agent to verify codebase references. Include the requirements.md text in the prompt for cross-referencing (or the file path if it's also large).
 
-**Sub-agent tool access**: The sub-agent (general-purpose) inherits tool access. For design and tasks reviews it SHOULD use Read, Glob, and Grep to read documents and verify codebase references. The sub-agent should NOT write the findings file — it should return the findings as text. The main agent writes the file after validating the output (see Step 6).
+**Sub-agent tool access**: The sub-agent (general-purpose) inherits tool access. For design and tasks reviews it SHOULD use Read, Glob, and Grep to read documents and verify codebase references. For **code** reviews it SHOULD additionally use `Bash(git diff:* / git show:* / git log:*)` to pull file-level diffs on demand. The sub-agent should NOT write the findings file — it should return the findings as text. The main agent writes the file after validating the output (see Step 6).
+
+**Code review sub-agent prompt must additionally include:**
+- The resolved base ref, the commit list, and the `git diff --stat` output
+- The full text of requirements.md, tasks.md, and each ADR (so the sub-agent can cross-reference without re-reading)
+- The paths to `.agent_instructions/code_style.md`, `testing.md`, `design_principles.md` (sub-agent reads them directly)
+- An explicit instruction to drill into at least the top-N changed files (by size) using `git diff {base}...HEAD -- <file>` and to cite specific file:line references in every finding
+- A reminder that uncommitted changes reported by `git status --porcelain` should be surfaced as at least a Medium finding
 
 **IMPORTANT**: The sub-agent prompt must include:
 1. The review criteria for the relevant phase (from Step 4 below)
@@ -182,6 +206,67 @@ You are a skeptical reviewer. Assume the task list has problems — your job is 
 
 ---
 
+#### Code Review Criteria
+
+You are a skeptical, **adversarial** reviewer. Your job is to find problems, not to validate work that has already been done. Assume:
+
+- The author convinced themselves the code is right — they are not a reliable narrator.
+- Tests that pass locally may still be wrong (asserting the wrong thing, testing the stub, or passing vacuously).
+- Commit messages and PROMPT.md describe intent, not outcome — verify against the actual diff.
+
+Every finding MUST cite concrete evidence: a file path, a line range, a diff hunk, or a spec section. No vibes.
+
+**Requirement & ADR Fidelity (highest priority):**
+- For each FR-N in requirements.md, locate where it is implemented in the diff. If you cannot find it, that is a finding (High or Critical depending on FR importance).
+- For each AC, locate a test that asserts it. If the AC is satisfied by a unit test where the spec implies integration, downgrade trust and flag it.
+- For each ADR decision, locate the corresponding code. Flag any deviation where the code does something different from the ADR without a documented reason.
+- Flag scope creep: changed files or new abstractions that don't trace back to any FR, AC, or ADR decision.
+- Flag scope holes: tasks in `tasks.md` marked done but with no visible code.
+
+**TDD Compliance (Brighter-specific):**
+- For each behavioral change, confirm a test exists. Prefer finding the test commit BEFORE the implementation commit in `git log {base}..HEAD` — that's the TDD signature. Absence isn't proof of violation, but combined with tests committed *after* implementation, it's a finding.
+- Test naming: `When_X_should_Y.cs` (Given/When/Then). Class name: `[Behavior]Tests`. Violations are Low–Medium unless pervasive.
+- **Critical Brighter rule**: integration tests that touch a database MUST hit a real database, not a mock. Mocked DB tests masking real migration behavior is a High/Critical finding (see feedback memory — prior incident).
+- Check for `[Skip]`, `[Fact(Skip=...)]`, commented-out `Assert`, or empty test bodies — any of these in the diff is at least Medium.
+
+**Correctness:**
+- Walk the logic of non-trivial new methods. Look for: off-by-one, null derefs on parameters without `[NotNull]`, resource leaks (connections/streams not disposed), async methods that swallow exceptions or skip `ConfigureAwait` where the codebase uses it, race conditions in shared state.
+- For each new `if`/`else`, ask: is the else branch tested? Is there a condition where both branches are wrong?
+- For new SQL: is it parameterised? Does it use the correct schema/quoting for the target dialect?
+- For new configuration/DI changes: is the lifetime correct (singleton vs scoped vs transient)? Are disposables registered correctly?
+
+**Security (apply even in "internal" code):**
+- SQL injection / command injection / path traversal at any trust boundary (user input, message headers, file names, connection strings)
+- Secrets or connection strings committed to code, logs, or test fixtures
+- Unsafe deserialization of attacker-controlled data
+- Weak crypto or `Random` used for security-sensitive values
+- Missing authorization checks on new endpoints
+
+**Project Conventions (read `.agent_instructions/code_style.md` yourself to verify):**
+- Primary constructors for new classes (project default)
+- `Async` suffix on async methods; `ValueTask` vs `Task` consistency with surrounding code
+- Nullability annotations consistent with the file's existing style
+- XML doc comments on public APIs (project requires them)
+- No dead code, speculative abstractions, or commented-out blocks
+- No mixing of structural and behavioral changes in the same commit (tidy-first rule)
+
+**Cross-backend consistency (Brighter-specific):**
+- When a feature touches multiple backends (MSSQL, PostgreSQL, MySQL, SQLite, Spanner, Dynamo), check parity. If MSSQL got a new safety check and PostgreSQL didn't, that's a finding.
+- Check case sensitivity for identifiers — PostgreSQL folds to lowercase, Spanner is strict, others vary. Flag any V1Columns-style comparisons with wrong `StringComparer`.
+
+**Hygiene:**
+- `git status --porcelain` non-empty → Medium finding ("uncommitted work on branch at time of review").
+- New files that look misplaced (e.g., test files in src/, or vice versa).
+- Binary files, generated files, or `.DS_Store` committed by accident.
+- Build warnings introduced (if the diff touches a project the user has recently built, note whether warnings regressed).
+
+**Grounding — no hallucinated findings:**
+- Before filing a finding, verify: did you actually read the file, or are you guessing from the name? If guessing, either read it or don't file the finding.
+- If the diff references a class or method, grep for it in the actual codebase (post-change) to confirm it exists as described.
+- A finding that says "you should have done X" when X is already present is worse than no finding — it destroys trust in the whole review. Prefer fewer, grounded findings over comprehensive-looking speculation.
+
+---
+
 ### Step 5: Output Format for Sub-Agent
 
 Tell the sub-agent to produce output in this exact format:
@@ -261,14 +346,15 @@ After the sub-agent returns:
    - Verify the verdict is consistent with the threshold and findings
    - If counts are wrong, fix them before writing
 
-2. **Write the findings file** to `specs/{current-spec}/review-{phase}.md` using the validated output.
+2. **Write the findings file** to `specs/{current-spec}/review-{phase}.md` using the validated output. For the `code` phase the file is `specs/{current-spec}/review-code.md`.
 
 3. **Present a summary to the user** in the conversation:
    - Verdict (PASS / NEEDS WORK)
    - Count of findings by severity
    - List just the title and score of each finding at or above threshold
    - Path to the findings file for full details
-   - Remind: Use `/spec:approve {phase}` when ready, or iterate on the document and re-run `/spec:review {phase}` after changes.
+   - For `requirements`/`design`/`tasks`: remind the user to use `/spec:approve {phase}` when ready, or iterate and re-run `/spec:review {phase}`.
+   - For `code`: remind the user that `code` has no approval marker — fix findings, commit, and re-run `/spec:review code` until clean. When clean, the next step is commit/push/PR.
 
 ### Step 7: Spec Status
 
@@ -277,3 +363,4 @@ Display overall spec status:
 - Requirements: Approved / In Progress
 - Design: {X} ADRs ({Y} approved, {Z} proposed)
 - Tasks: Approved / In Progress / Not Started
+- Code: Reviewed at {commit sha} / Not reviewed (code is "reviewed" if `review-code.md` exists; include its verdict and the commit sha at the top of HEAD when the review was run)

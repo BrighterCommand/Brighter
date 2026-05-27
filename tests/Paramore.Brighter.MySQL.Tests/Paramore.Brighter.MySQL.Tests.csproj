@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <!--
+            Net9-only TFM via BrighterTestNineOnlyTargetFrameworks. MSSQL / PG / SQLite tests
+            target net9.0+net10.0; MySQL deliberately follows the Paramore.Brighter.Analyzer.Tests
+            precedent and runs net9.0 only. Revisit when the matrix is next reviewed.
+        -->
         <TargetFrameworks>$(BrighterTestNineOnlyTargetFrameworks)</TargetFrameworks>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
@@ -27,8 +32,10 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.MySql\Paramore.Brighter.Inbox.MySql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.MySql\Paramore.Brighter.Locking.MySql.csproj" />
+      <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.MySql\Paramore.Brighter.BoxProvisioning.MySql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.MySql\Paramore.Brighter.Outbox.MySql.csproj" />
       <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
+      <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />
     </ItemGroup>
 
 </Project>

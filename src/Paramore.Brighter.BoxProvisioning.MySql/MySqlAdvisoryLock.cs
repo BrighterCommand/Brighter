@@ -1,0 +1,128 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using MySqlConnector;
+
+namespace Paramore.Brighter.BoxProvisioning.MySql;
+
+/// <summary>
+/// Default <see cref="IMySqlAdvisoryLock"/> backed by MySQL <c>GET_LOCK(name, timeout)</c>
+/// and <c>RELEASE_LOCK(name)</c>. Acquire blocks server-side for up to the supplied timeout
+/// and throws <see cref="TimeoutException"/> on failure.
+/// </summary>
+/// <remarks>
+/// Operator note — fail-fast is unavailable on MySQL. <c>GET_LOCK</c> takes whole seconds
+/// (SQL <c>INT</c> bind), and a sub-second wait of <c>TimeSpan.Zero</c> would round to a
+/// non-blocking acquire that races the migration. <see cref="AcquireAsync"/> floors the wait
+/// at 1 second instead, so a configured <c>TimeSpan.Zero</c> still produces a server-side
+/// blocking acquire of one second — not the "try once and fail immediately" semantics
+/// available on MSSQL (<c>sp_getapplock</c> with <c>LockTimeout = 0</c>) or PostgreSQL
+/// (<c>pg_try_advisory_lock</c>). Callers needing strict fail-fast should detect this
+/// constraint at configuration time on the MySQL backend.
+/// </remarks>
+public class MySqlAdvisoryLock : IMySqlAdvisoryLock
+{
+    /// <inheritdoc />
+    public async Task AcquireAsync(
+        MySqlConnection connection, string lockKey,
+        TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        ValidateLockParameters(timeout);
+
+        // GET_LOCK takes whole seconds; truncating sub-second TimeSpans to 0 makes the call
+        // non-blocking, defeating the migration lock for callers that configure short timeouts.
+        // Floor at 1 second so a 500ms timeout still produces server-side blocking.
+        var timeoutSeconds = (int)Math.Max(1, Math.Ceiling(timeout.TotalSeconds));
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT GET_LOCK(@LockName, @Timeout)";
+        command.Parameters.AddWithValue("@LockName", lockKey);
+        command.Parameters.AddWithValue("@Timeout", timeoutSeconds);
+
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+
+        // GET_LOCK returns 1 (acquired), 0 (timeout), or NULL (server-side error: OOM, KILLed
+        // session, memory-table fault). Distinguish the latter from a timeout so operators
+        // reading logs do not chase a phantom contention issue. NULL is unreachable on
+        // current MySQL 8 paths in practice (NULL/invalid lock names raise a typed
+        // MySqlException at parse time before GET_LOCK runs); kept as defensive coverage and
+        // for parity with MSSQL's per-return-code mapping (Item N).
+        if (result is null or DBNull)
+        {
+            throw new MySqlAdvisoryLockException(
+                $"GET_LOCK on '{lockKey}' returned NULL — likely a server-side error " +
+                "(out of memory, KILLed connection, or memory-table fault). Check server logs.");
+        }
+
+        if (Convert.ToInt32(result) != 1)
+        {
+            throw new TimeoutException(
+                $"Could not acquire migration lock '{lockKey}' within {timeoutSeconds}s.");
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool?> ReleaseAsync(
+        MySqlConnection connection, string lockKey,
+        CancellationToken cancellationToken)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT RELEASE_LOCK(@LockName)";
+        command.Parameters.AddWithValue("@LockName", lockKey);
+
+        var raw = await command.ExecuteScalarAsync(cancellationToken);
+        if (raw == null || raw is DBNull) return null;
+        return Convert.ToInt32(raw) == 1;
+    }
+
+    private static void ValidateLockParameters(TimeSpan timeout)
+    {
+        // GET_LOCK takes its @timeout via a SQL INT bind (whole seconds). A negative TimeSpan
+        // has no meaningful interpretation for an exclusive application lock — the existing
+        // `Math.Max(1, Math.Ceiling(timeout.TotalSeconds))` floor would silently coerce it to a
+        // 1-second wait, masking the bad input from the caller. A TimeSpan whose ceil(TotalSeconds)
+        // exceeds int.MaxValue silently overflows on cast (wraps to a negative int) and GET_LOCK
+        // then interprets the bind as "wait forever" — defeating the migration lock for callers
+        // expecting bounded waits. Surface both as actionable ArgumentOutOfRangeException so the
+        // failure mode at acquire time is a clear diagnostic rather than a deadlocked deployment.
+        // Mirrors `MsSqlAdvisoryLock.ValidateLockParameters` per PR #4039 review item #7; note the
+        // MSSQL boundary is int.MaxValue *milliseconds* (~24.85 days) because sp_getapplock takes
+        // ms, whereas GET_LOCK takes seconds — so the MySQL boundary is int.MaxValue seconds (~68
+        // years).
+        if (timeout < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(timeout), timeout, "Migration lock timeout must be non-negative.");
+        }
+
+        if (timeout.TotalSeconds > int.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(timeout), timeout,
+                $"Migration lock timeout must not exceed {TimeSpan.FromSeconds(int.MaxValue)} " +
+                $"(int.MaxValue seconds ≈ 68 years). GET_LOCK would silently overflow on cast.");
+        }
+    }
+}

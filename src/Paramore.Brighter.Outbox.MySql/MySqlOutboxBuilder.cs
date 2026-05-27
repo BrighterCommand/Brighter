@@ -104,13 +104,25 @@ namespace Paramore.Brighter.Outbox.MySql
         /// </summary>
         /// <param name="outboxTableName">The name of the table to store messages in</param>
         /// <param name="hasBinaryMessagePayload">Should the message body be stored as binary? Conversion of binary data to/from UTF-8 is lossy</param>
+        /// <param name="schemaName">
+        /// Optional MySQL schema (database) name. When non-null, the emitted DDL schema-qualifies
+        /// the table as <c>`schemaName`.`outboxTableName`</c>; otherwise the table is emitted
+        /// unqualified and lands in the connection's bound database (<c>DATABASE()</c>). In MySQL
+        /// "schema" is synonymous with "database"; per PR #4039 reviewer item M4-1 (F1c),
+        /// configuring <see cref="Paramore.Brighter.IAmARelationalDatabaseConfiguration.SchemaName"/>
+        /// to a database different from the connection's bound database requires schema-qualified
+        /// DDL — without it, detection looks in SchemaName while creation lands in DATABASE().
+        /// </param>
         /// <returns></returns>
-        public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false)
+        public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false, string? schemaName = null)
         {
             if (string.IsNullOrEmpty(outboxTableName))
                 throw new ArgumentNullException(outboxTableName, $"You must provide a tablename for the OutBox table");
 
-            return string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, outboxTableName);
+            var qualifiedTable = schemaName is null
+                ? outboxTableName
+                : $"`{schemaName}`.`{outboxTableName}`";
+            return string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, qualifiedTable);
         }
 
         /// <summary>

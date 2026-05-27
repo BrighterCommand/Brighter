@@ -52,15 +52,11 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
             new SqsPublication(channelName:  channelName, makeChannels: OnMissingChannel.Create));
     }
             
-    [SkippableTheory]
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public async Task When_a_message_consumer_reads_multiple_messages(bool fairQueue)
     {
-        // TODO: remove once Moto pin in #4096 is bumped to 5.1.23+
-        Skip.If(fairQueue && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_SERVICE_URL")),
-            "SQS fair queues require Moto >= 5.1.23; pinned image is 5.1.22. Runs against real AWS.");
-
         var partitionOne = fairQueue ? new PartitionKey(Uuid.NewAsString()) : PartitionKey.Empty;
         var partitionTwo = fairQueue ? new PartitionKey(Uuid.NewAsString()) : PartitionKey.Empty;
         

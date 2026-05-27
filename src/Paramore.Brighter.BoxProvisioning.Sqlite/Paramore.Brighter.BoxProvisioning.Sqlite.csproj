@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>SQLite box provisioning for Paramore.Brighter. Provides automatic creation and migration of inbox and outbox tables in SQLite at application startup.</Description>
+    <Authors>Ian Cooper</Authors>
+    <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>SQLite;Database;Outbox;Inbox;Provisioning;Migration;Command;Event;Command Processor;Messaging;Brighter</PackageTags>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning\Paramore.Brighter.BoxProvisioning.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Inbox.Sqlite\Paramore.Brighter.Inbox.Sqlite.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite"/>
+  </ItemGroup>
+
+</Project>
