@@ -39,6 +39,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
+[Trait("Category", "Spanner")]
 [Collection("SpannerBoxProvisioning")]
 public class SpannerOutboxNormalPathTests : IAsyncLifetime
 {
@@ -203,6 +204,7 @@ WHERE `BoxTableName` = @BoxTableName",
     }
 }
 
+[Trait("Category", "Spanner")]
 [Collection("SpannerBoxProvisioning")]
 public class SpannerInboxNormalPathTests : IAsyncLifetime
 {
