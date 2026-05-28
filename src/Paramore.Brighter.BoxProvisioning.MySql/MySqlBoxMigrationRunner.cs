@@ -131,9 +131,13 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
     }
 
     protected override async Task EnsureHistoryTableAsync(
-        MySqlConnection connection, MySqlTransaction? transaction, string? schemaName,
+        MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
         CancellationToken cancellationToken)
     {
+        // tableName is accepted for symmetry with the abstract signature; MySQL is out of scope
+        // for PerSchema history placement (SupportsPerSchemaHistory => false) so the D5 seed never
+        // fires here. Discard to suppress unused-parameter warnings.
+        _ = tableName;
         // No race-handling needed: MySQL acquires a metadata lock (MDL_EXCLUSIVE) on the table
         // name for the duration of CREATE TABLE, and the IF NOT EXISTS check is evaluated under
         // that lock. Concurrent CREATE TABLE IF NOT EXISTS statements serialize via the MDL —

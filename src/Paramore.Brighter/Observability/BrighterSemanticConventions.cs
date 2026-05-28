@@ -45,6 +45,7 @@ public static class BrighterSemanticConventions
     public const string BoxMigrationEventBootstrap = "bootstrap";
     public const string BoxMigrationEventNormalUpdate = "normal_update";
     public const string BoxMigrationEventHistoryTableRaceSwallowed = "history_table_race_swallowed";
+    public const string BoxMigrationEventLegacyHistorySeeded = "legacy_history_seeded";
     public const string BoxType = "paramore.brighter.box.type";
     public const string CeSource = "cloudevents.event_source";
     public const string CeMessageId = "cloudevents.event_id";

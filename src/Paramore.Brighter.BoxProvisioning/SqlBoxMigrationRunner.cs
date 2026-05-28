@@ -257,7 +257,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
             try
             {
                 activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventEnsureHistory));
-                await EnsureHistoryTableAsync(connection, uow.Transaction, schemaName, cancellationToken);
+                await EnsureHistoryTableAsync(connection, uow.Transaction, schemaName, tableName, cancellationToken);
 
                 var (tableExists, historyExists) = await RedetectStateAsync(
                     connection, uow.Transaction, schemaName, tableName, cancellationToken);
@@ -386,10 +386,13 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
 
     /// <summary>
     /// Ensures the migration-history table exists. Each backend's history-table DDL differs;
-    /// the base orchestrates the call but does not own the DDL.
+    /// the base orchestrates the call but does not own the DDL. Backends that opt into
+    /// <see cref="MigrationHistoryScope.PerSchema"/> placement may use
+    /// <paramref name="tableName"/> to seed this tenant's prior history rows from a legacy
+    /// default-schema history table on the first PerSchema run (ADR 0060 D5).
     /// </summary>
     protected abstract Task EnsureHistoryTableAsync(
-        TConnection connection, TTransaction? transaction, string? schemaName,
+        TConnection connection, TTransaction? transaction, string? schemaName, string tableName,
         CancellationToken cancellationToken);
 
     /// <summary>

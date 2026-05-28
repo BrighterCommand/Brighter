@@ -137,14 +137,17 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     }
 
     protected override async Task EnsureHistoryTableAsync(
-        NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName,
+        NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName, string tableName,
         CancellationToken cancellationToken)
     {
         // schemaName is accepted for symmetry with the abstract signature but ignored here — the
         // physical history schema comes from QuotedHistorySchema() (Global → "public"; PerSchema →
         // the configured SchemaName), the single source of truth shared with the INSERT path and
         // the detection helper. Explicit discard suppresses unused-parameter IDE warnings.
+        // tableName is the box-table name; it will be consumed by the T9 D5 seed (PG flip
+        // Global→PerSchema). Until then it is discarded for the same reason.
         _ = schemaName;
+        _ = tableName;
 
         var historySchema = QuotedHistorySchema();
 

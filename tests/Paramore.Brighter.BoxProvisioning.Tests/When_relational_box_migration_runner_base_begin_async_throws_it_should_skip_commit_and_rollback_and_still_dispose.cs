@@ -127,7 +127,7 @@ public class SqlBoxMigrationRunnerBeginFailureTests
             => $"lock_{tableName}";
 
         protected override Task EnsureHistoryTableAsync(
-            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName,
+            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
             CancellationToken cancellationToken)
             => throw new NotSupportedException("EnsureHistoryTableAsync must not be reached when BeginAsync throws.");
 

@@ -178,10 +178,11 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     }
 
     protected override async Task EnsureHistoryTableAsync(
-        SqliteConnection connection, SqliteTransaction? transaction, string? schemaName,
+        SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
         CancellationToken cancellationToken)
     {
         _ = schemaName; // SQLite has no schema concept.
+        _ = tableName;  // SQLite is out of scope for PerSchema; the D5 seed never fires here.
 
         // No race-handling needed: BEGIN IMMEDIATE above acquires SQLite's database-wide RESERVED
         // lock, so only one writer can be inside this transaction at a time. Concurrent runners

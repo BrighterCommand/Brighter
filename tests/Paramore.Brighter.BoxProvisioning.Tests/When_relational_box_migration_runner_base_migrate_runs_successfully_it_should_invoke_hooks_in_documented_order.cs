@@ -190,7 +190,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
             => $"lock_{tableName}";
 
         protected override Task EnsureHistoryTableAsync(
-            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName,
+            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
             CancellationToken cancellationToken)
         {
             _unitOfWork.Log.Add("EnsureHistoryTable");

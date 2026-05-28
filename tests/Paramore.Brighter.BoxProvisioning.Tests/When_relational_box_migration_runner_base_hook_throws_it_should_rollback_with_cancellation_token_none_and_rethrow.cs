@@ -141,7 +141,7 @@ public class SqlBoxMigrationRunnerHookFailureTests
             => $"lock_{tableName}";
 
         protected override Task EnsureHistoryTableAsync(
-            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName,
+            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
             CancellationToken cancellationToken)
         {
             if (_hookToThrow == ThrowFromHook.EnsureHistoryTable)
