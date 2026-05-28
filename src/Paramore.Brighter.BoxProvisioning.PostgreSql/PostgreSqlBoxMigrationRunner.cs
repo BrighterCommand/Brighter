@@ -140,21 +140,34 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string? schemaName, string tableName,
         CancellationToken cancellationToken)
     {
-        // schemaName is accepted for symmetry with the abstract signature but ignored here — the
-        // physical history schema comes from QuotedHistorySchema() (Global → "public"; PerSchema →
-        // the configured SchemaName), the single source of truth shared with the INSERT path and
-        // the detection helper. Explicit discard suppresses unused-parameter IDE warnings.
-        // tableName is the box-table name; it will be consumed by the T9 D5 seed (PG flip
-        // Global→PerSchema). Until then it is discarded for the same reason.
-        _ = schemaName;
-        _ = tableName;
+        // Resolve the physical history schema once. Under PerSchema it's the configured (non-null)
+        // SchemaName; under Global it is the backend default ("public"). The detection helper folds
+        // the same value the same way (PgIdentifier.Quote / Normalize), so write and read never
+        // diverge. AssertSafe guards against any unsafe schema literal leaking into the inline DDL.
+        var resolvedHistorySchema = ResolveHistorySchema() ?? HISTORY_TABLE_SCHEMA;
+        Identifiers.AssertSafe(resolvedHistorySchema, nameof(resolvedHistorySchema));
+        var historySchemaQuoted = PgIdentifier.Quote(resolvedHistorySchema);
+        var historySchemaFolded = PgIdentifier.Normalize(resolvedHistorySchema);
 
-        var historySchema = QuotedHistorySchema();
+        // D5 (ADR 0060): on a first PerSchema run that follows a Global predecessor, copy this
+        // tenant's prior history rows from the legacy public.__BrighterMigrationHistory so the
+        // runner does NOT mis-detect the box as needing a bootstrap re-stamp (which would silently
+        // re-run migration accounting and break FR5). We probe the per-schema table's existence
+        // BEFORE the CREATE so we can distinguish "just created — needs seed" from "already there —
+        // no seed needed". The probe runs under the same advisory lock + transaction as the CREATE
+        // and seed below, so a racing flip cannot interleave between them. Skipped when the folded
+        // resolved history schema equals the folded backend default (Global, or PerSchema with
+        // SchemaName == "public") — then per-schema and legacy are the same table and there is
+        // nothing to copy.
+        var needsSeedCheck = !string.Equals(historySchemaFolded, HISTORY_TABLE_SCHEMA, StringComparison.Ordinal);
+        var perSchemaExisted = needsSeedCheck
+            && await DoesHistoryTableExistAsync(connection, transaction, historySchemaFolded, cancellationToken);
 
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = $@"
-CREATE TABLE IF NOT EXISTS {historySchema}.""{MIGRATION_HISTORY_TABLE}"" (
+        using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = $@"
+CREATE TABLE IF NOT EXISTS {historySchemaQuoted}.""{MIGRATION_HISTORY_TABLE}"" (
     ""MigrationVersion"" INT NOT NULL,
     ""SchemaName"" VARCHAR(256) NOT NULL DEFAULT 'public',
     ""BoxTableName"" VARCHAR(256) NOT NULL,
@@ -162,56 +175,170 @@ CREATE TABLE IF NOT EXISTS {historySchema}.""{MIGRATION_HISTORY_TABLE}"" (
     ""AppliedAt"" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (""SchemaName"", ""BoxTableName"", ""MigrationVersion"")
 )";
-        // Postgres marks the outer transaction as aborted on a catalog-level duplicate-type
-        // error from CREATE TABLE IF NOT EXISTS regardless of whether we catch it. Without a
-        // savepoint the catch below leaves the transaction "poisoned" — RedetectStateAsync's
-        // next statement then fails with 25P02 even though our swallow was intentional. A
-        // SAVEPOINT around the CREATE narrows the abort to the inner sub-transaction, so
-        // ROLLBACK TO SAVEPOINT restores a usable transaction state on the racing path.
-        if (transaction is not null)
-        {
-            await transaction.SaveAsync(HistoryTableSavepoint, cancellationToken);
-        }
-        try
-        {
-            await command.ExecuteNonQueryAsync(cancellationToken);
+            // Postgres marks the outer transaction as aborted on a catalog-level duplicate-type
+            // error from CREATE TABLE IF NOT EXISTS regardless of whether we catch it. Without a
+            // savepoint the catch below leaves the transaction "poisoned" — RedetectStateAsync's
+            // next statement then fails with 25P02 even though our swallow was intentional. A
+            // SAVEPOINT around the CREATE narrows the abort to the inner sub-transaction, so
+            // ROLLBACK TO SAVEPOINT restores a usable transaction state on the racing path.
             if (transaction is not null)
             {
-                await transaction.ReleaseAsync(HistoryTableSavepoint, cancellationToken);
+                await transaction.SaveAsync(HistoryTableSavepoint, cancellationToken);
             }
-        }
-        catch (PostgresException ex) when (
-            ex.SqlState == PostgresErrorCodes.UniqueViolation
-            || ex.SqlState == PostgresErrorCodes.DuplicateTable
-            || ex.SqlState == PostgresErrorCodes.DuplicateObject)
-        {
-            // TOCTOU on Postgres catalog: another connection raced our CREATE TABLE IF NOT EXISTS
-            // between the existence check (pg_class) and the type insert (pg_type), or between
-            // the type insert and a duplicate-relation check. The error surfaces as one of:
-            //   23505 (UniqueViolation) on pg_type_typname_nsp_index — most common
-            //   42P07 (DuplicateTable) — relation already exists
-            //   42710 (DuplicateObject) — type/constraint already exists
-            // In every case the history table now exists with the schema we intended to create
-            // (the racing session ran the same DDL), which is the post-condition we wanted.
-            if (transaction is not null)
+            try
             {
-                // Restore the transaction from the aborted sub-transaction back to the pre-CREATE
-                // state. Subsequent statements (RedetectStateAsync etc.) then execute against a
-                // live transaction instead of failing with 25P02.
-                await transaction.RollbackAsync(HistoryTableSavepoint, cancellationToken);
+                await command.ExecuteNonQueryAsync(cancellationToken);
+                if (transaction is not null)
+                {
+                    await transaction.ReleaseAsync(HistoryTableSavepoint, cancellationToken);
+                }
             }
+            catch (PostgresException ex) when (
+                ex.SqlState == PostgresErrorCodes.UniqueViolation
+                || ex.SqlState == PostgresErrorCodes.DuplicateTable
+                || ex.SqlState == PostgresErrorCodes.DuplicateObject)
+            {
+                // TOCTOU on Postgres catalog: another connection raced our CREATE TABLE IF NOT EXISTS
+                // between the existence check (pg_class) and the type insert (pg_type), or between
+                // the type insert and a duplicate-relation check. The error surfaces as one of:
+                //   23505 (UniqueViolation) on pg_type_typname_nsp_index — most common
+                //   42P07 (DuplicateTable) — relation already exists
+                //   42710 (DuplicateObject) — type/constraint already exists
+                // In every case the history table now exists with the schema we intended to create
+                // (the racing session ran the same DDL), which is the post-condition we wanted.
+                if (transaction is not null)
+                {
+                    // Restore the transaction from the aborted sub-transaction back to the pre-CREATE
+                    // state. Subsequent statements (RedetectStateAsync etc.) then execute against a
+                    // live transaction instead of failing with 25P02.
+                    await transaction.RollbackAsync(HistoryTableSavepoint, cancellationToken);
+                }
 
-            // Surface the swallow so operators investigating "did two replicas race here?" have
-            // a signal — Debug-level log (carrying the actual SqlState so the three race shapes
-            // can be distinguished after the fact) + Activity event on the migration span (when
-            // one is active). Silent swallow was the prior behaviour; per PR #4039 review item #7
-            // the race is real and the swallow is intentional, but operators got no signal that
-            // two racers serialised here.
-            Logger.LogDebug(ex,
-                "{HistoryTable} already created by racing session (Postgres SqlState {SqlState})",
-                MIGRATION_HISTORY_TABLE, ex.SqlState);
+                // Surface the swallow so operators investigating "did two replicas race here?" have
+                // a signal — Debug-level log (carrying the actual SqlState so the three race shapes
+                // can be distinguished after the fact) + Activity event on the migration span (when
+                // one is active). Silent swallow was the prior behaviour; per PR #4039 review item #7
+                // the race is real and the swallow is intentional, but operators got no signal that
+                // two racers serialised here.
+                Logger.LogDebug(ex,
+                    "{HistoryTable} already created by racing session (Postgres SqlState {SqlState})",
+                    MIGRATION_HISTORY_TABLE, ex.SqlState);
+                Activity.Current?.AddEvent(new ActivityEvent(
+                    BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
+            }
+        }
+
+        // Run the D5 seed only when the per-schema table was absent before this run. If it was
+        // already there, this PerSchema deployment is already past its first run and any seed must
+        // have been done previously. The seed itself carries a NOT EXISTS guard against the
+        // composite PK so a re-fire (e.g. if a racing session beat us to the seed) is harmless.
+        if (needsSeedCheck && !perSchemaExisted)
+        {
+            await SeedHistoryFromLegacyAsync(
+                connection, transaction, historySchemaQuoted, schemaName ?? resolvedHistorySchema, tableName,
+                cancellationToken);
+        }
+    }
+
+    // EXISTS probe used both for the D5 pre-create check on the per-schema table and the
+    // legacy-existence check inside SeedHistoryFromLegacyAsync. The schema parameter must already
+    // be folded via PgIdentifier.Normalize — information_schema.tables stores the case PG actually
+    // saved, so an unfolded compare would miss tables created from mixed-case identifiers.
+    private async Task<bool> DoesHistoryTableExistAsync(
+        NpgsqlConnection connection, NpgsqlTransaction? transaction, string foldedSchema,
+        CancellationToken cancellationToken)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText =
+            "SELECT EXISTS(SELECT 1 FROM information_schema.tables " +
+            "WHERE table_name = @HistoryTableName AND table_schema = @SchemaName)";
+        command.Parameters.AddWithValue("@HistoryTableName", MIGRATION_HISTORY_TABLE);
+        command.Parameters.AddWithValue("@SchemaName", foldedSchema);
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return result is bool exists && exists;
+    }
+
+    // Copies this tenant's prior history rows from the legacy public history table into the
+    // newly-created per-schema history table on first PerSchema run (ADR 0060 D5). Filtered to this
+    // tenant (SchemaName + BoxTableName, folded the same way the runner stamped them on the Global
+    // INSERT path) so a multi-tenant Global deployment doesn't bleed rows across tenants. All five
+    // columns are copied — Description is NOT NULL with no default and AppliedAt preserves the
+    // original install/bootstrap timestamp, so the post-flip row is indistinguishable from a row
+    // written by the original Global-scope provision. NOT EXISTS on the composite PK makes the
+    // seed idempotent. Skipped when no legacy table exists — this is the first-ever provision (no
+    // Global predecessor) and there is nothing to copy.
+    private async Task SeedHistoryFromLegacyAsync(
+        NpgsqlConnection connection, NpgsqlTransaction? transaction,
+        string perSchemaQuoted, string boxSchema, string boxTableName,
+        CancellationToken cancellationToken)
+    {
+        const string legacySchema = HISTORY_TABLE_SCHEMA;
+        var legacyFolded = PgIdentifier.Normalize(legacySchema);
+        var legacyExists = await DoesHistoryTableExistAsync(connection, transaction, legacyFolded, cancellationToken);
+        if (!legacyExists)
+        {
+            return;
+        }
+
+        // perSchemaQuoted was already AssertSafe-d + Quote-d by the caller. legacySchema is the
+        // const "public" but we re-validate for defence in depth; boxSchema is operator-supplied
+        // and must be validated before its folded form is passed as a parameter (Normalize doesn't
+        // sanitise — AssertSafe does).
+        Identifiers.AssertSafe(legacySchema, nameof(legacySchema));
+        Identifiers.AssertSafe(boxSchema, nameof(boxSchema));
+
+        var legacyQuoted = PgIdentifier.Quote(legacySchema);
+
+        int rowsCopied;
+        using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = $@"
+INSERT INTO {perSchemaQuoted}.""{MIGRATION_HISTORY_TABLE}""
+    (""MigrationVersion"", ""SchemaName"", ""BoxTableName"", ""Description"", ""AppliedAt"")
+SELECT src.""MigrationVersion"", src.""SchemaName"", src.""BoxTableName"", src.""Description"", src.""AppliedAt""
+FROM {legacyQuoted}.""{MIGRATION_HISTORY_TABLE}"" AS src
+WHERE src.""SchemaName"" = @SchemaName
+  AND src.""BoxTableName"" = @BoxTableName
+  AND NOT EXISTS (
+      SELECT 1 FROM {perSchemaQuoted}.""{MIGRATION_HISTORY_TABLE}"" AS tgt
+      WHERE tgt.""SchemaName"" = src.""SchemaName""
+        AND tgt.""BoxTableName"" = src.""BoxTableName""
+        AND tgt.""MigrationVersion"" = src.""MigrationVersion"")";
+            command.Parameters.AddWithValue("@SchemaName", PgIdentifier.Normalize(boxSchema));
+            command.Parameters.AddWithValue("@BoxTableName", PgIdentifier.Normalize(boxTableName));
+            try
+            {
+                rowsCopied = await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch (PostgresException ex)
+            {
+                // Reviewer #1 hardening (must, not should): any failure reading the legacy history
+                // table — typically tenant-isolated credentials lacking SELECT on public — must
+                // surface as a ConfigurationException with a clear cause. Silently absorbing the
+                // failure would let an empty seed go through; the next provision would then
+                // bootstrap-stamp a fresh row, effectively re-running the migration ledger and
+                // breaking FR5. The throw rolls back the surrounding transaction so no partial
+                // per-schema state is left behind.
+                throw new ConfigurationException(
+                    $"Brighter PerSchema migration: the first Global → PerSchema run requires read " +
+                    $"access to the legacy default-schema history table {legacyQuoted}.\"{MIGRATION_HISTORY_TABLE}\" " +
+                    $"so prior history rows can be seeded into the per-schema history. Grant the runner " +
+                    $"SELECT on that table (and INSERT on {perSchemaQuoted}.\"{MIGRATION_HISTORY_TABLE}\") and retry. " +
+                    $"The original provider exception is preserved as the inner exception.",
+                    ex);
+            }
+        }
+
+        if (rowsCopied > 0)
+        {
+            Logger.LogInformation(
+                "Seeded {RowsCopied} legacy history row(s) into {HistorySchema}.{HistoryTable} " +
+                "from {LegacySchema} for {BoxSchema}.{BoxTable} on first PerSchema run",
+                rowsCopied, perSchemaQuoted, MIGRATION_HISTORY_TABLE, legacyQuoted, boxSchema, boxTableName);
             Activity.Current?.AddEvent(new ActivityEvent(
-                BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
+                BrighterSemanticConventions.BoxMigrationEventLegacyHistorySeeded));
         }
     }
 
