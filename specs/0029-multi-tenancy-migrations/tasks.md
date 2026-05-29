@@ -200,7 +200,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
     - Defensive-column note (reviewer #6): same as MSSQL — the runner always stamps `SchemaName`, the column DEFAULT is never exercised; no NULL concern in the SELECT.
     - **Harden the seed read failure (reviewer #1 — must):** wrap the legacy-table read; on failure rethrow a `ConfigurationException` stating *"the first Global → PerSchema run requires read access to the legacy default-schema history table"* rather than allowing a silent empty seed (FR5 break). Rolls back the transaction. Covered by T-PERM + DOC.
 
-- [ ] **TEST + IMPLEMENT: Global → PerSchema flip without read access to the legacy table fails loudly, not silently (reviewer #1)**
+- [x] **TEST + IMPLEMENT: Global → PerSchema flip without read access to the legacy table fails loudly, not silently (reviewer #1)** — `389daf1c4`. SqlBoxProvisioner pre-lock hint slice (catch DbException on both DoesHistoryExistAsync + GetMaxVersionAsync; static ILogger via ApplicationLogging.CreateLogger). Tests symmetric MSSQL+PG; ConfigurationException + documented phrase + inner provider exception + legacy row intact + no per-schema stub. Regression-clean across base/MSSQL/PG/MySQL/SQLite.
   - **USE COMMAND**: `/test-first when a global to perschema flip cannot read the legacy default-schema history table it should throw a clear configuration error and not silently re-run migrations`
   - Test location: one file per backend —
     - `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/When_per_schema_flip_cannot_read_legacy_history_table_mssql_runner_should_throw_clear_error.cs`
@@ -216,7 +216,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
 
 ### Multi-tenant isolation (FR6, AC4)
 
-- [ ] **TEST + IMPLEMENT: Two tenants under PerSchema get independent history tables**
+- [x] **TEST + IMPLEMENT: Two tenants under PerSchema get independent history tables** — `50b148111`. Two characterisation tests (MSSQL+PG) GREEN on first run; no prod code (T3/T4 `ResolveHistorySchema()` already keys off `SchemaName`). Two tenants share box-table name with distinct `tenant_a_<guid>`/`tenant_b_<guid>` `SchemaName`s under PerSchema; assert each schema's `__BrighterMigrationHistory` has filtered COUNT 1 stamped with own SchemaName; capture B's row count + AppliedAt + MigrationVersion; re-provision A; assert B unchanged. PG schemas folded; PG row-count helper probes existence in separate round-trip (T6 lesson). MSSQL 80/80 + 80/80 net9/net10; PG 73/73 + 73/73 net9/net10.
   - **USE COMMAND**: `/test-first when two tenants with distinct SchemaName values both use PerSchema each should get an independent history table and one tenant's migration should not affect the other`
   - Test location: one file per backend —
     - `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/When_two_mssql_tenants_use_per_schema_scope_each_should_get_independent_history.cs`
