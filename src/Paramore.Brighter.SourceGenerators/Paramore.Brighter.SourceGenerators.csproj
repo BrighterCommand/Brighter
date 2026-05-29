@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Description>Source generators for Brighter — emits handler/mapper/transform registrations at compile time so consumers can avoid AutoFromAssemblies reflection scanning.</Description>
+    <PackageTags>SourceGenerator;Brighter;Paramore.Brighter</PackageTags>
+    <IsPackable>false</IsPackable>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <Nullable>enable</Nullable>
+    <!-- Generator assemblies do not need ref assemblies and shouldn't ship XML docs -->
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- RS2008: analyzer release tracking — not needed for prototype -->
+    <NoWarn>$(NoWarn);RS2008</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pack the props into build/ so it applies only to direct PackageReferences (not transitive). -->
+    <None Include="build\Paramore.Brighter.SourceGenerators.props" Pack="true" PackagePath="build\" />
+  </ItemGroup>
+
+</Project>
