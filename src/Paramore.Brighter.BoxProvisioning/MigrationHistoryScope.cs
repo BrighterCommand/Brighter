@@ -28,6 +28,43 @@ namespace Paramore.Brighter.BoxProvisioning;
 /// physically placed relative to the configured
 /// <see cref="IAmARelationalDatabaseConfiguration.SchemaName"/>.
 /// </summary>
+/// <remarks>
+/// Spec 0029 / ADR 0060. The value is supplied through
+/// <c>BoxProvisioningOptions.MigrationHistoryScope</c> and threaded into each per-backend
+/// migration runner. The default <see cref="Global"/> is byte-for-byte today's behaviour — no
+/// operator action is required to upgrade.
+/// <para>
+/// <b>Backend support.</b> Only MSSQL and PostgreSQL honour <see cref="PerSchema"/> placement;
+/// MySQL (where schema == database), SQLite (no schema concept) and Spanner (degenerate
+/// fresh-install-only model per ADR 0057 §6) treat <see cref="PerSchema"/> as a no-op and keep
+/// history in their default location. No exception is thrown so a single
+/// <c>BoxProvisioningOptions</c> can target a mixed backend set without per-backend branching;
+/// the placement-decision log emitted by the runner each run (see <c>SqlBoxMigrationRunner</c>'s
+/// per-run Information log) surfaces the resolved schema so operators can confirm where their
+/// history landed without inspecting the database.
+/// </para>
+/// <para>
+/// <b>Flip semantics.</b> A <see cref="Global"/>→<see cref="PerSchema"/> flip on MSSQL/PG
+/// auto-seeds the new per-schema history table from the legacy default-schema history on the
+/// first run (ADR 0060 D5), so existing migrations are not re-applied. The seed runs under the
+/// same advisory lock and transaction as the CREATE and copies only this tenant's rows
+/// (<c>WHERE SchemaName=@schemaName AND BoxTableName=@boxTableName</c>) with a
+/// <c>NOT EXISTS</c> primary-key guard so a repeated flip is idempotent. The seed requires
+/// <b>read access to the legacy default-schema history table</b> (<c>dbo.__BrighterMigrationHistory</c>
+/// on MSSQL, <c>public.__BrighterMigrationHistory</c> on PG); when the database role lacks
+/// that grant the runner surfaces a <see cref="ConfigurationException"/> with the inner
+/// provider exception attached. The reverse flip (<see cref="PerSchema"/>→<see cref="Global"/>)
+/// and post-flip cleanup of the legacy rows are <b>out of scope</b>; operators wanting to
+/// reclaim that storage must run their own ad-hoc DELETE against the legacy table.
+/// </para>
+/// <para>
+/// <b>Misconfiguration.</b> Selecting <see cref="PerSchema"/> on a placement backend with a
+/// <c>null</c> <see cref="IAmARelationalDatabaseConfiguration.SchemaName"/> throws
+/// <see cref="ConfigurationException"/> at the entry to the runner — there is no schema to
+/// place history in. Per-tenant identifiers are validated through <c>Identifiers.AssertSafe</c>
+/// before any DDL is emitted.
+/// </para>
+/// </remarks>
 public enum MigrationHistoryScope
 {
     /// <summary>
@@ -45,5 +82,10 @@ public enum MigrationHistoryScope
     /// distinct schema concept (MySQL, SQLite, Spanner), where history stays in the default
     /// location and no exception is thrown.
     /// </summary>
+    /// <remarks>
+    /// See the enum's top-level remarks for flip semantics (auto-seed on
+    /// <see cref="Global"/>→<see cref="PerSchema"/>, idempotent re-runs, reverse flip out of
+    /// scope) and the read-access requirement on the legacy default-schema history table.
+    /// </remarks>
     PerSchema = 1
 }

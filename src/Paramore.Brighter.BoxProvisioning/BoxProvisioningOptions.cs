@@ -83,7 +83,10 @@ public class BoxProvisioningOptions
     /// a no-op on MySQL, SQLite and Spanner (no distinct schema concept), where history stays in
     /// the default location. Selecting <see cref="MigrationHistoryScope.PerSchema"/> with a null
     /// <see cref="IAmARelationalDatabaseConfiguration.SchemaName"/> on a placement backend throws
-    /// <see cref="ConfigurationException"/>.
+    /// <see cref="ConfigurationException"/>. See <see cref="MigrationHistoryScope"/> for full
+    /// flip semantics (auto-seed on a <see cref="MigrationHistoryScope.Global"/>→
+    /// <see cref="MigrationHistoryScope.PerSchema"/> upgrade, read-access requirement on the
+    /// legacy default-schema history table, reverse flip and legacy-row cleanup out of scope).
     /// </remarks>
     public MigrationHistoryScope MigrationHistoryScope { get; set; } = MigrationHistoryScope.Global;
 
