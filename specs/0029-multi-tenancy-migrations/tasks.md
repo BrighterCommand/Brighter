@@ -258,7 +258,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
 
 ## Closeout
 
-- [ ] **DOC: XML docs + operator-facing documentation**
+- [x] **DOC: XML docs + operator-facing documentation** (commit `991b4440b`)
   - XML-doc the `MigrationHistoryScope` enum + values, the `BoxProvisioningOptions.MigrationHistoryScope` property, and the new `historySchema` interface parameter (semantics: `null` = backend default).
   - Document the negative consequences from ADR 0060: `PerSchema` is a **no-op on MySQL/SQLite/Spanner** (operators should not expect placement; the D6 log shows the resolved default); the `Global → PerSchema` flip must run with **read access to the legacy default-schema history table** (D5 seed); reverse flip and legacy-row cleanup are **out of scope**.
   - Use `<c>Identifiers.AssertSafe</c>` (not a cross-project `cref`) for cross-assembly references; `<see cref="X{T1, T2}"/>` curly-brace generic syntax.
