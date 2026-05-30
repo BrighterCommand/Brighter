@@ -229,7 +229,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
 
 ### NF3 — Identifier safety (AC6)
 
-- [ ] **TEST + IMPLEMENT: PerSchema with an unsafe schema identifier is rejected**
+- [x] **TEST + IMPLEMENT: PerSchema with an unsafe schema identifier is rejected** (commit `c4a40f872`)
   - **USE COMMAND**: `/test-first when PerSchema scope is selected with an unsafe SchemaName the runner should throw and never emit unvalidated identifiers`
   - Test location: one file per backend —
     - `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/When_per_schema_scope_is_selected_with_an_unsafe_schema_name_mssql_runner_should_throw.cs`
