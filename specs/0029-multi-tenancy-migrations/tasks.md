@@ -242,7 +242,7 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
 
 ### D6 — Observability (NF5, AC7)
 
-- [ ] **TEST + IMPLEMENT: Each provisioning run logs the resolved history schema and active scope**
+- [x] **TEST + IMPLEMENT: Each provisioning run logs the resolved history schema and active scope** (commit `a5bc62d28`)
   - **USE COMMAND**: `/test-first when the migration runner provisions it should log at information level the resolved history schema and the active scope`
   - Test location: `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning`
   - Test file: `When_provisioning_runs_mssql_runner_should_log_resolved_history_schema_and_scope.cs`
