@@ -225,6 +225,16 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         // startup trace can be filtered without re-parsing the display name.
         using var activity = StartMigrationActivity(tableName, schemaName, boxType);
 
+        // Spec 0029 NF5/AC7 (ADR 0060 D6): surface the placement decision per run so an operator
+        // can answer "where did THIS tenant's migration history go?" without correlating to the
+        // provisioner config. The single Information log carries the table, the resolved physical
+        // history schema (or the placeholder "<backend default>" on backends with no distinct
+        // history schema concept, e.g. SQLite / MySQL), and the active MigrationHistoryScope.
+        // Fires once per run regardless of which path (fresh / bootstrap / normal) dispatches.
+        Logger.LogInformation(
+            "Box migration history for {BoxTable} resolved to schema {HistorySchema} (scope {Scope})",
+            tableName, ResolveHistorySchema() ?? "<backend default>", _scope);
+
         // Bootstrap resources are held in locals so the outer try/finally can guarantee
         // disposal whether the body succeeds, the body throws, or the bootstrap itself
         // fails before any disposer would have run. The inner bootstrap try/catch records

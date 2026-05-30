@@ -235,8 +235,8 @@ CREATE TABLE IF NOT EXISTS {historySchemaQuoted}.""{MIGRATION_HISTORY_TABLE}"" (
         if (needsSeedCheck && !perSchemaExisted)
         {
             await SeedHistoryFromLegacyAsync(
-                connection, transaction, historySchemaQuoted, schemaName ?? resolvedHistorySchema, tableName,
-                cancellationToken);
+                connection, transaction, historySchemaQuoted, resolvedHistorySchema,
+                schemaName ?? resolvedHistorySchema, tableName, cancellationToken);
         }
     }
 
@@ -270,7 +270,7 @@ CREATE TABLE IF NOT EXISTS {historySchemaQuoted}.""{MIGRATION_HISTORY_TABLE}"" (
     // Global predecessor) and there is nothing to copy.
     private async Task SeedHistoryFromLegacyAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction,
-        string perSchemaQuoted, string boxSchema, string boxTableName,
+        string perSchemaQuoted, string perSchemaBare, string boxSchema, string boxTableName,
         CancellationToken cancellationToken)
     {
         const string legacySchema = HISTORY_TABLE_SCHEMA;
@@ -333,12 +333,23 @@ WHERE src.""SchemaName"" = @SchemaName
 
         if (rowsCopied > 0)
         {
+            // Spec 0029 NF5/AC7 (ADR 0060 D6, reviewer #3): structured fields RowCount + BoxTable +
+            // LegacySchema + TargetSchema each appear as a separate placeholder so a structured log
+            // sink can filter on individual fields. Target/legacy schemas are passed bare (without
+            // the PgIdentifier.Quote double-quote) so the values are stable join keys against other
+            // operator dashboards that report unquoted schema identifiers. The existing legacy-
+            // history-seeded Activity event additionally carries the row count as a tag so a
+            // trace-store query can size flip impact without parsing event names.
             Logger.LogInformation(
-                "Seeded {RowsCopied} legacy history row(s) into {HistorySchema}.{HistoryTable} " +
-                "from {LegacySchema} for {BoxSchema}.{BoxTable} on first PerSchema run",
-                rowsCopied, perSchemaQuoted, MIGRATION_HISTORY_TABLE, legacyQuoted, boxSchema, boxTableName);
+                "Seeded {RowCount} legacy history row(s) for {BoxTable} from {LegacySchema} to {TargetSchema}",
+                rowsCopied, boxTableName, legacySchema, perSchemaBare);
             Activity.Current?.AddEvent(new ActivityEvent(
-                BrighterSemanticConventions.BoxMigrationEventLegacyHistorySeeded));
+                BrighterSemanticConventions.BoxMigrationEventLegacyHistorySeeded,
+                default,
+                new ActivityTagsCollection
+                {
+                    { BrighterSemanticConventions.BoxMigrationSeedRowCount, rowsCopied }
+                }));
         }
     }
 

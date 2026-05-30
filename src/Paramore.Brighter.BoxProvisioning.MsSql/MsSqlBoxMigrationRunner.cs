@@ -308,12 +308,21 @@ WHERE src.[SchemaName] = @SchemaName
 
         if (rowsCopied > 0)
         {
+            // Spec 0029 NF5/AC7 (ADR 0060 D6, reviewer #3): structured fields RowCount + BoxTable +
+            // LegacySchema + TargetSchema each appear as a separate placeholder so a structured log
+            // sink can filter on individual fields (e.g. RowCount>0, TargetSchema='billing_x'). The
+            // existing legacy-history-seeded Activity event additionally carries the row count as a
+            // tag so a trace-store query can size flip impact without parsing event names.
             Logger.LogInformation(
-                "Seeded {RowsCopied} legacy history row(s) into [{HistorySchema}].[{HistoryTable}] " +
-                "from [{LegacySchema}] for {BoxSchema}.{BoxTable} on first PerSchema run",
-                rowsCopied, perSchema, MIGRATION_HISTORY_TABLE, legacySchema, boxSchema, boxTableName);
+                "Seeded {RowCount} legacy history row(s) for {BoxTable} from {LegacySchema} to {TargetSchema}",
+                rowsCopied, boxTableName, legacySchema, perSchema);
             Activity.Current?.AddEvent(new ActivityEvent(
-                BrighterSemanticConventions.BoxMigrationEventLegacyHistorySeeded));
+                BrighterSemanticConventions.BoxMigrationEventLegacyHistorySeeded,
+                default,
+                new ActivityTagsCollection
+                {
+                    { BrighterSemanticConventions.BoxMigrationSeedRowCount, rowsCopied }
+                }));
         }
     }
 
