@@ -263,8 +263,11 @@ S1 (structural, tidy-first)  ──►  all behavioural tasks
   - Document the negative consequences from ADR 0060: `PerSchema` is a **no-op on MySQL/SQLite/Spanner** (operators should not expect placement; the D6 log shows the resolved default); the `Global → PerSchema` flip must run with **read access to the legacy default-schema history table** (D5 seed); reverse flip and legacy-row cleanup are **out of scope**.
   - Use `<c>Identifiers.AssertSafe</c>` (not a cross-project `cref`) for cross-assembly references; `<see cref="X{T1, T2}"/>` curly-brace generic syntax.
 
-- [ ] **VERIFY: Full regression across all backends**
-  - Run the complete box-provisioning suites with infra up (MSSQL net9.0 + net10.0 **separately**; PG; MySQL net9.0 with a prior `-f net9.0` build; SQLite; Spanner after `setup-spanner-emulator.sh`; `BoxProvisioning.Tests`; `Core.Tests/BoxProvisioning`). All green, including every pre-existing regression test (e.g. the non-`dbo`/non-`public` "still create in default" tests). Confirm `Global` paths are byte-for-byte unchanged.
+- [x] **VERIFY: Full regression across all backends** (commit ticked separately per T-PERM convention)
+  - **Spec-0029 surface (all green):** `BoxProvisioning.Tests` 65/65 (net9+net10) · `Core.Tests/BoxProvisioning` 4/4 (net9+net10) · MSSQL BoxProvisioning subset 84/84 (net9+net10, separate) · PG full 190/190 (net9+net10, separate) · MySQL full 160/160 (net9; `-f net9.0` build first) · SQLite full 127/127 (net9+net10) · Spanner BoxProvisioning subset 33/33 (net9+net10, after `setup-spanner-emulator.sh`). `Global` paths byte-for-byte unchanged (every T6/T7 characterization test green across all 5 backends).
+  - **Out-of-scope pre-existing failures (issues filed; both confirmed orthogonal — spec 0029 touches zero outbox/inbox prod code):**
+    - MSSQL: 12 `Outbox.{Binary,Text}.Generated.{Sync,Async}` `DateTimeOffset` round-trip failures (timezone-sensitive, bidirectional offset mismatch indicates `DateTime.Kind` ambiguity, not clock skew). → [#4161](https://github.com/BrighterCommand/Brighter/issues/4161).
+    - Spanner: 60 `Outbox/Spanner*` + `Spanner/Inbox/` failures on emulator (`Your default credentials were not found`) — root cause located: helpers `new SpannerConnection(connectionString)` without `EmulatorDetection.EmulatorOrProduction`; `Spanner/BoxProvisioning/` already uses the working pattern. → [#4162](https://github.com/BrighterCommand/Brighter/issues/4162).
 
 - [ ] **REVIEW: `/spec:review code` → `/spec:approve code`**
   - Adversarial code review against requirements + ADR (every AC1–AC7 traces to a passing test; no default changed; tidy-first ordering honoured). Iterate to PASS, then approve.
