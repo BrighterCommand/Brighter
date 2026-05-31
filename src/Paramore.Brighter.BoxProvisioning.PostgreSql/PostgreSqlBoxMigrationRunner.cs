@@ -156,19 +156,24 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         var historySchemaQuoted = PgIdentifier.Quote(resolvedHistorySchema);
         var historySchemaFolded = PgIdentifier.Normalize(resolvedHistorySchema);
 
-        // D5 (ADR 0060): on a first PerSchema run that follows a Global predecessor, copy this
-        // tenant's prior history rows from the legacy public.__BrighterMigrationHistory so the
-        // runner does NOT mis-detect the box as needing a bootstrap re-stamp (which would silently
-        // re-run migration accounting and break FR5). We probe the per-schema table's existence
-        // BEFORE the CREATE so we can distinguish "just created — needs seed" from "already there —
-        // no seed needed". The probe runs under the same advisory lock + transaction as the CREATE
-        // and seed below, so a racing flip cannot interleave between them. Skipped when the folded
-        // resolved history schema equals the folded backend default (Global, or PerSchema with
-        // SchemaName == "public") — then per-schema and legacy are the same table and there is
-        // nothing to copy.
+        // D5 (ADR 0060): on a PerSchema run that follows a Global predecessor, copy this tenant's
+        // prior history rows from the legacy public.__BrighterMigrationHistory so the runner does
+        // NOT mis-detect the box as needing a bootstrap re-stamp (which would silently re-run
+        // migration accounting and break FR5). Skipped when the folded resolved history schema
+        // equals the folded backend default (Global, or PerSchema with SchemaName == "public") —
+        // then per-schema and legacy are the same table and there is nothing to copy.
+        //
+        // PR #4155 reviewer bug fix: an earlier implementation gated the seed on whether the
+        // per-schema __BrighterMigrationHistory existed before this run, so the second box-type to
+        // flip (e.g. inbox after outbox) found the table already created by the first flip and
+        // skipped the seed — its legacy row never landed and the bootstrap path stamped a fresh
+        // "bootstrap: detected at V_latest" entry. The table-level gate has been removed: the
+        // seed's per-row NOT EXISTS PK guard already makes it idempotent (a fresh PerSchema
+        // install with no legacy table is a no-op because the seed's SELECT FROM legacy returns
+        // zero rows; a re-run on already-seeded data inserts zero rows because the composite PK
+        // matches). The cost is one extra `INSERT ... SELECT` round-trip on the steady-state
+        // PerSchema path, which is the same cost the first-box-type flip already pays today.
         var needsSeedCheck = !string.Equals(historySchemaFolded, HISTORY_TABLE_SCHEMA, StringComparison.Ordinal);
-        var perSchemaExisted = needsSeedCheck
-            && await DoesHistoryTableExistAsync(connection, transaction, historySchemaFolded, cancellationToken);
 
         using (var command = connection.CreateCommand())
         {
@@ -235,11 +240,12 @@ CREATE TABLE IF NOT EXISTS {historySchemaQuoted}.""{MIGRATION_HISTORY_TABLE}"" (
             }
         }
 
-        // Run the D5 seed only when the per-schema table was absent before this run. If it was
-        // already there, this PerSchema deployment is already past its first run and any seed must
-        // have been done previously. The seed itself carries a NOT EXISTS guard against the
-        // composite PK so a re-fire (e.g. if a racing session beat us to the seed) is harmless.
-        if (needsSeedCheck && !perSchemaExisted)
+        // Run the D5 seed on every PerSchema provision (subject to needsSeedCheck above). The seed
+        // carries a NOT EXISTS guard against the composite PK so re-fires are harmless — the
+        // important invariant is that EVERY box-type that flips gets a chance to seed its own
+        // (SchemaName, BoxTableName)-filtered row, not just the first one to land in a freshly
+        // created per-schema history table.
+        if (needsSeedCheck)
         {
             await SeedHistoryFromLegacyAsync(
                 connection, transaction, historySchemaQuoted, resolvedHistorySchema,
