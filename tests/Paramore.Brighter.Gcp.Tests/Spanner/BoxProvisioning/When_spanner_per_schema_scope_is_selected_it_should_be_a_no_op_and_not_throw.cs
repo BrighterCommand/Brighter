@@ -18,6 +18,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // These characterization tests pin that no-op for both a non-null SchemaName (accepted and ignored
 // by Spanner) and a null SchemaName.
 [Collection("SpannerBoxProvisioning")]
+[Trait("Category", "Spanner")]
 public class SpannerPerSchemaNoOpTests : IAsyncLifetime
 {
     private readonly string _connectionString = Const.ConnectionString;
