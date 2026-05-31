@@ -397,9 +397,11 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// <summary>
     /// Ensures the migration-history table exists. Each backend's history-table DDL differs;
     /// the base orchestrates the call but does not own the DDL. Backends that opt into
-    /// <see cref="MigrationHistoryScope.PerSchema"/> placement may use
-    /// <paramref name="tableName"/> to seed this tenant's prior history rows from a legacy
-    /// default-schema history table on the first PerSchema run (ADR 0060 D5).
+    /// <see cref="MigrationHistoryScope.PerSchema"/> placement use <paramref name="tableName"/>
+    /// to seed this tenant's prior history rows from a legacy default-schema history table on
+    /// every PerSchema provision run (ADR 0060 D5); the per-row <c>NOT EXISTS</c> guard makes
+    /// steady-state runs a zero-row no-op while still allowing each box-type that flips later
+    /// to seed its own row.
     /// </summary>
     protected abstract Task EnsureHistoryTableAsync(
         TConnection connection, TTransaction? transaction, string? schemaName, string tableName,

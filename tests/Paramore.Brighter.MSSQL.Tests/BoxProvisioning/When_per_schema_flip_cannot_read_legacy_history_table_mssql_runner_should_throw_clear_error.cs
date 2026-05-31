@@ -33,8 +33,10 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
 // Spec 0029 FR5 / AC5 (ADR 0060 D5 hardening, reviewer #1): the D5 seed copies legacy default-schema
-// history rows into the new per-schema history on the first Global → PerSchema run. Multi-tenant
-// deployments routinely run the provisioner under tenant-isolated credentials that have NO SELECT on
+// history rows into the per-schema history on every PerSchema provision run (the per-row NOT EXISTS
+// PK guard makes steady-state runs a zero-row no-op — but the SELECT against the legacy table runs
+// every time, so the permission is needed for the lifetime of the deployment, not just the first
+// flip). Multi-tenant deployments routinely run the provisioner under tenant-isolated credentials that have NO SELECT on
 // [dbo]. Silently absorbing the failed seed would leave an empty per-schema history; the runner would
 // then bootstrap-stamp a fresh row from the box-table columns on the next run, effectively re-applying
 // the migration ledger and breaking FR5. The runner must therefore surface the failure as a
@@ -92,7 +94,7 @@ public class MsSqlPerSchemaFlipPermissionTests : IAsyncLifetime
         //on the legacy table); the inner exception preserves the provider error for diagnostics.
         var configException = Assert.IsType<ConfigurationException>(exception);
         Assert.Contains(
-            "the first Global → PerSchema run requires read access to the legacy default-schema history table",
+            "every provision run reads the legacy default-schema history table",
             configException.Message);
         Assert.NotNull(configException.InnerException);
 
@@ -102,10 +104,11 @@ public class MsSqlPerSchemaFlipPermissionTests : IAsyncLifetime
 
         //Assert — per-schema [<tenant>].__BrighterMigrationHistory must NOT be left as an empty stub.
         //The CREATE TABLE and the failing seed both run inside the same provisioning transaction, so
-        //the roll-back unwinds the CREATE. An empty per-schema history table left behind would defeat
-        //FR5: the next provision would short-circuit the seed (table-present branch) and the runner's
-        //bootstrap path would then stamp a fresh row from the box columns, silently re-applying the
-        //migration ledger.
+        //the roll-back unwinds the CREATE. After the PR #4155 multi-box-flip fix the seed runs on
+        //every PerSchema provision, so even with an empty per-schema stub the next provision would
+        //re-attempt the seed and ConfigurationException-throw again with the same permission error —
+        //but leaving an empty stub still misleads operators inspecting the schema after a failed
+        //flip ("history table appears provisioned"), so the rollback remains part of the contract.
         Assert.False(
             TableExistsInSchema("__BrighterMigrationHistory", _schemaName),
             $"Per-schema history table must not be left as an empty stub in '{_schemaName}' after a failed flip.");

@@ -183,14 +183,15 @@ Each provisioning run emits an `Information` log of the form `Box migration hist
 
 ### Global → PerSchema flip (ADR 0060 D5)
 
-On the first run after flipping a previously-`Global` deployment to `PerSchema`, the MSSQL/PG runners auto-seed the new per-schema history table from the legacy default-schema history so existing migrations are not re-applied. The seed:
+After flipping a previously-`Global` deployment to `PerSchema`, the MSSQL/PG runners auto-seed the per-schema history table from the legacy default-schema history so existing migrations are not re-applied. The seed:
 
 - Runs under the same advisory lock and transaction as the CREATE.
 - Copies only this tenant's rows (`WHERE SchemaName=@schemaName AND BoxTableName=@boxTableName`) for all five history columns.
 - Uses a composite-primary-key `NOT EXISTS` guard, so re-running the flip is idempotent.
+- Runs on **every** PerSchema provision (so a second box-type to flip — e.g. inbox after outbox — still gets seeded into the per-schema history table the first flip already created). Steady-state runs copy zero rows; the NOT EXISTS guard makes the no-op cheap.
 - Emits a distinct `Information` log: `Seeded {RowCount} legacy history row(s) for {BoxTable} from {LegacySchema} to {TargetSchema}` plus an OpenTelemetry `Activity` event `legacy_history_seeded` (constant `BrighterSemanticConventions.BoxMigrationEventLegacyHistorySeeded`) carrying the row count as the `brighter.box.migration.seed.rows` tag.
 
-**Permission requirement.** The seed requires `SELECT` on the legacy default-schema history table (`dbo.__BrighterMigrationHistory` on MSSQL, `public.__BrighterMigrationHistory` on PG). When the database role lacks that grant the runner surfaces a `ConfigurationException` with the inner provider exception attached — provision the grant (or run the first PerSchema migration under a role that has it) and retry. The error message names the documented operator-facing phrase so it can be alerted on.
+**Permission requirement (every run, not just the first flip).** The seed's `INSERT…SELECT` reads from the legacy default-schema history table (`dbo.__BrighterMigrationHistory` on MSSQL, `public.__BrighterMigrationHistory` on PG) on **every** PerSchema provision, so the runner needs `SELECT` on that table for the lifetime of the PerSchema deployment — not just the first flip. Operators who grant `SELECT` only for the initial flip and then revoke it will hit a `ConfigurationException` on every subsequent provision run, with the inner provider exception attached. The exception message names the documented operator-facing phrase (`"every provision run reads the legacy default-schema history table"`) so it can be alerted on.
 
 **Reverse flip (`PerSchema → Global`) and cleanup of the legacy rows are out of scope.** The per-schema history table remains in the tenant's schema if a deployment is later switched back to `Global`; operators wanting to reclaim that storage must drop the table themselves. Legacy rows in the default-schema history are likewise left in place after a successful PerSchema flip — they are harmless but redundant and can be deleted with an ad-hoc `DELETE` if desired.
 

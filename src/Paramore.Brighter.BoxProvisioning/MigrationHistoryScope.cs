@@ -45,15 +45,18 @@ namespace Paramore.Brighter.BoxProvisioning;
 /// </para>
 /// <para>
 /// <b>Flip semantics.</b> A <see cref="Global"/>→<see cref="PerSchema"/> flip on MSSQL/PG
-/// auto-seeds the new per-schema history table from the legacy default-schema history on the
-/// first run (ADR 0060 D5), so existing migrations are not re-applied. The seed runs under the
-/// same advisory lock and transaction as the CREATE and copies only this tenant's rows
+/// auto-seeds the per-schema history table from the legacy default-schema history (ADR 0060 D5),
+/// so existing migrations are not re-applied. The seed runs under the same advisory lock and
+/// transaction as the CREATE and copies only this tenant's rows
 /// (<c>WHERE SchemaName=@schemaName AND BoxTableName=@boxTableName</c>) with a
-/// <c>NOT EXISTS</c> primary-key guard so a repeated flip is idempotent. The seed requires
+/// <c>NOT EXISTS</c> primary-key guard so a repeated flip is idempotent. The seed executes on
+/// <b>every</b> PerSchema provision (so a second box-type flipping after the first still gets
+/// seeded); the NOT EXISTS guard makes steady-state runs a zero-row no-op. The seed requires
 /// <b>read access to the legacy default-schema history table</b> (<c>dbo.__BrighterMigrationHistory</c>
-/// on MSSQL, <c>public.__BrighterMigrationHistory</c> on PG); when the database role lacks
-/// that grant the runner surfaces a <see cref="ConfigurationException"/> with the inner
-/// provider exception attached. The reverse flip (<see cref="PerSchema"/>→<see cref="Global"/>)
+/// on MSSQL, <c>public.__BrighterMigrationHistory</c> on PG) for the lifetime of the PerSchema
+/// deployment, not just the first flip — operators who revoke <c>SELECT</c> after the initial
+/// flip will hit a <see cref="ConfigurationException"/> on every subsequent provision run, with
+/// the inner provider exception attached. The reverse flip (<see cref="PerSchema"/>→<see cref="Global"/>)
 /// and post-flip cleanup of the legacy rows are <b>out of scope</b>; operators wanting to
 /// reclaim that storage must run their own ad-hoc DELETE against the legacy table.
 /// </para>

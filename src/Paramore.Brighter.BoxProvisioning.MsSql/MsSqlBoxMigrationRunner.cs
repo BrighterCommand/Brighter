@@ -247,13 +247,16 @@ END";
     }
 
     // Copies this tenant's prior history rows from the legacy default-schema history table into the
-    // newly-created per-schema history table on first PerSchema run (ADR 0060 D5). Filtered to this
-    // tenant (SchemaName + BoxTableName) so a multi-tenant Global deployment doesn't bleed rows
-    // across tenants. All five columns are copied — Description is NOT NULL with no default and
-    // AppliedAt preserves the original install/bootstrap timestamp, so the post-flip row is
-    // indistinguishable from a row written by the original Global-scope provision. NOT EXISTS on
-    // the composite PK makes the seed idempotent. Skipped when no legacy table exists — this is
-    // the first-ever provision (no Global predecessor) and there is nothing to copy.
+    // per-schema history table (ADR 0060 D5). Runs on every PerSchema provision where the resolved
+    // history schema differs from the backend default: the per-row NOT EXISTS PK guard makes
+    // steady-state runs (no new legacy rows) a zero-row no-op, while still allowing each box-type
+    // that flips later to seed its own (SchemaName, BoxTableName) row when needed (PR #4155 fix).
+    // Filtered to this tenant (SchemaName + BoxTableName) so a multi-tenant Global deployment
+    // doesn't bleed rows across tenants. All five columns are copied — Description is NOT NULL
+    // with no default and AppliedAt preserves the original install/bootstrap timestamp, so the
+    // post-flip row is indistinguishable from a row written by the original Global-scope
+    // provision. Skipped when no legacy table exists — this is a fresh PerSchema install with no
+    // Global predecessor and there is nothing to copy.
     private async Task SeedHistoryFromLegacyAsync(
         SqlConnection connection, SqlTransaction? transaction,
         string perSchema, string boxSchema, string boxTableName,
@@ -305,12 +308,22 @@ WHERE src.[SchemaName] = @SchemaName
                 // a fresh row, effectively re-running the migration ledger and breaking FR5. The
                 // throw rolls back the surrounding transaction so no partial per-schema state is
                 // left behind.
+                //
+                // The message says "every provision run" — not "the first run" — because the
+                // INSERT...SELECT executes on every PerSchema provision (PR #4155 multi-box-flip
+                // fix). Steady state copies zero rows thanks to the NOT EXISTS PK guard, but the
+                // SELECT itself runs every time, so the SELECT grant must persist for the lifetime
+                // of the PerSchema deployment. Operators who grant SELECT only for the initial
+                // flip and then revoke it will hit this exception on every subsequent restart.
                 throw new ConfigurationException(
-                    $"Brighter PerSchema migration: the first Global → PerSchema run requires read " +
-                    $"access to the legacy default-schema history table [{legacySchema}].[{MIGRATION_HISTORY_TABLE}] " +
-                    $"so prior history rows can be seeded into the per-schema history. Grant the runner " +
-                    $"SELECT on that table (and INSERT on [{perSchema}].[{MIGRATION_HISTORY_TABLE}]) and retry. " +
-                    $"The original provider exception is preserved as the inner exception.",
+                    $"Brighter PerSchema migration: every provision run reads the legacy default-schema " +
+                    $"history table [{legacySchema}].[{MIGRATION_HISTORY_TABLE}] so any unseeded tenant " +
+                    $"rows can be copied into the per-schema history (the per-row NOT EXISTS guard makes " +
+                    $"steady-state runs a zero-row no-op, but the SELECT against the legacy table runs " +
+                    $"every time). Grant the runner SELECT on that table (and INSERT on " +
+                    $"[{perSchema}].[{MIGRATION_HISTORY_TABLE}]) for the lifetime of the PerSchema " +
+                    $"deployment and retry. The original provider exception is preserved as the inner " +
+                    $"exception.",
                     ex);
             }
         }
