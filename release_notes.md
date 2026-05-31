@@ -223,7 +223,7 @@ services
 
 #### Source-breaking change: `IAmABoxMigrationDetectionHelper.DoesHistoryExistAsync` / `GetMaxVersionAsync` gain a `historySchema` parameter
 
-`IAmABoxMigrationDetectionHelper<TConnection, TTransaction>` and the derived `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` add a `string? historySchema` parameter to `DoesHistoryExistAsync` and `GetMaxVersionAsync` (placed after the existing `schemaName`). `null` means "the backend default" — i.e. today's behaviour — so the bundled Brighter detection helpers and call-sites are byte-for-byte unchanged. External implementors of either interface must add the new parameter on recompile; passing `null` preserves existing semantics.
+`IAmABoxMigrationDetectionHelper<TConnection, TTransaction>` gains a `string? historySchema` parameter on `DoesHistoryExistAsync` and `GetMaxVersionAsync` (placed after the existing `schemaName`). The derived `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` interface file itself is unchanged — its implementors inherit the new signature through interface inheritance. `null` means "the backend default" — i.e. today's behaviour — so the bundled Brighter detection helpers and call-sites are byte-for-byte unchanged. External implementors of either interface must add the new parameter on recompile; passing `null` preserves existing semantics.
 
 ```csharp
 // Before

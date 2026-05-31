@@ -260,9 +260,11 @@ END";
         }
 
         // The perSchema identifier was already AssertSafe-d via ResolveHistoryTableSchema. legacySchema
-        // is the const "dbo" but we re-validate for defence in depth; boxSchema is operator-supplied
-        // and must be validated before inlining into the parameterised WHERE clause's surrounding SQL.
-        Identifiers.AssertSafe(legacySchema, nameof(legacySchema));
+        // is the compile-time const HISTORY_TABLE_SCHEMA ("dbo") — trivially safe — so no AssertSafe
+        // call is needed. If a future refactor turns legacySchema into a non-const derived value
+        // (e.g. an operator-configurable legacy-schema override) restore the AssertSafe check. boxSchema
+        // is operator-supplied and must be validated before inlining into the parameterised WHERE
+        // clause's surrounding SQL.
         Identifiers.AssertSafe(boxSchema, nameof(boxSchema));
 
         int rowsCopied;
@@ -423,10 +425,13 @@ WHERE src.[SchemaName] = @SchemaName
     // Resolves the physical schema that holds the history table for this run, validated for safe
     // inline interpolation into DDL/DML. PerSchema → configured schema; otherwise the backend
     // default (dbo). Shared by EnsureHistoryTableAsync (CREATE) and InsertHistoryRowAsync (INSERT)
-    // so the write side never diverges from the read side's ResolveHistorySchema().
+    // so the write side never diverges from the read side's ResolveHistorySchema(). The `!` is
+    // safe: DefaultHistorySchema returns the non-null "dbo" const on this runner and the D3 guard
+    // rejects PerSchema with a null SchemaName before MigrateAsync proceeds, so ResolveHistorySchema()
+    // is provably non-null here. If a future refactor breaks that invariant, NRE points at this line.
     private string ResolveHistoryTableSchema()
     {
-        var historySchema = ResolveHistorySchema() ?? HISTORY_TABLE_SCHEMA;
+        var historySchema = ResolveHistorySchema()!;
         Identifiers.AssertSafe(historySchema, nameof(historySchema));
         return historySchema;
     }

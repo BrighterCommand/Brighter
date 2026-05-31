@@ -131,7 +131,11 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
     /// </summary>
     private string QuotedHistorySchema()
     {
-        var schema = ResolveHistorySchema() ?? HISTORY_TABLE_SCHEMA;
+        // The `!` is safe: DefaultHistorySchema returns the non-null "public" const on this runner
+        // and the D3 guard rejects PerSchema with a null SchemaName before MigrateAsync proceeds,
+        // so ResolveHistorySchema() is provably non-null here. If a future refactor breaks that
+        // invariant, NRE points at this line.
+        var schema = ResolveHistorySchema()!;
         Identifiers.AssertSafe(schema, nameof(schema));
         return PgIdentifier.Quote(schema);
     }
@@ -144,7 +148,10 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         // SchemaName; under Global it is the backend default ("public"). The detection helper folds
         // the same value the same way (PgIdentifier.Quote / Normalize), so write and read never
         // diverge. AssertSafe guards against any unsafe schema literal leaking into the inline DDL.
-        var resolvedHistorySchema = ResolveHistorySchema() ?? HISTORY_TABLE_SCHEMA;
+        // The `!` is safe: DefaultHistorySchema returns the non-null "public" const on this runner
+        // and the D3 guard rejects PerSchema with a null SchemaName before MigrateAsync proceeds,
+        // so ResolveHistorySchema() is provably non-null here.
+        var resolvedHistorySchema = ResolveHistorySchema()!;
         Identifiers.AssertSafe(resolvedHistorySchema, nameof(resolvedHistorySchema));
         var historySchemaQuoted = PgIdentifier.Quote(resolvedHistorySchema);
         var historySchemaFolded = PgIdentifier.Normalize(resolvedHistorySchema);
@@ -282,10 +289,11 @@ CREATE TABLE IF NOT EXISTS {historySchemaQuoted}.""{MIGRATION_HISTORY_TABLE}"" (
         }
 
         // perSchemaQuoted was already AssertSafe-d + Quote-d by the caller. legacySchema is the
-        // const "public" but we re-validate for defence in depth; boxSchema is operator-supplied
-        // and must be validated before its folded form is passed as a parameter (Normalize doesn't
-        // sanitise — AssertSafe does).
-        Identifiers.AssertSafe(legacySchema, nameof(legacySchema));
+        // compile-time const HISTORY_TABLE_SCHEMA ("public") — trivially safe — so no AssertSafe
+        // call is needed. If a future refactor turns legacySchema into a non-const derived value
+        // (e.g. an operator-configurable legacy-schema override) restore the AssertSafe check.
+        // boxSchema is operator-supplied and must be validated before its folded form is passed as a
+        // parameter (Normalize doesn't sanitise — AssertSafe does).
         Identifiers.AssertSafe(boxSchema, nameof(boxSchema));
 
         var legacyQuoted = PgIdentifier.Quote(legacySchema);
