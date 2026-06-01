@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(mkdir:*), Bash(echo:*), Bash(gh:*), Bash(git:*), Read, Write, Glob, Agent
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(mkdir:*), Bash(echo:*), Bash(gh:*), Bash(git:*), Read, Write, Glob, Agent, AskUserQuestion
 description: Create or review requirements specification
 argument-hint: [issue-number]
 ---
@@ -14,11 +14,15 @@ Current branch: !`git branch --show-current`
 **Workflow**: Issue → **Requirements** → ADR → Tasks → Tests → Code
 
 **Sub-agent**: Drafting the requirements body is delegated to a sub-agent
-(`subagent_type: "general-purpose"`, **`model: "opus"`**). The sub-agent turns the issue /
-problem description into a complete `requirements.md` body and RETURNS it as text. The main
-agent owns ALL of the bookkeeping — spec-directory setup, `gh`, branch management, writing
-the file, and the issue comment. See `.claude/commands/spec/README.md` → "Sub-agents &
-model policy".
+(`subagent_type: "Plan"`, **`model: "opus"`**). Requirements drafting is read-only by nature
+(it returns text), so `Plan` fits — and using it keeps the non-implementation commands
+uniform on `Plan` and removes `AskUserQuestion` from the sub-agent's tool set, so it cannot
+prompt the user. The sub-agent turns the (clarified) issue / problem description into a
+complete `requirements.md` body and RETURNS it as text. Because the sub-agent is one-shot and
+cannot ask anything, **all user interaction stays in the main agent**: the main agent clarifies
+any ambiguous inputs with the user via `AskUserQuestion` (Step 2.5) *before* launching, and
+owns ALL of the bookkeeping — spec-directory setup, `gh`, branch management, writing the file,
+and the issue comment. See `.claude/commands/spec/README.md` → "Sub-agents & model policy".
 
 ### Step 1: Setup Spec Directory
 
@@ -35,31 +39,41 @@ If $ARGUMENTS provided (issue number):
 2. Store issue number in spec directory: `echo $ARGUMENTS > specs/{current-spec}/.issue-number`
 3. The issue title + body become the source material for the sub-agent.
 
-If no issue number is provided, take the problem description from the **conversation context**
-(this command's `allowed-tools` does not include `AskUserQuestion`, so the conversation is
-the only channel — do not attempt to prompt the user interactively).
+If no issue number is provided, take the problem description from the **conversation context**.
 
 If neither an issue number nor a usable problem description from the conversation is
-available, **stop** and ask the user (in your reply) to either supply an issue number or
-describe the problem — do NOT launch the sub-agent with empty inputs.
+available, **stop** and ask the user (via `AskUserQuestion`) to either supply an issue number
+or describe the problem — do NOT launch the sub-agent with empty inputs.
 
 If a `requirements.md` already exists in the spec directory, read it and pass it to the
 sub-agent as the current draft to refine (rather than starting from scratch).
 
+### Step 2.5: Clarify Ambiguities Before Launch (MAIN agent)
+
+Requirements gathering is where clarification matters most, and the `Plan` sub-agent is
+one-shot — it has **no `AskUserQuestion`** and cannot ask the user anything once launched.
+So the **main agent** owns all user interaction: before launching the sub-agent, review the
+issue / conversation inputs for ambiguity or open decisions (unstated scope, undefined terms,
+conflicting goals, missing acceptance criteria) and resolve them with the user via
+`AskUserQuestion`. Then launch the sub-agent with the **clarified** inputs folded in, so it
+can draft from a complete, unambiguous brief. Do not defer clarification to the sub-agent or
+to a later phase.
+
 ### Step 3: Launch Sub-Agent to Draft Requirements
 
-Launch an `Agent` with `subagent_type: "general-purpose"` and **`model: "opus"`**. The
+Launch an `Agent` with `subagent_type: "Plan"` and **`model: "opus"`**. The
 prompt MUST include:
 
-1. The issue title + body (or the user-provided problem description), and the existing
-   `requirements.md` text if one is being refined.
+1. The issue title + body (or the user-provided problem description), **plus any answers the
+   user gave during Step 2.5 clarification**, and the existing `requirements.md` text if one
+   is being refined.
 2. The requirements template below.
 3. The quality bar below — the sub-agent should draft requirements that would PASS an
    adversarial `/spec:review requirements`.
 4. An explicit instruction: **RETURN the complete `requirements.md` body as markdown text.
    Do NOT write any file. Do NOT ask the user any questions — draft from the inputs provided.**
-   (The sub-agent inherits full tool access, so it *could* call `AskUserQuestion`; this command
-   deliberately keeps the conversation non-interactive, so the prompt must forbid it.)
+   (`Plan` has no `AskUserQuestion`, so the sub-agent *cannot* prompt the user; this
+   instruction is belt-and-braces and keeps the conversation non-interactive.)
 
 #### Requirements Template (the sub-agent fills this in)
 

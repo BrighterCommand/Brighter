@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git show:*), Read, Write, Glob, Grep, Agent
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Bash(git diff:*), Bash(git log:*), Bash(git status:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git show:*), Read, Write, Glob, Grep, Agent, AskUserQuestion
 description: Review current specification phase (requirements, design, tasks, or code)
 argument-hint: [requirements|design [adr-number]|tasks|code [base-ref]] [threshold]
 ---
@@ -74,6 +74,13 @@ Read ALL documents the sub-agent will need. The sub-agent gets a clean context �
 
 ### Step 3: Launch Sub-Agent for Adversarial Review
 
+**Verify scope with the user before launching (MAIN agent).** All user interaction stays in
+the main agent — never the sub-agent. If the review scope is ambiguous (which phase to review,
+which ADR for a design review, the threshold to apply), confirm it with the user via
+`AskUserQuestion` before launching. Unlike the `Plan`-based planning commands, this sub-agent
+is `general-purpose` and *could* prompt the user, so the prompt MUST explicitly forbid it (see
+the IMPORTANT list below) — it should return findings as text and ask the user nothing.
+
 Launch an Agent (subagent_type: "general-purpose", **model: "opus"**) with the prompt below.
 Review is reasoning-heavy work, so it uses opus per the model policy (see
 `.claude/commands/spec/README.md` → "Sub-agents & model policy").
@@ -98,6 +105,8 @@ Review is reasoning-heavy work, so it uses opus per the model policy (see
 4. The threshold value
 5. The output format instructions (from Step 5 below)
 6. An instruction to RETURN the findings as text output, NOT to write a file
+7. An instruction to NOT ask the user any questions — review the supplied inputs and return
+   findings; any clarification was handled by the main agent before launch
 
 ### Step 4: Phase-Specific Review Criteria
 

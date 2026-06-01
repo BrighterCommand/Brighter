@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(find:*), Bash(touch:*), Bash(ls:*),  Bash(echo:*), Read, Write, Glob, Agent
+allowed-tools: Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(find:*), Bash(touch:*), Bash(ls:*),  Bash(echo:*), Read, Write, Glob, Agent, AskUserQuestion
 description: Create implementation task list
 ---
 
@@ -10,9 +10,9 @@ Current spec directory: specs/
 **Workflow**: Issue → Requirements → ADR(s) → **Tasks** → Tests → Code
 
 **Sub-agent**: Drafting the task list is delegated to a sub-agent
-(`subagent_type: "Plan"`, **`model: "opus"`**). `Plan` is read-only (no Write/Edit), which
-structurally enforces the "RETURN as text, don't write the file" rule while still allowing
-Read/Glob/Grep to verify file paths. The sub-agent reads the requirements and ADRs and
+(`subagent_type: "Plan"`, **`model: "opus"`**). `Plan` has no `Write`/`Edit`/`NotebookEdit`,
+which makes it much harder to accidentally write the file (the prompt still forbids writing
+via `Bash`), while still allowing Read/Glob/Grep to verify file paths. The sub-agent reads the requirements and ADRs and
 RETURNS the task list as text. The main agent validates coverage and writes `tasks.md`. See
 `.claude/commands/spec/README.md` → "Sub-agents & model policy".
 
@@ -32,6 +32,14 @@ the sub-agent with missing inputs.
 
 ### Step 2: Launch Sub-Agent to Draft the Task List
 
+**Verify inputs with the user before launching (MAIN agent).** The `Plan` sub-agent is
+one-shot and has no `AskUserQuestion` — it cannot ask the user anything once launched. So
+before launching, review the requirements and ADRs for ambiguity or open decisions that
+affect decomposition (how granular the tasks should be, sequencing/dependencies, scope
+boundaries between what's in and out of this spec) and resolve them with the user via
+`AskUserQuestion`. Then launch the sub-agent with the clarified inputs folded in. All user
+interaction stays in the main agent — never the sub-agent.
+
 Launch an `Agent` with `subagent_type: "Plan"` and **`model: "opus"`**. The
 prompt MUST include:
 
@@ -39,7 +47,10 @@ prompt MUST include:
 2. The full text of each ADR (or their paths to read).
 3. The task-drafting rules and the **mandatory TDD task template** below.
 4. An explicit instruction: **RETURN the complete task list as markdown text. Do NOT write
-   any file.** The sub-agent may use Read/Glob/Grep to verify file paths it references.
+   any file.** The sub-agent may use Read/Glob/Grep to verify only the **existing** paths it
+   cites — code/classes and ADRs in a task's `References` section. The **new** test and
+   implementation files a task plans to create do NOT exist yet and MUST NOT be Glob-verified
+   or flagged as missing; they are expected to be absent.
 
 #### Task-drafting rules (include in the sub-agent prompt)
 

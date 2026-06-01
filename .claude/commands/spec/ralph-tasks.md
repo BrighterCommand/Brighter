@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(find:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Read, Write, Glob, Agent
+allowed-tools: Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(find:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Read, Write, Glob, Agent, AskUserQuestion
 description: Create ralph-tasks.md for unattended TDD implementation
 ---
 
@@ -10,9 +10,9 @@ Current spec directory: specs/
 **Purpose**: Generate `ralph-tasks.md` - a variant of `tasks.md` formatted for **unattended** TDD execution via the Ralph loop. Unlike `tasks.md`, ralph tasks have no approval gates and include all context needed for a fresh Claude session.
 
 **Sub-agent**: Drafting the ralph task list is delegated to a sub-agent
-(`subagent_type: "Plan"`, **`model: "opus"`**). `Plan` is read-only (no Write/Edit), which
-structurally enforces the "RETURN as text, don't write the file" rule while still allowing
-Read/Glob/Grep to verify test/impl paths. The sub-agent reads the approved tasks,
+(`subagent_type: "Plan"`, **`model: "opus"`**). `Plan` has no `Write`/`Edit`/`NotebookEdit`,
+which makes it much harder to accidentally write the file (the prompt still forbids writing
+via `Bash`), while still allowing Read/Glob/Grep to verify test/impl paths. The sub-agent reads the approved tasks,
 requirements, and ADRs and RETURNS the ralph task list as text. The main agent runs the
 validation checklist and writes the file. See `.claude/commands/spec/README.md` →
 "Sub-agents & model policy".
@@ -36,6 +36,15 @@ validation checklist and writes the file. See `.claude/commands/spec/README.md` 
 If prerequisites not met, inform user and exit. Do NOT launch the sub-agent.
 
 ### Step 3: Launch Sub-Agent to Draft ralph-tasks.md
+
+**Verify inputs with the user before launching (MAIN agent).** The `Plan` sub-agent is
+one-shot and has no `AskUserQuestion` — it cannot ask the user anything once launched. And
+because the ralph-tasks it produces are later executed **unattended** (no approval gates),
+any ambiguity must be resolved now. So before launching, review the approved tasks for open
+decisions that affect unattended execution (task granularity, ordering, anything that would
+need a human judgement call mid-loop) and resolve them with the user via `AskUserQuestion`.
+Then launch the sub-agent with the clarified inputs folded in. All user interaction stays in
+the main agent — never the sub-agent.
 
 Launch an `Agent` with `subagent_type: "Plan"` and **`model: "opus"`**. The
 prompt MUST include:

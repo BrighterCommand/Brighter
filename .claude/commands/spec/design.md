@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(git:*), Read, Write, Glob, Agent
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(git:*), Read, Write, Glob, Agent, AskUserQuestion
 description: Create technical design specification (ADR)
 argument-hint: [adr-focus-area]
 ---
@@ -14,9 +14,9 @@ ADR directory: `docs/adr/`
 **Note**: You can create multiple ADRs for the same requirement. Each ADR should focus on a single architectural decision.
 
 **Sub-agent**: The codebase-grounded drafting of the ADR is delegated to a sub-agent
-(`subagent_type: "Plan"`, **`model: "opus"`**). `Plan` is read-only (no Write/Edit), which
-structurally enforces the "RETURN as text, don't write the file" rule while still allowing
-Read/Glob/Grep to verify references. The sub-agent reads the inputs, verifies references
+(`subagent_type: "Plan"`, **`model: "opus"`**). `Plan` has no `Write`/`Edit`/`NotebookEdit`,
+which makes it much harder to accidentally write the file (the prompt still forbids writing
+via `Bash`), while still allowing Read/Glob/Grep to verify references. The sub-agent reads the inputs, verifies references
 against the real codebase, and RETURNS the ADR body as text. The main agent owns numbering,
 file writing, and `.adr-list` bookkeeping. See `.claude/commands/spec/README.md` →
 "Sub-agents & model policy".
@@ -72,6 +72,14 @@ If any required document is missing (e.g. no `requirements.md`), stop and tell t
 run the appropriate command first. Do NOT launch the sub-agent with missing inputs.
 
 ### Step 5: Launch Sub-Agent to Draft the ADR
+
+**Verify inputs with the user before launching (MAIN agent).** The `Plan` sub-agent is
+one-shot and has no `AskUserQuestion` — it cannot ask the user anything once launched. So
+before launching, review the gathered inputs for ambiguity or open design decisions (which
+architectural direction to take, the intended scope of this single ADR, trade-off
+preferences, anything under-specified in `requirements.md`) and resolve them with the user
+via `AskUserQuestion`. Then launch the sub-agent with the clarified inputs folded in. All
+user interaction stays in the main agent — never the sub-agent.
 
 Launch an `Agent` with `subagent_type: "Plan"` and **`model: "opus"`**. The
 prompt MUST include all of the following:

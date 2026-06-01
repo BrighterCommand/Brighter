@@ -155,9 +155,13 @@ space-separated line.
 
 Read the sub-agent's returned result and act on its `STATUS`:
 
-**GREEN or ALREADY_COMPLETE:**
-1. Mark the task complete: use Edit to change `- [ ]` to `- [x]` in `ralph-tasks.md`.
-2. Stage and commit (the MAIN agent owns this):
+**GREEN:**
+1. **Sanity-check the file lists first.** A `GREEN` result with **empty** `TEST_FILES` *and*
+   `IMPL_FILES` is a contract violation — a passing task should have written source. Do NOT
+   commit a `feat:` with no source changes. Send it back to the sub-agent and ask whether it
+   meant `ALREADY_COMPLETE` (behavior already existed) before proceeding.
+2. Mark the task complete: use Edit to change `- [ ]` to `- [x]` in `ralph-tasks.md`.
+3. Stage and commit (the MAIN agent owns this):
    ```bash
    git add [TEST_FILES] [IMPL_FILES] specs/{current-spec}/ralph-tasks.md
    git commit -m "feat: [DESCRIPTION]
@@ -171,8 +175,21 @@ Read the sub-agent's returned result and act on its `STATUS`:
    ```
    (Both models contributed: the main agent on **opus** orchestrated and committed; the
    sub-agent on **sonnet** wrote the test + implementation.)
-   (For `ALREADY_COMPLETE`, commit the checkbox tick alone with a `docs:`-style message
-   noting the behavior already existed.)
+4. Count this task toward the run count.
+
+**ALREADY_COMPLETE:**
+1. Mark the task complete: use Edit to change `- [ ]` to `- [x]` in `ralph-tasks.md`.
+2. The behavior already existed, so the sub-agent wrote **no** source — stage and commit the
+   checkbox tick **alone** (do NOT re-stage `[TEST_FILES]`/`[IMPL_FILES]`, which are empty):
+   ```bash
+   git add specs/{current-spec}/ralph-tasks.md
+   git commit -m "docs: mark ralph task [N] complete — behavior already existed
+
+   - Ralph task: [task number]/[total]
+
+   Co-Authored-By: Claude Opus <noreply@anthropic.com>
+   Co-Authored-By: Claude Sonnet <noreply@anthropic.com>"
+   ```
 3. Count this task toward the run count.
 
 **FAILED:**
