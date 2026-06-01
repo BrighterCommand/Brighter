@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(find:*), Bash(touch:*), Bash(ls:*),  Bash(echo:*), Read, Write, Glob
+allowed-tools: Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(find:*), Bash(touch:*), Bash(ls:*),  Bash(echo:*), Read, Write, Glob, Agent
 description: Create implementation task list
 ---
 
@@ -7,26 +7,55 @@ description: Create implementation task list
 
 Current spec directory: specs/
 
+**Workflow**: Issue → Requirements → ADR(s) → **Tasks** → Tests → Code
+
+**Sub-agent**: Drafting the task list is delegated to a sub-agent
+(`subagent_type: "general-purpose"`, **`model: "opus"`**). The sub-agent reads the
+requirements and ADRs and RETURNS the task list as text. The main agent validates
+coverage and writes `tasks.md`. See `.claude/commands/spec/README.md` → "Sub-agents
+& model policy".
+
 ## Your Task
 
-First, read specs/.current_spec to determine the active specification directory.
+### Step 1: Gather Context
 
-1. Verify design is approved (look for .design-approved file in the spec directory)
-2. Create tasks.md with:
-   - Detailed task list with checkboxes
-   - Task dependencies
-   - Risk mitigation tasks
-3. Each task should be specific and actionable
-4. A task MUST represent implementing a behavior and NOT an implementation detail
-5. Use markdown checkboxes: `- [ ] Task description`
+1. Read `specs/.current-spec` to determine the active specification directory.
+2. Verify design is approved: check for `.design-approved` in the spec directory. If
+   missing, tell the user to run `/spec:approve design` first and exit.
+3. Read `specs/{current-spec}/requirements.md` (the FRs/ACs the tasks must cover).
+4. Read `specs/{current-spec}/.adr-list` and each ADR from `docs/adr/` (the design
+   decisions the tasks must implement).
 
-Organize tasks to enable incremental development and testing.
+If `requirements.md` or any listed ADR is missing, stop and tell the user. Do NOT launch
+the sub-agent with missing inputs.
 
-## CRITICAL: TDD Task Format
+### Step 2: Launch Sub-Agent to Draft the Task List
 
-**MANDATORY**: When creating TEST tasks, you MUST format them to enforce `/test-first` skill usage:
+Launch an `Agent` with `subagent_type: "general-purpose"` and **`model: "opus"`**. The
+prompt MUST include:
 
-### Task Template
+1. The full text of `requirements.md`.
+2. The full text of each ADR (or their paths to read).
+3. The task-drafting rules and the **mandatory TDD task template** below.
+4. An explicit instruction: **RETURN the complete task list as markdown text. Do NOT write
+   any file.** The sub-agent may use Read/Glob/Grep to verify file paths it references.
+
+#### Task-drafting rules (include in the sub-agent prompt)
+
+- Produce `tasks.md` content with:
+  - A detailed task list with markdown checkboxes (`- [ ] Task description`)
+  - Explicit task dependencies
+  - Risk-mitigation tasks
+- Each task MUST be specific and actionable.
+- A task MUST represent implementing a **behavior**, NOT an implementation detail.
+- Organize tasks to enable incremental development and testing.
+- Order tasks so dependencies come first; structural/tidy tasks before behavioral ones.
+
+#### CRITICAL: TDD Task Format (include verbatim in the sub-agent prompt)
+
+**MANDATORY**: When creating TEST tasks, you MUST format them to enforce `/test-first` skill usage.
+
+##### Task Template
 
 ```markdown
 - [ ] **TEST + IMPLEMENT: [Behavior description]**
@@ -42,7 +71,7 @@ Organize tasks to enable incremental development and testing.
     - [implementation point 2]
 ```
 
-### Example Task
+##### Example Task
 
 ```markdown
 - [ ] **TEST + IMPLEMENT: Rejection with no channels configured acknowledges message**
@@ -62,7 +91,7 @@ Organize tasks to enable incremental development and testing.
     - Return true
 ```
 
-### Why This Format?
+##### Why This Format?
 
 1. **Visible command**: The `/test-first` command is prominently displayed
 2. **Stop sign**: The ⛔ emoji and "STOP HERE" makes the approval gate unmissable
@@ -70,7 +99,7 @@ Organize tasks to enable incremental development and testing.
 4. **Complete context**: All details needed for test and implementation
 5. **IDE review**: Explicitly states user will review in IDE, not CLI
 
-### DO NOT Format Tasks Like This
+##### DO NOT Format Tasks Like This
 
 ❌ **BAD - Separates test and implementation:**
 ```markdown
@@ -83,3 +112,32 @@ Organize tasks to enable incremental development and testing.
 ```
 
 This format allows Claude to skip the approval by treating them as independent tasks.
+
+#### Coverage cross-reference (include in the sub-agent prompt)
+
+- Map EVERY functional requirement (FR-N) from `requirements.md` to at least one task.
+  List any FR with no task.
+- Map EVERY ADR decision to at least one task. List any decision with no task.
+- Flag any task that does not trace back to a requirement or ADR decision (scope creep).
+
+### Step 3: Validate Coverage and Write the File
+
+After the sub-agent returns:
+
+1. **Validate** before writing:
+   - Every FR in `requirements.md` is covered by at least one task (check the list yourself).
+   - Every ADR decision maps to a task.
+   - Each behavioral task uses the `TEST + IMPLEMENT` template with `/test-first` and the
+     `⛔ STOP HERE` gate — none are split into separate TEST/IMPLEMENT tasks.
+   - No task is an implementation detail rather than a behavior.
+   - If coverage is incomplete or a task is malformed, ask the sub-agent to revise (or fix
+     it yourself) before writing.
+
+2. **Write** the validated task list to `specs/{current-spec}/tasks.md` using the Write tool.
+
+### Step 4: Next Steps
+
+Remind the user to:
+- Review `tasks.md`
+- Run `/spec:review tasks` for an adversarial coverage review, then
+- `/spec:approve tasks` when ready to begin implementation with `/spec:implement`.

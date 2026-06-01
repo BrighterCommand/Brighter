@@ -74,7 +74,9 @@ Read ALL documents the sub-agent will need. The sub-agent gets a clean context â
 
 ### Step 3: Launch Sub-Agent for Adversarial Review
 
-Launch an Agent (subagent_type: "general-purpose") with the prompt below.
+Launch an Agent (subagent_type: "general-purpose", **model: "opus"**) with the prompt below.
+Review is reasoning-heavy work, so it uses opus per the model policy (see
+`.claude/commands/spec/README.md` â†’ "Sub-agents & model policy").
 
 **For requirements reviews**: Include the full text of the document in the sub-agent prompt. If the document is very large (you couldn't read it in one Read call), pass the file path instead and instruct the sub-agent to read it.
 

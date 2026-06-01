@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(mkdir:*), Bash(echo:*), Bash(gh:*), Bash(git:*), Read, Write, Glob
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(mkdir:*), Bash(echo:*), Bash(gh:*), Bash(git:*), Read, Write, Glob, Agent
 description: Create or review requirements specification
 argument-hint: [issue-number]
 ---
@@ -11,7 +11,14 @@ Current branch: !`git branch --show-current`
 
 ## Your Task
 
-**Workflow**: Issue → Requirements → ADR → Tasks → Tests → Code
+**Workflow**: Issue → **Requirements** → ADR → Tasks → Tests → Code
+
+**Sub-agent**: Drafting the requirements body is delegated to a sub-agent
+(`subagent_type: "general-purpose"`, **`model: "opus"`**). The sub-agent turns the issue /
+problem description into a complete `requirements.md` body and RETURNS it as text. The main
+agent owns ALL of the bookkeeping — spec-directory setup, `gh`, branch management, writing
+the file, and the issue comment. See `.claude/commands/spec/README.md` → "Sub-agents &
+model policy".
 
 ### Step 1: Setup Spec Directory
 
@@ -26,11 +33,28 @@ Current branch: !`git branch --show-current`
 If $ARGUMENTS provided (issue number):
 1. Use `gh issue view $ARGUMENTS --json number,title,body` to pull the existing issue
 2. Store issue number in spec directory: `echo $ARGUMENTS > specs/{current-spec}/.issue-number`
-3. Use the issue content as the basis for requirements.md
+3. The issue title + body become the source material for the sub-agent.
 
-### Step 3: Create/Update Requirements
+If no issue number is provided, gather the problem description from the user / conversation
+to pass to the sub-agent instead.
 
-Create or update `requirements.md` in the current spec directory using this template:
+If a `requirements.md` already exists in the spec directory, read it and pass it to the
+sub-agent as the current draft to refine (rather than starting from scratch).
+
+### Step 3: Launch Sub-Agent to Draft Requirements
+
+Launch an `Agent` with `subagent_type: "general-purpose"` and **`model: "opus"`**. The
+prompt MUST include:
+
+1. The issue title + body (or the user-provided problem description), and the existing
+   `requirements.md` text if one is being refined.
+2. The requirements template below.
+3. The quality bar below — the sub-agent should draft requirements that would PASS an
+   adversarial `/spec:review requirements`.
+4. An explicit instruction: **RETURN the complete `requirements.md` body as markdown text.
+   Do NOT write any file.**
+
+#### Requirements Template (the sub-agent fills this in)
 
 ```markdown
 # Requirements
@@ -78,13 +102,40 @@ How we'll know this is working correctly:
 Add any other context or screenshots about the feature request here.
 ```
 
-### Step 4: Determine Next ADR Number
+#### Quality bar (include in the sub-agent prompt)
+
+Draft requirements that would survive a skeptical reviewer:
+- **Testability**: every functional requirement has at least one concrete example with
+  specific inputs/outputs; each acceptance criterion can become a test assertion; boundary
+  conditions and error scenarios are explicit.
+- **Completeness**: problem statement as a user story; numbered functional requirements;
+  non-functional requirements; constraints/assumptions; an explicit out-of-scope section.
+- **Unambiguity**: consistent, defined terminology; no vague phrases ("handle gracefully",
+  "supports multiple" without a number, "works as expected"); two developers could not
+  reasonably implement a requirement differently.
+- **Boundedness**: scope is clearly bounded; each FR has clear start/end conditions; no
+  contradictions between sections.
+- **Acceptance criteria**: every FR maps to at least one AC, written in Given/When/Then or
+  an equivalent testable format.
+
+The sub-agent may number FRs (FR-1, FR-2, …) and ACs so later phases can cross-reference them.
+
+### Step 4: Validate and Write Requirements
+
+After the sub-agent returns:
+
+1. **Validate** before writing: all template sections present; FRs numbered; every FR has
+   at least one AC; no obvious vague phrases. If weak, ask the sub-agent to revise (or fix
+   it yourself) before writing.
+2. **Write** the validated body to `specs/{current-spec}/requirements.md` using the Write tool.
+
+### Step 5: Determine Next ADR Number
 
 1. Check existing ADRs: `ls docs/adr/ | grep -E "^[0-9]+" | sort | tail -1`
 2. Calculate next number (e.g., if last is 0042, next is 0043)
 3. Inform user: "Next ADR will be: `docs/adr/{NNNN}-{feature-name}.md`"
 
-### Step 5: Branch Management
+### Step 6: Branch Management
 
 1. Check current branch with `git branch --show-current`
 2. If on `master` or `main`:
@@ -92,17 +143,15 @@ Add any other context or screenshots about the feature request here.
 3. If on another branch:
    - Inform user: "You're on branch `{branch-name}`. You can continue using this branch or create a new one."
 
-### Step 6: Update GitHub Issue (Optional)
+### Step 7: Update GitHub Issue (Optional)
 
 If issue number was provided:
 1. Ask user if they want to add a comment to the GitHub issue with a link to requirements
 2. If yes, use: `gh issue comment $ISSUE_NUMBER --body "Requirements documented in specs/{spec-dir}/requirements.md"`
 
-### Step 7: Next Steps
+### Step 8: Next Steps
 
 Remind user:
 - Review requirements.md
-- Use `/spec:approve requirements` when ready to proceed to design phase
+- Run `/spec:review requirements` for an adversarial review, then `/spec:approve requirements` when ready to proceed to design phase
 - Next step: Create ADR in `docs/adr/` with technical design decisions
-
-Use Write tool to create/update requirements.md. Use Bash for git/gh operations.

@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(ls:*), Bash(echo:*), Bash(dotnet:*), Bash(git:*), Read, Write, Edit, Glob, Grep
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(ls:*), Bash(echo:*), Bash(dotnet:*), Bash(git:*), Read, Write, Edit, Glob, Grep, Agent
 description: Unattended TDD implementation from ralph-tasks (no approval gates)
 argument-hint: [count=1]
 ---
@@ -14,11 +14,16 @@ Current spec directory: specs/
 
 **AskUserQuestion is deliberately excluded** - this command runs unattended.
 
-## Critical Guidelines
+**Sub-agent**: Each task's Red→Green→Refactor cycle is delegated to a sub-agent
+(`subagent_type: "general-purpose"`, **`model: "sonnet"`** — implementation work). The
+sub-agent writes the test + implementation files and RETURNS a structured result. The MAIN
+agent owns everything that must stay sequential and authoritative: the STOP-file check,
+task selection, the run count, marking the checkbox, **the git commit**, and the summary.
+The sub-agent NEVER commits, NEVER pushes, and NEVER edits `ralph-tasks.md`/`tasks.md`. See
+`.claude/commands/spec/README.md` → "Sub-agents & model policy".
 
-**ALWAYS follow these instructions when writing code:**
-- **Testing**: [.agent_instructions/testing.md](../../../.agent_instructions/testing.md)
-- **Code Style**: [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md)
+Tasks are processed **strictly sequentially** — they are dependency-ordered and each gets
+its own commit. Do not parallelise.
 
 ## Your Task
 
@@ -43,7 +48,6 @@ Then STOP immediately. Do not proceed.
 2. Verify `.tasks-approved` exists in that directory
 3. Read `specs/{current-spec}/ralph-tasks.md` to see ralph task list
 4. Read `specs/{current-spec}/.adr-list` to see all ADRs
-5. Read each ADR from `docs/adr/` referenced in the task list
 
 ### Step 3: Select Next Task
 
@@ -60,89 +64,107 @@ Status: ALL_DONE
 ```
 Then STOP.
 
-### Step 4: Read Task References
+### Step 4: Delegate the TDD Cycle to a Sub-Agent
 
-Before implementing, read ALL files listed in the task's **References** section. This provides context that would normally come from an ongoing conversation.
+Launch an `Agent` with `subagent_type: "general-purpose"` and **`model: "sonnet"`**. The
+prompt MUST include:
 
-### Step 5: TDD Implementation Cycle (No Approval Gate)
+1. The full text of the selected task (Behavior, Test file, Test should verify,
+   Implementation files, RALPH-VERIFY command, References).
+2. The paths `.agent_instructions/testing.md` and `.agent_instructions/code_style.md`, with
+   an instruction to read them before writing code.
+3. The TDD cycle instructions, code-style rules, and hard constraints below.
+4. The required return format below.
 
-For the selected task:
+The sub-agent runs unattended — it has full tool access (Read, Write, Edit, Glob, Grep,
+Bash) and DOES write the test and implementation source files. It just must not commit,
+push, or touch the task files.
 
-#### 🔴 RED: Write a Failing Test
+#### TDD Cycle for the sub-agent (include in the prompt)
 
-1. **Read Testing Guidelines**: Review [.agent_instructions/testing.md](../../../.agent_instructions/testing.md)
+**Before starting**: Read ALL files listed in the task's **References** section, plus
+`.agent_instructions/testing.md` and `.agent_instructions/code_style.md`. This provides the
+context a fresh session would otherwise get from conversation.
 
-2. **Write the Test** following these rules:
-   - **Test naming**: `When_[condition]_should_[expected_behavior]`
-   - **File naming**: One test case per file named `When_[condition]_should_[expected_behavior].cs`
-   - **Structure**: Use Arrange/Act/Assert with explicit comments
-   - **Evident Data**: Highlight the state that impacts the test outcome
-   - **Test behavior, not implementation**: Test public exports only
-   - **No mocks for isolation**: Use InMemory* implementations for I/O
-   - **Only test public exports**: Don't test private or internal methods
+🔴 **RED — Write a Failing Test**
+- Test naming: `When_[condition]_should_[expected_behavior]`; one test case per file named
+  the same; Arrange/Act/Assert with explicit comments; highlight evident data.
+- Test behavior, not implementation — public exports only; no mocks for isolation, use
+  `InMemory*` implementations for I/O.
+- Write the test file at the path the task specifies.
+- Run the task's `RALPH-VERIFY` command and confirm the test **FAILS** for the right reason
+  (behavior doesn't exist yet).
+- **If the test PASSES with no implementation change**: the behavior already exists. Either
+  revise the test to verify something genuinely new, or RETURN status `ALREADY_COMPLETE`.
 
-3. **Create Test File**: Use Write tool to create the test at the path specified in the task
+🟢 **GREEN — Make the Test Pass**
+- Write the MINIMUM code to pass — no speculative code. Follow the task's
+  **Implementation files** guidance.
+- Code style: .NET C# conventions (PascalCase public / camelCase private), ALL_CAPS
+  constants, expression-bodied members for simple members, `readonly` where appropriate,
+  nullable reference types enabled, Responsibility-Driven Design, avoid primitive obsession.
+- Run the `RALPH-VERIFY` command and confirm the test **PASSES**.
+- Run broader tests (`dotnet test` for the relevant project[s]) to catch regressions. If a
+  regression appears, fix it before finishing.
 
-4. **Run the Test**: Use the task's `RALPH-VERIFY` command
-   - Verify the test **FAILS** (Red)
-   - The failure should be for the expected reason (behavior doesn't exist yet)
-   - **If the test PASSES without any implementation changes**: The behavior already exists. Revise the test to verify something genuinely new, or mark the task as already complete.
+🔵 **REFACTOR — Improve the Design**
+- Tidy First: structural changes only, no behavior changes. Keep methods small and focused;
+  reduce complexity; remove duplication; reveal intent.
+- Re-run tests after refactoring to confirm no behavioral change.
 
-#### 🟢 GREEN: Make the Test Pass
+#### Hard constraints for the sub-agent (include in the prompt)
 
-1. **Read Code Style Guidelines**: Review [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md)
+- **NEVER** run `git commit`, `git add`, or `git push`.
+- **NEVER** edit `ralph-tasks.md` or `tasks.md`.
+- Only create/modify the test file(s) and implementation source file(s).
+- Do not ask the user anything — this is unattended.
 
-2. **Write Minimum Code** to make the test pass:
-   - Only write code necessary for the test to pass
-   - No speculative code
-   - Follow the implementation guidance from the task's **Implementation files** section
+#### Required return format (the sub-agent RETURNS this as text)
 
-3. **Follow Code Style**:
-   - .NET C# naming conventions (PascalCase for public, camelCase for private)
-   - Use ALL_CAPS for constants with underscores
-   - Expression-bodied members for simple properties/methods
-   - readonly for fields that don't change after construction
-   - Enable nullable reference types
-   - Responsibility Driven Design principles
-   - Avoid primitive obsession
+```
+STATUS: GREEN | FAILED | ALREADY_COMPLETE
+TEST_FILES: <comma-separated paths created/modified>
+IMPL_FILES: <comma-separated paths created/modified>
+DESCRIPTION: <one-line behavior description for the commit message>
+REGRESSIONS: <none | description of any regression and how it was resolved>
+FAILURE_REASON: <empty unless STATUS is FAILED — explain what went wrong>
+```
 
-4. **Run the Test Again**: Use the task's `RALPH-VERIFY` command
-   - Verify the test **PASSES** (Green)
+### Step 5: Process the Result, Mark, and Commit (MAIN agent)
 
-5. **Run Project Tests**: Run broader tests to catch regressions
-   - `dotnet test` for the relevant test project(s)
-   - If regressions found, fix them before proceeding
+Read the sub-agent's returned result and act on its `STATUS`:
 
-#### 🔵 REFACTOR: Improve the Design
-
-1. **Review the Code** for Tidy First improvements:
-   - Is it tidy and simple?
-   - Can complexity be reduced?
-   - Are methods small and focused?
-   - Does it follow Responsibility Driven Design?
-   - Does it avoid primitive obsession?
-
-2. **Apply refactoring** if needed (structural changes only, no behavioral changes)
-
-3. **Run All Tests After Each Refactoring**: Verify no behavioral changes
-
-### Step 6: Commit and Update
-
-1. **Mark task complete**: Use Edit tool to change `- [ ]` to `- [x]` in `ralph-tasks.md`
-
-2. **Stage and commit**:
+**GREEN or ALREADY_COMPLETE:**
+1. Mark the task complete: use Edit to change `- [ ]` to `- [x]` in `ralph-tasks.md`.
+2. Stage and commit (the MAIN agent owns this):
    ```bash
-   git add [test-file] [implementation-files] specs/{current-spec}/ralph-tasks.md
-   git commit -m "feat: [behavior description]
+   git add [TEST_FILES] [IMPL_FILES] specs/{current-spec}/ralph-tasks.md
+   git commit -m "feat: [DESCRIPTION]
 
    - Test: When_[condition]_should_[expected_behavior]
    - Implementation: [brief description]
    - Ralph task: [task number]/[total]
 
-   Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+   Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
    ```
+   (For `ALREADY_COMPLETE`, commit the checkbox tick alone with a `docs:`-style message
+   noting the behavior already existed.)
+3. Count this task toward the run count.
 
-### Step 7: Check Continuation
+**FAILED:**
+1. Mark the task as failed: change `- [ ]` to `- [!]` in `ralph-tasks.md`.
+2. Append a comment to the task line: ` <!-- RALPH-FAILED: [FAILURE_REASON] -->`
+3. Commit the failure marker so the next iteration skips it:
+   ```bash
+   git add specs/{current-spec}/ralph-tasks.md
+   git commit -m "chore: mark ralph task [N] failed — [short reason]"
+   ```
+   If the sub-agent left partial source edits, decide whether to include them or
+   `git checkout --` them; prefer committing only the marker unless the partial work is
+   clearly correct and isolated.
+4. Count it toward the run count and proceed to the next task — do NOT get stuck.
+
+### Step 6: Check Continuation
 
 Before starting the next task, check ALL of these:
 
@@ -150,9 +172,10 @@ Before starting the next task, check ALL of these:
 2. **Count limit**: If completed tasks this run >= count from $ARGUMENTS → stop
 3. **All done**: If no more `- [ ]` tasks remain → stop
 
-If none of these conditions are met, return to **Step 3** for the next task.
+If none of these conditions are met, return to **Step 3** for the next task (a fresh
+sub-agent, fresh context).
 
-### Step 8: Print Summary
+### Step 7: Print Summary
 
 **ALWAYS** print this structured summary at the end, regardless of how you stopped:
 
@@ -171,22 +194,13 @@ Status meanings:
 - `STOPPED`: Halted due to RALPH_STOP file
 - `ALL_DONE`: No more tasks in ralph-tasks.md
 
-## Error Handling
-
-If a task cannot be completed (build fails after multiple attempts, test won't pass, etc.):
-
-1. **Mark the task as failed**: Change `- [ ]` to `- [!]` in ralph-tasks.md
-2. **Add a comment**: Append ` <!-- RALPH-FAILED: [brief explanation of what went wrong] -->` to the task line
-3. **Commit the failure marker**: So the next iteration knows to skip it
-4. **Proceed to the next task**: Do not get stuck on a single task
-5. **Count it toward the run count**: Failed tasks count toward the count limit
-
 ## Important Reminders
 
 - **NEVER use AskUserQuestion** - this runs unattended
 - **NEVER push to remote** - the human decides when to push
 - **NEVER modify tasks.md** - only modify ralph-tasks.md
-- **Always commit after each task** - each task gets its own commit
-- **Read References first** - every task has context that must be read before starting
-- Follow ALL guidelines in .agent_instructions/testing.md
-- Follow ALL guidelines in .agent_instructions/code_style.md
+- **Always commit after each task** - each task gets its own commit, and the MAIN agent (not
+  the sub-agent) makes that commit
+- **The sub-agent reads its task's References first** - every task carries the context a
+  fresh session needs
+- Follow ALL guidelines in .agent_instructions/testing.md and .agent_instructions/code_style.md

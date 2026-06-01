@@ -46,6 +46,43 @@ The spec commands provide a structured approach to designing and implementing fe
  Pull Request
 ```
 
+## Sub-agents & model policy
+
+Several commands delegate their reasoning-heavy work to a **sub-agent** (launched via the
+`Agent` tool) rather than doing it inline. This keeps the main conversation's context clean
+and gives the heavy work a focused, single-purpose context.
+
+**The convention** (modelled on `/spec:review`):
+
+1. **The main agent gathers inputs.** A sub-agent starts with a clean context — it only
+   knows what is in its prompt. The command reads the needed files (and runs `gh`/`git`)
+   first, then passes the text or paths.
+2. **Launch `Agent`** with `subagent_type: "general-purpose"` and an explicit `model`.
+3. **The sub-agent RETURNS its artifact as text** — it does *not* write the spec file. The
+   one exception is `/spec:ralph-implement`, where the sub-agent must write the test and
+   implementation source files (it still never commits or edits the task list).
+4. **The main agent validates** the returned output against a checklist, then writes the
+   file and does all bookkeeping (approval markers, `.adr-list`, git, next-steps).
+
+**Model policy** — reasoning vs. implementation:
+
+| Command | Sub-agent | Model | Rationale |
+|---------|-----------|-------|-----------|
+| `/spec:requirements` | Yes (drafting only) | **opus** | Planning / analysis |
+| `/spec:design` | Yes | **opus** | Architecture / design |
+| `/spec:tasks` | Yes | **opus** | Planning / coverage mapping |
+| `/spec:ralph-tasks` | Yes | **opus** | Planning / decomposition |
+| `/spec:review` | Yes | **opus** | Adversarial reasoning |
+| `/spec:ralph-implement` | Yes (per task) | **sonnet** | Mechanical TDD implementation |
+| `/spec:implement` | No | **sonnet** (recommended) | Implementation work; runs in the main agent, so set the session model |
+| `/spec:new`, `/spec:switch`, `/spec:approve`, `/spec:status` | No | — | Mechanical bookkeeping |
+
+`/spec:implement` is deliberately **not** delegated: its per-behavior
+Red → user-approval → Green → Refactor loop is interactive, and the mandatory approval gate
+must run in the main agent where it can reach the user. Because there is no sub-agent to
+assign a model to, run the command itself on **sonnet** (set the session model) — it is
+implementation work, matching the sonnet policy for `/spec:ralph-implement`.
+
 ## Commands
 
 ### `/spec:new <feature-name>`
