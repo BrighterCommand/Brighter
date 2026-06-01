@@ -76,6 +76,7 @@ are not).
     - Recording consumer records ZERO rejects for the message and exactly ONE fall-through acknowledge.
     - Failure logged via `Log.FailedToDispatchMessage2`, process span status Error, span ended.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Existing tests to mirror: `tests/.../MessageDispatch/Proactor/When_an_event_handler_throws_unhandled_exception_Then_message_is_acked_async.cs` (class `MessagePumpEventProcessingExceptionTestsAsync`) and `When_a_command_handler_throws_unhandled_exception_Then_message_is_acked_async.cs` — both already drive the catch-all via `SpyExceptionCommandProcessor` (TestDoubles/SpyCommandProcessor.cs) and assert the Error log "MessagePump: Failed to dispatch message ...". Mirror their arrange; ADD a reject-vs-ack assertion by configuring the `InMemoryMessageConsumer` with an `invalidMessageTopic` and asserting the message did NOT land on the IMQ stream (proving the catch-all acked, not rejected). NB the existing tests assert via Serilog `TestCorrelator` log capture, not a recording consumer.
   - Implementation should:
     - Characterization — expected GREEN; no prod code (the catch-all `catch (Exception e)` block at ~380-385 is LEFT UNCHANGED per FR-8). If RED, investigate: the adjacent edit accidentally altered the catch-all.
   - References: FR-8, AC-2, NFR-2, ADR-0061 (catch-all unchanged; regression guard); touches `Proactor.cs` catch-all only as a guard.
@@ -89,6 +90,7 @@ are not).
     - Recording consumer records ZERO rejects and exactly ONE fall-through `AcknowledgeMessage`.
     - Logged via `Log.FailedToDispatchMessage2`, span Error, span ended.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Existing tests to mirror: `tests/.../MessageDispatch/Reactor/When_an_event_handler_throws_unhandled_exception_Then_message_is_acked.cs` (class `MessagePumpEventProcessingExceptionTests`) and `When_a_command_handler_throws_unhandled_exception_Then_message_is_acked.cs` (class `MessagePumpCommandProcessingExceptionTests`) — sync equivalents of the Proactor pair above (`SpyExceptionCommandProcessor`, "Failed to dispatch message" Error log). Mirror their arrange and ADD the IMQ-not-reached assertion as in the async guard.
   - Implementation should:
     - Characterization — expected GREEN; no prod code (catch-all at ~345-350 unchanged per FR-8). If RED, investigate accidental edit.
   - References: FR-8, AC-4, NFR-2, ADR-0061 (catch-all unchanged); touches `Reactor.cs` catch-all only as a guard.
@@ -102,6 +104,7 @@ are not).
     - On the iteration after the third failure, `UnacceptableMessageLimitReached()` returns true and the pump terminates (4th message not dispatched).
     - Strengthen the existing assertions to confirm each failure REJECTED (not acked) in addition to the limit-trip behaviour they already assert.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Existing tests to mirror: the files to UPDATE are `tests/.../MessageDispatch/Proactor/When_a_message_fails_to_be_mapped_to_a_request_and_the_unacceptable_message_limit_is_reached_async.cs` (class `MessagePumpUnacceptableMessageLimitTestsAsync`) and the sync sibling (class `MessagePumpUnacceptableMessageLimitTests`) — they already drive 3 mapping failures via `FailingEventMessageMapper(Async)` with `UnacceptableMessageLimit = 3`, but currently only assert `Assert.Empty(_bus.Stream(...))` with a `//TODO: How do we assert channel closure?`. Borrow the missing assertion from `When_an_unacceptable_message_limit_is_reached_async.cs` (class `MessagePumpUnacceptableMessageLimitBreachedAsyncTests`) / sync `When_an_unacceptable_message_limit_is_reached.cs` (class `MessagePumpUnacceptableMessageLimitBreachedTests`): `Assert.Equal(MessagePumpStatus.MP_LIMIT_EXCEEDED, _messagePump.Status)` (enum in `src/Paramore.Brighter.ServiceActivator/MessagePump.cs`). Also add the per-failure reject assertion (IMQ-configured consumer).
   - Implementation should:
     - Characterization for the limit-trip — the guardrail is unchanged; the reject behaviour comes from the Proactor/Reactor tasks above. No NEW prod code in `MessagePump.cs`. If the limit no longer trips, investigate: `IncrementUnacceptableMessageCount()` was dropped from the mapping block.
   - References: FR-5, AC-5, ADR-0061 (retain IncrementUnacceptableMessageCount); depends on Proactor/Reactor tasks.
@@ -114,6 +117,7 @@ are not).
     - `UnacceptableMessageLimit = 0` (default); a large run (e.g. 100) of real-translate mapping failures each reject with `Unacceptable` and increment.
     - The pump does NOT terminate due to the limit (loop continues until externally stopped).
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Existing tests to mirror: `tests/.../MessageDispatch/Proactor/When_an_unacceptable_message_is_recieved_async.cs` (class `AsyncMessagePumpUnacceptableMessageTests`) / sync `When_an_unacceptable_message_is_recieved.cs` (class `MessagePumpUnacceptableMessageTests`) — these run with the DEFAULT limit (`UnacceptableMessageLimit` unset = 0) and the pump only stops via an enqueued `MT_QUIT`, never via the limit. Mirror their default-limit arrange and QUIT-driven stop; swap the `MT_UNACCEPTABLE` message for a real mapping failure (`FailingEventMessageMapper(Async)`) and assert `_messagePump.Status != MessagePumpStatus.MP_LIMIT_EXCEEDED` after a large run.
   - Implementation should:
     - Characterization — expected GREEN; no new prod code (`UnacceptableMessageLimitReached()` already returns false when limit <= 0). If RED, investigate.
   - References: FR-5, AC-6, ADR-0061; depends on Proactor/Reactor tasks.
@@ -127,6 +131,7 @@ are not).
     - On a real-translate mapping failure for message `mno-345`: exactly one `Reject` with `RejectionReason.Unacceptable`; zero fall-through `Acknowledge`.
     - Assert the PUMP invoked reject (not acknowledge) — what the consumer's reject then does to the source (e.g. plain delete) is out of scope (C-3). No transport-specific branching exists in the pump.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Existing tests to mirror: the no-IMQ vs IMQ pair for `MT_UNACCEPTABLE` shows the exact consumer-setup contrast to reuse for the mapping path — `tests/.../MessageDispatch/Proactor/When_an_unacceptable_message_is_recieved_async.cs` (class `AsyncMessagePumpUnacceptableMessageTests`, NO IMQ) vs `When_an_unacceptable_message_is_recieved_async_and_there_is_an_imc.cs` (class `AsyncMessagePumpUnacceptableMessageInvalidMessageChannelTests`, with `invalidMessageTopic`, asserts the message lands on the IMQ stream); sync equivalents `When_an_unacceptable_message_is_recieved.cs` (class `MessagePumpUnacceptableMessageTests`) and `When_an_unacceptable_message_is_recieved_and_there_is_a_imc.cs`. Mirror the no-IMQ arrange but drive the mapping failure (`FailingEventMessageMapper(Async)`). NB those existing tests assert source-stream emptiness, which does NOT distinguish reject from ack on a no-IMQ consumer — hence this task needs a recording double (below) to assert the PUMP invoked `Reject(Unacceptable)`, not the fall-through acknowledge.
   - Implementation should:
     - May require a small recording test-double consumer in "tests/.../MessageDispatch/TestDoubles/" if no existing double records reject-vs-ack with the reason. Prefer reusing an existing recording double; only add one if none records both calls + the `MessageRejectionReason`. No prod-code change (delegation already follows from the Proactor/Reactor tasks).
   - References: FR-7, NFR-2, NFR-4, AC-8, ADR-0061 (no transport branching); depends on Proactor/Reactor tasks.
