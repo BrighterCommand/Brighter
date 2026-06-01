@@ -263,7 +263,21 @@ END";
         CancellationToken cancellationToken)
     {
         const string legacySchema = HISTORY_TABLE_SCHEMA;
-        var legacyExists = await DoesHistoryTableExistAsync(connection, transaction, legacySchema, cancellationToken);
+        bool legacyExists;
+        try
+        {
+            legacyExists = await DoesHistoryTableExistAsync(connection, transaction, legacySchema, cancellationToken);
+        }
+        catch (SqlException ex) when (IsLegacyHistoryReadPermissionDenied(ex))
+        {
+            // PR #4155 reviewer #2: the documented contract is "any legacy-history-read failure
+            // surfaces as a ConfigurationException with the documented message". sys.tables is
+            // conventionally row-filtered (not erroring) so this catch is mostly theoretical, but
+            // wrapping the probe with the same when-filter as the INSERT below keeps the contract
+            // honest for any future schema or backend behaviour change. Non-permission failures
+            // (connectivity, syntax) propagate untouched — the outer UoW transaction rolls back.
+            throw BuildLegacyHistoryReadDeniedException(legacySchema, perSchema, ex);
+        }
         if (!legacyExists)
         {
             return;
@@ -299,7 +313,7 @@ WHERE src.[SchemaName] = @SchemaName
             {
                 rowsCopied = await command.ExecuteNonQueryAsync(cancellationToken);
             }
-            catch (SqlException ex)
+            catch (SqlException ex) when (IsLegacyHistoryReadPermissionDenied(ex))
             {
                 // Reviewer #1 hardening (must, not should): any failure reading the legacy history
                 // table — typically tenant-isolated credentials lacking SELECT on dbo — must surface
@@ -309,22 +323,12 @@ WHERE src.[SchemaName] = @SchemaName
                 // throw rolls back the surrounding transaction so no partial per-schema state is
                 // left behind.
                 //
-                // The message says "every provision run" — not "the first run" — because the
-                // INSERT...SELECT executes on every PerSchema provision (PR #4155 multi-box-flip
-                // fix). Steady state copies zero rows thanks to the NOT EXISTS PK guard, but the
-                // SELECT itself runs every time, so the SELECT grant must persist for the lifetime
-                // of the PerSchema deployment. Operators who grant SELECT only for the initial
-                // flip and then revoke it will hit this exception on every subsequent restart.
-                throw new ConfigurationException(
-                    $"Brighter PerSchema migration: every provision run reads the legacy default-schema " +
-                    $"history table [{legacySchema}].[{MIGRATION_HISTORY_TABLE}] so any unseeded tenant " +
-                    $"rows can be copied into the per-schema history (the per-row NOT EXISTS guard makes " +
-                    $"steady-state runs a zero-row no-op, but the SELECT against the legacy table runs " +
-                    $"every time). Grant the runner SELECT on that table (and INSERT on " +
-                    $"[{perSchema}].[{MIGRATION_HISTORY_TABLE}]) for the lifetime of the PerSchema " +
-                    $"deployment and retry. The original provider exception is preserved as the inner " +
-                    $"exception.",
-                    ex);
+                // PR #4155 reviewer #2 tightening: the catch is filtered to the SELECT-permission
+                // error numbers (229 / 230) so a deadlock victim, connection drop, statement
+                // timeout, or future-refactor syntax error doesn't get misreported as "grant SELECT
+                // on the legacy table". Unmatched SqlExceptions propagate unchanged; the outer UoW
+                // transaction still rolls back so partial state is not left behind.
+                throw BuildLegacyHistoryReadDeniedException(legacySchema, perSchema, ex);
             }
         }
 
@@ -347,6 +351,29 @@ WHERE src.[SchemaName] = @SchemaName
                 }));
         }
     }
+
+    // PR #4155 reviewer #2: narrow the seed catch so the operator-facing "grant SELECT on the
+    // legacy history table" message only fires when the provider actually raised a SELECT-
+    // permission error. 229 is the canonical "permission denied on object" code; 230 is its
+    // column-level variant (raised when SELECT is allowed at the table level but DENY-ed on a
+    // specific column — possible if an operator narrows the grant). Other broad-base errors
+    // (connection drop 64/10054, login failure 18456, deadlock victim 1205, statement timeout,
+    // future-refactor syntax errors) propagate untouched.
+    private static bool IsLegacyHistoryReadPermissionDenied(SqlException ex) =>
+        ex.Number == 229 || ex.Number == 230;
+
+    private static ConfigurationException BuildLegacyHistoryReadDeniedException(
+        string legacySchema, string perSchema, Exception inner) =>
+        new ConfigurationException(
+            $"Brighter PerSchema migration: every provision run reads the legacy default-schema " +
+            $"history table [{legacySchema}].[{MIGRATION_HISTORY_TABLE}] so any unseeded tenant " +
+            $"rows can be copied into the per-schema history (the per-row NOT EXISTS guard makes " +
+            $"steady-state runs a zero-row no-op, but the SELECT against the legacy table runs " +
+            $"every time). Grant the runner SELECT on that table (and INSERT on " +
+            $"[{perSchema}].[{MIGRATION_HISTORY_TABLE}]) for the lifetime of the PerSchema " +
+            $"deployment and retry. The original provider exception is preserved as the inner " +
+            $"exception.",
+            inner);
 
     protected override async Task RunFreshPathAsync(
         SqlConnection connection, SqlTransaction? transaction, string? schemaName, string tableName,

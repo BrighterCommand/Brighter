@@ -291,7 +291,22 @@ CREATE TABLE IF NOT EXISTS {historySchemaQuoted}.""{MIGRATION_HISTORY_TABLE}"" (
     {
         const string legacySchema = HISTORY_TABLE_SCHEMA;
         var legacyFolded = PgIdentifier.Normalize(legacySchema);
-        var legacyExists = await DoesHistoryTableExistAsync(connection, transaction, legacyFolded, cancellationToken);
+        var legacyQuoted = PgIdentifier.Quote(legacySchema);
+        bool legacyExists;
+        try
+        {
+            legacyExists = await DoesHistoryTableExistAsync(connection, transaction, legacyFolded, cancellationToken);
+        }
+        catch (PostgresException ex) when (IsLegacyHistoryReadPermissionDenied(ex))
+        {
+            // PR #4155 reviewer #2: information_schema.tables is row-filtered to objects the role
+            // has SOME privilege on (so a missing-grant probe normally just returns zero rows, not
+            // 42501), but wrapping with the same when-filter as the INSERT below keeps the
+            // documented "any legacy-history-read failure surfaces as a ConfigurationException"
+            // contract honest. Non-permission failures (connectivity, syntax) propagate untouched;
+            // the outer UoW transaction still rolls back.
+            throw BuildLegacyHistoryReadDeniedException(legacyQuoted, perSchemaQuoted, ex);
+        }
         if (!legacyExists)
         {
             return;
@@ -304,8 +319,6 @@ CREATE TABLE IF NOT EXISTS {historySchemaQuoted}.""{MIGRATION_HISTORY_TABLE}"" (
         // boxSchema is operator-supplied and must be validated before its folded form is passed as a
         // parameter (Normalize doesn't sanitise — AssertSafe does).
         Identifiers.AssertSafe(boxSchema, nameof(boxSchema));
-
-        var legacyQuoted = PgIdentifier.Quote(legacySchema);
 
         int rowsCopied;
         using (var command = connection.CreateCommand())
@@ -329,7 +342,7 @@ WHERE src.""SchemaName"" = @SchemaName
             {
                 rowsCopied = await command.ExecuteNonQueryAsync(cancellationToken);
             }
-            catch (PostgresException ex)
+            catch (PostgresException ex) when (IsLegacyHistoryReadPermissionDenied(ex))
             {
                 // Reviewer #1 hardening (must, not should): any failure reading the legacy history
                 // table — typically tenant-isolated credentials lacking SELECT on public — must
@@ -339,22 +352,12 @@ WHERE src.""SchemaName"" = @SchemaName
                 // breaking FR5. The throw rolls back the surrounding transaction so no partial
                 // per-schema state is left behind.
                 //
-                // The message says "every provision run" — not "the first run" — because the
-                // INSERT...SELECT executes on every PerSchema provision (PR #4155 multi-box-flip
-                // fix). Steady state copies zero rows thanks to the NOT EXISTS PK guard, but the
-                // SELECT itself runs every time, so the SELECT grant must persist for the lifetime
-                // of the PerSchema deployment. Operators who grant SELECT only for the initial
-                // flip and then revoke it will hit this exception on every subsequent restart.
-                throw new ConfigurationException(
-                    $"Brighter PerSchema migration: every provision run reads the legacy default-schema " +
-                    $"history table {legacyQuoted}.\"{MIGRATION_HISTORY_TABLE}\" so any unseeded tenant " +
-                    $"rows can be copied into the per-schema history (the per-row NOT EXISTS guard makes " +
-                    $"steady-state runs a zero-row no-op, but the SELECT against the legacy table runs " +
-                    $"every time). Grant the runner SELECT on that table (and INSERT on " +
-                    $"{perSchemaQuoted}.\"{MIGRATION_HISTORY_TABLE}\") for the lifetime of the PerSchema " +
-                    $"deployment and retry. The original provider exception is preserved as the inner " +
-                    $"exception.",
-                    ex);
+                // PR #4155 reviewer #2 tightening: the catch is filtered to the SELECT-permission
+                // SqlState (42501 / insufficient_privilege) so a deadlock victim, connection drop,
+                // statement timeout, or future-refactor syntax error doesn't get misreported as
+                // "grant SELECT on the legacy table". Unmatched PostgresExceptions propagate
+                // unchanged; the outer UoW transaction still rolls back.
+                throw BuildLegacyHistoryReadDeniedException(legacyQuoted, perSchemaQuoted, ex);
             }
         }
 
@@ -379,6 +382,28 @@ WHERE src.""SchemaName"" = @SchemaName
                 }));
         }
     }
+
+    // PR #4155 reviewer #2: narrow the seed catch so the operator-facing "grant SELECT on the
+    // legacy history table" message only fires when the provider actually raised a SELECT-
+    // permission error. 42501 (insufficient_privilege) is the canonical SqlState PostgreSQL
+    // raises for missing SELECT/INSERT on a relation. Other PostgresExceptions (connectivity
+    // 08xxx, deadlock 40P01, statement_timeout 57014, future-refactor syntax errors 42xxx-other)
+    // propagate untouched.
+    private static bool IsLegacyHistoryReadPermissionDenied(PostgresException ex) =>
+        ex.SqlState == "42501";
+
+    private static ConfigurationException BuildLegacyHistoryReadDeniedException(
+        string legacyQuoted, string perSchemaQuoted, Exception inner) =>
+        new ConfigurationException(
+            $"Brighter PerSchema migration: every provision run reads the legacy default-schema " +
+            $"history table {legacyQuoted}.\"{MIGRATION_HISTORY_TABLE}\" so any unseeded tenant " +
+            $"rows can be copied into the per-schema history (the per-row NOT EXISTS guard makes " +
+            $"steady-state runs a zero-row no-op, but the SELECT against the legacy table runs " +
+            $"every time). Grant the runner SELECT on that table (and INSERT on " +
+            $"{perSchemaQuoted}.\"{MIGRATION_HISTORY_TABLE}\") for the lifetime of the PerSchema " +
+            $"deployment and retry. The original provider exception is preserved as the inner " +
+            $"exception.",
+            inner);
 
     private const string HistoryTableSavepoint = "ensure_history_table";
 
