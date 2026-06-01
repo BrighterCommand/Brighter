@@ -24,6 +24,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Paramore.Brighter.NJsonConverters;
 
 namespace Paramore.Brighter.Observability;
 
@@ -35,6 +36,8 @@ namespace Paramore.Brighter.Observability;
 /// Each entry consists of a key-value pair where the key identifies the vendor and the value contains user-defined request or workflow data.
 /// Note that baggage entries are not intended for telemetry data, but rather for user-defined metadata about a trace.
 /// </remarks>
+[System.Text.Json.Serialization.JsonConverter(typeof(BaggageConverter))]
+[Newtonsoft.Json.JsonConverter(typeof(NBaggageConverter))]
 public class Baggage : IEnumerable<KeyValuePair<string, string?>>
 {
     private readonly Dictionary<string, string> _entries = new();

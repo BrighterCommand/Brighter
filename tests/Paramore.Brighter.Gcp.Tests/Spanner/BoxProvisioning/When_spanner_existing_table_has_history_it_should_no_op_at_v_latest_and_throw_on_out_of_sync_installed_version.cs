@@ -40,6 +40,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
 [Collection("SpannerBoxProvisioning")]
+[Trait("Category", "Spanner")]
 public class SpannerOutboxNormalPathTests : IAsyncLifetime
 {
     private const string SeededDescription = "spec 0023 fresh install";
@@ -204,6 +205,7 @@ WHERE `BoxTableName` = @BoxTableName",
 }
 
 [Collection("SpannerBoxProvisioning")]
+[Trait("Category", "Spanner")]
 public class SpannerInboxNormalPathTests : IAsyncLifetime
 {
     private const string SeededDescription = "spec 0023 fresh install";

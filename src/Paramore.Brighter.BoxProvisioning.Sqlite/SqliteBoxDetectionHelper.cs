@@ -69,11 +69,13 @@ public class SqliteBoxDetectionHelper :
     /// given box table.
     /// </summary>
     /// <param name="schemaName">Accepted and ignored — SQLite has no schema concept.</param>
+    /// <param name="historySchema">Accepted and ignored — SQLite has no schema concept.</param>
     public async Task<bool> DoesHistoryExistAsync(
-        SqliteConnection connection, string tableName, string? schemaName,
+        SqliteConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         SqliteTransaction? transaction = null)
     {
+        _ = historySchema; // SQLite has no schema concept; PerSchema is a no-op here.
         var historyTableExists = await DoesTableExistAsync(
             connection, "__BrighterMigrationHistory", schemaName, cancellationToken, transaction);
         if (!historyTableExists)
@@ -95,11 +97,13 @@ WHERE [BoxTableName] = @BoxTableName";
     /// or 0 if no rows exist.
     /// </summary>
     /// <param name="schemaName">Accepted and ignored — SQLite has no schema concept.</param>
+    /// <param name="historySchema">Accepted and ignored — SQLite has no schema concept.</param>
     public async Task<int> GetMaxVersionAsync(
-        SqliteConnection connection, string tableName, string? schemaName,
+        SqliteConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         SqliteTransaction? transaction = null)
     {
+        _ = historySchema; // SQLite has no schema concept; PerSchema is a no-op here.
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
         command.CommandText = @"

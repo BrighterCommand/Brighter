@@ -101,7 +101,7 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         var historyExists = await _detectionHelper.DoesHistoryExistAsync(
-            connection, _configuration.InBoxTableName, schemaName: null, cancellationToken);
+            connection, _configuration.InBoxTableName, schemaName: null, historySchema: null, cancellationToken);
 
         if (!historyExists)
         {
@@ -111,7 +111,7 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
         }
 
         var maxVersion = await _detectionHelper.GetMaxVersionAsync(
-            connection, _configuration.InBoxTableName, schemaName: null, cancellationToken);
+            connection, _configuration.InBoxTableName, schemaName: null, historySchema: null, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 

@@ -33,6 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
 [Collection("SpannerBoxProvisioning")]
+[Trait("Category", "Spanner")]
 public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatched_payload_mode_it_should_throw_configuration_exception : IAsyncLifetime
 {
     private readonly string _connectionString = Const.ConnectionString;

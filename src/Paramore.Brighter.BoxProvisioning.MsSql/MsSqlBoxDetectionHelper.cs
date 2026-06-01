@@ -76,21 +76,30 @@ WHERE t.name = @TableName AND s.name = @SchemaName";
     /// Returns true if the migration history table exists and has at least one row for the
     /// given box table.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. The box-table schema used to filter history rows. Null
+    /// is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
+    /// <param name="historySchema">Optional. The physical schema holding the history table; null
+    /// resolves to <c>"dbo"</c> (today's behaviour). Drives the history-table existence probe.</param>
     public async Task<bool> DoesHistoryExistAsync(
-        SqlConnection connection, string tableName, string? schemaName,
+        SqlConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         SqlTransaction? transaction = null)
     {
         var historyTableExists = await DoesTableExistAsync(
-            connection, "__BrighterMigrationHistory", DefaultSchemaName, cancellationToken, transaction);
+            connection, "__BrighterMigrationHistory", historySchema, cancellationToken, transaction);
         if (!historyTableExists)
             return false;
 
+        // historySchema is the physical location of the history table: the configured schema under
+        // PerSchema, else dbo (null). AssertSafe + bracket-quote because the schema cannot be a bind
+        // parameter for the table qualifier; the runner folds the same ResolveHistorySchema() value
+        // on the write side, so read and write target the same table.
+        var historyTableSchema = historySchema ?? DefaultSchemaName;
+        Identifiers.AssertSafe(historyTableSchema, nameof(historySchema));
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
-        command.CommandText = @"
-SELECT COUNT(1) FROM [dbo].[__BrighterMigrationHistory]
+        command.CommandText = $@"
+SELECT COUNT(1) FROM [{historyTableSchema}].[__BrighterMigrationHistory]
 WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);
@@ -107,16 +116,23 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
     /// Returns the highest migration version recorded in history for the given box table,
     /// or 0 if no rows exist.
     /// </summary>
-    /// <param name="schemaName">Optional. Null is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
+    /// <param name="schemaName">Optional. The box-table schema used to filter history rows. Null
+    /// is substituted with <c>"dbo"</c> per ADR 0057 §A.1.</param>
+    /// <param name="historySchema">Optional. The physical schema holding the history table; null
+    /// resolves to <c>"dbo"</c> (today's behaviour).</param>
     public async Task<int> GetMaxVersionAsync(
-        SqlConnection connection, string tableName, string? schemaName,
+        SqlConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         SqlTransaction? transaction = null)
     {
+        // historySchema is the physical location of the history table (configured schema under
+        // PerSchema, else dbo). AssertSafe + bracket-quote — folded identically to the write side.
+        var historyTableSchema = historySchema ?? DefaultSchemaName;
+        Identifiers.AssertSafe(historyTableSchema, nameof(historySchema));
         using var command = connection.CreateCommand();
         if (transaction != null) command.Transaction = transaction;
-        command.CommandText = @"
-SELECT ISNULL(MAX([MigrationVersion]), 0) FROM [dbo].[__BrighterMigrationHistory]
+        command.CommandText = $@"
+SELECT ISNULL(MAX([MigrationVersion]), 0) FROM [{historyTableSchema}].[__BrighterMigrationHistory]
 WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = @SchemaName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
         command.Parameters.AddWithValue("@SchemaName", schemaName ?? DefaultSchemaName);

@@ -90,12 +90,19 @@ public interface IAmABoxMigrationDetectionHelper<TConnection, TTransaction>
     /// </summary>
     /// <param name="connection">An open connection to the target database.</param>
     /// <param name="tableName">The unqualified box table name whose history is being probed.</param>
-    /// <param name="schemaName">Optional. Null is substituted with the backend default by each
-    /// implementation — see <see cref="DoesTableExistAsync"/> for the substitution rule.</param>
+    /// <param name="schemaName">Optional. The box table's schema, used to filter the history
+    /// rows by their <c>SchemaName</c> column. Null is substituted with the backend default by
+    /// each implementation — see <see cref="DoesTableExistAsync"/> for the substitution rule.</param>
+    /// <param name="historySchema">Optional. The physical schema that holds the history table.
+    /// <c>null</c> means "the backend default schema" — i.e. the behaviour prior to per-schema
+    /// history placement. Distinct from <paramref name="schemaName"/>: under
+    /// <see cref="MigrationHistoryScope.Global"/> the two may differ (box in <c>billing</c>,
+    /// history in <c>dbo</c>); under <see cref="MigrationHistoryScope.PerSchema"/> they coincide.
+    /// Ignored by backends without a distinct schema concept (MySQL/SQLite/Spanner).</param>
     /// <param name="cancellationToken">Optional cancellation.</param>
     /// <param name="transaction">Optional. See <see cref="DoesTableExistAsync"/>.</param>
     Task<bool> DoesHistoryExistAsync(
-        TConnection connection, string tableName, string? schemaName,
+        TConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         TTransaction? transaction = null);
 
@@ -105,12 +112,17 @@ public interface IAmABoxMigrationDetectionHelper<TConnection, TTransaction>
     /// </summary>
     /// <param name="connection">An open connection to the target database.</param>
     /// <param name="tableName">The unqualified box table name whose history is being read.</param>
-    /// <param name="schemaName">Optional. Null is substituted with the backend default by each
+    /// <param name="schemaName">Optional. The box table's schema, used to filter the history rows
+    /// by their <c>SchemaName</c> column. Null is substituted with the backend default by each
     /// implementation — see <see cref="DoesTableExistAsync"/> for the substitution rule.</param>
+    /// <param name="historySchema">Optional. The physical schema that holds the history table.
+    /// <c>null</c> means "the backend default schema" — i.e. the behaviour prior to per-schema
+    /// history placement. See <see cref="DoesHistoryExistAsync"/> for the distinction from
+    /// <paramref name="schemaName"/>.</param>
     /// <param name="cancellationToken">Optional cancellation.</param>
     /// <param name="transaction">Optional. See <see cref="DoesTableExistAsync"/>.</param>
     Task<int> GetMaxVersionAsync(
-        TConnection connection, string tableName, string? schemaName,
+        TConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         TTransaction? transaction = null);
 

@@ -10,6 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
 [Collection("SpannerBoxProvisioning")]
+[Trait("Category", "Spanner")]
 public class When_spanner_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap : IAsyncLifetime
 {
     private readonly string _tableName;

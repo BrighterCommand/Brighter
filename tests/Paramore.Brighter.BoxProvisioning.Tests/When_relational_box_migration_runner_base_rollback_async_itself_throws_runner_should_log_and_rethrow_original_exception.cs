@@ -98,6 +98,8 @@ public class SqlBoxMigrationRunnerRollbackFailureTests
             _unitOfWork = unitOfWork;
         }
 
+        protected override string? DefaultHistorySchema => null;
+
         protected override Task<FakeDbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
             => Task.FromResult(new FakeDbConnection());
 
@@ -109,7 +111,7 @@ public class SqlBoxMigrationRunnerRollbackFailureTests
             => $"lock_{tableName}";
 
         protected override Task EnsureHistoryTableAsync(
-            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName,
+            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
             CancellationToken cancellationToken)
             => throw new InvalidOperationException(PrimarySentinelMessage);
 

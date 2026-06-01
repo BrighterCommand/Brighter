@@ -143,6 +143,8 @@ public class SqlBoxMigrationRunnerRedetectStateDefaultTests
         {
         }
 
+        protected override string? DefaultHistorySchema => null;
+
         protected override Task<FakeDbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
             => Task.FromResult(new FakeDbConnection());
 
@@ -154,7 +156,7 @@ public class SqlBoxMigrationRunnerRedetectStateDefaultTests
             => $"lock_{tableName}";
 
         protected override Task EnsureHistoryTableAsync(
-            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName,
+            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
             CancellationToken cancellationToken)
             => Task.CompletedTask;
 

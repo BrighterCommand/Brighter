@@ -268,6 +268,8 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
         //(MSSQL/PG/MySQL/SQLite) override with their specific DbSystem in production code.
         protected override DbSystem DbSystem => DbSystem.OtherSql;
 
+        protected override string? DefaultHistorySchema => null;
+
         protected override Task<FakeDbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
             => Task.FromResult(new FakeDbConnection());
 
@@ -279,7 +281,7 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
             => $"lock_{tableName}";
 
         protected override Task EnsureHistoryTableAsync(
-            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName,
+            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
             CancellationToken cancellationToken) => Task.CompletedTask;
 
         protected override Task<(bool tableExists, bool historyExists)> RedetectStateAsync(

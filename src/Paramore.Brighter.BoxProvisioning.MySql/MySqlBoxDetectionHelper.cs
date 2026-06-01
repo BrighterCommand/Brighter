@@ -81,12 +81,15 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
     /// existence check for the history table itself — the history table always lives in the
     /// connection's bound database, even when the box table is provisioned in a different schema 
     /// </param>
+    /// <param name="historySchema">Accepted and ignored — MySQL's history table always lives in
+    /// the connection-bound database; <see cref="MigrationHistoryScope.PerSchema"/> is a no-op.</param>
     /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits per ADR 0057 §5a.</param>
     public async Task<bool> DoesHistoryExistAsync(
-        MySqlConnection connection, string tableName, string? schemaName,
+        MySqlConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         MySqlTransaction? transaction = null)
     {
+        _ = historySchema; // MySQL keeps history in connection.Database; PerSchema is a no-op here.
         // The history table always resides in connection.Database (the MySQL runner's
         // EnsureHistoryTableAsync emits an unqualified CREATE TABLE IF NOT EXISTS targeting
         // DATABASE()). Probe its existence against connection.Database — not the
@@ -117,12 +120,15 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
     /// if no rows exist.
     /// </summary>
     /// <param name="schemaName">Optional. Null is substituted with <c>connection.Database</c></param>
+    /// <param name="historySchema">Accepted and ignored — MySQL keeps history in the
+    /// connection-bound database; <see cref="MigrationHistoryScope.PerSchema"/> is a no-op.</param>
     /// <param name="transaction">Accepted and ignored — MySQL DDL auto-commits.</param>
     public async Task<int> GetMaxVersionAsync(
-        MySqlConnection connection, string tableName, string? schemaName,
+        MySqlConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         MySqlTransaction? transaction = null)
     {
+        _ = historySchema; // MySQL keeps history in connection.Database; PerSchema is a no-op here.
         using var command = connection.CreateCommand();
         command.CommandText = @"
 SELECT COALESCE(MAX(`MigrationVersion`), 0) FROM `__BrighterMigrationHistory`

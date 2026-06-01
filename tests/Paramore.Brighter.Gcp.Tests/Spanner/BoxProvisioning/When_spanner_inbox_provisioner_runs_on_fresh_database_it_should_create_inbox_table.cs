@@ -9,6 +9,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
 [Collection("SpannerBoxProvisioning")]
+[Trait("Category", "Spanner")]
 public class InboxProvisionerFreshDatabaseTests : IAsyncLifetime
 {
     private readonly string _tableName;
