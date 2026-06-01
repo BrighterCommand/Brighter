@@ -128,16 +128,28 @@ context a fresh session would otherwise get from conversation.
 
 ```
 STATUS: GREEN | FAILED | ALREADY_COMPLETE
-TEST_FILES: <space-separated paths created/modified>
-IMPL_FILES: <space-separated paths created/modified>
+TEST_FILES:
+  <one path per line, indented; empty if none>
+IMPL_FILES:
+  <one path per line, indented; empty if none>
 DESCRIPTION: <one-line behavior description for the commit message>
 REGRESSIONS: <none | description of any regression and how it was resolved>
 FAILURE_REASON: <empty unless STATUS is FAILED — explain what went wrong>
 ```
 
-Paths MUST be **space-separated** (so they tokenise correctly as separate `git add`
-arguments). If a path itself contains spaces, wrap that single path in double quotes. Do not
-use commas as separators.
+Paths MUST be **one per line** (so they tokenise unambiguously regardless of spaces in a
+path — no quoting or escaping needed). List nothing under `TEST_FILES:`/`IMPL_FILES:` if the
+sub-agent created/modified no files of that kind. Do not use commas, JSON arrays, or a single
+space-separated line.
+
+**Main-agent parsing rules (apply before any `git` command):**
+- Collect the indented lines under `TEST_FILES:` and `IMPL_FILES:` into one path list.
+- If the sub-agent ignored the contract and returned a comma-separated, space-separated, or
+  JSON-array value, normalise it to a clean list yourself rather than feeding the raw string
+  to `git` — a mis-tokenised list silently stages the wrong files.
+- **If the combined path list is empty, skip the `git` command entirely.** Never run a bare
+  `git add` / `git checkout --` with no paths: `git checkout --` with no positional args
+  errors ("Nothing specified"), and a blanket form would touch unrelated working-tree files.
 
 ### Step 5: Process the Result, Mark, and Commit (MAIN agent)
 
@@ -154,8 +166,11 @@ Read the sub-agent's returned result and act on its `STATUS`:
    - Implementation: [brief description]
    - Ralph task: [task number]/[total]
 
-   Co-Authored-By: Claude Opus <noreply@anthropic.com>"
+   Co-Authored-By: Claude Opus <noreply@anthropic.com>
+   Co-Authored-By: Claude Sonnet <noreply@anthropic.com>"
    ```
+   (Both models contributed: the main agent on **opus** orchestrated and committed; the
+   sub-agent on **sonnet** wrote the test + implementation.)
    (For `ALREADY_COMPLETE`, commit the checkbox tick alone with a `docs:`-style message
    noting the behavior already existed.)
 3. Count this task toward the run count.
@@ -175,6 +190,9 @@ Read the sub-agent's returned result and act on its `STATUS`:
    ```bash
    git checkout -- [TEST_FILES] [IMPL_FILES]
    ```
+   If `STATUS: FAILED` but the sub-agent reported **no** files (it failed before writing
+   anything), the path list is empty — **skip this checkout entirely** (a bare
+   `git checkout --` errors with "Nothing specified") and just commit the failure marker.
    Only KEEP the partial edits (and add them to the marker commit) if BOTH hold:
    `dotnet build` of the affected project[s] succeeds, AND the edits are confined to the
    reported `TEST_FILES`/`IMPL_FILES` (no stray changes elsewhere). If either is in doubt,

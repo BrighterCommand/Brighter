@@ -57,7 +57,9 @@ prompt MUST include:
 3. The quality bar below — the sub-agent should draft requirements that would PASS an
    adversarial `/spec:review requirements`.
 4. An explicit instruction: **RETURN the complete `requirements.md` body as markdown text.
-   Do NOT write any file.**
+   Do NOT write any file. Do NOT ask the user any questions — draft from the inputs provided.**
+   (The sub-agent inherits full tool access, so it *could* call `AskUserQuestion`; this command
+   deliberately keeps the conversation non-interactive, so the prompt must forbid it.)
 
 #### Requirements Template (the sub-agent fills this in)
 

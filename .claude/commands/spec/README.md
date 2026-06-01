@@ -59,9 +59,11 @@ and gives the heavy work a focused, single-purpose context.
    first, then passes the text or paths.
 2. **Launch `Agent`** with an explicit `subagent_type` and `model`:
    - **Planning commands** (`/spec:design`, `/spec:tasks`, `/spec:ralph-tasks`) use
-     `subagent_type: "Plan"`. `Plan` is read-only (it has Read/Glob/Grep/Bash but **not**
-     Write/Edit), which structurally enforces the "return as text, don't write the file"
-     rule rather than relying on the prompt alone.
+     `subagent_type: "Plan"`. `Plan` is read-only — it has all tools **except** the
+     file-mutating ones (`Agent`, `ExitPlanMode`, `Edit`, `Write`, `NotebookEdit`), so it
+     can Read/Glob/Grep/Bash/WebFetch/WebSearch but cannot write or edit files. That
+     structurally enforces the "return as text, don't write the file" rule rather than
+     relying on the prompt alone.
    - **`/spec:requirements`** and **`/spec:review`** use `subagent_type: "general-purpose"`
      (drafting / adversarial reasoning that needs no source mutation).
    - **`/spec:ralph-implement`** uses `subagent_type: "general-purpose"` because its

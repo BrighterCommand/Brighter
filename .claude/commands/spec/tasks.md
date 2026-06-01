@@ -129,9 +129,13 @@ After the sub-agent returns:
    cross-reference" output); the main agent **sanity-checks** that report rather than
    re-deriving it:
    - The sub-agent's coverage report lists every FR and every ADR decision against a task,
-     with no gaps flagged. Spot-check a couple of entries against `requirements.md` /the
+     with no gaps flagged. Spot-check a couple of entries against `requirements.md` or the
      ADRs rather than re-mapping the whole set; if the report flags any uncovered FR/decision
-     or is missing, send it back to the sub-agent.
+     or is missing, send it back to the sub-agent. This spot-check is deliberately a
+     **sampling check, not full verification** — it is not expected to catch every
+     inconsistency or hallucinated coverage claim. The exhaustive adversarial coverage review
+     is `/spec:review tasks` (Step 4), which the user is prompted to run before approval; that
+     is where any remaining gaps are caught.
    - Each behavioral task uses the `TEST + IMPLEMENT` template with `/test-first` and the
      `⛔ STOP HERE` gate — none are split into separate TEST/IMPLEMENT tasks.
    - No task is an implementation detail rather than a behavior.

@@ -208,6 +208,9 @@ After the sub-agent returns:
    - It contains all template sections (Status, Context, Decision, Consequences with both
      Positive AND Negative, Alternatives Considered, References).
    - The header number/date and `Parent Requirement` / `Related ADRs` links are correct.
+   - **Re-check the ADR number** (closes the concurrent-run race noted in Step 3): re-run
+     `ls docs/adr/` and confirm `{NNNN}-{focus-area}.md` does not already exist. If it does,
+     increment to the next free number and update the ADR header before writing.
    - Spot-check at least one codebase reference the sub-agent cited (Glob/Grep) — if a
      referenced file/class doesn't exist, send it back to the sub-agent to fix rather than
      writing a misleading ADR.
