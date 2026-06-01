@@ -8,11 +8,18 @@ namespace Paramore.Brighter.AWS.V4.Tests.Helpers;
 
 public static class CredentialsChain
 {
+    // Per-process random 12-digit account ID; Floci treats a 12-digit access key
+    // as the AWS account ID for per-account resource isolation, so each test-runner
+    // process sees its own namespace and can share a single Floci container with
+    // other processes (e.g. V3 vs V4) without name collisions.
+    private static readonly string s_localAccountId =
+        Random.Shared.NextInt64(100_000_000_000L, 999_999_999_999L + 1).ToString();
+
     public static (AWSCredentials credentials, RegionEndpoint region) GetAwsCredentials()
     {
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_SERVICE_URL")))
         {
-            return (new BasicAWSCredentials("test", "test"), RegionEndpoint.USEast1);
+            return (new BasicAWSCredentials(s_localAccountId, "test"), RegionEndpoint.USEast1);
         }
             
         //Try to get the details out of the credential store chain
