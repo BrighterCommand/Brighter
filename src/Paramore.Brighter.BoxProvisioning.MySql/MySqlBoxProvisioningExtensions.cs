@@ -53,7 +53,7 @@ public static class MySqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<MySqlOutboxMigrationCatalog>();
                 var runner = new MySqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MySqlOutboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     catalog,
@@ -92,7 +92,7 @@ public static class MySqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<MySqlOutboxMigrationCatalog>();
                 var runner = new MySqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MySqlOutboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     catalog,
@@ -119,7 +119,7 @@ public static class MySqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<MySqlInboxMigrationCatalog>();
                 var runner = new MySqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MySqlInboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     catalog,
@@ -158,7 +158,7 @@ public static class MySqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<MySqlInboxMigrationCatalog>();
                 var runner = new MySqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MySqlInboxProvisioner(
                     sp.GetRequiredService<MySqlBoxDetectionHelper>(),
                     catalog,

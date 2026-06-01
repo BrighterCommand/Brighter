@@ -30,7 +30,7 @@ public static class MsSqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<MsSqlOutboxMigrationCatalog>();
                 var runner = new MsSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MsSqlOutboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     catalog,
@@ -69,7 +69,7 @@ public static class MsSqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<MsSqlOutboxMigrationCatalog>();
                 var runner = new MsSqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MsSqlOutboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     catalog,
@@ -96,7 +96,7 @@ public static class MsSqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<MsSqlInboxMigrationCatalog>();
                 var runner = new MsSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MsSqlInboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     catalog,
@@ -135,7 +135,7 @@ public static class MsSqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<MsSqlInboxMigrationCatalog>();
                 var runner = new MsSqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new MsSqlInboxProvisioner(
                     sp.GetRequiredService<MsSqlBoxDetectionHelper>(),
                     catalog,

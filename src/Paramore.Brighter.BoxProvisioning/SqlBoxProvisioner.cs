@@ -25,6 +25,8 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.BoxProvisioning;
 
@@ -50,6 +52,11 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     where TConnection : DbConnection
     where TTransaction : DbTransaction
 {
+    // Static logger keeps the ctor surface unchanged across the 8 concrete provisioners; only
+    // exercised by the pre-lock-hint failure swallow below (Spec 0029 T-PERM).
+    private static readonly ILogger s_logger =
+        ApplicationLogging.CreateLogger<SqlBoxProvisioner<TConnection, TTransaction>>();
+
     private readonly IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> _detectionHelper;
     private readonly IAmABoxMigrationCatalog _catalog;
     private readonly IAmABoxPayloadModeValidator<TConnection> _payloadValidator;
@@ -148,8 +155,30 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
-        var historyExists = await _detectionHelper.DoesHistoryExistAsync(
-            connection, BoxTableName, EffectiveSchemaName, cancellationToken);
+        // Pre-lock read is an explicitly discarded hint (the runner re-detects authoritatively
+        // under the lock and resolves the history schema there), so this site passes
+        // historySchema: null = backend default — see ADR 0060 D4. A provider exception on the
+        // hint is most commonly tenant-isolated credentials lacking SELECT on the backend-default
+        // history schema (Spec 0029 FR5 / T-PERM). Swallow it: the runner's under-lock detection
+        // resolves the per-schema history under PerSchema scope and its D5 seed converts any
+        // legacy-read failure into a ConfigurationException with the documented operator-facing
+        // message. Logged at Debug so the swallow is observable in diagnostics. DbException is
+        // the common base for SqlException / NpgsqlException / MySqlException / SqliteException
+        // and the only failure family the hint genuinely cannot reason about.
+        bool historyExists;
+        try
+        {
+            historyExists = await _detectionHelper.DoesHistoryExistAsync(
+                connection, BoxTableName, EffectiveSchemaName, historySchema: null, cancellationToken);
+        }
+        catch (DbException ex)
+        {
+            s_logger.LogDebug(ex,
+                "Pre-lock historyExists hint for '{Schema}.{Table}' unavailable; deferring to the runner's under-lock authoritative detection.",
+                EffectiveSchemaName, BoxTableName);
+            historyExists = false;
+        }
+
         if (!historyExists)
         {
             // Pre-lock detection is a hint for the caller; the runner re-detects under the lock.
@@ -163,8 +192,21 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
                 CurrentVersion: detectedVersion < 0 ? 0 : detectedVersion);
         }
 
-        var maxVersion = await _detectionHelper.GetMaxVersionAsync(
-            connection, BoxTableName, EffectiveSchemaName, cancellationToken);
+        // Same hint-swallow rationale as historyExists above: a provider failure here is a hint
+        // signal only, the runner re-detects authoritatively.
+        int maxVersion;
+        try
+        {
+            maxVersion = await _detectionHelper.GetMaxVersionAsync(
+                connection, BoxTableName, EffectiveSchemaName, historySchema: null, cancellationToken);
+        }
+        catch (DbException ex)
+        {
+            s_logger.LogDebug(ex,
+                "Pre-lock maxVersion hint for '{Schema}.{Table}' unavailable; deferring to the runner's under-lock authoritative detection.",
+                EffectiveSchemaName, BoxTableName);
+            maxVersion = 0;
+        }
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 

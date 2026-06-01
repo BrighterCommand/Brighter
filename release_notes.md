@@ -201,6 +201,62 @@ Spec 0028 introduces the following net-new public surface (all in `Paramore.Brig
 
 DI extensions in each `Add{Backend}{Box}` register the detection helper, catalogue, and payload validator as singletons (each role-impl is stateless after construction); existing call-site shape `UseBoxProvisioning(opts => opts.Add{Backend}Outbox(config))` is unchanged.
 
+### Multi-Tenancy Migration History Scope (spec 0029)
+
+The box migration-history table can now be placed **per tenant schema** instead of always landing in the backend default schema. The default behaviour is unchanged — existing deployments keep `__BrighterMigrationHistory` in `dbo` / `public` / the connection-bound database regardless of `SchemaName`. Set `BoxProvisioningOptions.MigrationHistoryScope = MigrationHistoryScope.PerSchema` to opt this deployment into per-schema placement on MSSQL and PostgreSQL. See [ADR 0060](docs/adr/0060-multi-tenancy-migration-history-scope.md) and [spec 0029](specs/0029-multi-tenancy-migrations/) for full details.
+
+```csharp
+services
+    .AddBrighter()
+    .UseBoxProvisioning(opts =>
+    {
+        opts.MigrationHistoryScope = MigrationHistoryScope.PerSchema;
+        opts.AddMsSqlOutbox(configuration);    // history lands in configuration.SchemaName
+        opts.AddPostgreSqlInbox(configuration);
+    });
+```
+
+#### Additive: new public types
+
+* **Enum**: `MigrationHistoryScope` in `Paramore.Brighter.BoxProvisioning` with values `Global` (default — today's behaviour) and `PerSchema`.
+* **Property**: `BoxProvisioningOptions.MigrationHistoryScope` (defaults to `MigrationHistoryScope.Global`).
+
+#### Source-breaking change: `IAmABoxMigrationDetectionHelper.DoesHistoryExistAsync` / `GetMaxVersionAsync` gain a `historySchema` parameter
+
+`IAmABoxMigrationDetectionHelper<TConnection, TTransaction>` gains a `string? historySchema` parameter on `DoesHistoryExistAsync` and `GetMaxVersionAsync` (placed after the existing `schemaName`). The derived `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` interface file itself is unchanged — its implementors inherit the new signature through interface inheritance. `null` means "the backend default" — i.e. today's behaviour — so the bundled Brighter detection helpers and call-sites are byte-for-byte unchanged. External implementors of either interface must add the new parameter on recompile; passing `null` preserves existing semantics.
+
+```csharp
+// Before
+Task<bool> DoesHistoryExistAsync(
+    TConnection connection, string tableName, string? schemaName,
+    CancellationToken cancellationToken = default,
+    TTransaction? transaction = null);
+
+// After
+Task<bool> DoesHistoryExistAsync(
+    TConnection connection, string tableName, string? schemaName, string? historySchema,
+    CancellationToken cancellationToken = default,
+    TTransaction? transaction = null);
+```
+
+`DetectCurrentVersionAsync` is **unchanged** — it reads box-table columns, not history.
+
+#### Source-breaking change: runner constructor cascade gains an optional `scope` parameter
+
+The four relational runners (`MsSqlBoxMigrationRunner`, `PostgreSqlBoxMigrationRunner`, `MySqlBoxMigrationRunner`, `SqliteBoxMigrationRunner`) and the abstract base `SqlBoxMigrationRunner<TConnection, TTransaction>` gain a final `MigrationHistoryScope scope = MigrationHistoryScope.Global` constructor parameter. The default keeps existing positional call-sites compiling; external code that constructs the runners directly with named arguments past this position will need a small adjustment. `Add{Backend}Outbox`/`Add{Backend}Inbox` absorb the cascade and read `BoxProvisioningOptions.MigrationHistoryScope`; existing DI call-sites are unchanged.
+
+#### Source-breaking change: `EnsureHistoryTableAsync` hook gains a `tableName` parameter
+
+The `protected abstract Task EnsureHistoryTableAsync(...)` hook on `SqlBoxMigrationRunner<TConnection, TTransaction>` gains a `string tableName` parameter. The MSSQL and PostgreSQL hook implementations use it to filter the `Global → PerSchema` auto-seed to this tenant's rows; MySQL and SQLite accept and ignore it. External code that derives from `SqlBoxMigrationRunner<TConnection, TTransaction>` (rare — designed for the four shipped backends) must thread the new parameter through.
+
+#### Behaviour notes
+
+* **Backend support.** Only MSSQL and PostgreSQL honour `PerSchema` placement. MySQL (where schema == database), SQLite (no schema concept), and Spanner (degenerate fresh-install-only model per ADR 0057 §6) treat `PerSchema` as a no-op and keep history in their default location — no exception, so a single `BoxProvisioningOptions` can target a mixed backend set without per-backend branching. The placement decision is surfaced per run via an `Information` log of the form `Box migration history for {BoxTable} resolved to schema {HistorySchema} (scope {Scope})` (on no-op backends `HistorySchema` is the literal `<backend default>`).
+* **Global → PerSchema auto-seed.** After flipping a previously-`Global` MSSQL/PG deployment to `PerSchema`, the runner copies this tenant's prior history rows from the legacy default-schema table into the per-schema table under the same advisory lock and transaction as the CREATE — existing migrations are not re-applied. The seed copies all five columns (`MigrationVersion`, `SchemaName`, `BoxTableName`, `Description`, `AppliedAt`) filtered by `(SchemaName, BoxTableName)`, with a composite-primary-key `NOT EXISTS` guard so repeated flips are idempotent. The seed runs on **every** PerSchema provision (so the second box-type to flip — e.g. inbox after outbox — still gets seeded into the per-schema history table the first flip created); the NOT EXISTS guard makes steady-state runs a zero-row no-op. A distinct `Information` log records `Seeded {RowCount} legacy history row(s) for {BoxTable} from {LegacySchema} to {TargetSchema}` plus an OpenTelemetry `Activity` event `legacy_history_seeded` carrying the row count as the `brighter.box.migration.seed.rows` tag.
+* **Permission requirement (every run, not just the first flip).** Because the seed's `INSERT…SELECT` executes on every PerSchema provision, the runner needs `SELECT` on the legacy default-schema history table for the **lifetime of the PerSchema deployment**. Operators who grant `SELECT` only for the initial flip and then revoke it will hit a `ConfigurationException` on every subsequent provision run, with the inner provider exception attached.
+* **Reverse flip (`PerSchema → Global`) and legacy-row cleanup are out of scope.** The per-schema history table remains in the tenant's schema if a deployment is later switched back to `Global`; the legacy default-schema rows survive after a PerSchema flip. Both are harmless but storage-redundant; operators wanting to reclaim that storage must run their own ad-hoc DELETE / DROP.
+* **Misconfiguration.** Selecting `PerSchema` on a placement backend with a `null` `SchemaName` throws `ConfigurationException` at the entry to the runner. Per-tenant identifiers flow through `Identifiers.AssertSafe` before any DDL is emitted, so an injection-shaped `SchemaName` is rejected at the provisioner entry well before reaching the database.
+
 ## Release 10.0.0
 
 With V10 we have made a number of significant changes to Brighter. There are breaking changes that you will need to be aware of. However, most of the changes required are straightforward to make. A summary of the most important changes:

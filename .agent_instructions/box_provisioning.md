@@ -156,6 +156,47 @@ services
 
 `UseBoxProvisioning` enforces a single-call contract — a second invocation throws `ConfigurationException`. Configure all outboxes and inboxes inside one delegate. The hosted service (`BoxProvisioningHostedService`) is registered via `TryAddEnumerable` and runs at app start, in Outbox-then-Inbox order, blocking until all provisioners complete.
 
+## Per-Schema History Placement (spec 0029)
+
+By default `__BrighterMigrationHistory` lives in the backend default schema (`dbo` on MSSQL, `public` on PostgreSQL, the connection-bound database on MySQL) regardless of `IAmARelationalDatabaseConfiguration.SchemaName`. Set `BoxProvisioningOptions.MigrationHistoryScope = MigrationHistoryScope.PerSchema` to opt this deployment into per-tenant placement: on MSSQL and PostgreSQL the history table is created inside the configured `SchemaName`, co-located with the tenant's box tables inside its isolation/backup boundary. The default `MigrationHistoryScope.Global` is byte-for-byte today's behaviour — no operator action is required to upgrade.
+
+```csharp
+services
+    .AddBrighter()
+    .UseBoxProvisioning(opts =>
+    {
+        opts.MigrationHistoryScope = MigrationHistoryScope.PerSchema;
+        opts.AddMsSqlOutbox(configuration);    // history lands in configuration.SchemaName
+        opts.AddPostgreSqlInbox(configuration);
+    });
+```
+
+| Backend       | `PerSchema` behaviour                                                          |
+|---------------|--------------------------------------------------------------------------------|
+| MSSQL         | History created in `SchemaName`. Null `SchemaName` throws `ConfigurationException`. |
+| PostgreSQL    | History created in `SchemaName` (folded to lowercase per PG semantics). Null `SchemaName` throws `ConfigurationException`. |
+| MySQL         | No-op — schema equals database; history stays in the connection-bound database. |
+| SQLite        | No-op — no schema concept; history stays at the database-file level.            |
+| Spanner       | No-op — degenerate fresh-install-only model per ADR 0057 §6.                    |
+
+Each provisioning run emits an `Information` log of the form `Box migration history for {BoxTable} resolved to schema {HistorySchema} (scope {Scope})` so operators can confirm placement without inspecting the database; on the no-op backends `HistorySchema` is the literal `<backend default>`.
+
+### Global → PerSchema flip (ADR 0060 D5)
+
+After flipping a previously-`Global` deployment to `PerSchema`, the MSSQL/PG runners auto-seed the per-schema history table from the legacy default-schema history so existing migrations are not re-applied. The seed:
+
+- Runs under the same advisory lock and transaction as the CREATE.
+- Copies only this tenant's rows (`WHERE SchemaName=@schemaName AND BoxTableName=@boxTableName`) for all five history columns.
+- Uses a composite-primary-key `NOT EXISTS` guard, so re-running the flip is idempotent.
+- Runs on **every** PerSchema provision (so a second box-type to flip — e.g. inbox after outbox — still gets seeded into the per-schema history table the first flip already created). Steady-state runs copy zero rows; the NOT EXISTS guard makes the no-op cheap.
+- Emits a distinct `Information` log: `Seeded {RowCount} legacy history row(s) for {BoxTable} from {LegacySchema} to {TargetSchema}` plus an OpenTelemetry `Activity` event `legacy_history_seeded` (constant `BrighterSemanticConventions.BoxMigrationEventLegacyHistorySeeded`) carrying the row count as the `brighter.box.migration.seed.rows` tag.
+
+**Permission requirement (every run, not just the first flip).** The seed's `INSERT…SELECT` reads from the legacy default-schema history table (`dbo.__BrighterMigrationHistory` on MSSQL, `public.__BrighterMigrationHistory` on PG) on **every** PerSchema provision, so the runner needs `SELECT` on that table for the lifetime of the PerSchema deployment — not just the first flip. Operators who grant `SELECT` only for the initial flip and then revoke it will hit a `ConfigurationException` on every subsequent provision run, with the inner provider exception attached. The exception message names the documented operator-facing phrase (`"every provision run reads the legacy default-schema history table"`) so it can be alerted on.
+
+**Reverse flip (`PerSchema → Global`) and cleanup of the legacy rows are out of scope.** The per-schema history table remains in the tenant's schema if a deployment is later switched back to `Global`; operators wanting to reclaim that storage must drop the table themselves. Legacy rows in the default-schema history are likewise left in place after a successful PerSchema flip — they are harmless but redundant and can be deleted with an ad-hoc `DELETE` if desired.
+
+Per-tenant identifiers flow through `Identifiers.AssertSafe` before any DDL is emitted, so an injection-shaped `SchemaName` is rejected at the provisioner entry well before reaching the runner or the database. See [ADR 0060](../docs/adr/0060-multi-tenancy-migration-history-scope.md) for the full decision record (D1–D6) and the spec at [specs/0029-multi-tenancy-migrations/](../specs/0029-multi-tenancy-migrations/) for the requirements + task breakdown.
+
 ## For Maintainers — Long-form playbooks
 
 - Adding a column: `docs/guides/box-provisioning-adding-columns.md` (worked example, file-by-file checklist).
