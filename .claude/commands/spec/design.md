@@ -14,10 +14,12 @@ ADR directory: `docs/adr/`
 **Note**: You can create multiple ADRs for the same requirement. Each ADR should focus on a single architectural decision.
 
 **Sub-agent**: The codebase-grounded drafting of the ADR is delegated to a sub-agent
-(`subagent_type: "general-purpose"`, **`model: "opus"`**). The sub-agent reads the
-inputs, verifies references against the real codebase, and RETURNS the ADR body as
-text. The main agent owns numbering, file writing, and `.adr-list` bookkeeping. See
-`.claude/commands/spec/README.md` → "Sub-agents & model policy".
+(`subagent_type: "Plan"`, **`model: "opus"`**). `Plan` is read-only (no Write/Edit), which
+structurally enforces the "RETURN as text, don't write the file" rule while still allowing
+Read/Glob/Grep to verify references. The sub-agent reads the inputs, verifies references
+against the real codebase, and RETURNS the ADR body as text. The main agent owns numbering,
+file writing, and `.adr-list` bookkeeping. See `.claude/commands/spec/README.md` →
+"Sub-agents & model policy".
 
 ## Your Task
 
@@ -50,6 +52,12 @@ text. The main agent owns numbering, file writing, and `.adr-list` bookkeeping. 
    **Do NOT write the ADR file or update `.adr-list` yet** — that happens in Step 6 after
    the sub-agent returns and you have validated its output.
 
+   > **Note**: the number is computed here but only *reserved* (written to `.adr-list`) in
+   > Step 6 after the sub-agent returns. Two `/spec:design` runs started concurrently could
+   > therefore pick the same number. This is a theoretical race for a single-user dev tool
+   > and is accepted; if you ever run designs in parallel, double-check the number in Step 6
+   > against `docs/adr/` before writing.
+
 ### Step 4: Gather Inputs for the Sub-Agent
 
 The sub-agent starts with a clean context — it only knows what you put in its prompt.
@@ -65,7 +73,7 @@ run the appropriate command first. Do NOT launch the sub-agent with missing inpu
 
 ### Step 5: Launch Sub-Agent to Draft the ADR
 
-Launch an `Agent` with `subagent_type: "general-purpose"` and **`model: "opus"`**. The
+Launch an `Agent` with `subagent_type: "Plan"` and **`model: "opus"`**. The
 prompt MUST include all of the following:
 
 1. The full text of `requirements.md` (or its path if too large to inline).

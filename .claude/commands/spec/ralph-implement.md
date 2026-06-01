@@ -49,6 +49,11 @@ Then STOP immediately. Do not proceed.
 3. Read `specs/{current-spec}/ralph-tasks.md` to see ralph task list
 4. Read `specs/{current-spec}/.adr-list` to see all ADRs
 
+The main agent does **not** read the ADR bodies here — that is deliberate. Its role in this
+command is bookkeeping (task selection, commit, marking, count); the per-task TDD context
+(including the relevant ADRs) is read by the **sub-agent** from each task's `References`
+section. This keeps the main agent's context lean.
+
 ### Step 3: Select Next Task
 
 Find the first unchecked `- [ ]` task in `ralph-tasks.md`.
@@ -123,12 +128,16 @@ context a fresh session would otherwise get from conversation.
 
 ```
 STATUS: GREEN | FAILED | ALREADY_COMPLETE
-TEST_FILES: <comma-separated paths created/modified>
-IMPL_FILES: <comma-separated paths created/modified>
+TEST_FILES: <space-separated paths created/modified>
+IMPL_FILES: <space-separated paths created/modified>
 DESCRIPTION: <one-line behavior description for the commit message>
 REGRESSIONS: <none | description of any regression and how it was resolved>
 FAILURE_REASON: <empty unless STATUS is FAILED — explain what went wrong>
 ```
+
+Paths MUST be **space-separated** (so they tokenise correctly as separate `git add`
+arguments). If a path itself contains spaces, wrap that single path in double quotes. Do not
+use commas as separators.
 
 ### Step 5: Process the Result, Mark, and Commit (MAIN agent)
 
@@ -145,7 +154,7 @@ Read the sub-agent's returned result and act on its `STATUS`:
    - Implementation: [brief description]
    - Ralph task: [task number]/[total]
 
-   Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
+   Co-Authored-By: Claude Opus <noreply@anthropic.com>"
    ```
    (For `ALREADY_COMPLETE`, commit the checkbox tick alone with a `docs:`-style message
    noting the behavior already existed.)
@@ -159,9 +168,17 @@ Read the sub-agent's returned result and act on its `STATUS`:
    git add specs/{current-spec}/ralph-tasks.md
    git commit -m "chore: mark ralph task [N] failed — [short reason]"
    ```
-   If the sub-agent left partial source edits, decide whether to include them or
-   `git checkout --` them; prefer committing only the marker unless the partial work is
-   clearly correct and isolated.
+   If the sub-agent left partial source edits, the default is to **discard them** so only
+   the failure marker is committed. Discard them with a **scoped** checkout limited to the
+   exact files the sub-agent reported — never a blanket `git checkout --`, which would also
+   throw away unrelated working-tree changes:
+   ```bash
+   git checkout -- [TEST_FILES] [IMPL_FILES]
+   ```
+   Only KEEP the partial edits (and add them to the marker commit) if BOTH hold:
+   `dotnet build` of the affected project[s] succeeds, AND the edits are confined to the
+   reported `TEST_FILES`/`IMPL_FILES` (no stray changes elsewhere). If either is in doubt,
+   discard.
 4. Count it toward the run count and proceed to the next task — do NOT get stuck.
 
 ### Step 6: Check Continuation

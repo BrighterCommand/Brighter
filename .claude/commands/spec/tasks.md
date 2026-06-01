@@ -10,10 +10,11 @@ Current spec directory: specs/
 **Workflow**: Issue → Requirements → ADR(s) → **Tasks** → Tests → Code
 
 **Sub-agent**: Drafting the task list is delegated to a sub-agent
-(`subagent_type: "general-purpose"`, **`model: "opus"`**). The sub-agent reads the
-requirements and ADRs and RETURNS the task list as text. The main agent validates
-coverage and writes `tasks.md`. See `.claude/commands/spec/README.md` → "Sub-agents
-& model policy".
+(`subagent_type: "Plan"`, **`model: "opus"`**). `Plan` is read-only (no Write/Edit), which
+structurally enforces the "RETURN as text, don't write the file" rule while still allowing
+Read/Glob/Grep to verify file paths. The sub-agent reads the requirements and ADRs and
+RETURNS the task list as text. The main agent validates coverage and writes `tasks.md`. See
+`.claude/commands/spec/README.md` → "Sub-agents & model policy".
 
 ## Your Task
 
@@ -31,7 +32,7 @@ the sub-agent with missing inputs.
 
 ### Step 2: Launch Sub-Agent to Draft the Task List
 
-Launch an `Agent` with `subagent_type: "general-purpose"` and **`model: "opus"`**. The
+Launch an `Agent` with `subagent_type: "Plan"` and **`model: "opus"`**. The
 prompt MUST include:
 
 1. The full text of `requirements.md`.
@@ -124,9 +125,13 @@ This format allows Claude to skip the approval by treating them as independent t
 
 After the sub-agent returns:
 
-1. **Validate** before writing:
-   - Every FR in `requirements.md` is covered by at least one task (check the list yourself).
-   - Every ADR decision maps to a task.
+1. **Validate** before writing. The sub-agent owns the coverage mapping (its "Coverage
+   cross-reference" output); the main agent **sanity-checks** that report rather than
+   re-deriving it:
+   - The sub-agent's coverage report lists every FR and every ADR decision against a task,
+     with no gaps flagged. Spot-check a couple of entries against `requirements.md` /the
+     ADRs rather than re-mapping the whole set; if the report flags any uncovered FR/decision
+     or is missing, send it back to the sub-agent.
    - Each behavioral task uses the `TEST + IMPLEMENT` template with `/test-first` and the
      `⛔ STOP HERE` gate — none are split into separate TEST/IMPLEMENT tasks.
    - No task is an implementation detail rather than a behavior.

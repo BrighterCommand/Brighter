@@ -10,10 +10,12 @@ Current spec directory: specs/
 **Purpose**: Generate `ralph-tasks.md` - a variant of `tasks.md` formatted for **unattended** TDD execution via the Ralph loop. Unlike `tasks.md`, ralph tasks have no approval gates and include all context needed for a fresh Claude session.
 
 **Sub-agent**: Drafting the ralph task list is delegated to a sub-agent
-(`subagent_type: "general-purpose"`, **`model: "opus"`**). The sub-agent reads the
-approved tasks, requirements, and ADRs and RETURNS the ralph task list as text. The main
-agent runs the validation checklist and writes the file. See
-`.claude/commands/spec/README.md` → "Sub-agents & model policy".
+(`subagent_type: "Plan"`, **`model: "opus"`**). `Plan` is read-only (no Write/Edit), which
+structurally enforces the "RETURN as text, don't write the file" rule while still allowing
+Read/Glob/Grep to verify test/impl paths. The sub-agent reads the approved tasks,
+requirements, and ADRs and RETURNS the ralph task list as text. The main agent runs the
+validation checklist and writes the file. See `.claude/commands/spec/README.md` →
+"Sub-agents & model policy".
 
 ## Your Task
 
@@ -35,7 +37,7 @@ If prerequisites not met, inform user and exit. Do NOT launch the sub-agent.
 
 ### Step 3: Launch Sub-Agent to Draft ralph-tasks.md
 
-Launch an `Agent` with `subagent_type: "general-purpose"` and **`model: "opus"`**. The
+Launch an `Agent` with `subagent_type: "Plan"` and **`model: "opus"`**. The
 prompt MUST include:
 
 1. The full text of `tasks.md`, `requirements.md`, and each ADR (or their paths to read).

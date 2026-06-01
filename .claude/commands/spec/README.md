@@ -57,7 +57,15 @@ and gives the heavy work a focused, single-purpose context.
 1. **The main agent gathers inputs.** A sub-agent starts with a clean context — it only
    knows what is in its prompt. The command reads the needed files (and runs `gh`/`git`)
    first, then passes the text or paths.
-2. **Launch `Agent`** with `subagent_type: "general-purpose"` and an explicit `model`.
+2. **Launch `Agent`** with an explicit `subagent_type` and `model`:
+   - **Planning commands** (`/spec:design`, `/spec:tasks`, `/spec:ralph-tasks`) use
+     `subagent_type: "Plan"`. `Plan` is read-only (it has Read/Glob/Grep/Bash but **not**
+     Write/Edit), which structurally enforces the "return as text, don't write the file"
+     rule rather than relying on the prompt alone.
+   - **`/spec:requirements`** and **`/spec:review`** use `subagent_type: "general-purpose"`
+     (drafting / adversarial reasoning that needs no source mutation).
+   - **`/spec:ralph-implement`** uses `subagent_type: "general-purpose"` because its
+     sub-agent genuinely *writes* source files.
 3. **The sub-agent RETURNS its artifact as text** — it does *not* write the spec file. The
    one exception is `/spec:ralph-implement`, where the sub-agent must write the test and
    implementation source files (it still never commits or edits the task list).
@@ -66,22 +74,29 @@ and gives the heavy work a focused, single-purpose context.
 
 **Model policy** — reasoning vs. implementation:
 
-| Command | Sub-agent | Model | Rationale |
+| Command | Sub-agent (type) | Model | Rationale |
 |---------|-----------|-------|-----------|
-| `/spec:requirements` | Yes (drafting only) | **opus** | Planning / analysis |
-| `/spec:design` | Yes | **opus** | Architecture / design |
-| `/spec:tasks` | Yes | **opus** | Planning / coverage mapping |
-| `/spec:ralph-tasks` | Yes | **opus** | Planning / decomposition |
-| `/spec:review` | Yes | **opus** | Adversarial reasoning |
-| `/spec:ralph-implement` | Yes (per task) | **sonnet** | Mechanical TDD implementation |
+| `/spec:requirements` | Yes — `general-purpose` (drafting only) | **opus** | Planning / analysis |
+| `/spec:design` | Yes — `Plan` (read-only) | **opus** | Architecture / design |
+| `/spec:tasks` | Yes — `Plan` (read-only) | **opus** | Planning / coverage mapping |
+| `/spec:ralph-tasks` | Yes — `Plan` (read-only) | **opus** | Planning / decomposition |
+| `/spec:review` | Yes — `general-purpose` | **opus** | Adversarial reasoning |
+| `/spec:ralph-implement` | Yes — `general-purpose`, per task (writes source) | **sonnet** | Mechanical TDD implementation |
 | `/spec:implement` | No | **sonnet** (recommended) | Implementation work; runs in the main agent, so set the session model |
 | `/spec:new`, `/spec:switch`, `/spec:approve`, `/spec:status` | No | — | Mechanical bookkeeping |
+
+The planning commands use the read-only `Plan` agent so the "return as text, don't write the
+file" rule is enforced structurally (it lacks Write/Edit). `/spec:ralph-implement` keeps
+`general-purpose` because its sub-agent must write source.
 
 `/spec:implement` is deliberately **not** delegated: its per-behavior
 Red → user-approval → Green → Refactor loop is interactive, and the mandatory approval gate
 must run in the main agent where it can reach the user. Because there is no sub-agent to
 assign a model to, run the command itself on **sonnet** (set the session model) — it is
-implementation work, matching the sonnet policy for `/spec:ralph-implement`.
+implementation work, matching the sonnet policy for `/spec:ralph-implement`. **If your
+session is not already on sonnet (e.g. it is on opus), consider switching to sonnet before
+running `/spec:implement`.** This guidance is repeated at the top of `implement.md` itself,
+since that is where the user reads it.
 
 ## Commands
 

@@ -35,8 +35,13 @@ If $ARGUMENTS provided (issue number):
 2. Store issue number in spec directory: `echo $ARGUMENTS > specs/{current-spec}/.issue-number`
 3. The issue title + body become the source material for the sub-agent.
 
-If no issue number is provided, gather the problem description from the user / conversation
-to pass to the sub-agent instead.
+If no issue number is provided, take the problem description from the **conversation context**
+(this command's `allowed-tools` does not include `AskUserQuestion`, so the conversation is
+the only channel — do not attempt to prompt the user interactively).
+
+If neither an issue number nor a usable problem description from the conversation is
+available, **stop** and ask the user (in your reply) to either supply an issue number or
+describe the problem — do NOT launch the sub-agent with empty inputs.
 
 If a `requirements.md` already exists in the spec directory, read it and pass it to the
 sub-agent as the current draft to refine (rather than starting from scratch).
