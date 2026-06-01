@@ -32,6 +32,7 @@ using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4.Internal;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
@@ -257,11 +258,15 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null,
         CancellationToken cancellationToken = default(CancellationToken))
     {
-        AmazonSQSClient? client = null;
-        Amazon.SQS.Model.Message[] sqsMessages;
+        RawAmazonSQSClient? client = null;
+        RawMessage[] sqsMessages;
         try
         {
-            client = _clientFactory.CreateSqsClient();
+            // The receive path uses an internal RawAmazonSQSClient that hands back
+            // the message body as UTF-8 bytes. It is constructed from the same
+            // credentials and config as CreateSqsClient, so a future custom factory
+            // (which only needs to produce a plain AmazonSQSClient) is unaffected.
+            client = _clientFactory.CreateRawSqsClient();
 
             await EnsureChannelUrl(client, cancellationToken);
             timeOut ??= TimeSpan.Zero;
@@ -276,9 +281,9 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
                 MessageSystemAttributeNames = ["All"]
             };
 
-            var receiveResponse = await client.ReceiveMessageAsync(request, cancellationToken);
+            var receiveResponse = await client.ReceiveMessageRawAsync(request, cancellationToken);
 
-            sqsMessages = receiveResponse.Messages?.ToArray() ?? [];
+            sqsMessages = receiveResponse.Messages.ToArray();
         }
         catch (InvalidOperationException ioe)
         {

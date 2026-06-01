@@ -24,14 +24,18 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Buffers;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Net.Mime;
+using System.Runtime.InteropServices;
 using Amazon;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4.Internal;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Transformers;
 
@@ -54,7 +58,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageCreator>();
 
-    public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
+    public Message CreateMessage(RawMessage sqsMessage)
     {
         var topic = HeaderResult<RoutingKey>.Empty();
         var messageId = HeaderResult<Id?>.Empty();
@@ -145,7 +149,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<Uri?>(null, false);
     }
     
-    private static Dictionary<string, string> ReadCloudEventHeaders(Amazon.SQS.Model.Message sqsMessage)
+    private static Dictionary<string, string> ReadCloudEventHeaders(RawMessage sqsMessage)
     {
         if (sqsMessage.MessageAttributes is not null
             && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.CloudEventHeaders, out var value))
@@ -228,17 +232,46 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
     }
 
 
-    private static MessageBody ReadMessageBody(Amazon.SQS.Model.Message sqsMessage, ContentType contentType)
+    private static MessageBody ReadMessageBody(RawMessage sqsMessage, ContentType contentType)
     {
+        var bodyBytes = sqsMessage.BodyBytes;
+
         if (contentType.ToString() == CompressPayloadTransformer.GZIP
             || contentType.ToString() == CompressPayloadTransformer.DEFLATE
             || contentType.ToString() == CompressPayloadTransformer.BROTLI)
-            return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.Base64);
+        {
+            // The wire body is a Base64-encoded UTF-8 string. We allocated the
+            // backing array ourselves in RawMessageUnmarshaller, so decode in
+            // place and slice — no string materialization, no extra allocation.
+            return new MessageBody(DecodeBase64FromUtf8InPlace(bodyBytes), contentType);
+        }
 
-        return new MessageBody(sqsMessage.Body, contentType);
+        return new MessageBody(bodyBytes, contentType);
     }
 
-    private static Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)
+    private static ReadOnlyMemory<byte> DecodeBase64FromUtf8InPlace(ReadOnlyMemory<byte> utf8)
+    {
+        // Base64 always shrinks (4 chars in, 3 bytes out), so we can decode the
+        // input buffer onto itself and return a slice. The buffer is the byte[]
+        // that RawMessageUnmarshaller allocated for this message.
+        if (MemoryMarshal.TryGetArray(utf8, out ArraySegment<byte> segment))
+        {
+            var span = segment.AsSpan();
+            var status = Base64.DecodeFromUtf8InPlace(span, out var written);
+            if (status == OperationStatus.Done)
+            {
+                return utf8.Slice(0, written);
+            }
+        }
+
+        // Fallback path: the memory wasn't array-backed (shouldn't happen) or the
+        // bytes weren't valid Base64. Preserve prior behaviour by going through
+        // System.Convert rather than throwing.
+        var ascii = utf8.ToArray();
+        return Convert.FromBase64String(System.Text.Encoding.UTF8.GetString(ascii, 0, ascii.Length));
+    }
+
+    private static Dictionary<string, object> ReadMessageBag(RawMessage sqsMessage)
     {
         var bag = new Dictionary<string, object>();
 
@@ -276,7 +309,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return bag;
     }
 
-    private static HeaderResult<RoutingKey> ReadReplyTo(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<RoutingKey> ReadReplyTo(RawMessage sqsMessage)
     {
         if (sqsMessage.MessageAttributes is not null
             && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ReplyTo, out MessageAttributeValue? value))
@@ -287,7 +320,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
     }
 
-    private static HeaderResult<DateTimeOffset> ReadTimestamp(Amazon.SQS.Model.Message sqsMessage, Dictionary<string, string> headers)
+    private static HeaderResult<DateTimeOffset> ReadTimestamp(RawMessage sqsMessage, Dictionary<string, string> headers)
     {
         if (headers.TryGetValue(HeaderNames.Timestamp, out var val)
             && DateTimeOffset.TryParse(val, out var timestamp))
@@ -313,7 +346,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
     }
 
-    private static HeaderResult<MessageType> ReadMessageType(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<MessageType> ReadMessageType(RawMessage sqsMessage)
     {
         if (sqsMessage.MessageAttributes is not null
             && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.MessageType, out MessageAttributeValue? value))
@@ -338,7 +371,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<int>(0, true);
     }
 
-    private static HeaderResult<Id> ReadCorrelationId(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<Id> ReadCorrelationId(RawMessage sqsMessage)
     {
         if (sqsMessage.MessageAttributes is not null
             && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.CorrelationId,
@@ -350,7 +383,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<Id>(Id.Empty, true);
     }
 
-    private static HeaderResult<ContentType> ReadContentType(Amazon.SQS.Model.Message sqsMessage, Dictionary<string, string> headers)
+    private static HeaderResult<ContentType> ReadContentType(RawMessage sqsMessage, Dictionary<string, string> headers)
     {
         var attributes = sqsMessage.MessageAttributes;
         if (attributes is not null
@@ -375,7 +408,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<ContentType>(new ContentType(MediaTypeNames.Text.Plain), true);
     }
 
-    private static HeaderResult<Id?> ReadMessageId(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<Id?> ReadMessageId(RawMessage sqsMessage)
     {
         if (sqsMessage.MessageAttributes is not null
             && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Id, out MessageAttributeValue? messageId))
@@ -387,7 +420,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<Id?>(Id.Random(), true);
     }
 
-    private static HeaderResult<RoutingKey> ReadTopic(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<RoutingKey> ReadTopic(RawMessage sqsMessage)
     {
         if (sqsMessage.MessageAttributes is not null
             && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Topic, out MessageAttributeValue? value))
@@ -411,7 +444,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
     }
 
-    private static HeaderResult<PartitionKey> ReadPartitionKey(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<PartitionKey> ReadPartitionKey(RawMessage sqsMessage)
     {
         if (sqsMessage.Attributes is not null
             && sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageGroupId, out var value))
@@ -424,7 +457,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<PartitionKey>(null, false);
     }
 
-    private static HeaderResult<string> ReadDeduplicationId(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<string> ReadDeduplicationId(RawMessage sqsMessage)
     {
         if (sqsMessage.Attributes is not null
             && sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageDeduplicationId, out var value))
@@ -437,7 +470,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         return new HeaderResult<string>(null, false);
     }
     
-    private static HeaderResult<string> ReadSubject(Amazon.SQS.Model.Message sqsMessage, Dictionary<string, string> headers)
+    private static HeaderResult<string> ReadSubject(RawMessage sqsMessage, Dictionary<string, string> headers)
     {
         if (sqsMessage.MessageAttributes is not null
             && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Subject, out var value))

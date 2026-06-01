@@ -347,3 +347,5 @@ ralph.log
 
 # AI agent session state
 PROMPT.md
+
+*.lscache

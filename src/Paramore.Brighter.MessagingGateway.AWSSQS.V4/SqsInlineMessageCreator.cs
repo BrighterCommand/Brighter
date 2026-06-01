@@ -32,6 +32,7 @@ using Amazon.SQS;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4.Internal;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
@@ -42,14 +43,16 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
     private Dictionary<string, JsonElement> _messageAttributes = new();
 
-    public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
+    public Message CreateMessage(RawMessage sqsMessage)
     {
         var topic = HeaderResult<RoutingKey>.Empty();
         var messageId = HeaderResult<Id?>.Empty();
 
         try
         {
-            var jsonDocument = JsonDocument.Parse(sqsMessage.Body);
+            // Parse the SNS-wrapped envelope directly from the UTF-8 byte buffer,
+            // skipping the string materialization the SDK would otherwise perform.
+            var jsonDocument = JsonDocument.Parse(sqsMessage.BodyBytes);
             _messageAttributes = ReadMessageAttributes(jsonDocument);
 
             topic = ReadTopic();
@@ -81,7 +84,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
             if (receiptHandle.Success)
             {
-                bag["ReceiptHandle"] = sqsMessage.ReceiptHandle;
+                bag["ReceiptHandle"] = sqsMessage.ReceiptHandle!;
             }
 
             var messageHeader = new MessageHeader(
@@ -416,7 +419,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new MessageBody(string.Empty);
     }
 
-    private static HeaderResult<PartitionKey> ReadPartitionKey(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<PartitionKey> ReadPartitionKey(RawMessage sqsMessage)
     {
         if (sqsMessage.Attributes is not null
             && sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageGroupId, out var value))
@@ -428,7 +431,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new HeaderResult<PartitionKey>(string.Empty, false);
     }
 
-    private static HeaderResult<string> ReadDeduplicationId(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<string> ReadDeduplicationId(RawMessage sqsMessage)
     {
         if (sqsMessage.Attributes is not null
             && sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageDeduplicationId, out var value))

@@ -29,6 +29,7 @@ using Amazon.Runtime;
 using Amazon.SecurityToken;
 using Amazon.SimpleNotificationService;
 using Amazon.SQS;
+using Paramore.Brighter.MessagingGateway.AWSSQS.V4.Internal;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
@@ -77,6 +78,22 @@ public class AWSClientFactory(
         ClientConfigAction?.Invoke(config);
 
         return new AmazonSQSClient(Credentials, config);
+    }
+
+    /// <summary>
+    /// Create an internal SQS client that supports the bytes-based receive path
+    /// used by <see cref="SqsMessageConsumer"/>. Constructed from the same
+    /// credentials and config as <see cref="CreateSqsClient"/>; not exposed on
+    /// the public factory contract so that a future user-supplied factory only
+    /// needs to produce a plain <see cref="AmazonSQSClient"/>.
+    /// </summary>
+    internal RawAmazonSQSClient CreateRawSqsClient()
+    {
+        var config = new AmazonSQSConfig { RegionEndpoint = RegionEndpoint };
+
+        ClientConfigAction?.Invoke(config);
+
+        return new RawAmazonSQSClient(Credentials, config);
     }
 
     /// <summary>
