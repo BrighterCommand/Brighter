@@ -135,7 +135,7 @@ Task 1 (already implemented) shows the exact wiring — see
     - No new prod code beyond the shared `description` local introduced in the Proactor/Reactor tasks above. This test PROVES the shared-local refactor (C-5). If the description and span string diverge, the test fails — investigate the shared-local extraction. (Before the prod edit lands, the reject never happens, so there is no rejected message on the IMQ stream to inspect — the test is RED until Tasks 1/2 are implemented.)
   - References: FR-1, FR-3, FR-6, AC-7 (EndSpan/span-ended), AC-10, C-5, ADR-0061 (shared description local); depends on both prior pump tasks.
 
-- [ ] **TEST + IMPLEMENT: Catch-all dispatch exception still acknowledges (async regression guard)**
+- [x] **TEST + IMPLEMENT: Catch-all dispatch exception still acknowledges (async regression guard)**
   - **USE COMMAND**: `/test-first an unexpected dispatch Exception in the Proactor still falls through to Acknowledge and is NOT rejected`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/"
   - Test file: `When_a_dispatch_exception_is_thrown_the_catch_all_acknowledges_async.cs`
