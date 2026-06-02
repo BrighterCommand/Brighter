@@ -29,19 +29,31 @@ using Paramore.Brighter.Test.Generator.Configuration;
 
 namespace Paramore.Brighter.Test.Generator.Generators;
 
+/// <summary>
+/// Generates shared test infrastructure code (such as default message builders and assertions) from Liquid templates.
+/// These shared files are rendered into the root of the destination folder and provide common helpers used by outbox and messaging gateway tests.
+/// </summary>
+/// <param name="logger">The logger instance used for diagnostic output during generation.</param>
 public class SharedGenerator(ILogger<SharedGenerator> logger) : BaseGenerator(logger)
 {
+    /// <summary>
+    /// Generates shared test infrastructure files, applying default values for
+    /// <see cref="TestConfiguration.MessageBuilder"/> and <see cref="TestConfiguration.MessageAssertion"/> when not specified.
+    /// </summary>
+    /// <param name="configuration">The root test configuration containing shared settings and destination folder.</param>
     public async Task GenerateAsync(TestConfiguration configuration)
     {
-        if (string.IsNullOrEmpty(configuration.MessageFactory))
+        if (string.IsNullOrEmpty(configuration.MessageBuilder))
         {
-            configuration.MessageFactory = "DefaultMessageFactory";
+            configuration.MessageBuilder = "DefaultMessageBuilder";
         }
-        
+
+        if (string.IsNullOrEmpty(configuration.MessageAssertion))
+        {
+            configuration.MessageAssertion = "DefaultMessageAssertion";
+        }
+
         logger.LogInformation("Generating shared class for testing");
-        await GenerateAsync(configuration,
-            "",
-            "",
-            configuration);
+        await GenerateAsync(configuration, "", "", configuration);
     }
 }

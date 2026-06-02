@@ -335,6 +335,11 @@ public partial class PostgresMessageConsumer(
         {
             Log.RequeueingMessage(s_logger, message.Id);
 
+            if (!message.Header.Bag.ContainsKey(Message.OriginalMessageIdHeaderName))
+            {
+                message.Header.Bag[Message.OriginalMessageIdHeaderName] = message.Header.MessageId.ToString();
+            }
+
             await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
 
@@ -441,6 +446,11 @@ public partial class PostgresMessageConsumer(
         try
         {
             Log.RequeueingMessage(s_logger, message.Id);
+
+            if (!message.Header.Bag.ContainsKey(Message.OriginalMessageIdHeaderName))
+            {
+                message.Header.Bag[Message.OriginalMessageIdHeaderName] = message.Header.MessageId.ToString();
+            }
 
             using var connection = _connectionProvider.GetConnection();
             using var command = connection.CreateCommand();

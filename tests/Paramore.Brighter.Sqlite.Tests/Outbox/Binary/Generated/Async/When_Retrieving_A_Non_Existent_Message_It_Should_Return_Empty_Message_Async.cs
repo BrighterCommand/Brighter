@@ -10,17 +10,19 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Async;
 
+[Trait("Category", "Sqlite")]
+[Collection("SqliteBinaryOutbox")]
 public class WhenRetrievingANonExistentMessageItShouldReturnEmptyMessageAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenRetrievingANonExistentMessageItShouldReturnEmptyMessageAsync()
     {
         _outboxProvider = new SqliteBinaryOutboxProvider();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     public async Task InitializeAsync()

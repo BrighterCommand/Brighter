@@ -39,7 +39,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscription)
 {
     private readonly RoutingKey _topic = subscription.RoutingKey;
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusMesssageCreator>();
+    private static readonly ILogger s_logger =
+        ApplicationLogging.CreateLogger<AzureServiceBusMesssageCreator>();
 
     /// <summary>
     /// Maps an Azure Service Bus message to a Brighter <see cref="Message"/>.
@@ -51,9 +52,9 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         if (azureServiceBusMessage is null)
         {
             Log.NullMessageReceived(s_logger, _topic, subscription.Name);
-            return Message.FailureMessage(_topic); 
+            return Message.FailureMessage(_topic);
         }
-        
+
         if (azureServiceBusMessage!.MessageBodyValue is null)
         {
             Log.NullMessageBodyReceived(s_logger, _topic, subscription.Name);
@@ -62,11 +63,20 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         var bodyMemory = azureServiceBusMessage.MessageBodyMemory;
 
 #if NETSTANDARD2_0
-        Log.ReceivedMessage(s_logger, _topic, subscription.Name, System.Text.Encoding.UTF8.GetString(bodyMemory.ToArray()));
+        Log.ReceivedMessage(
+            s_logger,
+            _topic,
+            subscription.Name,
+            System.Text.Encoding.UTF8.GetString(bodyMemory.ToArray())
+        );
 #else
-        Log.ReceivedMessage(s_logger, _topic, subscription.Name, System.Text.Encoding.UTF8.GetString(bodyMemory.Span));
+        Log.ReceivedMessage(
+            s_logger,
+            _topic,
+            subscription.Name,
+            System.Text.Encoding.UTF8.GetString(bodyMemory.Span)
+        );
 #endif
-            
         //TODO: Switch these to use the option type HeaderResult<T> for consistency with the rest of the codebase.
         MessageType messageType = GetMessageType(azureServiceBusMessage);
         var replyAddress = GetReplyAddress(azureServiceBusMessage);
@@ -81,22 +91,22 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         var traceState = GetTraceState(azureServiceBusMessage);
         var baggage = GetBaggage(azureServiceBusMessage);
         var partitionKey = GetPartitionKey(azureServiceBusMessage);
-            
+
         // TODO: We only support  a header based approach to Cloud Events at the moment, so we don't
         // have support here for Cloud Events JSON as the body. We should probably support that as well in the future.
         // https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/servicebus/Azure.Messaging.ServiceBus/samples/Sample11_CloudEvents.md
-            
+
         var headers = new MessageHeader(
-            messageId: azureServiceBusMessage.Id, 
-            topic: new RoutingKey(_topic), 
-            messageType: messageType, 
+            messageId: azureServiceBusMessage.Id,
+            topic: new RoutingKey(_topic),
+            messageType: messageType,
             source: source,
             type: type,
             timeStamp: time,
             correlationId: azureServiceBusMessage.CorrelationId,
             replyTo: new RoutingKey(replyAddress),
             contentType: contentType,
-            handledCount:handledCount, 
+            handledCount: handledCount,
             dataSchema: dataSchema,
             subject: subject,
             delayed: TimeSpan.Zero,
@@ -108,24 +118,29 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
         headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
         headers.Bag.Add(ASBConstants.SequenceNumberBagKey, azureServiceBusMessage.SequenceNumber);
-            
+
         foreach (var property in azureServiceBusMessage.ApplicationProperties)
         {
-            headers.Bag.Add(property.Key, property.Value);
+            headers.Bag[property.Key] = property.Value;
         }
-            
+
         var message = new Message(headers, new MessageBody(bodyMemory));
         return message;
     }
 
     private Baggage GetBaggage(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.Baggage, out object? property))
+        if (
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.Baggage,
+                out object? property
+            )
+        )
         {
             Log.NoBaggageFound(s_logger, _topic, subscription.Name);
             return new Baggage();
         }
-        
+
         var baggageString = property.ToString() ?? string.Empty;
 
         var baggage = new Baggage();
@@ -136,14 +151,19 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
     private Uri GetCloudEventsDataSchema(IBrokeredMessageWrapper azureServiceBusMessage)
     {
         var defaultSchemaUri = new Uri("http://goparamore.io"); // Default schema URI
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSchema, out object? property))
+        if (
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.CloudEventsSchema,
+                out object? property
+            )
+        )
         {
             Log.NoCloudEventsDataSchema(s_logger, _topic, subscription.Name);
             return defaultSchemaUri;
         }
 
-        var dataSchema = property.ToString() ;
-        
+        var dataSchema = property.ToString();
+
         if (string.IsNullOrEmpty(dataSchema))
         {
             Log.EmptyCloudEventsDataSchema(s_logger, _topic, subscription.Name);
@@ -155,7 +175,12 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
     private string GetCloudEventsSubject(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSubject, out object? property))
+        if (
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.CloudEventsSubject,
+                out object? property
+            )
+        )
         {
             Log.NoCloudEventsSubject(s_logger, _topic, subscription.Name);
             return string.Empty;
@@ -168,15 +193,23 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
     private DateTimeOffset GetCloudEventsTime(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsTime, out object? property))
+        if (
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.CloudEventsTime,
+                out object? property
+            )
+        )
         {
             Log.NoCloudEventsTime(s_logger, _topic, subscription.Name);
             return DateTimeOffset.UtcNow;
         }
-        
+
         var time = property.ToString() ?? string.Empty;
 
-        if (!string.IsNullOrEmpty(time) && DateTimeOffset.TryParse(time, out DateTimeOffset parsedTime))
+        if (
+            !string.IsNullOrEmpty(time)
+            && DateTimeOffset.TryParse(time, out DateTimeOffset parsedTime)
+        )
         {
             return parsedTime;
         }
@@ -187,7 +220,12 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
     private PartitionKey GetPartitionKey(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsParitionKey, out object? property))
+        if (
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.CloudEventsParitionKey,
+                out object? property
+            )
+        )
         {
             Log.NoCloudEventsPartitionKey(s_logger, _topic, subscription.Name);
             return PartitionKey.Empty;
@@ -198,7 +236,12 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
     private CloudEventsType GetCloudEventsType(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsType, out object? property))
+        if (
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.CloudEventsType,
+                out object? property
+            )
+        )
         {
             Log.NoCloudEventsType(s_logger, _topic, subscription.Name);
             return CloudEventsType.Empty;
@@ -214,12 +257,16 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
         return new ContentType(MediaTypeNames.Text.Plain);
     }
-    
+
     private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
     {
         var count = 0;
-        if (azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey,
-                out object? property))
+        if (
+            azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.HandledCountHeaderBagKey,
+                out object? property
+            )
+        )
         {
             int.TryParse(property.ToString(), out count);
         }
@@ -229,28 +276,45 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
 
     private static MessageType GetMessageType(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.MessageTypeHeaderBagKey, out object? property))
+        if (
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.MessageTypeHeaderBagKey,
+                out object? property
+            )
+        )
             return MessageType.MT_EVENT;
 
-        return Enum.TryParse(property.ToString(), true, out MessageType messageType) ? messageType : MessageType.MT_EVENT;
+        return Enum.TryParse(property.ToString(), true, out MessageType messageType)
+            ? messageType
+            : MessageType.MT_EVENT;
     }
 
     private static string GetReplyAddress(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.ReplyToHeaderBagKey, out object? property))
+        if (
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.ReplyToHeaderBagKey,
+                out object? property
+            )
+        )
         {
             return string.Empty;
         }
 
         var replyAddress = property.ToString() ?? string.Empty;
 
-        return replyAddress ;
+        return replyAddress;
     }
 
     private Uri GetSource(IBrokeredMessageWrapper azureServiceBusMessage)
     {
         var defaultSourceUri = new Uri("http://goparamore.io"); // Default source URI
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSource, out object? property))
+        if (
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.CloudEventsSource,
+                out object? property
+            )
+        )
         {
             Log.NoSourceFound(s_logger, _topic, subscription.Name);
             return defaultSourceUri;
@@ -261,28 +325,38 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
             Log.EmptyOrInvalidSource(s_logger, _topic, subscription.Name);
             return defaultSourceUri;
         }
-        
+
         var source = property.ToString();
 
         return new Uri(source!);
     }
-    
-   private TraceParent GetTraceParent(IBrokeredMessageWrapper azureServiceBusMessage)
+
+    private TraceParent GetTraceParent(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.TraceParent, out object?property))
+        if (
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.TraceParent,
+                out object? property
+            )
+        )
         {
             Log.NoTraceParentFound(s_logger, _topic, subscription.Name);
             return new TraceParent(string.Empty);
-        } 
-        
+        }
+
         var traceParentString = property.ToString() ?? string.Empty;
-        
+
         return new TraceParent(traceParentString);
     }
 
     private TraceState GetTraceState(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.TraceState, out object? property))
+        if (
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(
+                ASBConstants.TraceState,
+                out object? property
+            )
+        )
         {
             Log.NoTraceStateFound(s_logger, _topic, subscription.Name);
             return new TraceState(string.Empty);
@@ -291,54 +365,159 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         var traceStateString = property.ToString() ?? string.Empty;
 
         return new TraceState(traceStateString);
-
     }
 
     private static partial class Log
     {
-        [LoggerMessage(LogLevel.Warning, "Null message received from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void NullMessageReceived(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "Null message received from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void NullMessageReceived(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "Null message body received from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void NullMessageBodyReceived(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "Null message body received from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void NullMessageBodyReceived(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Debug, "Received message from topic {Topic} via subscription {ChannelName} with body {Request}")]
-        public static partial void ReceivedMessage(ILogger logger, RoutingKey topic, SubscriptionName channelName, string request);
+        [LoggerMessage(
+            LogLevel.Debug,
+            "Received message from topic {Topic} via subscription {ChannelName} with body {Request}"
+        )]
+        public static partial void ReceivedMessage(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName channelName,
+            string request
+        );
 
-        [LoggerMessage(LogLevel.Warning, "No baggage found in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void NoBaggageFound(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "No baggage found in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void NoBaggageFound(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "No Cloud Events data schema found in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void NoCloudEventsDataSchema(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "No Cloud Events data schema found in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void NoCloudEventsDataSchema(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "Empty Cloud Events data schema in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void EmptyCloudEventsDataSchema(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "Empty Cloud Events data schema in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void EmptyCloudEventsDataSchema(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "No Cloud Events subject found in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void NoCloudEventsSubject(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "No Cloud Events subject found in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void NoCloudEventsSubject(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "No Cloud Events time found in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void NoCloudEventsTime(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "No Cloud Events time found in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void NoCloudEventsTime(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "Invalid Cloud Events time format in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void InvalidCloudEventsTimeFormat(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "Invalid Cloud Events time format in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void InvalidCloudEventsTimeFormat(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "No Cloud Events partition key found in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void NoCloudEventsPartitionKey(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "No Cloud Events partition key found in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void NoCloudEventsPartitionKey(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "No Cloud Events type found in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void NoCloudEventsType(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "No Cloud Events type found in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void NoCloudEventsType(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "No source found in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void NoSourceFound(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "No source found in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void NoSourceFound(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "Empty or invalid source in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void EmptyOrInvalidSource(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "Empty or invalid source in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void EmptyOrInvalidSource(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "No trace parent found in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void NoTraceParentFound(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "No trace parent found in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void NoTraceParentFound(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
 
-        [LoggerMessage(LogLevel.Warning, "No trace state found in message from topic {Topic} via subscription {SubscriptionName}")]
-        public static partial void NoTraceStateFound(ILogger logger, RoutingKey topic, SubscriptionName subscriptionName);
+        [LoggerMessage(
+            LogLevel.Warning,
+            "No trace state found in message from topic {Topic} via subscription {SubscriptionName}"
+        )]
+        public static partial void NoTraceStateFound(
+            ILogger logger,
+            RoutingKey topic,
+            SubscriptionName subscriptionName
+        );
     }
 }

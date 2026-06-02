@@ -1,0 +1,35 @@
+{
+  "Namespace": "Paramore.Brighter.Kafka.Tests",
+  "MessageAssertion": "KafkaMessageAssertion",
+  "MessagingGateways": {
+    "Standard": {
+      "Publication": "Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider",
+      "Category": "Kafka",
+      "CollectionName": "Kafka",
+      "HasSupportToPublishConfirmation": true,
+      "HasSupportToDeadLetterQueue": false,
+      "HasSupportToDelayedMessages": false,
+      "HasSupportToPartitionKey": false,
+      "HasSupportToValidateBrokerExistence": false,
+      "HasSupportToRequeue": false,
+      "ReceiveMessageTimeoutInMilliseconds": 15000
+    },
+    "PartitionKey": {
+      "Publication": "Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaPartitionKeyMessageGatewayProvider",
+      "MessageBuilder": "FifoMessageBuilder",
+      "Category": "Kafka",
+      "CollectionName": "Kafka",
+      "HasSupportToPublishConfirmation": true,
+      "HasSupportToDeadLetterQueue": false,
+      "HasSupportToDelayedMessages": false,
+      "HasSupportToPartitionKey": true,
+      "HasSupportToValidateBrokerExistence": false,
+      "HasSupportToRequeue": false,
+      "ReceiveMessageTimeoutInMilliseconds": 15000
+    }
+  }
+}

@@ -34,18 +34,16 @@ using System.Linq;
 
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.Sync;
 
+[Trait("Category", "MongoDB")]
 public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessages : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
     private List<Message> _createdMessages = [];
 
     public WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessages()
     {
         _outboxProvider = new Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider();
         _outboxProvider.CreateStore();
-
-        _messageFactory = new DefaultMessageFactory();
     }
 
     [Fact]
@@ -53,9 +51,9 @@ public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessages : ID
     {
         // Arrange
         var context = new RequestContext();
-        var earliest = _messageFactory.Create();
-        var dispatched = _messageFactory.Create();
-        var undispatched = _messageFactory.Create();
+        var earliest = new DefaultMessageBuilder().Build();
+        var dispatched = new DefaultMessageBuilder().Build();
+        var undispatched = new DefaultMessageBuilder().Build();
 
         _createdMessages.Add(earliest);
         _createdMessages.Add(dispatched);

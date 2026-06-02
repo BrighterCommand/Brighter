@@ -1,0 +1,17 @@
+{
+  "Namespace": "Paramore.Brighter.Redis.Tests",
+  "MessagingGateway": {
+    "Publication": "Paramore.Brighter.MessagingGateway.Redis.RedisMessagePublication",
+    "Subscription": "Paramore.Brighter.MessagingGateway.Redis.RedisSubscription",
+    "MessageGatewayProvider": "Paramore.Brighter.Redis.Tests.MessagingGateway.RedisMessageGatewayProvider",
+    "Category": "Redis",
+    "CollectionName": "RedisMessagingGateway",
+    "HasSupportToPublishConfirmation": false,
+    "HasSupportToDeadLetterQueue": true,
+    "HasSupportToDelayedMessages": false,
+    "HasSupportToPartitionKey": false,
+    "HasSupportToValidateBrokerExistence": false,
+    "HasSupportToRequeue": true,
+    "HasSupportToValidateInfrastructure": false
+  }
+}

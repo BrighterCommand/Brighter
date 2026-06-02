@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -275,6 +275,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             var topic = message.Header.Topic;
             Log.RequeuingMessage(s_logger, topic, message.Id.ToString());
 
+            if (!message.Header.Bag.ContainsKey(Message.OriginalMessageIdHeaderName))
+            {
+                message.Header.Bag[Message.OriginalMessageIdHeaderName] = message.Header.MessageId.ToString();
+            }
+
             if (delay > TimeSpan.Zero)
             {
                 EnsureRequeueProducer();
@@ -299,6 +304,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             var topic = message.Header.Topic;
             Log.RequeuingMessage(s_logger, topic, message.Id.ToString());
+
+            if (!message.Header.Bag.ContainsKey(Message.OriginalMessageIdHeaderName))
+            {
+                message.Header.Bag[Message.OriginalMessageIdHeaderName] = message.Header.MessageId.ToString();
+            }
 
             if (delay > TimeSpan.Zero)
             {
