@@ -102,7 +102,7 @@ Task 1 (already implemented) shows the exact wiring — see
       - Leave the fall-through `await Acknowledge(message)` (~391) unchanged.
   - References: FR-1, FR-6, FR-7, AC-1, AC-12, ADR-0061 (route mapping via RejectMessage+continue; shared description local; retain counter); touches `Proactor.cs`, updates `When_a_message_fails_to_be_mapped_to_a_request_async.cs`.
 
-- [ ] **TEST + IMPLEMENT: Reactor rejects a mapping failure as Unacceptable instead of acknowledging it**
+- [x] **TEST + IMPLEMENT: Reactor rejects a mapping failure as Unacceptable instead of acknowledging it**
   - **USE COMMAND**: `/test-first Reactor routes a MessageMappingException through RejectMessage with RejectionReason.Unacceptable and continues, never reaching the fall-through acknowledge`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor/"
   - Test file: UPDATE the existing `When_a_message_fails_to_be_mapped_to_a_request.cs` (sync equivalent encoding the old ack contract). Re-wire it the same way as Task 1: **mechanism (A)** `InMemoryMessageConsumer` configured with `invalidMessageTopic` wrapped in a sync `Channel`; message pre-enqueued then `Channel.Stop(_routingKey)`; `_messagePump.Run()` called synchronously. **Mechanism (B)** `BrighterTracer` + in-memory exporter. Mapping failure driven via `FailingEventMessageMapper` (sync).
