@@ -120,7 +120,7 @@ Task 1 (already implemented) shows the exact wiring — see
   - References: FR-3, FR-6, FR-7, AC-3, AC-12, NFR-1, ADR-0061 (Reactor drops await; sequencing Proactor then Reactor); touches `Reactor.cs`, updates `When_a_message_fails_to_be_mapped_to_a_request.cs`.
   - Depends on: prior Proactor task (apply Proactor first per ADR sequencing; no file-level dependency, but keep order).
 
-- [ ] **TEST + IMPLEMENT: Rejection Description equals the process-span status string and contains the message Id (both pumps)**
+- [x] **TEST + IMPLEMENT: Rejection Description equals the process-span status string and contains the message Id (both pumps)**
   - **USE COMMAND**: `/test-first the MessageRejectionReason.Description on the mapping path is non-empty, contains the message Id, and is the same string passed to processSpan.SetStatus`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/" and "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor/"
   - Test file: `When_a_message_fails_to_be_mapped_the_rejection_description_matches_the_span_status_async.cs` (Proactor) and `When_a_message_fails_to_be_mapped_the_rejection_description_matches_the_span_status.cs` (Reactor)
