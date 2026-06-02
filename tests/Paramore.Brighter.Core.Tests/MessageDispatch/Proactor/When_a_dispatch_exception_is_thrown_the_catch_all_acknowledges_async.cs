@@ -24,7 +24,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         private readonly ChannelAsync _channel;
         private readonly List<Activity> _exportedActivities;
         private readonly TracerProvider _traceProvider;
-        private readonly string _messageId;
 
         public MessagePumpDispatchExceptionCatchAllAcknowledgesAsyncTests()
         {
@@ -46,13 +45,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
-                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
-            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
+                new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
-            // SpyExceptionCommandProcessor.PublishAsync throws AggregateException — drives the dispatch catch-all path
+            // SpyExceptionCommandProcessor.SendAsync throws bare Exception — exercises the catch (Exception e) catch-all
             _messagePump = new ServiceActivator.Proactor(
                 new SpyExceptionCommandProcessor(),
-                (message) => typeof(MyEvent),
+                (message) => typeof(MyCommand),
                 messageMapperRegistry,
                 null,
                 new InMemoryRequestContextFactory(),
@@ -65,12 +64,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 RequeueCount = 3
             };
 
-            // Build a properly-mapped event message so that mapping succeeds and the exception comes from dispatch
+            // Build a properly-mapped command message so that mapping succeeds and the exception comes from dispatch
             var mappableMessage = new TransformPipelineBuilderAsync(messageMapperRegistry, null, InstrumentationOptions.All)
-                .BuildWrapPipeline<MyEvent>()
-                .WrapAsync(new MyEvent(), new RequestContext(), new Publication { Topic = _routingKey })
+                .BuildWrapPipeline<MyCommand>()
+                .WrapAsync(new MyCommand(), new RequestContext(), new Publication { Topic = _routingKey })
                 .Result;
-            _messageId = mappableMessage.Id;
 
             _channel.Enqueue(mappableMessage);
             _channel.Stop(_routingKey);

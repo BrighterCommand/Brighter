@@ -44,16 +44,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             );
 
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var requestContextFactory = new InMemoryRequestContextFactory();
 
-            // SpyExceptionCommandProcessor.Publish throws AggregateException — drives the dispatch catch-all path
+            // SpyExceptionCommandProcessor.Send throws bare Exception — exercises the catch (Exception e) catch-all
             _messagePump = new ServiceActivator.Reactor(
                 new SpyExceptionCommandProcessor(),
-                (message) => typeof(MyEvent),
+                (message) => typeof(MyCommand),
                 messageMapperRegistry,
                 null,
                 requestContextFactory,
@@ -66,10 +66,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 RequeueCount = 3
             };
 
-            // Build a properly-mapped event message so that mapping succeeds and the exception comes from dispatch
+            // Build a properly-mapped command message so that mapping succeeds and the exception comes from dispatch
             var mappableMessage = new TransformPipelineBuilder(messageMapperRegistry, null)
-                .BuildWrapPipeline<MyEvent>()
-                .Wrap(new MyEvent(), requestContextFactory.Create(), new Publication { Topic = _routingKey });
+                .BuildWrapPipeline<MyCommand>()
+                .Wrap(new MyCommand(), requestContextFactory.Create(), new Publication { Topic = _routingKey });
 
             _channel.Enqueue(mappableMessage);
             _channel.Stop(_routingKey);

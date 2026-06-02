@@ -28,9 +28,9 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
-    public class MessagePumpFailingMessageTranslationNoImqTests
+    public class MessagePumpMappingFailureNoImqFallsToDlqAsyncTests
     {
         private const string ChannelName = "myChannel";
         private readonly RoutingKey _routingKey = new("MyTopic");
@@ -38,12 +38,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly Channel _channel;
+        private readonly ChannelAsync _channel;
 
-        public MessagePumpFailingMessageTranslationNoImqTests()
+        public MessagePumpMappingFailureNoImqFallsToDlqAsyncTests()
         {
             // No invalidMessageTopic — only a deadLetterTopic
-            _channel = new Channel(
+            _channel = new ChannelAsync(
                 new(ChannelName), _routingKey,
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider,
                     deadLetterTopic: _deadLetterKey,
@@ -51,11 +51,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             );
 
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new FailingEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyFailingMapperEvent, FailingEventMessageMapperAsync>();
 
-            _messagePump = new ServiceActivator.Reactor(
+            _messagePump = new ServiceActivator.Proactor(
                 new SpyRequeueCommandProcessor(),
                 (message) => typeof(MyFailingMapperEvent),
                 messageMapperRegistry,
@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         }
 
         [Fact]
-        public void When_A_Message_Fails_To_Be_Mapped_With_No_Imq_The_Pump_Still_Delegates_Reject()
+        public void When_No_Imq_Configured_Reject_Falls_Back_To_Dlq()
         {
             // Act
             _messagePump.Run();
