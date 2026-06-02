@@ -163,7 +163,7 @@ Task 1 (already implemented) shows the exact wiring — see
     - Characterization — expected GREEN; no prod code (catch-all at ~345-350 unchanged per FR-8). If RED, investigate accidental edit.
   - References: FR-8, AC-4, NFR-2, ADR-0061 (catch-all unchanged); touches `Reactor.cs` catch-all only as a guard.
 
-- [ ] **TEST + IMPLEMENT: Unacceptable limit trips after N mapping rejections**
+- [x] **TEST + IMPLEMENT: Unacceptable limit trips after N mapping rejections**
   - **USE COMMAND**: `/test-first with UnacceptableMessageLimit=3, three consecutive MessageMappingExceptions each reject and increment, and the pump terminates on the next iteration`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/" (async) — extend coverage in Reactor too if a parallel file does not already assert reject
   - Test file: UPDATE/repurpose existing `When_a_message_fails_to_be_mapped_to_a_request_and_the_unacceptable_message_limit_is_reached_async.cs` and its sync sibling `When_a_message_fails_to_be_mapped_to_a_request_and_the_unacceptable_message_limit_is_reached.cs`
