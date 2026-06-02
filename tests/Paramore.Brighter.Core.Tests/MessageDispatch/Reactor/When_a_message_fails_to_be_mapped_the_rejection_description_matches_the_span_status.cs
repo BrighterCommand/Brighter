@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
-    public class MessagePumpFailingMessageTranslationTests
+    public class MessagePumpMappingRejectionDescriptionMatchesSpanStatusTests
     {
         private const string ChannelName = "myChannel";
         private readonly RoutingKey _routingKey = new("MyTopic");
@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         private readonly TracerProvider _traceProvider;
         private readonly string _messageId;
 
-        public MessagePumpFailingMessageTranslationTests()
+        public MessagePumpMappingRejectionDescriptionMatchesSpanStatusTests()
         {
             _exportedActivities = new List<Activity>();
             _traceProvider = Sdk.CreateTracerProviderBuilder()
@@ -75,21 +75,29 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         }
 
         [Fact]
-        public void When_A_Message_Fails_To_Be_Mapped_To_A_Request_Should_Reject()
+        public void When_A_Message_Fails_To_Be_Mapped_The_Rejection_Description_Matches_The_Span_Status()
         {
+            // Act
             _messagePump.Run();
             _traceProvider.ForceFlush();
 
-            // Message was routed to the invalid message topic — Reject(Unacceptable) was called
-            Assert.Single(_bus.Stream(_invalidMessageKey));
-            Assert.Empty(_bus.Stream(_routingKey));
+            // Assert — mechanism (A): rejected message carries the rejection reason in its header bag
+            var rejectedMessage = _bus.Stream(_invalidMessageKey).First();
+            Assert.True(rejectedMessage.Header.Bag.TryGetValue(Message.RejectionReasonHeaderName, out var bagValue));
+            var bagString = Assert.IsType<string>(bagValue);
+            Assert.NotEmpty(bagString);
+            Assert.Contains(_messageId, bagString);
 
-            // Process span should reflect the mapping failure
+            // Assert — mechanism (B): process span StatusDescription contains the message Id
             var processActivity = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Process.ToSpanName()}");
             Assert.NotNull(processActivity);
             Assert.Equal(ActivityStatusCode.Error, processActivity!.Status);
+            Assert.NotNull(processActivity.StatusDescription);
             Assert.Contains(_messageId, processActivity.StatusDescription);
+
+            // The bag value embeds the span StatusDescription (both derive from the same shared description local — C-5)
+            Assert.Contains(processActivity.StatusDescription!, bagString);
         }
     }
 }

@@ -373,9 +373,12 @@ namespace Paramore.Brighter.ServiceActivator
                 }
                 catch (MessageMappingException messageMappingException)
                 {
+                    var description = $"MessagePump: Failed to map message {message.Id} from {Channel.Name} with {Channel.RoutingKey} on thread # {Thread.CurrentThread.ManagedThreadId}";
                     Log.FailedToMapMessage(s_logger, messageMappingException, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                     IncrementUnacceptableMessageCount();
-                    processSpan?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to map message {message.Id} from {Channel.Name} with {Channel.RoutingKey} on thread # {Thread.CurrentThread.ManagedThreadId}");
+                    processSpan?.SetStatus(ActivityStatusCode.Error, description);
+                    await RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, description));
+                    continue;
                 }
                 catch (Exception e)
                 {

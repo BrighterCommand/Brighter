@@ -10,9 +10,9 @@ using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
-    public class MessagePumpFailingMessageTranslationTests
+    public class MessagePumpMappingRejectionDescriptionMatchesSpanStatusAsyncTests
     {
         private const string ChannelName = "myChannel";
         private readonly RoutingKey _routingKey = new("MyTopic");
@@ -20,12 +20,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly Channel _channel;
+        private readonly ChannelAsync _channel;
         private readonly List<Activity> _exportedActivities;
         private readonly TracerProvider _traceProvider;
         private readonly string _messageId;
 
-        public MessagePumpFailingMessageTranslationTests()
+        public MessagePumpMappingRejectionDescriptionMatchesSpanStatusAsyncTests()
         {
             _exportedActivities = new List<Activity>();
             _traceProvider = Sdk.CreateTracerProviderBuilder()
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             var tracer = new BrighterTracer(_timeProvider);
             var instrumentationOptions = InstrumentationOptions.All;
 
-            _channel = new Channel(
+            _channel = new ChannelAsync(
                 new(ChannelName), _routingKey,
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider,
                     invalidMessageTopic: _invalidMessageKey,
@@ -44,16 +44,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             );
 
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
-            var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => throw new NotImplementedException());
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new FailingEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyFailingMapperEvent, FailingEventMessageMapperAsync>();
 
-            _messagePump = new ServiceActivator.Reactor(
+            _messagePump = new ServiceActivator.Proactor(
                 new SpyRequeueCommandProcessor(),
                 (message) => typeof(MyFailingMapperEvent),
                 messageMapperRegistry,
-                messageTransformerFactory,
+                null,
                 new InMemoryRequestContextFactory(),
                 _channel,
                 tracer,
@@ -75,21 +74,29 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         }
 
         [Fact]
-        public void When_A_Message_Fails_To_Be_Mapped_To_A_Request_Should_Reject()
+        public void When_A_Message_Fails_To_Be_Mapped_The_Rejection_Description_Matches_The_Span_Status()
         {
+            // Act
             _messagePump.Run();
             _traceProvider.ForceFlush();
 
-            // Message was routed to the invalid message topic — Reject(Unacceptable) was called
-            Assert.Single(_bus.Stream(_invalidMessageKey));
-            Assert.Empty(_bus.Stream(_routingKey));
+            // Assert — mechanism (A): rejected message carries the rejection reason in its header bag
+            var rejectedMessage = _bus.Stream(_invalidMessageKey).First();
+            Assert.True(rejectedMessage.Header.Bag.TryGetValue(Message.RejectionReasonHeaderName, out var bagValue));
+            var bagString = Assert.IsType<string>(bagValue);
+            Assert.NotEmpty(bagString);
+            Assert.Contains(_messageId, bagString);
 
-            // Process span should reflect the mapping failure
+            // Assert — mechanism (B): process span StatusDescription contains the message Id
             var processActivity = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Process.ToSpanName()}");
             Assert.NotNull(processActivity);
             Assert.Equal(ActivityStatusCode.Error, processActivity!.Status);
+            Assert.NotNull(processActivity.StatusDescription);
             Assert.Contains(_messageId, processActivity.StatusDescription);
+
+            // The bag value embeds the span StatusDescription (both derive from the same shared description local — C-5)
+            Assert.Contains(processActivity.StatusDescription!, bagString);
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Linq;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
+using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
@@ -12,7 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
-    public class MessagePumpFailingMessageTranslationTests
+    public class MessagePumpDispatchExceptionCatchAllAcknowledgesTests
     {
         private const string ChannelName = "myChannel";
         private readonly RoutingKey _routingKey = new("MyTopic");
@@ -23,9 +24,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         private readonly Channel _channel;
         private readonly List<Activity> _exportedActivities;
         private readonly TracerProvider _traceProvider;
-        private readonly string _messageId;
 
-        public MessagePumpFailingMessageTranslationTests()
+        public MessagePumpDispatchExceptionCatchAllAcknowledgesTests()
         {
             _exportedActivities = new List<Activity>();
             _traceProvider = Sdk.CreateTracerProviderBuilder()
@@ -44,52 +44,52 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             );
 
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
-            messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
-            var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => throw new NotImplementedException());
+            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
+            var requestContextFactory = new InMemoryRequestContextFactory();
+
+            // SpyExceptionCommandProcessor.Publish throws AggregateException — drives the dispatch catch-all path
             _messagePump = new ServiceActivator.Reactor(
-                new SpyRequeueCommandProcessor(),
-                (message) => typeof(MyFailingMapperEvent),
+                new SpyExceptionCommandProcessor(),
+                (message) => typeof(MyEvent),
                 messageMapperRegistry,
-                messageTransformerFactory,
-                new InMemoryRequestContextFactory(),
+                null,
+                requestContextFactory,
                 _channel,
                 tracer,
                 instrumentationOptions)
             {
                 Channel = _channel,
                 TimeOut = TimeSpan.FromMilliseconds(5000),
-                RequeueCount = 3,
-                UnacceptableMessageLimit = 3
+                RequeueCount = 3
             };
 
-            _messageId = Guid.NewGuid().ToString();
-            var unmappableMessage = new Message(
-                new MessageHeader(_messageId, _routingKey, MessageType.MT_EVENT),
-                new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
+            // Build a properly-mapped event message so that mapping succeeds and the exception comes from dispatch
+            var mappableMessage = new TransformPipelineBuilder(messageMapperRegistry, null)
+                .BuildWrapPipeline<MyEvent>()
+                .Wrap(new MyEvent(), requestContextFactory.Create(), new Publication { Topic = _routingKey });
 
-            _channel.Enqueue(unmappableMessage);
+            _channel.Enqueue(mappableMessage);
             _channel.Stop(_routingKey);
         }
 
         [Fact]
-        public void When_A_Message_Fails_To_Be_Mapped_To_A_Request_Should_Reject()
+        public void When_A_Dispatch_Exception_Is_Thrown_The_Catch_All_Acknowledges()
         {
+            // Act
             _messagePump.Run();
             _traceProvider.ForceFlush();
 
-            // Message was routed to the invalid message topic — Reject(Unacceptable) was called
-            Assert.Single(_bus.Stream(_invalidMessageKey));
-            Assert.Empty(_bus.Stream(_routingKey));
+            // Assert — mechanism (A): zero messages on the invalid-message topic; dispatch exceptions do NOT reject
+            Assert.Empty(_bus.Stream(_invalidMessageKey));
 
-            // Process span should reflect the mapping failure
+            // Assert — mechanism (B): the process span was exported with Error status and ended (span exported ⇒ EndSpan ran)
             var processActivity = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Process.ToSpanName()}");
             Assert.NotNull(processActivity);
             Assert.Equal(ActivityStatusCode.Error, processActivity!.Status);
-            Assert.Contains(_messageId, processActivity.StatusDescription);
         }
     }
 }
