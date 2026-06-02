@@ -177,7 +177,7 @@ Task 1 (already implemented) shows the exact wiring — see
     - Characterization for the limit-trip — the guardrail is unchanged; the reject behaviour comes from the Proactor/Reactor tasks above. No NEW prod code in `MessagePump.cs`. If the limit no longer trips, investigate: `IncrementUnacceptableMessageCount()` was dropped from the mapping block.
   - References: FR-5, AC-5, ADR-0061 (retain IncrementUnacceptableMessageCount); depends on Proactor/Reactor tasks.
 
-- [ ] **TEST + IMPLEMENT: Default limit of 0 never trips despite repeated mapping rejections**
+- [x] **TEST + IMPLEMENT: Default limit of 0 never trips despite repeated mapping rejections**
   - **USE COMMAND**: `/test-first with the default UnacceptableMessageLimit=0, many consecutive MessageMappingExceptions each reject and increment but the pump never terminates due to the limit`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/"
   - Test file: `When_the_unacceptable_message_limit_is_zero_mapping_failures_never_trip_the_limit_async.cs` (and Reactor sibling if not already covered)
