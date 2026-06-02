@@ -149,7 +149,7 @@ Task 1 (already implemented) shows the exact wiring — see
     - Characterization — expected GREEN; no prod code (the catch-all `catch (Exception e)` block at ~380-385 is LEFT UNCHANGED per FR-8). If RED, investigate: the adjacent edit accidentally altered the catch-all.
   - References: FR-8, AC-2, NFR-2, ADR-0061 (catch-all unchanged; regression guard); touches `Proactor.cs` catch-all only as a guard.
 
-- [ ] **TEST + IMPLEMENT: Catch-all dispatch exception still acknowledges (sync regression guard)**
+- [x] **TEST + IMPLEMENT: Catch-all dispatch exception still acknowledges (sync regression guard)**
   - **USE COMMAND**: `/test-first an unexpected dispatch Exception in the Reactor still falls through to AcknowledgeMessage and is NOT rejected`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor/"
   - Test file: `When_a_dispatch_exception_is_thrown_the_catch_all_acknowledges.cs`
