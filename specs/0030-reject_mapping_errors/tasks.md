@@ -192,7 +192,7 @@ Task 1 (already implemented) shows the exact wiring — see
     - Characterization — expected GREEN; no new prod code (`UnacceptableMessageLimitReached()` already returns false when limit <= 0). If RED, investigate.
   - References: FR-5, AC-6, ADR-0061; depends on Proactor/Reactor tasks.
 
-- [ ] **TEST + IMPLEMENT: No-IMQ consumer — pump still delegates reject without transport branching**
+- [x] **TEST + IMPLEMENT: No-IMQ consumer — pump still delegates reject without transport branching**
   - **USE COMMAND**: `/test-first a consumer with no IMQ or DLQ configured still receives a Reject call (not Acknowledge) on a mapping failure`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/" and "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor/"
   - Test file: `When_a_message_fails_to_be_mapped_with_no_imq_the_pump_still_delegates_reject_async.cs` (and sync sibling)
@@ -207,7 +207,7 @@ Task 1 (already implemented) shows the exact wiring — see
     - No NEW production code — delegation already follows from the Proactor/Reactor tasks. No custom test double is needed (routing IS the signal via `deadLetterTopic`).
   - References: FR-7, NFR-2, NFR-4, AC-8, ADR-0061 (no transport branching); depends on Proactor/Reactor tasks.
 
-- [ ] **TEST + IMPLEMENT: Async/sync parity on the mapping reject path**
+- [x] **TEST + IMPLEMENT: Async/sync parity on the mapping reject path**
   - **USE COMMAND**: `/test-first the Proactor and Reactor reject an identical MessageMappingException scenario identically — same Unacceptable reason, both retain the counter, both continue past acknowledge`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/" and "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor/"
   - Test file: `When_the_mapping_reject_path_is_compared_across_pumps_async.cs` (and the Reactor sibling), or a shared-scenario theory if the test layout supports it
