@@ -73,7 +73,7 @@ tracer + in-memory exporter, mirroring
 
 ## Tasks
 
-- [ ] **TEST + IMPLEMENT: Proactor rejects a mapping failure as Unacceptable instead of acknowledging it**
+- [x] **TEST + IMPLEMENT: Proactor rejects a mapping failure as Unacceptable instead of acknowledging it**
   - **USE COMMAND**: `/test-first Proactor routes a MessageMappingException through RejectMessage with RejectionReason.Unacceptable and continues, never reaching the fall-through acknowledge`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessageDispatch/Proactor/"
   - Test file: UPDATE the existing `When_a_message_fails_to_be_mapped_to_a_request_async.cs` (class `MessagePumpFailingMessageTranslationTestsAsync`, fact `When_A_Message_Fails_To_Be_Mapped_To_A_Request_Should_Ack`) — this currently encodes the OLD ack contract (`Assert.Empty(_bus.Stream(_routingKey))`, which still passes for the wrong reason). Re-wire its arrange to use **mechanism (A) the recording consumer double** (`RecordingMessageConsumerAsync`, built here per "Test infrastructure" above) wrapped in the `ChannelAsync`, AND **mechanism (B) a `BrighterTracer` + in-memory exporter** so the span can be observed. The mapping failure is still driven through the REAL translate path via `FailingEventMessageMapperAsync`.
