@@ -29,6 +29,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         string LockToken { get; }
 
         /// <summary>
+        /// The broker-assigned sequence number. Uniquely identifies a message within a Service Bus entity.
+        /// </summary>
+        long SequenceNumber { get; }
+
+        /// <summary>
         /// The message Id.
         /// </summary>
         string Id { get; }

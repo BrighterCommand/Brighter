@@ -12,6 +12,14 @@ Current spec directory: specs/
 
 **TDD Cycle**: 🔴 Red → ✅ User Approval → 🟢 Green → 🔵 Refactor
 
+> **Recommended model: `sonnet`.** Unlike the other `/spec:*` commands, `/spec:implement`
+> does its work in the **main agent** (the interactive approval gate must reach the user),
+> so there is no sub-agent to assign a model to — the session model is what runs. This is
+> implementation work, which the model policy puts on **sonnet** (matching
+> `/spec:ralph-implement`). **If your session is not already on sonnet, consider switching
+> before you start** (e.g. a non-sonnet model such as opus). See
+> `.claude/commands/spec/README.md` → "Sub-agents & model policy".
+
 ## Critical Guidelines
 
 **ALWAYS follow these instructions when writing code:**

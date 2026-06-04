@@ -269,7 +269,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The reply to.</value>
         [JsonConverter(typeof(RoutingKeyConvertor))]
-        [Newtonsoft.Json.JsonConverter(typeof(RoutingKeyConvertor))]
+        [Newtonsoft.Json.JsonConverter(typeof(NRoutingKeyConverter))]
         public RoutingKey? ReplyTo { get; set; }
         
         /// <summary>
@@ -308,7 +308,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The topic.</value>
         [JsonConverter(typeof(RoutingKeyConvertor))]
-        [Newtonsoft.Json.JsonConverter(typeof(RoutingKeyConvertor))]
+        [Newtonsoft.Json.JsonConverter(typeof(NRoutingKeyConverter))]
         public RoutingKey Topic { get; set; } = RoutingKey.Empty;
 
         /// <summary>
@@ -332,7 +332,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The traceparent.</value>
         [JsonConverter(typeof(TraceParentConverter))]
-        [Newtonsoft.Json.JsonConverter(typeof(TraceParentConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(NTraceParentConverter))]
         public TraceParent? TraceParent { get; set; }
 
         /// <summary>
@@ -346,7 +346,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The tracestate.</value>
         [JsonConverter(typeof(TraceStateConverter))]
-        [Newtonsoft.Json.JsonConverter(typeof(TraceStateConverter))]
+        [Newtonsoft.Json.JsonConverter(typeof(NTraceStateConverter))]
         public TraceState? TraceState { get; set; }
 
         /// <summary>

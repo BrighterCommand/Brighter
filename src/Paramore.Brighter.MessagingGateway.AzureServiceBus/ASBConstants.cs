@@ -3,6 +3,7 @@
     internal static class ASBConstants
     {
         public const string LockTokenHeaderBagKey = "LockToken";
+        public const string SequenceNumberBagKey = "SequenceNumber";
         public const string MessageTypeHeaderBagKey = "MessageType";
         public const string HandledCountHeaderBagKey = "HandledCount";
         public const string ReplyToHeaderBagKey = "ReplyTo";
