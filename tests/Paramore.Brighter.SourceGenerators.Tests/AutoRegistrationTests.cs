@@ -31,6 +31,29 @@ public class AutoRegistrationTests
         }
         """;
 
+    private const string UserSourceWithManualRegistration = """
+        using Paramore.Brighter;
+        using Paramore.Brighter.Extensions.DependencyInjection;
+
+        namespace App;
+
+        public class GreetingCommand : Command
+        {
+            public GreetingCommand() : base(System.Guid.NewGuid()) { }
+        }
+
+        public class GreetingHandler : RequestHandler<GreetingCommand>
+        {
+            public override GreetingCommand Handle(GreetingCommand command) => base.Handle(command);
+        }
+
+        public static partial class Registrations
+        {
+            [BrighterRegistrations]
+            public static partial IBrighterBuilder AddFromThisAssembly(this IBrighterBuilder builder);
+        }
+        """;
+
     private static GeneratorDriverRunResult Run(string source, string? autoRegistrationValue)
     {
         var references = new[]
@@ -100,6 +123,23 @@ public class AutoRegistrationTests
         Assert.DoesNotContain(
             result.Results.Single().GeneratedSources,
             g => g.HintName == "BrighterAssemblyRegistrations__AddFromThisAssembly.g.cs");
+    }
+
+    [Fact]
+    public void PropertyTrue_WithManualRegistrationMethod_SuppressesAutoClass()
+    {
+        // Auto-on + a hand-written [BrighterRegistrations] method would otherwise double-register
+        // (and collide on the AddFromThisAssembly name). The manual method wins; auto is suppressed.
+        var single = Run(UserSourceWithManualRegistration, "true").Results.Single();
+
+        Assert.DoesNotContain(
+            single.GeneratedSources,
+            g => g.HintName == "BrighterAssemblyRegistrations__AddFromThisAssembly.g.cs");
+
+        // The user's own registration method is still implemented.
+        Assert.Contains(
+            single.GeneratedSources,
+            g => g.HintName.StartsWith("App_Registrations") && g.HintName.EndsWith("__AddFromThisAssembly.g.cs"));
     }
 
     private sealed class StubOptionsProvider : AnalyzerConfigOptionsProvider

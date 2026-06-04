@@ -105,6 +105,11 @@ registered as-is and produce diagnostic `BRGEN005` (warning) rather than being s
 Malformed registration methods produce `BRGEN001`–`BRGEN004` (errors), giving the compile-time
 feedback that scanning never could.
 
+Discovery covers both `class` and `record` declarations: handlers must derive from
+`RequestHandler<T>` (so are always classes), but mappers and transforms implement interfaces only
+and may legitimately be records. A type is reachable when it (and any containing type) is `public`
+**or** `internal` — see the accessibility note under Consequences.
+
 ### Per-package auto-registration (the referenced-assembly story)
 
 A source generator only sees the syntax of the **current** compilation; types compiled into a
@@ -117,6 +122,11 @@ extension covering *that compilation's* types. Because the prop is in `build/` (
 `buildTransitive/`), it only applies to a **direct** `PackageReference`, so a library generates its
 own registrations at its own compile time and the consumer calls `AddFromThisAssembly()` — rather
 than the consumer trying to load and scan the library at runtime.
+
+The auto class is **suppressed when the compilation also hand-writes a `[BrighterRegistrations]`
+method**, so the default-on auto path and the documented manual path cannot both register the same
+types (double registration) or collide on the `AddFromThisAssembly(this IBrighterBuilder)` name
+(`CS0121` ambiguous call). The hand-written method takes precedence.
 
 ## Consequences
 
@@ -146,6 +156,33 @@ than the consumer trying to load and scan the library at runtime.
   know which they are using (and that they are additive).
 - **Generic mappers/transforms are unsupported** (by design) and require a closed type, a
   non-generic wrapper, or an explicit exclude.
+- **Accessibility asymmetry with `AutoFromAssemblies`.** The reflection scanner registers only
+  `public` (or nested-public) handlers; the generator also registers `internal` types, since
+  generated code lives in the same assembly and `internal` is genuinely reachable. This is arguably
+  better, but a team switching mechanisms may see `internal` handlers appear/disappear.
+- **Open-generic registration is coupled to `ServiceCollectionSubscriberRegistry`.** Open generics
+  emit a `(ServiceCollectionSubscriberRegistry)r` cast to reach `EnsureHandlerIsRegistered`. That
+  holds for the shipped DI extension; if `IBrighterBuilder.Handlers` ever supplied a different
+  `IAmASubscriberRegistry`, the generated cast would throw `InvalidCastException` at runtime.
+- **Handler inheritance can register a request type twice.** For `class B : A` where `A :
+  RequestHandler<Cmd>`, both `A` and `B` report `IHandleRequests<Cmd>`, so both are registered. This
+  matches the reflection scanner's behaviour rather than introducing a new asymmetry.
+
+### Deferred follow-ups
+
+These are accepted gaps, tracked rather than fixed in this change:
+
+- **Packaging is not yet wired up.** `IsPackable=false` and there is no companion `*.Package`
+  project, so `dotnet pack` produces nothing and the `build/`-props direct-vs-transitive story is
+  not yet exercised by a real package consumer — only the in-repo `ProjectReference` /
+  `OutputItemType="Analyzer"` path (used by the sample). Shipping should follow the existing
+  `Paramore.Brighter.Analyzer.Package` pattern.
+- **Roslyn version floor.** The generator references `Microsoft.CodeAnalysis.CSharp` at the
+  repo-pinned version. Since a generator's referenced Roslyn version sets the *minimum* compiler/SDK
+  a consumer needs, before packaging it should be pinned to the lowest version providing the APIs
+  used (`ForAttributeWithMetadataName`, 4.3.1+) to maximise the range of consuming SDKs.
+- **Public surface.** The reader/writer/model types are `public` for testability; for a
+  dev-dependency generator they could be `internal` + `InternalsVisibleTo`. Harmless either way.
 
 ### Risks and Mitigations
 

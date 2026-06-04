@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 
 namespace Paramore.Brighter.SourceGenerators;
@@ -49,7 +50,17 @@ public sealed class MarkerSymbols
         MessageTransform is not null &&
         MessageTransformAsync is not null;
 
-    public static MarkerSymbols Resolve(Compilation c) => new()
+    // Resolving the markers does eight metadata lookups; the discovery/method transforms run
+    // per-node, so without this every base-listed class and attributed method would repeat the
+    // work. All nodes in a single generator pass share one Compilation instance, so memoising by
+    // Compilation collapses it to one resolve per pass. The table holds weak keys, so an entry is
+    // collected once its Compilation is — nothing is leaked across edits.
+    private static readonly ConditionalWeakTable<Compilation, MarkerSymbols> s_cache = new();
+
+    public static MarkerSymbols Resolve(Compilation c) =>
+        s_cache.GetValue(c, static compilation => Create(compilation));
+
+    private static MarkerSymbols Create(Compilation c) => new()
     {
         BrighterBuilder = c.GetTypeByMetadataName("Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder"),
         HandleRequests = c.GetTypeByMetadataName("Paramore.Brighter.IHandleRequests`1"),

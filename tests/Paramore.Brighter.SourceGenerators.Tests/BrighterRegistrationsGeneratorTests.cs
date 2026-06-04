@@ -447,6 +447,99 @@ public class BrighterRegistrationsGeneratorTests
         await test.RunAsync();
     }
 
+    [Fact]
+    public async Task RecordMapper_IsDiscovered()
+    {
+        // Mappers/transforms implement interfaces only, so they may legitimately be records.
+        const string userCode = """
+            using Paramore.Brighter;
+            using Paramore.Brighter.Extensions.DependencyInjection;
+
+            namespace App;
+
+            public class GreetingEvent : Event { public GreetingEvent() : base(System.Guid.NewGuid()) { } }
+
+            public record GreetingMapper : IAmAMessageMapper<GreetingEvent>
+            {
+                public IRequestContext? Context { get; set; }
+                public Message MapToMessage(GreetingEvent request, Publication publication) => new();
+                public GreetingEvent MapToRequest(Message message) => new();
+            }
+
+            public static partial class Registrations
+            {
+                [BrighterRegistrations]
+                public static partial IBrighterBuilder AddFromThisAssembly(this IBrighterBuilder builder);
+            }
+            """;
+
+        var test = MakeTest();
+        test.TestState.Sources.Add(userCode);
+        test.TestState.GeneratedSources.Add(AttributeFile());
+        test.TestState.GeneratedSources.Add(Registration("""
+            builder.MapperRegistry(r =>
+            {
+                r.Add(typeof(global::App.GreetingEvent), typeof(global::App.GreetingMapper));
+            });
+            """));
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task PartialHandler_WithBaseListOnSecondaryFile_IsRegistered()
+    {
+        // The declaration WITHOUT the base list sorts first ("primary"); the base list lives on the
+        // second file. Regression test for the dropped-registration bug — the handler must still be
+        // discovered and registered.
+        const string partA = """
+            using Paramore.Brighter;
+            using Paramore.Brighter.Extensions.DependencyInjection;
+
+            namespace App;
+
+            public class GreetingCommand : Command
+            {
+                public GreetingCommand() : base(System.Guid.NewGuid()) { }
+            }
+
+            public partial class SplitHandler
+            {
+                public void Helper() { }
+            }
+
+            public static partial class Registrations
+            {
+                [BrighterRegistrations]
+                public static partial IBrighterBuilder AddFromThisAssembly(this IBrighterBuilder builder);
+            }
+            """;
+
+        const string partB = """
+            using Paramore.Brighter;
+
+            namespace App;
+
+            public partial class SplitHandler : RequestHandler<GreetingCommand>
+            {
+                public override GreetingCommand Handle(GreetingCommand command) => base.Handle(command);
+            }
+            """;
+
+        var test = MakeTest();
+        test.TestState.Sources.Add(partA);
+        test.TestState.Sources.Add(partB);
+        test.TestState.GeneratedSources.Add(AttributeFile());
+        test.TestState.GeneratedSources.Add(Registration("""
+            builder.Handlers(r =>
+            {
+                r.Register<global::App.GreetingCommand, global::App.SplitHandler>();
+            });
+            """));
+
+        await test.RunAsync();
+    }
+
     private const string RegistrationHint = "App_Registrations_6a7651d4__AddFromThisAssembly.g.cs";
 
     /// <summary>

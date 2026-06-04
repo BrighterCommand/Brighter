@@ -102,7 +102,11 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
 
         var discoveryBatches = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: static (node, _) => node is ClassDeclarationSyntax cls && cls.BaseList is not null,
+                // class or record (mappers/transforms implement interfaces, so they can be records);
+                // IsClassifiable still filters to TypeKind.Class, excluding structs/record structs.
+                predicate: static (node, _) =>
+                    node is ClassDeclarationSyntax { BaseList: not null }
+                        or RecordDeclarationSyntax { BaseList: not null },
                 transform: static (ctx, ct) => SemanticModelReader.ReadClass(ctx, ct))
             .Where(static batch => !batch.IsEmpty)
             .WithTrackingName(TrackingNames.DiscoveryBatches);
@@ -142,7 +146,14 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
             spc.AddSource(model.HintName, SourceText.From(RegistrationWriter.Write(model), Encoding.UTF8));
         });
 
-        RegisterAutoRegistration(context, discovered);
+        // True when the compilation hand-writes at least one valid [BrighterRegistrations] method.
+        // Used to suppress the auto class so the two paths can't both register (double registration,
+        // or an ambiguous AddFromThisAssembly call when the manual method shares the name).
+        var hasManualRegistration = methodCandidates
+            .Collect()
+            .Select(static (candidates, _) => candidates.Any(static c => c.Method is not null));
+
+        RegisterAutoRegistration(context, discovered, hasManualRegistration);
     }
 
     /// <summary>
@@ -153,7 +164,8 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
     /// </summary>
     private static void RegisterAutoRegistration(
         IncrementalGeneratorInitializationContext context,
-        IncrementalValueProvider<EquatableArray<DiscoveredEntry>> discovered)
+        IncrementalValueProvider<EquatableArray<DiscoveredEntry>> discovered,
+        IncrementalValueProvider<bool> hasManualRegistration)
     {
         var autoEnabled = context.AnalyzerConfigOptionsProvider
             .Select(static (provider, _) =>
@@ -164,12 +176,12 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
         var brighterAvailable = context.CompilationProvider
             .Select(static (c, _) => MarkerSymbols.Resolve(c).IsValid);
 
-        var autoInputs = autoEnabled.Combine(brighterAvailable).Combine(discovered);
+        var autoInputs = autoEnabled.Combine(brighterAvailable).Combine(discovered).Combine(hasManualRegistration);
 
         context.RegisterSourceOutput(autoInputs, static (spc, pair) =>
         {
-            var ((enabled, available), entries) = pair;
-            if (!enabled || !available)
+            var (((enabled, available), entries), hasManual) = pair;
+            if (!enabled || !available || hasManual)
                 return;
 
             var target = BuildAutoTarget();

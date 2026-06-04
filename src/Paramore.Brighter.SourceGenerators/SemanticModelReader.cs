@@ -71,7 +71,7 @@ public static class SemanticModelReader
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (ctx.Node is not ClassDeclarationSyntax cls)
+        if (ctx.Node is not TypeDeclarationSyntax cls)
             return DiscoveryBatch.Empty;
 
         if (ctx.SemanticModel.GetDeclaredSymbol(cls, cancellationToken) is not INamedTypeSymbol type)
@@ -80,11 +80,11 @@ public static class SemanticModelReader
         if (!IsClassifiable(type))
             return DiscoveryBatch.Empty;
 
-        // Only emit from the "primary" partial declaration so partial classes don't get
-        // discovered N times. Order explicitly so the choice is self-evidently stable.
-        if (!IsPrimaryDeclaration(type, cls))
-            return DiscoveryBatch.Empty;
-
+        // A partial type can carry its base/interface list on more than one declaration, so the
+        // same type may reach this transform multiple times. We deliberately do NOT dedup here on
+        // the "primary" declaration: that drops the type entirely when the primary declaration is
+        // the one without a base list (it never reaches the predicate). Duplicate entries are
+        // collapsed instead by RegistrationModel.From's Distinct(), which is order-independent.
         var markers = MarkerSymbols.Resolve(ctx.SemanticModel.Compilation);
         if (!markers.IsValid)
             return DiscoveryBatch.Empty;
@@ -160,7 +160,8 @@ public static class SemanticModelReader
                 entries.Add(entry);
         }
 
-        if (seenTransform && !type.IsGenericType)
+        // seenTransform is only set on the non-generic branch, so it already implies !IsGenericType.
+        if (seenTransform)
             entries.Add(new DiscoveredEntry(DiscoveredKind.Transform, string.Empty, FullyQualified(type), IsOpenGeneric: false));
 
         if (unsupportedGenericMapperOrTransform)
@@ -227,19 +228,6 @@ public static class SemanticModelReader
         if (type.IsAbstract || type.IsImplicitClass || type.IsAnonymousType)
             return false;
         return IsReachableFromGeneratedCode(type);
-    }
-
-    private static bool IsPrimaryDeclaration(INamedTypeSymbol type, ClassDeclarationSyntax cls)
-    {
-        var refs = type.DeclaringSyntaxReferences;
-        if (refs.Length <= 1)
-            return true;
-        // Deterministic primary pick that doesn't rely on undocumented Roslyn ordering.
-        var primary = refs
-            .OrderBy(r => r.SyntaxTree.FilePath, System.StringComparer.Ordinal)
-            .ThenBy(r => r.Span.Start)
-            .First();
-        return primary.SyntaxTree == cls.SyntaxTree && primary.Span == cls.Span;
     }
 
     private static bool IsReachableFromGeneratedCode(INamedTypeSymbol type)
