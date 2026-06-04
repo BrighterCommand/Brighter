@@ -40,7 +40,9 @@ public static class RegistrationWriter
         var buffer = new StringWriter();
         using var code = new CodeWriter(buffer);
 
-        code.WriteLine(GeneratedSource.Header);
+        // Write the banner line-by-line so it shares the writer's newline (consistent line endings).
+        foreach (var line in GeneratedSource.HeaderLines)
+            code.WriteLine(line);
         code.WriteLine("#nullable enable");
         code.WriteLineNoTabs(string.Empty);
 

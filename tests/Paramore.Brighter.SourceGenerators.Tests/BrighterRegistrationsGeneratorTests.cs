@@ -540,6 +540,96 @@ public class BrighterRegistrationsGeneratorTests
         await test.RunAsync();
     }
 
+    [Fact]
+    public void HandlerNestedInOpenGeneric_ReportsBRGEN006_AndEmitsNoBrokenRegistration()
+    {
+        // A handler nested in an open generic can't be named with concrete type args at the call
+        // site; the generator must surface BRGEN006 rather than emit code referencing unbound T.
+        var result = RunDriver("""
+            using Paramore.Brighter;
+            using Paramore.Brighter.Extensions.DependencyInjection;
+
+            namespace App;
+
+            public class GreetingCommand : Command
+            {
+                public GreetingCommand() : base(System.Guid.NewGuid()) { }
+            }
+
+            public class Outer<T>
+            {
+                public class Handler : RequestHandler<GreetingCommand>
+                {
+                    public override GreetingCommand Handle(GreetingCommand command) => base.Handle(command);
+                }
+            }
+
+            public static partial class Registrations
+            {
+                [BrighterRegistrations]
+                public static partial IBrighterBuilder AddFromThisAssembly(this IBrighterBuilder builder);
+            }
+            """);
+
+        Assert.Contains(result.Diagnostics, d => d.Id == "BRGEN006");
+
+        var generated = GeneratedText(result);
+        Assert.DoesNotContain(".Handlers(", generated);
+        Assert.DoesNotContain("Outer<T>", generated);
+    }
+
+    [Fact]
+    public void GenericMapperSplitAcrossPartials_ReportsSingleBRGEN005()
+    {
+        // Each base-list-bearing partial declaration reaches ReadClass and emits BRGEN005; the
+        // flattened diagnostics must be de-duplicated so the user sees it once, not once per file.
+        var result = RunDriver(
+            """
+            using Paramore.Brighter;
+            using Paramore.Brighter.Extensions.DependencyInjection;
+
+            namespace App;
+
+            public class GreetingEvent : Event { public GreetingEvent() : base(System.Guid.NewGuid()) { } }
+
+            public partial class OpenMapper<T> : IAmAMessageMapper<GreetingEvent>
+            {
+                public IRequestContext? Context { get; set; }
+                public Message MapToMessage(GreetingEvent request, Publication publication) => new();
+                public GreetingEvent MapToRequest(Message message) => new();
+            }
+            """,
+            """
+            namespace App;
+
+            public partial class OpenMapper<T> : System.IDisposable
+            {
+                public void Dispose() { }
+            }
+            """);
+
+        Assert.Equal(1, result.Diagnostics.Count(d => d.Id == "BRGEN005"));
+    }
+
+    private static GeneratorRunResult RunDriver(params string[] sources)
+    {
+        var references = new[]
+        {
+            MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Paramore.Brighter.IRequest).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder).Assembly.Location),
+        };
+        var trees = sources.Select(s => CSharpSyntaxTree.ParseText(s)).ToArray();
+        var compilation = CSharpCompilation.Create(
+            "TestAsm", trees, references, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new[] { new BrighterRegistrationsGenerator().AsSourceGenerator() });
+        return driver.RunGenerators(compilation).GetRunResult().Results.Single();
+    }
+
+    private static string GeneratedText(GeneratorRunResult result) =>
+        string.Join("\n", result.GeneratedSources.Select(g => g.SourceText.ToString()));
+
     private const string RegistrationHint = "App_Registrations_6a7651d4__AddFromThisAssembly.g.cs";
 
     /// <summary>

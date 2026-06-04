@@ -55,6 +55,13 @@ public static class GeneratedSource
         """;
 
     /// <summary>
+    /// <see cref="Header"/> split into individual lines so an emitter can write each through its own
+    /// writer (and thus its own newline), keeping a generated file's line endings consistent rather
+    /// than mixing the banner's literal LF with the writer's <c>Environment.NewLine</c>.
+    /// </summary>
+    public static string[] HeaderLines { get; } = Header.Replace("\r\n", "\n").Split('\n');
+
+    /// <summary>
     /// The <c>[System.CodeDom.Compiler.GeneratedCode(...)]</c> attribute, fully qualified so it can
     /// be emitted into any namespace without a using directive.
     /// </summary>

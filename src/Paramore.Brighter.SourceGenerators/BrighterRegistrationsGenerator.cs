@@ -117,8 +117,11 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
             FlattenAndSort(batches.Select(static b => b.Entries)))
             .WithTrackingName(TrackingNames.DiscoveredEntries);
 
+        // Distinct() because a generic type whose base list is split across partial declarations
+        // reaches ReadClass once per declaration, producing identical diagnostics (same id + location).
         var discoveryDiagnostics = collectedBatches.Select(static (batches, _) =>
-            new EquatableArray<DiagnosticInfo>(batches.SelectMany(static b => (IEnumerable<DiagnosticInfo>)b.Diagnostics)));
+            new EquatableArray<DiagnosticInfo>(
+                batches.SelectMany(static b => (IEnumerable<DiagnosticInfo>)b.Diagnostics).Distinct()));
 
         context.RegisterSourceOutput(discoveryDiagnostics, static (spc, diagnostics) =>
         {
@@ -181,8 +184,16 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(autoInputs, static (spc, pair) =>
         {
             var (((enabled, available), entries), hasManual) = pair;
-            if (!enabled || !available || hasManual)
+            if (!enabled || !available)
                 return;
+
+            // A hand-written [BrighterRegistrations] method takes precedence; tell the user why the
+            // auto class disappeared rather than leaving them to discover it.
+            if (hasManual)
+            {
+                spc.ReportDiagnostic(Diagnostic.Create(Diagnostics.AutoRegistrationSuppressed, Location.None));
+                return;
+            }
 
             var target = BuildAutoTarget();
             var model = RegistrationModel.From(target, entries);
@@ -230,6 +241,7 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
         "BRGEN003" => Diagnostics.WrongReturnType,
         "BRGEN004" => Diagnostics.WrongSignature,
         "BRGEN005" => Diagnostics.GenericMapperOrTransformIgnored,
+        "BRGEN006" => Diagnostics.NestedInOpenGeneric,
         _ => throw new System.InvalidOperationException($"Unknown Brighter diagnostic id '{id}' — DescriptorFor needs updating."),
     };
 }

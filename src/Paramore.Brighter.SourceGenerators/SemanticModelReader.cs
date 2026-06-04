@@ -71,35 +71,47 @@ public static class SemanticModelReader
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (ctx.Node is not TypeDeclarationSyntax cls)
+        var discoverable = GetDiscoverableType(ctx, cancellationToken);
+        if (discoverable is null)
             return DiscoveryBatch.Empty;
 
-        if (ctx.SemanticModel.GetDeclaredSymbol(cls, cancellationToken) is not INamedTypeSymbol type)
-            return DiscoveryBatch.Empty;
-
-        if (!IsClassifiable(type))
-            return DiscoveryBatch.Empty;
-
-        // A partial type can carry its base/interface list on more than one declaration, so the
-        // same type may reach this transform multiple times. We deliberately do NOT dedup here on
-        // the "primary" declaration: that drops the type entirely when the primary declaration is
-        // the one without a base list (it never reaches the predicate). Duplicate entries are
-        // collapsed instead by RegistrationModel.From's Distinct(), which is order-independent.
-        var markers = MarkerSymbols.Resolve(ctx.SemanticModel.Compilation);
-        if (!markers.IsValid)
-            return DiscoveryBatch.Empty;
-
-        if (markers.ExcludeAttribute is not null && HasAttribute(type, markers.ExcludeAttribute))
-            return DiscoveryBatch.Empty;
-
+        var (type, markers) = discoverable.Value;
         var entries = new List<DiscoveredEntry>();
         var diagnostics = new List<DiagnosticInfo>();
         ClassifyEntries(type, markers, entries, diagnostics);
+
         if (entries.Count == 0 && diagnostics.Count == 0)
             return DiscoveryBatch.Empty;
         return new DiscoveryBatch(
             new EquatableArray<DiscoveredEntry>(entries),
             new EquatableArray<DiagnosticInfo>(diagnostics));
+    }
+
+    /// <summary>
+    /// Resolve a syntax node to a classifiable type symbol and the framework markers, or null if
+    /// the node isn't a discoverable Brighter type. A partial type can carry its base/interface
+    /// list on more than one declaration, so the same type may reach this transform multiple times;
+    /// we deliberately do NOT dedup on a "primary" declaration (that drops the type when the primary
+    /// declaration is the one without a base list). Duplicate entries are collapsed downstream by
+    /// RegistrationModel.From's Distinct().
+    /// </summary>
+    private static (INamedTypeSymbol Type, MarkerSymbols Markers)? GetDiscoverableType(
+        GeneratorSyntaxContext ctx, CancellationToken cancellationToken)
+    {
+        if (ctx.Node is not TypeDeclarationSyntax cls)
+            return null;
+        if (ctx.SemanticModel.GetDeclaredSymbol(cls, cancellationToken) is not INamedTypeSymbol type)
+            return null;
+        if (!IsClassifiable(type))
+            return null;
+
+        var markers = MarkerSymbols.Resolve(ctx.SemanticModel.Compilation);
+        if (!markers.IsValid)
+            return null;
+        if (markers.ExcludeAttribute is not null && HasAttribute(type, markers.ExcludeAttribute))
+            return null;
+
+        return (type, markers);
     }
 
     private static bool HasAttribute(INamedTypeSymbol type, INamedTypeSymbol attribute) =>
@@ -150,6 +162,20 @@ public static class SemanticModelReader
         List<DiscoveredEntry> entries,
         List<DiagnosticInfo> diagnostics)
     {
+        // A Brighter type declared inside an open generic can't be named with concrete type
+        // arguments at the registration call site, so any registration we emit would reference
+        // unbound type parameters and fail to compile. Surface it as BRGEN006 instead — and bail
+        // before classifying, because building entries for such a type would itself misfire.
+        if (IsNestedInOpenGeneric(type))
+        {
+            if (ImplementsAnyBrighterInterface(type, markers))
+                diagnostics.Add(new DiagnosticInfo(
+                    Diagnostics.NestedInOpenGeneric.Id,
+                    LocationInfo.From(type.Locations.FirstOrDefault()),
+                    FullyQualified(type)));
+            return;
+        }
+
         var seenTransform = false;
         var unsupportedGenericMapperOrTransform = false;
 
@@ -240,6 +266,33 @@ public static class SemanticModelReader
         return true;
     }
 
+    private static bool IsNestedInOpenGeneric(INamedTypeSymbol type)
+    {
+        for (var outer = type.ContainingType; outer is not null; outer = outer.ContainingType)
+        {
+            if (outer.IsGenericType)
+                return true;
+        }
+        return false;
+    }
+
+    private static bool ImplementsAnyBrighterInterface(INamedTypeSymbol type, MarkerSymbols markers)
+    {
+        foreach (var iface in type.AllInterfaces)
+        {
+            if (Same(iface, markers.MessageTransform) || Same(iface, markers.MessageTransformAsync))
+                return true;
+            if (iface.IsGenericType && iface.TypeArguments.Length == 1)
+            {
+                var def = iface.OriginalDefinition;
+                if (Same(def, markers.HandleRequests) || Same(def, markers.HandleRequestsAsync)
+                    || Same(def, markers.MessageMapper) || Same(def, markers.MessageMapperAsync))
+                    return true;
+            }
+        }
+        return false;
+    }
+
     private static string BuildHintName(INamedTypeSymbol containingType, string methodName)
     {
         var raw = containingType.ToDisplayString();
@@ -270,6 +323,8 @@ public static class SemanticModelReader
     private static bool IsOpenGeneric(INamedTypeSymbol type) =>
         type.IsUnboundGenericType || (type.IsGenericType && type.IsDefinition);
 
+    // Only reached for top-level open generics: types nested in an open generic are filtered out
+    // earlier (BRGEN006), so the first '<' here always belongs to the type's own parameter list.
     private static string UnboundGenericName(INamedTypeSymbol type)
     {
         var name = FullyQualified(type);

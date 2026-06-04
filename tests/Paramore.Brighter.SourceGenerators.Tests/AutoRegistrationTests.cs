@@ -140,6 +140,9 @@ public class AutoRegistrationTests
         Assert.Contains(
             single.GeneratedSources,
             g => g.HintName.StartsWith("App_Registrations") && g.HintName.EndsWith("__AddFromThisAssembly.g.cs"));
+
+        // ...and the user is told why the auto class vanished (BRGEN007, info-level).
+        Assert.Contains(single.Diagnostics, d => d.Id == "BRGEN007");
     }
 
     private sealed class StubOptionsProvider : AnalyzerConfigOptionsProvider

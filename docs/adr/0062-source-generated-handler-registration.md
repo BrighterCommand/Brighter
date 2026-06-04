@@ -103,7 +103,11 @@ emitting calls that register every discovered type:
 `[ExcludeFromBrighterRegistration]` opts a single type out. Generic mappers/transforms cannot be
 registered as-is and produce diagnostic `BRGEN005` (warning) rather than being silently dropped.
 Malformed registration methods produce `BRGEN001`–`BRGEN004` (errors), giving the compile-time
-feedback that scanning never could.
+feedback that scanning never could. A Brighter type declared inside an *open generic* type cannot be
+named with concrete type arguments at the registration site, so it is reported as `BRGEN006`
+(warning) instead of emitting code that would not compile. When auto-registration is enabled but a
+manual `[BrighterRegistrations]` method is present, the suppressed auto path is reported as
+`BRGEN007` (info).
 
 Discovery covers both `class` and `record` declarations: handlers must derive from
 `RequestHandler<T>` (so are always classes), but mappers and transforms implement interfaces only

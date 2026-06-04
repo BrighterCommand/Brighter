@@ -56,4 +56,16 @@ public static class Diagnostics
         "Generic message mappers and transforms are not registered",
         "Generic type '{0}' implements a Brighter mapper or transform interface but won't be auto-registered; close the generic, write a non-generic wrapper, or mark it with [ExcludeFromBrighterRegistration]",
         "Brighter", DiagnosticSeverity.Warning, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor NestedInOpenGeneric = new(
+        "BRGEN006",
+        "Types nested in an open generic type are not registered",
+        "Type '{0}' is declared inside an open generic type, so its name cannot be written with concrete type arguments at the registration site; move it out of the open generic type, or mark it with [ExcludeFromBrighterRegistration]",
+        "Brighter", DiagnosticSeverity.Warning, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor AutoRegistrationSuppressed = new(
+        "BRGEN007",
+        "Auto-registration suppressed by a manual registration method",
+        "Brighter auto-registration is enabled but a manual [BrighterRegistrations] method is present, so the generated BrighterAssemblyRegistrations class was not emitted; remove the manual method or set <BrighterAutoRegistration>false</BrighterAutoRegistration>",
+        "Brighter", DiagnosticSeverity.Info, isEnabledByDefault: true);
 }
