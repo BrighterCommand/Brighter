@@ -97,19 +97,23 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
             .ForAttributeWithMetadataName(
                 AttributeName,
                 predicate: static (node, _) => node is MethodDeclarationSyntax,
-                transform: static (ctx, ct) => SemanticModelReader.ReadMethod(ctx, ct));
+                transform: static (ctx, ct) => SemanticModelReader.ReadMethod(ctx, ct))
+            .WithTrackingName(TrackingNames.MethodCandidates);
 
         var discoveryBatches = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: static (node, _) => node is ClassDeclarationSyntax cls && cls.BaseList is not null,
                 transform: static (ctx, ct) => SemanticModelReader.ReadClass(ctx, ct))
             .Where(static batch => !batch.IsEmpty)
-            .Collect();
+            .WithTrackingName(TrackingNames.DiscoveryBatches);
 
-        var discovered = discoveryBatches.Select(static (batches, _) =>
-            FlattenAndSort(batches.Select(static b => b.Entries)));
+        var collectedBatches = discoveryBatches.Collect();
 
-        var discoveryDiagnostics = discoveryBatches.Select(static (batches, _) =>
+        var discovered = collectedBatches.Select(static (batches, _) =>
+            FlattenAndSort(batches.Select(static b => b.Entries)))
+            .WithTrackingName(TrackingNames.DiscoveredEntries);
+
+        var discoveryDiagnostics = collectedBatches.Select(static (batches, _) =>
             new EquatableArray<DiagnosticInfo>(batches.SelectMany(static b => (IEnumerable<DiagnosticInfo>)b.Diagnostics)));
 
         context.RegisterSourceOutput(discoveryDiagnostics, static (spc, diagnostics) =>
@@ -118,7 +122,8 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
                 spc.ReportDiagnostic(ToDiagnostic(info));
         });
 
-        var combined = methodCandidates.Combine(discovered);
+        var combined = methodCandidates.Combine(discovered)
+            .WithTrackingName(TrackingNames.RegistrationInputs);
 
         context.RegisterSourceOutput(combined, static (spc, pair) =>
         {

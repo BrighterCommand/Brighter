@@ -1,16 +1,16 @@
-using System.Collections.Immutable;
+using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Paramore.Brighter.SourceGenerators.Tests;
 
 /// <summary>
-/// Verifies that the incremental pipeline's outputs are cached when an edit doesn't change
-/// the semantically relevant shape of the compilation. These tests exercise the actual
-/// IncrementalStepRunReason values that Roslyn records — the contract that "the same input
-/// produces a cached result" is what determines real-world IDE responsiveness.
+/// Verifies that the incremental pipeline really is incremental: when an edit doesn't change the
+/// semantically relevant shape of the compilation, the model stages must not be re-computed into a
+/// new value. The classic failure is a pipeline value that lost value equality (a record holding a
+/// raw array, or a Roslyn symbol that escaped a transform) — that shows up here as a tracked stage
+/// flipping to <see cref="IncrementalStepRunReason.Modified"/> on an unrelated edit.
 /// </summary>
 public class IncrementalCachingTests
 {
@@ -37,6 +37,14 @@ public class IncrementalCachingTests
         }
         """;
 
+    private static readonly string[] ModelStages =
+    {
+        TrackingNames.MethodCandidates,
+        TrackingNames.DiscoveryBatches,
+        TrackingNames.DiscoveredEntries,
+        TrackingNames.RegistrationInputs,
+    };
+
     private static (GeneratorDriver Driver, Compilation Compilation) RunInitial(string source)
     {
         var references = new[]
@@ -60,41 +68,61 @@ public class IncrementalCachingTests
         return (driver, compilation);
     }
 
-    [Fact]
-    public void UnrelatedSyntaxEdit_CachesAllOutputs()
+    private static IncrementalStepRunReason[] StageReasons(GeneratorRunResult result, string stage) =>
+        result.TrackedSteps.TryGetValue(stage, out var steps)
+            ? steps.SelectMany(s => s.Outputs).Select(o => o.Reason).ToArray()
+            : Array.Empty<IncrementalStepRunReason>();
+
+    private static IncrementalStepRunReason[] OutputReasons(GeneratorRunResult result) =>
+        result.TrackedOutputSteps.SelectMany(kv => kv.Value).SelectMany(s => s.Outputs).Select(o => o.Reason).ToArray();
+
+    private static void AssertNotRecomputed(GeneratorRunResult result, string stage)
     {
-        var (driver, compilation) = RunInitial(UserSource);
-
-        // Touch the source: add a blank line at the bottom. Nothing semantically relevant changes.
-        var edited = compilation.SyntaxTrees.Single();
-        var editedText = edited.GetText().ToString() + "\n// trailing comment\n";
-        var newCompilation = compilation
-            .ReplaceSyntaxTree(edited, CSharpSyntaxTree.ParseText(editedText));
-
-        driver = driver.RunGenerators(newCompilation);
-
-        var runResult = driver.GetRunResult();
-        var stepReasons = runResult.Results
-            .Single()
-            .TrackedOutputSteps
-            .SelectMany(kv => kv.Value)
-            .SelectMany(step => step.Outputs)
-            .Select(output => output.Reason)
-            .ToArray();
-
-        Assert.NotEmpty(stepReasons);
-        Assert.All(stepReasons, reason =>
-            Assert.True(
-                reason is IncrementalStepRunReason.Cached or IncrementalStepRunReason.Unchanged,
-                $"Expected Cached or Unchanged but got {reason}"));
+        var reasons = StageReasons(result, stage);
+        Assert.NotEmpty(reasons);
+        Assert.All(reasons, reason => Assert.True(
+            reason is IncrementalStepRunReason.Cached or IncrementalStepRunReason.Unchanged,
+            $"Stage '{stage}' was {reason}; expected Cached or Unchanged. " +
+            "A Modified/New here means a pipeline value lost its value equality."));
     }
 
     [Fact]
-    public void AddingUnrelatedClass_CachesRegistrationOutput()
+    public void UnrelatedSyntaxEdit_ModelStagesAreNotInvalidated()
     {
         var (driver, compilation) = RunInitial(UserSource);
 
-        // Add a completely unrelated class in a new tree — nothing implementing handler/mapper.
+        // Touch the source: append a trailing comment. Nothing semantically relevant changes, so
+        // the transforms may re-run but must produce equal values (Unchanged), and everything
+        // downstream of the Collect must stay Cached.
+        var tree = compilation.SyntaxTrees.Single();
+        var newCompilation = compilation.ReplaceSyntaxTree(
+            tree, CSharpSyntaxTree.ParseText(tree.GetText().ToString() + "\n// trailing comment\n"));
+
+        var result = driver.RunGenerators(newCompilation).GetRunResult().Results.Single();
+
+        foreach (var stage in ModelStages)
+            AssertNotRecomputed(result, stage);
+
+        // Stages downstream of the Collect see an unchanged collected input, so they are fully
+        // cached (never even re-executed). This is the strongest guarantee that equality held.
+        Assert.All(StageReasons(result, TrackingNames.DiscoveredEntries),
+            r => Assert.Equal(IncrementalStepRunReason.Cached, r));
+        Assert.All(StageReasons(result, TrackingNames.RegistrationInputs),
+            r => Assert.Equal(IncrementalStepRunReason.Cached, r));
+
+        // And no generated output is regenerated.
+        Assert.All(OutputReasons(result), r => Assert.True(
+            r is IncrementalStepRunReason.Cached or IncrementalStepRunReason.Unchanged,
+            $"A source output was {r}; expected Cached or Unchanged."));
+    }
+
+    [Fact]
+    public void AddingUnrelatedClass_DoesNotInvalidateRegistration()
+    {
+        var (driver, compilation) = RunInitial(UserSource);
+
+        // A new file with a class that implements no Brighter interface contributes zero entries,
+        // so the discovered-entries list — and therefore the registration — is unchanged.
         var newTree = CSharpSyntaxTree.ParseText("""
             namespace App.Other;
 
@@ -103,43 +131,22 @@ public class IncrementalCachingTests
                 public int X { get; set; }
             }
             """);
-        var newCompilation = compilation.AddSyntaxTrees(newTree);
+        var result = driver.RunGenerators(compilation.AddSyntaxTrees(newTree)).GetRunResult().Results.Single();
 
-        driver = driver.RunGenerators(newCompilation);
-
-        var runResult = driver.GetRunResult();
-        var allReasons = runResult.Results
-            .Single()
-            .TrackedSteps
-            .SelectMany(kv => kv.Value)
-            .SelectMany(step => step.Outputs)
-            .Select(output => output.Reason)
-            .ToArray();
-
-        // The new class adds a fresh "ReadClass" run (New), but downstream of FlattenAndSort the
-        // discovered list must be Unchanged because the new class produces zero entries.
-        Assert.Contains(IncrementalStepRunReason.Unchanged, allReasons);
-
-        // And the final generated source step shouldn't be Modified.
-        var sourceReasons = runResult.Results
-            .Single()
-            .TrackedOutputSteps
-            .SelectMany(kv => kv.Value)
-            .SelectMany(step => step.Outputs)
-            .Select(o => o.Reason)
-            .ToArray();
-        Assert.All(sourceReasons, reason =>
-            Assert.True(
-                reason is IncrementalStepRunReason.Cached or IncrementalStepRunReason.Unchanged,
-                $"Expected Cached or Unchanged for output step but got {reason}"));
+        AssertNotRecomputed(result, TrackingNames.DiscoveredEntries);
+        AssertNotRecomputed(result, TrackingNames.RegistrationInputs);
+        Assert.All(OutputReasons(result), r => Assert.True(
+            r is IncrementalStepRunReason.Cached or IncrementalStepRunReason.Unchanged,
+            $"A source output was {r}; expected Cached or Unchanged."));
     }
 
     [Fact]
-    public void AddingNewHandler_RegeneratesRegistrationOutput()
+    public void AddingNewHandler_InvalidatesRegistration()
     {
         var (driver, compilation) = RunInitial(UserSource);
 
-        // Add a NEW handler in a separate file. This must invalidate the output.
+        // Adding a real handler must flow through to a regenerated registration — the positive
+        // control proving the cache invalidates when it genuinely should.
         var newTree = CSharpSyntaxTree.ParseText("""
             using Paramore.Brighter;
 
@@ -155,24 +162,12 @@ public class IncrementalCachingTests
                 public override OtherCommand Handle(OtherCommand command) => base.Handle(command);
             }
             """);
-        var newCompilation = compilation.AddSyntaxTrees(newTree);
+        var result = driver.RunGenerators(compilation.AddSyntaxTrees(newTree)).GetRunResult().Results.Single();
 
-        driver = driver.RunGenerators(newCompilation);
+        Assert.Contains(IncrementalStepRunReason.Modified, StageReasons(result, TrackingNames.DiscoveredEntries));
+        Assert.Contains(IncrementalStepRunReason.Modified, OutputReasons(result));
 
-        var runResult = driver.GetRunResult();
-        var sourceReasons = runResult.Results
-            .Single()
-            .TrackedOutputSteps
-            .SelectMany(kv => kv.Value)
-            .SelectMany(step => step.Outputs)
-            .Select(o => o.Reason)
-            .ToArray();
-
-        // At least one source output must be Modified (the registration file).
-        Assert.Contains(IncrementalStepRunReason.Modified, sourceReasons);
-
-        // And the generated source itself must mention the new handler.
-        var generated = runResult.Results.Single().GeneratedSources
+        var generated = result.GeneratedSources
             .First(gs => gs.HintName.EndsWith("__AddFromThisAssembly.g.cs"))
             .SourceText.ToString();
         Assert.Contains("global::App.OtherHandler", generated);
