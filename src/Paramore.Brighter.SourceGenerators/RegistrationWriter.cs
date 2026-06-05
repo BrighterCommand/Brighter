@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.IO;
+using System.Linq;
 using System.Text;
 using Paramore.Brighter.SourceGenerators.Model;
 
@@ -90,14 +91,9 @@ public static class RegistrationWriter
 
     private static string ContainingTypeDeclaration(RegistrationModel model)
     {
-        var typeKeyword = (model.ContainingTypeIsStatic, model.IsPartial) switch
-        {
-            (true, true) => "static partial class",
-            (true, false) => "static class",
-            (false, true) => "partial class",
-            (false, false) => "class",
-        };
-        return $"{model.ContainingTypeAccessibility} {typeKeyword} {model.ContainingTypeName}";
+        var modifiers = (model.ContainingTypeIsStatic ? "static " : string.Empty)
+            + (model.IsPartial ? "partial " : string.Empty);
+        return $"{model.ContainingTypeAccessibility} {modifiers}class {model.ContainingTypeName}";
     }
 
     private static string MethodSignature(RegistrationModel model)
@@ -124,37 +120,37 @@ public static class RegistrationWriter
 
         var callbackMethod = isAsync ? "AsyncHandlers" : "Handlers";
         var registerMethod = isAsync ? "RegisterAsync" : "Register";
-        var hasOpenGeneric = false;
-        foreach (var entry in entries)
-        {
-            if (entry.IsOpenGeneric) { hasOpenGeneric = true; break; }
-        }
 
         code.WriteLine($"{paramName}.{callbackMethod}(r =>");
         code.StartBlock();
+        WriteClosedHandlers(code, registerMethod, entries);
+        WriteOpenGenericHandlers(code, entries);
+        code.EndBlock(");");
+    }
 
-        // For closed-generic handlers, use the strongly-typed Register<TRequest, TImpl>() method
-        // available on the public interface — no implementation cast needed.
+    // For closed-generic handlers, use the strongly-typed Register<TRequest, TImpl>() method
+    // available on the public interface — no implementation cast needed.
+    private static void WriteClosedHandlers(CodeWriter code, string registerMethod, EquatableArray<HandlerEntry> entries)
+    {
         foreach (var entry in entries)
         {
             if (entry.IsOpenGeneric) continue;
             code.WriteLine($"r.{registerMethod}<{entry.RequestTypeFullyQualified}, {entry.HandlerTypeFullyQualified}>();");
         }
+    }
 
-        // Open-generic handlers need EnsureHandlerIsRegistered, which only exists on the DI
-        // extension's concrete ServiceCollectionSubscriberRegistry. Emit the cast only when at
-        // least one open generic is present, so the common case stays interface-only.
-        if (hasOpenGeneric)
-        {
-            code.WriteLine("var registry = (global::Paramore.Brighter.Extensions.DependencyInjection.ServiceCollectionSubscriberRegistry)r;");
-            foreach (var entry in entries)
-            {
-                if (!entry.IsOpenGeneric) continue;
-                code.WriteLine($"registry.EnsureHandlerIsRegistered(typeof({entry.HandlerTypeFullyQualified}));");
-            }
-        }
+    // Open-generic handlers need EnsureHandlerIsRegistered, which only exists on the DI extension's
+    // concrete ServiceCollectionSubscriberRegistry. Emit the cast only when at least one open generic
+    // is present, so the common case stays interface-only.
+    private static void WriteOpenGenericHandlers(CodeWriter code, EquatableArray<HandlerEntry> entries)
+    {
+        var openGenerics = entries.Where(static e => e.IsOpenGeneric).ToList();
+        if (openGenerics.Count == 0)
+            return;
 
-        code.EndBlock(");");
+        code.WriteLine("var registry = (global::Paramore.Brighter.Extensions.DependencyInjection.ServiceCollectionSubscriberRegistry)r;");
+        foreach (var entry in openGenerics)
+            code.WriteLine($"registry.EnsureHandlerIsRegistered(typeof({entry.HandlerTypeFullyQualified}));");
     }
 
     private static void WriteMappers(

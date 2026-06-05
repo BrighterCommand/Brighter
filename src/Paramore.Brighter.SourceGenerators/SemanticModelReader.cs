@@ -200,6 +200,8 @@ public static class SemanticModelReader
         }
     }
 
+    private enum BrighterInterfaceKind { None, SyncHandler, AsyncHandler, Mapper, AsyncMapper, Transform }
+
     private static DiscoveredEntry? TryClassifyInterface(
         INamedTypeSymbol type,
         INamedTypeSymbol iface,
@@ -207,43 +209,62 @@ public static class SemanticModelReader
         ref bool seenTransform,
         ref bool unsupportedGenericMapperOrTransform)
     {
+        switch (ClassifyInterface(iface, markers, out var requestType))
+        {
+            case BrighterInterfaceKind.Transform:
+                if (type.IsGenericType) unsupportedGenericMapperOrTransform = true;
+                else seenTransform = true;
+                return null;
+            case BrighterInterfaceKind.SyncHandler:
+                return MakeHandlerEntry(DiscoveredKind.SyncHandler, type, requestType!);
+            case BrighterInterfaceKind.AsyncHandler:
+                return MakeHandlerEntry(DiscoveredKind.AsyncHandler, type, requestType!);
+            case BrighterInterfaceKind.Mapper:
+                return MakeMapperEntry(DiscoveredKind.Mapper, type, requestType!, ref unsupportedGenericMapperOrTransform);
+            case BrighterInterfaceKind.AsyncMapper:
+                return MakeMapperEntry(DiscoveredKind.AsyncMapper, type, requestType!, ref unsupportedGenericMapperOrTransform);
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>Classify a single interface the type implements as a Brighter role (or None).</summary>
+    private static BrighterInterfaceKind ClassifyInterface(INamedTypeSymbol iface, MarkerSymbols markers, out ITypeSymbol? requestType)
+    {
+        requestType = null;
         if (Same(iface, markers.MessageTransform) || Same(iface, markers.MessageTransformAsync))
-        {
-            if (type.IsGenericType)
-                unsupportedGenericMapperOrTransform = true;
-            else
-                seenTransform = true;
-            return null;
-        }
-
+            return BrighterInterfaceKind.Transform;
         if (!iface.IsGenericType || iface.TypeArguments.Length != 1)
-            return null;
+            return BrighterInterfaceKind.None;
 
-        var def = iface.OriginalDefinition;
-        var requestType = iface.TypeArguments[0];
+        requestType = iface.TypeArguments[0];
+        return GenericInterfaceKind(iface.OriginalDefinition, markers);
+    }
 
-        if (Same(def, markers.HandleRequests))
-            return MakeHandlerEntry(DiscoveredKind.SyncHandler, type, requestType);
-        if (Same(def, markers.HandleRequestsAsync))
-            return MakeHandlerEntry(DiscoveredKind.AsyncHandler, type, requestType);
-        if (Same(def, markers.MessageMapper))
-        {
-            if (type.IsGenericType) { unsupportedGenericMapperOrTransform = true; return null; }
-            return new DiscoveredEntry(DiscoveredKind.Mapper, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
-        }
-        if (Same(def, markers.MessageMapperAsync))
-        {
-            if (type.IsGenericType) { unsupportedGenericMapperOrTransform = true; return null; }
-            return new DiscoveredEntry(DiscoveredKind.AsyncMapper, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
-        }
-
-        return null;
+    private static BrighterInterfaceKind GenericInterfaceKind(INamedTypeSymbol def, MarkerSymbols markers)
+    {
+        if (Same(def, markers.HandleRequests)) return BrighterInterfaceKind.SyncHandler;
+        if (Same(def, markers.HandleRequestsAsync)) return BrighterInterfaceKind.AsyncHandler;
+        if (Same(def, markers.MessageMapper)) return BrighterInterfaceKind.Mapper;
+        if (Same(def, markers.MessageMapperAsync)) return BrighterInterfaceKind.AsyncMapper;
+        return BrighterInterfaceKind.None;
     }
 
     private static DiscoveredEntry MakeHandlerEntry(DiscoveredKind kind, INamedTypeSymbol type, ITypeSymbol requestType)
     {
         if (IsOpenGeneric(type))
             return new DiscoveredEntry(kind, string.Empty, UnboundGenericName(type), IsOpenGeneric: true);
+        return new DiscoveredEntry(kind, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
+    }
+
+    private static DiscoveredEntry? MakeMapperEntry(
+        DiscoveredKind kind, INamedTypeSymbol type, ITypeSymbol requestType, ref bool unsupportedGenericMapperOrTransform)
+    {
+        if (type.IsGenericType)
+        {
+            unsupportedGenericMapperOrTransform = true;
+            return null;
+        }
         return new DiscoveredEntry(kind, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
     }
 
@@ -276,22 +297,8 @@ public static class SemanticModelReader
         return false;
     }
 
-    private static bool ImplementsAnyBrighterInterface(INamedTypeSymbol type, MarkerSymbols markers)
-    {
-        foreach (var iface in type.AllInterfaces)
-        {
-            if (Same(iface, markers.MessageTransform) || Same(iface, markers.MessageTransformAsync))
-                return true;
-            if (iface.IsGenericType && iface.TypeArguments.Length == 1)
-            {
-                var def = iface.OriginalDefinition;
-                if (Same(def, markers.HandleRequests) || Same(def, markers.HandleRequestsAsync)
-                    || Same(def, markers.MessageMapper) || Same(def, markers.MessageMapperAsync))
-                    return true;
-            }
-        }
-        return false;
-    }
+    private static bool ImplementsAnyBrighterInterface(INamedTypeSymbol type, MarkerSymbols markers) =>
+        type.AllInterfaces.Any(iface => ClassifyInterface(iface, markers, out _) != BrighterInterfaceKind.None);
 
     private static string BuildHintName(INamedTypeSymbol containingType, string methodName)
     {
@@ -338,14 +345,16 @@ public static class SemanticModelReader
     private static bool Same(ISymbol? a, ISymbol? b) =>
         SymbolEqualityComparer.Default.Equals(a, b);
 
-    private static string AccessibilityModifier(Accessibility accessibility) => accessibility switch
+    private static readonly Dictionary<Accessibility, string> s_accessibilityModifiers = new()
     {
-        Accessibility.Public => "public",
-        Accessibility.Internal => "internal",
-        Accessibility.Private => "private",
-        Accessibility.Protected => "protected",
-        Accessibility.ProtectedOrInternal => "protected internal",
-        Accessibility.ProtectedAndInternal => "private protected",
-        _ => "internal"
+        [Accessibility.Public] = "public",
+        [Accessibility.Internal] = "internal",
+        [Accessibility.Private] = "private",
+        [Accessibility.Protected] = "protected",
+        [Accessibility.ProtectedOrInternal] = "protected internal",
+        [Accessibility.ProtectedAndInternal] = "private protected",
     };
+
+    private static string AccessibilityModifier(Accessibility accessibility) =>
+        s_accessibilityModifiers.TryGetValue(accessibility, out var modifier) ? modifier : "internal";
 }

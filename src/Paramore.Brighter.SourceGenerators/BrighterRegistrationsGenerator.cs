@@ -184,7 +184,9 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(autoInputs, static (spc, pair) =>
         {
             var (((enabled, available), entries), hasManual) = pair;
-            if (!enabled || !available)
+            if (!enabled)
+                return;
+            if (!available)
                 return;
 
             // A hand-written [BrighterRegistrations] method takes precedence; tell the user why the
