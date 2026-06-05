@@ -181,9 +181,11 @@ public static class SemanticModelReader
 
         foreach (var iface in type.AllInterfaces)
         {
-            var entry = TryClassifyInterface(type, iface, markers, ref seenTransform, ref unsupportedGenericMapperOrTransform);
+            var (entry, isTransform, isUnsupported) = TryClassifyInterface(type, iface, markers);
             if (entry is not null)
                 entries.Add(entry);
+            seenTransform |= isTransform;
+            unsupportedGenericMapperOrTransform |= isUnsupported;
         }
 
         // seenTransform is only set on the non-generic branch, so it already implies !IsGenericType.
@@ -202,29 +204,27 @@ public static class SemanticModelReader
 
     private enum BrighterInterfaceKind { None, SyncHandler, AsyncHandler, Mapper, AsyncMapper, Transform }
 
-    private static DiscoveredEntry? TryClassifyInterface(
+    // Returns the discovered entry (if any) plus flags the caller folds into its running state, so
+    // the per-interface classification stays a pure function of (type, iface) with no ref plumbing.
+    private static (DiscoveredEntry? Entry, bool IsTransform, bool IsUnsupportedGeneric) TryClassifyInterface(
         INamedTypeSymbol type,
         INamedTypeSymbol iface,
-        MarkerSymbols markers,
-        ref bool seenTransform,
-        ref bool unsupportedGenericMapperOrTransform)
+        MarkerSymbols markers)
     {
         switch (ClassifyInterface(iface, markers, out var requestType))
         {
             case BrighterInterfaceKind.Transform:
-                if (type.IsGenericType) unsupportedGenericMapperOrTransform = true;
-                else seenTransform = true;
-                return null;
+                return type.IsGenericType ? (null, false, true) : (null, true, false);
             case BrighterInterfaceKind.SyncHandler:
-                return MakeHandlerEntry(DiscoveredKind.SyncHandler, type, requestType!);
+                return (MakeHandlerEntry(DiscoveredKind.SyncHandler, type, requestType!), false, false);
             case BrighterInterfaceKind.AsyncHandler:
-                return MakeHandlerEntry(DiscoveredKind.AsyncHandler, type, requestType!);
+                return (MakeHandlerEntry(DiscoveredKind.AsyncHandler, type, requestType!), false, false);
             case BrighterInterfaceKind.Mapper:
-                return MakeMapperEntry(DiscoveredKind.Mapper, type, requestType!, ref unsupportedGenericMapperOrTransform);
+                return MapperClassification(DiscoveredKind.Mapper, type, requestType!);
             case BrighterInterfaceKind.AsyncMapper:
-                return MakeMapperEntry(DiscoveredKind.AsyncMapper, type, requestType!, ref unsupportedGenericMapperOrTransform);
+                return MapperClassification(DiscoveredKind.AsyncMapper, type, requestType!);
             default:
-                return null;
+                return (null, false, false);
         }
     }
 
@@ -257,16 +257,11 @@ public static class SemanticModelReader
         return new DiscoveredEntry(kind, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
     }
 
-    private static DiscoveredEntry? MakeMapperEntry(
-        DiscoveredKind kind, INamedTypeSymbol type, ITypeSymbol requestType, ref bool unsupportedGenericMapperOrTransform)
-    {
-        if (type.IsGenericType)
-        {
-            unsupportedGenericMapperOrTransform = true;
-            return null;
-        }
-        return new DiscoveredEntry(kind, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
-    }
+    private static (DiscoveredEntry? Entry, bool IsTransform, bool IsUnsupportedGeneric) MapperClassification(
+        DiscoveredKind kind, INamedTypeSymbol type, ITypeSymbol requestType) =>
+        type.IsGenericType
+            ? (null, false, true)
+            : (new DiscoveredEntry(kind, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false), false, false);
 
     private static bool IsClassifiable(INamedTypeSymbol type)
     {

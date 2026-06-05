@@ -78,6 +78,9 @@ public class BrighterRegistrationsGeneratorTests
             {
                 r.Register<global::App.GreetingCommand, global::App.GreetingHandler>();
             });
+            builder.MapperRegistry(r =>
+            {
+            });
             """));
 
         await test.RunAsync();
@@ -113,7 +116,11 @@ public class BrighterRegistrationsGeneratorTests
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
         test.TestState.GeneratedSources.Add(AttributeFile());
-        test.TestState.GeneratedSources.Add(Registration(""));
+        test.TestState.GeneratedSources.Add(Registration("""
+            builder.MapperRegistry(r =>
+            {
+            });
+            """));
 
         await test.RunAsync();
     }
@@ -150,6 +157,9 @@ public class BrighterRegistrationsGeneratorTests
             builder.AsyncHandlers(r =>
             {
                 r.RegisterAsync<global::App.GreetingCommand, global::App.GreetingHandler>();
+            });
+            builder.MapperRegistry(r =>
+            {
             });
             """));
 
@@ -261,6 +271,9 @@ public class BrighterRegistrationsGeneratorTests
             {
                 r.Register<global::App.GreetingCommand, global::App.SplitHandler>();
             });
+            builder.MapperRegistry(r =>
+            {
+            });
             """));
 
         await test.RunAsync();
@@ -302,7 +315,11 @@ public class BrighterRegistrationsGeneratorTests
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
         test.TestState.GeneratedSources.Add(AttributeFile());
-        test.TestState.GeneratedSources.Add(Registration(""));
+        test.TestState.GeneratedSources.Add(Registration("""
+            builder.MapperRegistry(r =>
+            {
+            });
+            """));
 
         await test.RunAsync();
     }
@@ -335,7 +352,11 @@ public class BrighterRegistrationsGeneratorTests
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
         test.TestState.GeneratedSources.Add(AttributeFile());
-        test.TestState.GeneratedSources.Add(Registration(""));
+        test.TestState.GeneratedSources.Add(Registration("""
+            builder.MapperRegistry(r =>
+            {
+            });
+            """));
         test.TestState.ExpectedDiagnostics.Add(
             DiagnosticResult.CompilerWarning("BRGEN005").WithSpan(8, 14, 8, 24).WithArguments("global::App.OpenMapper<T>"));
 
@@ -535,6 +556,9 @@ public class BrighterRegistrationsGeneratorTests
             {
                 r.Register<global::App.GreetingCommand, global::App.SplitHandler>();
             });
+            builder.MapperRegistry(r =>
+            {
+            });
             """));
 
         await test.RunAsync();
@@ -597,6 +621,12 @@ public class BrighterRegistrationsGeneratorTests
                 public IRequestContext? Context { get; set; }
                 public Message MapToMessage(GreetingEvent request, Publication publication) => new();
                 public GreetingEvent MapToRequest(Message message) => new();
+            }
+
+            public static partial class Registrations
+            {
+                [BrighterRegistrations]
+                public static partial IBrighterBuilder AddFromThisAssembly(this IBrighterBuilder builder);
             }
             """,
             """

@@ -184,7 +184,12 @@ These are accepted gaps, tracked rather than fixed in this change:
 - **Roslyn version floor.** The generator references `Microsoft.CodeAnalysis.CSharp` at the
   repo-pinned version. Since a generator's referenced Roslyn version sets the *minimum* compiler/SDK
   a consumer needs, before packaging it should be pinned to the lowest version providing the APIs
-  used (`ForAttributeWithMetadataName`, 4.3.1+) to maximise the range of consuming SDKs.
+  used (`ForAttributeWithMetadataName`, 4.3.1+) to maximise the range of consuming SDKs. Note this
+  pin is entangled with diagnostics: pinning to 4.3.1 pulls in an older
+  `Microsoft.CodeAnalysis.Analyzers` whose `RS2002` requires the `BRGEN0xx` IDs to be declared on a
+  `DiagnosticAnalyzer.SupportedDiagnostics`, which an `IIncrementalGenerator` has no equivalent of —
+  so the floor pin must be done together with resolving that (e.g. a companion analyzer declaring
+  the descriptors, or suppressing `RS2002`).
 - **Public surface.** The reader/writer/model types are `public` for testability; for a
   dev-dependency generator they could be `internal` + `InternalsVisibleTo`. Harmless either way.
 

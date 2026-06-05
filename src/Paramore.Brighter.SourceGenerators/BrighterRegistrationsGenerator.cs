@@ -123,8 +123,31 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
             new EquatableArray<DiagnosticInfo>(
                 batches.SelectMany(static b => (IEnumerable<DiagnosticInfo>)b.Diagnostics).Distinct()));
 
-        context.RegisterSourceOutput(discoveryDiagnostics, static (spc, diagnostics) =>
+        // True when the compilation hand-writes at least one valid [BrighterRegistrations] method.
+        // Used to suppress the auto class so the two paths can't both register (double registration,
+        // or an ambiguous AddFromThisAssembly call when the manual method shares the name).
+        var hasManualRegistration = methodCandidates
+            .Collect()
+            .Select(static (candidates, _) => candidates.Any(static c => c.Method is not null));
+
+        var autoEnabled = context.AnalyzerConfigOptionsProvider
+            .Select(static (provider, _) =>
+                provider.GlobalOptions.TryGetValue(AutoRegistrationProperty, out var v)
+                && bool.TryParse(v, out var b)
+                && b);
+
+        // The generator only emits registrations when auto-registration is on or a manual method is
+        // present. Gate discovery diagnostics (BRGEN005/006) on that, so a transitive analyzer
+        // reference that generates nothing doesn't warn about the consumer's generic /
+        // nested-in-open-generic types.
+        var generatorActive = autoEnabled.Combine(hasManualRegistration)
+            .Select(static (pair, _) => pair.Left || pair.Right);
+
+        context.RegisterSourceOutput(discoveryDiagnostics.Combine(generatorActive), static (spc, pair) =>
         {
+            var (diagnostics, active) = pair;
+            if (!active)
+                return;
             foreach (var info in diagnostics)
                 spc.ReportDiagnostic(ToDiagnostic(info));
         });
@@ -149,14 +172,7 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
             spc.AddSource(model.HintName, SourceText.From(RegistrationWriter.Write(model), Encoding.UTF8));
         });
 
-        // True when the compilation hand-writes at least one valid [BrighterRegistrations] method.
-        // Used to suppress the auto class so the two paths can't both register (double registration,
-        // or an ambiguous AddFromThisAssembly call when the manual method shares the name).
-        var hasManualRegistration = methodCandidates
-            .Collect()
-            .Select(static (candidates, _) => candidates.Any(static c => c.Method is not null));
-
-        RegisterAutoRegistration(context, discovered, hasManualRegistration);
+        RegisterAutoRegistration(context, discovered, autoEnabled, hasManualRegistration);
     }
 
     /// <summary>
@@ -168,14 +184,9 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
     private static void RegisterAutoRegistration(
         IncrementalGeneratorInitializationContext context,
         IncrementalValueProvider<EquatableArray<DiscoveredEntry>> discovered,
+        IncrementalValueProvider<bool> autoEnabled,
         IncrementalValueProvider<bool> hasManualRegistration)
     {
-        var autoEnabled = context.AnalyzerConfigOptionsProvider
-            .Select(static (provider, _) =>
-                provider.GlobalOptions.TryGetValue(AutoRegistrationProperty, out var v)
-                && bool.TryParse(v, out var b)
-                && b);
-
         var brighterAvailable = context.CompilationProvider
             .Select(static (c, _) => MarkerSymbols.Resolve(c).IsValid);
 

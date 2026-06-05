@@ -145,6 +145,40 @@ public class AutoRegistrationTests
         Assert.Contains(single.Diagnostics, d => d.Id == "BRGEN007");
     }
 
+    [Fact]
+    public void PropertyTrue_WithInvalidManualMethod_StillGeneratesAutoClass()
+    {
+        // Only a *valid* [BrighterRegistrations] method suppresses the auto class; an invalid one
+        // (which produces its own BRGEN diagnostic and no implementation) does not.
+        const string source = """
+            using Paramore.Brighter;
+            using Paramore.Brighter.Extensions.DependencyInjection;
+
+            namespace App;
+
+            public class GreetingCommand : Command
+            {
+                public GreetingCommand() : base(System.Guid.NewGuid()) { }
+            }
+
+            public class GreetingHandler : RequestHandler<GreetingCommand>
+            {
+                public override GreetingCommand Handle(GreetingCommand command) => base.Handle(command);
+            }
+
+            public static partial class Registrations
+            {
+                [BrighterRegistrations]
+                public static partial void NotAValidSignature();
+            }
+            """;
+        var single = Run(source, "true").Results.Single();
+
+        Assert.Contains(
+            single.GeneratedSources,
+            g => g.HintName == "BrighterAssemblyRegistrations__AddFromThisAssembly.g.cs");
+    }
+
     private sealed class StubOptionsProvider : AnalyzerConfigOptionsProvider
     {
         private readonly StubOptions _global;

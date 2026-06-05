@@ -148,7 +148,7 @@ public static class RegistrationWriter
         if (openGenerics.Count == 0)
             return;
 
-        code.WriteLine("var registry = (global::Paramore.Brighter.Extensions.DependencyInjection.ServiceCollectionSubscriberRegistry)r;");
+        code.WriteLine("var registry = r as global::Paramore.Brighter.Extensions.DependencyInjection.ServiceCollectionSubscriberRegistry ?? throw new global::System.InvalidOperationException(\"Open-generic handler registration requires Brighter's DI ServiceCollectionSubscriberRegistry.\");");
         foreach (var entry in openGenerics)
             code.WriteLine($"registry.EnsureHandlerIsRegistered(typeof({entry.HandlerTypeFullyQualified}));");
     }
@@ -159,9 +159,9 @@ public static class RegistrationWriter
         EquatableArray<MapperEntry> sync,
         EquatableArray<MapperEntry> async)
     {
-        if (sync.Count == 0 && async.Count == 0)
-            return;
-
+        // Always emit MapperRegistry, even with no discovered mappers: the call registers Brighter's
+        // default message mapper (EnsureDefaultMessageMapperIsRegistered), matching the parity goal
+        // with AutoFromAssemblies, which would otherwise be lost on a handlers-only assembly.
         code.WriteLine($"{paramName}.MapperRegistry(r =>");
         code.StartBlock();
 

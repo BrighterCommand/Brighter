@@ -49,8 +49,10 @@ public class RegistrationWriterTests
         Assert.Contains("public static partial global::Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder AddFromThisAssembly(this global::Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder builder)", output);
         Assert.Contains("return builder;", output);
         Assert.DoesNotContain(".Handlers(", output);
-        Assert.DoesNotContain(".MapperRegistry(", output);
         Assert.DoesNotContain(".Transforms(", output);
+        // MapperRegistry is always emitted so the default message mapper is registered, matching
+        // AutoFromAssemblies even when no mappers are discovered.
+        Assert.Contains("builder.MapperRegistry(r =>", output);
     }
 
     [Fact]
@@ -78,7 +80,7 @@ public class RegistrationWriterTests
 
         var output = RegistrationWriter.Write(model);
 
-        Assert.Contains("var registry = (global::Paramore.Brighter.Extensions.DependencyInjection.ServiceCollectionSubscriberRegistry)r;", output);
+        Assert.Contains("var registry = r as global::Paramore.Brighter.Extensions.DependencyInjection.ServiceCollectionSubscriberRegistry ?? throw new global::System.InvalidOperationException(", output);
         Assert.Contains("registry.EnsureHandlerIsRegistered(typeof(global::MyApp.PolicyHandler<>));", output);
     }
 
@@ -95,9 +97,9 @@ public class RegistrationWriterTests
 
         Assert.Contains("r.Register<global::MyApp.GreetingCommand, global::MyApp.GreetingCommandHandler>();", output);
         Assert.Contains("registry.EnsureHandlerIsRegistered(typeof(global::MyApp.PolicyHandler<>));", output);
-        // Cast appears exactly once.
-        var castOccurrences = output.Split(new[] { "ServiceCollectionSubscriberRegistry)r" }, System.StringSplitOptions.None).Length - 1;
-        Assert.Equal(1, castOccurrences);
+        // The registry is resolved exactly once, even with multiple open generics.
+        var registryResolves = output.Split(new[] { "var registry =" }, System.StringSplitOptions.None).Length - 1;
+        Assert.Equal(1, registryResolves);
     }
 
     [Fact]

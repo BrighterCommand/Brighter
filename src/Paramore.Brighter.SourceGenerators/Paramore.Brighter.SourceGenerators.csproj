@@ -16,6 +16,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!--
+      A source generator is loaded by the CONSUMER's compiler, so it only runs where Roslyn is at
+      least the version it was built against; before shipping, this should be pinned down to the
+      lowest version providing the APIs we use (ForAttributeWithMetadataName, 4.3.1) to maximise the
+      range of consuming SDKs. Deferred with packaging (see ADR 0062): pinning to 4.3.1 also pulls
+      in an older Microsoft.CodeAnalysis.Analyzers whose RS2002 requires the BRGEN diagnostics to be
+      declared on a DiagnosticAnalyzer, which a generator does not have — that needs sorting too.
+    -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
   </ItemGroup>
 
