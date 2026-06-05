@@ -260,11 +260,7 @@ public static class SemanticModelReader
     {
         if (type.TypeKind != TypeKind.Class)
             return false;
-        if (type.IsAbstract)
-            return false;
-        if (type.IsImplicitClass)
-            return false;
-        if (type.IsAnonymousType)
+        if (type.IsAbstract || type.IsImplicitClass || type.IsAnonymousType)
             return false;
         return IsReachableFromGeneratedCode(type);
     }
@@ -353,16 +349,14 @@ public static class SemanticModelReader
     private static bool Same(ISymbol? a, ISymbol? b) =>
         SymbolEqualityComparer.Default.Equals(a, b);
 
-    private static readonly Dictionary<Accessibility, string> s_accessibilityModifiers = new()
+    private static string AccessibilityModifier(Accessibility accessibility) => accessibility switch
     {
-        [Accessibility.Public] = "public",
-        [Accessibility.Internal] = "internal",
-        [Accessibility.Private] = "private",
-        [Accessibility.Protected] = "protected",
-        [Accessibility.ProtectedOrInternal] = "protected internal",
-        [Accessibility.ProtectedAndInternal] = "private protected",
+        Accessibility.Public => "public",
+        Accessibility.Internal => "internal",
+        Accessibility.Private => "private",
+        Accessibility.Protected => "protected",
+        Accessibility.ProtectedOrInternal => "protected internal",
+        Accessibility.ProtectedAndInternal => "private protected",
+        _ => "internal"
     };
-
-    private static string AccessibilityModifier(Accessibility accessibility) =>
-        s_accessibilityModifiers.TryGetValue(accessibility, out var modifier) ? modifier : "internal";
 }
