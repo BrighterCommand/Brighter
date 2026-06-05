@@ -169,7 +169,7 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
                 return;
 
             var model = RegistrationModel.From(candidate.Method, entries);
-            spc.AddSource(model.HintName, SourceText.From(RegistrationWriter.Write(model), Encoding.UTF8));
+            spc.AddSource(model.Target.HintName, SourceText.From(RegistrationWriter.Write(model), Encoding.UTF8));
         });
 
         RegisterAutoRegistration(context, discovered, autoEnabled, hasManualRegistration);
@@ -210,7 +210,7 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
 
             var target = BuildAutoTarget();
             var model = RegistrationModel.From(target, entries);
-            spc.AddSource(model.HintName, SourceText.From(RegistrationWriter.Write(model), Encoding.UTF8));
+            spc.AddSource(model.Target.HintName, SourceText.From(RegistrationWriter.Write(model), Encoding.UTF8));
         });
     }
 
@@ -247,14 +247,18 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
         info.Location?.ToLocation() ?? Location.None,
         info.Argument);
 
-    private static DiagnosticDescriptor DescriptorFor(string id) => id switch
+    private static readonly Dictionary<string, DiagnosticDescriptor> s_descriptorsById = new()
     {
-        "BRGEN001" => Diagnostics.MustBePartial,
-        "BRGEN002" => Diagnostics.MustBeStatic,
-        "BRGEN003" => Diagnostics.WrongReturnType,
-        "BRGEN004" => Diagnostics.WrongSignature,
-        "BRGEN005" => Diagnostics.GenericMapperOrTransformIgnored,
-        "BRGEN006" => Diagnostics.NestedInOpenGeneric,
-        _ => throw new System.InvalidOperationException($"Unknown Brighter diagnostic id '{id}' — DescriptorFor needs updating."),
+        [Diagnostics.MustBePartial.Id] = Diagnostics.MustBePartial,
+        [Diagnostics.MustBeStatic.Id] = Diagnostics.MustBeStatic,
+        [Diagnostics.WrongReturnType.Id] = Diagnostics.WrongReturnType,
+        [Diagnostics.WrongSignature.Id] = Diagnostics.WrongSignature,
+        [Diagnostics.GenericMapperOrTransformIgnored.Id] = Diagnostics.GenericMapperOrTransformIgnored,
+        [Diagnostics.NestedInOpenGeneric.Id] = Diagnostics.NestedInOpenGeneric,
     };
+
+    private static DiagnosticDescriptor DescriptorFor(string id) =>
+        s_descriptorsById.TryGetValue(id, out var descriptor)
+            ? descriptor
+            : throw new System.InvalidOperationException($"Unknown Brighter diagnostic id '{id}' — DescriptorFor needs updating.");
 }

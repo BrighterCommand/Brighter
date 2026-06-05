@@ -166,15 +166,8 @@ public static class SemanticModelReader
         // arguments at the registration call site, so any registration we emit would reference
         // unbound type parameters and fail to compile. Surface it as BRGEN006 instead — and bail
         // before classifying, because building entries for such a type would itself misfire.
-        if (IsNestedInOpenGeneric(type))
-        {
-            if (ImplementsAnyBrighterInterface(type, markers))
-                diagnostics.Add(new DiagnosticInfo(
-                    Diagnostics.NestedInOpenGeneric.Id,
-                    LocationInfo.From(type.Locations.FirstOrDefault()),
-                    FullyQualified(type)));
+        if (TryReportNestedInOpenGeneric(type, markers, diagnostics))
             return;
-        }
 
         var seenTransform = false;
         var unsupportedGenericMapperOrTransform = false;
@@ -267,7 +260,11 @@ public static class SemanticModelReader
     {
         if (type.TypeKind != TypeKind.Class)
             return false;
-        if (type.IsAbstract || type.IsImplicitClass || type.IsAnonymousType)
+        if (type.IsAbstract)
+            return false;
+        if (type.IsImplicitClass)
+            return false;
+        if (type.IsAnonymousType)
             return false;
         return IsReachableFromGeneratedCode(type);
     }
@@ -279,6 +276,22 @@ public static class SemanticModelReader
             if (t.DeclaredAccessibility is not (Accessibility.Public or Accessibility.Internal))
                 return false;
         }
+        return true;
+    }
+
+    // Reports BRGEN006 for a Brighter type nested in an open generic and returns true (telling the
+    // caller to stop); returns false for everything else. Kept separate so ClassifyEntries doesn't
+    // carry a second block of nested conditionals.
+    private static bool TryReportNestedInOpenGeneric(
+        INamedTypeSymbol type, MarkerSymbols markers, List<DiagnosticInfo> diagnostics)
+    {
+        if (!IsNestedInOpenGeneric(type))
+            return false;
+        if (ImplementsAnyBrighterInterface(type, markers))
+            diagnostics.Add(new DiagnosticInfo(
+                Diagnostics.NestedInOpenGeneric.Id,
+                LocationInfo.From(type.Locations.FirstOrDefault()),
+                FullyQualified(type)));
         return true;
     }
 

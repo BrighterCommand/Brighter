@@ -147,6 +147,9 @@ types (double registration) or collide on the `AddFromThisAssembly(this IBrighte
   because a mapper/transform was missing.
 - **Trimming / AOT friendly and lower startup cost** for projects that rely on generation instead
   of scanning.
+- **Broad SDK compatibility.** The generator assembly is built against Roslyn 4.8.0 (the first
+  .NET 8 Roslyn, the oldest in-support modern .NET) via a `VersionOverride`, so it loads on that SDK
+  and newer rather than requiring the repo-wide (latest) Roslyn.
 - **Behaviourally identical downstream.** Generated registrations flow through the same registries,
   so `ValidatePipelines` / `DescribePipelines` behave the same.
 
@@ -181,15 +184,6 @@ These are accepted gaps, tracked rather than fixed in this change:
   not yet exercised by a real package consumer — only the in-repo `ProjectReference` /
   `OutputItemType="Analyzer"` path (used by the sample). Shipping should follow the existing
   `Paramore.Brighter.Analyzer.Package` pattern.
-- **Roslyn version floor.** The generator references `Microsoft.CodeAnalysis.CSharp` at the
-  repo-pinned version. Since a generator's referenced Roslyn version sets the *minimum* compiler/SDK
-  a consumer needs, before packaging it should be pinned to the lowest version providing the APIs
-  used (`ForAttributeWithMetadataName`, 4.3.1+) to maximise the range of consuming SDKs. Note this
-  pin is entangled with diagnostics: pinning to 4.3.1 pulls in an older
-  `Microsoft.CodeAnalysis.Analyzers` whose `RS2002` requires the `BRGEN0xx` IDs to be declared on a
-  `DiagnosticAnalyzer.SupportedDiagnostics`, which an `IIncrementalGenerator` has no equivalent of —
-  so the floor pin must be done together with resolving that (e.g. a companion analyzer declaring
-  the descriptors, or suppressing `RS2002`).
 - **Public surface.** The reader/writer/model types are `public` for testability; for a
   dev-dependency generator they could be `internal` + `InternalsVisibleTo`. Harmless either way.
 

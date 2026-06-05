@@ -10,24 +10,28 @@ public class RegistrationWriterTests
         EquatableArray<HandlerEntry>? asyncHandlers = null,
         EquatableArray<MapperEntry>? mappers = null,
         EquatableArray<MapperEntry>? asyncMappers = null,
-        EquatableArray<string>? transforms = null) =>
+        EquatableArray<string>? transforms = null,
+        string? @namespace = "MyApp",
+        bool containingTypeIsStatic = true,
+        bool isExtensionMethod = true) =>
         new(
-            Namespace: "MyApp",
-            ContainingTypeAccessibility: "public",
-            ContainingTypeName: "Registrations",
-            ContainingTypeIsStatic: true,
-            MethodAccessibility: "public",
-            MethodName: "AddFromThisAssembly",
-            ReturnTypeFullyQualified: "global::Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder",
-            ParameterTypeFullyQualified: "global::Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder",
-            ParameterName: "builder",
-            IsExtensionMethod: true,
-            Handlers: handlers ?? EquatableArray<HandlerEntry>.Empty,
-            AsyncHandlers: asyncHandlers ?? EquatableArray<HandlerEntry>.Empty,
-            Mappers: mappers ?? EquatableArray<MapperEntry>.Empty,
-            AsyncMappers: asyncMappers ?? EquatableArray<MapperEntry>.Empty,
-            Transforms: transforms ?? EquatableArray<string>.Empty,
-            HintName: "MyApp_Registrations__AddFromThisAssembly.g.cs");
+            new MethodTarget(
+                Namespace: @namespace,
+                ContainingTypeAccessibility: "public",
+                ContainingTypeName: "Registrations",
+                ContainingTypeIsStatic: containingTypeIsStatic,
+                MethodAccessibility: "public",
+                MethodName: "AddFromThisAssembly",
+                ReturnTypeFullyQualified: "global::Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder",
+                ParameterTypeFullyQualified: "global::Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder",
+                ParameterName: "builder",
+                IsExtensionMethod: isExtensionMethod,
+                HintName: "MyApp_Registrations__AddFromThisAssembly.g.cs"),
+            handlers ?? EquatableArray<HandlerEntry>.Empty,
+            asyncHandlers ?? EquatableArray<HandlerEntry>.Empty,
+            mappers ?? EquatableArray<MapperEntry>.Empty,
+            asyncMappers ?? EquatableArray<MapperEntry>.Empty,
+            transforms ?? EquatableArray<string>.Empty);
 
     [Fact]
     public void EmitsGeneratedBannerAndGeneratedCodeAttribute()
@@ -153,7 +157,7 @@ public class RegistrationWriterTests
     [Fact]
     public void GlobalNamespace_OmitsNamespaceWrapper()
     {
-        var model = EmptyModel() with { Namespace = null };
+        var model = EmptyModel(@namespace: null);
 
         var output = RegistrationWriter.Write(model);
 
@@ -164,7 +168,7 @@ public class RegistrationWriterTests
     [Fact]
     public void NonStaticContainingType_EmitsPartialClassWithoutStatic()
     {
-        var model = EmptyModel() with { ContainingTypeIsStatic = false, IsExtensionMethod = false };
+        var model = EmptyModel(containingTypeIsStatic: false, isExtensionMethod: false);
 
         var output = RegistrationWriter.Write(model);
 

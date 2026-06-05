@@ -27,27 +27,17 @@ using System.Linq;
 namespace Paramore.Brighter.SourceGenerators.Model;
 
 /// <summary>
-/// Pure-data description of what the generator should emit for a single registration method.
-/// Deliberately free of Roslyn types so the writer can be unit-tested without a Compilation.
+/// Pure-data description of what the generator should emit for a single registration method: the
+/// method/type <see cref="Target"/> plus the discovered registrations. Deliberately free of Roslyn
+/// types so the writer can be unit-tested without a Compilation.
 /// </summary>
 public sealed record RegistrationModel(
-    string? Namespace,
-    string ContainingTypeAccessibility,
-    string ContainingTypeName,
-    bool ContainingTypeIsStatic,
-    string MethodAccessibility,
-    string MethodName,
-    string ReturnTypeFullyQualified,
-    string ParameterTypeFullyQualified,
-    string ParameterName,
-    bool IsExtensionMethod,
+    MethodTarget Target,
     EquatableArray<HandlerEntry> Handlers,
     EquatableArray<HandlerEntry> AsyncHandlers,
     EquatableArray<MapperEntry> Mappers,
     EquatableArray<MapperEntry> AsyncMappers,
-    EquatableArray<string> Transforms,
-    string HintName,
-    bool IsPartial = true)
+    EquatableArray<string> Transforms)
 {
     /// <summary>
     /// Assemble a model from a per-method target and the flat list of discovered registration
@@ -84,23 +74,12 @@ public sealed record RegistrationModel(
         }
 
         return new RegistrationModel(
-            target.Namespace,
-            target.ContainingTypeAccessibility,
-            target.ContainingTypeName,
-            target.ContainingTypeIsStatic,
-            target.MethodAccessibility,
-            target.MethodName,
-            target.ReturnTypeFullyQualified,
-            target.ParameterTypeFullyQualified,
-            target.ParameterName,
-            target.IsExtensionMethod,
+            target,
             new EquatableArray<HandlerEntry>(sync),
             new EquatableArray<HandlerEntry>(async),
             new EquatableArray<MapperEntry>(mappers),
             new EquatableArray<MapperEntry>(asyncMappers),
-            new EquatableArray<string>(transforms),
-            target.HintName,
-            target.IsPartial);
+            new EquatableArray<string>(transforms));
     }
 }
 

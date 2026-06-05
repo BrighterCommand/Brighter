@@ -47,10 +47,10 @@ public static class RegistrationWriter
         code.WriteLine("#nullable enable");
         code.WriteLineNoTabs(string.Empty);
 
-        var hasNamespace = !string.IsNullOrEmpty(model.Namespace);
+        var hasNamespace = !string.IsNullOrEmpty(model.Target.Namespace);
         if (hasNamespace)
         {
-            code.WriteLine($"namespace {model.Namespace}");
+            code.WriteLine($"namespace {model.Target.Namespace}");
             code.StartBlock();
         }
         else
@@ -71,41 +71,42 @@ public static class RegistrationWriter
 
     private static void WriteContainingType(CodeWriter code, RegistrationModel model)
     {
-        code.WriteLine(ContainingTypeDeclaration(model));
+        var target = model.Target;
+        code.WriteLine(ContainingTypeDeclaration(target));
         code.StartBlock();
 
         code.WriteLine(GeneratedSource.GeneratedCodeAttribute);
-        code.WriteLine(MethodSignature(model));
+        code.WriteLine(MethodSignature(target));
         code.StartBlock();
 
-        WriteHandlers(code, model.ParameterName, model.Handlers, isAsync: false);
-        WriteHandlers(code, model.ParameterName, model.AsyncHandlers, isAsync: true);
-        WriteMappers(code, model.ParameterName, model.Mappers, model.AsyncMappers);
-        WriteTransforms(code, model.ParameterName, model.Transforms);
+        WriteHandlers(code, target.ParameterName, model.Handlers, isAsync: false);
+        WriteHandlers(code, target.ParameterName, model.AsyncHandlers, isAsync: true);
+        WriteMappers(code, target.ParameterName, model.Mappers, model.AsyncMappers);
+        WriteTransforms(code, target.ParameterName, model.Transforms);
 
-        code.WriteLine($"return {model.ParameterName};");
+        code.WriteLine($"return {target.ParameterName};");
 
         code.EndBlock(); // method
         code.EndBlock(); // containing type
     }
 
-    private static string ContainingTypeDeclaration(RegistrationModel model)
+    private static string ContainingTypeDeclaration(MethodTarget target)
     {
-        var modifiers = (model.ContainingTypeIsStatic ? "static " : string.Empty)
-            + (model.IsPartial ? "partial " : string.Empty);
-        return $"{model.ContainingTypeAccessibility} {modifiers}class {model.ContainingTypeName}";
+        var modifiers = (target.ContainingTypeIsStatic ? "static " : string.Empty)
+            + (target.IsPartial ? "partial " : string.Empty);
+        return $"{target.ContainingTypeAccessibility} {modifiers}class {target.ContainingTypeName}";
     }
 
-    private static string MethodSignature(RegistrationModel model)
+    private static string MethodSignature(MethodTarget target)
     {
         var sb = new StringBuilder();
-        sb.Append(model.MethodAccessibility).Append(" static ");
-        if (model.IsPartial)
+        sb.Append(target.MethodAccessibility).Append(" static ");
+        if (target.IsPartial)
             sb.Append("partial ");
-        sb.Append(model.ReturnTypeFullyQualified).Append(' ').Append(model.MethodName).Append('(');
-        if (model.IsExtensionMethod)
+        sb.Append(target.ReturnTypeFullyQualified).Append(' ').Append(target.MethodName).Append('(');
+        if (target.IsExtensionMethod)
             sb.Append("this ");
-        sb.Append(model.ParameterTypeFullyQualified).Append(' ').Append(model.ParameterName).Append(')');
+        sb.Append(target.ParameterTypeFullyQualified).Append(' ').Append(target.ParameterName).Append(')');
         return sb.ToString();
     }
 
