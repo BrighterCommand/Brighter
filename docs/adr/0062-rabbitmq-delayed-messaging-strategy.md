@@ -1,4 +1,4 @@
-# 57. RabbitMQ Delayed Messaging Strategy (Post Plugin Archival)
+# 62. RabbitMQ Delayed Messaging Strategy (Post Plugin Archival)
 
 Date: 2026-04-27
 
@@ -67,7 +67,7 @@ Combine **Option B** (route delay through `IAmAMessageScheduler`) with **Option 
    - `Exchange.SupportDelay` (the property setter and the `supportDelay` constructor parameter on the `Exchange` type)
    - `RmqMessageGateway.DelaySupported` (the public read-only property derived from `SupportDelay`, in both the Sync and Async transports)
 
-   `[Obsolete]` text along the lines of: `"Configure an IAmAMessageScheduler instead — the rabbitmq_delayed_message_exchange plugin is archived upstream and incompatible with RabbitMQ 4.3+. See ADR 0057."` Implementation should choose the most-narrow target (the `supportDelay` parameter via documentation rather than the whole `Exchange` constructor, if other parameters remain valid) — this is a PR-level decision, not an ADR one.
+   `[Obsolete]` text along the lines of: `"Configure an IAmAMessageScheduler instead — the rabbitmq_delayed_message_exchange plugin is archived upstream and incompatible with RabbitMQ 4.3+. See ADR 0062."` Implementation should choose the most-narrow target (the `supportDelay` parameter via documentation rather than the whole `Exchange` constructor, if other parameters remain valid) — this is a PR-level decision, not an ADR one.
 2. **Pick and document the runtime precedence rule.** The current code in `RmqMessageProducer` reads:
    ```csharp
    if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null) { /* plugin path */ }
@@ -121,7 +121,7 @@ This consolidation matches the long-standing principle in Brighter's design guid
 
 - Users currently relying on `SupportDelay = true` must register an `IAmAMessageScheduler` before the next major. This is a real migration, not just a renaming.
 - Delayed messages are no longer visible in the RabbitMQ Management UI as queued-but-not-yet-delivered; they sit in the scheduler's store. Operators using the RMQ UI for delay visibility will need to look elsewhere.
-- Sub-second delay precision now depends on the scheduler implementation. Hangfire and Quartz have polling intervals (default ~15s for Hangfire); TickerQ is finer-grained. Users with strict sub-second SLAs need to pick the scheduler appropriately.
+- Sub-second delay precision now depends on the scheduler implementation. Hangfire and Quartz have polling intervals (Hangfire's default is on the order of seconds and is version-dependent — verify against the version you ship); TickerQ is finer-grained. Users with strict sub-second SLAs need to pick the scheduler appropriately.
 - Adds a deployment dependency for delay users (a scheduler backend), which the plugin path did not require beyond the broker.
 - **Durability boundary shifts.** A pending delayed message is no longer protected by RabbitMQ's persistent-queue guarantees; it now lives in whichever store the chosen `IAmAMessageScheduler` uses (process memory for `InMemoryScheduler`, a SQL DB for Hangfire/Quartz, etc.). Operators must size and back up the scheduler's store with the same care they applied to the broker's queues, and tolerate the scheduler's failure modes (DB row loss, replica lag, polling-interval skew) for delayed messages.
 - **Pre-existing silent no-delay failure mode is exposed by Phase 1 documentation, not introduced.** Today, when a caller passes `delay > TimeSpan.Zero` to `SendWithDelay`/`RequeueAsync` with `SupportDelay = false` and no `Scheduler` registered, the producer condition `delay == TimeSpan.Zero || DelaySupported || Scheduler == null` evaluates `false || false || true` and takes the plugin path, publishing with the `x-delay` header to a normal exchange. The broker silently ignores the header and the message is delivered immediately, with no error. Documenting the migration surfaces this gap; Phase 2's call-time `ConfigurationException` (step 2) closes it permanently.
