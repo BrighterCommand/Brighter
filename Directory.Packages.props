@@ -13,7 +13,7 @@
     <RabbitMQClientV6>6.8.1</RabbitMQClientV6>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.3.5" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.4.2" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.3.5" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.500.5, 4)" />
