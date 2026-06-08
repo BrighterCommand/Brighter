@@ -23,68 +23,68 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Testing;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
-    public class MessagePumpUnacceptableMessageLimitTests
+    public class MessagePumpMappingFailureNoImqFallsToDlqTests
     {
-        private const string Channel = "MyChannel";
+        private const string ChannelName = "myChannel";
         private readonly RoutingKey _routingKey = new("MyTopic");
-        private readonly RoutingKey _invalidMessageKey = new("MyInvalidMessageTopic");
+        private readonly RoutingKey _deadLetterKey = new("MyDeadLetterTopic");
         private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly FakeTimeProvider _timeProvider;
+        private readonly Channel _channel;
 
-        public MessagePumpUnacceptableMessageLimitTests()
+        public MessagePumpMappingFailureNoImqFallsToDlqTests()
         {
-            SpyRequeueCommandProcessor commandProcessor = new();
-            _timeProvider = new FakeTimeProvider();
-            Channel channel = new(new (Channel), _routingKey,
+            // No invalidMessageTopic — only a deadLetterTopic
+            _channel = new Channel(
+                new(ChannelName), _routingKey,
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider,
-                    invalidMessageTopic: _invalidMessageKey,
-                    ackTimeout: TimeSpan.FromMilliseconds(1000)));
+                    deadLetterTopic: _deadLetterKey,
+                    ackTimeout: TimeSpan.FromMilliseconds(1000))
+            );
+
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
 
-            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyFailingMapperEvent),
-                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
+            _messagePump = new ServiceActivator.Reactor(
+                new SpyRequeueCommandProcessor(),
+                (message) => typeof(MyFailingMapperEvent),
+                messageMapperRegistry,
+                null,
+                new InMemoryRequestContextFactory(),
+                _channel)
             {
-                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3
+                Channel = _channel,
+                TimeOut = TimeSpan.FromMilliseconds(5000),
+                RequeueCount = 3
             };
 
             var unmappableMessage = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
-                new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }")
-            );
+                new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
 
-            _bus.Enqueue(unmappableMessage);
-            _bus.Enqueue(unmappableMessage);
-            _bus.Enqueue(unmappableMessage);
-
+            _channel.Enqueue(unmappableMessage);
+            _channel.Stop(_routingKey);
         }
 
         [Fact]
-        public void When_A_Message_Fails_To_Be_Mapped_To_A_Request_And_The_Unacceptable_Message_Limit_Is_Reached()
+        public void When_No_Imq_Configured_Reject_Falls_Back_To_Dlq()
         {
-            // Act — pump terminates on its own when UnacceptableMessageLimitReached fires on the 4th iteration
+            // Act
             _messagePump.Run();
 
-            // Assert — each of the 3 mapping failures was rejected (not acknowledged)
-            Assert.Equal(3, _bus.Stream(_invalidMessageKey).Count());
-
-            // Assert — source queue is empty (no fall-through acknowledge)
+            // Assert — Reject(Unacceptable) falls back to dead-letter topic when no IMQ configured
+            Assert.Single(_bus.Stream(_deadLetterKey));
             Assert.Empty(_bus.Stream(_routingKey));
-
-            // Assert — pump terminated because the unacceptable message limit was reached
-            Assert.Equal(MessagePumpStatus.MP_LIMIT_EXCEEDED, _messagePump.Status);
         }
     }
 }
