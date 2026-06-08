@@ -12,7 +12,7 @@ The Box Provisioning subsystem (`Paramore.Brighter.BoxProvisioning` and its back
 
 **Parent Requirement**: [specs/0030-primitive_obsession/requirements.md](../../specs/0030-primitive_obsession/requirements.md)
 
-**Scope**: This ADR focuses specifically on introducing dedicated value types to replace the user-facing primitives that flow through the Box Provisioning interfaces and their concrete record/implementations. It does not touch the core `Paramore.Brighter` assembly, the internal `LogicalColumns` detection mechanism, or `IAmABoxMigrationDetectionHelper<,>`.
+**Scope**: This ADR focuses specifically on introducing dedicated value types to replace the user-facing primitives that flow through the Box Provisioning interfaces and their concrete record/implementations. Its primary goal does not touch the core `Paramore.Brighter` assembly, the internal `LogicalColumns` detection mechanism, or `IAmABoxMigrationDetectionHelper<,>`. Following the boy-scout rule, this branch also corrected a latent null-safety deficiency in the existing implicit string operators on nine value types across `Paramore.Brighter` and `Paramore.Brighter.ServiceActivator` (see D8): these fixes were small, mechanical, and closely related to the value-type pattern work; deferring them to a separate ADR would have added bureaucratic overhead disproportionate to the change size.
 
 The concrete pain points, verified against the current source:
 
@@ -93,7 +93,7 @@ Modified contracts and implementations:
 - `IAmABoxMigrationRunner.MigrateAsync` (FR-9): `tableName → BoxTableName`, `schemaName → SchemaName?`.
 - `IAmABoxProvisioner.BoxTableName` (FR-10): retyped to `BoxTableName`. Log interpolation via `ToString()` still renders the underlying string.
 
-Explicitly **unchanged**: `LogicalColumns` (`IReadOnlyCollection<string>`), `IAmABoxMigrationDetectionHelper<,>` parameter types, `Identifiers` itself, and the core `Paramore.Brighter` assembly.
+Explicitly **unchanged**: `LogicalColumns` (`IReadOnlyCollection<string>`), `IAmABoxMigrationDetectionHelper<,>` parameter types, and `Identifiers` itself. The core `Paramore.Brighter` and `Paramore.Brighter.ServiceActivator` assemblies were touched only for the boy-scout operator null-safety fix described in D8; no BoxProvisioning types were added to those assemblies.
 
 ### Technology Choices
 
@@ -128,6 +128,9 @@ All other `MigrationVersion`/`int` interaction patterns compile unchanged. Overl
 
 **D7 — `netstandard2.0` compatibility confirmed.**  
 `Paramore.Brighter.BoxProvisioning.csproj` targets `netstandard2.0;net8.0;net9.0;net10.0` with `LangVersion=latest`. The existing `BoxMigration` record in this same assembly already compiles on all four TFMs, demonstrating the `record`-on-netstandard2.0 configuration works before any new code is added. `[NotNullWhen]` is consumed by `Id.cs` and other netstandard2.0 code in the repo today.
+
+**D8 — Boy-scout null-safety fix on existing value-type implicit operators (core and ServiceActivator).**  
+While introducing the new BoxProvisioning value types, it became apparent that nine existing value types in `Paramore.Brighter` and `Paramore.Brighter.ServiceActivator` — `Id`, `RoutingKey`, `PartitionKey`, `CloudEventsType`, `SubscriptionName`, `TraceContext.TraceParent`/`TraceState`, `ConsumerName`, `HostName` — had implicit `operator string(T t) => t.Value` with no null guard. On a reference-type `record`, a user-defined conversion is not auto-lifted for null the way `Nullable<T>` operators are, so `(string?)(T?)null` would call the operator on a null receiver and throw NRE. `ChannelName.cs` already used the null-safe pattern (`=> value?.Value`); the nine types were brought in line. The resulting `operator string?(T t) => t?.Value` change widened the return type to `string?`, surfacing CS8604/CS8601 at call sites that passed the result to `string`-typed parameters. Those call sites were resolved with `.Value` at the point of use — the standard pattern established elsewhere in the codebase. Four core mappers (`MonitorEventMessageMapper`, `CloudEventsTransformer`, `CloudEventJsonMessageMapper`, `JsonMessageMapper`) required slightly non-mechanical rewrites (null coalescion / explicit null-check); characterisation tests were added to document and pin the null-path semantics of each. Following the boy-scout rule, these fixes were included in this branch because they were small, mechanical, closely related to the value-type pattern work in scope, and individually too minor to warrant a separate ADR.
 
 ### Implementation Approach
 
