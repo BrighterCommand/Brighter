@@ -4,11 +4,11 @@
 **Branch:** `primitive_obsession`
 **Spec dir:** `specs/0030-primitive_obsession/`  ·  `specs/.current-spec` = `0030-primitive_obsession`
 **Issue:** #4164  ·  ADR: `docs/adr/0061-box-provisioning-value-types.md`
-**HEAD:** `4cb46c41d`
+**HEAD:** `2d0aaa80c`
 
 ## Where we are in the workflow
 
-Issue → **Requirements ✅** → **Design (ADR 0061) ✅** → **Tasks ✅** → **Tests/Code 🔄** → Code Review
+Issue → **Requirements ✅** → **Design (ADR 0061) ✅** → **Tasks ✅** → **Tests/Code ✅** → **Code Review 🔄**
 
 ## Phase 1 — COMPLETE ✅  (111/111 tests, net9.0)
 
@@ -31,9 +31,26 @@ New type files (all in `src/Paramore.Brighter.BoxProvisioning/`):
 
 ---
 
-## Current phase: Phase 2 — Retype contracts
+## Phase 2 — COMPLETE ✅  (111/111 tests net9.0+net10.0, all TFMs build clean)
 
-> ADR 0061 step 2. **Purely structural** — no behaviour changes. Commit separately from any behaviour work.
+Commit: `2d0aaa80c` — retype BoxProvisioning contracts to value types.
+
+All Phase 3 and Phase 4 verification tasks also done:
+- All 4 relational backends + Spanner compile with 0 warnings/errors
+- All 4 TFMs (netstandard2.0/net8/net9/net10) build clean
+- Identifier-validation regression: 11/11 tests pass
+- Monotonicity regression: pass
+- Full suite: 111/111 on net9.0 and net10.0
+- No types leaked outside Paramore.Brighter.BoxProvisioning
+- Core Paramore.Brighter assembly unmodified
+
+## Current phase: CODE REVIEW 🔄
+
+All implementation tasks complete. Ready for `/spec:review` or PR creation.
+
+---
+
+### Archived: Phase 2 contract-retyping plan (for reference)
 
 ### Task 2a — Retype `IAmABoxMigration` and `BoxMigration`
 

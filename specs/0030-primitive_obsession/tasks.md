@@ -116,14 +116,14 @@
 
 > ADR 0061 Implementation Approach step 2. These edits change member/parameter **types** only; all existing call sites continue to compile via implicit conversions (NFR-1, AC-4, AC-5). The only non-mechanical-conversion edit is the single ternary cast at `SqlBoxMigrationRunner.cs:285` (D4). No behaviour changes — commit this separately from any behavioural change.
 
-- [ ] **Retype `IAmABoxMigration` and `BoxMigration` to value types; keep all primitive call sites compiling.**
+- [x] **Retype `IAmABoxMigration` and `BoxMigration` to value types; keep all primitive call sites compiling.**
   - Edit `src/Paramore.Brighter.BoxProvisioning/IAmABoxMigration.cs`: `Version → MigrationVersion`, `Description → MigrationDescription`, `UpScript → SqlScript`, `SourceReference → SourceReference?`, `IdempotencyCheckSql → SqlScript?`. `LogicalColumns` stays `IReadOnlyCollection<string>` (FR-8, D5). Preserve existing XML docs and nullability contract notes (NFR-5).
   - Edit `src/Paramore.Brighter.BoxProvisioning/BoxMigration.cs` record parameters to the same value types, `LogicalColumns` unchanged (FR-8).
   - Verify (do not change arguments) that existing `new BoxMigration(1, "Add Source", "ALTER TABLE …", new[] { "Source" })` and `new BoxMigration(1, "V1", "CREATE TABLE …", cols, null, null)` call sites across the four relational catalog assemblies compile unchanged via implicit conversions (FR-8, NFR-1, AC-4, D2).
   - References (existing): `src/Paramore.Brighter.BoxProvisioning/IAmABoxMigration.cs`, `src/Paramore.Brighter.BoxProvisioning/BoxMigration.cs`, `src/Paramore.Brighter/Id.cs`
   - Depends on: all Phase 1 value-type tasks.
 
-- [ ] **Retype `IAmABoxMigrationRunner.MigrateAsync` signature; fix the D4 ternary cast in `SqlBoxMigrationRunner`.**
+- [x] **Retype `IAmABoxMigrationRunner.MigrateAsync` signature; fix the D4 ternary cast in `SqlBoxMigrationRunner`.**
   - Edit `src/Paramore.Brighter.BoxProvisioning/IAmABoxMigrationRunner.cs`: `tableName → BoxTableName`, `schemaName → SchemaName?`; leave `boxType`, `tableState`, `cancellationToken` unchanged (FR-9). Preserve XML docs.
   - Edit `src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs` line ~285 ternary to `migrations.Count == 0 ? (MigrationVersion)0 : migrations[migrations.Count - 1].Version` to resolve the bidirectional-implicit ambiguity (CS0172) (D4). This is the **only** required cast.
   - Verify the `Identifiers.AssertSafe(tableName, …)` (line ~191) and `AssertSafe(schemaName, …)` (line ~194) calls still compile against the retyped parameters via implicit `→ string?`, unchanged — do NOT move validation into constructors (FR-11, D3, C-3). Note: because all string-backed operators return `string?` (matching `Id.cs`), these calls pass a `string?` into the non-nullable `AssertSafe(string identifier, …)` parameter — the established codebase pattern. CS8604 nullable warnings may surface; resolve with `.Value` or `!` at each call site, not by reverting the operator return type.
@@ -131,7 +131,7 @@
   - References (existing): `src/Paramore.Brighter.BoxProvisioning/IAmABoxMigrationRunner.cs`, `src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs` (lines 285, 191, 194), `src/Paramore.Brighter.BoxProvisioning/SqlBoxProvisioner.cs`
   - Depends on: Phase 1 (`BoxTableName`, `SchemaName`, `MigrationVersion`).
 
-- [ ] **Retype `IAmABoxProvisioner.BoxTableName` to `BoxTableName`; keep config-derived and log call sites working.**
+- [x] **Retype `IAmABoxProvisioner.BoxTableName` to `BoxTableName`; keep config-derived and log call sites working.**
   - Edit `src/Paramore.Brighter.BoxProvisioning/IAmABoxProvisioner.cs`: `BoxTableName` property `string → BoxTableName` (FR-10). Preserve XML docs.
   - Verify `SqlBoxProvisioner` deriving the property from `_configuration.OutBoxTableName` / `InBoxTableName` (core `string`) compiles via implicit conversion, with no core changes (FR-10, C-1, D2).
   - Verify `BoxProvisioningHostedService` log interpolation of `BoxTableName` still renders the underlying string via `ToString()`, not the type name (FR-10, AC-9).
@@ -139,7 +139,7 @@
   - References (existing): `src/Paramore.Brighter.BoxProvisioning/IAmABoxProvisioner.cs`, `src/Paramore.Brighter.BoxProvisioning/SqlBoxProvisioner.cs` (line 105)
   - Depends on: Phase 1 (`BoxTableName`).
 
-- [ ] **Mechanically update existing test doubles' property types and method signatures to value types (no behaviour change).**
+- [x] **Mechanically update existing test doubles' property types and method signatures to value types (no behaviour change).**
   - This is a purely mechanical type adjustment driven by the contract retyping — NOT a new behaviour test. It splits into two categories:
   - **`IAmABoxMigration` implementers** — update property declarations: `int Version → MigrationVersion`, `string Description → MigrationDescription`, `string UpScript → SqlScript`, `string? SourceReference → SourceReference?`, `string? IdempotencyCheckSql → SqlScript?`. `LogicalColumns` stays `IReadOnlyCollection<string>`. Note: the test project contains no `new BoxMigration(...)` call sites — migrations in tests are built via `StubBoxMigration` property declarations; `new BoxMigration(...)` source-compat is a production-catalog concern covered by Phase 3.
   - **`IAmABoxMigrationRunner` direct implementers** — update `MigrateAsync` signature: `string tableName → BoxTableName`, `string? schemaName → SchemaName?`. Four such stubs exist in the test project, each a private class in a provisioner test file (they implement `IAmABoxMigrationRunner` directly, not `SqlBoxMigrationRunner`).
@@ -165,14 +165,14 @@
 
 > C-2: backend implementers are in scope only to keep them compiling and behaviourally identical. AC-4/AC-5/AC-6/NFR-1: implicit operators absorb the type change at every call site — **no argument reordering or retyping** is expected.
 
-- [ ] **Verify the four relational backends recompile unchanged through implicit conversions.**
+- [x] **Verify the four relational backends recompile unchanged through implicit conversions.**
   - Build the MsSql, MySql, PostgreSql, and Sqlite BoxProvisioning catalog/runner/detection-helper/provisioner assemblies against the retyped interfaces.
   - Confirm internal helpers still receiving primitives — `LockResourceFor(string?, string)`, detection-helper `string tableName`/`string? schemaName`, DDL string interpolation, `HashSet<string>.IsSupersetOf(LogicalColumns)` — receive values via implicit `BoxTableName → string` / `SchemaName? → string?` at the call sites, with no signature changes to `IAmABoxMigrationDetectionHelper<,>` (FR-12, C-2, D5, Out-of-Scope detection helpers).
   - Confirm `actualColumns.IsSupersetOf(migrations[i].LogicalColumns)` is unaffected (`LogicalColumns` unchanged) (FR-12, D5).
   - **Null-path behavioural check**: compilation alone is not sufficient for the nullable conversions. Also confirm at runtime that the SQLite runner path (null `SchemaName`) and a V2+ migration with null `IdempotencyCheckSql` produce the same outcome as before — no NRE, no "missing identifier" exception. The Phase 4 identifier-validation task provides the null-schema test; ensure it is run before marking this Phase 3 task done.
   - Depends on: Phase 2.
 
-- [ ] **Verify the free-standing Spanner provisioners/runner recompile and stay catalog-free.**
+- [x] **Verify the free-standing Spanner provisioners/runner recompile and stay catalog-free.**
   - Build the Spanner provisioner/runner against the retyped interfaces; confirm it compiles via implicit conversions without assuming the `IAmABoxMigrationCatalog` / V_k version-chain shape (FR-12, C-4 Spanner exemption).
   - Depends on: Phase 2.
 
@@ -180,26 +180,26 @@
 
 ## Phase 4 — Cross-cutting verification (risk mitigation; preserves behaviour)
 
-- [ ] **Verify all TFMs compile, including `netstandard2.0` with no unavailable APIs.**
+- [x] **Verify all TFMs compile, including `netstandard2.0` with no unavailable APIs.**
   - Build `Paramore.Brighter.BoxProvisioning` and all backends across `netstandard2.0;net8.0;net9.0;net10.0`. Confirm new value types use no `netstandard2.0`-unavailable API (e.g. no `IReadOnlySet<T>`); `[NotNullWhen]` and the `Id`-style record pattern are already proven on this TFM matrix (NFR-2, AC-8, D7).
   - Depends on: Phases 1–3.
 
-- [ ] **Verify identifier-validation behaviour is unchanged (no regression).**
+- [x] **Verify identifier-validation behaviour is unchanged (no regression).**
   - Confirm the existing identifier-validation tests still pass: provisioning with table name `"1Outbox"` throws `ConfigurationException` whose message contains `^[A-Za-z][A-Za-z0-9_]*$`; SQLite provisioning with `schemaName == null` succeeds with no "missing identifier" error (FR-11, NFR-3, AC-6).
   - References (existing): `tests/Paramore.Brighter.BoxProvisioning.Tests/When_sql_box_provisioner_provision_async_receives_unsafe_identifier_it_should_throw_before_opening_connection.cs`, `tests/Paramore.Brighter.BoxProvisioning.Tests/When_relational_box_migration_runner_base_migrate_receives_unsafe_identifier_it_should_throw_before_opening_connection.cs`, `tests/Paramore.Brighter.BoxProvisioning.Tests/When_assert_safe_identifier_is_called_with_known_unsafe_inputs_it_should_throw.cs`
   - Depends on: Phase 2.
 
-- [ ] **Verify monotonicity validation behaviour is unchanged.**
+- [x] **Verify monotonicity validation behaviour is unchanged.**
   - Confirm versions `[1,2,3]` pass and `[1,3]` throws `ConfigurationException` whose message contains `V1 followed by V3 (expected V2)` — identical to current, with `MigrationVersion` participating via implicit `→ int` arithmetic in the `$"...expected V{prev + 1}"` interpolation at `SqlBoxMigrationRunner.cs:479` (FR-4, NFR-3, AC-7).
   - References (existing): `tests/Paramore.Brighter.BoxProvisioning.Tests/When_relational_box_migration_runner_base_migrate_receives_non_monotonic_migrations_it_should_throw_before_opening_connection.cs`, `src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs` (lines 467–479)
   - Depends on: Phase 1 (`MigrationVersion`), Phase 2.
 
-- [ ] **Verify full suite parity and telemetry/log string content.**
+- [x] **Verify full suite parity and telemetry/log string content.**
   - Run the entire BoxProvisioning unit suite (and integration tests where runnable); confirm all previously-passing tests pass with only mechanical type adjustments, and that emitted telemetry tags / log messages render the same string content — `BoxTable` renders `Outbox`, `HistorySchema` unchanged, span display name `box.migration {table}` unchanged (NFR-3, AC-9, FR-10).
   - References (existing): `tests/Paramore.Brighter.BoxProvisioning.Tests/When_box_provisioning_hosted_service_logs_progress_it_should_include_the_box_table_name.cs`, `tests/Paramore.Brighter.BoxProvisioning.Tests/When_relational_box_migration_runner_base_migrate_runs_with_a_tracer_it_should_emit_a_migration_span.cs`
   - Depends on: Phases 1–4.
 
-- [ ] **Confirm no new public types leaked outside `Paramore.Brighter.BoxProvisioning` (scope guard).**
+- [x] **Confirm no new public types leaked outside `Paramore.Brighter.BoxProvisioning` (scope guard).**
   - Confirm the core `Paramore.Brighter` assembly is unmodified — `IAmARelationalDatabaseConfiguration.OutBoxTableName`/`InBoxTableName`/`SchemaName` remain `string`/`string?`; all six new types live only in `src/Paramore.Brighter.BoxProvisioning/` (C-1, AC-10 definition of done).
   - References (existing): `src/Paramore.Brighter.BoxProvisioning/`
   - Depends on: Phases 1–3.
