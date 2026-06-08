@@ -14,13 +14,13 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
         {
             var header = new MessageHeader(
                 messageId: request.Id,
-                topic: new RoutingKey(request.SendersAddress.Topic),
+                topic: new RoutingKey(request.SendersAddress.Topic.Value),
                 messageType: MessageType.MT_COMMAND,
                 timeStamp: DateTime.UtcNow,
                 correlationId: request.SendersAddress.CorrelationId
                 );
 
-            var consumers = request.Consumers.Select(c => new HeartBeatResponseBodyConsumerObject(c.ConsumerName, c.State)).ToArray();
+            var consumers = request.Consumers.Select(c => new HeartBeatResponseBodyConsumerObject(c.ConsumerName.Value, c.State)).ToArray();
             var json = JsonSerializer.Serialize(new HeartBeatResponseBody(request.HostName, consumers), JsonSerialisationOptions.Options);
 
             var body = new MessageBody(json.ToString());

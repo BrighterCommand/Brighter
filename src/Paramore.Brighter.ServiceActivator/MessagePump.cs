@@ -192,12 +192,12 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (messageType == MessageType.MT_COMMAND && request is IEvent)
             {
-                Log.MessageMismatchCommand(s_logger, request.Id, MessageType.MT_COMMAND);
+                Log.MessageMismatchCommand(s_logger, request.Id.Value, MessageType.MT_COMMAND);
             }
 
             if (messageType == MessageType.MT_EVENT && request is ICommand)
             {
-                Log.MessageMismatchEvent(s_logger, request.Id, MessageType.MT_EVENT);
+                Log.MessageMismatchEvent(s_logger, request.Id.Value, MessageType.MT_EVENT);
             }
         }
 

@@ -35,7 +35,8 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 /// Spanner box surface is degenerate (fresh-install only, no V_k chain), so this provisioner
 /// uses the BASE <see cref="IAmABoxMigrationDetectionHelper{TConnection,TTransaction}"/>
 /// interface and is exempt from <see cref="IAmABoxMigrationCatalog"/>. Spanner has no
-/// schema concept; <c>schemaName</c> is passed as <c>null</c> throughout.
+/// schema concept; DDL paths discard <c>schemaName</c>, but the configured value is forwarded
+/// to the migration activity for observability consistency with other backends.
 /// </summary>
 public class SpannerOutboxProvisioner : IAmABoxProvisioner
 {
@@ -88,7 +89,7 @@ public class SpannerOutboxProvisioner : IAmABoxProvisioner
         // degenerate (fresh-only, no V_k chain — ADR 0057 §6).
         await _migrationRunner.MigrateAsync(
             _configuration.OutBoxTableName,
-            null,
+            _configuration.SchemaName != null ? (SchemaName)_configuration.SchemaName : null,
             BoxType.Outbox,
             tableState,
             cancellationToken);
