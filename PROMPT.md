@@ -4,11 +4,20 @@
 **Branch:** `primitive_obsession`
 **Spec dir:** `specs/0030-primitive_obsession/`  ·  `specs/.current-spec` = `0030-primitive_obsession`
 **Issue:** #4164  ·  ADR: `docs/adr/0061-box-provisioning-value-types.md`
-**HEAD:** `2d0aaa80c`
+**HEAD:** `7f451cd96`
 
 ## Where we are in the workflow
 
-Issue → **Requirements ✅** → **Design (ADR 0061) ✅** → **Tasks ✅** → **Tests/Code ✅** → **Code Review 🔄**
+Issue → **Requirements ✅** → **Design (ADR 0061) ✅** → **Tasks ✅** → **Tests/Code ✅** → **Code Review ✅ (all findings resolved)**
+
+## Code Review — COMPLETE ✅
+
+Findings from `specs/0030-primitive_obsession/review-code.md` all resolved in `7f451cd96`:
+- **Finding 2 (Score 72)** — Spanner provisioners now forward `_configuration.SchemaName` to migration activity
+- **Finding 1 fix-forward** — ServiceActivator .Value call-site completions for string?-widened operators
+- **Finding 3 (Score 64)** — 4 characterisation tests added for mapper null paths
+- **Phase 2 miss** — 3 BoxProvisioning test doubles updated to `BoxTableName` type
+- **Finding 4 (Score 38)** / **Finding 5 (Score 22)** — low severity, no action required
 
 ## Phase 1 — COMPLETE ✅  (111/111 tests, net9.0)
 
