@@ -327,7 +327,7 @@ namespace Paramore.Brighter
                         message.Id, _instrumentationOptions);
                     if (span is not null)
                     {
-                        childSpans.TryAdd(message.Id, span);
+                        childSpans.TryAdd(message.Id.Value, span);
                         requestContext.Span = span;
                     }
 
@@ -396,7 +396,7 @@ namespace Paramore.Brighter
                         message.Id, _instrumentationOptions);
                     if (span != null)
                     {
-                        childSpans.TryAdd(message.Id, span);
+                        childSpans.TryAdd(message.Id.Value, span);
                         requestContext.Span = span;
                     }
 
@@ -819,13 +819,13 @@ namespace Paramore.Brighter
                     // Log the wire topic (Header.Topic) — where the message is going. Producer
                     // lookup uses GetProducerLookupTopic, which may differ from Header.Topic when
                     // a mapper overrode it (e.g. Reply messages routed to a dynamic reply address).
-                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
+                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic.Value, message.Id.Value);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
                         _instrumentationOptions);
                     producer.Span = span;
-                    if (span != null) producerSpans.TryAdd(message.Id, span);
+                    if (span != null) producerSpans.TryAdd(message.Id.Value, span);
 
                     if (producer is IAmAMessageProducerSync producerSync)
                     {
@@ -900,7 +900,7 @@ namespace Paramore.Brighter
                     {
                         var messages = topicBatch.ToArray();
 
-                        Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key.WireTopic);
+                        Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key.WireTopic.Value);
 
                         foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
                         {
@@ -964,13 +964,13 @@ namespace Paramore.Brighter
                     // Log the wire topic (Header.Topic) — where the message is going. Producer
                     // lookup uses GetProducerLookupTopic, which may differ from Header.Topic when
                     // a mapper overrode it (e.g. Reply messages routed to a dynamic reply address).
-                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
+                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic.Value, message.Id.Value);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
                         _instrumentationOptions);
                     producer.Span = span;
-                    if (span != null) producerSpans.TryAdd(message.Id, span);
+                    if (span != null) producerSpans.TryAdd(message.Id.Value, span);
 
                     if (producer is IAmAMessageProducerAsync producerAsync)
                     {
