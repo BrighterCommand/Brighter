@@ -36,5 +36,20 @@ namespace Paramore.Brighter.FeatureSwitch
         /// <param name="handler"></param>
         /// <returns></returns>
         FeatureSwitchStatus StatusOf(Type handler);
+
+        /// <summary>
+        /// Check the <see cref="FeatureSwitchStatus"/> of a Handler based on type, optionally
+        /// inspecting the incoming request for per-request decisions.
+        /// </summary>
+        /// <typeparam name="TRequest">The request type flowing through the pipeline.</typeparam>
+        /// <param name="handler">The handler type to look up.</param>
+        /// <param name="command">
+        /// The live request instance, or <c>null</c> when no request context is available.
+        /// When <c>null</c>, implementations should fall back to type-only logic and must not
+        /// throw a <see cref="NullReferenceException"/>.
+        /// </param>
+        /// <returns>The <see cref="FeatureSwitchStatus"/> for the given handler.</returns>
+        FeatureSwitchStatus StatusOf<TRequest>(Type handler, TRequest? command = null)
+            where TRequest : class, IRequest;
     }
 }
