@@ -31,13 +31,13 @@ namespace Paramore.Brighter.BoxProvisioning;
 public interface IAmABoxMigration
 {
     /// <summary>Monotonically increasing version number.</summary>
-    int Version { get; }
+    MigrationVersion Version { get; }
 
     /// <summary>Human-readable description of what this migration does.</summary>
-    string Description { get; }
+    MigrationDescription Description { get; }
 
     /// <summary>Script to apply the migration (SQL for relational backends).</summary>
-    string UpScript { get; }
+    SqlScript UpScript { get; }
 
     /// <summary>
     /// The full set of logical (cross-backend) column names that exist on the table after this
@@ -65,7 +65,7 @@ public interface IAmABoxMigration
     /// (typically <c>"&lt;short-sha&gt; / #&lt;pr-number&gt;"</c>) and intended for diagnostics
     /// and archaeology, not for runtime behaviour. <c>null</c> for V1 (no single source commit).
     /// </summary>
-    string? SourceReference { get; }
+    SourceReference? SourceReference { get; }
 
     /// <summary>
     /// Optional SQL fragment used as an idempotency guard before executing
@@ -75,5 +75,5 @@ public interface IAmABoxMigration
     /// When non-null, the runner evaluates this query and skips <see cref="UpScript"/> if the
     /// result indicates the migration has already been applied.
     /// </summary>
-    string? IdempotencyCheckSql { get; }
+    SqlScript? IdempotencyCheckSql { get; }
 }

@@ -67,7 +67,7 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
     }
 
     public BoxType BoxType => BoxType.Inbox;
-    public string BoxTableName => _configuration.InBoxTableName;
+    public BoxTableName BoxTableName => _configuration.InBoxTableName;
 
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
@@ -84,7 +84,7 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
         // degenerate (fresh-only, no V_k chain — ADR 0057 §6).
         await _migrationRunner.MigrateAsync(
             _configuration.InBoxTableName,
-            _configuration.SchemaName,
+            null,
             BoxType.Inbox,
             tableState,
             cancellationToken);
