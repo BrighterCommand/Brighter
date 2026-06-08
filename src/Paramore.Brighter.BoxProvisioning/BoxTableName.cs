@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Paramore.Brighter.BoxProvisioning
 {
     /// <summary>
@@ -44,6 +46,15 @@ namespace Paramore.Brighter.BoxProvisioning
         {
             Value = value;
         }
+
+        /// <summary>
+        /// Returns <see langword="true"/> if <paramref name="value"/> is <see langword="null"/> or wraps an empty string;
+        /// otherwise <see langword="false"/>.
+        /// </summary>
+        /// <param name="value">The <see cref="BoxTableName"/> to test.</param>
+        /// <returns><see langword="true"/> when <paramref name="value"/> is <see langword="null"/> or empty; otherwise <see langword="false"/>.</returns>
+        public static bool IsNullOrEmpty([NotNullWhen(false)] BoxTableName? value)
+            => value is null || string.IsNullOrEmpty(value.Value);
 
         /// <summary>
         /// Implicitly converts a <see cref="BoxTableName"/> to its underlying <see cref="string"/> value.
