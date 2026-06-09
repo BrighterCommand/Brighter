@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_sqlite_migration_is_cancelled_mid_flight_it_should_rollback_releasing_writer_slot : IAsyncLifetime
+public class MigrationCancellationRollbackTests : IAsyncLifetime
 {
     // Per-test DB file so the writer slot we hold during Task.Delay does not contend with
     // sibling tests in this assembly running against the shared `test.db`. Same isolation
@@ -43,13 +43,13 @@ public class When_sqlite_migration_is_cancelled_mid_flight_it_should_rollback_re
     private readonly string _connectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    public When_sqlite_migration_is_cancelled_mid_flight_it_should_rollback_releasing_writer_slot()
+    public MigrationCancellationRollbackTests()
     {
         _connectionString = $"Data Source={_dbPath}";
     }
 
     [Fact]
-    public async Task Should_invoke_rollback_with_cancellation_token_none_and_release_writer_slot_when_caller_cancels_mid_flight()
+    public async Task When_sqlite_migration_is_cancelled_mid_flight_it_should_rollback_releasing_writer_slot()
     {
         //Arrange — the cancelling runner's RunFreshPathAsync override blocks on Task.Delay so
         // the caller's cancellation hits AFTER BeginAsync has opened the BEGIN IMMEDIATE

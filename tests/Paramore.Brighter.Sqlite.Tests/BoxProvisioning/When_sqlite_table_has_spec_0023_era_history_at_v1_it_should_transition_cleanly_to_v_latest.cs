@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_sqlite_table_has_spec_0023_era_history_at_v1_it_should_transition_cleanly_to_v_latest : IAsyncLifetime
+public class Spec0023EraHistoryTransitionTests : IAsyncLifetime
 {
     private const string Spec0023EraDescription = "spec 0023 fresh install";
 
@@ -39,7 +39,7 @@ public class When_sqlite_table_has_spec_0023_era_history_at_v1_it_should_transit
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_transition_cleanly_via_normal_path_with_no_ddl_changes_and_no_duplicate_history()
+    public async Task When_sqlite_table_has_spec_0023_era_history_at_v1_it_should_transition_cleanly_to_v_latest()
     {
         //Arrange — V7-shaped outbox via the live builder DDL + spec-0023-era history at V1.
         //This models a prod install that was provisioned under spec 0023 (which only ever

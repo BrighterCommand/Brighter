@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_sqlite_runner_is_constructed_with_enable_wal_mode_false_it_should_not_change_journal_mode : IAsyncLifetime
+public class RunnerWalModeJournalTests : IAsyncLifetime
 {
     // PRAGMA journal_mode is database-file-wide and persistent (the choice survives connection
     // close). A host application that has deliberately picked DELETE or TRUNCATE journal mode
@@ -50,7 +50,7 @@ public class When_sqlite_runner_is_constructed_with_enable_wal_mode_false_it_sho
     private string ConnectionString => $"DataSource=\"{_databasePath}\"";
 
     [Fact]
-    public async Task Should_preserve_existing_DELETE_journal_mode_when_wal_mode_disabled()
+    public async Task When_wal_mode_disabled_it_should_preserve_existing_delete_journal_mode()
     {
         //Arrange — start the database in DELETE journal mode and create an empty placeholder
         //          table so the file persists between connections.
@@ -72,7 +72,7 @@ public class When_sqlite_runner_is_constructed_with_enable_wal_mode_false_it_sho
     }
 
     [Fact]
-    public async Task Should_switch_to_WAL_journal_mode_when_wal_mode_enabled()
+    public async Task When_wal_mode_enabled_it_should_switch_to_wal_journal_mode()
     {
         //Arrange — start in DELETE so the assertion observes the runner's effect, not a
         //          pre-existing state.
