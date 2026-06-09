@@ -70,6 +70,10 @@ public class MsSqlRunnerLockResourceSchemaQualificationTests
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
+        // configuredSchema is a string?; a null reaches MigrateAsync via the implicit
+        // string->SchemaName conversion as a SchemaName wrapping null. The runner must treat that
+        // (and a wrapped-empty) as "no schema supplied" — defaulting the lock resource to dbo —
+        // exactly as it did when this parameter was a string?. See SchemaName.IsNullOrEmpty.
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             runner.MigrateAsync(
                 tableName, configuredSchema, BoxType.Outbox, freshHint));
