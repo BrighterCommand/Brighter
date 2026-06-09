@@ -178,13 +178,13 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message, _instrumentationOptions);
 
             Log.PublishingMessageAsync(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay.Value.TotalMilliseconds,
-                message.Header.Topic, message.Persist, message.Id, message.Body.Value);
+                message.Header.Topic.Value, message.Persist, message.Id.Value, message.Body.Value);
 
             if (PublishesOnChannel(delay.Value))
             {
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
                 var deliveryTag = await Channel.GetNextPublishSequenceNumberAsync(cancellationToken);
-                AddPendingConfirmation(deliveryTag, message.Id);
+                AddPendingConfirmation(deliveryTag, message.Id.Value);
                 pendingDeliveryTag = deliveryTag;
                 await rmqMessagePublisher.PublishMessageAsync(message, delay.Value, cancellationToken);
                 // Publish succeeded; the broker now owns the confirmation and will ack/nack via the handler.
@@ -202,7 +202,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             }
 
             Log.PublishedMessageAsync(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
-                message.Header.Topic, message.Persist, message.Id,
+                message.Header.Topic.Value, message.Persist, message.Id.Value,
                 JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow);
         }
         catch (IOException io)

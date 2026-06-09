@@ -53,7 +53,7 @@ public class PostgreSqlInboxMigrationsTests
         //Assert — exactly one migration, version 1, no SourceReference (no archaeology pointer
         //for V1 baseline — same convention as outbox V1).
         Assert.Single(migrations);
-        Assert.Equal(1, migrations[0].Version);
+        Assert.Equal(1, migrations[0].Version.Value);
         Assert.Null(migrations[0].SourceReference);
 
         //Assert — V1 LogicalColumns are lowercase (ADR §1) and contextkey is part of V1.

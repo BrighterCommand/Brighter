@@ -46,7 +46,7 @@ internal sealed class StubBoxProvisioner : IAmABoxProvisioner
     }
 
     public BoxType BoxType { get; }
-    public string BoxTableName { get; }
+    public BoxTableName BoxTableName { get; }
 
     /// <summary>
     /// Set when <see cref="ProvisionAsync"/> has been entered (regardless of whether the stub

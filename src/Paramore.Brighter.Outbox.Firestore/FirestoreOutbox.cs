@@ -88,7 +88,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     {
         var dbAttributes = new Dictionary<string, string>
         {
-            ["db.operation.parameter.message.id"] = message.Id
+            ["db.operation.parameter.message.id"] = message.Id.Value
         };
         
         var span = Tracer?.CreateDbSpan(
@@ -140,7 +140,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
             {
                 var dbAttributes = new Dictionary<string, string>
                 {
-                    ["db.operation.parameter.message.id"] = message.Id
+                    ["db.operation.parameter.message.id"] = message.Id.Value
                 };
 
                 return Tracer?.CreateDbSpan(
@@ -476,7 +476,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     {
         var dbAttributes = new Dictionary<string, string>
         {
-            ["db.operation.parameter.message.id"] = message.Id
+            ["db.operation.parameter.message.id"] = message.Id.Value
         };
         
         var span = Tracer?.CreateDbSpan(
@@ -533,7 +533,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
             {
                 var dbAttributes = new Dictionary<string, string>
                 {
-                    ["db.operation.parameter.message.id"] = message.Id
+                    ["db.operation.parameter.message.id"] = message.Id.Value
                 };
 
                 return Tracer?.CreateDbSpan(

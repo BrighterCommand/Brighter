@@ -58,7 +58,7 @@ public class SqliteInboxMigrationsTests
         Assert.Equal(2, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version);
+            Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
         //Assert — LogicalColumns at each version matches the cumulative archaeology.

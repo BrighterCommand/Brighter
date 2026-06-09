@@ -46,9 +46,9 @@ namespace Paramore.Brighter.BoxProvisioning;
 /// checks; <c>null</c> where the guard lives inside <see cref="UpScript"/> directly.
 /// </param>
 public record BoxMigration(
-    int Version,
-    string Description,
-    string UpScript,
+    MigrationVersion Version,
+    MigrationDescription Description,
+    SqlScript UpScript,
     IReadOnlyCollection<string> LogicalColumns,
-    string? SourceReference = null,
-    string? IdempotencyCheckSql = null) : IAmABoxMigration;
+    SourceReference? SourceReference = null,
+    SqlScript? IdempotencyCheckSql = null) : IAmABoxMigration;

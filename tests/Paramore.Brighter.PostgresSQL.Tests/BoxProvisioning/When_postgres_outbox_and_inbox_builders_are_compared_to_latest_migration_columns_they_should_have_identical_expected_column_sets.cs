@@ -97,7 +97,7 @@ public class PostgreSqlOutboxBuilderDriftTests
         var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
-        Assert.Equal(1, v1.Version);
+        Assert.Equal(1, v1.Version.Value);
         Assert.Contains("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("HeaderBag", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }
@@ -176,7 +176,7 @@ public class PostgreSqlInboxBuilderDriftTests
         var migrations = new PostgreSqlInboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
-        Assert.Equal(1, v1.Version);
+        Assert.Equal(1, v1.Version.Value);
         Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(

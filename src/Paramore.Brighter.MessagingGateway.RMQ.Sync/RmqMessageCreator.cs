@@ -101,7 +101,7 @@ internal sealed partial class RmqMessageCreator
             type: type.Result,
             timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
             correlationId: correlationId.Result,
-            replyTo: new RoutingKey(replyTo.Result ?? string.Empty),
+            replyTo: new RoutingKey(replyTo.Result?.Value ?? string.Empty),
             contentType: new ContentType(fromQueue.BasicProperties.ContentType), 
             handledCount: handledCount.Result,
             dataSchema: dataSchema.Result,
@@ -295,7 +295,7 @@ internal sealed partial class RmqMessageCreator
         if (string.IsNullOrEmpty(messageId))
         {
             var newMessageId = Id.Random();
-            Log.NoMessageIdFoundInMessage(s_logger, newMessageId);
+            Log.NoMessageIdFoundInMessage(s_logger, newMessageId.Value);
             return new HeaderResult<Id?>(newMessageId, true);
         }
 

@@ -1,0 +1,1 @@
+Passed!  - Failed:     0, Passed:   111, Skipped:     0, Total:   111, Duration: 148 ms - Paramore.Brighter.BoxProvisioning.Tests.dll (net9.0)

@@ -164,8 +164,8 @@ public class SqlBoxProvisionerIdentifierValidationTests
     private sealed class ThrowingMigrationRunner : IAmABoxMigrationRunner
     {
         public Task MigrateAsync(
-            string tableName,
-            string? schemaName,
+            BoxTableName tableName,
+            SchemaName? schemaName,
             BoxType boxType,
             BoxTableState tableState,
             CancellationToken cancellationToken = default)

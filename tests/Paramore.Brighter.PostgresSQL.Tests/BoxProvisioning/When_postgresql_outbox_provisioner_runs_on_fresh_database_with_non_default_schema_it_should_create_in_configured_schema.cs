@@ -41,14 +41,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 //
 // This test pre-creates a non-default schema, runs the provisioner with SchemaName set,
 // and asserts the table actually lives in that schema (not in `public`).
-public class When_postgresql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema : IAsyncLifetime
+public class PostgreSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly string _nonDefaultSchema = $"billing_for_schema_test_{Guid.NewGuid():N}";
     private readonly PostgreSqlOutboxProvisioner _provisioner;
 
-    public When_postgresql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
+    public PostgreSqlOutboxNonDefaultSchemaTests()
     {
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
@@ -64,7 +64,7 @@ public class When_postgresql_outbox_provisioner_runs_on_fresh_database_with_non_
     }
 
     [Fact]
-    public async Task Should_create_outbox_in_configured_schema_and_no_op_on_second_run()
+    public async Task When_postgresql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
         //Arrange — non-default schema is pre-created (PG runner does not create schemas itself).
         new PostgresSqlTestHelper().SetupDatabase();

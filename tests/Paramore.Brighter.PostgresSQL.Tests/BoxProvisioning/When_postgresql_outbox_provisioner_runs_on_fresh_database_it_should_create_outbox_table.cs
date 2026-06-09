@@ -6,13 +6,13 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgresql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table : IAsyncLifetime
+public class PostgreSqlOutboxProvisionerFreshDatabaseTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName;
     private readonly PostgreSqlOutboxProvisioner _provisioner;
 
-    public When_postgresql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table()
+    public PostgreSqlOutboxProvisionerFreshDatabaseTests()
     {
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
@@ -29,7 +29,7 @@ public class When_postgresql_outbox_provisioner_runs_on_fresh_database_it_should
     }
 
     [Fact]
-    public async Task Should_create_outbox_table()
+    public async Task When_postgresql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table()
     {
         //Arrange
         new PostgresSqlTestHelper().SetupDatabase();

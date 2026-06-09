@@ -17,7 +17,7 @@ public class ConcurrentProvisionerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_not_corrupt_state()
+    public async Task When_multiple_mysql_provisioners_run_concurrently_they_should_not_corrupt_state()
     {
         // Arrange
         var config = new RelationalDatabaseConfiguration(

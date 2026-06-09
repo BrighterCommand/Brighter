@@ -71,9 +71,9 @@ public class CloudEventJsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>
         var defaultCloudEventsAdditionalProperties = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
         var body = new MessageBody(JsonSerializer.SerializeToUtf8Bytes(new CloudEventMessage
         {
-            Id = request.Id,
+            Id = request.Id.Value,
             Source = publication.Source,
-            Type = publication.Type,
+            Type = publication.Type?.Value ?? string.Empty,
             DataContentType = bodyContentType.ToString(),
             Subject = publication.Subject,
             DataSchema = publication.DataSchema,
