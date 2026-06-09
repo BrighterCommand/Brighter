@@ -1,157 +1,83 @@
-# Resume State — Spec 0030 primitive_obsession
+# Resume State — Spec 0031 test_naming_conventions
 
-**Last updated:** 2026-06-08
-**Branch:** `primitive_obsession`
-**Spec dir:** `specs/0030-primitive_obsession/`  ·  `specs/.current-spec` = `0030-primitive_obsession`
-**Issue:** #4164  ·  ADR: `docs/adr/0061-box-provisioning-value-types.md`
-**HEAD:** `7f451cd96`
+**Last updated:** 2026-06-09
+**Branch:** `test_naming`
+**Spec dir:** `specs/0031-test_naming_conventions/`  ·  `specs/.current-spec` = `0031-test_naming_conventions`
+**Issue:** #4157 (Database Migration Has Bad Test Naming — Not Convention)
+**ADR:** none — **Design marked N/A** (this is a correction to an already-documented convention, not a design decision)
+
+## What this is
+
+Rename the BoxProvisioning tests to follow Brighter's authoritative naming convention in
+`.agent_instructions/testing.md`:
+- **Class**: `[Behavior]Tests` (PascalCase, ends `Tests`; never `When_`)
+- **Method**: `When_[condition]_should_[expected_behavior]` (snake_case)
+- **File**: named after the happy-path method, `When_..._should_....cs`
+
+Pure rename/refactor — **no new tests, no behaviour/assertion/logic changes, no test-count changes.**
+`/test-first` does NOT apply (nothing is written test-first). Verification = build + count parity
++ green/red parity (run suite where the backend container is available; note explicitly where not).
 
 ## Where we are in the workflow
 
-Issue → **Requirements ✅** → **Design (ADR 0061) ✅** → **Tasks ✅** → **Tests/Code ✅** → **Code Review ✅ (all findings resolved)**
+Issue → **Requirements ✅** → **Design N/A** → **Tasks ✅ approved** → **Implement ✅ DONE** → **Verify ✅ DONE** → Review (next)
 
-## Code Review — COMPLETE ✅
+> **STATUS 2026-06-09: IMPLEMENTATION COMPLETE.** All 7 tasks (T1 baseline + T2–T6 renames + T7 sign-off)
+> done & committed on branch `test_naming`. 118 non-conforming files renamed to convention (0 WRONG +
+> 0 MIXED remain). Commits: T2 `a3b2bc33d` · T3 `53520bb84` · T4 `d9947c90b` · T5 `e9358acb3` ·
+> T6 `24c4f168d`. Verification record: `specs/0031-test_naming_conventions/.scratch/T7-signoff.md`.
+> All AC-1..10 PASS; build clean on all 5 projects; count + green/red parity vs baseline (MSSQL keeps its
+> 13 pre-existing failures, 1 now under a renamed FQN). **Remaining: `/spec:review code` then PR / merge.**
 
-Findings from `specs/0030-primitive_obsession/review-code.md` all resolved in `7f451cd96`:
-- **Finding 2 (Score 72)** — Spanner provisioners now forward `_configuration.SchemaName` to migration activity
-- **Finding 1 fix-forward** — ServiceActivator .Value call-site completions for string?-widened operators
-- **Finding 3 (Score 64)** — 4 characterisation tests added for mapper null paths
-- **Phase 2 miss** — 3 BoxProvisioning test doubles updated to `BoxTableName` type
-- **Finding 4 (Score 38)** / **Finding 5 (Score 22)** — low severity, no action required
-
-## Phase 1 — COMPLETE ✅  (111/111 tests, net9.0)
-
-All six value types implemented and committed:
-
-| Commit | What |
+| Phase | Status |
 |---|---|
-| `6262cc15d` | fix: resolve CS8604/CS8601 call-site nullability in `Paramore.Brighter` (boy-scout) |
-| `56f77029a` | feat(spec-0030): `BoxTableName` round-trip + value equality (4 tests) |
-| `056204fc7` | feat(spec-0030): `BoxTableName.IsNullOrEmpty` (3 tests) |
-| `30e7ea169` | feat(spec-0030): `SchemaName` round-trip + nullable + `IsNullOrEmpty` (8 tests) |
-| `2efa24466` | feat(spec-0030): `MigrationDescription` round-trip + `IsNullOrEmpty` (7 tests) |
-| `e8f854397` | feat(spec-0030): `SqlScript` round-trip + nullable + no-validation + `IsNullOrEmpty` (9 tests) |
-| `a92ffc70c` | feat(spec-0030): `SourceReference` round-trip + nullable + `IsNullOrEmpty` (8 tests) |
-| `4cb46c41d` | feat(spec-0030): `MigrationVersion` round-trip + int arithmetic + `IComparable` (7 tests) |
+| Requirements (`requirements.md`) | ✅ written + approved (`.requirements-approved`); FR-1..6, NFR-1..6, AC-1..10. Issue commented. |
+| Design (ADR) | ⏭️ N/A by decision (`.design-approved` marker records why) |
+| Tasks (`tasks.md`) | ✅ drafted + **approved** (`.tasks-approved`) 2026-06-09 — 8 tasks (T1 baseline · T2–T6 rename-per-project · T7 final). Full FR/NFR/AC coverage map, no gaps/creep. |
+| `/spec:implement` | 🔄 **NEXT — start at T1 (baseline)** |
 
-New type files (all in `src/Paramore.Brighter.BoxProvisioning/`):
-- `BoxTableName.cs`, `SchemaName.cs`, `MigrationDescription.cs`
-- `SqlScript.cs`, `SourceReference.cs`, `MigrationVersion.cs`
+## Scope (survey baseline — T1 will re-confirm exact counts)
 
----
+5 in-scope folders, 252 test files; **118 need correction** (111 WRONG + 7 MIXED). 77 CORRECT files left untouched.
 
-## Phase 2 — COMPLETE ✅  (111/111 tests net9.0+net10.0, all TFMs build clean)
+| Unit (task) | Folder | Non-conforming |
+|---|---|---|
+| T2 BoxProvisioning.Tests | `tests/Paramore.Brighter.BoxProvisioning.Tests/` | 2 |
+| T3 Sqlite | `tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning/` | 22 (18 WRONG + 4 MIXED) |
+| T4 MSSQL | `tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning/` | 33 WRONG |
+| T5 MySQL | `tests/Paramore.Brighter.MySQL.Tests/BoxProvisioning/` | 27 (24 WRONG + 3 MIXED) |
+| T6 PostgreSQL | `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/` | 34 WRONG |
 
-Commit: `2d0aaa80c` — retype BoxProvisioning contracts to value types.
+**Categories:** CORRECT = good class + good method (leave untouched). MIXED = good class, `Should_` method
+(rename method only). WRONG = `When_` class + `Should_` method (rename class + method + file-if-needed).
 
-All Phase 3 and Phase 4 verification tasks also done:
-- All 4 relational backends + Spanner compile with 0 warnings/errors
-- All 4 TFMs (netstandard2.0/net8/net9/net10) build clean
-- Identifier-validation regression: 11/11 tests pass
-- Monotonicity regression: pass
-- Full suite: 111/111 on net9.0 and net10.0
-- No types leaked outside Paramore.Brighter.BoxProvisioning
-- Core Paramore.Brighter assembly unmodified
+## Container needs for verification
 
-## Current phase: CODE REVIEW 🔄
-
-All implementation tasks complete. Ready for `/spec:review` or PR creation.
-
----
-
-### Archived: Phase 2 contract-retyping plan (for reference)
-
-### Task 2a — Retype `IAmABoxMigration` and `BoxMigration`
-
-Files to edit:
-- `src/Paramore.Brighter.BoxProvisioning/IAmABoxMigration.cs`
-- `src/Paramore.Brighter.BoxProvisioning/BoxMigration.cs`
-
-Changes:
-- `int Version` → `MigrationVersion`
-- `string Description` → `MigrationDescription`
-- `string UpScript` → `SqlScript`
-- `string? SourceReference` → `SourceReference?`
-- `string? IdempotencyCheckSql` → `SqlScript?`
-- `LogicalColumns` stays `IReadOnlyCollection<string>` — do NOT change
-
-Verify existing `new BoxMigration(1, "Add Source", "ALTER TABLE …", new[] { "Source" })` call sites in the four relational catalog assemblies compile unchanged via implicit conversions (no argument changes needed).
-
-### Task 2b — Retype `IAmABoxMigrationRunner.MigrateAsync` + fix D4 ternary
-
-Files to edit:
-- `src/Paramore.Brighter.BoxProvisioning/IAmABoxMigrationRunner.cs`
-- `src/Paramore.Brighter.BoxProvisioning/SqlBoxMigrationRunner.cs`
-
-Changes:
-- `MigrateAsync(string tableName, string? schemaName, …)` → `MigrateAsync(BoxTableName tableName, SchemaName? schemaName, …)`
-- **D4 ternary** at `SqlBoxMigrationRunner.cs:285`: change to `migrations.Count == 0 ? (MigrationVersion)0 : migrations[migrations.Count - 1].Version` (resolves CS0172 bidirectional-implicit ambiguity)
-- `Identifiers.AssertSafe(tableName, …)` and `AssertSafe(schemaName, …)` lines ~191/194 pass `string?` via implicit conversion — resolve any CS8604 with `.Value` or `!`, do NOT revert operator return type
-- `SqlBoxProvisioner` call `_migrationRunner.MigrateAsync(BoxTableName, _configuration.SchemaName, …)` compiles via implicit `string? → SchemaName?`
-
-### Task 2c — Retype `IAmABoxProvisioner.BoxTableName`
-
-Files to edit:
-- `src/Paramore.Brighter.BoxProvisioning/IAmABoxProvisioner.cs`
-- `src/Paramore.Brighter.BoxProvisioning/SqlBoxProvisioner.cs` (line ~105)
-
-Changes:
-- `string BoxTableName` property → `BoxTableName`
-- `SqlBoxProvisioner` derives property from `_configuration.OutBoxTableName`/`InBoxTableName` (core `string`) — compiles via implicit conversion, no core changes
-- `Identifiers.AssertSafe(BoxTableName, …)` at line ~105 still compiles via implicit `→ string?`; resolve CS8604 with `.Value` or `!`
-
-### Task 2d — Update test doubles to new types (mechanical, no behaviour)
-
-Files to edit (exhaustive list):
-
-**`IAmABoxMigration` implementers** (update property declarations only):
-- `tests/.../When_relational_box_migration_runner_base_migrate_receives_non_monotonic_migrations_it_should_throw_before_opening_connection.cs` (`StubBoxMigration`)
-- `tests/.../When_relational_box_migration_runner_base_migrate_receives_unsafe_identifier_it_should_throw_before_opening_connection.cs` (`StubBoxMigration`)
-
-**`IAmABoxMigrationRunner` direct implementers** (update `MigrateAsync` signature only):
-- `tests/.../When_sql_box_provisioner_detect_table_state_inlines_negative_version_clamp.cs` (`VersionCapturingMigrationRunner`)
-- `tests/.../When_sql_box_provisioner_effective_schema_name_is_overridden_it_should_propagate_to_detection_and_payload_calls_only.cs` (`SchemaCapturingMigrationRunner`)
-- `tests/.../When_sql_box_provisioner_provision_async_receives_unsafe_identifier_it_should_throw_before_opening_connection.cs` (`ThrowingMigrationRunner`)
-- `tests/.../When_sql_box_provisioner_provision_async_runs_successfully_it_should_invoke_hooks_in_documented_order.cs` (`RecordingMigrationRunner`)
-
-**`IAmABoxProvisioner` implementer**:
-- `tests/.../TestDoubles/StubBoxProvisioner.cs` (`BoxTableName` property type)
-
-Do NOT modify: `StubBoxDetectionHelper.cs` (detection-helper, out of scope).
-
----
-
-## Phase 3 — Backend compilability (after Phase 2)
-
-Build all four relational backends (MsSql, MySql, PostgreSql, Sqlite) + Spanner against the retyped interfaces. Confirm compilation via implicit conversions — no argument changes expected. Also confirm null-path behaviour: SQLite null `SchemaName` and V2+ null `IdempotencyCheckSql` produce no NRE.
-
----
-
-## Phase 4 — Cross-cutting verification (after Phase 3)
-
-1. All TFMs compile (`netstandard2.0;net8.0;net9.0;net10.0`) — confirm no `netstandard2.0`-unavailable APIs
-2. Identifier-validation regression: `1Outbox` → `ConfigurationException`; SQLite null schema → succeeds
-3. Monotonicity regression: `[1,2,3]` passes; `[1,3]` → `ConfigurationException` with `V1 followed by V3 (expected V2)`
-4. Full suite parity + telemetry/log string content unchanged
-5. Scope guard: no new types leaked outside `Paramore.Brighter.BoxProvisioning`; core assembly unmodified
-
----
+- **No container**: BoxProvisioning.Tests (T2), Sqlite (T3) — suite MUST be run.
+- **Docker required**: MSSQL (T4), PostgreSQL (T5), MySQL (T6) — run if available, else NOTE "suite not run — infra unavailable" (never silent-skip).
 
 ## Key implementation notes
 
-- **No behaviour changes in Phase 2** — only type signatures change; call sites compile via implicit conversions
-- **D4 ternary** is the one required explicit cast; it is pre-identified at `SqlBoxMigrationRunner.cs:285`
-- **`AssertSafe` stays at call sites** — do NOT move validation into constructors (D3)
-- **`LogicalColumns` unchanged** — stays `IReadOnlyCollection<string>` throughout (D5)
-- **CS8604 pattern**: all string-backed operators return `string?`; when passing into non-nullable `AssertSafe(string, …)`, resolve with `.Value` or `!` at the call site (established codebase pattern)
-- Phase 2 tasks 2a–2c should each be committed separately; 2d (test doubles) committed after 2c
+- Class-name derivation: concise PascalCase describing behaviour-under-test, strip `When_`/`Should_`, end in `Tests`.
+  Worked example: class `When_sqlite_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap`
+  → `OutboxProvisionerBootstrapTests`; method `Should_bootstrap_with_synthetic_history()`
+  → `When_sqlite_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()`; file already conforms → keep name.
+- MIXED files: rename `Should_` method(s) ONLY; class already conforms.
+- File renames via `git mv` (preserve history); leave already-conforming file names as-is.
+- Update all references to renamed identifiers: `[Collection]`, `nameof`, base/partial classes, namespace usages.
+- Commit per project (T2–T6).
+- ⚠️ `.gitignore` `*.sqlite` quirk: new files under `*.Sqlite` dirs need `git add -f` (see CLAUDE.md). Test dirs end in `.Tests` so NOT affected — but watch the Sqlite rename commit.
 
-## Test run command
+## Resume steps
+
+1. `git branch --show-current` → expect `test_naming`; `cat specs/.current-spec` → `0031-test_naming_conventions`.
+2. If tasks not yet reviewed: run `/spec:review tasks`, address findings, then `/spec:approve tasks`.
+3. `/spec:implement` → start at **T1 (baseline)**: record per-project discovery count + pass/fail/skip + container availability to a scratch note.
+4. Then T2–T6 (any order/parallel; each: rename → build → count parity → suite-where-available → commit).
+5. Finally T7 whole-spec sign-off (0 WRONG + 0 MIXED, CORRECT untouched, scope containment AC-10).
+
+## Test run command (per project, e.g.)
 
 ```bash
-dotnet test tests/Paramore.Brighter.BoxProvisioning.Tests/ --framework net9.0 --no-build -q
+dotnet test tests/Paramore.Brighter.BoxProvisioning.Tests/ --framework net9.0 -q
 ```
-
-## Spec 0030 about
-
-Replace bare `string`/`int` primitives in Box Provisioning public interfaces with six dedicated value-type `record`s modelled on `src/Paramore.Brighter/Id.cs`. Six types: `BoxTableName`, `SchemaName`, `MigrationDescription`, `SqlScript`, `SourceReference`, `MigrationVersion`. Implicit conversions preserve full source compatibility at every existing call site.
