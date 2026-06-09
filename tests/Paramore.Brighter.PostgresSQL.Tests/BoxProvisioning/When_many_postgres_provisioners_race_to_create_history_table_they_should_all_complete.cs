@@ -48,13 +48,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 // test was added to defend stays covered by the local run + the same project's other concurrent
 // provisioning tests (SpannerConcurrent* mirror the same shape on Spanner).
 [Trait("Fragile", "CI")]
-public class When_many_postgres_provisioners_race_to_create_history_table_they_should_all_complete : IAsyncLifetime
+public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
 {
     private const int RacerCount = 16;
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string[] _tableNames;
 
-    public When_many_postgres_provisioners_race_to_create_history_table_they_should_all_complete()
+    public PostgreSqlManyProvisionersHistoryRaceTests()
     {
         _tableNames = Enumerable.Range(0, RacerCount)
             .Select(_ => $"test_outbox_{Guid.NewGuid():N}")
@@ -62,7 +62,7 @@ public class When_many_postgres_provisioners_race_to_create_history_table_they_s
     }
 
     [Fact]
-    public async Task Should_all_complete_without_transaction_abort()
+    public async Task When_many_postgres_provisioners_race_to_create_history_table_they_should_all_complete()
     {
         // Arrange — 16 racers each provision a distinct outbox table, so each holds its own
         // per-table advisory lock and they DO NOT serialize on the box-table lock. The shared

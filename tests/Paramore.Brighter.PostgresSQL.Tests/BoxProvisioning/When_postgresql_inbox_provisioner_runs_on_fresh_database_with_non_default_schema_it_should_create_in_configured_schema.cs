@@ -35,14 +35,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 // Per PR #4039 reviewer item M4-1 (F1b): PostgreSqlInboxBuilder.GetDDL is now schema-aware
 // via an optional schemaName parameter, and PostgreSqlInboxMigrationCatalog.FreshInstallDdl
 // threads configuration.SchemaName through to it.
-public class When_postgresql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema : IAsyncLifetime
+public class PostgreSqlInboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_inbox_{Guid.NewGuid():N}";
     private readonly string _nonDefaultSchema = $"billing_for_inbox_schema_test_{Guid.NewGuid():N}";
     private readonly PostgreSqlInboxProvisioner _provisioner;
 
-    public When_postgresql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
+    public PostgreSqlInboxNonDefaultSchemaTests()
     {
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
@@ -58,7 +58,7 @@ public class When_postgresql_inbox_provisioner_runs_on_fresh_database_with_non_d
     }
 
     [Fact]
-    public async Task Should_create_inbox_in_configured_schema_and_no_op_on_second_run()
+    public async Task When_postgresql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
         //Arrange
         new PostgresSqlTestHelper().SetupDatabase();

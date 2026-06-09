@@ -11,18 +11,18 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_box_provisioning_uses_connection_name_for_outbox_it_should_resolve_from_configuration : IAsyncLifetime
+public class PostgreSqlOutboxConnectionNameResolutionTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName;
 
-    public When_postgres_box_provisioning_uses_connection_name_for_outbox_it_should_resolve_from_configuration()
+    public PostgreSqlOutboxConnectionNameResolutionTests()
     {
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
     }
 
     [Fact]
-    public async Task Should_resolve_connection_string_and_provision()
+    public async Task When_postgres_box_provisioning_uses_connection_name_for_outbox_it_should_resolve_from_configuration()
     {
         //Arrange
         new PostgresSqlTestHelper().SetupDatabase();

@@ -33,13 +33,13 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds : IAsyncLifetime
+public class PostgreSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_pass_thirty_seconds_to_advisory_lock_acquire()
+    public async Task When_postgres_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
     {
         //Arrange — the runner is constructed via the detection-helper ctor with `lockTimeout`
         // OMITTED, exercising the optional-parameter default path. A fake IPostgreSqlAdvisoryLock
