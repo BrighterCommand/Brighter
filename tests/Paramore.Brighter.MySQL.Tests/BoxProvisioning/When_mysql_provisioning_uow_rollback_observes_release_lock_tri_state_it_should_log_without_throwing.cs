@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_provisioning_uow_rollback_observes_release_lock_tri_state_it_should_log_without_throwing : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkRollbackTriStateTests : IAsyncLifetime
 {
     // Per spec 0027 Item M / ADR 0057 §5b / ADR 0058 §B.3: MySQL's RELEASE_LOCK has three
     // outcomes — 1 (released by this session), 0 (lock held by another session — diagnostic
@@ -68,15 +68,15 @@ public class When_mysql_provisioning_uow_rollback_observes_release_lock_tri_stat
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_complete_with_no_warning_when_release_returns_true() =>
+    public async Task When_release_returns_true_it_should_complete_with_no_warning() =>
         await AssertRollbackBehavior(releaseResult: true, expectWarning: false, expectedMarker: null);
 
     [Fact]
-    public async Task Should_log_warning_with_marker_zero_when_release_returns_false() =>
+    public async Task When_release_returns_false_it_should_log_warning_with_marker_zero() =>
         await AssertRollbackBehavior(releaseResult: false, expectWarning: true, expectedMarker: "0");
 
     [Fact]
-    public async Task Should_log_warning_with_marker_NULL_when_release_returns_null() =>
+    public async Task When_release_returns_null_it_should_log_warning_with_marker_null() =>
         await AssertRollbackBehavior(releaseResult: null, expectWarning: true, expectedMarker: "NULL");
 
     private async Task AssertRollbackBehavior(bool? releaseResult, bool expectWarning, string? expectedMarker)

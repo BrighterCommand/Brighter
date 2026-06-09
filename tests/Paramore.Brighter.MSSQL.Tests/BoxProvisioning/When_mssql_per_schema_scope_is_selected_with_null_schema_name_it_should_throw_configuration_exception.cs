@@ -34,13 +34,13 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // MigrationHistoryScope.PerSchema with a null SchemaName is a misconfiguration — there is no
 // schema to place history in. The runner must reject it at the MigrateAsync entry with a
 // ConfigurationException and must NOT silently fall back to Global or create any history.
-public class When_mssql_per_schema_scope_is_selected_with_null_schema_name_it_should_throw_configuration_exception : IAsyncLifetime
+public class MsSqlPerSchemaNullSchemaNameTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly MsSqlBoxMigrationRunner _runner;
 
-    public When_mssql_per_schema_scope_is_selected_with_null_schema_name_it_should_throw_configuration_exception()
+    public MsSqlPerSchemaNullSchemaNameTests()
     {
         // Evident data: PerSchema scope with a null SchemaName is the misconfiguration under test.
         var config = new RelationalDatabaseConfiguration(
@@ -53,7 +53,7 @@ public class When_mssql_per_schema_scope_is_selected_with_null_schema_name_it_sh
     }
 
     [Fact]
-    public async Task Should_throw_configuration_exception_and_create_no_history()
+    public async Task When_mssql_per_schema_scope_is_selected_with_null_schema_name_it_should_throw_configuration_exception()
     {
         //Arrange — a real database; no box table for this run yet.
         Configuration.EnsureDatabaseExists(_connectionString);

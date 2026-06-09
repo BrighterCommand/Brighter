@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_advisory_lock_acquire_throws_runner_should_propagate_distinguishable_exception_types : IAsyncLifetime
+public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
 {
     // sp_getapplock returns one of four negative codes when acquisition fails: -1 (timeout),
     // -2 (cancelled), -3 (deadlock victim), -999 (parameter validation / call error). The
@@ -55,21 +55,21 @@ public class When_mssql_advisory_lock_acquire_throws_runner_should_propagate_dis
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_propagate_TimeoutException_when_acquire_throws_TimeoutException()
+    public async Task When_acquire_throws_timeout_exception_it_should_propagate_timeout_exception()
     {
         await AssertRunnerPropagatesAcquireException(
             new TimeoutException("forced -1 timeout for spec 0027 Item N test"));
     }
 
     [Fact]
-    public async Task Should_propagate_OperationCanceledException_when_acquire_throws_OperationCanceledException()
+    public async Task When_acquire_throws_operation_canceled_exception_it_should_propagate_operation_canceled_exception()
     {
         await AssertRunnerPropagatesAcquireException(
             new OperationCanceledException("forced -2 cancellation for spec 0027 Item N test"));
     }
 
     [Fact]
-    public async Task Should_propagate_MigrationLockDeadlockException_when_acquire_throws_MigrationLockDeadlockException()
+    public async Task When_acquire_throws_migration_lock_deadlock_exception_it_should_propagate_migration_lock_deadlock_exception()
     {
         // -3 is the new path: MigrationLockDeadlockException is introduced by Item N so an
         // operator can distinguish a deadlock victim from a generic lock timeout (-1) and
@@ -80,14 +80,14 @@ public class When_mssql_advisory_lock_acquire_throws_runner_should_propagate_dis
     }
 
     [Fact]
-    public async Task Should_propagate_ArgumentException_when_acquire_throws_ArgumentException()
+    public async Task When_acquire_throws_argument_exception_it_should_propagate_argument_exception()
     {
         await AssertRunnerPropagatesAcquireException(
             new ArgumentException("forced -999 parameter validation for spec 0027 Item N test"));
     }
 
     [Fact]
-    public async Task Should_complete_migration_when_acquire_succeeds()
+    public async Task When_acquire_succeeds_it_should_complete_migration()
     {
         //Arrange — happy-path fake: AcquireAsync is a no-op success. The runner's real DDL
         //          executes against the real MSSQL container under a real transaction.

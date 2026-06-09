@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_sqlite_provisioning_uow_begin_async_is_called_it_should_begin_immediate_as_writer_slot_lock : IAsyncLifetime
+public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
 {
     // Per ADR 0057 §4 / ADR 0058 §B.1: SQLite has no advisory-lock primitive — the writer slot
     // acquired by BEGIN IMMEDIATE is itself the lock. The SQLite UoW is therefore the
@@ -65,7 +65,7 @@ public class When_sqlite_provisioning_uow_begin_async_is_called_it_should_begin_
     private readonly string _connectionString;
     private readonly SqliteConnection _connection;
 
-    public When_sqlite_provisioning_uow_begin_async_is_called_it_should_begin_immediate_as_writer_slot_lock()
+    public ProvisioningUnitOfWorkBeginTests()
     {
         _connectionString = $"Data Source={_dbPath}";
         _connection = new SqliteConnection(_connectionString);
@@ -88,7 +88,7 @@ public class When_sqlite_provisioning_uow_begin_async_is_called_it_should_begin_
     }
 
     [Fact]
-    public async Task Should_acquire_writer_slot_via_BEGIN_IMMEDIATE_as_combined_lock_and_transaction()
+    public async Task When_sqlite_provisioning_uow_begin_async_is_called_it_should_begin_immediate_as_writer_slot_lock()
     {
         // Arrange — SqliteProvisioningUnitOfWork ctor takes only (SqliteConnection, ILogger).
         // The absence of an advisory-lock parameter is part of the contract and is locked in by

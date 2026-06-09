@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_advisory_lock_deadline_is_evaluated_against_the_injected_time_provider_it_should_be_independent_of_wall_clock : IAsyncLifetime
+public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
 {
     // PostgreSqlAdvisoryLock previously read DateTime.UtcNow to compute the timeout deadline.
     // A wall-clock jump (NTP correction during a long lock wait, leap-second smear, container
@@ -56,7 +56,7 @@ public class When_postgres_advisory_lock_deadline_is_evaluated_against_the_injec
     private NpgsqlConnection? _contenderConnection;
 
     [Fact]
-    public async Task Should_throw_timeout_exception_when_fake_time_provider_advances_past_timeout_independent_of_wall_clock()
+    public async Task When_postgres_advisory_lock_deadline_is_evaluated_against_the_injected_time_provider_it_should_be_independent_of_wall_clock()
     {
         // Arrange — ensure database exists, then open two distinct sessions. The first
         //           genuinely holds the Postgres advisory lock (so any subsequent

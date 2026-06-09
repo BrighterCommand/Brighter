@@ -10,12 +10,12 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_box_provisioning_uses_connection_name_for_inbox_it_should_resolve_from_configuration : IAsyncLifetime
+public class MsSqlInboxConnectionNameResolutionTests : IAsyncLifetime
 {
     private readonly string _connectionString;
     private readonly string _tableName;
 
-    public When_mssql_box_provisioning_uses_connection_name_for_inbox_it_should_resolve_from_configuration()
+    public MsSqlInboxConnectionNameResolutionTests()
     {
         var builder = new ConfigurationBuilder().AddEnvironmentVariables();
         var configuration = builder.Build();
@@ -26,7 +26,7 @@ public class When_mssql_box_provisioning_uses_connection_name_for_inbox_it_shoul
     }
 
     [Fact]
-    public async Task Should_resolve_connection_string_and_provision()
+    public async Task When_mssql_box_provisioning_uses_connection_name_for_inbox_it_should_resolve_from_configuration()
     {
         //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);

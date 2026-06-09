@@ -186,10 +186,22 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         // Defence-in-depth at the framework chokepoint. Catalogs gate AssertSafe at the entry to
         // All(...), but the runner is independently reachable (callers can construct a migration
         // list and invoke MigrateAsync directly), so the public entry point must validate too.
-        // schemaName is nullable: SQLite has no schema concept per ADR 0057 §6, so a null value
-        // is legitimate and must not be rejected as "missing".
         Identifiers.AssertSafe(tableName.Value, nameof(tableName));
-        if (schemaName is not null)
+
+        // schemaName is optional: SQLite has no schema concept per ADR 0057 §6, so an absent value
+        // is legitimate and must not be rejected as "missing". A SchemaName is "absent" when it is
+        // a null reference OR wraps a null/empty string — callers commonly reach the latter via the
+        // implicit string->SchemaName conversion of a null/empty value (e.g. an unconfigured
+        // RelationalDatabaseConfiguration.SchemaName). Collapse every absent form to a single null
+        // using SchemaName.IsNullOrEmpty (the canonical "absent" check, mirroring Id.IsNullOrEmpty)
+        // so the AssertSafe gate and every downstream `schemaName?.Value ?? <backend default>` treat
+        // them identically — preserving the semantics of the `string?` parameter this value type
+        // replaced (spec 0030), which a bare `is not null` reference check silently broke.
+        if (SchemaName.IsNullOrEmpty(schemaName))
+        {
+            schemaName = null;
+        }
+        else
         {
             Identifiers.AssertSafe(schemaName.Value, nameof(schemaName));
         }
