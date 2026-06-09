@@ -33,14 +33,14 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // Per PR #4039 reviewer item M4-1 (F1a): SqlInboxBuilder.GetDDL is now schema-aware via an
 // optional schemaName parameter, and MsSqlInboxMigrationCatalog.FreshInstallDdl threads
 // configuration.SchemaName through to it. This test pins the inbox half of the contract.
-public class When_mssql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema : IAsyncLifetime
+public class MsSqlInboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private const string NonDefaultSchema = "billing_for_inbox_schema_test";
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_inbox_{Guid.NewGuid():N}";
     private readonly MsSqlInboxProvisioner _provisioner;
 
-    public When_mssql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
+    public MsSqlInboxNonDefaultSchemaTests()
     {
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
@@ -56,7 +56,7 @@ public class When_mssql_inbox_provisioner_runs_on_fresh_database_with_non_defaul
     }
 
     [Fact]
-    public async Task Should_create_inbox_in_configured_schema_and_no_op_on_second_run()
+    public async Task When_mssql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
         //Arrange — operator pre-creates the schema; runner does not create schemas itself.
         Configuration.EnsureDatabaseExists(_connectionString);

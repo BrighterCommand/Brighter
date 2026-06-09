@@ -32,7 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_runner_acquires_lock_resource_should_be_qualified_by_schema
+public class MsSqlRunnerLockResourceSchemaQualificationTests
 {
     // Two tables with the same name in different schemas (e.g. dbo.Outbox and billing.Outbox)
     // must acquire DISTINCT advisory locks. The pre-fix lock resource was
@@ -52,7 +52,7 @@ public class When_mssql_runner_acquires_lock_resource_should_be_qualified_by_sch
     [InlineData(null, "dbo")]
     [InlineData("dbo", "dbo")]
     [InlineData("billing", "billing")]
-    public async Task Should_qualify_lock_resource_with_effective_schema(
+    public async Task When_mssql_runner_acquires_lock_resource_should_be_qualified_by_schema(
         string? configuredSchema, string expectedSchemaInLockResource)
     {
         //Arrange
