@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7 : IAsyncLifetime
+public class MySqlOutboxVkToV7UpgradeTests : IAsyncLifetime
 {
     private const string MarkerMessageId = "marker-row-must-survive";
 
@@ -51,7 +51,7 @@ public class When_mysql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_
     [InlineData(3)]
     [InlineData(5)]
     [InlineData(7)]
-    public async Task Should_upgrade_to_v7_with_synthetic_v_k_plus_applied_rows(int k)
+    public async Task When_mysql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7(int k)
     {
         //Arrange — seed an outbox at V_k (no history row) and a marker row to prove preservation.
         MySqlOutboxLegacySeeder.SeedAtV(k, _connectionString, _tableName);
