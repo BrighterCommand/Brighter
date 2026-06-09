@@ -34,7 +34,7 @@ public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnecti
 
             if (publication.MakeChannels == OnMissingChannel.Create)
             {
-                Log.CreateTopicIsNotSupported(s_logger, publication.Topic);
+                Log.CreateTopicIsNotSupported(s_logger, publication.Topic!.Value);
             }
             
             producers[new ProducerKey(publication.Topic, publication.Type)] = new RocketMqMessageProducer(connection,

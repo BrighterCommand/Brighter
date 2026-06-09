@@ -264,12 +264,12 @@ public class AwsScheduler(
 
     private ValueTask<string?> GetTopicAsync(Message message)
     {
-        if (s_topic.TryGetValue(message.Header.Topic, out var topicArn))
+        if (s_topic.TryGetValue(message.Header.Topic.Value, out var topicArn))
         {
             return new ValueTask<string?>(topicArn);
         }
 
-        return new ValueTask<string?>(GetTopicArnAsync(message.Header.Topic));
+        return new ValueTask<string?>(GetTopicArnAsync(message.Header.Topic.Value));
 
 
         async Task<string?> GetTopicArnAsync(string topicName)
@@ -289,12 +289,12 @@ public class AwsScheduler(
 
     private ValueTask<string?> GetQueueAsync(Message message)
     {
-        if (s_queueUrl.TryGetValue(message.Header.Topic, out var queueUrl))
+        if (s_queueUrl.TryGetValue(message.Header.Topic.Value, out var queueUrl))
         {
             return new ValueTask<string?>(queueUrl);
         }
 
-        return new ValueTask<string?>(GetQueueUrlAsync(message.Header.Topic));
+        return new ValueTask<string?>(GetQueueUrlAsync(message.Header.Topic.Value));
 
         async Task<string?> GetQueueUrlAsync(string queueName)
         {

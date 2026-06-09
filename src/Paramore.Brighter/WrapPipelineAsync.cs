@@ -99,7 +99,7 @@ namespace Paramore.Brighter
             
             if (message.Header.Topic != publication.Topic)
             {
-                Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic);
+                Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic.Value);
                 if (publication.Topic is not null)
                 {
                     message.Header.Bag[Message.ProducerTopicHeaderName] = publication.Topic.Value;

@@ -173,11 +173,11 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
             Version = version;
         }
 
-        public int Version { get; }
-        public string Description => $"V{Version}";
-        public string UpScript => string.Empty;
+        public MigrationVersion Version { get; }
+        public MigrationDescription Description => $"V{Version}";
+        public SqlScript UpScript => string.Empty;
         public IReadOnlyCollection<string> LogicalColumns => Array.Empty<string>();
-        public string? SourceReference => null;
-        public string? IdempotencyCheckSql => null;
+        public SourceReference? SourceReference => null;
+        public SqlScript? IdempotencyCheckSql => null;
     }
 }

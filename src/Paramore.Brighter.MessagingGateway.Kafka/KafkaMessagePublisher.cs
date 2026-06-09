@@ -70,7 +70,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var kafkaMessage = new Message<string, byte[]>
             {
                 Headers = headers,
-                Key = message.Header.PartitionKey,
+                Key = message.Header.PartitionKey.Value,
                 Value = message.Body.ToByteArray()
             };
 

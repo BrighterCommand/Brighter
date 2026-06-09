@@ -256,7 +256,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             try
             {
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
-                Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic, message.Body.Value);
+                Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
                 _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers));
             }
             catch (ProduceException<string, string> pe)
@@ -278,7 +278,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (KafkaException kafkaException)
             {
-                Log.KafkaExceptionError(s_logger, kafkaException, Topic ?? RoutingKey.Empty);
+                Log.KafkaExceptionError(s_logger, kafkaException, Topic?.Value ?? RoutingKey.Empty.Value);
 
                 if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
                     throw;
@@ -329,7 +329,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
              try
              {
                  BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
-                 Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic, message.Body.Value);
+                 Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
                  await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers), cancellationToken);
             
              }

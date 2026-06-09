@@ -127,9 +127,28 @@ public class JsonMessageMapperTests
     {
         var command = new MyCommand { Value = Guid.NewGuid().ToString() };
         var mapper = new JsonMessageMapper<MyCommand>();
-        
+
         var request = await mapper.MapToRequestAsync(new Message(new MessageHeader(), new MessageBody(JsonSerializer.Serialize(command))));
         Assert.NotNull(request);
         Assert.Equal(command.Value, request.Value);
+    }
+
+    [Fact]
+    public void When_mapping_command_to_message_with_null_reply_to()
+    {
+        //Arrange
+        var mapper = new JsonMessageMapper<MyCommand>();
+        var command = new MyCommand { Value = Guid.NewGuid().ToString() };
+        var publication = new Publication
+        {
+            Topic = new RoutingKey("test-topic"),
+            ReplyTo = null
+        };
+
+        //Act
+        var message = mapper.MapToMessage(command, publication);
+
+        //Assert
+        Assert.Equal(RoutingKey.Empty, message.Header.ReplyTo);
     }
 }
