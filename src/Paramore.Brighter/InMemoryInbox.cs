@@ -138,9 +138,9 @@ namespace Paramore.Brighter
                 ClearExpiredMessages();
                 EnforceCapacityLimit();
 
-                string key = InboxItem.CreateKey(command.Id, contextKey);
+                string key = InboxItem.CreateKey(command.Id.Value, contextKey);
                 InboxItem item;
-                if (!ExistsInternal<T>(command.Id, contextKey))
+                if (!ExistsInternal<T>(command.Id.Value, contextKey))
                 {
                     item = new InboxItem(typeof(T), string.Empty, _timeProvider.GetUtcNow(), contextKey);
                     if (!Requests.TryAdd(key, item))

@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_two_sqlite_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_history_row : IAsyncLifetime
+public class LegacyTableRaceTests : IAsyncLifetime
 {
     private const int OutboxSeedVersion = 3;
     private const string OutboxMarkerMessageId = "outbox-marker-must-survive";
@@ -42,7 +42,7 @@ public class When_two_sqlite_provisioners_race_on_legacy_table_they_should_produ
     private readonly string _inboxTableName = $"test_inbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_produce_exactly_one_synthetic_v3_when_two_outbox_provisioners_race()
+    public async Task When_two_outbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v3()
     {
         //Arrange — seed an outbox at V3 (no history row) plus a marker row to prove preservation.
         //Two independent provisioners (each with its own runner) race against the same table.
@@ -93,7 +93,7 @@ public class When_two_sqlite_provisioners_race_on_legacy_table_they_should_produ
     }
 
     [Fact]
-    public async Task Should_produce_exactly_one_synthetic_v1_when_two_inbox_provisioners_race()
+    public async Task When_two_inbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v1()
     {
         //Arrange — seed a V1 inbox (no ContextKey, no history) plus a marker command row.
         SqliteInboxLegacySeeder.SeedAtV1(_connectionString, _inboxTableName);

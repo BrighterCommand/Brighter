@@ -141,7 +141,7 @@ public partial class SqsMessageSender
             [HeaderNames.DataContentType] = contentType.ToString(),
             [HeaderNames.DataSchema] = message.Header.DataSchema?.ToString() ?? string.Empty,
             [HeaderNames.SpecVersion] = message.Header.SpecVersion,
-            [HeaderNames.Type] = message.Header.Type,
+            [HeaderNames.Type] = message.Header.Type.Value,
             [HeaderNames.Source] = message.Header.Source.ToString(),
             [HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339(),
             [HeaderNames.Baggage] = message.Header.Baggage.ToString()

@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_sqlite_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds : IAsyncLifetime
+public class RunnerDefaultLockTimeoutTests : IAsyncLifetime
 {
     // Per-test DB file so the test does not interact with siblings running against the shared
     // test.db (same isolation pattern as the cancellation test).
@@ -43,13 +43,13 @@ public class When_sqlite_runner_is_constructed_without_lock_timeout_default_shou
     private readonly string _connectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    public When_sqlite_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
+    public RunnerDefaultLockTimeoutTests()
     {
         _connectionString = $"Data Source={_dbPath}";
     }
 
     [Fact]
-    public async Task Should_pass_thirty_seconds_to_unit_of_work_begin_async()
+    public async Task When_sqlite_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
     {
         //Arrange — the runner is constructed via the detection-helper ctor with `lockTimeout`
         // OMITTED, exercising the optional-parameter default path. SQLite has no advisory-lock

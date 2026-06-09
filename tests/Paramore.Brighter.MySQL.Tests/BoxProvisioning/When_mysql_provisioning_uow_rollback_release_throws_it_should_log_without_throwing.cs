@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_provisioning_uow_rollback_release_throws_it_should_log_without_throwing : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkRollbackReleaseThrowsTests : IAsyncLifetime
 {
     // Per ADR 0058 §B.3: RollbackAsync MUST NOT throw — disposal-style semantics. The runner's
     // catch path is `catch { await uow.RollbackAsync(CancellationToken.None); throw; }`, so any
@@ -58,7 +58,7 @@ public class When_mysql_provisioning_uow_rollback_release_throws_it_should_log_w
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_swallow_release_exception_and_log_warning()
+    public async Task When_mysql_provisioning_uow_rollback_release_throws_it_should_log_without_throwing()
     {
         // Arrange — release throws (simulates a dead connection / driver fault during
         // RELEASE_LOCK). MySqlException construction from test code is awkward, so an

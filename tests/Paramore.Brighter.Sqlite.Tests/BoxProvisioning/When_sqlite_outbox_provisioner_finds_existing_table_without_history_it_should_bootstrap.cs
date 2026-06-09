@@ -7,13 +7,13 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_sqlite_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap : IAsyncLifetime
+public class OutboxProvisionerBootstrapTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.ConnectionString;
     private readonly string _tableName;
     private readonly SqliteOutboxProvisioner _provisioner;
 
-    public When_sqlite_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
+    public OutboxProvisionerBootstrapTests()
     {
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
@@ -30,7 +30,7 @@ public class When_sqlite_outbox_provisioner_finds_existing_table_without_history
     }
 
     [Fact]
-    public async Task Should_bootstrap_with_synthetic_history()
+    public async Task When_sqlite_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
     {
         // Arrange — create outbox table directly (simulating pre-migration install)
         using (var setupConn = new SqliteConnection(_connectionString))

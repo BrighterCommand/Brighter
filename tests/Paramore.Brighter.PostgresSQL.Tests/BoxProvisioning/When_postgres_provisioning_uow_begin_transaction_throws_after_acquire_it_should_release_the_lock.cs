@@ -59,7 +59,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// nested/concurrent transactions aren't supported."), which is the same surface a real
 /// driver/server failure would present at this seam.
 /// </remarks>
-public class When_postgres_provisioning_uow_begin_transaction_throws_after_acquire_it_should_release_the_lock : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkBeginTransactionThrowsTests : IAsyncLifetime
 {
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
@@ -80,7 +80,7 @@ public class When_postgres_provisioning_uow_begin_transaction_throws_after_acqui
     }
 
     [Fact]
-    public async Task Should_release_acquired_lock_before_propagating_the_BeginTransaction_exception()
+    public async Task When_postgres_provisioning_uow_begin_transaction_throws_after_acquire_it_should_release_the_lock()
     {
         const string lockKey = "test_lock_resource_begintx_failure";
 

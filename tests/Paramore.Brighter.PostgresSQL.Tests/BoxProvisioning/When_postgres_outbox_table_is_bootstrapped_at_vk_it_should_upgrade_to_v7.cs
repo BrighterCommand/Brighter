@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7 : IAsyncLifetime
+public class PostgreSqlOutboxVkToV7UpgradeTests : IAsyncLifetime
 {
     private static readonly string[] s_v7ExpectedColumns =
     [
@@ -49,7 +49,7 @@ public class When_postgres_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_
     [InlineData(3)]
     [InlineData(5)]
     [InlineData(7)]
-    public async Task Should_upgrade_to_v7_with_synthetic_v_k_plus_applied_rows(int k)
+    public async Task When_postgres_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7(int k)
     {
         //Arrange — seed an outbox at V_k (no history row) and a marker row to prove preservation.
         new PostgresSqlTestHelper().SetupDatabase();

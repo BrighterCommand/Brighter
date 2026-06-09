@@ -298,16 +298,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
             {
-                Log.CannotAcknowledgeMessage(s_logger, message.Id);
+                Log.CannotAcknowledgeMessage(s_logger, message.Id.Value);
                 return;
             }
-            
+
             try
             {
                 var topicPartitionOffset = bagData as TopicPartitionOffset;
                 if (topicPartitionOffset == null)
                 {
-                    Log.CannotAcknowledgeMessage(s_logger, message.Id);
+                    Log.CannotAcknowledgeMessage(s_logger, message.Id.Value);
                     return;
                 }
 
@@ -358,7 +358,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
             {
-                Log.CannotNackMessage(s_logger, message.Id);
+                Log.CannotNackMessage(s_logger, message.Id.Value);
                 return;
             }
 
@@ -367,7 +367,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 var topicPartitionOffset = bagData as TopicPartitionOffset;
                 if (topicPartitionOffset == null)
                 {
-                    Log.CannotNackMessageTypeMismatch(s_logger, message.Id, bagData?.GetType().FullName ?? "null");
+                    Log.CannotNackMessageTypeMismatch(s_logger, message.Id.Value, bagData?.GetType().FullName ?? "null");
                     return;
                 }
 
@@ -597,7 +597,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
               {
                   if (reason != null)
                   {
-                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, reason.RejectionReason.ToString());
                   }
                   Acknowledge(message);
                   return true;
@@ -619,7 +619,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   {
                       message.Header.Topic = routingKey!;
                       if (isFallingBackToDlq)
-                          Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
+                          Log.FallingBackToDLQ(s_logger, message.Header.MessageId.Value);
 
                       // Get the appropriate producer based on routing
                       producer = GetRejectionProducer(routingKey);
@@ -628,16 +628,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   if (producer != null)
                   {
                       producer.Send(message);
-                      Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                      Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                   }
                   else
                   {
-                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                   }
               }
               catch (Exception ex)
               {
-                  Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
+                  Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId.Value, rejectionReason.ToString());
                   Acknowledge(message);
                   return true;
               }
@@ -663,7 +663,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 if (reason != null)
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, reason.RejectionReason.ToString());
                 }
                 await AcknowledgeAsync(message, cancellationToken);
                 return true;
@@ -685,7 +685,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
+                        Log.FallingBackToDLQ(s_logger, message.Header.MessageId.Value);
 
                     // Get the appropriate producer based on routing
                     producer = GetRejectionProducer(routingKey);
@@ -694,16 +694,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 if (producer != null)
                 {
                     await producer.SendAsync(message, cancellationToken);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
             {
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId.Value, rejectionReason.ToString());
                 await AcknowledgeAsync(message, cancellationToken);
                 return true;
             }

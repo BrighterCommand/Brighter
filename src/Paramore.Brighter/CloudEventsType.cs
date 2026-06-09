@@ -62,7 +62,7 @@ public sealed class CloudEventsType : IEquatable<CloudEventsType>
     /// </summary>
     /// <param name="type">The <see cref="CloudEventsType"/> instance.</param>
     /// <returns>The string value of the CloudEvents type.</returns>
-    public static implicit operator string(CloudEventsType type) => type.Value;
+    public static implicit operator string?(CloudEventsType type) => type?.Value;
 
     /// <summary>
     /// Explicitly converts a <see cref="string"/> to a <see cref="CloudEventsType"/>.

@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_sqlite_provisioning_uow_commit_async_is_called_it_should_commit_releasing_writer_slot : IAsyncLifetime
+public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
 {
     // Per ADR 0058 §B.1: SQLite's BEGIN IMMEDIATE transaction IS the lock — there is no
     // separate advisory-lock primitive to release. CommitAsync therefore only needs to commit
@@ -58,7 +58,7 @@ public class When_sqlite_provisioning_uow_commit_async_is_called_it_should_commi
     private readonly string _connectionString;
     private readonly SqliteConnection _connection;
 
-    public When_sqlite_provisioning_uow_commit_async_is_called_it_should_commit_releasing_writer_slot()
+    public ProvisioningUnitOfWorkCommitTests()
     {
         _connectionString = $"Data Source={_dbPath}";
         _connection = new SqliteConnection(_connectionString);
@@ -81,7 +81,7 @@ public class When_sqlite_provisioning_uow_commit_async_is_called_it_should_commi
     }
 
     [Fact]
-    public async Task Should_commit_the_BEGIN_IMMEDIATE_transaction()
+    public async Task When_sqlite_provisioning_uow_commit_async_is_called_it_should_commit_releasing_writer_slot()
     {
         // Arrange — SqliteProvisioningUnitOfWork ctor takes only (SqliteConnection, ILogger).
         await using var uow = new SqliteProvisioningUnitOfWork(_connection, NullLogger.Instance);

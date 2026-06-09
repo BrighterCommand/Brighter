@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_provisioning_uow_begin_throws_it_should_dispose_without_throwing : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
 {
     // Per ADR 0058 §B.3: the runner declares the UoW with `await using`, so DisposeAsync runs
     // on every exit path — including when BeginAsync itself throws. In that case the UoW may
@@ -60,7 +60,7 @@ public class When_mssql_provisioning_uow_begin_throws_it_should_dispose_without_
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_propagate_BeginAsync_exception_and_dispose_cleanly()
+    public async Task When_mssql_provisioning_uow_begin_throws_it_should_dispose_without_throwing()
     {
         // Arrange — fake lock that fails Acquire after the transaction has been opened
         var failingLock = new FakeMsSqlAdvisoryLock(
