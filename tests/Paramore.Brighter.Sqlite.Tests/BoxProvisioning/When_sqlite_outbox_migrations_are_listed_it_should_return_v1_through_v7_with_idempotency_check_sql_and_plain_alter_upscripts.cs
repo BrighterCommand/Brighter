@@ -69,7 +69,7 @@ public class SqliteOutboxMigrationsTests
         Assert.Equal(7, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version);
+            Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
         //Assert — LogicalColumns at each version match the cumulative archaeology.

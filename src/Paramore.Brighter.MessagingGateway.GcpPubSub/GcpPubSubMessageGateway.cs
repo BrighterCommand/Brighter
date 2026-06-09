@@ -271,7 +271,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
             pubSubSubscription.TopicAttributes.ProjectId ??= projectId;
             if (string.IsNullOrEmpty(pubSubSubscription.TopicAttributes.Name))
             {
-                pubSubSubscription.TopicAttributes.Name = pubSubSubscription.RoutingKey;
+                pubSubSubscription.TopicAttributes.Name = pubSubSubscription.RoutingKey.Value;
             }
 
             return pubSubSubscription.TopicAttributes;
@@ -362,7 +362,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
             gpcSubscription.DeadLetterPolicy = new Google.Cloud.PubSub.V1.DeadLetterPolicy
             {
                 MaxDeliveryAttempts = pubSubSubscription.DeadLetter.MaxDeliveryAttempts,
-                DeadLetterTopic = ParseOrCreateTopicName(pubSubSubscription.DeadLetter.TopicName, projectId).ToString()
+                DeadLetterTopic = ParseOrCreateTopicName(pubSubSubscription.DeadLetter.TopicName.Value, projectId).ToString()
             };
         }
 
@@ -437,7 +437,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
             gcpSubscription.DeadLetterPolicy = new Google.Cloud.PubSub.V1.DeadLetterPolicy
             {
                 MaxDeliveryAttempts = pubSubSubscription.DeadLetter.MaxDeliveryAttempts,
-                DeadLetterTopic = ParseOrCreateTopicName(pubSubSubscription.DeadLetter.TopicName, projectId).ToString()
+                DeadLetterTopic = ParseOrCreateTopicName(pubSubSubscription.DeadLetter.TopicName.Value, projectId).ToString()
             };
         }
         else
@@ -490,7 +490,7 @@ public abstract class GcpPubSubMessageGateway(GcpMessagingGatewayConnection conn
             publishMember ??= $"serviceAccount:service-{projectNumber}@gcp-sa-pubsub.iam.gserviceaccount.com";
         }
 
-        var topicName = ParseOrCreateTopicName(pubSubSubscription.DeadLetter.TopicName, projectId);
+        var topicName = ParseOrCreateTopicName(pubSubSubscription.DeadLetter.TopicName.Value, projectId);
         var publisher = await Connection.CreatePublisherServiceApiClientAsync();
 
         // 1. Get the current IAM policy for the DLT

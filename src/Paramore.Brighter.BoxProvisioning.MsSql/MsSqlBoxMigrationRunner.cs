@@ -430,7 +430,7 @@ WHERE src.[SchemaName] = @SchemaName
             await ExecuteUpScriptAsync(connection, transaction!, migration, cancellationToken);
             await InsertHistoryRowAsync(
                 connection, transaction!, effectiveSchema, tableName,
-                migration.Version, migration.Description, cancellationToken);
+                migration.Version, migration.Description.Value, cancellationToken);
         }
     }
 
@@ -450,14 +450,14 @@ WHERE src.[SchemaName] = @SchemaName
             await ExecuteUpScriptAsync(connection, transaction!, migration, cancellationToken);
             await InsertHistoryRowAsync(
                 connection, transaction!, effectiveSchema, tableName,
-                migration.Version, migration.Description, cancellationToken);
+                migration.Version, migration.Description.Value, cancellationToken);
         }
     }
 
     private static Task ExecuteUpScriptAsync(
         SqlConnection connection, SqlTransaction transaction,
         IAmABoxMigration migration, CancellationToken cancellationToken)
-        => ExecuteDdlAsync(connection, transaction, migration.UpScript, cancellationToken);
+        => ExecuteDdlAsync(connection, transaction, migration.UpScript.Value, cancellationToken);
 
     private static async Task ExecuteDdlAsync(
         SqlConnection connection, SqlTransaction transaction,

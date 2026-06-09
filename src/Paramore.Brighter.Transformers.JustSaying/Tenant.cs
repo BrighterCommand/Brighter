@@ -45,7 +45,7 @@ public readonly record struct Tenant(string Value)
     /// Provides implicit conversion from <see cref="Tenant"/> to <see cref="string"/>.
     /// </summary>
     /// <param name="tenant">The tenant instance to convert.</param>
-    public static implicit operator string?(Tenant tenant) => tenant?.Value;
+    public static implicit operator string(Tenant tenant) => tenant.Value;
 
     /// <summary>
     /// Provides implicit conversion from <see cref="string"/> to <see cref="Tenant"/>.

@@ -13,7 +13,7 @@ public static class DispatcherExtensions
         {
             AvailableTopics = state.Select(c => c.Name).ToArray(),
             ExecutingAssemblyVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "None",
-            NodeName = dispatcher.HostName,
+            NodeName = dispatcher.HostName.Value,
             Subscriptions = state
                 .Select(c => new NodeStatusSubscriptionInformation()
                 {
