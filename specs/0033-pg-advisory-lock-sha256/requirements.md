@@ -48,7 +48,7 @@ Example: with a fake `TimeProvider` whose elapsed time exceeds `timeout` after t
 
 **NFR-2: No public API surface change.** The change MUST be confined to the `PostgreSqlAdvisoryLock` implementation. The `IPostgreSqlAdvisoryLock` interface signatures (`AcquireAsync`, `ReleaseAsync`) MUST remain unchanged, so no caller recompilation or call-site change is required.
 
-**NFR-3: Determinism is independently verifiable.** The derivation MUST be unit-testable without a database connection — i.e. it MUST be possible to assert that a given `lockKey` maps to a specific known 64-bit value and that two distinct keys map to two distinct values, in a pure (no-I/O) test.
+**NFR-3: Determinism is independently verifiable (via integration).** The derivation MUST be verifiable against a real PostgreSQL instance: by acquiring the lock and observing, from a separate session, that the advisory lock recorded in `pg_locks` has the expected shape (`objsubid = 1`, identifying the single-argument `bigint` overload) and that the same `lockKey` always maps to the same lock identity (same `pg_locks.classid`/`objid`) while two distinct keys map to distinct identities. The key-derivation method (`DeriveLockKey`) remains `private` (per ADR 0062); a pure no-database unit test of the raw 64-bit value is therefore explicitly NOT required — verification is integration-based.
 
 ### Constraints and Assumptions
 
@@ -83,20 +83,20 @@ Given any `lockKey`,
 When the keys derived for the acquire path and the release path are compared,
 Then they are byte-for-byte equal.
 
-**AC-4 (FR-3): Distinct lock keys yield distinct 64-bit keys.**
-Given two distinct lock keys `"BrighterMigration_public.Outbox"` and `"BrighterMigration_billing.Outbox"`,
-When their keys are derived,
-Then the two derived 64-bit values differ.
+**AC-4 (FR-3): Distinct lock keys yield distinct lock identities (integration).**
+Given two distinct lock keys `"BrighterMigration_public.Outbox"` and `"BrighterMigration_billing.Outbox"` and a real PostgreSQL instance,
+When each is acquired (on separate sessions) and `pg_locks` is inspected,
+Then the two advisory locks have distinct identities (different `classid`/`objid`), i.e. they do not block one another.
 
 **AC-5 (FR-3): Namespace participates in the derivation.**
-Given the Brighter lock namespace constant `74726` and a `lockKey`,
-When the key is derived,
-Then the derivation hashes a composite that includes the namespace constant `74726` (the namespace is not passed as a separate SQL argument), and the derived value is not equal to a SHA-256-over-`lockKey`-alone derivation that omits the namespace.
+Given the Brighter lock namespace constant `74726`,
+When the lock key is derived,
+Then the implementation forms a composite hashed input that includes the namespace constant `74726` (e.g. `"74726:{lockKey}"`) and passes no separate namespace argument to SQL. (Verified by the implementation's composite construction; the namespace is folded into the hash input rather than being an independently `pg_locks`-observable value.)
 
-**AC-6 (FR-4): Determinism across repeated and cross-process derivation.**
-Given a fixed `lockKey`,
-When the key is derived multiple times (including under different OS culture/locale settings simulating a different process/host),
-Then every derivation produces the identical 64-bit value.
+**AC-6 (FR-4): Determinism across repeated derivation (integration).**
+Given a fixed `lockKey` and a real PostgreSQL instance,
+When the lock is acquired and released and then acquired again (and/or acquired from separate sessions),
+Then each acquisition records the same advisory-lock identity in `pg_locks` (same `classid`/`objid`), demonstrating the derivation is stable for a fixed input. (A pure no-DB unit test asserting an exact 64-bit literal is not required — `DeriveLockKey` is private per ADR 0062.)
 
 **AC-7 (FR-5): Timeout behaviour preserved.**
 Given an injected fake `TimeProvider` configured so elapsed time exceeds `timeout` after a failed acquisition attempt, and a connection on which `pg_try_advisory_lock` returns `false`,

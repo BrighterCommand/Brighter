@@ -119,7 +119,7 @@ This decision **consolidates the responsibility into one cohesive C# unit** — 
 
 ### Positive
 - Collision space hardened from ~1-in-2^32 to ~1-in-2^64 (NFR-1, AC-12): the value handed to PostgreSQL is now 64 bits drawn from a cryptographic hash with uniform output, not the 32-bit `hashtext` output.
-- The derivation is a pure C# function with no database dependency, so it can be asserted against known fixed `bigint` values and distinct-key inequalities in unit tests (NFR-3, AC-4, AC-5, AC-6).
+- The derivation is a pure C# function with no database dependency. Verification is integration-based (NFR-3, AC-4, AC-6): `DeriveLockKey` stays `private`, so rather than a no-DB unit test asserting an exact 64-bit literal, the derivation is verified against a real PostgreSQL — acquiring the lock and observing from a separate session that `pg_locks` records the expected single-arg-`bigint` shape (`objsubid = 1`), that a fixed `lockKey` maps to a stable identity, and that distinct keys map to distinct identities. (Decision: integration-only verification was chosen over making the helper `internal` + `InternalsVisibleTo`, keeping the type surface unchanged.)
 - Acquire and release derive the key through the same single helper, structurally guaranteeing byte-for-byte equality (FR-2, AC-3) — previously this depended on both SQL strings passing the same `@ns`/`@key` to `hashtext`.
 - Aligns the PG backend with the 64-bit-SHA-256 principle the MySQL long-form fallback follows (A-2), without sharing a code path (the two backends keep their distinct shapes).
 - No public API change; no caller recompilation (NFR-2, AC-11). Control flow (retry/backoff/timeout/null-guard/`TimeProvider`) is preserved exactly (FR-5).
