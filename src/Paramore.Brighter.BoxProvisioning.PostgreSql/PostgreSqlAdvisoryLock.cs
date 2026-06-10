@@ -32,7 +32,7 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
 /// <summary>
 /// Default <see cref="IPostgreSqlAdvisoryLock"/> backed by Postgres
-/// <c>pg_try_advisory_lock(int4, int4)</c> / <c>pg_advisory_unlock(int4, int4)</c>. Uses an
+/// <c>pg_try_advisory_lock(bigint)</c> / <c>pg_advisory_unlock(bigint)</c>. Uses an
 /// exponential backoff retry loop bounded by the supplied timeout for acquisition.
 /// </summary>
 /// <remarks>
@@ -42,27 +42,30 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// smear, container clock skew on VM resume) cannot collapse or extend the budget. Tests
 /// inject a fake provider to drive the deadline check deterministically.
 /// <para>
-/// Lock-key hashing: the per-call key (typically <c>BrighterMigration_&lt;schema&gt;.&lt;table&gt;</c>
-/// from the runner) is fed through Postgres <c>hashtext(text) → int4</c> to fit the 32-bit
-/// second argument of the <c>(int4, int4)</c> overload of <c>pg_try_advisory_lock</c>. The
-/// birthday-bound collision probability across distinct lock keys is therefore ~1 in 2^32
-/// (~4 billion), mirroring the MySQL lock-name truncation note in
-/// <c>MySqlMigrationLockName</c> — accepted as negligible given the per-deployment
-/// population is typically &lt; 100 box tables, and any collision merely serialises two
-/// migrations on a shared advisory lock (correctness preserved, only the concurrency boundary
-/// widens). The <c>(bigint)</c> overload of <c>pg_try_advisory_lock</c> with a SHA-256-derived
-/// 64-bit key would push this to ~1 in 2^64 — tracked as a follow-up at
-/// <see href="https://github.com/BrighterCommand/Brighter/issues/4145"/>.
+/// Lock-key derivation: the per-call key (typically <c>BrighterMigration_&lt;schema&gt;.&lt;table&gt;</c>
+/// from the runner) is combined with the Brighter namespace constant into the composite
+/// <c>"74726:&lt;lockKey&gt;"</c>, hashed with SHA-256, and the first 8 bytes of the digest are read
+/// fixed big-endian (via <c>BinaryPrimitives.ReadInt64BigEndian</c>) into a signed <c>long</c>.
+/// That single 64-bit value is passed to the single-argument <c>pg_try_advisory_lock(bigint)</c> /
+/// <c>pg_advisory_unlock(bigint)</c> overloads; there is no <c>hashtext</c> call and the namespace
+/// is folded into the hash input rather than passed as a separate SQL argument. The birthday-bound
+/// collision probability across distinct lock keys is therefore ~1 in 2^64, hardened from the
+/// ~1 in 2^32 of the prior <c>hashtext → int4</c> scheme and aligned with the 64-bit SHA-256
+/// principle the MySQL long-form fallback in <c>MySqlMigrationLockName</c> follows. Any collision
+/// merely serialises two migrations on a shared advisory lock (correctness preserved, only the
+/// concurrency boundary widens), and the per-deployment population is typically &lt; 100 box tables.
+/// Fixing big-endian keeps the derived key identical on every host, OS, and culture (deterministic);
+/// see ADR 0062.
 /// </para>
 /// </remarks>
 public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock
 {
-    // Brighter-specific advisory-lock namespace. Postgres advisory locks operate in a single
-    // 64-bit integer space (or two int4s); BRIGHTER_LOCK_NAMESPACE is the int4 namespace
-    // distinguishing Brighter's locks from any other application that uses advisory locks
-    // against the same database. The numeric value is "BRIG" interpreted as ASCII (74726
-    // decimal); not load-bearing — collision with another application's choice is diagnostic
-    // not correctness, since the lock-key string further partitions per box table.
+    // Brighter-specific advisory-lock namespace, folded into the hash input by DeriveLockKey (the
+    // composite prefix "74726:<lockKey>") rather than passed as a separate SQL argument. The single
+    // 64-bit advisory-lock space is partitioned per box table by the lock-key string; the namespace
+    // distinguishes Brighter's locks from any other application using the same composite scheme. The
+    // numeric value is "BRIG" interpreted as ASCII (74726 decimal); not load-bearing — collision
+    // with another application's choice is diagnostic not correctness.
     private const int BRIGHTER_LOCK_NAMESPACE = 74726;
 
     private readonly TimeProvider _timeProvider;

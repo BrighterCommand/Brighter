@@ -79,7 +79,7 @@ change (see ordering note above).
 
 This is a tidy/documentation task; no behavior changes, no test.
 
-- [ ] **DOC TIDY: update the PostgreSqlAdvisoryLock XML-doc to describe the implemented bigint/SHA-256 scheme**
+- [x] **DOC TIDY: update the PostgreSqlAdvisoryLock XML-doc to describe the implemented bigint/SHA-256 scheme**
   - File (existing): `src/Paramore.Brighter.BoxProvisioning.PostgreSql/PostgreSqlAdvisoryLock.cs`
   - Update the class summary (lines 32–35) so it references `pg_try_advisory_lock(bigint)` / `pg_advisory_unlock(bigint)` instead of the `(int4, int4)` overloads.
   - Replace the "Lock-key hashing" `<para>` (lines 42–54): describe the new scheme — composite `"74726:{lockKey}"`, SHA-256, first 8 bytes read big-endian via `BinaryPrimitives.ReadInt64BigEndian` into a signed `long`, passed to the single-arg `bigint` overload; ~1-in-2^64 birthday bound (NFR-1); namespace folded into the hash rather than a SQL arg. Remove the "#4145 follow-up / would push this to 2^64" wording, since this change implements it (the ADR supersedes that inline TODO).
