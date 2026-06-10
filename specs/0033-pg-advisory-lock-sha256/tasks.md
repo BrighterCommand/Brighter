@@ -52,7 +52,7 @@ change (see ordering note above).
 
 ### Task 3 — distinct keys map to distinct lock identities
 
-- [ ] **TEST + IMPLEMENT: two distinct lock keys acquire distinct advisory-lock identities and do not block each other**
+- [x] **TEST + IMPLEMENT: two distinct lock keys acquire distinct advisory-lock identities and do not block each other** — coverage-only (characterisation); passes against Task 2 impl, no new production code.
   - **USE COMMAND**: `/test-first two distinct Brighter lock keys acquired on separate PostgreSQL sessions occupy distinct advisory-lock identities and do not contend`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning"
   - Test file: `When_two_distinct_lock_keys_are_acquired_they_should_occupy_distinct_advisory_lock_identities.cs`
