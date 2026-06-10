@@ -975,11 +975,14 @@ public class BrighterTracer : IAmABrighterTracer
     {
         if (!string.IsNullOrEmpty(parentId))
         {
+            // The span is a child of the producer's trace, but the message pump that drove this consume
+            // is not its temporal parent, so associate the pump with a link rather than parent/child.
             return ActivitySource.StartActivity(
                 name: spanName,
                 kind: kind,
                 parentId: parentId,
                 tags: tags,
+                links: GetMessagePumpLinks(Activity.Current),
                 startTime: startTime);
         }
 
@@ -999,11 +1002,13 @@ public class BrighterTracer : IAmABrighterTracer
         {
             // ActivitySource treats a null parentId as "use Activity.Current", so suppress the ambient span to create a root.
             Activity.Current = null;
+            // Link the suppressed ambient span (the message pump) so the root span stays associated with it.
             activity = ActivitySource.StartActivity(
                 name: spanName,
                 kind: kind,
                 parentId: null,
                 tags: tags,
+                links: GetMessagePumpLinks(current),
                 startTime: startTime);
         }
         finally
@@ -1016,6 +1021,20 @@ public class BrighterTracer : IAmABrighterTracer
 
         return activity;
     }
+
+    /// <summary>
+    /// Builds the set of links used to associate a consumer span with the ambient message pump span.
+    /// </summary>
+    /// <remarks>
+    /// The message pump drives each consume/process iteration but is not its temporal parent, so the
+    /// relationship is expressed as an <see cref="ActivityLink"/> (per the OTel messaging semantic
+    /// conventions) rather than parent/child. This keeps the spans' durations measurable independently
+    /// while still correlating them. Returns <c>null</c> when no pump span is active.
+    /// </remarks>
+    /// <param name="messagePump">The ambient message pump <see cref="Activity"/>, if any.</param>
+    /// <returns>A single-element link collection to the pump's context, or <c>null</c> when none is active.</returns>
+    private static IEnumerable<ActivityLink>? GetMessagePumpLinks(Activity? messagePump)
+        => messagePump is not null ? new[] { new ActivityLink(messagePump.Context) } : null;
     
     private static void PropogateTraceString(Activity? parentActivity, Activity? activity)
     {
