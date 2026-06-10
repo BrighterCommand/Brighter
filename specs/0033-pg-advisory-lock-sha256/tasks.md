@@ -20,7 +20,7 @@ This task MODIFIES an existing test, so it does not use the TDD `/test-first` te
 behavior-preserving regression fix that must be committed **together with** Task 2's production
 change (see ordering note above).
 
-- [ ] **REGRESSION FIX: deadline/TimeProvider test contends on the new single-arg bigint lock**
+- [x] **REGRESSION FIX: deadline/TimeProvider test contends on the new single-arg bigint lock**
   - File (existing): `tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning/When_postgres_advisory_lock_deadline_is_evaluated_against_the_injected_time_provider_it_should_be_independent_of_wall_clock.cs`
   - Problem: the holder session hand-rolls `SELECT pg_advisory_lock(@ns, hashtext(@key))` (lines 71–73) and releases with the matching two-arg `pg_advisory_unlock(@ns, hashtext(@key))` (lines 122–124), with a mirrored `private const int LOCK_NAMESPACE = 74726` (line 50). Once Task 2 switches the system-under-test (`PostgreSqlAdvisoryLock.AcquireAsync`) to the single-arg bigint key, the holder and the contender no longer name the same lock, the contention disappears, and `AcquireAsync` would succeed immediately instead of timing out — the test would fail or hang.
   - Change required:
@@ -33,7 +33,7 @@ change (see ordering note above).
 
 ### Task 2 — primary behavioral change: acquire + release round-trip via the single-arg bigint overload
 
-- [ ] **TEST + IMPLEMENT: AcquireAsync and ReleaseAsync use the single-arg pg_(try_)advisory_(un)lock(bigint) overload with a SHA-256-derived 64-bit key**
+- [x] **TEST + IMPLEMENT: AcquireAsync and ReleaseAsync use the single-arg pg_(try_)advisory_(un)lock(bigint) overload with a SHA-256-derived 64-bit key**
   - **USE COMMAND**: `/test-first PostgreSqlAdvisoryLock acquires and releases a session advisory lock against real PostgreSQL using the single-argument bigint overload, verified via pg_locks objsubid = 1`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning"
   - Test file: `When_postgres_advisory_lock_acquires_and_releases_it_should_use_the_single_arg_bigint_overload.cs`

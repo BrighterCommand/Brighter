@@ -22,6 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -65,6 +67,17 @@ public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock
 
     private readonly TimeProvider _timeProvider;
 
+    // Derives the 64-bit advisory-lock key for a Brighter lock key. The namespace is folded into a
+    // composite ("74726:<lockKey>"), hashed with SHA-256, and the first 8 bytes are read fixed
+    // big-endian into a signed long (ADR 0062). Both AcquireAsync and ReleaseAsync route through
+    // this single helper, so they always derive byte-identical keys for the same lockKey.
+    private static long DeriveLockKey(string lockKey)
+    {
+        var composite = $"{BRIGHTER_LOCK_NAMESPACE}:{lockKey}";
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(composite));
+        return System.Buffers.Binary.BinaryPrimitives.ReadInt64BigEndian(hash);
+    }
+
     /// <summary>
     /// Initialises a new <see cref="PostgreSqlAdvisoryLock"/>.
     /// </summary>
@@ -87,9 +100,8 @@ public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock
         while (true)
         {
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT pg_try_advisory_lock(@ns, hashtext(@key))";
-            command.Parameters.AddWithValue("@ns", BRIGHTER_LOCK_NAMESPACE);
-            command.Parameters.AddWithValue("@key", lockKey);
+            command.CommandText = "SELECT pg_try_advisory_lock(@key)";
+            command.Parameters.AddWithValue("@key", DeriveLockKey(lockKey));
 
             var raw = await command.ExecuteScalarAsync(cancellationToken);
             var result = raw is bool b
@@ -115,9 +127,8 @@ public class PostgreSqlAdvisoryLock : IPostgreSqlAdvisoryLock
         CancellationToken cancellationToken)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT pg_advisory_unlock(@ns, hashtext(@key))";
-        command.Parameters.AddWithValue("@ns", BRIGHTER_LOCK_NAMESPACE);
-        command.Parameters.AddWithValue("@key", lockKey);
+        command.CommandText = "SELECT pg_advisory_unlock(@key)";
+        command.Parameters.AddWithValue("@key", DeriveLockKey(lockKey));
 
         var raw = await command.ExecuteScalarAsync(cancellationToken);
         return raw is bool released && released;
