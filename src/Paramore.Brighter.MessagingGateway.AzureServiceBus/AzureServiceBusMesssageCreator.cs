@@ -97,9 +97,9 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         // https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/servicebus/Azure.Messaging.ServiceBus/samples/Sample11_CloudEvents.md
 
         var headers = new MessageHeader(
-            messageId: azureServiceBusMessage.Id,
-            topic: new RoutingKey(_topic),
-            messageType: messageType,
+            messageId: azureServiceBusMessage.Id, 
+            topic: new RoutingKey(_topic.Value),
+            messageType: messageType, 
             source: source,
             type: type,
             timeStamp: time,

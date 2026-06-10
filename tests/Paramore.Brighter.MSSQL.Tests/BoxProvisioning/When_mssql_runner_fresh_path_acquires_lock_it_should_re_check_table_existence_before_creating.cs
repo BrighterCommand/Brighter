@@ -31,21 +31,21 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating : IAsyncLifetime
+public class MsSqlRunnerFreshPathRecheckTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly RelationalDatabaseConfiguration _config;
     private readonly MsSqlBoxMigrationRunner _runner;
 
-    public When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating()
+    public MsSqlRunnerFreshPathRecheckTests()
     {
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         _runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
     }
 
     [Fact]
-    public async Task Should_re_check_table_existence_under_lock_and_fall_through_to_bootstrap()
+    public async Task When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating()
     {
         //Arrange — simulate the TOCTOU race: another instance created the V_latest-shape outbox
         //table after detection ran but before this runner acquires the migration lock. We seed

@@ -46,6 +46,76 @@ The spec commands provide a structured approach to designing and implementing fe
  Pull Request
 ```
 
+## Sub-agents & model policy
+
+Several commands delegate their reasoning-heavy work to a **sub-agent** (launched via the
+`Agent` tool) rather than doing it inline. This keeps the main conversation's context clean
+and gives the heavy work a focused, single-purpose context.
+
+**The convention** (modelled on `/spec:review`):
+
+1. **The main agent gathers inputs.** A sub-agent starts with a clean context — it only
+   knows what is in its prompt. The command reads the needed files (and runs `gh`/`git`)
+   first, then passes the text or paths.
+2. **Launch `Agent`** with an explicit `subagent_type` and `model`:
+   - **Planning commands** (`/spec:design`, `/spec:tasks`, `/spec:ralph-tasks`) use
+     `subagent_type: "Plan"`. `Plan` has all tools **except** `Agent`, `ExitPlanMode`,
+     `Edit`, `Write`, and `NotebookEdit` — so it can Read/Glob/Grep/Bash/WebFetch/WebSearch
+     but has no file-editing tool. That makes it much **harder** for the sub-agent to
+     accidentally write the spec file (no `Write`/`Edit`/`NotebookEdit`) than relying on the
+     prompt alone, though it is not an absolute lock — it still has `Bash`, so a determined
+     `echo >`/`tee`/`sed -i` could write. The prompt still instructs it to return as text;
+     `Plan` simply removes the easy, accidental path to writing.
+   - **`/spec:requirements`** also uses `subagent_type: "Plan"` — drafting requirements is
+     read-only (returns text), so `Plan` fits, and `Plan` has no `AskUserQuestion` so the
+     sub-agent cannot prompt the user.
+   - **`/spec:review`** uses `subagent_type: "general-purpose"` (adversarial reasoning that
+     needs no source mutation).
+   - **`/spec:ralph-implement`** uses `subagent_type: "general-purpose"` because its
+     sub-agent genuinely *writes* source files.
+3. **The main agent owns all user interaction.** A sub-agent is one-shot — once launched it
+   runs to completion and returns; it cannot pause to ask the user anything. So before
+   launching, the main agent clarifies any ambiguous or under-specified inputs with the user
+   via `AskUserQuestion`, then launches the sub-agent with the clarified inputs folded in.
+   Every delegated command keeps `AskUserQuestion` in its own `allowed-tools` for this. The
+   sub-agents never prompt: the `Plan`-based commands (`requirements`, `design`, `tasks`,
+   `ralph-tasks`) have no `AskUserQuestion` so they *structurally* can't, and the
+   `general-purpose` `review` sub-agent is explicitly instructed not to. **Exception:**
+   `/spec:ralph-implement` runs fully **unattended** — neither its main agent nor its
+   sub-agent prompts the user (it has no `AskUserQuestion` at all).
+4. **The sub-agent RETURNS its artifact as text** — it does *not* write the spec file. The
+   one exception is `/spec:ralph-implement`, where the sub-agent must write the test and
+   implementation source files (it still never commits or edits the task list).
+5. **The main agent validates** the returned output against a checklist, then writes the
+   file and does all bookkeeping (approval markers, `.adr-list`, git, next-steps).
+
+**Model policy** — reasoning vs. implementation:
+
+| Command | Sub-agent (type) | Model | Rationale |
+|---------|-----------|-------|-----------|
+| `/spec:requirements` | Yes — `Plan` (read-only drafting) | **opus** | Planning / analysis |
+| `/spec:design` | Yes — `Plan` (read-only) | **opus** | Architecture / design |
+| `/spec:tasks` | Yes — `Plan` (read-only) | **opus** | Planning / coverage mapping |
+| `/spec:ralph-tasks` | Yes — `Plan` (read-only) | **opus** | Planning / decomposition |
+| `/spec:review` | Yes — `general-purpose` | **opus** | Adversarial reasoning |
+| `/spec:ralph-implement` | Yes — `general-purpose`, per task (writes source) | **sonnet** | Mechanical TDD implementation |
+| `/spec:implement` | No | **sonnet** (recommended) | Implementation work; runs in the main agent, so set the session model |
+| `/spec:new`, `/spec:switch`, `/spec:approve`, `/spec:status` | No | — | Mechanical bookkeeping |
+
+The planning commands use the `Plan` agent so the "return as text, don't write the file"
+rule is much harder to violate accidentally (it has no `Write`/`Edit`/`NotebookEdit`; the
+prompt still forbids writing via `Bash`). `/spec:ralph-implement` keeps `general-purpose`
+because its sub-agent must write source.
+
+`/spec:implement` is deliberately **not** delegated: its per-behavior
+Red → user-approval → Green → Refactor loop is interactive, and the mandatory approval gate
+must run in the main agent where it can reach the user. Because there is no sub-agent to
+assign a model to, run the command itself on **sonnet** (set the session model) — it is
+implementation work, matching the sonnet policy for `/spec:ralph-implement`. **If your
+session is not already on sonnet (e.g. it is on opus), consider switching to sonnet before
+running `/spec:implement`.** This guidance is repeated at the top of `implement.md` itself,
+since that is where the user reads it.
+
 ## Commands
 
 ### `/spec:new <feature-name>`

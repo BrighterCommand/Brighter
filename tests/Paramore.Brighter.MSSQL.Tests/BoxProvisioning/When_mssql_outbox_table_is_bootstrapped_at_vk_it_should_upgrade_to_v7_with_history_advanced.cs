@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7_with_history_advanced : IAsyncLifetime
+public class MsSqlOutboxVkToV7UpgradeTests : IAsyncLifetime
 {
     private static readonly string[] s_v7ExpectedColumns =
     [
@@ -49,7 +49,7 @@ public class When_mssql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_
     [InlineData(3)]
     [InlineData(5)]
     [InlineData(7)]
-    public async Task Should_upgrade_to_v7_with_synthetic_v_k_plus_applied_rows(int k)
+    public async Task When_mssql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7_with_history_advanced(int k)
     {
         //Arrange — seed an outbox at V_k (no history row) and a marker row to prove preservation.
         Configuration.EnsureDatabaseExists(_connectionString);

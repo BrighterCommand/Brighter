@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_provisioning_uow_release_returns_non_true_with_table_name_it_should_log_warning_containing_table_name : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkReleaseNonTrueTests : IAsyncLifetime
 {
     // Phase 5.3 regression guard exposed by Phase 7.3a (orchestration shift from legacy
     // runner-owned RELEASE_LOCK Warning to the inherited base-template orchestration). The
@@ -60,7 +60,7 @@ public class When_mysql_provisioning_uow_release_returns_non_true_with_table_nam
     [Theory]
     [InlineData(false, "0")]
     [InlineData(null, "NULL")]
-    public async Task Should_log_warning_naming_table_name_and_lock_resource_when_release_is_non_true(
+    public async Task When_mysql_provisioning_uow_release_returns_non_true_with_table_name_it_should_log_warning_containing_table_name(
         bool? releaseResult, string expectedMarker)
     {
         // Arrange — UoW receives a tableName (the runner provides this from the MigrateAsync

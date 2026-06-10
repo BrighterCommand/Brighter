@@ -64,10 +64,11 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         IMsSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
-        IAmABrighterTracer? tracer = null)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
             logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>(),
-            tracer)
+            tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
     }
@@ -84,13 +85,20 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         TimeSpan lockTimeout,
         IMsSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
-        IAmABrighterTracer? tracer = null)
-        : this(new MsSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
+        : this(new MsSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope)
     {
     }
 
     /// <inheritdoc />
     protected override DbSystem DbSystem => DbSystem.MsSql;
+
+    /// <inheritdoc />
+    protected override string? DefaultHistorySchema => HISTORY_TABLE_SCHEMA;
+
+    /// <inheritdoc />
+    protected override bool SupportsPerSchemaHistory => true;
 
     // ==== Hook overrides — Phase 7.1a delegates to legacy helpers ====
 
@@ -113,31 +121,58 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         => $"BrighterMigration_{schemaName ?? HISTORY_TABLE_SCHEMA}.{tableName}";
 
     protected override async Task EnsureHistoryTableAsync(
-        SqlConnection connection, SqlTransaction? transaction, string? schemaName,
+        SqlConnection connection, SqlTransaction? transaction, string? schemaName, string tableName,
         CancellationToken cancellationToken)
     {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        // Filter sys.tables by both name AND schema_id — without the schema_id filter the
-        // existence check misfires when any other schema happens to contain a table by that name,
-        // skipping the [dbo] create and breaking subsequent INSERT/SELECT statements.
-        // The WHERE values are parameterised (matching DoesTableExistAsync); the bracketed
-        // identifiers in the CREATE TABLE body must remain inline because T-SQL DDL does not
-        // accept bind parameters for object names.
-        // SET XACT_ABORT OFF is issued defensively so the 2714 swallow below works for callers
-        // who pre-enable XACT_ABORT ON on their connection pool (some ORM defaults, startup
-        // scripts). With XACT_ABORT ON, 2714 dooms the transaction rather than being statement-
-        // terminating, and RedetectStateAsync would fail with state error 3930. We restore the
-        // session default OFF for the runner's own connection only — scope is bounded to this
-        // command. Per PR #4039 reviewer item F2-3.
-        command.CommandText = $@"
+        // Under PerSchema the history table is placed in the configured schema; under Global it is
+        // the backend default (dbo). ResolveHistoryTableSchema() is the single source of truth
+        // shared with the read side so they cannot diverge. AssertSafe + bracket-quote because
+        // T-SQL DDL cannot parameterize the schema in CREATE TABLE; the @HistorySchema bind param
+        // still drives the SCHEMA_ID(...) existence probe.
+        var historySchema = ResolveHistoryTableSchema();
+
+        // D5 (ADR 0060): on a PerSchema run that follows a Global predecessor, copy this tenant's
+        // prior history rows from the legacy default-schema table so the runner does NOT mis-detect
+        // the box as needing a bootstrap re-stamp (which would silently re-run migration accounting
+        // and break FR5). Skipped when the resolved history schema equals the backend default
+        // (Global, or PerSchema with SchemaName == dbo) — then per-schema and legacy are the same
+        // table and there is nothing to copy.
+        //
+        // PR #4155 reviewer bug fix: an earlier implementation gated the seed on whether the
+        // per-schema __BrighterMigrationHistory existed before this run, so the second box-type to
+        // flip (e.g. inbox after outbox) found the table already created by the first flip and
+        // skipped the seed — its legacy row never landed and the bootstrap path stamped a fresh
+        // "bootstrap: detected at V_latest" entry. The table-level gate has been removed: the
+        // seed's per-row NOT EXISTS PK guard already makes it idempotent (a fresh PerSchema
+        // install with no legacy table is a no-op because the seed's SELECT FROM legacy returns
+        // zero rows; a re-run on already-seeded data inserts zero rows because the composite PK
+        // matches). The cost is one extra `INSERT ... SELECT` round-trip on the steady-state
+        // PerSchema path, which is the same cost the first-box-type flip already pays today.
+        var needsSeedCheck = !string.Equals(historySchema, HISTORY_TABLE_SCHEMA, StringComparison.OrdinalIgnoreCase);
+
+        using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            // Filter sys.tables by both name AND schema_id — without the schema_id filter the
+            // existence check misfires when any other schema happens to contain a table by that name,
+            // skipping the create and breaking subsequent INSERT/SELECT statements.
+            // The WHERE values are parameterised (matching DoesTableExistAsync); the bracketed
+            // identifiers in the CREATE TABLE body must remain inline because T-SQL DDL does not
+            // accept bind parameters for object names.
+            // SET XACT_ABORT OFF is issued defensively so the 2714 swallow below works for callers
+            // who pre-enable XACT_ABORT ON on their connection pool (some ORM defaults, startup
+            // scripts). With XACT_ABORT ON, 2714 dooms the transaction rather than being statement-
+            // terminating, and RedetectStateAsync would fail with state error 3930. We restore the
+            // session default OFF for the runner's own connection only — scope is bounded to this
+            // command. Per PR #4039 reviewer item F2-3.
+            command.CommandText = $@"
 SET XACT_ABORT OFF;
 IF NOT EXISTS (
     SELECT 1 FROM sys.tables
     WHERE name = @HistoryTableName AND schema_id = SCHEMA_ID(@HistorySchema)
 )
 BEGIN
-    CREATE TABLE [{HISTORY_TABLE_SCHEMA}].[{MIGRATION_HISTORY_TABLE}] (
+    CREATE TABLE [{historySchema}].[{MIGRATION_HISTORY_TABLE}] (
         [MigrationVersion] INT NOT NULL,
         [SchemaName] VARCHAR(256) NOT NULL DEFAULT 'dbo',
         [BoxTableName] VARCHAR(256) NOT NULL,
@@ -147,34 +182,198 @@ BEGIN
             PRIMARY KEY ([SchemaName], [BoxTableName], [MigrationVersion])
     );
 END";
-        command.Parameters.AddWithValue("@HistoryTableName", MIGRATION_HISTORY_TABLE);
-        command.Parameters.AddWithValue("@HistorySchema", HISTORY_TABLE_SCHEMA);
-        try
-        {
-            await command.ExecuteNonQueryAsync(cancellationToken);
+            command.Parameters.AddWithValue("@HistoryTableName", MIGRATION_HISTORY_TABLE);
+            command.Parameters.AddWithValue("@HistorySchema", historySchema);
+            try
+            {
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch (SqlException ex) when (ex.Number == 2714)
+            {
+                // TOCTOU on sys.tables: the per-table sp_getapplock above does not cover the shared
+                // __BrighterMigrationHistory, so two concurrent provisioners with different table
+                // names (e.g. outbox + inbox) can both pass the IF NOT EXISTS check and both issue
+                // CREATE TABLE; the loser hits 2714 ("There is already an object named ..."). 2714
+                // is a statement-terminating error with default XACT_ABORT OFF — the transaction is
+                // not doomed, so we can ignore it and continue. The history table now exists with
+                // the schema we intended (the racing session ran the same DDL).
+                //
+                // Surface the swallow so operators investigating "did two replicas race here?" have
+                // a signal — Debug-level log + Activity event on the migration span (when one is
+                // active). Silent swallow was the prior behaviour; per PR #4039 review item #7 the
+                // race is real and the swallow is intentional, but operators got no signal that
+                // two racers serialised here.
+                Logger.LogDebug(ex,
+                    "{HistoryTable} already created by racing session (MsSql 2714)",
+                    MIGRATION_HISTORY_TABLE);
+                Activity.Current?.AddEvent(new ActivityEvent(
+                    BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
+            }
         }
-        catch (SqlException ex) when (ex.Number == 2714)
+
+        // Run the D5 seed on every PerSchema provision (subject to needsSeedCheck above). The seed
+        // carries a NOT EXISTS guard against the composite PK so re-fires are harmless — the
+        // important invariant is that EVERY box-type that flips gets a chance to seed its own
+        // (SchemaName, BoxTableName)-filtered row, not just the first one to land in a freshly
+        // created per-schema history table.
+        if (needsSeedCheck)
         {
-            // TOCTOU on sys.tables: the per-table sp_getapplock above does not cover the shared
-            // __BrighterMigrationHistory, so two concurrent provisioners with different table
-            // names (e.g. outbox + inbox) can both pass the IF NOT EXISTS check and both issue
-            // CREATE TABLE; the loser hits 2714 ("There is already an object named ..."). 2714
-            // is a statement-terminating error with default XACT_ABORT OFF — the transaction is
-            // not doomed, so we can ignore it and continue. The history table now exists with
-            // the schema we intended (the racing session ran the same DDL).
-            //
-            // Surface the swallow so operators investigating "did two replicas race here?" have
-            // a signal — Debug-level log + Activity event on the migration span (when one is
-            // active). Silent swallow was the prior behaviour; per PR #4039 review item #7 the
-            // race is real and the swallow is intentional, but operators got no signal that
-            // two racers serialised here.
-            Logger.LogDebug(ex,
-                "{HistoryTable} already created by racing session (MsSql 2714)",
-                MIGRATION_HISTORY_TABLE);
-            Activity.Current?.AddEvent(new ActivityEvent(
-                BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed));
+            await SeedHistoryFromLegacyAsync(
+                connection, transaction, historySchema, schemaName ?? historySchema, tableName,
+                cancellationToken);
         }
     }
+
+    // EXISTS probe used both for the D5 pre-create check on the per-schema table and the
+    // legacy-existence check inside SeedHistoryFromLegacyAsync. Filtering by both name and
+    // schema name (via the join to sys.schemas) ensures a same-named table in a third schema
+    // does not register as a hit.
+    private async Task<bool> DoesHistoryTableExistAsync(
+        SqlConnection connection, SqlTransaction? transaction, string schema,
+        CancellationToken cancellationToken)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText =
+            "SELECT CASE WHEN EXISTS(" +
+            "SELECT 1 FROM sys.tables t " +
+            "INNER JOIN sys.schemas s ON t.schema_id = s.schema_id " +
+            "WHERE t.name = @HistoryTableName AND s.name = @SchemaName" +
+            ") THEN 1 ELSE 0 END";
+        command.Parameters.AddWithValue("@HistoryTableName", MIGRATION_HISTORY_TABLE);
+        command.Parameters.AddWithValue("@SchemaName", schema);
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return result != null && (int)result == 1;
+    }
+
+    // Copies this tenant's prior history rows from the legacy default-schema history table into the
+    // per-schema history table (ADR 0060 D5). Runs on every PerSchema provision where the resolved
+    // history schema differs from the backend default: the per-row NOT EXISTS PK guard makes
+    // steady-state runs (no new legacy rows) a zero-row no-op, while still allowing each box-type
+    // that flips later to seed its own (SchemaName, BoxTableName) row when needed (PR #4155 fix).
+    // Filtered to this tenant (SchemaName + BoxTableName) so a multi-tenant Global deployment
+    // doesn't bleed rows across tenants. All five columns are copied — Description is NOT NULL
+    // with no default and AppliedAt preserves the original install/bootstrap timestamp, so the
+    // post-flip row is indistinguishable from a row written by the original Global-scope
+    // provision. Skipped when no legacy table exists — this is a fresh PerSchema install with no
+    // Global predecessor and there is nothing to copy.
+    private async Task SeedHistoryFromLegacyAsync(
+        SqlConnection connection, SqlTransaction? transaction,
+        string perSchema, string boxSchema, string boxTableName,
+        CancellationToken cancellationToken)
+    {
+        const string legacySchema = HISTORY_TABLE_SCHEMA;
+        bool legacyExists;
+        try
+        {
+            legacyExists = await DoesHistoryTableExistAsync(connection, transaction, legacySchema, cancellationToken);
+        }
+        catch (SqlException ex) when (IsLegacyHistoryReadPermissionDenied(ex))
+        {
+            // PR #4155 reviewer #2: the documented contract is "any legacy-history-read failure
+            // surfaces as a ConfigurationException with the documented message". sys.tables is
+            // conventionally row-filtered (not erroring) so this catch is mostly theoretical, but
+            // wrapping the probe with the same when-filter as the INSERT below keeps the contract
+            // honest for any future schema or backend behaviour change. Non-permission failures
+            // (connectivity, syntax) propagate untouched — the outer UoW transaction rolls back.
+            throw BuildLegacyHistoryReadDeniedException(legacySchema, perSchema, ex);
+        }
+        if (!legacyExists)
+        {
+            return;
+        }
+
+        // The perSchema identifier was already AssertSafe-d via ResolveHistoryTableSchema. legacySchema
+        // is the compile-time const HISTORY_TABLE_SCHEMA ("dbo") — trivially safe — so no AssertSafe
+        // call is needed. If a future refactor turns legacySchema into a non-const derived value
+        // (e.g. an operator-configurable legacy-schema override) restore the AssertSafe check. boxSchema
+        // is operator-supplied and must be validated before inlining into the parameterised WHERE
+        // clause's surrounding SQL.
+        Identifiers.AssertSafe(boxSchema, nameof(boxSchema));
+
+        int rowsCopied;
+        using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText = $@"
+INSERT INTO [{perSchema}].[{MIGRATION_HISTORY_TABLE}]
+    ([MigrationVersion], [SchemaName], [BoxTableName], [Description], [AppliedAt])
+SELECT src.[MigrationVersion], src.[SchemaName], src.[BoxTableName], src.[Description], src.[AppliedAt]
+FROM [{legacySchema}].[{MIGRATION_HISTORY_TABLE}] AS src
+WHERE src.[SchemaName] = @SchemaName
+  AND src.[BoxTableName] = @BoxTableName
+  AND NOT EXISTS (
+      SELECT 1 FROM [{perSchema}].[{MIGRATION_HISTORY_TABLE}] AS tgt
+      WHERE tgt.[SchemaName] = src.[SchemaName]
+        AND tgt.[BoxTableName] = src.[BoxTableName]
+        AND tgt.[MigrationVersion] = src.[MigrationVersion])";
+            command.Parameters.AddWithValue("@SchemaName", boxSchema);
+            command.Parameters.AddWithValue("@BoxTableName", boxTableName);
+            try
+            {
+                rowsCopied = await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch (SqlException ex) when (IsLegacyHistoryReadPermissionDenied(ex))
+            {
+                // Reviewer #1 hardening (must, not should): any failure reading the legacy history
+                // table — typically tenant-isolated credentials lacking SELECT on dbo — must surface
+                // as a ConfigurationException with a clear cause. Silently absorbing the failure
+                // would let an empty seed go through; the next provision would then bootstrap-stamp
+                // a fresh row, effectively re-running the migration ledger and breaking FR5. The
+                // throw rolls back the surrounding transaction so no partial per-schema state is
+                // left behind.
+                //
+                // PR #4155 reviewer #2 tightening: the catch is filtered to the SELECT-permission
+                // error numbers (229 / 230) so a deadlock victim, connection drop, statement
+                // timeout, or future-refactor syntax error doesn't get misreported as "grant SELECT
+                // on the legacy table". Unmatched SqlExceptions propagate unchanged; the outer UoW
+                // transaction still rolls back so partial state is not left behind.
+                throw BuildLegacyHistoryReadDeniedException(legacySchema, perSchema, ex);
+            }
+        }
+
+        if (rowsCopied > 0)
+        {
+            // Spec 0029 NF5/AC7 (ADR 0060 D6, reviewer #3): structured fields RowCount + BoxTable +
+            // LegacySchema + TargetSchema each appear as a separate placeholder so a structured log
+            // sink can filter on individual fields (e.g. RowCount>0, TargetSchema='billing_x'). The
+            // existing legacy-history-seeded Activity event additionally carries the row count as a
+            // tag so a trace-store query can size flip impact without parsing event names.
+            Logger.LogInformation(
+                "Seeded {RowCount} legacy history row(s) for {BoxTable} from {LegacySchema} to {TargetSchema}",
+                rowsCopied, boxTableName, legacySchema, perSchema);
+            Activity.Current?.AddEvent(new ActivityEvent(
+                BrighterSemanticConventions.BoxMigrationEventLegacyHistorySeeded,
+                default,
+                new ActivityTagsCollection
+                {
+                    { BrighterSemanticConventions.BoxMigrationSeedRowCount, rowsCopied }
+                }));
+        }
+    }
+
+    // PR #4155 reviewer #2: narrow the seed catch so the operator-facing "grant SELECT on the
+    // legacy history table" message only fires when the provider actually raised a SELECT-
+    // permission error. 229 is the canonical "permission denied on object" code; 230 is its
+    // column-level variant (raised when SELECT is allowed at the table level but DENY-ed on a
+    // specific column — possible if an operator narrows the grant). Other broad-base errors
+    // (connection drop 64/10054, login failure 18456, deadlock victim 1205, statement timeout,
+    // future-refactor syntax errors) propagate untouched.
+    private static bool IsLegacyHistoryReadPermissionDenied(SqlException ex) =>
+        ex.Number == 229 || ex.Number == 230;
+
+    private static ConfigurationException BuildLegacyHistoryReadDeniedException(
+        string legacySchema, string perSchema, Exception inner) =>
+        new ConfigurationException(
+            $"Brighter PerSchema migration: every provision run reads the legacy default-schema " +
+            $"history table [{legacySchema}].[{MIGRATION_HISTORY_TABLE}] so any unseeded tenant " +
+            $"rows can be copied into the per-schema history (the per-row NOT EXISTS guard makes " +
+            $"steady-state runs a zero-row no-op, but the SELECT against the legacy table runs " +
+            $"every time). Grant the runner SELECT on that table (and INSERT on " +
+            $"[{perSchema}].[{MIGRATION_HISTORY_TABLE}]) for the lifetime of the PerSchema " +
+            $"deployment and retry. The original provider exception is preserved as the inner " +
+            $"exception.",
+            inner);
 
     protected override async Task RunFreshPathAsync(
         SqlConnection connection, SqlTransaction? transaction, string? schemaName, string tableName,
@@ -231,7 +430,7 @@ END";
             await ExecuteUpScriptAsync(connection, transaction!, migration, cancellationToken);
             await InsertHistoryRowAsync(
                 connection, transaction!, effectiveSchema, tableName,
-                migration.Version, migration.Description, cancellationToken);
+                migration.Version, migration.Description.Value, cancellationToken);
         }
     }
 
@@ -242,7 +441,7 @@ END";
         var effectiveSchema = schemaName ?? HISTORY_TABLE_SCHEMA;
 
         var maxVersion = await DetectionHelper.GetMaxVersionAsync(
-            connection, tableName, effectiveSchema, cancellationToken, transaction);
+            connection, tableName, effectiveSchema, ResolveHistorySchema(), cancellationToken, transaction);
 
         foreach (var migration in migrations)
         {
@@ -251,14 +450,14 @@ END";
             await ExecuteUpScriptAsync(connection, transaction!, migration, cancellationToken);
             await InsertHistoryRowAsync(
                 connection, transaction!, effectiveSchema, tableName,
-                migration.Version, migration.Description, cancellationToken);
+                migration.Version, migration.Description.Value, cancellationToken);
         }
     }
 
     private static Task ExecuteUpScriptAsync(
         SqlConnection connection, SqlTransaction transaction,
         IAmABoxMigration migration, CancellationToken cancellationToken)
-        => ExecuteDdlAsync(connection, transaction, migration.UpScript, cancellationToken);
+        => ExecuteDdlAsync(connection, transaction, migration.UpScript.Value, cancellationToken);
 
     private static async Task ExecuteDdlAsync(
         SqlConnection connection, SqlTransaction transaction,
@@ -270,15 +469,30 @@ END";
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task InsertHistoryRowAsync(
+    // Resolves the physical schema that holds the history table for this run, validated for safe
+    // inline interpolation into DDL/DML. PerSchema → configured schema; otherwise the backend
+    // default (dbo). Shared by EnsureHistoryTableAsync (CREATE) and InsertHistoryRowAsync (INSERT)
+    // so the write side never diverges from the read side's ResolveHistorySchema(). The `!` is
+    // safe: DefaultHistorySchema returns the non-null "dbo" const on this runner and the D3 guard
+    // rejects PerSchema with a null SchemaName before MigrateAsync proceeds, so ResolveHistorySchema()
+    // is provably non-null here. If a future refactor breaks that invariant, NRE points at this line.
+    private string ResolveHistoryTableSchema()
+    {
+        var historySchema = ResolveHistorySchema()!;
+        Identifiers.AssertSafe(historySchema, nameof(historySchema));
+        return historySchema;
+    }
+
+    private async Task InsertHistoryRowAsync(
         SqlConnection connection, SqlTransaction transaction,
         string schemaName, string tableName,
         int version, string description, CancellationToken cancellationToken)
     {
+        var historySchema = ResolveHistoryTableSchema();
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $@"
-INSERT INTO [{HISTORY_TABLE_SCHEMA}].[{MIGRATION_HISTORY_TABLE}] ([MigrationVersion], [SchemaName], [BoxTableName], [Description])
+INSERT INTO [{historySchema}].[{MIGRATION_HISTORY_TABLE}] ([MigrationVersion], [SchemaName], [BoxTableName], [Description])
 VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
         command.Parameters.AddWithValue("@Version", version);
         command.Parameters.AddWithValue("@SchemaName", schemaName);

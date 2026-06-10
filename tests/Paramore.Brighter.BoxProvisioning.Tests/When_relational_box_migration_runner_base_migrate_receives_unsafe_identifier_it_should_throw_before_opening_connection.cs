@@ -130,6 +130,8 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
         {
         }
 
+        protected override string? DefaultHistorySchema => null;
+
         protected override Task<FakeDbConnection> OpenConnectionAsync(CancellationToken cancellationToken)
         {
             OpenConnectionCalled = true;
@@ -144,7 +146,7 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
             => throw new NotSupportedException("LockResourceFor must not be reached when identifier validation throws.");
 
         protected override Task EnsureHistoryTableAsync(
-            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName,
+            FakeDbConnection connection, FakeDbTransaction? transaction, string? schemaName, string tableName,
             CancellationToken cancellationToken)
             => throw new NotSupportedException("EnsureHistoryTableAsync must not be reached when identifier validation throws.");
 
@@ -171,11 +173,11 @@ public class SqlBoxMigrationRunnerIdentifierValidationTests
             Version = version;
         }
 
-        public int Version { get; }
-        public string Description => $"V{Version}";
-        public string UpScript => string.Empty;
+        public MigrationVersion Version { get; }
+        public MigrationDescription Description => $"V{Version}";
+        public SqlScript UpScript => string.Empty;
         public IReadOnlyCollection<string> LogicalColumns => Array.Empty<string>();
-        public string? SourceReference => null;
-        public string? IdempotencyCheckSql => null;
+        public SourceReference? SourceReference => null;
+        public SqlScript? IdempotencyCheckSql => null;
     }
 }

@@ -77,12 +77,14 @@ public class SpannerBoxDetectionHelper :
     /// given box table.
     /// </summary>
     /// <param name="schemaName">Accepted and ignored — Spanner has no schema concept.</param>
+    /// <param name="historySchema">Accepted and ignored — Spanner has no schema concept.</param>
     /// <param name="transaction">Accepted and ignored — Spanner DDL is single-statement.</param>
     public async Task<bool> DoesHistoryExistAsync(
-        SpannerConnection connection, string tableName, string? schemaName,
+        SpannerConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         SpannerTransaction? transaction = null)
     {
+        _ = historySchema; // Spanner has no schema concept; PerSchema is a no-op here.
         var historyTableExists = await DoesTableExistAsync(
             connection, SpannerBoxMigrationRunner.MigrationHistoryTable,
             schemaName, cancellationToken, transaction);
@@ -103,12 +105,14 @@ WHERE `BoxTableName` = @BoxTableName",
     /// or 0 if no rows exist.
     /// </summary>
     /// <param name="schemaName">Accepted and ignored — Spanner has no schema concept.</param>
+    /// <param name="historySchema">Accepted and ignored — Spanner has no schema concept.</param>
     /// <param name="transaction">Accepted and ignored — Spanner DDL is single-statement.</param>
     public async Task<int> GetMaxVersionAsync(
-        SpannerConnection connection, string tableName, string? schemaName,
+        SpannerConnection connection, string tableName, string? schemaName, string? historySchema,
         CancellationToken cancellationToken = default,
         SpannerTransaction? transaction = null)
     {
+        _ = historySchema; // Spanner has no schema concept; PerSchema is a no-op here.
         using var command = connection.CreateSelectCommand(
             @"SELECT COALESCE(MAX(`MigrationVersion`), 0) FROM `BrighterMigrationHistory`
 WHERE `BoxTableName` = @BoxTableName",

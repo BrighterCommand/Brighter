@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Monitoring.Mappers
         /// <returns>Message.</returns>
         public Message MapToMessage(MonitorEvent request, Publication publication)
         {
-            var header = new MessageHeader(messageId: request.Id, topic: new RoutingKey(publication.Topic ?? ""), messageType: request.RequestToMessageType());
+            var header = new MessageHeader(messageId: request.Id, topic: publication.Topic ?? RoutingKey.Empty, messageType: request.RequestToMessageType());
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;

@@ -135,7 +135,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.command.id", command.Id}
+                {"db.operation.parameter.command.id", command.Id.Value}
             };
             var span = Tracer?.CreateDbSpan(
                 new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Add, _configuration.TableName, dbAttributes: dbAttributes),

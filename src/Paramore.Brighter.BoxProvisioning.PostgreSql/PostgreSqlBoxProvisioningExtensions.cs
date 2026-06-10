@@ -30,7 +30,7 @@ public static class PostgreSqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<PostgreSqlOutboxMigrationCatalog>();
                 var runner = new PostgreSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new PostgreSqlOutboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     catalog,
@@ -69,7 +69,7 @@ public static class PostgreSqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<PostgreSqlOutboxMigrationCatalog>();
                 var runner = new PostgreSqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new PostgreSqlOutboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     catalog,
@@ -96,7 +96,7 @@ public static class PostgreSqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<PostgreSqlInboxMigrationCatalog>();
                 var runner = new PostgreSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new PostgreSqlInboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     catalog,
@@ -135,7 +135,7 @@ public static class PostgreSqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<PostgreSqlInboxMigrationCatalog>();
                 var runner = new PostgreSqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
-                    tracer: sp.GetService<IAmABrighterTracer>());
+                    tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new PostgreSqlInboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     catalog,

@@ -35,7 +35,8 @@ namespace Paramore.Brighter.BoxProvisioning.Spanner;
 /// Spanner box surface is degenerate (fresh-install only, no V_k chain), so this provisioner
 /// uses the BASE <see cref="IAmABoxMigrationDetectionHelper{TConnection,TTransaction}"/>
 /// interface and is exempt from <see cref="IAmABoxMigrationCatalog"/>. Spanner has no
-/// schema concept; <c>schemaName</c> is passed as <c>null</c> throughout.
+/// schema concept; DDL paths discard <c>schemaName</c>, but the configured value is forwarded
+/// to the migration activity for observability consistency with other backends.
 /// </summary>
 public class SpannerInboxProvisioner : IAmABoxProvisioner
 {
@@ -67,7 +68,7 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
     }
 
     public BoxType BoxType => BoxType.Inbox;
-    public string BoxTableName => _configuration.InBoxTableName;
+    public BoxTableName BoxTableName => _configuration.InBoxTableName;
 
     /// <inheritdoc />
     public async Task ProvisionAsync(CancellationToken cancellationToken = default)
@@ -84,7 +85,7 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
         // degenerate (fresh-only, no V_k chain — ADR 0057 §6).
         await _migrationRunner.MigrateAsync(
             _configuration.InBoxTableName,
-            _configuration.SchemaName,
+            _configuration.SchemaName != null ? (SchemaName)_configuration.SchemaName : null,
             BoxType.Inbox,
             tableState,
             cancellationToken);
@@ -101,7 +102,7 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         var historyExists = await _detectionHelper.DoesHistoryExistAsync(
-            connection, _configuration.InBoxTableName, schemaName: null, cancellationToken);
+            connection, _configuration.InBoxTableName, schemaName: null, historySchema: null, cancellationToken);
 
         if (!historyExists)
         {
@@ -111,7 +112,7 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
         }
 
         var maxVersion = await _detectionHelper.GetMaxVersionAsync(
-            connection, _configuration.InBoxTableName, schemaName: null, cancellationToken);
+            connection, _configuration.InBoxTableName, schemaName: null, historySchema: null, cancellationToken);
         return new BoxTableState(TableExists: true, HistoryExists: true, CurrentVersion: maxVersion);
     }
 

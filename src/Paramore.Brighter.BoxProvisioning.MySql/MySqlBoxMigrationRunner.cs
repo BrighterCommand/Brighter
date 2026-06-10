@@ -64,10 +64,11 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
-        IAmABrighterTracer? tracer = null)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
             logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>(),
-            tracer)
+            tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
     }
@@ -84,13 +85,19 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         TimeSpan lockTimeout,
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
-        IAmABrighterTracer? tracer = null)
-        : this(new MySqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
+        : this(new MySqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope)
     {
     }
 
     /// <inheritdoc />
     protected override DbSystem DbSystem => DbSystem.MySql;
+
+    /// <inheritdoc />
+    /// <remarks>MySQL's history table lives in the connection-bound database, not a static schema,
+    /// so there is no constant default and <see cref="MigrationHistoryScope.PerSchema"/> is a no-op.</remarks>
+    protected override string? DefaultHistorySchema => null;
 
     // ==== Hook overrides — Phase 7.3a delegates to legacy helpers ====
 
@@ -124,9 +131,13 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
     }
 
     protected override async Task EnsureHistoryTableAsync(
-        MySqlConnection connection, MySqlTransaction? transaction, string? schemaName,
+        MySqlConnection connection, MySqlTransaction? transaction, string? schemaName, string tableName,
         CancellationToken cancellationToken)
     {
+        // tableName is accepted for symmetry with the abstract signature; MySQL is out of scope
+        // for PerSchema history placement (SupportsPerSchemaHistory => false) so the D5 seed never
+        // fires here. Discard to suppress unused-parameter warnings.
+        _ = tableName;
         // No race-handling needed: MySQL acquires a metadata lock (MDL_EXCLUSIVE) on the table
         // name for the duration of CREATE TABLE, and the IF NOT EXISTS check is evaluated under
         // that lock. Concurrent CREATE TABLE IF NOT EXISTS statements serialize via the MDL —
@@ -199,7 +210,7 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
             await ExecuteUpScriptAsync(connection, migration, cancellationToken);
             await InsertHistoryRowAsync(
                 connection, effectiveSchema, tableName,
-                migration.Version, migration.Description, cancellationToken);
+                migration.Version, migration.Description.Value, cancellationToken);
         }
     }
 
@@ -209,7 +220,7 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
     {
         var effectiveSchema = schemaName ?? DatabaseName();
         var maxVersion = await DetectionHelper.GetMaxVersionAsync(
-            connection, tableName, effectiveSchema, cancellationToken);
+            connection, tableName, effectiveSchema, ResolveHistorySchema(), cancellationToken);
 
         foreach (var migration in migrations)
         {
@@ -218,14 +229,14 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
             await ExecuteUpScriptAsync(connection, migration, cancellationToken);
             await InsertHistoryRowAsync(
                 connection, effectiveSchema, tableName,
-                migration.Version, migration.Description, cancellationToken);
+                migration.Version, migration.Description.Value, cancellationToken);
         }
     }
 
     private static Task ExecuteUpScriptAsync(
         MySqlConnection connection, IAmABoxMigration migration,
         CancellationToken cancellationToken)
-        => ExecuteDdlAsync(connection, migration.UpScript, cancellationToken);
+        => ExecuteDdlAsync(connection, migration.UpScript.Value, cancellationToken);
 
     private static async Task ExecuteDdlAsync(
         MySqlConnection connection, string ddl,

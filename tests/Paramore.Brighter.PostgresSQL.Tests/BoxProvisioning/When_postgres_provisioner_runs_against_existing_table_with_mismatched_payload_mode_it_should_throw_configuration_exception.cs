@@ -31,14 +31,14 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_provisioner_runs_against_existing_table_with_mismatched_payload_mode_it_should_throw_configuration_exception : IAsyncLifetime
+public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _outboxTableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly string _inboxTableName = $"test_inbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_throw_when_existing_outbox_body_is_text_and_provisioner_is_configured_for_binary()
+    public async Task When_existing_outbox_body_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
         //Arrange — text-mode outbox already exists; configure provisioner for binary.
         new PostgresSqlTestHelper().SetupDatabase();
@@ -61,7 +61,7 @@ public class When_postgres_provisioner_runs_against_existing_table_with_mismatch
     }
 
     [Fact]
-    public async Task Should_throw_when_existing_outbox_body_is_bytea_and_provisioner_is_configured_for_text()
+    public async Task When_existing_outbox_body_is_bytea_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
         //Arrange — binary (bytea) outbox already exists; configure provisioner for text.
         new PostgresSqlTestHelper().SetupDatabase();
@@ -84,7 +84,7 @@ public class When_postgres_provisioner_runs_against_existing_table_with_mismatch
     }
 
     [Fact]
-    public async Task Should_throw_when_existing_inbox_commandbody_is_text_and_provisioner_is_configured_for_binary()
+    public async Task When_existing_inbox_commandbody_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
         //Arrange — text-mode inbox already exists; configure provisioner for binary.
         new PostgresSqlTestHelper().SetupDatabase();
@@ -107,7 +107,7 @@ public class When_postgres_provisioner_runs_against_existing_table_with_mismatch
     }
 
     [Fact]
-    public async Task Should_throw_when_existing_inbox_commandbody_is_bytea_and_provisioner_is_configured_for_text()
+    public async Task When_existing_inbox_commandbody_is_bytea_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
         //Arrange — binary (bytea) inbox already exists; configure provisioner for text.
         new PostgresSqlTestHelper().SetupDatabase();

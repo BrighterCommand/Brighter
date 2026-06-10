@@ -317,7 +317,7 @@ namespace Paramore.Brighter
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
             try
             {
-                Log.BuildingSendPipelineForCommand(s_logger, command.GetType(), command.Id);
+                Log.BuildingSendPipelineForCommand(s_logger, command.GetType(), command.Id.Value);
                 var handlerChain = builder.Build(command, context);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -394,7 +394,7 @@ namespace Paramore.Brighter
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
             try
             {
-                Log.BuildingSendAsyncPipelineForCommand(s_logger, command.GetType(), command.Id);
+                Log.BuildingSendAsyncPipelineForCommand(s_logger, command.GetType(), command.Id.Value);
                 var handlerChain = builder.BuildAsync(command, context, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -470,12 +470,12 @@ namespace Paramore.Brighter
                     throw new ArgumentException("A subscriberRegistry must be configured.");
                 
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
-                Log.BuildingSendPipelineForEvent(s_logger, @event.GetType(), @event.Id);
+                Log.BuildingSendPipelineForEvent(s_logger, @event.GetType(), @event.Id.Value);
                 var handlerChain = builder.Build(@event, context);
 
                 var handlerCount = handlerChain.Count();
 
-                Log.FoundHandlerCountForEvent(s_logger, handlerCount, @event.GetType(), @event.Id);
+                Log.FoundHandlerCountForEvent(s_logger, handlerCount, @event.GetType(), @event.Id.Value);
 
                 var exceptions = new ConcurrentBag<Exception>();
                 Parallel.ForEach(handlerChain, (handleRequests) =>
@@ -576,12 +576,12 @@ namespace Paramore.Brighter
             var handlerSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
-                Log.BuildingSendAsyncPipelineForEvent(s_logger, @event.GetType(), @event.Id);
+                Log.BuildingSendAsyncPipelineForEvent(s_logger, @event.GetType(), @event.Id.Value);
 
                 var handlerChain = builder.BuildAsync(@event, context, continueOnCapturedContext);
                 var handlerCount = handlerChain.Count();
 
-                Log.FoundAsyncHandlerCount(s_logger, handlerCount, @event.GetType(), @event.Id);
+                Log.FoundAsyncHandlerCount(s_logger, handlerCount, @event.GetType(), @event.Id.Value);
 
                 var exceptions = new ConcurrentBag<Exception>();
 
@@ -820,7 +820,7 @@ namespace Paramore.Brighter
             string? batchId = null) 
             where TRequest : class, IRequest
         {
-            Log.SaveRequest(s_logger, request.GetType(), request.Id);
+            Log.SaveRequest(s_logger, request.GetType(), request.Id.Value);
             
             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
@@ -1062,7 +1062,7 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default,
             string? batchId = null) where TRequest : class, IRequest
         {
-            Log.SaveRequest(s_logger, request.GetType(), request.Id);
+            Log.SaveRequest(s_logger, request.GetType(), request.Id.Value);
             
              var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
              var context = InitRequestContext(span, requestContext);
@@ -1501,7 +1501,7 @@ namespace Paramore.Brighter
 
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
-            Log.FoundHandlerCountForCommand(s_logger, handlerCount, typeof(T), command.Id);
+            Log.FoundHandlerCountForCommand(s_logger, handlerCount, typeof(T), command.Id.Value);
 
             if (handlerCount > 1)
                 throw new ArgumentException(

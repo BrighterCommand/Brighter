@@ -176,7 +176,7 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         }
 
         public Task<bool> DoesHistoryExistAsync(
-            FakeDbConnection connection, string tableName, string? schemaName,
+            FakeDbConnection connection, string tableName, string? schemaName, string? historySchema,
             CancellationToken cancellationToken = default,
             FakeDbTransaction? transaction = null)
         {
@@ -185,7 +185,7 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         }
 
         public Task<int> GetMaxVersionAsync(
-            FakeDbConnection connection, string tableName, string? schemaName,
+            FakeDbConnection connection, string tableName, string? schemaName, string? historySchema,
             CancellationToken cancellationToken = default,
             FakeDbTransaction? transaction = null)
         {
@@ -242,8 +242,8 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         public List<string?> MigrateSchemas { get; } = new();
 
         public Task MigrateAsync(
-            string tableName,
-            string? schemaName,
+            BoxTableName tableName,
+            SchemaName? schemaName,
             BoxType boxType,
             BoxTableState tableState,
             CancellationToken cancellationToken = default)

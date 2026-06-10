@@ -10,6 +10,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
 [Trait("Category", "Spanner")]
 [Collection("SpannerBoxProvisioning")]
+[Trait("Category", "Spanner")]
 public class InboxProvisionerFreshDatabaseTests : IAsyncLifetime
 {
     private readonly string _tableName;

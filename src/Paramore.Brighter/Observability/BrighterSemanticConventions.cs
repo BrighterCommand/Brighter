@@ -45,6 +45,11 @@ public static class BrighterSemanticConventions
     public const string BoxMigrationEventBootstrap = "bootstrap";
     public const string BoxMigrationEventNormalUpdate = "normal_update";
     public const string BoxMigrationEventHistoryTableRaceSwallowed = "history_table_race_swallowed";
+    public const string BoxMigrationEventLegacyHistorySeeded = "legacy_history_seeded";
+    // Attribute on the legacy_history_seeded event carrying the number of rows the D5 seed copied
+    // from the legacy default-schema history to the per-schema history on a Global→PerSchema flip.
+    // Operators querying a trace store can filter / aggregate by this value to size the flip impact.
+    public const string BoxMigrationSeedRowCount = "brighter.box.migration.seed.rows";
     public const string BoxType = "paramore.brighter.box.type";
     public const string CeSource = "cloudevents.event_source";
     public const string CeMessageId = "cloudevents.event_id";

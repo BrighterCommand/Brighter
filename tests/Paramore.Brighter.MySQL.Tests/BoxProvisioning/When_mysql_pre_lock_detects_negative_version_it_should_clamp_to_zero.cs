@@ -112,13 +112,13 @@ public class MySqlPreLockNegativeVersionClampTests
             => Task.FromResult(true);
 
         public Task<bool> DoesHistoryExistAsync(
-            MySqlConnection connection, string tableName, string? schemaName,
+            MySqlConnection connection, string tableName, string? schemaName, string? historySchema,
             CancellationToken cancellationToken = default,
             MySqlTransaction? transaction = null)
             => Task.FromResult(false);
 
         public Task<int> GetMaxVersionAsync(
-            MySqlConnection connection, string tableName, string? schemaName,
+            MySqlConnection connection, string tableName, string? schemaName, string? historySchema,
             CancellationToken cancellationToken = default,
             MySqlTransaction? transaction = null)
             => throw new NotSupportedException("Bootstrap branch should not call GetMaxVersionAsync.");
@@ -157,8 +157,8 @@ public class MySqlPreLockNegativeVersionClampTests
         public BoxTableState? CapturedTableState { get; private set; }
 
         public Task MigrateAsync(
-            string tableName,
-            string? schemaName,
+            BoxTableName tableName,
+            SchemaName? schemaName,
             BoxType boxType,
             BoxTableState tableState,
             CancellationToken cancellationToken = default)

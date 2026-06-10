@@ -95,10 +95,11 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         bool enableWalMode = true,
-        IAmABrighterTracer? tracer = null)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
             logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>(),
-            tracer)
+            tracer, scope)
     {
         _enableWalMode = enableWalMode;
         _lockTimeout = lockTimeout ?? TimeSpan.FromSeconds(30);
@@ -115,8 +116,9 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         bool enableWalMode = true,
-        IAmABrighterTracer? tracer = null)
-        : this(new SqliteBoxDetectionHelper(), catalog, configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer)
+        IAmABrighterTracer? tracer = null,
+        MigrationHistoryScope scope = MigrationHistoryScope.Global)
+        : this(new SqliteBoxDetectionHelper(), catalog, configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer, scope: scope)
     {
     }
 
@@ -134,6 +136,11 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
 
     /// <inheritdoc />
     protected override DbSystem DbSystem => DbSystem.Sqlite;
+
+    /// <inheritdoc />
+    /// <remarks>SQLite has no schema concept, so history has no qualifying schema and
+    /// <see cref="MigrationHistoryScope.PerSchema"/> is a no-op.</remarks>
+    protected override string? DefaultHistorySchema => null;
 
     // ==== Per-backend hook overrides for SqlBoxMigrationRunner ====
 
@@ -171,10 +178,11 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
     }
 
     protected override async Task EnsureHistoryTableAsync(
-        SqliteConnection connection, SqliteTransaction? transaction, string? schemaName,
+        SqliteConnection connection, SqliteTransaction? transaction, string? schemaName, string tableName,
         CancellationToken cancellationToken)
     {
         _ = schemaName; // SQLite has no schema concept.
+        _ = tableName;  // SQLite is out of scope for PerSchema; the D5 seed never fires here.
 
         // No race-handling needed: BEGIN IMMEDIATE above acquires SQLite's database-wide RESERVED
         // lock, so only one writer can be inside this transaction at a time. Concurrent runners
@@ -256,7 +264,7 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         _ = schemaName; // SQLite has no schema concept.
 
         var maxVersion = await DetectionHelper.GetMaxVersionAsync(
-            connection, tableName, null, cancellationToken, transaction);
+            connection, tableName, null, ResolveHistorySchema(), cancellationToken, transaction);
 
         foreach (var migration in migrations)
         {
@@ -274,23 +282,23 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         // Per ADR §6: if IdempotencyCheckSql is non-null, evaluate it under the lock-bearing
         // transaction. A non-zero scalar means the migration's effect is already present —
         // skip UpScript but still record history so MAX(V) advances.
-        if (!string.IsNullOrEmpty(migration.IdempotencyCheckSql))
+        if (!string.IsNullOrEmpty(migration.IdempotencyCheckSql?.Value))
         {
             var alreadyApplied = await ScalarIsPositiveAsync(
                 connection, transaction, migration.IdempotencyCheckSql!, cancellationToken);
             if (!alreadyApplied)
             {
-                await ExecuteUpScriptAsync(connection, transaction, migration.UpScript, cancellationToken);
+                await ExecuteUpScriptAsync(connection, transaction, migration.UpScript.Value, cancellationToken);
             }
         }
         else
         {
-            await ExecuteUpScriptAsync(connection, transaction, migration.UpScript, cancellationToken);
+            await ExecuteUpScriptAsync(connection, transaction, migration.UpScript.Value, cancellationToken);
         }
 
         await InsertHistoryRowAsync(
             connection, transaction, tableName,
-            migration.Version, migration.Description, cancellationToken);
+            migration.Version, migration.Description.Value, cancellationToken);
     }
 
     private static async Task<bool> ScalarIsPositiveAsync(

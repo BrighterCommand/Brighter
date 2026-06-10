@@ -34,14 +34,32 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // shared [dbo].[__BrighterMigrationHistory] table to demonstrate the schema_id-filter bug.
 // DisposeAsync restores it (and the rest of the seeded state) even on test failure so the
 // rest of the BoxProvisioning suite is left in a consistent state.
-public class When_history_table_exists_in_a_non_dbo_schema_runner_should_still_create_it_in_dbo : IAsyncLifetime
+//
+// Fragile=CI filters this out of `sqlserver-ci`. The xUnit `parallelizeTestCollections: false`
+// setting keeps tests sequential WITHIN a single test process, but `sqlserver-ci` runs the
+// net9 and net10 TFM matrix as two concurrent test processes against the same SQL Server
+// instance — the "REQUIRES SEQUENTIAL EXECUTION" invariant above only binds within one
+// process, so the cross-process race is structurally outside its reach. When this test's
+// outside-transaction `DROP TABLE [dbo].[__BrighterMigrationHistory]` overlaps another TFM
+// process's BoxProvisioning transaction that has SCH-M on the same table, SQL Server picks a
+// deadlock victim; the victim's next call (typically `CommitAsync` in `SqlBoxMigrationRunner`)
+// throws `InvalidOperationException : This SqlTransaction has completed; it is no longer
+// usable.` (observed at https://github.com/BrighterCommand/Brighter/actions/runs/26726375087
+// — `MsSqlGlobalToPerSchemaFlipTests` failed in one TFM run, passed in the other on the same
+// commit). The CI workflow runs `dotnet test --filter "Fragile!=CI"`, so `[Trait("Fragile",
+// "CI")]` is the minimal-change escape hatch — no per-TFM database, no ci.yml change. The
+// schema_id-filter bug this test was added to defend stays covered locally (where the two
+// TFM matrices run sequentially) and the discriminator/detection tests catch regressions in
+// the same area.
+[Trait("Fragile", "CI")]
+public class MsSqlHistoryTableNonDboSchemaTests : IAsyncLifetime
 {
     private const string CollidingSchema = "stage_for_history_clash_test";
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly MsSqlOutboxProvisioner _provisioner;
 
-    public When_history_table_exists_in_a_non_dbo_schema_runner_should_still_create_it_in_dbo()
+    public MsSqlHistoryTableNonDboSchemaTests()
     {
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -54,7 +72,7 @@ public class When_history_table_exists_in_a_non_dbo_schema_runner_should_still_c
     }
 
     [Fact]
-    public async Task Should_filter_history_existence_check_by_schema_id()
+    public async Task When_history_table_exists_in_a_non_dbo_schema_runner_should_still_create_it_in_dbo()
     {
         //Arrange — pre-create [stage].[__BrighterMigrationHistory] with a deliberately wrong
         //shape. Without a schema_id filter on the runner's IF NOT EXISTS check, the runner sees

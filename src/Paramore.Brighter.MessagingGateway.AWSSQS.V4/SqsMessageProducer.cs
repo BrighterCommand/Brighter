@@ -158,7 +158,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
         }
         
         BrighterTracer.WriteProducerEvent(Span, MessagingSystem.AWSSQS, message, _instrumentation);
-        Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
+        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
 
         await ConfirmQueueExistsAsync(cancellationToken);
 
@@ -172,7 +172,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
                 $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
         }
 
-        Log.PublishedMessage(s_logger, message.Header.Topic, message.Id, messageId);
+        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, messageId);
     }
 
     public void Send(Message message) => SendWithDelay(message, null);

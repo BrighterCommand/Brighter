@@ -61,14 +61,15 @@ public class PostgreSqlDetectionHelperNullSchemaTests : IAsyncLifetime
         Assert.True(existsWithNull);
 
         // Act + Assert — DoesHistoryExistAsync: null must locate the row recorded against 'public'.
-        var historyWithPublic = await helper.DoesHistoryExistAsync(connection, tableName, "public");
-        var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null);
+        // historySchema: null keeps the history table in the backend default ('public') — today's behaviour.
+        var historyWithPublic = await helper.DoesHistoryExistAsync(connection, tableName, "public", historySchema: null);
+        var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null, historySchema: null);
         Assert.True(historyWithPublic);
         Assert.True(historyWithNull);
 
         // Act + Assert — GetMaxVersionAsync: null must read the same version recorded under 'public'.
-        var maxWithPublic = await helper.GetMaxVersionAsync(connection, tableName, "public");
-        var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null);
+        var maxWithPublic = await helper.GetMaxVersionAsync(connection, tableName, "public", historySchema: null);
+        var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null, historySchema: null);
         Assert.Equal(3, maxWithPublic);
         Assert.Equal(3, maxWithNull);
 
