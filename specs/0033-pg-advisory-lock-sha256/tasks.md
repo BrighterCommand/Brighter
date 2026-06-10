@@ -65,7 +65,7 @@ change (see ordering note above).
 
 ### Task 4 — stable re-derivation for a fixed key
 
-- [ ] **TEST + IMPLEMENT: a fixed lock key acquires the same advisory-lock identity on every acquisition (deterministic derivation)**
+- [x] **TEST + IMPLEMENT: a fixed lock key acquires the same advisory-lock identity on every acquisition (deterministic derivation)** — coverage-only (characterisation); passes against Task 2 impl, no new production code.
   - **USE COMMAND**: `/test-first a fixed Brighter lock key maps to a stable PostgreSQL advisory-lock identity across acquire, release, and re-acquire`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning"
   - Test file: `When_a_fixed_lock_key_is_acquired_released_and_reacquired_it_should_map_to_the_same_advisory_lock_identity.cs`
