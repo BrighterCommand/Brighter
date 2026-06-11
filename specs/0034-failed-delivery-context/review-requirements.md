@@ -1,8 +1,17 @@
 # Review: requirements — 0034-failed-delivery-context
 
+> **✅ RESOLVED & SUPERSEDED (2026-06-11).** All findings from this round-3 review were folded into
+> `requirements.md` before approval (`.requirements-approved` present): finding 1 (C-6 ↔ C-8
+> contradiction, 82) — C-6 reworded so the captured `producer` yields only the *static*
+> `Publication.Topic`, not the wire topic; finding 2 (NFR-4 orphan, 66) — AC-15 added; plus the
+> three sub-threshold items (C-8 `:44` wording, FR-10 scope note, AC-10 "gateway-dependent
+> threads"). The **NEEDS WORK** verdict below is the historical round-3 state and no longer reflects
+> `requirements.md`. (Note: FR-10/AC-14 were further superseded during design by ADR 0063's
+> `Activity.Current` mechanism — see the banners in `requirements.md` and `review-design.md`.)
+
 **Date**: 2026-06-10
 **Threshold**: 60
-**Verdict**: NEEDS WORK
+**Verdict**: NEEDS WORK ~~→ superseded; see resolution banner above~~
 
 2 findings at or above threshold 60. Address these before approving.
 
