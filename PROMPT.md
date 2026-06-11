@@ -12,7 +12,7 @@ Issue → **Requirements ✅** → **ADR ✅ (drafted, uncommitted)** ◀ HERE �
 | Phase | State |
 |---|---|
 | Requirements | ✅ Approved (`.requirements-approved`), committed `d7c997512`, pushed, PR #4180 |
-| Design | ✅ ADR 0063 `docs/adr/0063-failed-delivery-context.md`, in `.adr-list`, **UNCOMMITTED**. 3 review rounds: R1 4 findings (1 Critical)→revised; R2 1 High (concurrency)→fixed via `Activity.Current`; **R3 PASS (0 ≥60, 3 sub-threshold nits, 2 folded in)**. Ready for `/spec:approve design` + commit. |
+| Design | ✅ ADR 0063 `docs/adr/0063-failed-delivery-context.md`, in `.adr-list`, **committed + pushed** (HEAD has RMQ `PendingConfirmation` record refinement + R4 nit fixes uncommitted). 4 review rounds: R1 4 findings (1 Critical)→revised; R2 1 High (concurrency)→`Activity.Current`; R3 PASS; **R4 PASS** (named-record refinement, 2 cosmetic nits folded in). Ready for `/spec:approve design`. |
 | Tasks | Not started |
 | Code | Not written |
 
@@ -37,7 +37,14 @@ KEY FACTS: source from `Activity.Current` (==S1 during send, AsyncLocal=race-fre
 `producer.Span` field (races under concurrent same-topic dispatch → R2 finding #1), NOT `requestContext.Span`
 (=parent span). Capture MUST be inside the send call before any await/child-activity, never at callback
 time (S1 ended + Activity.Current reset by then). Verified Polly OutboxProducer pipeline
-(`OutboxProducerMediator.cs:1111-1134`) does not perturb `Activity.Current`.
+(`src/Paramore.Brighter/Extensions/ResiliencePipelineRegistryExtensions.cs:57-67`, bare AddRetry) does not perturb `Activity.Current`.
+
+## 📌 TASKS-PHASE carry-forward notes (from PR #4180 wider review — fold into `/spec:tasks`)
+These were deferred from the design review to the tasks phase (PO decision 2026-06-11):
+1. **Kafka context channel** — the captured `ActivityContext` rides the **delivery-report closure created inside `Send`/`SendAsync`** (`KafkaMessageProducer.cs:260, 333` → `PublishResults`); `PublishResults`'s own signature is just `(status, headers)`, so the context is carried via the closure local, NOT a new correlation store. Make this explicit in the implementation task.
+2. **Harden the "capture before any `await`" invariant** — it must be re-honoured at **4 raise sites** (Kafka sync/async, RMQ sync/async). Consider a single shared capture helper + a test that FAILS if an intervening activity is started before capture (AC-2/AC-10 only catch a regression when a tracing listener is active). The RMQ-async `await EnsureBrokerAsync` (`:167`) precedes per-message tracking → capture must go at the top of the method.
+3. **Binary-break + test migration** — `Action<bool,string>` → `Action<PublishConfirmationResult>` breaks ~**10 in-repo test subscriber sites** (Kafka tests `delegate(bool,string)`; RMQ tests `(success, messageId)`/`(success, guid)`). Migrate them; confirm the break fits the target release line (minor vs major). `InMemoryMessageProducer` is NOT affected (does not implement `ISupportPublishConfirmation`; its `OnMessagePublished` is a separate `Action<bool, Id>` with no false path).
+4. **Test fixture for shared mediator path** — FR-1/2/3 unit tests need a **fake `ISupportPublishConfirmation` producer** that can raise `(false, …)`. InMemory cannot serve (not a confirmation producer, no failure path). Either build a fake or use real Kafka/RMQ integration tests. (Making InMemory a confirmation producer = scope expansion beyond Kafka+RMQ; out of scope unless PO decides otherwise.)
 
 ## What the feature does (issue #4179)
 
