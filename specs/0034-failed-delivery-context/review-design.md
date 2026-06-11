@@ -4,39 +4,29 @@
 **Threshold**: 60
 **Verdict**: PASS
 
-**Round 3** (re-review after the `Activity.Current` capture-source change). No findings at or above threshold 60. Round 1 (4 findings, 1 Critical) and round 2 (1 High concurrency race) are all resolved and verified against the live codebase. Consider addressing the lower-scored nits below.
+**Round 4** (re-review after the `PendingConfirmation` named-record refinement). No findings at or above threshold 60. Rounds 1–3 issues (Critical AC-2 linchpin, optional-param-ordering break, concurrency race) all resolved and verified. The refinement is fully grounded and consistent. Only two cosmetic nits below.
 
-> **Post-round-3 edits (2026-06-11).** Nits #1 and #2 folded into the ADR (RMQ-async capture-ordering caveat added to the RMQ paragraph; the "plain Polly" claim re-cited to `ResiliencePipelineRegistryExtensions.cs:60-67`). #3 is optional and left as-is.
+> **Post-round-4 edits (2026-06-11).** Both nits folded in: RMQ touch-points now cite `RemovePendingConfirmations`/`RemoveConfirmationsLocked` (`:419`, lookup `:447`); the resilience-extension path now includes the `Extensions/` segment (`src/Paramore.Brighter/Extensions/ResiliencePipelineRegistryExtensions.cs:57-67`).
 
 ## Findings
 
-### 1. Capture-before-await invariant is correct but understates the RMQ-async ordering it must displace (Score: 42)
+### 1. `RemovePendingConfirmations` cited at `:447` actually lands inside `RemoveConfirmationsLocked` (Score: 18)
 
-The ADR's invariant — capture `Activity.Current?.Context` "as the **first action** inside `Send`/`SendAsync`, before any `await`" — is sound and implementable. But in the RMQ async producer the existing `SendWithDelayAsync` body does `BeginSend()` then `await EnsureBrokerAsync(...)` at `RmqMessageProducer.cs:167` **before** it ever touches `Span`/`WriteProducerEvent` (`:178`) or `AddPendingConfirmation` (`:187`). So the capture line must be inserted above `:167`. An implementer who places the capture next to the existing `AddPendingConfirmation`/`WriteProducerEvent` site (the natural "where the per-message tracking happens" spot) would place it *after* the `EnsureBrokerAsync` await, violating the invariant. Documentation-precision gap, not a design defect; the Kafka path has no equivalent tension (`WriteProducerEvent` merely `AddEvent`s, starts no child activity — `BrighterTracer.cs:951`).
+The ADR cited the RMQ-async touch-points as `AddPendingConfirmation`/`RemovePendingConfirmations`/`OnPublishFailed` at `:397, :447, :476`. `AddPendingConfirmation` (`:397`) and `OnPublishFailed` (`:476`) are correct, but `RemovePendingConfirmations`'s header is at `:419`; line `:447` is the `_pendingConfirmations.TryGetValue` inside helper `RemoveConfirmationsLocked` — i.e. the actual line whose value type changes. Not misleading (matches round-3's `:447-449` reference to the same removal logic), just not the method header the prose named. Cosmetic line drift only.
 
-**Evidence**: `RmqMessageProducer.cs:151` `BeginSend()`, `:167` `await EnsureBrokerAsync(...)`, `:178` `WriteProducerEvent`, `:187` `AddPendingConfirmation`.
+**Evidence**: `RmqMessageProducer.cs:419` `RemovePendingConfirmations(...)`; `:447` `TryGetValue(...)` inside `RemoveConfirmationsLocked`.
 
-**Recommendation**: Add a sentence to the RMQ paragraph noting the capture must precede the broker-ensure await. **(Done in post-round-3 edits.)**
-
----
-
-### 2. "Plain Polly, no activity-creating strategy" cited the executor, not the pipeline definition (Score: 30)
-
-The "plain Polly with no activity-creating strategy" claim cited `OutboxProducerMediator.cs:1111-1134` (`ExecuteWithResiliencePipeline`), which only fetches and runs the pipeline. The actual strategy set is in `ResiliencePipelineRegistryExtensions.AddBrighterDefault` (`:60-67`) — a single `AddRetry`, no telemetry middleware — so the claim is *true* but cited against the wrong file. The pipeline is registry-keyed and user-overridable; the claim holds for the Brighter default.
-
-**Evidence**: `OutboxProducerMediator.cs:1113` `GetPipeline(CommandProcessor.OutboxProducer)`; `ResiliencePipelineRegistryExtensions.cs:60-67`.
-
-**Recommendation**: Cite `ResiliencePipelineRegistryExtensions.cs:60-67`. **(Done in post-round-3 edits.)**
+**Recommendation**: Cite `:419` (header) and `:447` (value-typed lookup) together. **(Done in post-round-4 edits.)**
 
 ---
 
-### 3. RMQ map-widening touch-points not fully enumerated (Score: 18)
+### 2. Resilience-extension path omitted `Extensions/` subfolder (Score: 8)
 
-The value-type widening also ripples to `RemovePendingConfirmations` (`:447-449`) and the sync project's add (`:153`) / raise (`:233-236`) sites, which the ADR folds into "analogous"/"touching the map" rather than enumerating. Implementable as stated.
+The ADR cited `ResiliencePipelineRegistryExtensions.cs:60-67`; the file actually lives at `src/Paramore.Brighter/Extensions/ResiliencePipelineRegistryExtensions.cs`, with `AddBrighterDefault`'s bare `AddRetry` (no telemetry/activity strategy) at ~`:57-67`. Pre-existing across prior rounds; content claim correct, path incomplete.
 
-**Evidence**: async `:480` raise, `:397` add, `:447-449` remove; sync `RmqMessageProducer.cs:58` (`ConcurrentDictionary<ulong,string>`), `:153` add, `:233-236` raise.
+**Evidence**: `src/Paramore.Brighter/Extensions/ResiliencePipelineRegistryExtensions.cs` — `AddBrighterDefault` `TryAddBuilder(CommandProcessor.OutboxProducer, … AddRetry(…))`, no activity middleware.
 
-**Recommendation**: None required (optional enumeration partially added in post-round-3 edits).
+**Recommendation**: Add the `Extensions/` segment. **(Done in post-round-4 edits.)**
 
 ## Summary
 
@@ -45,18 +35,17 @@ The value-type widening also ripples to `RemovePendingConfirmations` (`:447-449`
 | 90-100 (Critical) | 0 |
 | 70-89 (High) | 0 |
 | 50-69 (Medium) | 0 |
-| 0-49 (Low) | 3 |
+| 0-49 (Low) | 2 |
 
-**Total findings**: 3
+**Total findings**: 2
 **Findings at or above threshold (60)**: 0
 
 ---
 
-### Verified against the live codebase (round-3 linchpin holds)
+### Verified against the live codebase (refinement is grounded)
 
-- **`Activity.Current = S1` at `BrighterTracer.cs:700`** — the activity `CreateProducerSpan` creates/returns IS the same S1 the mediator assigns to `producer.Span` (`OutboxProducerMediator.cs:825-827`/`:970-972`), so AC-2's "link == S1" is satisfiable.
-- **Race genuinely resolved** — `Activity.Current` is BCL `AsyncLocal`; the OutboxProducer default pipeline (`ResiliencePipelineRegistryExtensions.cs:60-67`) is a bare `AddRetry` with no telemetry/activity strategy, so `Activity.Current` is not perturbed between span creation and the `Send` body on either sync or async path.
-- **Capture-ordering invariant** implementable; `WriteProducerEvent` only `AddEvent`s (`BrighterTracer.cs:951`). RMQ-async tension is the documentation nit #1 (now addressed).
-- **Consistency sweep clean** — every section sources from `Activity.Current`; `producer.Span`/`requestContext.Span` appear only as rejected options. No "flow the RequestContext"-as-current-design leftover. Tidy-first correctly states the construction-time `RequestContext` cleanup is NOT enabled.
-- **RMQ map widening + async-null note** present and accurate (`Dictionary<ulong,string>`/`ConcurrentDictionary<ulong,string>`; `producer.Span = null` only at `:858`, absent in `DispatchAsync`).
-- **Core unchanged claims verified**: `OnMessagePublished` is `Action<bool,string>` (`:42`); event change documented source+binary-breaking scoped to confirmation producers; `PublishConfirmationResult` documented as public type needing XML docs + success-branch population; `CreateSpan` takes `ActivityLink[]?` (`:106`); Kafka unbound catch (`:52`) with `MESSAGE_ID` to `deliveryResult.Headers`/`Message.Headers=[]`; `PublishResults` hardcodes `(false, string.Empty)` (`:381-382`); `TripTopic(RoutingKey?)` guard (`:1168-1171`); non-confirmation trip `:998`; OOS-2 `<string,string>` catches `:262`/`:336`.
+- **Record types real and coherent.** `Id` (`Id.cs:38`, a `record`) and `RoutingKey` (`RoutingKey.cs:36`, a `class`) are real Brighter types, valid as `readonly record struct` members; `ActivityContext?` is a valid nullable struct member. At the stash site `RmqMessageProducer.cs:187` the producer holds `message`, so `message.Id` (an `Id`, `Message.cs:100`) and `message.Header.Topic` (a non-nullable `RoutingKey`, `MessageHeader.cs:312`) are both available — coherent with the record's strong-typed members. The ADR accurately notes the current map stores `message.Id.Value` (a string).
+- **`record struct` choice** defensible (small, short-lived dictionary value); no over-claim.
+- **Consistency sweep clean** — all three RMQ mentions (Implementation Approach, Consequences §Negative, Critical Files) describe the named internal `PendingConfirmation` record; no leftover "widen the value type"/loose-tuple phrasing; the internal-vs-public contrast with `PublishConfirmationResult` is explicit and non-contradictory.
+- **Capture-ordering caveat** (RMQ-async `await EnsureBrokerAsync` at `:167` precedes per-message tracking → capture at top) remains coherent and explicitly documented.
+- **Still-load-bearing claims intact**: `Activity.Current = S1` at `BrighterTracer.cs:700` (AsyncLocal/race-free capture source); OutboxProducer default pipeline has no activity strategy; `OnMessagePublished` `Action<bool,string>` (`:42`) → `Action<PublishConfirmationResult>`, source+binary-breaking scoped to confirmation producers; `PublishConfirmationResult` public type w/ XML-doc + success-branch population; Kafka unbound catch (`:52`); `PublishResults` hardcodes `(false, string.Empty)` (`:381-382`); `TripTopic(RoutingKey?)` guard (`:1168-1171`); non-confirmation trip (`:998`).
