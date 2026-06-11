@@ -4,24 +4,23 @@
 **Branch:** `issue-4179-failed-delivery-context`  ·  **Spec dir:** `specs/0034-failed-delivery-context/`
 **Issue:** #4179  ·  **PR:** #4180 (open)
 
-## ✅ STATUS: ADR 0063 committed + expanded; requirements & ADR tidied; **uncommitted working-tree edits** (symmetric decision + clarity pass)
+## ✅ STATUS: ADR 0063 design settled through **R5 PASS**; **R6 re-review owed** on the now-detailed InMemory pump. All committed + pushed.
 
 Spec artifacts only so far; **no production code yet**. Workflow position:
-Issue → **Requirements ✅** → **ADR ✅ (committed, expanded, edited — uncommitted edits live)** ◀ HERE → re-review (R5) → approve → Tasks → Tests → Code.
+Issue → **Requirements ✅** → **ADR ✅ (R5 PASS, findings folded in; R6 owed on pump detail)** ◀ HERE → approve → Tasks → Tests → Code.
 
 | Phase | State |
 |---|---|
-| Requirements | ✅ Approved (`.requirements-approved`), committed `d7c997512`, pushed, PR #4180. **Edited since (uncommitted)** — see below. |
-| Design | ✅ ADR 0063 committed `d4dd4d793`, in `.adr-list`. Reviewed through **R4 PASS** (`5b96a2f4c`). THEN expanded (InMemory confirmation capability, `b8fceb3bc`). THEN **two uncommitted edit passes today** (clarity tidy + symmetric success/failure decision). **R5 re-review still owed** (must cover InMemory expansion **and** the symmetric change). |
+| Requirements | ✅ Approved (`.requirements-approved`), `d7c997512`, PR #4180. Edited since (FR-10 removed, FR-2 made symmetric, OOS-4 narrowed, AC-13 rewritten) — committed `d8b930803`. |
+| Design | ✅ ADR 0063 (`.adr-list`). History: R1 Crit → R2 High → R3/R4 PASS (`5b96a2f4c`) → InMemory expansion (`b8fceb3bc`) → clarity tidy + symmetric success/failure decision (`d8b930803`) → **R5 PASS** (`review-design.md`, 0 findings ≥ 60) with all 5 sub-threshold findings folded in → **Option B InMemory pump** (single worker + `Task.Run`-per-raise, AC-10 now exercised in-memory). **R6 re-review owed**: scrutinize the detailed pump — drain correctness, the `Task.Run` concurrency claim, dispose ordering, no lost/double confirmations. |
 | Tasks | Not started |
 | Code | Not written |
 
 ## ▶️ FIRST THING NEXT SESSION
 
-Working tree has **uncommitted edits** to `specs/0034-failed-delivery-context/requirements.md` and `docs/adr/0063-failed-delivery-context.md` (clarity pass + symmetric decision). Options:
-1. Eyeball the diffs, then commit them (the prior ADR/requirements work is already committed; these are follow-up edits).
-2. Run `/spec:review design` (round 5) — must cover the InMemory expansion **and** the new symmetric-span decision.
-3. When design is settled: `/spec:approve design` → then `/spec:tasks`.
+Everything is committed + pushed (working tree clean). Design is at **R5 PASS** but the InMemory pump gained substantial new detail (Option B concurrency + two-stage drain) that should be re-reviewed before approval. Options:
+1. Run `/spec:review design` (**round 6**) — focus on the InMemory pump: drain correctness (two-stage: await worker, then await in-flight `Task.Run` raises), the AC-10 concurrency claim, dispose ordering, no lost/double confirmations on shutdown. Also re-verify the symmetric orphan-fix (R5 confirmed it works via `StartActivity(parentId:null)` → ambient `Activity.Current` fallback).
+2. If R6 is clean: `/spec:approve design` → then `/spec:tasks`.
 
 ## ✅ RESOLVED DECISIONS (were open; now locked)
 
@@ -64,10 +63,18 @@ perturb `Activity.Current`.
 3. **Binary-break + test migration** — `Action<bool,string>` → `Action<PublishConfirmationResult>` breaks ~**10 in-repo test
    subscriber sites** (Kafka `delegate(bool,string)`; RMQ `(success,messageId)`/`(success,guid)`). Migrate them; confirm break
    fits target release line.
-4. **InMemory confirmation capability** — `InMemoryMessageProducer` = 3rd `ISupportPublishConfirmation` implementer: opt-in
-   async-confirm switch (default off = today's sync `(true,id)`), `Channel`+worker pump raising enriched callback off-thread,
-   failure-injection hook (drives the `false` path), capture `Activity.Current` before enqueue + carry, dispose draining. Its
-   orphaned `Action<bool,Id>` event (no external subscribers) → enriched `Action<PublishConfirmationResult>`.
+4. **InMemory confirmation capability** — `InMemoryMessageProducer` = 3rd `ISupportPublishConfirmation` implementer. Pinned
+   design (round-5 review folded in): settable props (property-injection style) **`bool UseAsyncPublishConfirmation`** (default
+   `false` = today's sync write + `(true,id)`) and **`Func<Message,bool>? PublishFailurePredicate`** (default null = never fail;
+   `true` ⇒ no bus write + raise `(false,…)`). When switch ON, **fire-and-forget**: `Send`/`SendAsync` capture `Activity.Current`,
+   enqueue a work-item (carrying the `Message`) onto an **unbounded** `Channel` (SingleReader, SingleWriter=false) and return
+   WITHOUT writing the bus; a **single** lazily-started worker drains **FIFO**, **writes `InternalBus`** (produce-order
+   deterministic) **then dispatches the raise via `Task.Run`** (Option B — concurrent callbacks, mirrors Kafka `:373,381`). This
+   **DOES** exercise AC-10/NFR-3 same-topic concurrency in-memory (cost: confirmation *ordering* non-deterministic, but no AC
+   asserts it; single-msg ACs await 1 confirm, unaffected). **Two-stage drain** on dispose: complete writer → await worker → await
+   in-flight raise tasks (`Interlocked` count + `TaskCompletionSource`). `SendWithDelay` → Scheduler re-enters `Send` later (pump
+   engages then). Batch `SendAsync` = one work-item per message. Failure hook: `true` ⇒ no bus write + raise `(false,…)`. Orphaned
+   `Action<bool,Id>` event (no external subscribers) → `Action<PublishConfirmationResult>`.
 5. **Symmetric span + orphan fix (NEW)** — mediator callback creates the confirmation span (S2) FIRST on every invocation, sets
    `Activity.Current = S2`, THEN branches. New `BrighterTracer` confirmation-span helper (outcome flag, both branches, sets
    `Activity.Current`). Success branch needs its OWN regression test (AC-13): asserts S2 + link to S1 + `MarkDispatched` DB span
@@ -136,8 +143,11 @@ When a confirmation-based producer (Kafka/RMQ) reports a failed publish via `OnM
 
 ## Review history
 - **Requirements:** 3 adversarial rounds (7→4→2 findings ≥ threshold, all resolved). `review-requirements.md` (round 3).
-- **Design:** R1 Critical → R2 High (concurrency) → R3/R4 PASS, all committed. `review-design.md` (round 4). **R5 owed** —
-  must cover (a) the InMemory expansion and (b) the symmetric success/failure span decision.
+- **Design:** R1 Critical → R2 High (concurrency) → R3/R4 PASS → **R5 PASS** (`review-design.md`, 0 findings ≥ 60; covered the
+  InMemory expansion + symmetric span; empirically confirmed the orphan-fix re-parents via `StartActivity(parentId:null)` →
+  ambient fallback). All 5 R5 sub-threshold findings folded in (pump switch/hook names, single-worker FIFO, `SendWithDelay`,
+  deferred-visibility consequence, the 2-async-only `CancellationToken` correction, `:1006` line fix) + Option B pump adopted.
+  **R6 owed** — re-review the detailed pump (drain correctness, `Task.Run` concurrency, dispose ordering).
 
 ## ⚠️ Process reminders (CLAUDE.md)
 - **TDD MANDATORY**: TEST tasks use `/test-first <behavior>`; STOP for approval after each test.
