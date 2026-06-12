@@ -122,7 +122,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: async pump (a) slice.
   - **References**: ADR "Fire-and-forget publish + single-worker pump" (batch fan-out); InMemory `:112`.
 
-- [ ] **TEST + IMPLEMENT: async pump (b) — single-start guard: concurrent first-enqueuers start exactly one worker / one reader**
+- [x] **TEST + IMPLEMENT: async pump (b) — single-start guard: concurrent first-enqueuers start exactly one worker / one reader** — done `af0501b35`
   - **USE COMMAND**: `/test-first InMemoryMessageProducer with async confirmation on starts exactly one draining worker even when many threads race to be the first enqueuer, so only one reader drains the channel`
   - Test location: "tests/Paramore.Brighter.InMemory.Tests/Confirmation"
   - Test file: `When_concurrent_first_enqueuers_should_start_one_worker.cs`
