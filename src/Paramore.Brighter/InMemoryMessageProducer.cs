@@ -46,7 +46,7 @@ namespace Paramore.Brighter
         private Task? _worker;
         private int _pumpStarted; // 0 = not started, 1 = started; CAS guard
 
-        private readonly record struct WorkItem(Message Message);
+        private readonly record struct WorkItem(Message Message, ActivityContext? Context);
 
         /// <summary>
         /// The in-memory producer is mainly intended for usage with tests. It allows you to send messages to a bus and
@@ -176,9 +176,11 @@ namespace Paramore.Brighter
             // _pumpStarted from 0→1 calls Task.Run. All concurrent first-enqueuers lose the
             // CAS and skip the start — preventing two readers against a SingleReader = true
             // channel (load-bearing for slice 7's two-stage dispose drain).
+            // Capture before any await or channel handoff so the context is always from the caller's thread.
+            var publishContext = Activity.Current?.Context;
             if (Interlocked.CompareExchange(ref _pumpStarted, 1, 0) == 0)
                 _worker = Task.Run(DrainAsync);
-            _channel.Writer.TryWrite(new WorkItem(message));
+            _channel.Writer.TryWrite(new WorkItem(message, publishContext));
         }
 
         private void Enqueue(Message message)
@@ -198,12 +200,12 @@ namespace Paramore.Brighter
             {
                 if (PublishFailurePredicate?.Invoke(item.Message) == true)
                 {
-                    var failResult = new PublishConfirmationResult(false, item.Message.Id, item.Message.Header.Topic, null);
+                    var failResult = new PublishConfirmationResult(false, item.Message.Id, item.Message.Header.Topic, item.Context);
                     _ = Task.Run(() => OnMessagePublished?.Invoke(failResult));
                     continue;
                 }
                 _bus.Enqueue(item.Message);
-                var successResult = new PublishConfirmationResult(true, item.Message.Id, null, null);
+                var successResult = new PublishConfirmationResult(true, item.Message.Id, null, item.Context);
                 _ = Task.Run(() => OnMessagePublished?.Invoke(successResult));
             }
         }
