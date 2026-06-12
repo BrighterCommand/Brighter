@@ -44,6 +44,7 @@ namespace Paramore.Brighter
         private readonly System.Threading.Channels.Channel<WorkItem> _channel =
             System.Threading.Channels.Channel.CreateUnbounded<WorkItem>(new UnboundedChannelOptions { SingleReader = true });
         private Task? _worker;
+        private int _pumpStarted; // 0 = not started, 1 = started; CAS guard
 
         private readonly record struct WorkItem(Message Message);
 
@@ -171,8 +172,12 @@ namespace Paramore.Brighter
 
         private void EnqueueDeferred(Message message)
         {
-            // NOTE: _worker ??= is not race-safe; the single-start guard (Interlocked.CompareExchange) is added in the next slice.
-            _worker ??= Task.Run(DrainAsync);
+            // First-one-wins CAS on an int flag: only the thread that atomically transitions
+            // _pumpStarted from 0→1 calls Task.Run. All concurrent first-enqueuers lose the
+            // CAS and skip the start — preventing two readers against a SingleReader = true
+            // channel (load-bearing for slice 7's two-stage dispose drain).
+            if (Interlocked.CompareExchange(ref _pumpStarted, 1, 0) == 0)
+                _worker = Task.Run(DrainAsync);
             _channel.Writer.TryWrite(new WorkItem(message));
         }
 
