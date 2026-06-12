@@ -43,6 +43,7 @@ namespace Paramore.Brighter
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly System.Threading.Channels.Channel<WorkItem> _channel =
             System.Threading.Channels.Channel.CreateUnbounded<WorkItem>(new UnboundedChannelOptions { SingleReader = true });
+        private readonly List<Task> _raiseTasks = new(); // drain worker is single-threaded; read only after worker completes
         private Task? _worker;
         private int _pumpStarted; // 0 = not started, 1 = started; CAS guard
 
@@ -109,14 +110,23 @@ namespace Paramore.Brighter
         public event Action<PublishConfirmationResult>? OnMessagePublished;
 
         /// <summary>
-        /// Dispose of the producer
+        /// Dispose of the producer. Blocks until any in-flight async pump has fully drained
+        /// (channel completed, worker finished, all confirmation callbacks returned).
         /// </summary>
-        public void Dispose() {}
-        
+        public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
+
         /// <summary>
-        /// Dispose of the producer
-        /// </summary> 
-        public ValueTask DisposeAsync() {return new ValueTask();}
+        /// Dispose of the producer asynchronously. Two-stage drain: completes the channel
+        /// writer so the pump loop exits, awaits the worker, then awaits every confirmation
+        /// raise <see cref="Task"/> so callers can rely on all callbacks having fired before
+        /// this returns.
+        /// </summary>
+        public async ValueTask DisposeAsync()
+        {
+            _channel.Writer.TryComplete();
+            await (_worker ?? Task.CompletedTask);
+            await Task.WhenAll(_raiseTasks);
+        }
 
         /// <summary>
         /// Send a message to a broker; in this case an <see cref="InternalBus"/>
@@ -201,12 +211,12 @@ namespace Paramore.Brighter
                 if (PublishFailurePredicate?.Invoke(item.Message) == true)
                 {
                     var failResult = new PublishConfirmationResult(false, item.Message.Id, item.Message.Header.Topic, item.Context);
-                    _ = Task.Run(() => OnMessagePublished?.Invoke(failResult));
+                    _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(failResult)));
                     continue;
                 }
                 _bus.Enqueue(item.Message);
                 var successResult = new PublishConfirmationResult(true, item.Message.Id, null, item.Context);
-                _ = Task.Run(() => OnMessagePublished?.Invoke(successResult));
+                _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(successResult)));
             }
         }
 
