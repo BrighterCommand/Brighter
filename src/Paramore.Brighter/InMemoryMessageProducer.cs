@@ -85,6 +85,18 @@ namespace Paramore.Brighter
         public bool UseAsyncPublishConfirmation { get; init; } = false;
 
         /// <summary>
+        /// An optional predicate evaluated per message at send time.  When the predicate returns
+        /// <see langword="true"/> the message is NOT written to the bus and a failure
+        /// <see cref="PublishConfirmationResult"/> is raised instead — useful for injecting publish
+        /// failures in tests.  <see langword="null"/> (the default) and a predicate returning
+        /// <see langword="false"/> both result in a normal successful send.
+        /// </summary>
+        /// <remarks>
+        /// This is an init-only property: set it once via an object initializer at construction time.
+        /// </remarks>
+        public Func<Message, bool>? PublishFailurePredicate { get; init; }
+
+        /// <summary>
         /// What action should we take on confirmation that a message has been published to a broker
         /// </summary>
         public event Action<PublishConfirmationResult>? OnMessagePublished;
@@ -104,15 +116,10 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message to send</param>
         /// <param name="cancellationToken">Cancel the Send operation</param>
-        /// <returns></returns>
         public Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
-            var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _bus.Enqueue(message);
-            OnMessagePublished?.Invoke(new PublishConfirmationResult(true, message.Id, null, null));
-            tcs.SetResult(message);
-            return tcs.Task;
+            PublishMessage(message);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -121,20 +128,14 @@ namespace Paramore.Brighter
         /// <param name="batch">A batch of messages to send</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <exception cref="NotImplementedException"></exception>
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public Task SendAsync(IAmAMessageBatch batch, CancellationToken cancellationToken)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             if (batch is not MessageBatch messageBatch)
                 throw new NotImplementedException($"{nameof(SendAsync)} only supports ${typeof(MessageBatch)}");
 
             var messages = messageBatch.Content as Message[] ?? messageBatch.Content.ToArray();
             foreach (var message in messages)
-            {
-                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
-                _bus.Enqueue(message);
-                OnMessagePublished?.Invoke(new PublishConfirmationResult(true, message.Id, null, null));
-            }
+                PublishMessage(message);
 
             return Task.CompletedTask;
         }
@@ -151,9 +152,16 @@ namespace Paramore.Brighter
         /// Send a message to a broker; in this case an <see cref="InternalBus"/>
         /// </summary>
         /// <param name="message">The message to send</param>
-        public void Send(Message message)
+        public void Send(Message message) => PublishMessage(message);
+
+        private void PublishMessage(Message message)
         {
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
+            if (PublishFailurePredicate?.Invoke(message) == true)
+            {
+                OnMessagePublished?.Invoke(new PublishConfirmationResult(false, message.Id, message.Header.Topic, null));
+                return;
+            }
             _bus.Enqueue(message);
             OnMessagePublished?.Invoke(new PublishConfirmationResult(true, message.Id, null, null));
         }
