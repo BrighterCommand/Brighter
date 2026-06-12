@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
 
@@ -40,6 +41,11 @@ namespace Paramore.Brighter
     {
         private readonly IAmABus _bus;
         private readonly InstrumentationOptions _instrumentationOptions;
+        private readonly System.Threading.Channels.Channel<WorkItem> _channel =
+            System.Threading.Channels.Channel.CreateUnbounded<WorkItem>(new UnboundedChannelOptions { SingleReader = true });
+        private Task? _worker;
+
+        private readonly record struct WorkItem(Message Message);
 
         /// <summary>
         /// The in-memory producer is mainly intended for usage with tests. It allows you to send messages to a bus and
@@ -157,6 +163,13 @@ namespace Paramore.Brighter
         private void PublishMessage(Message message)
         {
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
+            if (UseAsyncPublishConfirmation)
+            {
+                // NOTE: _worker ??= is not race-safe; the single-start guard (Interlocked.CompareExchange) is added in the next slice.
+                _worker ??= Task.Run(DrainAsync);
+                _channel.Writer.TryWrite(new WorkItem(message));
+                return;
+            }
             if (PublishFailurePredicate?.Invoke(message) == true)
             {
                 OnMessagePublished?.Invoke(new PublishConfirmationResult(false, message.Id, message.Header.Topic, null));
@@ -164,6 +177,22 @@ namespace Paramore.Brighter
             }
             _bus.Enqueue(message);
             OnMessagePublished?.Invoke(new PublishConfirmationResult(true, message.Id, null, null));
+        }
+
+        private async Task DrainAsync()
+        {
+            await foreach (var item in _channel.Reader.ReadAllAsync(CancellationToken.None))
+            {
+                if (PublishFailurePredicate?.Invoke(item.Message) == true)
+                {
+                    var failResult = new PublishConfirmationResult(false, item.Message.Id, item.Message.Header.Topic, null);
+                    _ = Task.Run(() => OnMessagePublished?.Invoke(failResult));
+                    continue;
+                }
+                _bus.Enqueue(item.Message);
+                var successResult = new PublishConfirmationResult(true, item.Message.Id, null, null);
+                _ = Task.Run(() => OnMessagePublished?.Invoke(successResult));
+            }
         }
 
         /// <summary>
