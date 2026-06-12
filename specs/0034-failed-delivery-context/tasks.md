@@ -11,7 +11,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
 
 ## Phase 1 — Structural (tidy-first)
 
-- [ ] **TIDY-FIRST (STRUCTURAL, behavior-preserving): Introduce `PublishConfirmationResult` and flip `OnMessagePublished` to `Action<PublishConfirmationResult>`**
+- [x] **TIDY-FIRST (STRUCTURAL, behavior-preserving): Introduce `PublishConfirmationResult` and flip `OnMessagePublished` to `Action<PublishConfirmationResult>`** — done `98053c6bc`
   - **USE COMMAND**: `/tidy-first` (structural change only — separate it from all behavioral commits; the suite MUST stay green)
   - This is NOT a `/test-first` task: it adds no behavior. The mediator still handles success-only; the new `Topic`/`PublishSpanContext` fields may be populated by producers but are NOT yet consumed by the mediator.
   - **Create** `src/Paramore.Brighter/PublishConfirmationResult.cs`: public sealed record `PublishConfirmationResult(bool Success, Id MessageId, RoutingKey? Topic, ActivityContext? PublishSpanContext)` in namespace `Paramore.Brighter`. Full XML docs on type + every member (public API; ADR "Choosing the enriched shape"). `MessageId` typed `Id` (so `Id.Empty` is the FR-5 marker and implicit `string↔Id` conversions let Kafka/RMQ keep passing raw string ids).
@@ -33,7 +33,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: none (sequenced FIRST — prerequisite for all behavioral slices).
   - **References**: ADR "Choosing the enriched `OnMessagePublished` shape", "Contract before/after" (`ISupportPublishConfirmation.cs:42`); Negative consequence "Source- and binary-breaking"; raise sites Kafka `:373/:381`, RMQ.Async `:480`, RMQ.Sync `:235/:245`, InMemory `:77/:100/:123/:145`; mediator `:741/:768`.
 
-- [ ] **TIDY-FIRST (STRUCTURAL, behavior-preserving): make `InMemoryOutboxCircuitBreaker` thread-safe (`Dictionary` → `ConcurrentDictionary`)**
+- [x] **TIDY-FIRST (STRUCTURAL, behavior-preserving): make `InMemoryOutboxCircuitBreaker` thread-safe (`Dictionary` → `ConcurrentDictionary`)** — done `4d4dab9cb`
   - **USE COMMAND**: `/tidy-first` (structural change only — separate it from all behavioral commits; the suite MUST stay green)
   - This is NOT a `/test-first` task: single-threaded semantics are identical. It removes a latent data race so the concurrent-`TripTopic` behavior NFR-3/AC-10 require (driven by the Phase 6 AC-10 test) holds. The behavioral assertion lives in Phase 6 (a plain-`Dictionary` corruption is non-deterministic and cannot be reliably unit-asserted; the deterministic, reviewable artifact is this structural swap).
   - **Why needed (grounded):** `InMemoryOutboxCircuitBreaker._trippedTopics` is a plain `Dictionary<RoutingKey, int>` with no lock (`InMemoryOutboxCircuitBreaker.cs:42`); `TripTopic` writes it via indexer (`:70-71`) and `TrippedTopics` reads `.Keys` (`:47`). The Phase 3 pump raises confirmations concurrently via `Task.Run`, so confirmation failures call `TripTopic` concurrently (NFR-3) — concurrent writes to a plain `Dictionary` can corrupt its internal state. The prior tasks/ADR wording wrongly *assumed* the breaker was already safe.
