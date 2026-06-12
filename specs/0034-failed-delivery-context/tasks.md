@@ -46,7 +46,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
 
 ## Phase 2 — BrighterTracer confirmation-span helper
 
-- [ ] **TEST + IMPLEMENT: BrighterTracer creates a standalone confirmation span (S2) with optional link to the publish span and becomes ambient**
+- [x] **TEST + IMPLEMENT: BrighterTracer creates a standalone confirmation span (S2) with optional link to the publish span and becomes ambient** — done `cfdeb6d0f`
   - **USE COMMAND**: `/test-first BrighterTracer creates a standalone confirmation span carrying outcome, message id, wire topic, an ActivityLink to the supplied ActivityContext when present, sets Activity.Current to it, and degrades to no link when the context is absent`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Observability"
   - Test file: `When_creating_a_confirmation_span_should_link_and_set_ambient.cs`
