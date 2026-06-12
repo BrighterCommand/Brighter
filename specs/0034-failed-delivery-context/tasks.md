@@ -2,13 +2,14 @@
 
 Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references below were verified against the working tree on 2026-06-11. Behavioral tasks use the mandatory `/test-first` TDD format and STOP for IDE approval before implementation. The single structural task uses `/tidy-first`.
 
-**Two locked decomposition decisions (PO, 2026-06-11):**
-1. The public contract break is a **standalone `/tidy-first` structural task, sequenced FIRST** (behavior-preserving; mediator still success-only).
-2. Kafka/RMQ-specific FRs are tested **unit-level where possible** (no broker); the shared mediator behaviors (FR-1..FR-5, AC-10, AC-13) are exercised **in-process via the InMemory confirmation pump**, so the pump (Phase 3) is built before the mediator-behavior slices (Phases 4–6) that depend on it.
+**Locked decomposition decisions (PO, 2026-06-11; broker-test classification corrected 2026-06-12):**
+1. The public contract break is a **standalone `/tidy-first` structural task, sequenced FIRST** (behavior-preserving; mediator still success-only). A second `/tidy-first` structural task in Phase 1 makes `InMemoryOutboxCircuitBreaker` thread-safe (`Dictionary`→`ConcurrentDictionary`) — a prerequisite for the concurrent `TripTopic` that NFR-3/AC-10 require.
+2. The shared mediator behaviors (FR-1..FR-5, AC-10, AC-13) are exercised **in-process via the InMemory confirmation pump (no broker)**, so the pump (Phase 3) is built before the mediator-behavior slices (Phases 4–6) that depend on it.
+3. The **Kafka- and RMQ-specific FRs are broker-required integration tests** (FR-6/FR-7/FR-8 Kafka; FR-9 + FR-2-RMQ). The producer/publisher internals they target are not reachable from the public API without a live broker (`KafkaMessagePublisher` is `internal sealed`; `KafkaMessageProducer.PublishResults` is `private`; both build a real Confluent `IProducer` in `Init()`; RMQ's nack arrives only from a broker confirm round-trip). These tests live in the existing gateway test assemblies (`Paramore.Brighter.Kafka.Tests`, `.RMQ.Async.Tests`, `.RMQ.Sync.Tests`), which exist precisely to host broker-backed tests and already carry `[Trait("Category", …)]` + `[Collection(…)]`. We accept that broker-specific behavior needs a broker — that is why these assemblies are separate. No `InternalsVisibleTo` / production seam is introduced (testing.md:73-82).
 
 ---
 
-## Phase 1 — Structural (tidy-first): contract break
+## Phase 1 — Structural (tidy-first)
 
 - [ ] **TIDY-FIRST (STRUCTURAL, behavior-preserving): Introduce `PublishConfirmationResult` and flip `OnMessagePublished` to `Action<PublishConfirmationResult>`**
   - **USE COMMAND**: `/tidy-first` (structural change only — separate it from all behavioral commits; the suite MUST stay green)
@@ -31,6 +32,15 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Verification:** full solution builds; entire test suite stays green with no behavioral assertions changed (only the delegate shape at call/subscribe sites). No new behavior, no new tags, no mediator branching.
   - **Depends on**: none (sequenced FIRST — prerequisite for all behavioral slices).
   - **References**: ADR "Choosing the enriched `OnMessagePublished` shape", "Contract before/after" (`ISupportPublishConfirmation.cs:42`); Negative consequence "Source- and binary-breaking"; raise sites Kafka `:373/:381`, RMQ.Async `:480`, RMQ.Sync `:235/:245`, InMemory `:77/:100/:123/:145`; mediator `:741/:768`.
+
+- [ ] **TIDY-FIRST (STRUCTURAL, behavior-preserving): make `InMemoryOutboxCircuitBreaker` thread-safe (`Dictionary` → `ConcurrentDictionary`)**
+  - **USE COMMAND**: `/tidy-first` (structural change only — separate it from all behavioral commits; the suite MUST stay green)
+  - This is NOT a `/test-first` task: single-threaded semantics are identical. It removes a latent data race so the concurrent-`TripTopic` behavior NFR-3/AC-10 require (driven by the Phase 6 AC-10 test) holds. The behavioral assertion lives in Phase 6 (a plain-`Dictionary` corruption is non-deterministic and cannot be reliably unit-asserted; the deterministic, reviewable artifact is this structural swap).
+  - **Why needed (grounded):** `InMemoryOutboxCircuitBreaker._trippedTopics` is a plain `Dictionary<RoutingKey, int>` with no lock (`InMemoryOutboxCircuitBreaker.cs:42`); `TripTopic` writes it via indexer (`:70-71`) and `TrippedTopics` reads `.Keys` (`:47`). The Phase 3 pump raises confirmations concurrently via `Task.Run`, so confirmation failures call `TripTopic` concurrently (NFR-3) — concurrent writes to a plain `Dictionary` can corrupt its internal state. The prior tasks/ADR wording wrongly *assumed* the breaker was already safe.
+  - **Change**: `private readonly ConcurrentDictionary<RoutingKey, int> _trippedTopics = new();`. `TripTopic` indexer-set stays valid (atomic on `ConcurrentDictionary`). In `CoolDown` (`:55-64`) replace `_trippedTopics.Remove(key)` with `_trippedTopics.TryRemove(key, out _)`; the `foreach` over `.Keys` already takes a snapshot. Add `using System.Collections.Concurrent;`.
+  - **Verification:** full solution builds; entire circuit-breaker + outbox test suite stays green with no behavioral assertions changed.
+  - **Depends on**: none (structural; may land alongside the contract break).
+  - **References**: NFR-3, AC-10; ADR "Thread safety (NFR-3)", Key Components → `IAmAnOutboxCircuitBreaker`; `InMemoryOutboxCircuitBreaker.cs:42/:47/:55-64/:70-71`.
 
 ---
 
@@ -85,21 +95,44 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: Phase 1; previous pump slice (switch).
   - **References**: FR-4 (failed = not delivered), FR-5; ADR "Failure-injection hook"; InMemory raise sites.
 
-- [ ] **TEST + IMPLEMENT: async pump — fire-and-forget enqueue, single-worker FIFO bus write, concurrent raise, single-start guard**
-  - **USE COMMAND**: `/test-first InMemoryMessageProducer with async confirmation on returns before the bus write, drains a single-reader channel in FIFO order on one lazily-and-once-started worker, and dispatches each confirmation raise via Task.Run`
+- [ ] **TEST + IMPLEMENT: async pump (a) — fire-and-forget enqueue, single-reader FIFO bus write, concurrent raise**
+  - **USE COMMAND**: `/test-first InMemoryMessageProducer with async confirmation on returns before the bus write, drains a single-reader channel in FIFO enqueue order on one worker writing the bus then raising each confirmation via Task.Run`
   - Test location: "tests/Paramore.Brighter.InMemory.Tests/Confirmation"
   - Test file: `When_async_confirmation_is_on_should_enqueue_and_pump.cs`
   - Test should verify:
     - With `UseAsyncPublishConfirmation == true`, `Send`/`SendAsync` returns BEFORE the message is on the bus (deferred bus visibility); awaiting/polling the confirmation eventually shows the message written and a success confirmation raised.
-    - Messages are written to the bus in FIFO enqueue order (deterministic produce order); batch `SendAsync(IAmAMessageBatch)` enqueues one work-item per message.
-    - Concurrent first-enqueuers start exactly one worker (single-start guard); only one reader drains.
+    - Messages are written to the bus in FIFO enqueue order (deterministic produce order).
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - When on, `Send`/`SendAsync` do NOT write inline; capture the work-item (Message + `Id` + `RoutingKey` topic + captured `ActivityContext?`), enqueue onto `Channel.CreateUnbounded<T>(new(){ SingleReader = true, SingleWriter = false })`, return immediately.
-    - Lazily start a single long-running worker via `Interlocked.CompareExchange` on a backing `Task?` field (or `LazyInitializer.EnsureInitialized`); worker drains via `ChannelReader.ReadAllAsync` and per item writes the bus (unless failure-injected), then dispatches the raise via `Task.Run` (mirrors Kafka `KafkaMessageProducer.cs:373/381`).
+    - Start a single long-running worker that drains via `ChannelReader.ReadAllAsync` and per item writes the bus (unless failure-injected), then dispatches the raise via `Task.Run` (mirrors Kafka `KafkaMessageProducer.cs:373/381`). (For THIS slice a straightforward lazy start is sufficient; the concurrent-first-enqueuer single-start guard is the next slice.)
     - Zero/null-delay `SendWithDelay`/`SendWithDelayAsync` delegate to `Send`/`SendAsync` (pump engages); real-delay routes through `Scheduler` (`:72`) and re-enters later.
   - **Depends on**: previous two pump slices.
   - **References**: NFR-3; ADR "Fire-and-forget publish + single-worker pump", "Delayed sends"; Kafka `:373/381`.
+
+- [ ] **TEST + IMPLEMENT: async pump (c) — batch `SendAsync(IAmAMessageBatch)` enqueues one work-item per message**
+  - **USE COMMAND**: `/test-first InMemoryMessageProducer with async confirmation on enqueues one pump work-item per message in a batch SendAsync, each producing its own bus write and confirmation`
+  - Test location: "tests/Paramore.Brighter.InMemory.Tests/Confirmation"
+  - Test file: `When_async_confirmation_is_on_should_fan_out_a_batch.cs`
+  - Test should verify:
+    - `SendAsync(IAmAMessageBatch)` with N messages enqueues N work-items; awaiting/polling shows N bus writes and N confirmations, FIFO by batch order.
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - The batch `SendAsync(IAmAMessageBatch)` path (`:112`) enqueues one work-item per message onto the same channel; the worker handles them identically to single sends.
+  - **Depends on**: async pump (a) slice.
+  - **References**: ADR "Fire-and-forget publish + single-worker pump" (batch fan-out); InMemory `:112`.
+
+- [ ] **TEST + IMPLEMENT: async pump (b) — single-start guard: concurrent first-enqueuers start exactly one worker / one reader**
+  - **USE COMMAND**: `/test-first InMemoryMessageProducer with async confirmation on starts exactly one draining worker even when many threads race to be the first enqueuer, so only one reader drains the channel`
+  - Test location: "tests/Paramore.Brighter.InMemory.Tests/Confirmation"
+  - Test file: `When_concurrent_first_enqueuers_should_start_one_worker.cs`
+  - Test should verify:
+    - Many threads calling `Send`/`SendAsync` concurrently as the first sends start the worker exactly once (single-start guard); only one reader drains (FIFO/drain bookkeeping intact — no duplicated or dropped bus writes / confirmations).
+  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - Implementation should:
+    - Gate worker start with `Interlocked.CompareExchange` on a backing `Task?` field (or `LazyInitializer.EnsureInitialized`) so two concurrent first-enqueuers cannot each spin up a reader. `SingleReader = true` is a caller-asserted contract the channel does not enforce; two `ReadAllAsync` readers would break FIFO + drain bookkeeping, so the guard is load-bearing, not an optimisation (ADR).
+  - **Depends on**: async pump (a) slice.
+  - **References**: NFR-3; ADR "Fire-and-forget publish + single-worker pump" (single-start guard "load-bearing, not an optimisation").
 
 - [ ] **TEST + IMPLEMENT: pump captures the publish `ActivityContext` synchronously before enqueue**
   - **USE COMMAND**: `/test-first InMemoryMessageProducer captures Activity.Current's context inside Send before enqueuing so the confirmation carries the publish span context`
@@ -111,7 +144,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Read `Activity.Current?.Context` synchronously inside `Send`/`SendAsync`, before enqueuing (the channel hand-off is the boundary past which `Activity.Current` is no longer S1); carry it on the work-item; populate `PublishSpanContext` from it.
-  - **Depends on**: async pump slice.
+  - **Depends on**: async pump (a) slice.
   - **References**: FR-2, AC-2, AC-2b, C-7; ADR "Same capture invariant".
 
 - [ ] **TEST + IMPLEMENT: two-stage drain on dispose — no confirmation lost on shutdown**
@@ -124,10 +157,9 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
     - The already-quiescent case (all raises decremented before writer completed) does not block forever.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - On dispose: `writer.Complete()`, await the worker, then await the in-flight raise tasks. **Preferred:** collect raise `Task` handles into a thread-safe bag and `await Task.WhenAll(bag)` (immune to increment-ordering and quiescent-transition hazards).
-    - If using the `Interlocked` count + TCS alternative instead: increment the count in the worker **immediately before** each `Task.Run` spawn (count-before-spawn) and decrement in the raise's `finally`; after `writer.Complete()` + await worker, re-check `count == 0` directly (quiescent re-check) rather than waiting only on a transition.
-    - Wrap each raise so a throwing callback still runs its `finally` (count decrement) and cannot kill the worker or strand the drain (NFR-4).
-  - **Depends on**: async pump slice.
+    - On dispose: `writer.Complete()`, await the worker, then await the in-flight raise tasks by collecting the raise `Task` handles into a thread-safe bag and `await Task.WhenAll(bag)` (immune to the increment-ordering and quiescent-transition hazards). This is the committed mechanism for this slice; the `Interlocked` count + TCS alternative (count-before-spawn + quiescent re-check) is documented in ADR 0063 "Lifecycle / draining" but is NOT the chosen approach here.
+    - Wrap each raise so a throwing callback still runs its drain bookkeeping (the raise `Task` still completes and is awaited) and cannot kill the worker or strand the drain (NFR-4).
+  - **Depends on**: async pump (a) slice.
   - **References**: NFR-3, NFR-4; ADR "Lifecycle / draining" rules (i) count-before-spawn, (ii) re-check-zero, preferred `Task.WhenAll`; InMemory `:82/:87`.
 
 ---
@@ -242,20 +274,23 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
     - Overlap is FORCED via a `Barrier`/`ManualResetEventSlim` released inside the injected callback or `PublishFailurePredicate` (not reliant on the scheduler interleaving short raises).
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - No new mediator code expected beyond ensuring thread-safety holds (breaker safe under concurrent `TripTopic`, source-gen logger thread-safe, `ActivitySource.StartActivity` thread-safe). The InMemory pump's `Task.Run`-per-raise (Phase 3) supplies the concurrency; the test's gate forces overlap.
-  - **Depends on**: Phase 4 (failure branch); Phase 3 async pump.
-  - **References**: NFR-3, AC-10; ADR "Concurrency scope", "Thread safety".
+    - No new mediator code expected. Breaker thread-safety is supplied by the Phase 1 `ConcurrentDictionary` structural task (the prior "breaker safe under concurrent `TripTopic`" was an unverified assumption — it is now an explicit prerequisite, not a given). Remaining thread-safe collaborators: source-gen logger, `ActivitySource.StartActivity`. The InMemory pump's `Task.Run`-per-raise (Phase 3) supplies the concurrency; the test's gate forces overlap.
+  - **Depends on**: Phase 1 breaker `ConcurrentDictionary` structural task; Phase 4 (failure branch); Phase 3 async pump.
+  - **References**: NFR-3, AC-10; ADR "Concurrency scope", "Thread safety"; `InMemoryOutboxCircuitBreaker.cs:42/:70-71`.
 
 ---
 
-## Phase 7 — Kafka unit slices
+## Phase 7 — Kafka slices (broker-required integration tests)
+
+> All Phase 7 tests are **broker-required integration tests** in `Paramore.Brighter.Kafka.Tests` (the internals — `internal sealed KafkaMessagePublisher`, `private PublishResults`, real Confluent `IProducer` built in `Init()` — are not reachable without a live broker; no `InternalsVisibleTo`/seam is introduced). Place under `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor` (async) / `…/Reactor` (sync), and decorate each class `[Trait("Category", "Kafka")]` + `[Collection("Kafka")]`, matching the existing producer tests (e.g. `Proactor/When_posting_a_message_async.cs`). **Failure induction:** drive the `ProduceException` → synthetic `NotPersisted` path by configuring a small client-side `MessageMaxBytes` (or low topic `max.message.bytes`) and producing an oversized message — the Confluent client throws `ProduceException<string, byte[]>` with `Error.Code = MsgSizeTooLarge` / reason "Message size too large", exactly the FR-6/AC-6 example. (`run-tests` / `test-infra` brings up the Kafka container.)
 
 - [ ] **TEST + IMPLEMENT: Kafka publisher logs the swallowed ProduceException at Warning and preserves the synthetic NotPersisted flow (FR-6 / FR-7)**
-  - **USE COMMAND**: `/test-first KafkaMessagePublisher.PublishMessageAsync binds the ProduceException, logs its reason and code at Warning, and still produces the synthetic NotPersisted delivery result to the callback`
-  - Test location: "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway"
+  - **USE COMMAND**: `/test-first against a live Kafka broker an oversized produce raises a ProduceException whose reason and code are logged at Warning while the synthetic NotPersisted delivery result still reaches the callback`
+  - Test location: "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
   - Test file: `When_an_async_produce_throws_should_warn_and_synthesize_not_persisted.cs`
+  - **Broker-required** (`[Trait("Category","Kafka")]` + `[Collection("Kafka")]`).
   - Test should verify:
-    - On a thrown `ProduceException<string, byte[]>`, a Warning containing `pe.Error.Reason` + `pe.Error.Code` is logged (NFR-1) and the synthetic `NotPersisted` `DeliveryResult` (with `MESSAGE_ID` in `deliveryResult.Headers`) is still routed to the callback (no bubble) (AC-6).
+    - Producing an oversized message to the broker yields a Warning containing the broker `Error.Reason` + `Error.Code` (NFR-1), and the synthetic `NotPersisted` `DeliveryResult` (with `MESSAGE_ID` in `deliveryResult.Headers`) is still routed to the callback (no bubble to the caller) (AC-6).
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - At `KafkaMessagePublisher.cs:52` bind the catch var: `catch (ProduceException<string, byte[]> pe)`; add a Warning `Log` message with reason+code. Leave the synthetic `NotPersisted` body (`:56-61`) + `deliveryReport(...)` unchanged (FR-7). Leave the wrong-typed `<string,string>` catches at `KafkaMessageProducer.cs:262/336` untouched (OOS-2).
@@ -263,9 +298,10 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **References**: FR-6, FR-7, AC-6, NFR-1, OOS-2; `KafkaMessagePublisher.cs:52-62`.
 
 - [ ] **TEST + IMPLEMENT: Kafka NotPersisted reads MESSAGE_ID from report-level headers and raises failure with the id (FR-8 / AC-7 / AC-8)**
-  - **USE COMMAND**: `/test-first KafkaMessageProducer.PublishResults on the NotPersisted branch reads MESSAGE_ID from the report-level headers and raises a failure confirmation carrying that id, falling back to empty when absent`
-  - Test location: "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway"
+  - **USE COMMAND**: `/test-first against a live Kafka broker a NotPersisted confirmation reads MESSAGE_ID from the report-level headers and raises a failure confirmation carrying that id`
+  - Test location: "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
   - Test file: `When_publish_results_not_persisted_should_raise_failure_with_id.cs`
+  - **Broker-required** (`[Trait("Category","Kafka")]` + `[Collection("Kafka")]`). Reach `PublishResults`'s `NotPersisted` branch via the same oversized-message induction as the FR-6 slice (the only public route to that private branch); subscribe to `OnMessagePublished` and assert on the raised `PublishConfirmationResult`.
   - Test should verify:
     - `NotPersisted` with `MESSAGE_ID` present in the report-level `headers` raises `Success == false` with that id (AC-7), NOT from `result.Message.Headers`.
     - `MESSAGE_ID` absent → id falls back to empty (AC-8).
@@ -276,9 +312,10 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **References**: FR-8, AC-7, AC-8; `KafkaMessageProducer.cs:364-384`; ADR FR-8 risk/mitigation.
 
 - [ ] **TEST + IMPLEMENT: Kafka closure rewrite — confirmation carries `message.Header.Topic`, `message.Id`, and the captured publish context (FR-2 Kafka data path)**
-  - **USE COMMAND**: `/test-first KafkaMessageProducer captures the publish ActivityContext at send and closes the delivery-report closure over message so the confirmation carries the wire topic from message.Header.Topic, the id, and the publish context even on the synthetic NotPersisted path`
-  - Test location: "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway"
+  - **USE COMMAND**: `/test-first against a live Kafka broker the confirmation carries the wire topic from message.Header.Topic, the id, and the captured publish context even on the synthetic NotPersisted path`
+  - Test location: "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
   - Test file: `When_a_kafka_confirmation_fires_should_carry_topic_and_link_from_message.cs`
+  - **Broker-required** (`[Trait("Category","Kafka")]` + `[Collection("Kafka")]`). Drive the synthetic `NotPersisted` path via the oversized-message induction; start an `Activity` before the produce so the captured context is non-default.
   - Test should verify:
     - The raised `PublishConfirmationResult.Topic` equals `message.Header.Topic` (NOT `report.Topic`) — specifically on the synthetic `NotPersisted` path where the `DeliveryResult.Topic` is never set (the failure path this spec exists to observe).
     - With an active publish `Activity` at send, `PublishSpanContext` equals its context; with none, it is null (degrade).
@@ -293,29 +330,34 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
 
 ---
 
-## Phase 8 — RMQ slices
+## Phase 8 — RMQ slices (broker-required integration tests)
 
-- [ ] **TEST + IMPLEMENT: RMQ.Async — `PendingConfirmation` record carries id/topic/context; nack raise enriched (FR-9 / FR-2)**
-  - **USE COMMAND**: `/test-first RmqMessageProducer (Async) captures the publish context and wire topic at the top of Send, tracks them in a PendingConfirmation record keyed by delivery tag, and on nack raises a failure confirmation carrying the id, topic, and context`
-  - Test location: "tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway"
-  - Test file: `When_a_nack_is_received_should_raise_failure_with_context.cs`
+> All Phase 8 tests are **broker-required integration tests** in the RMQ gateway assemblies; the nack/ack confirmation handlers fire only from a real broker confirm round-trip and the producer is not seam-injectable. Place under `…/MessagingGateway/Proactor` (Async) / `…/Reactor` (Sync) and decorate each class `[Trait("Category", "RMQ")]` (matching the existing `RmqMessageProducerConfirmations…` tests; RMQ tests carry the Trait but no `[Collection]`). The `test-infra`/`run-tests` harness brings up the RabbitMQ container.
+>
+> **Confirmation-data verification strategy (honest):** FR-2's enrichment (`Id` + `message.Header.Topic` + captured `ActivityContext`) is populated **identically** on both `OnPublishSucceeded` and `OnPublishFailed` (the `PendingConfirmation` lookup feeds both). The **ack path is deterministically reachable** against a real broker (publish → ack), so the enriched `PublishConfirmationResult` is asserted there — extending the existing `RmqMessageProducerConfirmations…` ack tests. Forcing a real broker **nack** is non-deterministic; the mediator-level *failure* behavior (FR-1/FR-3/FR-4 on `Success == false`) is already covered in-process via the InMemory pump (Phase 4). These RMQ slices therefore verify the **producer-side enrichment** (the listable RMQ code change) on the reachable confirmation path; if a deterministic broker-nack fixture proves feasible, assert the nack raise directly too.
+
+- [ ] **TEST + IMPLEMENT: RMQ.Async — `PendingConfirmation` record carries id/topic/context into the enriched confirmation raise (FR-9 / FR-2)**
+  - **USE COMMAND**: `/test-first against a live RabbitMQ broker RmqMessageProducer (Async) captures the publish context and wire topic at the top of Send, tracks them in a PendingConfirmation keyed by delivery tag, and raises an enriched confirmation carrying the id, topic, and context`
+  - Test location: "tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway/Proactor"
+  - Test file: `When_a_confirmation_is_received_should_carry_id_topic_and_context.cs`
+  - **Broker-required** (`[Trait("Category","RMQ")]`).
   - Test should verify:
-    - On nack, the raised `PublishConfirmationResult` carries the message id (AC-9), `message.Header.Topic`, and the captured `ActivityContext` (link present when an `Activity` was active at send; null otherwise).
+    - On the broker confirmation, the raised `PublishConfirmationResult` carries the message id (AC-9), `message.Header.Topic`, and the captured `ActivityContext` (link present when an `Activity` was active at send; null otherwise) — asserted on the deterministically-reachable ack path; the same `PendingConfirmation` feeds the nack raise.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Add `internal readonly record struct PendingConfirmation(Id MessageId, RoutingKey Topic, ActivityContext? Context)` (internal — no public-API/XML-doc obligation).
     - Change `_pendingConfirmations` from `Dictionary<ulong, string>` (`:60`) to `Dictionary<ulong, PendingConfirmation>`; update `AddPendingConfirmation` (`:397`), `RemovePendingConfirmations` (`:419`)/`RemoveConfirmationsLocked` (`:440`, lookup `:447`), `OnPublishFailed` (`:476-482`) and `OnPublishSucceeded` (`:487+`).
     - Capture `Activity.Current?.Context` at the very top of `SendWithDelay(Async)` — above `BeginSend()`/`EnsureBrokerAsync` (the `:167` await) — and stash with topic in `AddPendingConfirmation` (`:187`). Build the enriched result in `OnPublishFailed`/`OnPublishSucceeded`. No `Send`-signature change.
-    - If a real broker is genuinely required for any assertion, call it out; otherwise drive the nack handler with existing unit patterns.
   - **Depends on**: Phase 1.
   - **References**: FR-9, FR-2 (RMQ not verify-only), AC-9, C-7, C-8; ADR "RMQ FR-9 + FR-2"; RMQ.Async `:60/:167/:187/:397/:419/:440/:447/:476/:480/:487`.
 
-- [ ] **TEST + IMPLEMENT: RMQ.Sync — same `PendingConfirmation` enrichment on the nack path (FR-9 / FR-2)**
-  - **USE COMMAND**: `/test-first RmqMessageProducer (Sync) captures the publish context and wire topic at send, tracks them per delivery tag, and on nack raises a failure confirmation carrying id, topic, and context`
-  - Test location: "tests/Paramore.Brighter.RMQ.Sync.Tests/MessagingGateway"
-  - Test file: `When_a_nack_is_received_should_raise_failure_with_context.cs`
+- [ ] **TEST + IMPLEMENT: RMQ.Sync — same `PendingConfirmation` enrichment on the confirmation path (FR-9 / FR-2)**
+  - **USE COMMAND**: `/test-first against a live RabbitMQ broker RmqMessageProducer (Sync) captures the publish context and wire topic at send, tracks them per delivery tag, and raises an enriched confirmation carrying id, topic, and context`
+  - Test location: "tests/Paramore.Brighter.RMQ.Sync.Tests/MessagingGateway/Reactor"
+  - Test file: `When_a_confirmation_is_received_should_carry_id_topic_and_context.cs`
+  - **Broker-required** (`[Trait("Category","RMQ")]`).
   - Test should verify:
-    - On nack, the raised result carries id (AC-9), `message.Header.Topic`, and captured context (or null degrade).
+    - On the broker confirmation, the raised result carries id (AC-9), `message.Header.Topic`, and captured context (or null degrade) — asserted on the reachable ack path; the same `PendingConfirmation` feeds the nack raise.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Mirror the Async change: `ConcurrentDictionary<ulong, string>` (`:58`) → `ConcurrentDictionary<ulong, PendingConfirmation>`; update the add at `:153`, and the nack/ack handlers at `:233-236` / `:243-246`. Capture `Activity.Current?.Context` at top of `Send`/`SendWithDelay`. No `Send`-signature change.
@@ -360,7 +402,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
 |-----|---------|
 | NFR-1 (Warning never Error+) | Phase 4 FR-1; Phase 7 FR-6 |
 | NFR-2 (non-blocking; S2 sync in-callback) | Phase 2 (ambient/sync helper); Phase 4 FR-2; Phase 4 FR-4 (no extra await) |
-| NFR-3 (thread safety) | Phase 3 async pump + drain; Phase 6 AC-10 concurrency |
+| NFR-3 (thread safety) | Phase 1 breaker `ConcurrentDictionary` structural task; Phase 3 async pump + drain; Phase 6 AC-10 concurrency |
 | NFR-4 (observability throw isolated) | Phase 6 "observability throws should isolate"; Phase 3 drain (raise wrapped) |
 | NFR-5 (always-on; InMemory switch ≠ mediator toggle) | Phase 3 switch slice (default off, preserves behavior); Phase 9 DOC note |
 | NFR-6 (breaker trip wire-topic parity) | Phase 4 "trip topic on wire topic" (parity with `:998`) |
@@ -370,6 +412,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
 | ADR decision | Task(s) |
 |--------------|---------|
 | Contract enrichment (`PublishConfirmationResult` + delegate flip + raise/subscriber migration) | Phase 1 (tidy-first) |
+| Breaker thread-safety under concurrent `TripTopic` (NFR-3) — `InMemoryOutboxCircuitBreaker` `Dictionary`→`ConcurrentDictionary` | Phase 1 (tidy-first, breaker) |
 | Producer self-sources span from `Activity.Current` (no `Send` sig change) | Phase 3 (InMemory capture), Phase 7 (Kafka capture), Phase 8 (RMQ capture) |
 | BrighterTracer confirmation-span helper (outcome flag, link, sets `Activity.Current`) | Phase 2 |
 | Mediator both-branch S2 first + branch | Phase 4 (failure), Phase 5 (success) |
@@ -392,14 +435,16 @@ AC-1→P4 FR-1; AC-2/AC-2b→P2 + P4 FR-2 + P7 (Kafka) + P8 (RMQ); AC-3/AC-3b→
 
 ### Gaps / scope-creep flags
 
-- **No FR/NFR gaps.** Every FR-1..FR-9 and NFR-1..NFR-6 maps to at least one task.
+- **No FR/NFR gaps.** Every FR-1..FR-9 and NFR-1..NFR-6 maps to at least one task. (NFR-3's breaker requirement is now an explicit Phase 1 structural task, not an unverified assumption — see below.)
 - **No ADR-decision gaps.** Every Decision/Implementation-Approach mechanism maps to a task.
 - **No scope creep.** Every task traces to an FR/NFR/AC or an explicit ADR decision. Phase 9 (DOC) traces to the ADR's stated public-API XML-doc / release-note / operator-note obligations and NFR-5/OOS-3.
 - **Note (not a gap):** `BrighterSynchronizationContextsTests.cs:162` is listed in Phase 1 as **verify-then-migrate-only-if-it-binds** — it may be a custom runner's own event rather than `ISupportPublishConfirmation.OnMessagePublished`; the implementer must confirm before touching it.
-- **Real-broker call-out:** Phase 8 (RMQ) prefers existing unit nack-path patterns; flagged to call out explicitly if any assertion genuinely requires a live broker. No other task needs broker infrastructure.
+- **Breaker thread-safety (corrected 2026-06-12).** `InMemoryOutboxCircuitBreaker` currently backs `_trippedTopics` with a plain unlocked `Dictionary` (`:42`); NFR-3/AC-10 require `TripTopic` to be safe under the concurrent raises the Phase 3 pump produces. This is now an explicit Phase 1 `/tidy-first` structural task (`Dictionary`→`ConcurrentDictionary`), with the behavioral assertion in Phase 6 AC-10. (Previously the tasks/ADR wrongly assumed the breaker was already thread-safe.)
+- **Broker-test classification (corrected 2026-06-12).** Phase 7 (Kafka FR-6/7/8/FR-2-Kafka) and Phase 8 (RMQ FR-9/FR-2) are **broker-required integration tests** in their gateway test assemblies — the producer/publisher internals are not reachable without a live broker and no `InternalsVisibleTo`/seam is introduced (testing.md:73-82). The shared mediator behaviors (FR-1..FR-5, AC-10, AC-13) remain broker-free, exercised in-process via the InMemory pump (Phases 3–6). The earlier "tested unit-level where possible / no other task needs broker infrastructure" framing was inaccurate and has been removed.
 
 ### Critical Files for Implementation
 - `src/Paramore.Brighter/OutboxProducerMediator.cs` (callback handlers `:741`/`:768`, `TripTopic :1168`, parity `:998`)
+- `src/Paramore.Brighter/CircuitBreaker/InMemoryOutboxCircuitBreaker.cs` (`:42`/`:47`/`:55-64`/`:70-71` — `Dictionary`→`ConcurrentDictionary` for NFR-3/AC-10)
 - `src/Paramore.Brighter/Observability/BrighterTracer.cs` (`:490`/`:641`/`:700` — new confirmation-span helper)
 - `src/Paramore.Brighter/InMemoryMessageProducer.cs` (`:77`/`:100`/`:123`/`:145`/`:82`/`:87` — pump + switch + drain)
 - `src/Paramore.Brighter.MessagingGateway.Kafka/KafkaMessageProducer.cs` (`:260`/`:333`/`:364-384`) + `KafkaMessagePublisher.cs` (`:52-62`)
