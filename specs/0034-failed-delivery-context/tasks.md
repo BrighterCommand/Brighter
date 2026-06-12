@@ -134,7 +134,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: async pump (a) slice.
   - **References**: NFR-3; ADR "Fire-and-forget publish + single-worker pump" (single-start guard "load-bearing, not an optimisation").
 
-- [ ] **TEST + IMPLEMENT: pump captures the publish `ActivityContext` synchronously before enqueue**
+- [x] **TEST + IMPLEMENT: pump captures the publish `ActivityContext` synchronously before enqueue** — done `d264a6cea`
   - **USE COMMAND**: `/test-first InMemoryMessageProducer captures Activity.Current's context inside Send before enqueuing so the confirmation carries the publish span context`
   - Test location: "tests/Paramore.Brighter.InMemory.Tests/Confirmation"
   - Test file: `When_sending_should_capture_publish_context_before_enqueue.cs`
@@ -147,7 +147,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: async pump (a) slice.
   - **References**: FR-2, AC-2, AC-2b, C-7; ADR "Same capture invariant".
 
-- [ ] **TEST + IMPLEMENT: two-stage drain on dispose — no confirmation lost on shutdown**
+- [x] **TEST + IMPLEMENT: two-stage drain on dispose — no confirmation lost on shutdown** — done `bd715f571`
   - **USE COMMAND**: `/test-first InMemoryMessageProducer Dispose/DisposeAsync completes the writer, awaits the worker, then awaits all in-flight raise tasks so no confirmation is dropped on shutdown`
   - Test location: "tests/Paramore.Brighter.InMemory.Tests/Confirmation"
   - Test file: `When_disposing_with_pending_confirmations_should_drain_all.cs`
