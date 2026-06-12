@@ -4,10 +4,15 @@
 **Branch:** `issue-4179-failed-delivery-context`  ·  **Spec dir:** `specs/0034-failed-delivery-context/`
 **Issue:** #4179  ·  **PR:** #4180 (open)
 
-## ✅ STATUS: ADR 0063 design settled through **R5 PASS**; **R6 re-review owed** on the now-detailed InMemory pump. All committed + pushed.
+## ✅ STATUS: ADR 0063 design **APPROVED** (R7 PASS). **`tasks.md` DRAFTED** (9 phases, Phase 1 = `/tidy-first` contract break, Phases 4–6 tested in-process via InMemory pump, Kafka/RMQ unit-level). **NEXT: `/spec:review tasks` → `/spec:approve tasks`.** Design approval committed `9cf9f11ee`; `tasks.md` + PROMPT.md UNCOMMITTED.
 
 Spec artifacts only so far; **no production code yet**. Workflow position:
-Issue → **Requirements ✅** → **ADR ✅ (R5 PASS, findings folded in; R6 owed on pump detail)** ◀ HERE → approve → Tasks → Tests → Code.
+Issue → **Requirements ✅** → **ADR ✅ (APPROVED)** → **Tasks 🔄 (drafted; review+approve owed)** ◀ HERE → Tests → Code.
+
+**Two locked decomposition decisions (PO, 2026-06-11):** (1) contract break = standalone `/tidy-first` structural task FIRST (behavior-preserving, mediator still success-only); (2) Kafka/RMQ FRs tested UNIT-level (no broker), shared mediator FR-1..5/AC-10/AC-13 tested in-process via InMemory pump (so pump Phase 3 precedes mediator Phases 4–6).
+
+**R6 findings (folded into ADR, committed `edc198391`):** ① InMemory two-stage drain quiescent-deadlock + count-before-spawn ordering (64) — drain bullet rewritten with 2 mandatory rules + preferred `Task.WhenAll` alt; ② Kafka closure did NOT actually capture `message` ("already closes over" was false) (63) — reworded to "rewrite the closure body to close over `message`"; ③ lazy worker single-start guard (57) — `Interlocked.CompareExchange`; ④ `Task.Run` AC-10 concurrency probabilistic (46) — softened + test must force overlap with a gate; ⑤ capture-site `Send`→`SendWithDelay` prose (28).
+**R7 nits (folded in, uncommitted):** ① Negative-consequence bullet still said TCS-only (48) — reworded to "preferably `Task.WhenAll`…or `Interlocked`+TCS with quiescent re-check"; ② InMemory line drift (30) — `Span :76→:69`, `Scheduler :79→:72` (×2), batch `SendAsync :114→:112`.
 
 | Phase | State |
 |---|---|
@@ -54,9 +59,19 @@ pipeline (`src/Paramore.Brighter/Extensions/ResiliencePipelineRegistryExtensions
 perturb `Activity.Current`.
 
 ## 📌 TASKS-PHASE carry-forward notes (fold into `/spec:tasks`)
-1. **Kafka context channel** — captured `ActivityContext` rides the **delivery-report closure created inside `Send`/`SendAsync`**
-   (`KafkaMessageProducer.cs:260, 333` → `PublishResults`); `PublishResults`'s own signature is `(status, headers)`, so context
-   carried via closure local, NOT a correlation store.
+1. **Kafka context+topic channel** — BOTH the captured `ActivityContext` AND the wire topic ride the **delivery-report closure
+   created inside `SendWithDelay`/`SendWithDelayAsync`** (`KafkaMessageProducer.cs:260` sync, `:333` async → `PublishResults`;
+   `Send`/`SendAsync` `:200/:215` are thin delegators). The CURRENT lambda body (`report => PublishResults(...)`) references only
+   `report`, so it does NOT yet capture `message` — the mechanism is to **rewrite the closure body to close over `message`** (and the
+   captured `ActivityContext` local), making `message.Header.Topic` (topic) + `message.Id` (id) reachable; capture
+   `Activity.Current?.Context` into a send-method local for the ctx. NO correlation store (closure is the carrier — the Kafka analogue
+   of RMQ's `PendingConfirmation`). **`PublishResults` signature must widen** from `(status, headers)` to also take
+   `(RoutingKey topic, ActivityContext? publishContext)` — OR build the `PublishConfirmationResult` inline in the closure; this is the
+   listable Kafka producer-side change (parallel to RMQ's map-value change). **⚠️ TRAP: do NOT source topic from `report.Topic`** —
+   the async synthetic `NotPersisted` `DeliveryResult` never sets `.Topic` (`KafkaMessagePublisher.cs:56-61`), so it's empty on
+   exactly the failure path we observe; `message.Header.Topic` is the only reliable source. **Add a Kafka-specific link/topic AC** —
+   AC-2/AC-2b/AC-3b are exercised in-memory only and do NOT cover the Kafka closure, so the link could silently degrade to no-link on
+   Kafka without a dedicated assertion. (ADR 0063 "Kafka FR-8 + FR-2 (data path)" + Risks now pin all of this.)
 2. **Harden the "capture before any `await`" invariant** — re-honoured at **4 raise sites** (Kafka sync/async, RMQ sync/async).
    Consider a shared capture helper + a test that FAILS if an intervening activity starts before capture. RMQ-async
    `await EnsureBrokerAsync` (`:167`) precedes per-message tracking → capture at top of method.
@@ -70,11 +85,18 @@ perturb `Activity.Current`.
    enqueue a work-item (carrying the `Message`) onto an **unbounded** `Channel` (SingleReader, SingleWriter=false) and return
    WITHOUT writing the bus; a **single** lazily-started worker drains **FIFO**, **writes `InternalBus`** (produce-order
    deterministic) **then dispatches the raise via `Task.Run`** (Option B — concurrent callbacks, mirrors Kafka `:373,381`). This
-   **DOES** exercise AC-10/NFR-3 same-topic concurrency in-memory (cost: confirmation *ordering* non-deterministic, but no AC
-   asserts it; single-msg ACs await 1 confirm, unaffected). **Two-stage drain** on dispose: complete writer → await worker → await
-   in-flight raise tasks (`Interlocked` count + `TaskCompletionSource`). `SendWithDelay` → Scheduler re-enters `Send` later (pump
-   engages then). Batch `SendAsync` = one work-item per message. Failure hook: `true` ⇒ no bus write + raise `(false,…)`. Orphaned
-   `Action<bool,Id>` event (no external subscribers) → `Action<PublishConfirmationResult>`.
+   makes AC-10/NFR-3 same-topic concurrency REACHABLE in-memory but `Task.Run` only *queues* (best-effort, like Kafka) — **AC-10
+   test MUST force overlap with a `Barrier`/gate** in the callback, else short raise bodies run serially & test passes vacuously
+   (R6 #4). Cost: confirmation *ordering* non-deterministic, but no AC asserts it; single-msg ACs await 1 confirm, unaffected.
+   **Single-start guard (R6 #3):** worker started exactly once via `Interlocked.CompareExchange` on a `Task?` field — `SingleReader=true`
+   is unenforced, 2 concurrent first-enqueuers must not spin up 2 readers. **Two-stage drain (R6 #1) — TWO ordering rules, both
+   mandatory:** (i) **count BEFORE spawn** — worker does `Interlocked.Increment` immediately before each `Task.Run`, raise decrements
+   in `finally`; increment inside the `Task.Run` body ⇒ `await worker` returns with uncounted raise ⇒ LOST confirmation. (ii) **re-check
+   already-zero** — quiescent shutdown already decremented to 0 before writer completed, so a TCS keyed on "transition to 0" blocks
+   forever; disposer must re-eval `count==0` after `await worker` and short-circuit. **PREFERRED: drop the TCS — collect raise `Task`s
+   in a thread-safe bag + `await Task.WhenAll` after the worker** (immune to both hazards). `SendWithDelay` → Scheduler re-enters `Send`
+   later (pump engages then). Batch `SendAsync` = one work-item per message. Failure hook: `true` ⇒ no bus write + raise `(false,…)`.
+   Orphaned `Action<bool,Id>` event (no external subscribers) → `Action<PublishConfirmationResult>`.
 5. **Symmetric span + orphan fix (NEW)** — mediator callback creates the confirmation span (S2) FIRST on every invocation, sets
    `Activity.Current = S2`, THEN branches. New `BrighterTracer` confirmation-span helper (outcome flag, both branches, sets
    `Activity.Current`). Success branch needs its OWN regression test (AC-13): asserts S2 + link to S1 + `MarkDispatched` DB span
