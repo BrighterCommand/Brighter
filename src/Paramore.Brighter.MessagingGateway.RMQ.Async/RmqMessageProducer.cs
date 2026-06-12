@@ -71,7 +71,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     /// Action taken when a message is published, following receipt of a confirmation from the broker
     /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
     /// </summary>
-    public event Action<bool, string>? OnMessagePublished;
+    public event Action<PublishConfirmationResult>? OnMessagePublished;
 
     /// <summary>
     /// The publication configuration for this producer
@@ -477,7 +477,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     {
         foreach (var messageId in RemovePendingConfirmations(e.DeliveryTag, e.Multiple))
         {
-            OnMessagePublished?.Invoke(false, messageId);
+            OnMessagePublished?.Invoke(new PublishConfirmationResult(false, messageId, null, null));
             Log.FailedToPublishMessageAsync(s_logger, messageId);
         }
 
@@ -488,7 +488,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     {
         foreach (var messageId in RemovePendingConfirmations(e.DeliveryTag, e.Multiple))
         {
-            OnMessagePublished?.Invoke(true, messageId);
+            OnMessagePublished?.Invoke(new PublishConfirmationResult(true, messageId, null, null));
             Log.PublishedMessage(s_logger, messageId);
         }
 

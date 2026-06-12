@@ -738,15 +738,15 @@ namespace Paramore.Brighter
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {
-                producerSync.OnMessagePublished += async delegate(bool success, string id)
+                producerSync.OnMessagePublished += async delegate(PublishConfirmationResult result)
                 {
-                    if (success)
+                    if (result.Success)
                     {
-                        Log.SentMessage(s_logger, id);
+                        Log.SentMessage(s_logger, result.MessageId.Value);
                         if (_asyncOutbox != null)
                             await ExecuteWithResiliencePipelineAsync(
                                 async ct =>
-                                    await _asyncOutbox.MarkDispatchedAsync(id, requestContext, _timeProvider.GetUtcNow(),
+                                    await _asyncOutbox.MarkDispatchedAsync(result.MessageId, requestContext, _timeProvider.GetUtcNow(),
                                         cancellationToken: ct),
                                 requestContext
                             );
@@ -765,15 +765,15 @@ namespace Paramore.Brighter
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {
-                producerSync.OnMessagePublished += delegate(bool success, string id)
+                producerSync.OnMessagePublished += delegate(PublishConfirmationResult result)
                 {
-                    if (success)
+                    if (result.Success)
                     {
-                        Log.SentMessage(s_logger, id);
+                        Log.SentMessage(s_logger, result.MessageId.Value);
 
                         if (_outBox != null)
                             ExecuteWithResiliencePipeline(
-                                () => _outBox.MarkDispatched(id, requestContext, _timeProvider.GetUtcNow()),
+                                () => _outBox.MarkDispatched(result.MessageId, requestContext, _timeProvider.GetUtcNow()),
                                 requestContext);
                     }
                 };

@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Action taken when a message is published, following receipt of a confirmation from the broker
         /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
         /// </summary>
-        public event Action<bool, string>? OnMessagePublished;
+        public event Action<PublishConfirmationResult>? OnMessagePublished;
       
         /// <summary>
         /// The publication configuration for this producer
@@ -371,15 +371,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     if (!string.IsNullOrEmpty(val))
                     {
                         Task.Run(
-                            () => OnMessagePublished?.Invoke(true, val)
+                            () => OnMessagePublished?.Invoke(new PublishConfirmationResult(true, val, null, null))
                         );
                         return;
                     }
                 }
             }
-            
+
             Task.Run(
-                () =>OnMessagePublished?.Invoke(false, string.Empty)
+                () =>OnMessagePublished?.Invoke(new PublishConfirmationResult(false, Id.Empty, null, null))
             );
         }
 

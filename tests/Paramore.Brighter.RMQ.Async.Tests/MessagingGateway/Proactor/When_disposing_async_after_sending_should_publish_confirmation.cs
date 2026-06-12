@@ -64,10 +64,10 @@ public class RmqMessageProducerDisposeAsyncConfirmationTests : IDisposable, IAsy
                 WaitForConfirmsTimeOutInMilliseconds = 2000
             });
 
-        _messageProducer.OnMessagePublished += (success, messageId) =>
+        _messageProducer.OnMessagePublished += result =>
         {
-            if (messageId == _message.Id)
-                _published.TrySetResult(success);
+            if (result.MessageId == _message.Id)
+                _published.TrySetResult(result.Success);
         };
     }
 

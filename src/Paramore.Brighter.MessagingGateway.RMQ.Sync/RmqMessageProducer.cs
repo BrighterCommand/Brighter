@@ -63,7 +63,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// Action taken when a message is published, following receipt of a confirmation from the broker
         /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
         /// </summary>
-        public event Action<bool, string>? OnMessagePublished;
+        public event Action<PublishConfirmationResult>? OnMessagePublished;
 
         /// <summary>
         /// The publication configuration for this producer
@@ -232,7 +232,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out string? messageId))
             {
-                OnMessagePublished?.Invoke(false, messageId);
+                OnMessagePublished?.Invoke(new PublishConfirmationResult(false, messageId, null, null));
                 _pendingConfirmations.TryRemove(e.DeliveryTag, out string? _);
                 Log.FailedToPublishMessage(s_logger, messageId);
             }
@@ -242,7 +242,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out string? messageId))
             {
-                OnMessagePublished?.Invoke(true, messageId);
+                OnMessagePublished?.Invoke(new PublishConfirmationResult(true, messageId, null, null));
                 _pendingConfirmations.TryRemove(e.DeliveryTag, out string? _);
                 Log.PublishedMessageInformation(s_logger, messageId);
             }

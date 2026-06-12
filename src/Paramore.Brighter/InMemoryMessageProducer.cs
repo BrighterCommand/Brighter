@@ -74,7 +74,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// What action should we take on confirmation that a message has been published to a broker
         /// </summary>
-        public event Action<bool, Id>? OnMessagePublished;
+        public event Action<PublishConfirmationResult>? OnMessagePublished;
 
         /// <summary>
         /// Dispose of the producer
@@ -97,7 +97,7 @@ namespace Paramore.Brighter
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
             _bus.Enqueue(message);
-            OnMessagePublished?.Invoke(true, message.Id);
+            OnMessagePublished?.Invoke(new PublishConfirmationResult(true, message.Id, null, null));
             tcs.SetResult(message);
             return tcs.Task;
         }
@@ -120,7 +120,7 @@ namespace Paramore.Brighter
             {
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
                 _bus.Enqueue(message);
-                OnMessagePublished?.Invoke(true, message.Id);
+                OnMessagePublished?.Invoke(new PublishConfirmationResult(true, message.Id, null, null));
             }
 
             return Task.CompletedTask;
@@ -142,7 +142,7 @@ namespace Paramore.Brighter
         {
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
             _bus.Enqueue(message);
-            OnMessagePublished?.Invoke(true, message.Id);
+            OnMessagePublished?.Invoke(new PublishConfirmationResult(true, message.Id, null, null));
         }
 
         /// <summary>
