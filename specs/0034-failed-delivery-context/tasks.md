@@ -67,7 +67,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
 
 ## Phase 3 — InMemory confirmation pump (the in-process test vehicle)
 
-- [ ] **TEST + IMPLEMENT: `UseAsyncPublishConfirmation` defaults off and preserves today's synchronous write + success confirm**
+- [x] **TEST + IMPLEMENT: `UseAsyncPublishConfirmation` defaults off and preserves today's synchronous write + success confirm** — done `1c3441c4f`
   - **USE COMMAND**: `/test-first InMemoryMessageProducer with UseAsyncPublishConfirmation off writes the message to the bus inline and raises a success confirmation synchronously exactly as today`
   - Test location: "tests/Paramore.Brighter.InMemory.Tests/Confirmation"
   - Test file: `When_async_confirmation_is_off_should_write_and_confirm_synchronously.cs`
@@ -81,7 +81,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: Phase 1.
   - **References**: ADR "Confirmation-capable in-memory producer → Opt-in switch"; NFR-5 (switch toggles in-memory timing only, not mediator behavior); InMemory `:62/:69/:72/:100/:123/:145`.
 
-- [ ] **TEST + IMPLEMENT: `PublishFailurePredicate` injects a failed publish (no bus write, failure confirm)**
+- [x] **TEST + IMPLEMENT: `PublishFailurePredicate` injects a failed publish (no bus write, failure confirm)** — done `bdb106104`
   - **USE COMMAND**: `/test-first InMemoryMessageProducer with a PublishFailurePredicate returning true does not write the bus and raises a failure confirmation`
   - Test location: "tests/Paramore.Brighter.InMemory.Tests/Confirmation"
   - Test file: `When_publish_failure_predicate_returns_true_should_raise_failure.cs`
@@ -95,7 +95,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: Phase 1; previous pump slice (switch).
   - **References**: FR-4 (failed = not delivered), FR-5; ADR "Failure-injection hook"; InMemory raise sites.
 
-- [ ] **TEST + IMPLEMENT: async pump (a) — fire-and-forget enqueue, single-reader FIFO bus write, concurrent raise**
+- [x] **TEST + IMPLEMENT: async pump (a) — fire-and-forget enqueue, single-reader FIFO bus write, concurrent raise** — done `1a1a84fbf`
   - **USE COMMAND**: `/test-first InMemoryMessageProducer with async confirmation on returns before the bus write, drains a single-reader channel in FIFO enqueue order on one worker writing the bus then raising each confirmation via Task.Run`
   - Test location: "tests/Paramore.Brighter.InMemory.Tests/Confirmation"
   - Test file: `When_async_confirmation_is_on_should_enqueue_and_pump.cs`
@@ -110,7 +110,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: previous two pump slices.
   - **References**: NFR-3; ADR "Fire-and-forget publish + single-worker pump", "Delayed sends"; Kafka `:373/381`.
 
-- [ ] **TEST + IMPLEMENT: async pump (c) — batch `SendAsync(IAmAMessageBatch)` enqueues one work-item per message**
+- [x] **TEST + IMPLEMENT: async pump (c) — batch `SendAsync(IAmAMessageBatch)` enqueues one work-item per message** — done `a11e35c30`
   - **USE COMMAND**: `/test-first InMemoryMessageProducer with async confirmation on enqueues one pump work-item per message in a batch SendAsync, each producing its own bus write and confirmation`
   - Test location: "tests/Paramore.Brighter.InMemory.Tests/Confirmation"
   - Test file: `When_async_confirmation_is_on_should_fan_out_a_batch.cs`
