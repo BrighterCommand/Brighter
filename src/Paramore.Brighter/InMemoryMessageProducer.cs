@@ -72,6 +72,19 @@ namespace Paramore.Brighter
         public IAmAMessageScheduler? Scheduler { get; set; }
 
         /// <summary>
+        /// When <see langword="false"/> (the default), <see cref="Send"/> and <see cref="SendAsync"/> write to the
+        /// <see cref="InternalBus"/> and raise <see cref="OnMessagePublished"/> inline before returning — identical
+        /// to today's behavior.  When <see langword="true"/>, sends are fire-and-forget: the work-item is enqueued
+        /// onto an internal channel and the bus write + confirmation raise happen asynchronously on a single
+        /// background worker.
+        /// </summary>
+        /// <remarks>
+        /// This is an init-only property: set it once via an object initializer at construction time.  Changing it
+        /// after the first send would leave the channel and worker in an inconsistent state.
+        /// </remarks>
+        public bool UseAsyncPublishConfirmation { get; init; } = false;
+
+        /// <summary>
         /// What action should we take on confirmation that a message has been published to a broker
         /// </summary>
         public event Action<PublishConfirmationResult>? OnMessagePublished;
