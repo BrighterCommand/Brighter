@@ -164,12 +164,20 @@ namespace Paramore.Brighter
         {
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, _instrumentationOptions);
             if (UseAsyncPublishConfirmation)
-            {
-                // NOTE: _worker ??= is not race-safe; the single-start guard (Interlocked.CompareExchange) is added in the next slice.
-                _worker ??= Task.Run(DrainAsync);
-                _channel.Writer.TryWrite(new WorkItem(message));
-                return;
-            }
+                EnqueueDeferred(message);
+            else
+                Enqueue(message);
+        }
+
+        private void EnqueueDeferred(Message message)
+        {
+            // NOTE: _worker ??= is not race-safe; the single-start guard (Interlocked.CompareExchange) is added in the next slice.
+            _worker ??= Task.Run(DrainAsync);
+            _channel.Writer.TryWrite(new WorkItem(message));
+        }
+
+        private void Enqueue(Message message)
+        {
             if (PublishFailurePredicate?.Invoke(message) == true)
             {
                 OnMessagePublished?.Invoke(new PublishConfirmationResult(false, message.Id, message.Header.Topic, null));
