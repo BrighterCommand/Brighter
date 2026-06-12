@@ -24,6 +24,7 @@ THE SOFTWARE. */
 # endregion
 
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -39,7 +40,7 @@ public class InMemoryOutboxCircuitBreaker(OutboxCircuitBreakerOptions? options =
 {
     private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions = options ?? new OutboxCircuitBreakerOptions();
 
-    private readonly Dictionary<RoutingKey, int> _trippedTopics = new();
+    private readonly ConcurrentDictionary<RoutingKey, int> _trippedTopics = new();
 
     /// <summary>
     /// A collection of tripped topics.
@@ -59,7 +60,7 @@ public class InMemoryOutboxCircuitBreaker(OutboxCircuitBreakerOptions? options =
             _trippedTopics[trippedTopicsKey] -= 1;
 
             if (_trippedTopics[trippedTopicsKey] < 0)
-                _trippedTopics.Remove(trippedTopicsKey);
+                _trippedTopics.TryRemove(trippedTopicsKey, out _);
         }
     }
 
