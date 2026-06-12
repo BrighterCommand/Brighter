@@ -38,7 +38,7 @@ Adopt **mechanism (a): extend the contract** — but only the *one* contract tha
 
 On `success == true`:
 - keeps the existing **Info** "sent" log and the `MarkDispatched`/`MarkDispatchedAsync` Outbox call (delivery semantics frozen, OOS-4);
-- because S2 is the ambient parent, the `MarkDispatched` DB span now nests **under** S2 (which links to S1), fixing today's orphaned/null-parent Outbox span (C-6); **no** Warning, **no** breaker trip (AC-13).
+- the `MarkDispatched` DB span is **explicitly re-parented to S2** (by giving `MarkDispatched(Async)` a `RequestContext` whose `Span == S2`), so it nests **under** S2 (which links to S1), fixing today's orphaned/null-parent Outbox span (C-6) — see "Re-parent the `MarkDispatched` DB span EXPLICITLY" below; **no** Warning, **no** breaker trip (AC-13).
 
 On `success == false`:
 - logs at **Warning** including message id (empty-marked when blank) and wire topic (FR-1, NFR-1);
@@ -146,7 +146,7 @@ using var s2 = _tracer?.CreateConfirmationSpan(id, topic, result.Success, links)
 try {
     if (result.Success) {                               // SUCCESS branch — delivery semantics frozen (OOS-4)
         Log.<Info>("sent", id);                         // existing "sent" log, unchanged
-        MarkDispatched(id, ...);                        // existing; its DB span now nests under S2 (orphan fix, C-6)
+        MarkDispatched(id, ctxWithSpan: S2, ...);       // explicitly parent its DB span to S2 (orphan fix, C-6)
                                                         // no Warning, no TripTopic (AC-13)
     }
     else {                                              // FAILURE branch
@@ -157,7 +157,9 @@ try {
 }
 catch (Exception ex) { Log.<observability failed, swallowed>(ex); }    // NFR-4 / AC-14 (both branches)
 ```
-S2 is started and stopped synchronously inside the callback (NFR-2). On success the only *new* behaviour is S2 + the re-parenting of the existing `MarkDispatched` DB span; the "sent" log and mark-dispatched themselves are untouched (OOS-4, AC-13). On failure the breaker trip is synchronous against in-memory state, with no `MarkDispatched` and no awaited broker/Outbox call (AC-12b).
+S2 is created inside the callback and disposed deterministically before the callback returns (NFR-2). On the failure branch it is started and stopped with no intervening `await`; on the success branch it remains the ambient `Activity.Current` across the single pre-existing `MarkDispatched`/`MarkDispatchedAsync` await and is disposed immediately after (a bounded hold across one known Outbox await, not an open-ended span). On success the only *new* behaviour is S2 + the re-parenting of the existing `MarkDispatched` DB span; the "sent" log and mark-dispatched themselves are untouched (OOS-4, AC-13). On failure the breaker trip is synchronous against in-memory state, with no `MarkDispatched` and no awaited broker/Outbox call (AC-12b).
+
+> **Re-parent the `MarkDispatched` DB span EXPLICITLY — do not rely on the null-parent fallback.** `MarkDispatched`/`MarkDispatchedAsync` create the DB span via `BrighterTracer.CreateDbSpan(info, parentActivity, options)` (`BrighterTracer.cs:490`), which parents from the **explicitly-passed** `parentActivity` — `parentId = parentActivity?.Id` (`:496`) — and that argument is the success branch's `requestContext.Span` (read **synchronously at `MarkDispatched` entry**, before any `await`; e.g. `RelationDatabaseOutbox.AddAsync` builds the span at the top before `WriteToStoreAsync`). Today the DB span is orphaned because that `requestContext.Span` is `null` on the callback thread (C-6). The orphan-fix is therefore to **set the confirmation span S2 as that parent**: on the success branch, give `MarkDispatched(Async)` a `RequestContext` whose `Span == S2` so `CreateDbSpan` parents the DB span to S2 by its explicit id. We do **not** lean on the alternative — leaving `requestContext.Span` null so `StartActivity` falls back to the ambient `Activity.Current == S2` — because that "works" only by the coincidence that the context is empty (C-6); if anything ever populated `requestContext.Span`, the explicit `parentId` would silently win and the orphan-fix would regress with no error. Mechanics that make the explicit set clean and race-free: `requestContext.Span` is **thread-keyed by `ManagedThreadId`** (`RequestContext.cs:113-125`) and read synchronously on the callback thread, so concurrent same-producer confirmations on different threads each set their own S2 with no cross-talk; and because the setter **ignores `null`** (cannot unset) and the construction-time `requestContext` is shared/reused, set `Span = S2` on a **per-callback copy** (`requestContext.CreateCopy()`) rather than mutating the shared construction-time context. `Activity.Current = S2` (set by `CreateConfirmationSpan`) is retained for ambient hygiene but is no longer the load-bearing mechanism. AC-13's test asserts the DB span's parent **id equals S2's id** (guaranteed by construction, not by the empty-context coincidence).
 
 **Capturing the context at dispatch (C-7).** When the mediator creates the producer span S1, `CreateProducerSpan` sets `Activity.Current = S1` (`BrighterTracer.cs:700`) before `Send`/`SendAsync` is invoked. The producer reads `Activity.Current?.Context` — the *value* of S1's `ActivityContext` (a struct, valid after the span ends) — **as the first action inside `Send`/`SendAsync`, before any `await`**, and stashes that value alongside the per-message confirmation state. This satisfies AC-2's requirement that the link's `ActivityContext` **equal S1's context**.
 
