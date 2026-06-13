@@ -235,7 +235,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
 
 ## Phase 5 — Shared mediator SUCCESS branch (symmetric span + orphan fix)
 
-- [ ] **TEST + IMPLEMENT: success emits S2 (linked) and nests MarkDispatched under it; no Warning, no breaker (FR-2 success / AC-13 / C-6 orphan fix)**
+- [x] **TEST + IMPLEMENT: success emits S2 (linked) and nests MarkDispatched under it; no Warning, no breaker (FR-2 success / AC-13 / C-6 orphan fix)**
   - **USE COMMAND**: `/test-first a successful confirmation keeps the sent log and mark-dispatched, emits a linked confirmation span, nests the MarkDispatched DB span under it, and never warns or trips the breaker`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Confirmation"
   - Test file: `When_a_confirmation_succeeds_should_nest_dispatch_under_span.cs`

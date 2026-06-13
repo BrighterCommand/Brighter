@@ -755,12 +755,22 @@ namespace Paramore.Brighter
                     {
                         Log.SentMessage(s_logger, result.MessageId.Value);
                         if (_asyncOutbox != null)
+                        {
+                            // Explicitly re-parent the MarkDispatched DB span to the confirmation
+                            // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
+                            // per-callback copy whose Span is S2 rather than relying on the ambient
+                            // Activity.Current fallback (C-6). A copy is required because
+                            // RequestContext.Span is thread-keyed and its setter ignores null, so we
+                            // must not mutate the shared construction-time context.
+                            var dispatchedContext = (RequestContext)requestContext.CreateCopy();
+                            dispatchedContext.Span = confirmationSpan;
                             await ExecuteWithResiliencePipelineAsync(
                                 async ct =>
-                                    await _asyncOutbox.MarkDispatchedAsync(result.MessageId, requestContext, _timeProvider.GetUtcNow(),
+                                    await _asyncOutbox.MarkDispatchedAsync(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow(),
                                         cancellationToken: ct),
-                                requestContext
+                                dispatchedContext
                             );
+                        }
                     }
                     else
                     {
@@ -802,9 +812,19 @@ namespace Paramore.Brighter
                         Log.SentMessage(s_logger, result.MessageId.Value);
 
                         if (_outBox != null)
+                        {
+                            // Explicitly re-parent the MarkDispatched DB span to the confirmation
+                            // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
+                            // per-callback copy whose Span is S2 rather than relying on the ambient
+                            // Activity.Current fallback (C-6). A copy is required because
+                            // RequestContext.Span is thread-keyed and its setter ignores null, so we
+                            // must not mutate the shared construction-time context.
+                            var dispatchedContext = (RequestContext)requestContext.CreateCopy();
+                            dispatchedContext.Span = confirmationSpan;
                             ExecuteWithResiliencePipeline(
-                                () => _outBox.MarkDispatched(result.MessageId, requestContext, _timeProvider.GetUtcNow()),
-                                requestContext);
+                                () => _outBox.MarkDispatched(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow()),
+                                dispatchedContext);
+                        }
                     }
                     else
                     {
