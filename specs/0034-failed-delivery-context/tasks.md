@@ -207,7 +207,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: Phase 2, Phase 3.
   - **References**: FR-3, NFR-6, AC-3, AC-3b, C-8; mediator `:1168/:1170`, parity `:998`.
 
-- [ ] **TEST + IMPLEMENT: failure does not mark dispatched, does not bubble, message stays Sweeper-eligible (FR-4)**
+- [x] **TEST + IMPLEMENT: failure does not mark dispatched, does not bubble, message stays Sweeper-eligible (FR-4)**
   - **USE COMMAND**: `/test-first a confirmation failure does not mark the message dispatched, does not throw, and adds no awaited broker or outbox call`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Confirmation"
   - Test file: `When_a_confirmation_fails_should_not_dispatch_or_bubble.cs`
