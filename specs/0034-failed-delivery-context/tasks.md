@@ -180,7 +180,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: Phase 2; Phase 3 (failure-injection + pump).
   - **References**: FR-1, NFR-1, AC-1, AC-11; mediator `:741/:768`.
 
-- [ ] **TEST + IMPLEMENT: confirmation (success and failure) emits S2 linked to the publish span, S1 unmutated (FR-2)**
+- [x] **TEST + IMPLEMENT: confirmation (success and failure) emits S2 linked to the publish span, S1 unmutated (FR-2)**
   - **USE COMMAND**: `/test-first every confirmation emits a standalone confirmation span linked to the original publish span without mutating it, degrading to no link when the publish context is absent`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Confirmation"
   - Test file: `When_a_confirmation_is_received_should_emit_linked_span.cs`
