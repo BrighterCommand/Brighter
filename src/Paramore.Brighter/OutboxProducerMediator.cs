@@ -740,6 +740,17 @@ namespace Paramore.Brighter
             {
                 producerSync.OnMessagePublished += async delegate(PublishConfirmationResult result)
                 {
+                    // Emit a standalone confirmation span FIRST on every invocation (success or
+                    // failure). It links back to the original publish span (when its context was
+                    // captured at send time) rather than reopening it, and degrades to no link when
+                    // the context is absent. Scoped with using so it starts and stops within the
+                    // callback (NFR-2).
+                    var links = result.PublishSpanContext is { } publishContext
+                        ? new[] { new ActivityLink(publishContext) }
+                        : null;
+                    using var confirmationSpan = _tracer?.CreateConfirmationSpan(
+                        result.MessageId, result.Topic, result.Success, links);
+
                     if (result.Success)
                     {
                         Log.SentMessage(s_logger, result.MessageId.Value);
@@ -771,6 +782,17 @@ namespace Paramore.Brighter
             {
                 producerSync.OnMessagePublished += delegate(PublishConfirmationResult result)
                 {
+                    // Emit a standalone confirmation span FIRST on every invocation (success or
+                    // failure). It links back to the original publish span (when its context was
+                    // captured at send time) rather than reopening it, and degrades to no link when
+                    // the context is absent. Scoped with using so it starts and stops within the
+                    // callback (NFR-2).
+                    var links = result.PublishSpanContext is { } publishContext
+                        ? new[] { new ActivityLink(publishContext) }
+                        : null;
+                    using var confirmationSpan = _tracer?.CreateConfirmationSpan(
+                        result.MessageId, result.Topic, result.Success, links);
+
                     if (result.Success)
                     {
                         Log.SentMessage(s_logger, result.MessageId.Value);
