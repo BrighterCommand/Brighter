@@ -219,7 +219,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: Phase 4 FR-1/FR-3 slices.
   - **References**: FR-4, AC-4, AC-12b, OOS-1; mediator `:741/:768`.
 
-- [ ] **TEST + IMPLEMENT: empty/null id — FR-1/2/3 still occur with an explicit unknown marker, no crash (FR-5)**
+- [x] **TEST + IMPLEMENT: empty/null id — FR-1/2/3 still occur with an explicit unknown marker, no crash (FR-5)**
   - **USE COMMAND**: `/test-first a confirmation failure with an empty message id still logs at Warning, emits the span, and trips the topic, recording the id as an explicit unknown marker without crashing`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Confirmation"
   - Test file: `When_a_confirmation_fails_with_empty_id_should_still_observe.cs`
