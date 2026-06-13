@@ -751,6 +751,10 @@ namespace Paramore.Brighter
                                 requestContext
                             );
                     }
+                    else
+                    {
+                        Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                    }
                 };
             }
         }
@@ -775,6 +779,10 @@ namespace Paramore.Brighter
                             ExecuteWithResiliencePipeline(
                                 () => _outBox.MarkDispatched(result.MessageId, requestContext, _timeProvider.GetUtcNow()),
                                 requestContext);
+                    }
+                    else
+                    {
+                        Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
                     }
                 };
                 return true;
@@ -896,7 +904,7 @@ namespace Paramore.Brighter
                         producerSpans.TryAdd(Uuid.NewAsString(), span);
                     }
 
-                    if (producer is IAmABulkMessageProducerAsync bulkMessageProducer and not ISupportPublishConfirmation)
+                    if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
                     {
                         var messages = topicBatch.ToArray();
 
@@ -1187,6 +1195,9 @@ namespace Paramore.Brighter
             
             [LoggerMessage(LogLevel.Information, "Sent message: Id:{Id}")]
             public static partial void SentMessage(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Warning, "Publish confirmation failed for message Id:{Id} on topic {Topic}")]
+            public static partial void ConfirmationFailed(ILogger logger, string id, string topic);
             
             [LoggerMessage(LogLevel.Information, "Decoupled invocation of message: Topic:{Topic} Id:{Id}")]
             public static partial void DecoupledInvocationOfMessage(ILogger logger, string topic, string id);

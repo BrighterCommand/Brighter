@@ -37,7 +37,7 @@ namespace Paramore.Brighter
     /// The in-memory producer is mainly intended for usage with tests. It allows you to send messages to a bus and
     /// then inspect the messages that have been sent.
     /// </summary>
-    public sealed class InMemoryMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
+    public sealed class InMemoryMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync, ISupportPublishConfirmation
     {
         private readonly IAmABus _bus;
         private readonly InstrumentationOptions _instrumentationOptions;

@@ -168,7 +168,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
 
 > All Phase 4 slices: the mediator callback creates S2 FIRST on every invocation (via the Phase 2 helper), sets `Activity.Current = S2`, then branches on `result.Success`. Rewrite both `ConfigureAsyncPublisherCallbackMaybe` (`:741`) and `ConfigurePublisherCallbackMaybe` (`:768`).
 
-- [ ] **TEST + IMPLEMENT: confirmation failure logs at Warning with id and wire topic (FR-1)**
+- [x] **TEST + IMPLEMENT: confirmation failure logs at Warning with id and wire topic (FR-1)**
   - **USE COMMAND**: `/test-first the mediator logs a confirmation failure at Warning including the message id and the wire topic and never at Error or above`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Confirmation"
   - Test file: `When_a_confirmation_fails_should_log_warning_with_id_and_topic.cs`
