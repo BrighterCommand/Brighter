@@ -193,7 +193,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: Phase 2; Phase 3 (context capture + pump).
   - **References**: FR-2, AC-2, AC-2b, NFR-2; mediator `:741/:768`.
 
-- [ ] **TEST + IMPLEMENT: failure trips the breaker on the wire topic (FR-3)**
+- [x] **TEST + IMPLEMENT: failure trips the breaker on the wire topic (FR-3)**
   - **USE COMMAND**: `/test-first a confirmation failure trips the circuit breaker using the wire topic message.Header.Topic with exact parity to the non-confirmation send-failure path`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Confirmation"
   - Test file: `When_a_confirmation_fails_should_trip_topic_on_wire_topic.cs`

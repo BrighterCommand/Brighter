@@ -765,6 +765,10 @@ namespace Paramore.Brighter
                     else
                     {
                         Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                        // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
+                        // not the Publication topic — exact parity with the non-confirmation send
+                        // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
+                        TripTopic(result.Topic);
                     }
                 };
             }
@@ -805,6 +809,10 @@ namespace Paramore.Brighter
                     else
                     {
                         Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                        // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
+                        // not the Publication topic — exact parity with the non-confirmation send
+                        // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
+                        TripTopic(result.Topic);
                     }
                 };
                 return true;
