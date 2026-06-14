@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         static readonly object s_lock = new();
         private RmqPublication _publication;
-        private readonly ConcurrentDictionary<ulong, string> _pendingConfirmations = new ConcurrentDictionary<ulong, string>();
+        private readonly ConcurrentDictionary<ulong, PendingConfirmation> _pendingConfirmations = new ConcurrentDictionary<ulong, PendingConfirmation>();
         private bool _confirmsSelected;
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
 
@@ -128,7 +128,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private void SendWithDelay(Message message, TimeSpan? delay, bool useSchedulerAsync)
         {
             delay ??= TimeSpan.Zero;
-            
+
+            // Capture the ambient publish context synchronously, before any send work, so the confirmation
+            // raise (ack or nack) can link the settle span back to the producer (S1) span. Activity.Current
+            // flows via AsyncLocal/ExecutionContext, so it is captured even when SendAsync routes via Task.Run.
+            var publishContext = Activity.Current?.Context;
+
             try
             {
                 lock (s_lock)
@@ -150,7 +155,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     Log.PublishingMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri!.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                         message.Header.Topic.Value, message.Persist, message.Id.Value, message.Body.Value);
 
-                    _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, message.Id.Value);
+                    _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, new PendingConfirmation(message.Id, message.Header.Topic, publishContext));
 
                      if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
                      {
@@ -230,21 +235,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private void OnPublishFailed(object? sender, BasicNackEventArgs e)
         {
-            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out string? messageId))
+            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out PendingConfirmation confirmation))
             {
-                OnMessagePublished?.Invoke(new PublishConfirmationResult(false, messageId, null, null));
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out string? _);
-                Log.FailedToPublishMessage(s_logger, messageId);
+                OnMessagePublished?.Invoke(new PublishConfirmationResult(false, confirmation.MessageId, confirmation.Topic, confirmation.Context));
+                _pendingConfirmations.TryRemove(e.DeliveryTag, out PendingConfirmation _);
+                Log.FailedToPublishMessage(s_logger, confirmation.MessageId.Value);
             }
         }
 
         private void OnPublishSucceeded(object? sender, BasicAckEventArgs e)
         {
-            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out string? messageId))
+            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out PendingConfirmation confirmation))
             {
-                OnMessagePublished?.Invoke(new PublishConfirmationResult(true, messageId, null, null));
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out string? _);
-                Log.PublishedMessageInformation(s_logger, messageId);
+                OnMessagePublished?.Invoke(new PublishConfirmationResult(true, confirmation.MessageId, confirmation.Topic, confirmation.Context));
+                _pendingConfirmations.TryRemove(e.DeliveryTag, out PendingConfirmation _);
+                Log.PublishedMessageInformation(s_logger, confirmation.MessageId.Value);
             }
         }
 
@@ -272,5 +277,16 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             public static partial void PublishedMessageInformation(ILogger logger, string? messageId);
         }
     }
+
+    /// <summary>
+    /// Tracks the data needed to raise an enriched <see cref="PublishConfirmationResult"/> when the broker
+    /// later acks or nacks a publish. Keyed by the publish sequence number (delivery tag) while the confirmation
+    /// is in flight. The same entry feeds both the ack (<c>OnPublishSucceeded</c>) and nack (<c>OnPublishFailed</c>)
+    /// handlers, so the enrichment is identical on success and failure.
+    /// </summary>
+    /// <param name="MessageId">The id of the published message.</param>
+    /// <param name="Topic">The wire topic the message was published to (<c>message.Header.Topic</c>).</param>
+    /// <param name="Context">The publish span context captured at send time, used to link the settle span; null when no <see cref="Activity"/> was active.</param>
+    internal readonly record struct PendingConfirmation(Id MessageId, RoutingKey Topic, ActivityContext? Context);
 }
 

@@ -353,7 +353,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: Phase 1.
   - **References**: FR-9, FR-2 (RMQ not verify-only), AC-9, C-7, C-8; ADR "RMQ FR-9 + FR-2"; RMQ.Async `:60/:167/:187/:397/:419/:440/:447/:476/:480/:487`.
 
-- [ ] **TEST + IMPLEMENT: RMQ.Sync — same `PendingConfirmation` enrichment on the confirmation path (FR-9 / FR-2)**
+- [x] **TEST + IMPLEMENT: RMQ.Sync — same `PendingConfirmation` enrichment on the confirmation path (FR-9 / FR-2)**
   - **USE COMMAND**: `/test-first against a live RabbitMQ broker RmqMessageProducer (Sync) captures the publish context and wire topic at send, tracks them per delivery tag, and raises an enriched confirmation carrying id, topic, and context`
   - Test location: "tests/Paramore.Brighter.RMQ.Sync.Tests/MessagingGateway/Reactor"
   - Test file: `When_a_confirmation_is_received_should_carry_id_topic_and_context.cs`
