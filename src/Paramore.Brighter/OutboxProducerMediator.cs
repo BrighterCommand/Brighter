@@ -743,42 +743,58 @@ namespace Paramore.Brighter
                     // Emit a standalone confirmation span FIRST on every invocation (success or
                     // failure). It links back to the original publish span (when its context was
                     // captured at send time) rather than reopening it, and degrades to no link when
-                    // the context is absent. Scoped with using so it starts and stops within the
-                    // callback (NFR-2).
-                    var links = result.PublishSpanContext is { } publishContext
-                        ? new[] { new ActivityLink(publishContext) }
-                        : null;
-                    using var confirmationSpan = _tracer?.CreateConfirmationSpan(
-                        result.MessageId, result.Topic, result.Success, links);
-
-                    if (result.Success)
+                    // the context is absent. The observability work is isolated in try/catch so a
+                    // tracing fault can never destabilise the producer thread (NFR-4); the span is
+                    // disposed in the finally so it starts and stops within the callback (NFR-2).
+                    Activity? confirmationSpan = null;
+                    try
                     {
-                        Log.SentMessage(s_logger, result.MessageId.Value);
-                        if (_asyncOutbox != null)
+                        var links = result.PublishSpanContext is { } publishContext
+                            ? new[] { new ActivityLink(publishContext) }
+                            : null;
+                        confirmationSpan = _tracer?.CreateConfirmationSpan(
+                            result.MessageId, result.Topic, result.Success, links);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.ConfirmationObservabilityError(s_logger, ex);
+                    }
+
+                    try
+                    {
+                        if (result.Success)
                         {
-                            // Explicitly re-parent the MarkDispatched DB span to the confirmation
-                            // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
-                            // per-callback copy whose Span is S2 rather than relying on the ambient
-                            // Activity.Current fallback (C-6). A copy is required because
-                            // RequestContext.Span is thread-keyed and its setter ignores null, so we
-                            // must not mutate the shared construction-time context.
-                            var dispatchedContext = (RequestContext)requestContext.CreateCopy();
-                            dispatchedContext.Span = confirmationSpan;
-                            await ExecuteWithResiliencePipelineAsync(
-                                async ct =>
-                                    await _asyncOutbox.MarkDispatchedAsync(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow(),
-                                        cancellationToken: ct),
-                                dispatchedContext
-                            );
+                            Log.SentMessage(s_logger, result.MessageId.Value);
+                            if (_asyncOutbox != null)
+                            {
+                                // Explicitly re-parent the MarkDispatched DB span to the confirmation
+                                // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
+                                // per-callback copy whose Span is S2 rather than relying on the ambient
+                                // Activity.Current fallback (C-6). A copy is required because
+                                // RequestContext.Span is thread-keyed and its setter ignores null, so we
+                                // must not mutate the shared construction-time context.
+                                var dispatchedContext = (RequestContext)requestContext.CreateCopy();
+                                dispatchedContext.Span = confirmationSpan;
+                                await ExecuteWithResiliencePipelineAsync(
+                                    async ct =>
+                                        await _asyncOutbox.MarkDispatchedAsync(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow(),
+                                            cancellationToken: ct),
+                                    dispatchedContext
+                                );
+                            }
+                        }
+                        else
+                        {
+                            Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                            // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
+                            // not the Publication topic — exact parity with the non-confirmation send
+                            // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
+                            TripTopic(result.Topic);
                         }
                     }
-                    else
+                    finally
                     {
-                        Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
-                        // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
-                        // not the Publication topic — exact parity with the non-confirmation send
-                        // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
-                        TripTopic(result.Topic);
+                        confirmationSpan?.Dispose();
                     }
                 };
             }
@@ -799,40 +815,56 @@ namespace Paramore.Brighter
                     // Emit a standalone confirmation span FIRST on every invocation (success or
                     // failure). It links back to the original publish span (when its context was
                     // captured at send time) rather than reopening it, and degrades to no link when
-                    // the context is absent. Scoped with using so it starts and stops within the
-                    // callback (NFR-2).
-                    var links = result.PublishSpanContext is { } publishContext
-                        ? new[] { new ActivityLink(publishContext) }
-                        : null;
-                    using var confirmationSpan = _tracer?.CreateConfirmationSpan(
-                        result.MessageId, result.Topic, result.Success, links);
-
-                    if (result.Success)
+                    // the context is absent. The observability work is isolated in try/catch so a
+                    // tracing fault can never destabilise the producer thread (NFR-4); the span is
+                    // disposed in the finally so it starts and stops within the callback (NFR-2).
+                    Activity? confirmationSpan = null;
+                    try
                     {
-                        Log.SentMessage(s_logger, result.MessageId.Value);
+                        var links = result.PublishSpanContext is { } publishContext
+                            ? new[] { new ActivityLink(publishContext) }
+                            : null;
+                        confirmationSpan = _tracer?.CreateConfirmationSpan(
+                            result.MessageId, result.Topic, result.Success, links);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.ConfirmationObservabilityError(s_logger, ex);
+                    }
 
-                        if (_outBox != null)
+                    try
+                    {
+                        if (result.Success)
                         {
-                            // Explicitly re-parent the MarkDispatched DB span to the confirmation
-                            // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
-                            // per-callback copy whose Span is S2 rather than relying on the ambient
-                            // Activity.Current fallback (C-6). A copy is required because
-                            // RequestContext.Span is thread-keyed and its setter ignores null, so we
-                            // must not mutate the shared construction-time context.
-                            var dispatchedContext = (RequestContext)requestContext.CreateCopy();
-                            dispatchedContext.Span = confirmationSpan;
-                            ExecuteWithResiliencePipeline(
-                                () => _outBox.MarkDispatched(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow()),
-                                dispatchedContext);
+                            Log.SentMessage(s_logger, result.MessageId.Value);
+
+                            if (_outBox != null)
+                            {
+                                // Explicitly re-parent the MarkDispatched DB span to the confirmation
+                                // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
+                                // per-callback copy whose Span is S2 rather than relying on the ambient
+                                // Activity.Current fallback (C-6). A copy is required because
+                                // RequestContext.Span is thread-keyed and its setter ignores null, so we
+                                // must not mutate the shared construction-time context.
+                                var dispatchedContext = (RequestContext)requestContext.CreateCopy();
+                                dispatchedContext.Span = confirmationSpan;
+                                ExecuteWithResiliencePipeline(
+                                    () => _outBox.MarkDispatched(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow()),
+                                    dispatchedContext);
+                            }
+                        }
+                        else
+                        {
+                            Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                            // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
+                            // not the Publication topic — exact parity with the non-confirmation send
+                            // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
+                            TripTopic(result.Topic);
                         }
                     }
-                    else
+                    finally
                     {
-                        Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
-                        // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
-                        // not the Publication topic — exact parity with the non-confirmation send
-                        // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
-                        TripTopic(result.Topic);
+                        confirmationSpan?.Dispose();
                     }
                 };
                 return true;
@@ -1248,6 +1280,9 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "Publish confirmation failed for message Id:{Id} on topic {Topic}")]
             public static partial void ConfirmationFailed(ILogger logger, string id, string topic);
+
+            [LoggerMessage(LogLevel.Error, "Observability failed while handling a publish confirmation; confirmation handling continued")]
+            public static partial void ConfirmationObservabilityError(ILogger logger, Exception ex);
             
             [LoggerMessage(LogLevel.Information, "Decoupled invocation of message: Topic:{Topic} Id:{Id}")]
             public static partial void DecoupledInvocationOfMessage(ILogger logger, string topic, string id);

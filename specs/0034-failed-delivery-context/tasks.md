@@ -255,7 +255,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
 
 ## Phase 6 — Error isolation + concurrency
 
-- [ ] **TEST + IMPLEMENT: observability throw is isolated; breaker trip + log still happen (NFR-4 / AC-14)**
+- [x] **TEST + IMPLEMENT: observability throw is isolated; breaker trip + log still happen (NFR-4 / AC-14)**
   - **USE COMMAND**: `/test-first when the observability work throws in the confirmation callback the exception is caught and logged and does not escape, while the breaker trip still runs`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Confirmation"
   - Test file: `When_observability_throws_should_isolate_and_still_trip.cs`
