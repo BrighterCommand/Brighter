@@ -299,7 +299,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: Phase 1.
   - **References**: FR-6, FR-7, AC-6, NFR-1, OOS-2; `KafkaMessagePublisher.cs:52-62`.
 
-- [ ] **TEST + IMPLEMENT: Kafka NotPersisted reads MESSAGE_ID from report-level headers and raises failure with the id (FR-8 / AC-7 / AC-8)**
+- [x] **TEST + IMPLEMENT: Kafka NotPersisted reads MESSAGE_ID from report-level headers and raises failure with the id (FR-8 / AC-7 / AC-8)**
   - **USE COMMAND**: `/test-first against a live Kafka broker a NotPersisted confirmation reads MESSAGE_ID from the report-level headers and raises a failure confirmation carrying that id`
   - Test location: "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
   - Test file: `When_publish_results_not_persisted_should_raise_failure_with_id.cs`

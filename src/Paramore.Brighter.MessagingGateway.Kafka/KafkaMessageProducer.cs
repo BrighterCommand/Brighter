@@ -378,8 +378,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
             }
 
+            //Not persisted (or no id on the persisted path): raise a failure confirmation carrying
+            //the message id read from the report-level headers (the synthetic NotPersisted result
+            //adds MESSAGE_ID there), falling back to Id.Empty when it is absent.
+            var failureId = Id.Empty;
+            if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[]? failureIdBytes))
+            {
+                var val = failureIdBytes.FromByteArray();
+                if (!string.IsNullOrEmpty(val))
+                    failureId = new Id(val);
+            }
+
             Task.Run(
-                () =>OnMessagePublished?.Invoke(new PublishConfirmationResult(false, Id.Empty, null, null))
+                () =>OnMessagePublished?.Invoke(new PublishConfirmationResult(false, failureId, null, null))
             );
         }
 
