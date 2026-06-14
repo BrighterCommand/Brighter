@@ -313,7 +313,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: Phase 1.
   - **References**: FR-8, AC-7, AC-8; `KafkaMessageProducer.cs:364-384`; ADR FR-8 risk/mitigation.
 
-- [ ] **TEST + IMPLEMENT: Kafka closure rewrite — confirmation carries `message.Header.Topic`, `message.Id`, and the captured publish context (FR-2 Kafka data path)**
+- [x] **TEST + IMPLEMENT: Kafka closure rewrite — confirmation carries `message.Header.Topic`, `message.Id`, and the captured publish context (FR-2 Kafka data path)**
   - **USE COMMAND**: `/test-first against a live Kafka broker the confirmation carries the wire topic from message.Header.Topic, the id, and the captured publish context even on the synthetic NotPersisted path`
   - Test location: "tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Proactor"
   - Test file: `When_a_kafka_confirmation_fires_should_carry_topic_and_link_from_message.cs`

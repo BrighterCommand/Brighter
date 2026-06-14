@@ -255,9 +255,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             try
             {
+                //Capture the publish span context synchronously, before any closure runs, so the
+                //confirmation can be linked back to the original publish even on the synthetic path.
+                var publishContext = Activity.Current?.Context;
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
                 Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
-                _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers));
+                _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers, message.Header.Topic, publishContext));
             }
             catch (ProduceException<string, string> pe)
             {
@@ -328,10 +331,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
               
              try
              {
+                 //Capture the publish span context synchronously, before any closure runs, so the
+                 //confirmation can be linked back to the original publish even on the synthetic path.
+                 var publishContext = Activity.Current?.Context;
                  BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
                  Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
-                 await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers), cancellationToken);
-            
+                 await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers, message.Header.Topic, publishContext), cancellationToken);
+
              }
              catch (ProduceException<string, string> pe)
              {
@@ -361,7 +367,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
         
-        private void PublishResults(PersistenceStatus status, Headers headers)
+        private void PublishResults(PersistenceStatus status, Headers headers, RoutingKey topic, ActivityContext? publishContext)
         {
             if (status == PersistenceStatus.Persisted)
             {
@@ -371,7 +377,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     if (!string.IsNullOrEmpty(val))
                     {
                         Task.Run(
-                            () => OnMessagePublished?.Invoke(new PublishConfirmationResult(true, val, null, null))
+                            () => OnMessagePublished?.Invoke(new PublishConfirmationResult(true, val, topic, publishContext))
                         );
                         return;
                     }
@@ -380,7 +386,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             //Not persisted (or no id on the persisted path): raise a failure confirmation carrying
             //the message id read from the report-level headers (the synthetic NotPersisted result
-            //adds MESSAGE_ID there), falling back to Id.Empty when it is absent.
+            //adds MESSAGE_ID there), falling back to Id.Empty when it is absent. The wire topic and
+            //the captured publish context come from the send call, since the synthetic NotPersisted
+            //delivery report never sets .Topic and has no active publish activity of its own.
             var failureId = Id.Empty;
             if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[]? failureIdBytes))
             {
@@ -390,7 +398,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
 
             Task.Run(
-                () =>OnMessagePublished?.Invoke(new PublishConfirmationResult(false, failureId, null, null))
+                () =>OnMessagePublished?.Invoke(new PublishConfirmationResult(false, failureId, topic, publishContext))
             );
         }
 
