@@ -77,7 +77,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Implement `ISupportPublishConfirmation` on `InMemoryMessageProducer` (event already flipped in Phase 1).
-    - Add settable `bool UseAsyncPublishConfirmation { get; set; } = false;` (property-injection style matching `Publication`/`Span`/`Scheduler` at `:62/:69/:72`). When false, keep the existing inline `WriteProducerEvent` + success raise at `:100/:123/:145` (now raising the record).
+    - Add `init`-only `bool UseAsyncPublishConfirmation { get; init; } = false;` (property-injection style via object initializer / DI, set alongside `Publication`/`Span`/`Scheduler`; `init` rather than `set` enforces the configure-before-first-send contract — flipping the switch after the pump's channel/worker are live would leave them inconsistent). When false, keep the existing inline `WriteProducerEvent` + success raise at `:100/:123/:145` (now raising the record).
   - **Depends on**: Phase 1.
   - **References**: ADR "Confirmation-capable in-memory producer → Opt-in switch"; NFR-5 (switch toggles in-memory timing only, not mediator behavior); InMemory `:62/:69/:72/:100/:123/:145`.
 
@@ -90,7 +90,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
     - `null` predicate (default) and a predicate returning `false` both behave as success.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Add settable `Func<Message, bool>? PublishFailurePredicate { get; set; }` (default `null` = never fail). Evaluate per work-item: `true` ⇒ skip bus write, raise `Success: false`; else write bus, raise `Success: true`.
+    - Add `init`-only `Func<Message, bool>? PublishFailurePredicate { get; init; }` (default `null` = never fail; `init` for the same configure-before-first-send reason as the switch). Evaluate per work-item: `true` ⇒ skip bus write, raise `Success: false`; else write bus, raise `Success: true`.
     - Build the `PublishConfirmationResult` with `Topic = message.Header.Topic`.
   - **Depends on**: Phase 1; previous pump slice (switch).
   - **References**: FR-4 (failed = not delivered), FR-5; ADR "Failure-injection hook"; InMemory raise sites.
