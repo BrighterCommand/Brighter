@@ -267,7 +267,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
   - **Depends on**: Phase 4 (failure branch).
   - **References**: NFR-4, AC-14; ADR "Error isolation".
 
-- [ ] **TEST + IMPLEMENT: concurrent same-topic failures — no race loss, topic ends tripped (NFR-3 / AC-10)**
+- [x] **TEST + IMPLEMENT: concurrent same-topic failures — no race loss, topic ends tripped (NFR-3 / AC-10)**
   - **USE COMMAND**: `/test-first concurrent same-topic confirmation failures each warn and trip without race-induced loss and the topic ends tripped, with overlap forced by a synchronization gate`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Confirmation"
   - Test file: `When_concurrent_same_topic_confirmations_fail_should_not_lose_trips.cs`
