@@ -89,6 +89,19 @@ namespace Paramore.Brighter
         /// <remarks>
         /// This is an init-only property: set it once via an object initializer at construction time.  Changing it
         /// after the first send would leave the channel and worker in an inconsistent state.
+        /// <para>
+        /// This switch is an opt-in affordance for tests and local development (e.g. emulating a broker-backed
+        /// confirmation producer in a modular monolith, or before moving to persistent storage); it is
+        /// <see langword="false"/> by default so existing in-process behavior is preserved.  It toggles only this
+        /// in-memory provider's confirm timing — it does <b>not</b> change the mediator's always-on failed-delivery
+        /// observability and circuit-breaker behavior.
+        /// </para>
+        /// <para>
+        /// <b>Deferred bus visibility:</b> when <see langword="true"/>, <see cref="Send"/>/<see cref="SendAsync"/>
+        /// return <i>before</i> the message is written to the <see cref="InternalBus"/> (the worker writes it), so a
+        /// caller that synchronously inspects the bus immediately after sending may not see the message yet.  Tests
+        /// must await the confirmation (or poll the bus) rather than read it immediately.
+        /// </para>
         /// </remarks>
         public bool UseAsyncPublishConfirmation { get; init; } = false;
 
@@ -100,7 +113,9 @@ namespace Paramore.Brighter
         /// <see langword="false"/> both result in a normal successful send.
         /// </summary>
         /// <remarks>
-        /// This is an init-only property: set it once via an object initializer at construction time.
+        /// This is an init-only property: set it once via an object initializer at construction time.  Like
+        /// <see cref="UseAsyncPublishConfirmation"/>, it is a test/local-development affordance for exercising the
+        /// failed-delivery path in-process; it does not change the mediator's failed-delivery behavior.
         /// </remarks>
         public Func<Message, bool>? PublishFailurePredicate { get; init; }
 

@@ -370,7 +370,7 @@ Source of truth: ADR 0063 (Accepted) + requirements.md. All file/line references
 
 ## Phase 9 — Documentation
 
-- [ ] **DOC: XML docs for new/changed public surface + operator-facing notes**
+- [x] **DOC: XML docs for new/changed public surface + operator-facing notes**
   - (documentation task — no `/test-first`; verify build/XML-doc warnings stay clean)
   - Work:
     - Confirm `PublishConfirmationResult` carries complete XML docs on type + all four members (delivered in Phase 1; verify nothing regressed).
