@@ -34,65 +34,79 @@ The maintainer noted that "FluentValidation might be a good starting PR".
 
 ## Decision
 
-We add validation as an **optional, additive concern split across two assemblies**,
-so a single attribute serves every framework while users only take the dependency
-they need (consistent with Brighter's rule that optional behaviours live in their
-own NuGet package).
+We add validation as an **optional, additive concern**. The provider-agnostic
+abstractions live in the **core** `Paramore.Brighter` assembly (they depend only
+on the core and carry no third-party reference, exactly like the built-in
+`RequestLogging`/`UseInbox` attribute+handler pairs), and each validation
+framework ships as **its own provider package**, so users only take the dependency
+they need.
 
-**`Paramore.Brighter.Validation`** (provider-agnostic abstractions, depends only on
-the core):
+**Core — `Paramore.Brighter`, under a `RequestValidation/` sub-folder**:
 
-- `ValidateQueryAttribute` / `ValidateQueryAsyncAttribute` — extend
+- `ValidateRequestAttribute` / `ValidateRequestAsyncAttribute`
+  (namespace `Paramore.Brighter.RequestValidation.Attributes`) — extend
   `RequestHandlerAttribute`; `GetHandlerType()` points at the **abstract** base
   handlers below, mirroring `RequestLoggingAttribute`.
-- `ValidateRequestHandler<TRequest>` / `ValidateRequestHandlerAsync<TRequest>` —
-  **abstract** base handlers extending `RequestHandler<TRequest>` /
-  `RequestHandlerAsync<TRequest>`. They own the shared pipeline behaviour
-  (null-guard the request, ask the provider for failures, throw on any failure,
-  otherwise call `base.Handle`/`base.HandleAsync`) and expose one abstract method,
-  `Validate` / `ValidateAsync`, that returns the failures.
-- `RequestValidationException` — carries a framework-agnostic
-  `IReadOnlyCollection<ValidationError>` (property, message, attempted value,
-  error code), so a caller catches **one** exception type regardless of provider.
+- `ValidateRequestHandler<TRequest>` / `ValidateRequestHandlerAsync<TRequest>`
+  (namespace `Paramore.Brighter.RequestValidation.Handlers`) — **abstract** base
+  handlers extending `RequestHandler<TRequest>` / `RequestHandlerAsync<TRequest>`.
+  They own the shared pipeline behaviour (null-guard the request, ask the provider
+  for failures, throw on any failure, otherwise call `base.Handle`/`base.HandleAsync`)
+  and expose one abstract method, `Validate` / `ValidateAsync`, that returns the
+  failures.
+- `RequestValidationException` and `RequestValidationError`
+  (namespace `Paramore.Brighter.RequestValidation`) — the exception carries a
+  framework-agnostic `IReadOnlyCollection<RequestValidationError>` (property,
+  message, attempted value, error code), so a caller catches **one** exception type
+  regardless of provider. `RequestValidationError` is named to avoid a clash with
+  the pre-existing `Paramore.Brighter.ValidationError`, which reports findings from
+  Brighter's *startup pipeline validation* (ADR 0053) — a different concern.
 
-**`Paramore.Brighter.Validation.FluentValidation`** (the first provider, this PR):
+**Provider packages** (separate assemblies, this PR):
 
-- `FluentValidationRequestHandler<TRequest>` /
-  `FluentValidationRequestHandlerAsync<TRequest>` — derive from the abstract base
-  handlers and implement `Validate`/`ValidateAsync` by resolving a FluentValidation
+- `Paramore.Brighter.Validation.FluentValidation` — derives from the abstract base
+  handlers and implements `Validate`/`ValidateAsync` by resolving a FluentValidation
   `IValidator<TRequest>` from the container and mapping its failures onto
-  `ValidationError`.
-- `UseFluentValidation()` — registers the abstract handler types against the
-  FluentValidation implementations on the container, so Brighter's handler factory
-  resolves the concrete handler for `[ValidateQuery]`. The core is not modified.
+  `RequestValidationError`. `UseFluentValidation()` maps the abstract handler types
+  to the FluentValidation implementations on the container.
+- `Paramore.Brighter.Validation.DataAnnotations` — validates with
+  `System.ComponentModel.DataAnnotations`; `UseDataAnnotationsValidation()`.
+- `Paramore.Brighter.Validation.Specification` — validates with Brighter's own
+  Specification pattern (ADR 0040); `UseSpecificationValidation()`.
 
-Because the attribute targets the abstract handler and the provider package maps it
-to a concrete implementation, **one `[ValidateQuery]` attribute works for every
-framework**: a future `Paramore.Brighter.Validation.DataAnnotations` or
-`Paramore.Brighter.Validation.Specification` package is purely additive — a new
-concrete handler plus a `UseX()` registration — with no change to the abstractions
-or to this FluentValidation package.
+Because the attribute targets the abstract handler and each provider package maps
+it to a concrete implementation, **one `[ValidateRequest]` attribute works for
+every framework**: adding a further provider is purely additive — a new concrete
+handler plus a `UseX()` registration — with no change to the abstractions or to
+the existing provider packages.
 
 **Missing validator** is treated as a configuration error: if a request is marked
-with `[ValidateQuery]` but no validator is registered for it, the provider handler
+with `[ValidateRequest]` but no validator is registered for it, the provider handler
 throws `ConfigurationException` (Brighter's existing misconfiguration type),
 fail-fast, rather than silently skipping validation.
 
 ## Consequences
 
 - Validation is opt-in per request via one attribute; the framework is chosen by
-  which provider package is registered. The core gains no dependency.
-- A single `RequestValidationException` / `ValidationError` model is shared by all
-  current and future providers, so edge code (e.g. an API mapping to HTTP 422)
-  catches one type.
-- Adding the remaining frameworks from the issue is additive and leaves the shipped
-  code untouched.
-- Open questions deferred to the PR discussion:
-  - **Naming.** The attribute is named `[ValidateQuery]` per the issue, but the
-    concern validates commands as well as queries. Should it be `[ValidateRequest]`
-    (with `[ValidateQuery]` kept as an alias)?
-  - **Placement.** The abstractions live in a new `Paramore.Brighter.Validation`
-    package. Would you prefer them in the core assembly instead? They depend only on
-    the core, so either home works.
-  - **Darker.** The same requirement exists for Darker V5 and is intentionally out
-    of scope for this PR; it can follow as separate work.
+  which provider package is registered. The core gains no third-party dependency —
+  only a small, dependency-free abstraction, consistent with the existing built-in
+  middleware.
+- A single `RequestValidationException` / `RequestValidationError` model is shared
+  by all current and future providers, so edge code (e.g. an API mapping to HTTP
+  422) catches one type.
+- Adding further frameworks is additive and leaves the shipped code untouched.
+
+### Resolution of the open questions (maintainer feedback on PR #4183)
+
+- **Naming.** Renamed `[ValidateQuery]` → `[ValidateRequest]` (and the async
+  variant). "Query" was a holdover from the Darker write-up of the issue; Brighter
+  has requests, not queries. No alias is kept.
+- **Placement.** The abstractions are folded into the core `Paramore.Brighter`
+  assembly (under `RequestValidation/`) rather than a separate
+  `Paramore.Brighter.Validation` package, following the same pattern as the other
+  built-in attribute+handler pairs. Providers remain separate packages.
+- **Issue tracking.** This PR delivers FluentValidation, DataAnnotations and
+  Specification providers; it "Contributes to" #4175.
+- **Darker.** The same requirement exists for Darker V5; it carries a lot of
+  structural change for V5 and is intentionally out of scope here, to follow as
+  separate work.

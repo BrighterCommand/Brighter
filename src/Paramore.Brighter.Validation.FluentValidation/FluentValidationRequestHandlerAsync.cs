@@ -26,36 +26,37 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.RequestValidation;
+using Paramore.Brighter.RequestValidation.Handlers;
 
-namespace Paramore.Brighter.Validation.FluentValidation
+namespace Paramore.Brighter.Validation.FluentValidation;
+
+/// <summary>
+/// The FluentValidation implementation of the asynchronous validation handler. It resolves a
+/// FluentValidation <c>IValidator&lt;TRequest&gt;</c> from the container and awaits its failures, which the
+/// base <see cref="ValidateRequestHandlerAsync{TRequest}"/> turns into a
+/// <see cref="RequestValidationException"/> when the request is invalid. Register it with
+/// <see cref="FluentValidationBuilderExtensions.UseFluentValidation"/>.
+/// </summary>
+/// <typeparam name="TRequest">The type of the request being validated.</typeparam>
+/// <remarks>
+/// The pipeline's <see cref="CancellationToken"/> is passed to <c>IValidator&lt;TRequest&gt;.ValidateAsync</c>,
+/// so a cancelled token cancels validation. The handler holds no per-request state, so it is safe to reuse
+/// across concurrent pipelines.
+/// </remarks>
+public class FluentValidationRequestHandlerAsync<TRequest>(IServiceProvider serviceProvider) : ValidateRequestHandlerAsync<TRequest>
+    where TRequest : class, IRequest
 {
-    /// <summary>
-    /// The FluentValidation implementation of the asynchronous validation handler. It resolves a
-    /// FluentValidation <c>IValidator&lt;TRequest&gt;</c> from the container and awaits its failures, which the
-    /// base <see cref="ValidateRequestHandlerAsync{TRequest}"/> turns into a
-    /// <see cref="RequestValidationException"/> when the request is invalid. Register it with
-    /// <see cref="FluentValidationBuilderExtensions.UseFluentValidation"/>.
-    /// </summary>
-    /// <typeparam name="TRequest">The type of the request being validated.</typeparam>
-    /// <remarks>
-    /// The pipeline's <see cref="CancellationToken"/> is passed to <c>IValidator&lt;TRequest&gt;.ValidateAsync</c>,
-    /// so a cancelled token cancels validation. The handler holds no per-request state, so it is safe to reuse
-    /// across concurrent pipelines.
-    /// </remarks>
-    public class FluentValidationRequestHandlerAsync<TRequest>(IServiceProvider serviceProvider) : ValidateRequestHandlerAsync<TRequest>
-        where TRequest : class, IRequest
+    /// <inheritdoc />
+    /// <exception cref="ConfigurationException">Thrown when no <c>IValidator&lt;TRequest&gt;</c> is registered.</exception>
+    protected override async Task<IReadOnlyCollection<RequestValidationError>> ValidateAsync(TRequest request, CancellationToken cancellationToken)
     {
-        /// <inheritdoc />
-        /// <exception cref="ConfigurationException">Thrown when no <c>IValidator&lt;TRequest&gt;</c> is registered.</exception>
-        protected override async Task<IReadOnlyCollection<ValidationError>> ValidateAsync(TRequest request, CancellationToken cancellationToken)
-        {
-            var validator = (global::FluentValidation.IValidator<TRequest>?)serviceProvider.GetService(typeof(global::FluentValidation.IValidator<TRequest>));
-            if (validator is null)
-                throw new ConfigurationException(FluentValidationErrors.NoValidatorRegistered(typeof(TRequest)));
+        var validator = (global::FluentValidation.IValidator<TRequest>?)serviceProvider.GetService(typeof(global::FluentValidation.IValidator<TRequest>));
+        if (validator is null)
+            throw new ConfigurationException(FluentValidationErrors.NoValidatorRegistered(typeof(TRequest)));
 
-            global::FluentValidation.Results.ValidationResult result =
-                await validator.ValidateAsync(request, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            return FluentValidationErrors.ToErrors(result);
-        }
+        global::FluentValidation.Results.ValidationResult result =
+            await validator.ValidateAsync(request, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+        return FluentValidationErrors.ToErrors(result);
     }
 }

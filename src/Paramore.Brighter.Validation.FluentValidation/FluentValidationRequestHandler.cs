@@ -24,62 +24,63 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using Paramore.Brighter.RequestValidation;
+using Paramore.Brighter.RequestValidation.Handlers;
 
-namespace Paramore.Brighter.Validation.FluentValidation
+namespace Paramore.Brighter.Validation.FluentValidation;
+
+/// <summary>
+/// The FluentValidation implementation of the synchronous validation handler. It resolves a
+/// FluentValidation <c>IValidator&lt;TRequest&gt;</c> from the container and returns its failures to the
+/// base <see cref="ValidateRequestHandler{TRequest}"/>, which throws a
+/// <see cref="RequestValidationException"/> when the request is invalid. Register it with
+/// <see cref="FluentValidationBuilderExtensions.UseFluentValidation"/>.
+/// </summary>
+/// <typeparam name="TRequest">The type of the request being validated.</typeparam>
+/// <remarks>
+/// The validator is resolved through <see cref="IServiceProvider"/> on each call so a missing registration
+/// can be reported as a <see cref="ConfigurationException"/>. The handler holds no per-request state, so it
+/// is safe to reuse across concurrent pipelines.
+/// </remarks>
+public class FluentValidationRequestHandler<TRequest>(IServiceProvider serviceProvider) : ValidateRequestHandler<TRequest>
+    where TRequest : class, IRequest
 {
-    /// <summary>
-    /// The FluentValidation implementation of the synchronous validation handler. It resolves a
-    /// FluentValidation <c>IValidator&lt;TRequest&gt;</c> from the container and returns its failures to the
-    /// base <see cref="ValidateRequestHandler{TRequest}"/>, which throws a
-    /// <see cref="RequestValidationException"/> when the request is invalid. Register it with
-    /// <see cref="FluentValidationBuilderExtensions.UseFluentValidation"/>.
-    /// </summary>
-    /// <typeparam name="TRequest">The type of the request being validated.</typeparam>
-    /// <remarks>
-    /// The validator is resolved through <see cref="IServiceProvider"/> on each call so a missing registration
-    /// can be reported as a <see cref="ConfigurationException"/>. The handler holds no per-request state, so it
-    /// is safe to reuse across concurrent pipelines.
-    /// </remarks>
-    public class FluentValidationRequestHandler<TRequest>(IServiceProvider serviceProvider) : ValidateRequestHandler<TRequest>
-        where TRequest : class, IRequest
+    /// <inheritdoc />
+    /// <exception cref="ConfigurationException">Thrown when no <c>IValidator&lt;TRequest&gt;</c> is registered.</exception>
+    protected override IReadOnlyCollection<RequestValidationError> Validate(TRequest request)
     {
-        /// <inheritdoc />
-        /// <exception cref="ConfigurationException">Thrown when no <c>IValidator&lt;TRequest&gt;</c> is registered.</exception>
-        protected override IReadOnlyCollection<ValidationError> Validate(TRequest request)
-        {
-            var validator = (global::FluentValidation.IValidator<TRequest>?)serviceProvider.GetService(typeof(global::FluentValidation.IValidator<TRequest>));
-            if (validator is null)
-                throw new ConfigurationException(FluentValidationErrors.NoValidatorRegistered(typeof(TRequest)));
+        var validator = (global::FluentValidation.IValidator<TRequest>?)serviceProvider.GetService(typeof(global::FluentValidation.IValidator<TRequest>));
+        if (validator is null)
+            throw new ConfigurationException(FluentValidationErrors.NoValidatorRegistered(typeof(TRequest)));
 
-            global::FluentValidation.Results.ValidationResult result = validator.Validate(request);
-            return FluentValidationErrors.ToErrors(result);
-        }
+        global::FluentValidation.Results.ValidationResult result = validator.Validate(request);
+        return FluentValidationErrors.ToErrors(result);
     }
+}
 
-    /// <summary>
-    /// Shared message and mapping helpers for the FluentValidation handlers.
-    /// </summary>
-    internal static class FluentValidationErrors
+/// <summary>
+/// Shared message and mapping helpers for the FluentValidation handlers.
+/// </summary>
+internal static class FluentValidationErrors
+{
+    public static string NoValidatorRegistered(Type requestType)
+        => $"No FluentValidation IValidator<{requestType.Name}> is registered. Register a validator for {requestType.Name} (for example services.AddScoped<IValidator<{requestType.Name}>, {requestType.Name}Validator>()) or remove the [ValidateRequest] attribute from its handler.";
+
+    public static IReadOnlyCollection<RequestValidationError> ToErrors(global::FluentValidation.Results.ValidationResult result)
     {
-        public static string NoValidatorRegistered(Type requestType)
-            => $"No FluentValidation IValidator<{requestType.Name}> is registered. Register a validator for {requestType.Name} (for example services.AddScoped<IValidator<{requestType.Name}>, {requestType.Name}Validator>()) or remove the [ValidateQuery] attribute from its handler.";
+        if (result.IsValid)
+            return System.Array.Empty<RequestValidationError>();
 
-        public static IReadOnlyCollection<ValidationError> ToErrors(global::FluentValidation.Results.ValidationResult result)
+        var errors = new List<RequestValidationError>(result.Errors.Count);
+        foreach (var failure in result.Errors)
         {
-            if (result.IsValid)
-                return System.Array.Empty<ValidationError>();
-
-            var errors = new List<ValidationError>(result.Errors.Count);
-            foreach (var failure in result.Errors)
-            {
-                errors.Add(new ValidationError(
-                    failure.PropertyName,
-                    failure.ErrorMessage,
-                    failure.AttemptedValue,
-                    failure.ErrorCode));
-            }
-
-            return errors;
+            errors.Add(new RequestValidationError(
+                failure.PropertyName,
+                failure.ErrorMessage,
+                failure.AttemptedValue,
+                failure.ErrorCode));
         }
+
+        return errors;
     }
 }

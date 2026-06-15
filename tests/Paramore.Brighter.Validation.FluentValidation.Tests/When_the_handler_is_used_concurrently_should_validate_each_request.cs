@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
 using Xunit;
 using global::FluentValidation;

@@ -9,7 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
-    <ProjectReference Include="..\..\src\Paramore.Brighter.Validation\Paramore.Brighter.Validation.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Validation.FluentValidation\Paramore.Brighter.Validation.FluentValidation.csproj" />
   </ItemGroup>
 

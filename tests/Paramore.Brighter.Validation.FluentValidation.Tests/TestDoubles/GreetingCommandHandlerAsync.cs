@@ -24,12 +24,13 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.RequestValidation.Attributes;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles
 {
     public class GreetingCommandHandlerAsync(HandlerReceipt receipt) : RequestHandlerAsync<GreetingCommand>
     {
-        [ValidateQueryAsync(step: 0)]
+        [ValidateRequestAsync(step: 0)]
         public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default)
         {
             receipt.Record(command.Name);

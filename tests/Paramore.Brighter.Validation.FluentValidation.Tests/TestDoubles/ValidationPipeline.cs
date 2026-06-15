@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.RequestValidation.Handlers;
 using Polly.Registry;
 using global::FluentValidation;
 

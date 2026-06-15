@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>FluentValidation integration for Paramore.Brighter. Validates command and query inputs in the Brighter request pipeline before the business handler runs, via the [ValidateQuery] attribute and a ValidateRequestHandler that resolves an IValidator&lt;TRequest&gt; from the container.</Description>
-    <Authors>Miguel Ramirez</Authors>
+    <Description>FluentValidation integration for Paramore.Brighter. Validates request inputs in the Brighter request pipeline before the business handler runs, via the [ValidateRequest] attribute and a ValidateRequestHandler that resolves an IValidator&lt;TRequest&gt; from the container.</Description>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <PackageTags>FluentValidation;Validation;Command Processor;Pipeline;Brighter</PackageTags>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -12,7 +11,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
     <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
-    <ProjectReference Include="..\Paramore.Brighter.Validation\Paramore.Brighter.Validation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

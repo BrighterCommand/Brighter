@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Threading.Tasks;
+using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
 using Xunit;
 

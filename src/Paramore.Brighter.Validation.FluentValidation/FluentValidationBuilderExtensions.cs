@@ -25,38 +25,39 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.RequestValidation.Attributes;
+using Paramore.Brighter.RequestValidation.Handlers;
 
-namespace Paramore.Brighter.Validation.FluentValidation
+namespace Paramore.Brighter.Validation.FluentValidation;
+
+/// <summary>
+/// Registration extensions that add the FluentValidation pipeline handlers to a Brighter application.
+/// </summary>
+public static class FluentValidationBuilderExtensions
 {
     /// <summary>
-    /// Registration extensions that add the FluentValidation pipeline handlers to a Brighter application.
+    /// Selects FluentValidation as the validation provider by mapping the provider-agnostic
+    /// <see cref="ValidateRequestHandler{TRequest}"/> and <see cref="ValidateRequestHandlerAsync{TRequest}"/>
+    /// (the targets of <see cref="ValidateRequestAttribute"/> and <see cref="ValidateRequestAsyncAttribute"/>)
+    /// to their FluentValidation implementations.
     /// </summary>
-    public static class FluentValidationBuilderExtensions
+    /// <param name="brighterBuilder">The Brighter builder to add the handlers to.</param>
+    /// <returns>The same <paramref name="brighterBuilder"/>, to allow fluent chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="brighterBuilder"/> is null.</exception>
+    /// <remarks>
+    /// The handlers are registered as <see cref="ServiceLifetime.Transient"/>; their effective lifetime is
+    /// managed by Brighter's <c>ServiceProviderHandlerFactory</c>. You must still register an
+    /// <c>IValidator&lt;TRequest&gt;</c> for each validated request — for example with FluentValidation's
+    /// <c>services.AddValidatorsFromAssembly(...)</c>.
+    /// </remarks>
+    public static IBrighterBuilder UseFluentValidation(this IBrighterBuilder brighterBuilder)
     {
-        /// <summary>
-        /// Selects FluentValidation as the validation provider by mapping the provider-agnostic
-        /// <see cref="ValidateRequestHandler{TRequest}"/> and <see cref="ValidateRequestHandlerAsync{TRequest}"/>
-        /// (the targets of <see cref="ValidateQueryAttribute"/> and <see cref="ValidateQueryAsyncAttribute"/>)
-        /// to their FluentValidation implementations.
-        /// </summary>
-        /// <param name="brighterBuilder">The Brighter builder to add the handlers to.</param>
-        /// <returns>The same <paramref name="brighterBuilder"/>, to allow fluent chaining.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="brighterBuilder"/> is null.</exception>
-        /// <remarks>
-        /// The handlers are registered as <see cref="ServiceLifetime.Transient"/>; their effective lifetime is
-        /// managed by Brighter's <c>ServiceProviderHandlerFactory</c>. You must still register an
-        /// <c>IValidator&lt;TRequest&gt;</c> for each validated request — for example with FluentValidation's
-        /// <c>services.AddValidatorsFromAssembly(...)</c>.
-        /// </remarks>
-        public static IBrighterBuilder UseFluentValidation(this IBrighterBuilder brighterBuilder)
-        {
-            if (brighterBuilder is null)
-                throw new ArgumentNullException(nameof(brighterBuilder));
+        if (brighterBuilder is null)
+            throw new ArgumentNullException(nameof(brighterBuilder));
 
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(ValidateRequestHandler<>), typeof(FluentValidationRequestHandler<>), ServiceLifetime.Transient));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(ValidateRequestHandlerAsync<>), typeof(FluentValidationRequestHandlerAsync<>), ServiceLifetime.Transient));
+        brighterBuilder.Services.Add(new ServiceDescriptor(typeof(ValidateRequestHandler<>), typeof(FluentValidationRequestHandler<>), ServiceLifetime.Transient));
+        brighterBuilder.Services.Add(new ServiceDescriptor(typeof(ValidateRequestHandlerAsync<>), typeof(FluentValidationRequestHandlerAsync<>), ServiceLifetime.Transient));
 
-            return brighterBuilder;
-        }
+        return brighterBuilder;
     }
 }

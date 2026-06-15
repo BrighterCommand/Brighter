@@ -22,11 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
+using Paramore.Brighter.RequestValidation.Attributes;
+
 namespace Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles
 {
     public class GreetingCommandHandler(HandlerReceipt receipt) : RequestHandler<GreetingCommand>
     {
-        [ValidateQuery(step: 0)]
+        [ValidateRequest(step: 0)]
         public override GreetingCommand Handle(GreetingCommand command)
         {
             receipt.Record(command.Name);

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.RequestValidation;
 using global::FluentValidation;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles
