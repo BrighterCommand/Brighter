@@ -134,7 +134,15 @@ namespace Paramore.Brighter
         /// from a thread that carries its own single-threaded synchronization context. Prefer
         /// <see cref="DisposeAsync"/> when the async confirmation pump is enabled.
         /// </summary>
-        public void Dispose() => BrighterAsyncContext.Run(async () => await DisposeAsync());
+        public void Dispose()
+        {
+            // The async pump is opt-in: when it never started there is nothing to drain, so keep
+            // Dispose a true no-op rather than spinning up a single-threaded BrighterAsyncContext on
+            // the default (sync-confirmation) path that the vast majority of callers use.
+            if (Volatile.Read(ref _pumpStarted) == 0)
+                return;
+            BrighterAsyncContext.Run(async () => await DisposeAsync());
+        }
 
         /// <summary>
         /// Dispose of the producer asynchronously. Two-stage drain: completes the channel
@@ -237,7 +245,7 @@ namespace Paramore.Brighter
                 return;
             }
             _bus.Enqueue(message);
-            OnMessagePublished?.Invoke(new PublishConfirmationResult(true, message.Id, null, null));
+            OnMessagePublished?.Invoke(new PublishConfirmationResult(true, message.Id, message.Header.Topic, null));
         }
 
         private async Task DrainAsync()
@@ -251,7 +259,7 @@ namespace Paramore.Brighter
                     continue;
                 }
                 _bus.Enqueue(item.Message);
-                var successResult = new PublishConfirmationResult(true, item.Message.Id, null, item.Context);
+                var successResult = new PublishConfirmationResult(true, item.Message.Id, item.Message.Header.Topic, item.Context);
                 // NOTE: when the subscriber is an async-void callback (as the mediator's success branch is, which
                 // awaits MarkDispatchedAsync), Invoke returns at its first await — so this raise Task completes, and
                 // DisposeAsync's drain therefore awaits, only up to that first await, NOT the whole callback. Do not
