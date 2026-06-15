@@ -30,6 +30,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -127,9 +128,13 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Dispose of the producer. Blocks until any in-flight async pump has fully drained
-        /// (channel completed, worker finished, all confirmation callbacks returned).
+        /// (channel completed, worker finished, all confirmation callbacks returned). The async
+        /// drain is pumped on a dedicated single-threaded <see cref="BrighterAsyncContext"/> rather
+        /// than blocking with <c>GetAwaiter().GetResult()</c>, so it does not deadlock when called
+        /// from a thread that carries its own single-threaded synchronization context. Prefer
+        /// <see cref="DisposeAsync"/> when the async confirmation pump is enabled.
         /// </summary>
-        public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
+        public void Dispose() => BrighterAsyncContext.Run(async () => await DisposeAsync());
 
         /// <summary>
         /// Dispose of the producer asynchronously. Two-stage drain: completes the channel
