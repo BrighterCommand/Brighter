@@ -89,11 +89,17 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // still tripped the wire topic and the Warning was still logged (AC-14).
             Assert.Contains(_topic, _circuitBreaker.TrippedTopics);
 
-            var warnings = TestCorrelator.GetLogEventsFromCurrentContext()
+            var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
+
+            var warnings = logEvents
                 .Where(e => e.Level == LogEventLevel.Warning)
                 .Where(e => e.RenderMessage().Contains(_topic.Value))
                 .ToList();
             Assert.Single(warnings);
+
+            // Assert: the observability fault itself is logged at Warning, never Error — nothing is lost
+            // (the message is safely in the Outbox for the Sweeper to retry), so NFR-1 applies (point 2).
+            Assert.DoesNotContain(logEvents, e => e.Level >= LogEventLevel.Error);
         }
     }
 }

@@ -757,7 +757,7 @@ namespace Paramore.Brighter
                     }
                     catch (Exception ex)
                     {
-                        Log.ConfirmationObservabilityError(s_logger, ex);
+                        Log.ConfirmationObservabilityFault(s_logger, ex);
                     }
 
                     try
@@ -843,7 +843,7 @@ namespace Paramore.Brighter
                     }
                     catch (Exception ex)
                     {
-                        Log.ConfirmationObservabilityError(s_logger, ex);
+                        Log.ConfirmationObservabilityFault(s_logger, ex);
                     }
 
                     try
@@ -1308,8 +1308,8 @@ namespace Paramore.Brighter
             [LoggerMessage(LogLevel.Warning, "Publish confirmation failed for message Id:{Id} on topic {Topic}")]
             public static partial void ConfirmationFailed(ILogger logger, string id, string topic);
 
-            [LoggerMessage(LogLevel.Error, "Observability failed while handling a publish confirmation; confirmation handling continued")]
-            public static partial void ConfirmationObservabilityError(ILogger logger, Exception ex);
+            [LoggerMessage(LogLevel.Warning, "Observability failed while handling a publish confirmation; confirmation handling continued")]
+            public static partial void ConfirmationObservabilityFault(ILogger logger, Exception ex);
 
             [LoggerMessage(LogLevel.Warning, "Error handling publish confirmation for message Id:{Id} on topic {Topic}; message left un-dispatched for Sweeper retry")]
             public static partial void ConfirmationDispatchError(ILogger logger, string id, string topic, Exception ex);

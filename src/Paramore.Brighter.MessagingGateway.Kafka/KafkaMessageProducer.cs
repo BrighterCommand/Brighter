@@ -384,6 +384,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         persistedId = new Id(val);
                 }
 
+                // Should not happen on the current path (MESSAGE_ID is always stamped). Log it so the
+                // degraded state is diagnosable: MarkDispatched(Id.Empty) matches no Outbox row, so the
+                // message stays un-dispatched and the Sweeper re-delivers it rather than being marked sent.
+                if (Id.IsNullOrEmpty(persistedId))
+                    Log.PersistedReportMissingId(s_logger, topic.Value);
+
                 RaisePublishConfirmation(new PublishConfirmationResult(true, persistedId, topic, publishContext));
                 return;
             }
@@ -418,7 +424,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
                 catch (Exception ex)
                 {
-                    Log.ErrorRaisingPublishConfirmation(s_logger, ex);
+                    Log.PublishConfirmationRaiseFault(s_logger, ex);
                 }
             });
         }
@@ -438,7 +444,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             public static partial void ErrorSendingMessageToKafka(ILogger logger, Exception exception, string servers, string errorMessage);
 
             [LoggerMessage(LogLevel.Warning, "A publish-confirmation subscriber threw while handling a Kafka delivery report; the fault was contained")]
-            public static partial void ErrorRaisingPublishConfirmation(ILogger logger, Exception exception);
+            public static partial void PublishConfirmationRaiseFault(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "Kafka reported topic {Topic} as persisted but the delivery report carried no message id; confirmation degraded to an empty id so the message stays un-dispatched for Sweeper retry")]
+            public static partial void PersistedReportMissingId(ILogger logger, string topic);
             
             [LoggerMessage(LogLevel.Error, "KafkaMessageProducer: There was an error sending to topic {Topic})")]
             public static partial void KafkaExceptionError(ILogger logger, Exception exception, string topic);
