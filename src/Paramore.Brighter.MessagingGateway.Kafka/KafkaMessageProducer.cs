@@ -384,9 +384,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         persistedId = new Id(val);
                 }
 
-                Task.Run(
-                    () => OnMessagePublished?.Invoke(new PublishConfirmationResult(true, persistedId, topic, publishContext))
-                );
+                RaisePublishConfirmation(new PublishConfirmationResult(true, persistedId, topic, publishContext));
                 return;
             }
 
@@ -403,9 +401,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     failureId = new Id(val);
             }
 
-            Task.Run(
-                () =>OnMessagePublished?.Invoke(new PublishConfirmationResult(false, failureId, topic, publishContext))
-            );
+            RaisePublishConfirmation(new PublishConfirmationResult(false, failureId, topic, publishContext));
+        }
+
+        private void RaisePublishConfirmation(PublishConfirmationResult result)
+        {
+            // Raise on a worker thread so we never block Confluent's delivery-report handler. Wrap the
+            // invoke so a faulting subscriber is logged rather than left as an unobserved Task exception
+            // (which can escalate via TaskScheduler.UnobservedTaskException). Brighter's own mediator
+            // callback is already self-contained; this guards any other subscriber and the broker thread.
+            Task.Run(() =>
+            {
+                try
+                {
+                    OnMessagePublished?.Invoke(result);
+                }
+                catch (Exception ex)
+                {
+                    Log.ErrorRaisingPublishConfirmation(s_logger, ex);
+                }
+            });
         }
 
         private static partial class Log
@@ -421,6 +436,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             [LoggerMessage(LogLevel.Error, "Error sending message to Kafka servers {Servers} because {ErrorMessage} ")]
             public static partial void ErrorSendingMessageToKafka(ILogger logger, Exception exception, string servers, string errorMessage);
+
+            [LoggerMessage(LogLevel.Warning, "A publish-confirmation subscriber threw while handling a Kafka delivery report; the fault was contained")]
+            public static partial void ErrorRaisingPublishConfirmation(ILogger logger, Exception exception);
             
             [LoggerMessage(LogLevel.Error, "KafkaMessageProducer: There was an error sending to topic {Topic})")]
             public static partial void KafkaExceptionError(ILogger logger, Exception exception, string topic);
