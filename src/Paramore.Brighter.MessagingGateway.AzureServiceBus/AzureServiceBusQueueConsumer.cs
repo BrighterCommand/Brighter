@@ -24,11 +24,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading;       
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.Tasks;
 
@@ -40,12 +40,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
 {
     protected override string SubscriptionName => "Queue";
-    protected override ILogger Logger => s_logger;
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusQueueConsumer>();
+    protected override ILogger Logger => _logger;
+    private readonly ILogger _logger;
     private readonly IServiceBusReceiverProvider _serviceBusReceiverProvider;
 
     private bool _queueCreated = false;
-        
+
     /// <summary>
     /// Initializes an Instance of <see cref="AzureServiceBusQueueConsumer"/> for Service Bus Queus
     /// </summary>
@@ -53,25 +53,28 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
     /// <param name="messageProducer">An instance of the Messaging Producer used for Requeue.</param>
     /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
     /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
     public AzureServiceBusQueueConsumer(AzureServiceBusSubscription subscription,
         IAmAMessageProducerSync messageProducer,
         IAdministrationClientWrapper administrationClientWrapper,
-        IServiceBusReceiverProvider serviceBusReceiverProvider) : base(subscription,
-        messageProducer, administrationClientWrapper)
+        IServiceBusReceiverProvider serviceBusReceiverProvider,
+        ILoggerFactory? loggerFactory = null) : base(subscription,
+        messageProducer, administrationClientWrapper, loggerFactory: loggerFactory)
     {
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureServiceBusQueueConsumer>();
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
     }
 
     protected override async Task GetMessageReceiverProviderAsync()
     {
-        Log.GettingMessageReceiverProviderAsync(s_logger, Topic);
+        Log.GettingMessageReceiverProviderAsync(_logger, Topic);
         try
         {
             ServiceBusReceiver = await _serviceBusReceiverProvider.GetAsync(Topic, SubscriptionConfiguration.RequireSession);
         }
         catch (Exception e)
         {
-            Log.FailedToGetMessageReceiverProviderAsync(s_logger, Topic, e);
+            Log.FailedToGetMessageReceiverProviderAsync(_logger, Topic, e);
         }
     }
         
@@ -80,7 +83,7 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
     /// </summary>
     public override async Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
     {
-        Log.PurgingMessagesFromQueueAsync(s_logger, Topic);
+        Log.PurgingMessagesFromQueueAsync(_logger, Topic);
 
         await AdministrationClientWrapper.DeleteQueueAsync(Topic);
         await EnsureChannelAsync();
@@ -111,7 +114,7 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
         {
             if (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
             {
-                Log.MessageEntityAlreadyExists(s_logger, Topic);
+                Log.MessageEntityAlreadyExists(_logger, Topic);
                 _queueCreated = true;
             }
             else
@@ -121,7 +124,7 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
         }
         catch (Exception e)
         {
-            Log.FailingToCheckOrCreateSubscription(s_logger, e);
+            Log.FailingToCheckOrCreateSubscription(_logger, e);
 
             //The connection to Azure Service bus may have failed so we re-establish the connection.
             AdministrationClientWrapper.Reset();

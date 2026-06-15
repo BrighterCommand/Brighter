@@ -28,7 +28,8 @@ using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using Microsoft.Data.Sqlite;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Sqlite;
 
@@ -47,12 +48,14 @@ public class SqliteOutbox : RelationDatabaseOutbox
     /// </summary>
     /// <param name="configuration">The configuration to connect to this data store</param>
     /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
+    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
     public SqliteOutbox(
         IAmARelationalDatabaseConfiguration configuration,
-        IAmARelationalDbConnectionProvider connectionProvider
+        IAmARelationalDbConnectionProvider connectionProvider,
+        ILogger? logger = null
     )
-        : base(DbSystem.Sqlite, configuration, connectionProvider, 
-            new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutbox>())
+        : base(DbSystem.Sqlite, configuration, connectionProvider,
+            new SqliteQueries(), logger ?? NullLogger<SqliteOutbox>.Instance)
     {
     }
 
@@ -60,8 +63,9 @@ public class SqliteOutbox : RelationDatabaseOutbox
     /// Initializes a new instance of the <see cref="SqliteOutbox" /> class.
     /// </summary>
     /// <param name="configuration">The configuration to connect to this data store</param>
-    public SqliteOutbox(IAmARelationalDatabaseConfiguration configuration)
-        : this(configuration, new SqliteConnectionProvider(configuration))
+    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+    public SqliteOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger? logger = null)
+        : this(configuration, new SqliteConnectionProvider(configuration), logger)
     {
     }
 

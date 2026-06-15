@@ -26,8 +26,9 @@ THE SOFTWARE. */
 using System;
 using System.Data;
 using System.Data.Common;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MySqlConnector;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MySql;
 using Paramore.Brighter.Observability;
 
@@ -45,10 +46,12 @@ namespace Paramore.Brighter.Outbox.MySql
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
+        /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
         public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration,
-            IAmARelationalDbConnectionProvider connectionProvider)
-            : base(DbSystem.MySql, configuration, connectionProvider, 
-                new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
+            IAmARelationalDbConnectionProvider connectionProvider,
+            ILogger? logger = null)
+            : base(DbSystem.MySql, configuration, connectionProvider,
+                new MySqlQueries(), logger ?? NullLogger<MySqlOutbox>.Instance)
         {
         }
 
@@ -56,8 +59,9 @@ namespace Paramore.Brighter.Outbox.MySql
         /// Initializes a new instance of the <see cref="MySqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
-        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration)
-            : this(configuration, new MySqlConnectionProvider(configuration))
+        /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger? logger = null)
+            : this(configuration, new MySqlConnectionProvider(configuration), logger)
         {
         }
 

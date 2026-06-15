@@ -28,15 +28,15 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
-public partial class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(channel)
+public partial class PullConsumer(IChannel channel, ILoggerFactory? loggerFactory = null) : AsyncDefaultBasicConsumer(channel)
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageConsumer>();
 
     //we do end up creating a second buffer to the Brighter Channel, but controlling the flow from RMQ depends
     //on us being able to buffer up to the set QoS and then pull. This matches other implementations.
@@ -131,7 +131,7 @@ public partial class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(
         catch (Exception e)
         {
             //don't impede shutdown, just log
-            Log.NackUnhandledMessagesOnShutdownFailed(s_logger, e.Message);
+            Log.NackUnhandledMessagesOnShutdownFailed(_logger, e.Message);
         }
 
         await base.OnCancelAsync(consumerTags, cancellationToken);

@@ -31,8 +31,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 using RabbitMQ.Client.Events;
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
         private readonly InstrumentationOptions _instrumentationOptions;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
+        private readonly ILogger _logger;
 
         static readonly object s_lock = new();
         private RmqPublication _publication;
@@ -88,9 +88,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </summary>
         /// <param name="connection">The subscription information needed to talk to RMQ</param>
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
         /// Make Channels = Create
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-            : this(connection, new RmqPublication { MakeChannels = OnMissingChannel.Create })
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All, ILoggerFactory? loggerFactory = null)
+            : this(connection, new RmqPublication { MakeChannels = OnMissingChannel.Create }, loggerFactory)
         {
             _instrumentationOptions = instrumentationOptions;
         }
@@ -102,9 +103,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="publication">How should we configure this producer. If not provided use default behaviours:
         ///     Make Channels = Create
         /// </param>
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection, RmqPublication publication)
-            : base(connection)
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection, RmqPublication publication, ILoggerFactory? loggerFactory = null)
+            : base(connection, loggerFactory)
         {
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageProducer>();
             _publication = publication ?? new RmqPublication { MakeChannels = OnMissingChannel.Create };
             _waitForConfirmsTimeOutInMilliseconds = _publication.WaitForConfirmsTimeOutInMilliseconds;
         }
@@ -135,9 +138,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 {
                     EnsureBroker(makeExchange: _publication.MakeChannels);
                     //NOTE: EnsureBroker will create a channel if one does not exist
-                    Log.PreparingToSend(s_logger, Connection.Exchange!.Name);
+                    Log.PreparingToSend(_logger, Connection.Exchange!.Name);
 
-                    var rmqMessagePublisher = new RmqMessagePublisher(Channel!, Connection);
+                    var rmqMessagePublisher = new RmqMessagePublisher(Channel!, Connection, LoggerFactory);
 
                     message.Persist = Connection.PersistMessages;
                     Channel!.BasicAcks += OnPublishSucceeded;
@@ -147,7 +150,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
                     BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message, _instrumentationOptions);
 
-                    Log.PublishingMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri!.GetSanitizedUri(), delay.Value.TotalMilliseconds,
+                    Log.PublishingMessage(_logger, Connection.Exchange.Name, Connection.AmpqUri!.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                         message.Header.Topic.Value, message.Persist, message.Id.Value, message.Body.Value);
 
                     _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, message.Id.Value);
@@ -167,14 +170,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                          schedulerSync.Schedule(message, delay.Value);
                      }
 
-                    Log.PublishedMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
+                    Log.PublishedMessage(_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
                         message.Header.Topic.Value, message.Persist, message.Id.Value,
                         JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow);
                 }
             }
             catch (IOException io)
             {
-                Log.ErrorTalkingToSocket(s_logger, io, Connection.AmpqUri!.GetSanitizedUri());
+                Log.ErrorTalkingToSocket(_logger, io, Connection.AmpqUri!.GetSanitizedUri());
                 ResetConnectionToBroker();
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
             }
@@ -221,7 +224,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     //As we are disposing, just let that happen
                     Channel.WaitForConfirms(TimeSpan.FromMilliseconds(_waitForConfirmsTimeOutInMilliseconds), out bool timedOut);
                     if (timedOut)
-                        Log.FailedToAwaitPublisherConfirms(s_logger);
+                        Log.FailedToAwaitPublisherConfirms(_logger);
                 }
             }
 
@@ -234,7 +237,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             {
                 OnMessagePublished?.Invoke(false, messageId);
                 _pendingConfirmations.TryRemove(e.DeliveryTag, out string? _);
-                Log.FailedToPublishMessage(s_logger, messageId);
+                Log.FailedToPublishMessage(_logger, messageId);
             }
         }
 
@@ -244,7 +247,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             {
                 OnMessagePublished?.Invoke(true, messageId);
                 _pendingConfirmations.TryRemove(e.DeliveryTag, out string? _);
-                Log.PublishedMessageInformation(s_logger, messageId);
+                Log.PublishedMessageInformation(_logger, messageId);
             }
         }
 

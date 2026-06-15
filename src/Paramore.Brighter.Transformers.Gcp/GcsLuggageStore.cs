@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Google;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Storage;
 
@@ -39,10 +39,10 @@ namespace Paramore.Brighter.Transformers.Gcp;
 /// Integrates with Brighter's tracing via <see cref="IAmABrighterTracer"/> and provides structured logging through <see cref="ILogger"/>.
 /// </para>
 /// </remarks>
-public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStorageProvider, IAmAStorageProviderAsync
+public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory? loggerFactory = null) : IAmAStorageProvider, IAmAStorageProviderAsync
 {
     private const string ClaimCheckProvider = "gcp_gcs";
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcsLuggageStore>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<GcsLuggageStore>();
     private static readonly Dictionary<string, string> s_spanAttributes = new();
     
     /// <inheritdoc cref="IAmAStorageProvider.Tracer" />
@@ -82,7 +82,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStoragePro
         }
         catch(Exception e)
         {
-            Log.ErrorCreatingValidatingLuggageStore(s_logger, options.BucketName, e);
+            Log.ErrorCreatingValidatingLuggageStore(_logger, options.BucketName, e);
             throw;   
         }
     }
@@ -98,7 +98,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStoragePro
         }
         catch (GoogleApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
         {
-            Log.CouldNotDeleteLuggage(s_logger, claimCheck, options.BucketName);
+            Log.CouldNotDeleteLuggage(_logger, claimCheck, options.BucketName);
         }
         finally
         {
@@ -122,7 +122,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStoragePro
         }
         catch (Exception e)
         {
-            Log.UnableToRead(s_logger, claimCheck, options.BucketName, e);
+            Log.UnableToRead(_logger, claimCheck, options.BucketName, e);
             throw;
         }
         finally
@@ -224,7 +224,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStoragePro
         }
         catch (GoogleApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
         {
-            Log.CouldNotDeleteLuggage(s_logger, claimCheck, options.BucketName);
+            Log.CouldNotDeleteLuggage(_logger, claimCheck, options.BucketName);
         }
         finally
         {
@@ -248,7 +248,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options) : IAmAStoragePro
         }
         catch (Exception e)
         {
-            Log.UnableToRead(s_logger, claimCheck, options.BucketName, e);
+            Log.UnableToRead(_logger, claimCheck, options.BucketName, e);
             throw;
         }
         finally

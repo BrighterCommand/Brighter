@@ -31,8 +31,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client.Exceptions;
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// </summary>
 public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
+    private readonly ILogger _logger;
 
     private PullConsumer? _consumer;
     private RmqMessageProducer? _requeueProducer;
@@ -85,6 +85,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="makeChannels">Should we validate, or create missing channels</param>
     /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
     /// <param name="scheduler">Optional scheduler for delayed requeue operations</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
     public RmqMessageConsumer(
         RmqMessagingGatewayConnection connection,
         ChannelName queueName,
@@ -98,9 +99,10 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         int? maxQueueLength = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         QueueType queueType = QueueType.Classic,
-        IAmAMessageScheduler? scheduler = null)
+        IAmAMessageScheduler? scheduler = null,
+        ILoggerFactory? loggerFactory = null)
         : this(connection, queueName, new RoutingKeys(routingKey), isDurable, highAvailability,
-            batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, queueType, scheduler)
+            batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, queueType, scheduler, loggerFactory)
     {
     }
 
@@ -120,6 +122,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="makeChannels">Should we validate or create missing channels</param>
     /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
     /// <param name="scheduler">Optional scheduler for delayed requeue operations</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
     public RmqMessageConsumer(
         RmqMessagingGatewayConnection connection,
         ChannelName queueName,
@@ -133,9 +136,11 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         int? maxQueueLength = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         QueueType queueType = QueueType.Classic,
-        IAmAMessageScheduler? scheduler = null)
-        : base(connection)
+        IAmAMessageScheduler? scheduler = null,
+        ILoggerFactory? loggerFactory = null)
+        : base(connection, loggerFactory)
     {
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageConsumer>();
         _queueName = queueName;
         _routingKeys = routingKeys;
         _isDurable = isDurable;
@@ -176,12 +181,12 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
             
-            Log.AcknowledgingMessage(s_logger, message.Id.Value, deliveryTag);
+            Log.AcknowledgingMessage(_logger, message.Id.Value, deliveryTag);
             await Channel.BasicAckAsync(deliveryTag, false, cancellationToken);
         }
         catch (Exception exception)
         {
-            Log.ErrorAcknowledgingMessage(s_logger, exception, message.Id.Value, deliveryTag);
+            Log.ErrorAcknowledgingMessage(_logger, exception, message.Id.Value, deliveryTag);
             throw;
         }
     }
@@ -200,7 +205,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
 
-            Log.PurgingChannel(s_logger, _queueName.Value);
+            Log.PurgingChannel(_logger, _queueName.Value);
 
             try
             {
@@ -218,7 +223,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         }
         catch (Exception exception)
         {
-            Log.ErrorPurgingChannel(s_logger, exception, _queueName.Value);
+            Log.ErrorPurgingChannel(_logger, exception, _queueName.Value);
             throw;
         }
     }
@@ -255,7 +260,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
            if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
 
-            Log.RetrievingNextMessage(s_logger, _queueName.Value,
+            Log.RetrievingNextMessage(_logger, _queueName.Value,
                 string.Join(";", _routingKeys.Select(rk => rk.Value)),
                 Connection.Exchange.Name,
                 Connection.AmpqUri.GetSanitizedUri());
@@ -270,7 +275,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
                 var message = RmqMessageCreator.CreateMessage(results![i]);
                 messages[i] = message;
 
-                Log.ReceivedMessage(s_logger, _queueName.Value,
+                Log.ReceivedMessage(_logger, _queueName.Value,
                     string.Join(";", _routingKeys.Select(rk => rk.Value)),
                     Connection.Exchange.Name,
                     Connection.AmpqUri.GetSanitizedUri(),
@@ -322,12 +327,12 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
 
-            Log.NackingMessage(s_logger, message.Id.Value, deliveryTag);
+            Log.NackingMessage(_logger, message.Id.Value, deliveryTag);
             await Channel.BasicNackAsync(deliveryTag, false, true, cancellationToken);
         }
         catch (Exception exception)
         {
-            Log.ErrorNackingMessage(s_logger, exception, message.Id.Value, deliveryTag);
+            Log.ErrorNackingMessage(_logger, exception, message.Id.Value, deliveryTag);
             throw;
         }
     }
@@ -356,7 +361,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
             var description = reason is null ? "unknown" : reason.Description ?? "unknown";
             
-            Log.NoAckMessage(s_logger, message.Id.Value, message.DeliveryTag, reasonString, description);
+            Log.NoAckMessage(_logger, message.Id.Value, message.DeliveryTag, reasonString, description);
             
             //if we have a DLQ, this will force over to the DLQ
             await Channel.BasicRejectAsync(message.DeliveryTag, false, cancellationToken);
@@ -364,7 +369,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         }
         catch (Exception exception)
         {
-            Log.ErrorNoAckMessage(s_logger, exception, message.Id.Value);
+            Log.ErrorNoAckMessage(_logger, exception, message.Id.Value);
             throw;
         }
     }
@@ -423,7 +428,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
         try
         {
-            Log.RequeueingMessage(s_logger, message.Id.Value, timeout.Value.TotalMilliseconds);
+            Log.RequeueingMessage(_logger, message.Id.Value, timeout.Value.TotalMilliseconds);
 
             await EnsureChannelAsync(cancellationToken);
 
@@ -434,7 +439,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             // timeout is guaranteed non-null here due to the ??= TimeSpan.Zero coalescing at the top of this method
             if (DelaySupported || timeout <= TimeSpan.Zero)
             {
-                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
+                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection, LoggerFactory);
                 await rmqMessagePublisher.RequeueMessageAsync(message, _queueName, timeout.Value, cancellationToken);
             }
             else
@@ -447,14 +452,14 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             // If this fails after a successful publish, the message may be duplicated (not lost).
             // Consumers should be idempotent to handle potential duplicates.
             var deliveryTag = message.DeliveryTag;
-            Log.DeletingMessage(s_logger, message.Id.Value, deliveryTag);
+            Log.DeletingMessage(_logger, message.Id.Value, deliveryTag);
             await Channel.BasicAckAsync(deliveryTag, false, cancellationToken);
 
             return true;
         }
         catch (Exception exception)
         {
-            Log.ErrorRequeueingMessage(s_logger, exception, message.Id.Value);
+            Log.ErrorRequeueingMessage(_logger, exception, message.Id.Value);
             return false;
         }
     }
@@ -485,7 +490,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
            if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
 
-            Log.CreatedChannel(s_logger, Channel.ChannelNumber, _queueName.Value,
+            Log.CreatedChannel(_logger, Channel.ChannelNumber, _queueName.Value,
                 string.Join(";", _routingKeys.Select(rk => rk.Value)),
                 Connection.Exchange.Name,
                 Connection.AmpqUri.GetSanitizedUri());
@@ -511,7 +516,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
        if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
         
-        _consumer = new PullConsumer(Channel);
+        _consumer = new PullConsumer(Channel, LoggerFactory);
         if (_consumer is null) throw new InvalidOperationException($"RmqMessageConsumer: consumer for {_queueName.Value} is null");
         
         await _consumer.SetChannelBatchSizeAsync(_batchSize);
@@ -525,7 +530,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             _consumer,
             cancellationToken: cancellationToken);
 
-        Log.CreatedConsumer(s_logger, _queueName.Value,
+        Log.CreatedConsumer(_logger, _queueName.Value,
             string.Join(";", _routingKeys.Select(rk => rk.Value)),
             Connection.Exchange.Name,
             Connection.AmpqUri.GetSanitizedUri());
@@ -537,7 +542,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
        if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
         
-        Log.CreatingQueue(s_logger, _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
+        Log.CreatingQueue(_logger, _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
         await Channel.QueueDeclareAsync(_queueName.Value, _isDurable, false, false, SetQueueArguments(),
             cancellationToken: cancellationToken);
         
@@ -572,7 +577,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null", exception);
        if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null", exception);
         
-        Log.ErrorListeningToQueue(s_logger, exception, _queueName.Value,
+        Log.ErrorListeningToQueue(_logger, exception, _queueName.Value,
             string.Join(";", _routingKeys.Select(rk => rk.Value)),
             Connection.Exchange.Name,
             Connection.AmpqUri.GetSanitizedUri());
@@ -587,7 +592,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
        if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
 
-        Log.ValidatingQueue(s_logger, _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
+        Log.ValidatingQueue(_logger, _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
 
         try
         {
@@ -641,7 +646,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     {
 #pragma warning disable CS0420 // LazyInitializer handles the memory barrier for the volatile field
         LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
-            ref _requeueProducerLock, () => new RmqMessageProducer(Connection)
+            ref _requeueProducerLock, () => new RmqMessageProducer(Connection, loggerFactory: LoggerFactory)
             {
                 Scheduler = _scheduler
             });

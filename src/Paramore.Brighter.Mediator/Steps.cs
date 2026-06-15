@@ -27,8 +27,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -52,13 +52,14 @@ public abstract class Step<TData>(
     string name,
     Sequential<TData>? next,
     IStepTask<TData>? stepTask = null,
-    Action? onCompletion = null) 
+    Action? onCompletion = null,
+    ILoggerFactory? loggerFactory = null)
 {
     /// <summary> Which job is being executed by the step. </summary>
     protected Job<TData>? Job ;
 
     /// <summary> The logger for the step. </summary>
-    protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Step<TData>>();
+    protected readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<Step<TData>>();
     
     /// <summary>The name of the step, used for tracing execution</summary>
     public string Name { get; init; } = name;
@@ -116,9 +117,10 @@ public class ExclusiveChoice<TData>(
     ISpecification<TData> predicate,
     Action? onCompletion,
     Sequential<TData>? nextTrue,
-    Sequential<TData>? nextFalse
+    Sequential<TData>? nextFalse,
+    ILoggerFactory? loggerFactory = null
 )
-    : Step<TData>(name, null, null, onCompletion)
+    : Step<TData>(name, null, null, onCompletion, loggerFactory)
 {
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
@@ -158,8 +160,9 @@ public class ExclusiveChoice<TData>(
 
 public class ParallelSplit<TData>(
     string name,
-    Func<TData, IEnumerable<Step<TData>>>? onMap)
-    : Step<TData>(name, null)
+    Func<TData, IEnumerable<Step<TData>>>? onMap,
+    ILoggerFactory? loggerFactory = null)
+    : Step<TData>(name, null, loggerFactory: loggerFactory)
 {
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
@@ -223,14 +226,15 @@ public class ParallelSplit<TData>(
 /// <param name="faultNext">The next step in the sequence, following a faulted execution of the step</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
 public class Sequential<TData>(
-    string name, 
-    IStepTask<TData> stepTask, 
-    Action? onCompletion, 
-    Sequential<TData>? next, 
-    Action? onFaulted = null, 
-    Sequential<TData>? faultNext = null
-) 
-    : Step<TData>(name, next, stepTask, onCompletion)
+    string name,
+    IStepTask<TData> stepTask,
+    Action? onCompletion,
+    Sequential<TData>? next,
+    Action? onFaulted = null,
+    Sequential<TData>? faultNext = null,
+    ILoggerFactory? loggerFactory = null
+)
+    : Step<TData>(name, next, stepTask, onCompletion, loggerFactory)
 {
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
@@ -254,7 +258,7 @@ public class Sequential<TData>(
         
         if (StepTask is null)
         {
-            s_logger.LogWarning("No task to execute for {Name}", Name);
+            _logger.LogWarning("No task to execute for {Name}", Name);
             State = StepState.Done;
             await stateStore.SaveJobAsync(Job, cancellationToken);
             return;
@@ -303,9 +307,10 @@ public class Wait<TData> : Step<TData>
     /// <param name="name">The name of the step, used for tracing execution</param>
     /// <param name="duration">The period for which we pause</param>
     /// <param name="next">The next step in the sequence, null if this is the last step.</param>
+    /// <param name="loggerFactory">The factory used to create the logger for this step.</param>
     /// <typeparam name="TData">The data that the step operates over</typeparam>
-    public Wait(string name, TimeSpan duration, Sequential<TData>? next) 
-        : base(name, next)
+    public Wait(string name, TimeSpan duration, Sequential<TData>? next, ILoggerFactory? loggerFactory = null)
+        : base(name, next, loggerFactory: loggerFactory)
     {
         _duration = duration;
     }

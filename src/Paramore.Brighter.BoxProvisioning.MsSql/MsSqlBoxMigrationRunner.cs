@@ -28,7 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.MsSql;
@@ -65,9 +65,10 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         IAmABrighterTracer? tracer = null,
-        MigrationHistoryScope scope = MigrationHistoryScope.Global)
+        MigrationHistoryScope scope = MigrationHistoryScope.Global,
+        ILoggerFactory? loggerFactory = null)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? ApplicationLogging.CreateLogger<MsSqlBoxMigrationRunner>(),
+            logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MsSqlBoxMigrationRunner>(),
             tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
@@ -86,8 +87,9 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         IMsSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         IAmABrighterTracer? tracer = null,
-        MigrationHistoryScope scope = MigrationHistoryScope.Global)
-        : this(new MsSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope)
+        MigrationHistoryScope scope = MigrationHistoryScope.Global,
+        ILoggerFactory? loggerFactory = null)
+        : this(new MsSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope, loggerFactory)
     {
     }
 

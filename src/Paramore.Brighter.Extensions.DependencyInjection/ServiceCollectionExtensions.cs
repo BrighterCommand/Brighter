@@ -30,6 +30,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
@@ -680,11 +681,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         private static IAmACommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
-            var loggerFactory = provider.GetService<ILoggerFactory>();
-            //if not supplied, use the default logger factory, which has no providers
-            if (loggerFactory != null)
-                ApplicationLogging.LoggerFactory = loggerFactory;
-
+            //Resolve the container's logger factory and flow it through the builder as an instance,
+            //rather than copying it into a process-wide static (which would be disposed with the container).
+            var loggerFactory = provider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
 
             var options = provider.GetRequiredService<IBrighterOptions>();
             var subscriberRegistry = provider.GetRequiredService<ServiceCollectionSubscriberRegistry>();
@@ -712,6 +711,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 .ConfigureInstrumentation(provider.GetService<IAmABrighterTracer>(), options.InstrumentationOptions)
                 .RequestContextFactory(provider.GetRequiredService<IAmARequestContextFactory>())
                 .RequestSchedulerFactory(provider.GetRequiredService<IAmARequestSchedulerFactory>())
+                .ConfigureLogging(loggerFactory)
                 .Build();
             
             var eventBusConfiguration = provider.GetService<IAmProducersConfiguration>();
@@ -751,7 +751,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 busConfiguration.MaxOutStandingCheckInterval,
                 busConfiguration.OutBoxBag,
                 TimeProvider.System,
-                busConfiguration.InstrumentationOptions);
+                busConfiguration.InstrumentationOptions,
+                serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance);
         }
 
         /// <summary>

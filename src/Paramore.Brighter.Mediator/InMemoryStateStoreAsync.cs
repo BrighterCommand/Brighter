@@ -29,7 +29,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -41,15 +41,16 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
     private readonly ConcurrentDictionary<string, Job?> _jobs = new();
     private readonly TimeProvider _timeProvider;
     private DateTimeOffset _sinceTime;
-    
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryStateStoreAsync>();
+
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Represents an in-memory store for jobs.
     /// </summary>
-    public InMemoryStateStoreAsync(TimeProvider? timeProvider = null)
+    public InMemoryStateStoreAsync(TimeProvider? timeProvider = null, ILoggerFactory? loggerFactory = null)
     {
         _timeProvider = timeProvider ??  TimeProvider.System;
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<InMemoryStateStoreAsync>();
     }
 
     /// <summary>
@@ -111,7 +112,7 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
         }
         catch (Exception e)
         {
-            s_logger.LogError($"Error saving job {job.Id} to in-memory store: {e.Message}"); 
+            _logger.LogError($"Error saving job {job.Id} to in-memory store: {e.Message}");
             return Task.FromException(e);
         }
     }

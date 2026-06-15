@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Tasks;
 
 #region Licence
@@ -35,14 +36,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 public class AzureServiceBusChannelFactory : IAmAChannelFactory
 {
     private readonly AzureServiceBusConsumerFactory _azureServiceBusConsumerFactory;
+    private readonly ILoggerFactory? _loggerFactory;
 
     /// <summary>
     /// Initializes an Instance of <see cref="AzureServiceBusConsumerFactory"/>
     /// </summary>
     /// <param name="azureServiceBusConsumerFactory">An Azure Service Bus Consumer Factory.</param>
-    public AzureServiceBusChannelFactory(AzureServiceBusConsumerFactory azureServiceBusConsumerFactory)
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers</param>
+    public AzureServiceBusChannelFactory(AzureServiceBusConsumerFactory azureServiceBusConsumerFactory, ILoggerFactory? loggerFactory = null)
     {
         _azureServiceBusConsumerFactory = azureServiceBusConsumerFactory;
+        _loggerFactory = loggerFactory;
     }
 
     /// <summary>

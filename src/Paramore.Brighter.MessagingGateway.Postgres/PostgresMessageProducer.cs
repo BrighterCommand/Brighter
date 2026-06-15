@@ -4,10 +4,10 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
@@ -21,9 +21,10 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 public partial class PostgresMessageProducer(
     RelationalDatabaseConfiguration configuration,
     PostgresPublication publication,
-    InstrumentationOptions instrumentations = InstrumentationOptions.All) : IAmAMessageProducerAsync, IAmAMessageProducerSync
+    InstrumentationOptions instrumentations = InstrumentationOptions.All,
+    ILoggerFactory? loggerFactory = null) : IAmAMessageProducerAsync, IAmAMessageProducerSync
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresMessageProducer>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PostgresMessageProducer>();
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
     private PostgresPublication _publication = publication;
 
@@ -56,7 +57,7 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
+        Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
@@ -66,7 +67,7 @@ public partial class PostgresMessageProducer(
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
         var id = await command.ExecuteScalarAsync(cancellationToken);
         
-        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
+        Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
     /// <inheritdoc />
@@ -84,7 +85,7 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
+        Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
@@ -95,7 +96,7 @@ public partial class PostgresMessageProducer(
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
         var id = await command.ExecuteScalarAsync(cancellationToken);
         
-        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
+        Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
     
     /// <inheritdoc />
@@ -107,7 +108,7 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
+        Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         using var connection = _connectionProvider.GetConnection();
         using var command = connection.CreateCommand();
@@ -117,7 +118,7 @@ public partial class PostgresMessageProducer(
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
         var id = command.ExecuteScalar();
         
-        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
+        Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
     /// <inheritdoc />
@@ -135,7 +136,7 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
+        Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         using var connection = _connectionProvider.GetConnection();
         using var command = connection.CreateCommand();
@@ -146,7 +147,7 @@ public partial class PostgresMessageProducer(
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
         var id = command.ExecuteScalar();
         
-        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
+        Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
 

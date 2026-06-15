@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -135,11 +136,10 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
         {
-            var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
-            //if not supplied, use the default logger factory, which has no providers
-            if (loggerFactory != null)
-                ApplicationLogging.LoggerFactory = loggerFactory;
-        
+            //Resolve the container's logger factory and flow it through the builder as an instance,
+            //rather than copying it into a process-wide static (which would be disposed with the container).
+            var loggerFactory = serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
+
             var options = serviceProvider.GetRequiredService<IAmConsumerOptions>();
             
             var commandProcessor = serviceProvider.GetRequiredService<IAmACommandProcessor>();
@@ -178,6 +178,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 .ChannelFactory(channelFactory)
                 .Subscriptions(options.Subscriptions)
                 .ConfigureInstrumentation(tracer, options.InstrumentationOptions)
+                .ConfigureLogging(loggerFactory)
                 .Build();
         }
 

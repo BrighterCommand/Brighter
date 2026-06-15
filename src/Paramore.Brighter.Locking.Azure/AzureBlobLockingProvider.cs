@@ -27,7 +27,7 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Locking.Azure;
 
@@ -35,12 +35,13 @@ namespace Paramore.Brighter.Locking.Azure;
 /// The Azure Blob provider for distributed locks
 /// </summary>
 /// <param name="options"></param>
-public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options) : IDistributedLock
+/// <param name="loggerFactory"></param>
+public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options, ILoggerFactory? loggerFactory = null) : IDistributedLock
 {
     private readonly BlobContainerClient _containerClient =
         new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
 
-    private readonly ILogger _logger = ApplicationLogging.CreateLogger<AzureBlobLockingProviderOptions>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureBlobLockingProviderOptions>();
 
     /// <summary>
     /// Attempt to obtain a lock on a resource

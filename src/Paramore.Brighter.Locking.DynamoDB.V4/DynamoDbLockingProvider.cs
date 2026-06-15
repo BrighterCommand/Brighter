@@ -24,7 +24,7 @@ THE SOFTWARE. */
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Locking.DynamoDB.V4;
 
@@ -34,18 +34,19 @@ public partial class DynamoDbLockingProvider : IDistributedLock
     private readonly DynamoDbLockingProviderOptions _options;
     private readonly TimeProvider _timeProvider;
 
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<DynamoDbLockingProvider>();
+    private readonly ILogger _logger;
 
-    public DynamoDbLockingProvider(IAmazonDynamoDB dynamoDb, DynamoDbLockingProviderOptions options)
-        :this(dynamoDb, options, TimeProvider.System)
+    public DynamoDbLockingProvider(IAmazonDynamoDB dynamoDb, DynamoDbLockingProviderOptions options, ILoggerFactory? loggerFactory = null)
+        :this(dynamoDb, options, TimeProvider.System, loggerFactory)
     {
     }
 
-    public DynamoDbLockingProvider(IAmazonDynamoDB dynamoDb, DynamoDbLockingProviderOptions options, TimeProvider timeProvider)
+    public DynamoDbLockingProvider(IAmazonDynamoDB dynamoDb, DynamoDbLockingProviderOptions options, TimeProvider timeProvider, ILoggerFactory? loggerFactory = null)
     {
         _dynamoDb = dynamoDb;
         _options = options;
         _timeProvider = timeProvider;
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<DynamoDbLockingProvider>();
     }
 
     /// <summary>
@@ -64,11 +65,11 @@ public partial class DynamoDbLockingProvider : IDistributedLock
         }
         catch (ConditionalCheckFailedException)
         {
-            Log.UnableToObtainLockForResource(s_logger, resource);
+            Log.UnableToObtainLockForResource(_logger, resource);
             return null;
         }
 
-        Log.ObtainedLockForResource(s_logger, lockId, resource);
+        Log.ObtainedLockForResource(_logger, lockId, resource);
         return lockId;
     }
 
@@ -89,7 +90,7 @@ public partial class DynamoDbLockingProvider : IDistributedLock
             }
             catch (ConditionalCheckFailedException)
             {
-                Log.UnableToReleaseLockForResource(s_logger, lockId, resource);
+                Log.UnableToReleaseLockForResource(_logger, lockId, resource);
             }
         }
     }

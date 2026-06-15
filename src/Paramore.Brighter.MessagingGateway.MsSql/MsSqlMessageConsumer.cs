@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
 
@@ -11,7 +11,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     public partial class MsSqlMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private readonly string _topic;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumer>();
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory? _loggerFactory;
         private readonly MsSqlMessageQueue<Message> _sqlMessageQueue;
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
         private readonly RoutingKey? _deadLetterRoutingKey;
@@ -29,11 +30,14 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             RelationalDbConnectionProvider connectionProvider,
             IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
-            RoutingKey? invalidMessageRoutingKey = null)
+            RoutingKey? invalidMessageRoutingKey = null,
+            ILoggerFactory? loggerFactory = null)
         {
+            _loggerFactory = loggerFactory;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MsSqlMessageConsumer>();
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
             _msSqlConfiguration = msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
-            _sqlMessageQueue = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider);
+            _sqlMessageQueue = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider, loggerFactory);
             _scheduler = scheduler;
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
@@ -52,8 +56,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             string topic,
             IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
-            RoutingKey? invalidMessageRoutingKey = null)
-            : this(msSqlConfiguration, topic, new MsSqlConnectionProvider(msSqlConfiguration), scheduler, deadLetterRoutingKey, invalidMessageRoutingKey)
+            RoutingKey? invalidMessageRoutingKey = null,
+            ILoggerFactory? loggerFactory = null)
+            : this(msSqlConfiguration, topic, new MsSqlConnectionProvider(msSqlConfiguration), scheduler, deadLetterRoutingKey, invalidMessageRoutingKey, loggerFactory)
         {}
 
         /// <summary>
@@ -89,13 +94,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         public void Purge()
         {
-            Log.PurgingQueue(s_logger);
+            Log.PurgingQueue(_logger);
             _sqlMessageQueue.Purge();
         }
 
         public async Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            Log.PurgingQueue(s_logger);
+            Log.PurgingQueue(_logger);
             await Task.Run( () => _sqlMessageQueue.Purge(), cancellationToken);
         }
 
@@ -149,7 +154,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
                 if (reason != null)
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, reason.RejectionReason.ToString());
 
                 return true;
             }
@@ -168,7 +173,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDlq(s_logger, message.Id.Value);
+                        Log.FallingBackToDlq(_logger, message.Id.Value);
 
                     if (routingKey == _invalidMessageRoutingKey)
                         producer = _invalidMessageProducer?.Value;
@@ -179,11 +184,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 if (producer != null)
                 {
                     producer.Send(message);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(_logger, message.Id.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
@@ -191,7 +196,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 // DLQ send failed — the message was already atomically deleted from the source
                 // queue on Receive, so we cannot requeue it. Log and return true to prevent the
                 // message pump from retrying endlessly.
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
+                Log.ErrorSendingToRejectionChannel(_logger, ex, message.Id.Value, rejectionReason.ToString());
                 return true;
             }
 
@@ -213,7 +218,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
                 if (reason != null)
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, reason.RejectionReason.ToString());
 
                 return true;
             }
@@ -232,7 +237,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDlq(s_logger, message.Id.Value);
+                        Log.FallingBackToDlq(_logger, message.Id.Value);
 
                     if (routingKey == _invalidMessageRoutingKey)
                         producer = _invalidMessageProducer?.Value;
@@ -243,11 +248,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 if (producer != null)
                 {
                     await producer.SendAsync(message, cancellationToken);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(_logger, message.Id.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
@@ -255,7 +260,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 // DLQ send failed — the message was already atomically deleted from the source
                 // queue on ReceiveAsync, so we cannot requeue it. Log and return true to prevent
                 // the message pump from retrying endlessly.
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
+                Log.ErrorSendingToRejectionChannel(_logger, ex, message.Id.Value, rejectionReason.ToString());
                 return true;
             }
 
@@ -273,7 +278,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             delay ??= TimeSpan.Zero;
 
             var topic = message.Header.Topic;
-            Log.RequeuingMessage(s_logger, topic.Value, message.Id.ToString());
+            Log.RequeuingMessage(_logger, topic.Value, message.Id.ToString());
 
             if (delay > TimeSpan.Zero)
             {
@@ -298,7 +303,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             delay ??= TimeSpan.Zero;
 
             var topic = message.Header.Topic;
-            Log.RequeuingMessage(s_logger, topic.Value, message.Id.ToString());
+            Log.RequeuingMessage(_logger, topic.Value, message.Id.ToString());
 
             if (delay > TimeSpan.Zero)
             {
@@ -329,7 +334,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private void EnsureRequeueProducer()
         {
             LazyInitializer.EnsureInitialized(ref _requeueProducer, ref _requeueProducerInitialized,
-                ref _requeueProducerLock, () => new MsSqlMessageProducer(_msSqlConfiguration)
+                ref _requeueProducerLock, () => new MsSqlMessageProducer(_msSqlConfiguration, loggerFactory: _loggerFactory)
                 {
                     Scheduler = _scheduler
                 });
@@ -342,11 +347,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             try
             {
                 return new MsSqlMessageProducer(_msSqlConfiguration,
-                    new Publication { Topic = _deadLetterRoutingKey });
+                    new Publication { Topic = _deadLetterRoutingKey }, _loggerFactory);
             }
             catch (Exception e)
             {
-                Log.ErrorCreatingDlqProducer(s_logger, e, _deadLetterRoutingKey.Value);
+                Log.ErrorCreatingDlqProducer(_logger, e, _deadLetterRoutingKey.Value);
                 return null;
             }
         }
@@ -358,11 +363,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             try
             {
                 return new MsSqlMessageProducer(_msSqlConfiguration,
-                    new Publication { Topic = _invalidMessageRoutingKey });
+                    new Publication { Topic = _invalidMessageRoutingKey }, _loggerFactory);
             }
             catch (Exception e)
             {
-                Log.ErrorCreatingInvalidMessageProducer(s_logger, e, _invalidMessageRoutingKey.Value);
+                Log.ErrorCreatingInvalidMessageProducer(_logger, e, _invalidMessageRoutingKey.Value);
                 return null;
             }
         }

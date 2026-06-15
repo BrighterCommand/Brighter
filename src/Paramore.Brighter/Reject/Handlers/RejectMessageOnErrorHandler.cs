@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Logging;
 
@@ -41,7 +42,16 @@ namespace Paramore.Brighter.Reject.Handlers;
 public partial class RejectMessageOnErrorHandler<TRequest> : RequestHandler<TRequest>, IAmABackstopHandler
     where TRequest : class, IRequest
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RejectMessageOnErrorHandler<TRequest>>();
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RejectMessageOnErrorHandler{TRequest}"/> class.
+    /// </summary>
+    /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
+    public RejectMessageOnErrorHandler(ILoggerFactory? loggerFactory = null)
+    {
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RejectMessageOnErrorHandler<TRequest>>();
+    }
 
     /// <summary>
     /// Handles the request by passing it to the next handler in the pipeline.
@@ -60,7 +70,7 @@ public partial class RejectMessageOnErrorHandler<TRequest> : RequestHandler<TReq
         }
         catch (Exception ex)
         {
-            Log.UnhandledExceptionRejectingMessage(s_logger, ex, typeof(TRequest).Name, ex.Message);
+            Log.UnhandledExceptionRejectingMessage(_logger, ex, typeof(TRequest).Name, ex.Message);
             throw new RejectMessageAction(ex.Message, ex);
         }
     }

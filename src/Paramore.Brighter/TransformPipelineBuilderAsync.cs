@@ -30,6 +30,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -47,7 +48,7 @@ namespace Paramore.Brighter
     /// </summary>
     public partial class TransformPipelineBuilderAsync
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TransformPipelineBuilder>();
+        private readonly ILogger _logger;
         private readonly IAmAMessageMapperRegistryAsync _mapperRegistryAsync;
 
         private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
@@ -74,7 +75,8 @@ namespace Paramore.Brighter
         public TransformPipelineBuilderAsync(
             IAmAMessageMapperRegistryAsync mapperRegistryAsync,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
-            InstrumentationOptions instrumentationOptions
+            InstrumentationOptions instrumentationOptions,
+            ILoggerFactory? loggerFactory = null
         )
         {
             _mapperRegistryAsync = mapperRegistryAsync ??
@@ -82,6 +84,7 @@ namespace Paramore.Brighter
                                        "TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
             _instrumentationOptions = instrumentationOptions;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<TransformPipelineBuilder>();
         }
 
         /// <summary>
@@ -100,12 +103,12 @@ namespace Paramore.Brighter
 
                 var pipeline = new WrapPipelineAsync<TRequest>(messageMapper, _messageTransformerFactoryAsync, transforms, _instrumentationOptions);
 
-                Log.NewWrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
+                Log.NewWrapPipelineCreated(_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 
                 var unwraps = FindUnwrapTransforms(messageMapper);
                 if (unwraps.Any())
                 {
-                    Log.UnwrapAttributesOnMapToMessageMethodIgnored(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
+                    Log.UnwrapAttributesOnMapToMessageMethodIgnored(_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
                 }
 
                 return pipeline;
@@ -132,12 +135,12 @@ namespace Paramore.Brighter
 
                 var pipeline = new UnwrapPipelineAsync<TRequest>(transforms, _messageTransformerFactoryAsync, messageMapper);
 
-                Log.NewUnwrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
+                Log.NewUnwrapPipelineCreated(_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
 
                 var wraps = FindWrapTransforms(messageMapper);
                 if (wraps.Any())
                 {
-                    Log.WrapAttributesOnMapToRequestMethodIgnored(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
+                    Log.WrapAttributesOnMapToRequestMethodIgnored(_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
                 }
 
                 return pipeline;
@@ -163,7 +166,7 @@ namespace Paramore.Brighter
             {
                 int i = transformAttributes.Count();
                 if (i > 0)
-                    Log.NoMessageTransformerFactoryConfigured(s_logger, i);
+                    Log.NoMessageTransformerFactoryConfigured(_logger, i);
 
                 return transforms;
             }

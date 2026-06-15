@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 
@@ -32,25 +33,26 @@ namespace Paramore.Brighter
 {
     internal sealed partial class HandlerLifetimeScope : IAmALifetime
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<HandlerLifetimeScope>();
+        private readonly ILogger _logger;
 
         private readonly IAmAHandlerFactorySync? _handlerFactorySync;
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
         private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
 
-        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync) 
-            : this(handlerFactorySync, null)
+        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, ILoggerFactory? loggerFactory = null)
+            : this(handlerFactorySync, null, loggerFactory)
         {}
 
-        public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory) 
-            : this(null, asyncHandlerFactory)
+        public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory, ILoggerFactory? loggerFactory = null)
+            : this(null, asyncHandlerFactory, loggerFactory)
         {}
 
-        public HandlerLifetimeScope(IAmAHandlerFactorySync? handlerFactorySync, IAmAHandlerFactoryAsync? asyncHandlerFactory) 
+        public HandlerLifetimeScope(IAmAHandlerFactorySync? handlerFactorySync, IAmAHandlerFactoryAsync? asyncHandlerFactory, ILoggerFactory? loggerFactory = null)
         {
             _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<HandlerLifetimeScope>();
         }
 
         public int TrackedItemCount => _trackedObjects.Count + _trackedAsyncObjects.Count;
@@ -60,7 +62,7 @@ namespace Paramore.Brighter
             if (_handlerFactorySync == null)
                 throw new ArgumentException("An instance of a handler can not be added without a HandlerFactory.");
             _trackedObjects.Add(instance);
-            Log.TrackingInstance(s_logger, instance.GetHashCode(), instance.GetType());
+            Log.TrackingInstance(_logger, instance.GetHashCode(), instance.GetType());
         }
 
         public void Add(IHandleRequestsAsync instance)
@@ -68,7 +70,7 @@ namespace Paramore.Brighter
             if (_asyncHandlerFactory == null)
                 throw new ArgumentException("An instance of an async handler can not be added without an AsyncHandlerFactory.");
             _trackedAsyncObjects.Add(instance);
-            Log.TrackingAsyncHandlerInstance(s_logger, instance.GetHashCode(), instance.GetType());
+            Log.TrackingAsyncHandlerInstance(_logger, instance.GetHashCode(), instance.GetType());
         }
 
         public void Dispose()
@@ -77,14 +79,14 @@ namespace Paramore.Brighter
             {
                 //free disposable items
                 _handlerFactorySync?.Release(trackedItem, this);
-                Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                Log.ReleasingHandlerInstance(_logger, trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             _trackedAsyncObjects.Each(trackedItem =>
             {
                 //free disposable items
                 _asyncHandlerFactory?.Release(trackedItem, this);
-                Log.ReleasingAsyncHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                Log.ReleasingAsyncHandlerInstance(_logger, trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             //clear our tracking

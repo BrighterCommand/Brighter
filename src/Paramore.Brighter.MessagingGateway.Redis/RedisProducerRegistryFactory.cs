@@ -1,12 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public class RedisProducerRegistryFactory(
         RedisMessagingGatewayConfiguration redisConfiguration,
-        IEnumerable<RedisMessagePublication> publications)
+        IEnumerable<RedisMessagePublication> publications,
+        ILoggerFactory? loggerFactory = null)
         : IAmAProducerRegistryFactory
     {
         /// <summary>
@@ -15,7 +17,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
         public IAmAProducerRegistry Create()
         {
-            var producerFactory = new RedisMessageProducerFactory(redisConfiguration, publications);
+            var producerFactory = new RedisMessageProducerFactory(redisConfiguration, publications, loggerFactory);
 
             return new ProducerRegistry(producerFactory.Create());
         }

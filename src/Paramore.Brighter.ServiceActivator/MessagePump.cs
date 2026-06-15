@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
@@ -67,7 +68,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// </summary>
     public abstract partial class MessagePump
     {
-        internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump>();
+        protected readonly ILogger _logger;
 
         protected const string NoMessageReceivedDescription = "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout";
 
@@ -154,17 +155,19 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="instrumentationOptions">When creating a span for <see cref="Brighter.CommandProcessor"/> operations how noisy should the attributes be</param>
         /// <param name="timeProvider">Allows you to override the time provider, for testing purposes</param>
         protected MessagePump(
-            IAmACommandProcessor commandProcessor, 
+            IAmACommandProcessor commandProcessor,
             IAmARequestContextFactory requestContextFactory,
             IAmABrighterTracer? tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            TimeProvider? timeProvider = null)
+            TimeProvider? timeProvider = null,
+            ILoggerFactory? loggerFactory = null)
         {
             CommandProcessor = commandProcessor;
             RequestContextFactory = requestContextFactory;
             Tracer = tracer;
             InstrumentationOptions = instrumentationOptions;
             PumpTimeProvider = timeProvider ?? TimeProvider.System;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MessagePump>();
         }
 
 
@@ -192,12 +195,12 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (messageType == MessageType.MT_COMMAND && request is IEvent)
             {
-                Log.MessageMismatchCommand(s_logger, request.Id.Value, MessageType.MT_COMMAND);
+                Log.MessageMismatchCommand(_logger, request.Id.Value, MessageType.MT_COMMAND);
             }
 
             if (messageType == MessageType.MT_EVENT && request is ICommand)
             {
-                Log.MessageMismatchEvent(s_logger, request.Id.Value, MessageType.MT_EVENT);
+                Log.MessageMismatchEvent(_logger, request.Id.Value, MessageType.MT_EVENT);
             }
         }
 

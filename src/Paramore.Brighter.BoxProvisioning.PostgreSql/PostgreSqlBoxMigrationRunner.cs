@@ -27,8 +27,8 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
@@ -65,9 +65,10 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         IAmABrighterTracer? tracer = null,
-        MigrationHistoryScope scope = MigrationHistoryScope.Global)
+        MigrationHistoryScope scope = MigrationHistoryScope.Global,
+        ILoggerFactory? loggerFactory = null)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxMigrationRunner>(),
+            logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PostgreSqlBoxMigrationRunner>(),
             tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new PostgreSqlAdvisoryLock();
@@ -86,8 +87,9 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         IPostgreSqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         IAmABrighterTracer? tracer = null,
-        MigrationHistoryScope scope = MigrationHistoryScope.Global)
-        : this(new PostgreSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope)
+        MigrationHistoryScope scope = MigrationHistoryScope.Global,
+        ILoggerFactory? loggerFactory = null)
+        : this(new PostgreSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope, loggerFactory)
     {
     }
 

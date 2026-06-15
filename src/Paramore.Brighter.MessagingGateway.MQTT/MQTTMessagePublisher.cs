@@ -3,11 +3,11 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Protocol;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
@@ -17,7 +17,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// </summary>
     public partial class MqttMessagePublisher : IDisposable, IAsyncDisposable
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageProducer>();
+        private readonly ILogger _logger;
         private readonly MqttMessagingGatewayConfiguration _config;
         private readonly IMqttClient _mqttClient;
         private readonly MqttClientOptions _mqttClientOptions;
@@ -27,8 +27,10 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// Sync over async, but necessary as we are in the ctor
         /// </summary>
         /// <param name="config">The Publisher configuration.</param>
-        public MqttMessagePublisher(MqttMessagingGatewayConfiguration config)
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
+        public MqttMessagePublisher(MqttMessagingGatewayConfiguration config, ILoggerFactory? loggerFactory = null)
         {
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MqttMessageProducer>();
             _config = config;
 
             _mqttClient = new MqttFactory().CreateMqttClient();
@@ -113,12 +115,12 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 try
                 {
                     await _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None);
-                    Log.ConnectedToHost(s_logger, _config.Hostname, _config.Port);
+                    Log.ConnectedToHost(_logger, _config.Hostname, _config.Port);
                     return;
                 }
                 catch (Exception)
                 {
-                    Log.UnableToConnectToHost(s_logger, _config.Hostname!, _config.Port);
+                    Log.UnableToConnectToHost(_logger, _config.Hostname!, _config.Port);
                 }
             }
         }

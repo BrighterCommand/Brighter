@@ -26,6 +26,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Policies.Attributes;
@@ -49,9 +50,9 @@ namespace Paramore.Brighter
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-    public abstract partial class RequestHandler<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IHandleRequests<TRequest> where TRequest : class, IRequest
+    public abstract partial class RequestHandler<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All, ILoggerFactory? loggerFactory = null) : IHandleRequests<TRequest> where TRequest : class, IRequest
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandler<TRequest>>();
+        private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RequestHandler<TRequest>>();
 
         private IHandleRequests<TRequest>? _successor;
 
@@ -110,7 +111,7 @@ namespace Paramore.Brighter
             
             if (_successor != null)
             {
-                Log.PassingRequestFromTo(s_logger, Name, _successor.Name);
+                Log.PassingRequestFromTo(_logger, Name, _successor.Name);
                 return _successor.Handle(request);
             }
 
@@ -145,7 +146,7 @@ namespace Paramore.Brighter
             
             if (_successor != null)
             {
-                Log.FallingBackFromTo(s_logger, Name, _successor.Name);
+                Log.FallingBackFromTo(_logger, Name, _successor.Name);
                 return _successor.Fallback(command);
             }
 

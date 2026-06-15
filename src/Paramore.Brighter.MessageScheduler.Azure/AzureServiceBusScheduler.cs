@@ -2,8 +2,8 @@
 using System.Text.Json;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessageScheduler.Azure;
@@ -14,13 +14,15 @@ namespace Paramore.Brighter.MessageScheduler.Azure;
 /// <param name="sender">The <see cref="AzureServiceBusScheduler"/>.</param>
 /// <param name="schedulerTopic">The scheduler topic or queue</param>
 /// <param name="timeProvider">The <see cref="TimeProvider"/>.</param>
+/// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
 public class AzureServiceBusScheduler(
     ServiceBusSender sender,
     RoutingKey schedulerTopic,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILoggerFactory? loggerFactory = null)
     : IAmAMessageSchedulerAsync, IAmAMessageSchedulerSync, IAmARequestSchedulerAsync, IAmARequestSchedulerSync
 {
-    private static readonly ILogger Logger = ApplicationLogging.CreateLogger<AzureServiceBusScheduler>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureServiceBusScheduler>();
 
     /// <inheritdoc />
     public async Task<string> ScheduleAsync(Message message, DateTimeOffset at,
@@ -118,7 +120,7 @@ public class AzureServiceBusScheduler(
         }
         else
         {
-            Logger.LogWarning("Could not cancel message as schedulerId is not a sequence number");
+            _logger.LogWarning("Could not cancel message as schedulerId is not a sequence number");
         }
     }
 

@@ -28,8 +28,8 @@ using System.IO;
 using System.Net.Mime;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using ServiceStack;
 
@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public partial class RedisMessageCreator
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RedisMessageCreator>();
+        private static readonly ILogger s_logger = NullLoggerFactory.Instance.CreateLogger<RedisMessageCreator>();
         
         /// <summary>
         /// Create a Brighter Message from the Redis raw content

@@ -3,7 +3,8 @@ using System.Data;
 using System.Data.Common;
 using Google.Cloud.Spanner.Data;
 using Grpc.Core;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Spanner;
 
@@ -29,14 +30,15 @@ namespace Paramore.Brighter.Inbox.Spanner;
 /// </remarks>
 public class SpannerInboxAsync(
     IAmARelationalDatabaseConfiguration configuration,
-    IAmARelationalDbConnectionProvider connectionProvider)
+    IAmARelationalDbConnectionProvider connectionProvider,
+    ILogger? logger = null)
     : RelationalDatabaseInbox(DbSystem.Spanner, configuration, connectionProvider,
-        new SpannerSqlQueries(), ApplicationLogging.CreateLogger<SpannerInboxAsync>())
+        new SpannerSqlQueries(), logger ?? NullLogger<SpannerInboxAsync>.Instance)
 {
-    public SpannerInboxAsync(IAmARelationalDatabaseConfiguration configuration)
-        : this(configuration, new SpannerConnectionProvider(configuration))
+    public SpannerInboxAsync(IAmARelationalDatabaseConfiguration configuration, ILogger? logger = null)
+        : this(configuration, new SpannerConnectionProvider(configuration), logger)
     {
-        
+
     }
     
     /// <inheritdoc />

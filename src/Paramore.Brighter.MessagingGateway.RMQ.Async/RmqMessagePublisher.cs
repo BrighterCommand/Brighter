@@ -31,8 +31,8 @@ using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// </summary>
 internal sealed partial class RmqMessagePublisher
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessagePublisher>();
+    private readonly ILogger _logger;
 
     private static readonly HashSet<string> _headersToReset =
     [
@@ -62,12 +62,13 @@ internal sealed partial class RmqMessagePublisher
     /// </summary>
     /// <param name="channel">The channel.</param>
     /// <param name="connection">The exchange we want to talk to.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
     /// <exception cref="System.ArgumentNullException">
     /// channel
     /// or
     /// exchangeName
     /// </exception>
-    public RmqMessagePublisher(IChannel channel, RmqMessagingGatewayConnection connection)
+    public RmqMessagePublisher(IChannel channel, RmqMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null)
     {
         if (channel is null)
         {
@@ -78,6 +79,8 @@ internal sealed partial class RmqMessagePublisher
         {
             throw new ArgumentNullException(nameof(connection));
         }
+
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessagePublisher>();
 
         _connection = connection;
 
@@ -131,7 +134,7 @@ internal sealed partial class RmqMessagePublisher
         var messageId = Uuid.NewAsString();
         const string deliveryTag = "1";
 
-        Log.RegeneratingMessage(s_logger, message.Id.Value, deliveryTag, messageId, 1);
+        Log.RegeneratingMessage(_logger, message.Id.Value, deliveryTag, messageId, 1);
 
         Dictionary<string, object?> headers = AddCloudEventsHeaders(message);
 

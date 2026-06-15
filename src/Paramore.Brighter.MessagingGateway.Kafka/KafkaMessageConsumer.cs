@@ -108,6 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="invalidMessageRoutingKey">If we support an invalid message topic what is the <see cref="RoutingKey"/></param>
         /// <param name="scheduler">Optional scheduler for delayed requeue operations. When provided, the lazily-created
         /// requeue producer will use this scheduler for delayed sends.</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for this consumer and the producers it creates.</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -129,8 +130,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null,
             TimeProvider? timeProvider = null,
-            IAmAMessageScheduler? scheduler = null
+            IAmAMessageScheduler? scheduler = null,
+            ILoggerFactory? loggerFactory = null
             )
+            : base(loggerFactory)
         {
             if (groupId is null)
                 throw new ConfigurationException("You must set a GroupId for the consumer");
@@ -227,7 +230,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     var partitions = list.Select(p => $"{p.Topic} : {p.Partition.Value}");
                     
-                    Log.PartitionAdded(s_logger, String.Join(",", partitions));
+                    Log.PartitionAdded(_logger, String.Join(",", partitions));
                     
                     _partitions.AddRange(list);
                 })
@@ -238,7 +241,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     
                     var revokedPartitionInfo = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
                     
-                    Log.PartitionsRevoked(s_logger, string.Join(",", revokedPartitionInfo));
+                    Log.PartitionsRevoked(_logger, string.Join(",", revokedPartitionInfo));
                     
                     _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
@@ -246,7 +249,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     var lostPartitions = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
                     
-                    Log.PartitionsLost(s_logger, string.Join(",", lostPartitions));
+                    Log.PartitionsLost(_logger, string.Join(",", lostPartitions));
                     
                     _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
@@ -255,13 +258,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     _hasFatalError = error.IsFatal;
                     
                     if (_hasFatalError ) 
-                        Log.FatalError(s_logger, error.Code, error.Reason, true);
+                        Log.FatalError(_logger, error.Code, error.Reason, true);
                     else
-                        Log.NonFatalError(s_logger, error.Code, error.Reason, false);
+                        Log.NonFatalError(_logger, error.Code, error.Reason, false);
                 })
                 .Build();
 
-            Log.SubscribingToTopic(s_logger, Topic);
+            Log.SubscribingToTopic(_logger, Topic);
             _consumer.Subscribe([Topic.Value]);
 
             _creator = new KafkaMessageCreator();
@@ -298,7 +301,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
             {
-                Log.CannotAcknowledgeMessage(s_logger, message.Id.Value);
+                Log.CannotAcknowledgeMessage(_logger, message.Id.Value);
                 return;
             }
 
@@ -307,26 +310,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 var topicPartitionOffset = bagData as TopicPartitionOffset;
                 if (topicPartitionOffset == null)
                 {
-                    Log.CannotAcknowledgeMessage(s_logger, message.Id.Value);
+                    Log.CannotAcknowledgeMessage(_logger, message.Id.Value);
                     return;
                 }
 
                 var offset = new TopicPartitionOffset(topicPartitionOffset.TopicPartition, new Offset(topicPartitionOffset.Offset + 1));
 
-                Log.StoringOffset(s_logger, new Offset(topicPartitionOffset.Offset + 1).Value, topicPartitionOffset.TopicPartition.Topic, topicPartitionOffset.TopicPartition.Partition.Value);
+                Log.StoringOffset(_logger, new Offset(topicPartitionOffset.Offset + 1).Value, topicPartitionOffset.TopicPartition.Topic, topicPartitionOffset.TopicPartition.Partition.Value);
                 _offsetStorage.Add(offset);
 
                 if (_offsetStorage.Count % _maxBatchSize == 0)
                     FlushOffsets();
 
-                Log.CurrentKafkaBatchCount(s_logger, _offsetStorage.Count.ToString(), _maxBatchSize.ToString());
+                Log.CurrentKafkaBatchCount(_logger, _offsetStorage.Count.ToString(), _maxBatchSize.ToString());
             }
             catch (TopicPartitionException tpe)
             {
                 var results = tpe.Results.Select(r =>
                     $"Error committing topic {r.Topic} for partition {r.Partition.Value.ToString()} because {r.Error.Reason}");
                 var errorString = string.Join(Environment.NewLine, results);
-                Log.ErrorCommittingOffsetsAsDebug(s_logger, errorString);
+                Log.ErrorCommittingOffsetsAsDebug(_logger, errorString);
             }
         }
 
@@ -358,7 +361,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
             {
-                Log.CannotNackMessage(s_logger, message.Id.Value);
+                Log.CannotNackMessage(_logger, message.Id.Value);
                 return;
             }
 
@@ -367,17 +370,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 var topicPartitionOffset = bagData as TopicPartitionOffset;
                 if (topicPartitionOffset == null)
                 {
-                    Log.CannotNackMessageTypeMismatch(s_logger, message.Id.Value, bagData?.GetType().FullName ?? "null");
+                    Log.CannotNackMessageTypeMismatch(_logger, message.Id.Value, bagData?.GetType().FullName ?? "null");
                     return;
                 }
 
-                Log.NackingMessage(s_logger, topicPartitionOffset.Offset.Value, topicPartitionOffset.Topic, topicPartitionOffset.Partition.Value);
+                Log.NackingMessage(_logger, topicPartitionOffset.Offset.Value, topicPartitionOffset.Topic, topicPartitionOffset.Partition.Value);
 
                 _consumer.Seek(topicPartitionOffset);
             }
             catch (Exception ex) when (ex is KafkaException or InvalidOperationException)
             {
-                Log.ErrorSeekingOffsetForNack(s_logger, ex.Message);
+                Log.ErrorSeekingOffsetForNack(_logger, ex.Message);
             }
         }
 
@@ -414,13 +417,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
                 else
                 {
-                    Log.SkippedCommittingOffsetsBeforeClose(s_logger);
+                    Log.SkippedCommittingOffsetsBeforeClose(_logger);
                 }
             }
             catch (Exception ex)
             {
                 //Close anyway, we just will get replay of those messages
-                Log.ErrorCommittingOffsetBeforeClosing(s_logger, ex.Message);
+                Log.ErrorCommittingOffsetBeforeClosing(_logger, ex.Message);
             }
             finally
             {
@@ -501,37 +504,37 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 
                 LogOffSets();
 
-                Log.ConsumingMessages(s_logger, timeOut.Value.TotalMilliseconds);
+                Log.ConsumingMessages(_logger, timeOut.Value.TotalMilliseconds);
                 var consumeResult = _consumer.Consume(timeOut.Value);
 
                 if (consumeResult == null)
                 {
                     CheckHasPartitions();
                     
-                    Log.NoMessagesAvailable(s_logger);
+                    Log.NoMessagesAvailable(_logger);
                     return [new Message()];
                 }
 
                 if (consumeResult.IsPartitionEOF)
                 {
-                    Log.EndOfPartition(s_logger, _consumer.MemberId);
+                    Log.EndOfPartition(_logger, _consumer.MemberId);
                     return [new Message()];
                 }
 
-                Log.UsableMessageRetrieved(s_logger, consumeResult.Message.Value);
-                Log.PartitionOffsetValue(s_logger, consumeResult.Partition, consumeResult.Offset, consumeResult.Message.Value);
+                Log.UsableMessageRetrieved(_logger, consumeResult.Message.Value);
+                Log.PartitionOffsetValue(_logger, consumeResult.Partition, consumeResult.Offset, consumeResult.Message.Value);
 
                 return [_creator.CreateMessage(consumeResult)];
             }
             catch (ConsumeException consumeException)
             {
-                Log.ErrorListeningToTopic(s_logger, consumeException, Topic ?? RoutingKey.Empty, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
+                Log.ErrorListeningToTopic(_logger, consumeException, Topic ?? RoutingKey.Empty, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
                 throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", consumeException);
 
             }
             catch (KafkaException kafkaException)
             {
-                Log.ErrorListeningToTopic(s_logger, kafkaException, Topic ?? RoutingKey.Empty, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
+                Log.ErrorListeningToTopic(_logger, kafkaException, Topic ?? RoutingKey.Empty, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
                 if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new consumer
                     throw;
                 
@@ -539,7 +542,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (Exception exception)
             {
-                Log.ErrorListeningToTopic(s_logger, exception, Topic ?? RoutingKey.Empty, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
+                Log.ErrorListeningToTopic(_logger, exception, Topic ?? RoutingKey.Empty, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
                 throw;
             }
         }
@@ -597,7 +600,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
               {
                   if (reason != null)
                   {
-                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, reason.RejectionReason.ToString());
+                      Log.NoChannelsConfiguredForRejection(_logger, message.Header.MessageId.Value, reason.RejectionReason.ToString());
                   }
                   Acknowledge(message);
                   return true;
@@ -619,7 +622,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   {
                       message.Header.Topic = routingKey!;
                       if (isFallingBackToDlq)
-                          Log.FallingBackToDLQ(s_logger, message.Header.MessageId.Value);
+                          Log.FallingBackToDLQ(_logger, message.Header.MessageId.Value);
 
                       // Get the appropriate producer based on routing
                       producer = GetRejectionProducer(routingKey);
@@ -628,16 +631,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   if (producer != null)
                   {
                       producer.Send(message);
-                      Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
+                      Log.MessageSentToRejectionChannel(_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                   }
                   else
                   {
-                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
+                      Log.NoChannelsConfiguredForRejection(_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                   }
               }
               catch (Exception ex)
               {
-                  Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId.Value, rejectionReason.ToString());
+                  Log.ErrorSendingToRejectionChannel(_logger, ex, message.Header.MessageId.Value, rejectionReason.ToString());
                   Acknowledge(message);
                   return true;
               }
@@ -663,7 +666,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 if (reason != null)
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(_logger, message.Header.MessageId.Value, reason.RejectionReason.ToString());
                 }
                 await AcknowledgeAsync(message, cancellationToken);
                 return true;
@@ -685,7 +688,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDLQ(s_logger, message.Header.MessageId.Value);
+                        Log.FallingBackToDLQ(_logger, message.Header.MessageId.Value);
 
                     // Get the appropriate producer based on routing
                     producer = GetRejectionProducer(routingKey);
@@ -694,16 +697,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 if (producer != null)
                 {
                     await producer.SendAsync(message, cancellationToken);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
             {
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId.Value, rejectionReason.ToString());
+                Log.ErrorSendingToRejectionChannel(_logger, ex, message.Header.MessageId.Value, rejectionReason.ToString());
                 await AcknowledgeAsync(message, cancellationToken);
                 return true;
             }
@@ -780,7 +783,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private void CheckHasPartitions()
         {
             if (_partitions.Count <= 0)
-                Log.NoPartitionsAllocated(s_logger);
+                Log.NoPartitionsAllocated(_logger);
         }
 
 
@@ -805,13 +808,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 foreach (KeyValuePair<TopicPartition,long> pair in highestReadOffset)
                 {
                     var topicPartition = pair.Key;
-                    Log.OffsetToConsumeFrom(s_logger, pair.Value.ToString(), topicPartition.Partition.Value.ToString(), topicPartition.Topic);
+                    Log.OffsetToConsumeFrom(_logger, pair.Value.ToString(), topicPartition.Partition.Value.ToString(), topicPartition.Topic);
                 }
             }
             catch (KafkaException ke)
             {
                 //This is only login for debug, so skip errors here
-                Log.KafkaErrorLoggingOffsets(s_logger, ke.Message);
+                Log.KafkaErrorLoggingOffsets(_logger, ke.Message);
             }
         }
 
@@ -844,12 +847,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 }
 
-                if (s_logger.IsEnabled(LogLevel.Information))
+                if (_logger.IsEnabled(LogLevel.Information))
                 {
                     var offsets = listOffsets.Select(tpo =>
                         $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
                     var offsetAsString = string.Join(Environment.NewLine, offsets);
-                    Log.CommittingOffsets(s_logger, Environment.NewLine, offsetAsString);
+                    Log.CommittingOffsets(_logger, Environment.NewLine, offsetAsString);
                 }
 
                 _consumer.Commit(listOffsets);
@@ -857,7 +860,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             catch(Exception ex)
             {
                 //may happen if the consumer is not valid when the thread runs
-                Log.ErrorCommittingOffsetsAsWarning(s_logger, ex.Message);
+                Log.ErrorCommittingOffsetsAsWarning(_logger, ex.Message);
             }
             finally
             {
@@ -876,7 +879,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 //wait for any in-flight background commit to finish before we commit revoked offsets
                 if (!_flushToken.Wait(s_commitSyncTimeout))
                 {
-                    Log.SkippedCommittingOffsetsForRevokedPartitions(s_logger);
+                    Log.SkippedCommittingOffsetsForRevokedPartitions(_logger);
                     return;
                 }
 
@@ -908,7 +911,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (KafkaException error)
             {
-                Log.ErrorCommittingOffsetsDuringPartitionRevoke(s_logger, error.Message, error.Error.Code, error.Error.Reason, error.Error.IsFatal);
+                Log.ErrorCommittingOffsetsDuringPartitionRevoke(_logger, error.Message, error.Error.Code, error.Error.Reason, error.Error.IsFatal);
             }
         }
 
@@ -916,10 +919,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         [DebuggerStepThrough]
         private void LogOffSetCommitRevokedPartitions(List<TopicPartitionOffset> revokedOffsetsToCommit)
         {
-            Log.SavingRevokedPartitionOffsets(s_logger, revokedOffsetsToCommit.Count);
+            Log.SavingRevokedPartitionOffsets(_logger, revokedOffsetsToCommit.Count);
             foreach (var offset in revokedOffsetsToCommit)
             {
-                Log.SavingRevokedPartitionOffset(s_logger, offset.Offset.Value.ToString(), offset.Partition.Value.ToString(), offset.Topic);
+                Log.SavingRevokedPartitionOffset(_logger, offset.Offset.Value.ToString(), offset.Partition.Value.ToString(), offset.Topic);
             }
         }
         
@@ -940,12 +943,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 }
 
-                if (s_logger.IsEnabled(LogLevel.Information) && listOffsets.Count != 0)
+                if (_logger.IsEnabled(LogLevel.Information) && listOffsets.Count != 0)
                 {
                     var offsets = listOffsets.Select(tpo =>
                         $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
                     var offsetAsString = string.Join(Environment.NewLine, offsets);
-                    Log.SweepingOffsets(s_logger, Environment.NewLine, offsetAsString);
+                    Log.SweepingOffsets(_logger, Environment.NewLine, offsetAsString);
                 }
 
                 _consumer.Commit(listOffsets);
@@ -987,13 +990,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             try
             {
-                var producer = new KafkaMessageProducer(_configuration, publication);
+                var producer = new KafkaMessageProducer(_configuration, publication, loggerFactory: _loggerFactory);
                 producer.Init();
                 return producer;
             }
             catch (Exception e)
             {
-                logError?.Invoke(s_logger, e);
+                logError?.Invoke(_logger, e);
                 return null;
             }
         }
@@ -1027,7 +1030,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             var offset = new TopicPartitionOffset(partitionOffset.TopicPartition, new Offset(partitionOffset.Offset + 1));
 
-            Log.StoringOffset(s_logger, new Offset(partitionOffset.Offset + 1).Value, partitionOffset.TopicPartition.Topic, partitionOffset.TopicPartition.Partition.Value);
+            Log.StoringOffset(_logger, new Offset(partitionOffset.Offset + 1).Value, partitionOffset.TopicPartition.Topic, partitionOffset.TopicPartition.Partition.Value);
             _offsetStorage.Add(offset);
 
             if (_offsetStorage.Count % _maxBatchSize == 0)
@@ -1118,7 +1121,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             else
             {
-                Log.SkippedCommittingOffsets(s_logger);
+                Log.SkippedCommittingOffsets(_logger);
             }
         }
 
@@ -1150,7 +1153,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             else
             {
-                Log.SkippedSweepingOffsets(s_logger);
+                Log.SkippedSweepingOffsets(_logger);
             }
         }
 

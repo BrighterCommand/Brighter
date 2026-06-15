@@ -26,7 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Net.Mime;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.Observability;
 
@@ -36,10 +36,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// Creates a Brighter <see cref="Message"/> from an Azure Service Bus message.
 /// </summary>
 /// <param name="subscription">Subscription information, used to help populate the message</param>
-public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscription)
+/// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
+public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription subscription, ILoggerFactory? loggerFactory = null)
 {
     private readonly RoutingKey _topic = subscription.RoutingKey;
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusMesssageCreator>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureServiceBusMesssageCreator>();
 
     /// <summary>
     /// Maps an Azure Service Bus message to a Brighter <see cref="Message"/>.
@@ -50,21 +51,21 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
     {
         if (azureServiceBusMessage is null)
         {
-            Log.NullMessageReceived(s_logger, _topic, subscription.Name);
+            Log.NullMessageReceived(_logger, _topic, subscription.Name);
             return Message.FailureMessage(_topic); 
         }
         
         if (azureServiceBusMessage!.MessageBodyValue is null)
         {
-            Log.NullMessageBodyReceived(s_logger, _topic, subscription.Name);
+            Log.NullMessageBodyReceived(_logger, _topic, subscription.Name);
         }
 
         var bodyMemory = azureServiceBusMessage.MessageBodyMemory;
 
 #if NETSTANDARD2_0
-        Log.ReceivedMessage(s_logger, _topic, subscription.Name, System.Text.Encoding.UTF8.GetString(bodyMemory.ToArray()));
+        Log.ReceivedMessage(_logger, _topic, subscription.Name, System.Text.Encoding.UTF8.GetString(bodyMemory.ToArray()));
 #else
-        Log.ReceivedMessage(s_logger, _topic, subscription.Name, System.Text.Encoding.UTF8.GetString(bodyMemory.Span));
+        Log.ReceivedMessage(_logger, _topic, subscription.Name, System.Text.Encoding.UTF8.GetString(bodyMemory.Span));
 #endif
             
         //TODO: Switch these to use the option type HeaderResult<T> for consistency with the rest of the codebase.
@@ -122,7 +123,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.Baggage, out object? property))
         {
-            Log.NoBaggageFound(s_logger, _topic, subscription.Name);
+            Log.NoBaggageFound(_logger, _topic, subscription.Name);
             return new Baggage();
         }
         
@@ -138,7 +139,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         var defaultSchemaUri = new Uri("http://goparamore.io"); // Default schema URI
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSchema, out object? property))
         {
-            Log.NoCloudEventsDataSchema(s_logger, _topic, subscription.Name);
+            Log.NoCloudEventsDataSchema(_logger, _topic, subscription.Name);
             return defaultSchemaUri;
         }
 
@@ -146,7 +147,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         
         if (string.IsNullOrEmpty(dataSchema))
         {
-            Log.EmptyCloudEventsDataSchema(s_logger, _topic, subscription.Name);
+            Log.EmptyCloudEventsDataSchema(_logger, _topic, subscription.Name);
             return defaultSchemaUri;
         }
 
@@ -157,7 +158,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSubject, out object? property))
         {
-            Log.NoCloudEventsSubject(s_logger, _topic, subscription.Name);
+            Log.NoCloudEventsSubject(_logger, _topic, subscription.Name);
             return string.Empty;
         }
 
@@ -170,7 +171,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsTime, out object? property))
         {
-            Log.NoCloudEventsTime(s_logger, _topic, subscription.Name);
+            Log.NoCloudEventsTime(_logger, _topic, subscription.Name);
             return DateTimeOffset.UtcNow;
         }
         
@@ -181,7 +182,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
             return parsedTime;
         }
 
-        Log.InvalidCloudEventsTimeFormat(s_logger, _topic, subscription.Name);
+        Log.InvalidCloudEventsTimeFormat(_logger, _topic, subscription.Name);
         return DateTimeOffset.UtcNow;
     }
 
@@ -189,7 +190,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsParitionKey, out object? property))
         {
-            Log.NoCloudEventsPartitionKey(s_logger, _topic, subscription.Name);
+            Log.NoCloudEventsPartitionKey(_logger, _topic, subscription.Name);
             return PartitionKey.Empty;
         }
 
@@ -200,7 +201,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsType, out object? property))
         {
-            Log.NoCloudEventsType(s_logger, _topic, subscription.Name);
+            Log.NoCloudEventsType(_logger, _topic, subscription.Name);
             return CloudEventsType.Empty;
         }
 
@@ -252,13 +253,13 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         var defaultSourceUri = new Uri("http://goparamore.io"); // Default source URI
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.CloudEventsSource, out object? property))
         {
-            Log.NoSourceFound(s_logger, _topic, subscription.Name);
+            Log.NoSourceFound(_logger, _topic, subscription.Name);
             return defaultSourceUri;
         }
 
         if (property is not string sourceString || string.IsNullOrEmpty(sourceString))
         {
-            Log.EmptyOrInvalidSource(s_logger, _topic, subscription.Name);
+            Log.EmptyOrInvalidSource(_logger, _topic, subscription.Name);
             return defaultSourceUri;
         }
         
@@ -271,7 +272,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.TraceParent, out object?property))
         {
-            Log.NoTraceParentFound(s_logger, _topic, subscription.Name);
+            Log.NoTraceParentFound(_logger, _topic, subscription.Name);
             return new TraceParent(string.Empty);
         } 
         
@@ -284,7 +285,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
     {
         if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.TraceState, out object? property))
         {
-            Log.NoTraceStateFound(s_logger, _topic, subscription.Name);
+            Log.NoTraceStateFound(_logger, _topic, subscription.Name);
             return new TraceState(string.Empty);
         }
 

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
@@ -40,9 +41,18 @@ namespace Paramore.Brighter.Logging.Handlers
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public partial class RequestLoggingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestLoggingHandler<TRequest>>();
+        private readonly ILogger _logger;
 
         private HandlerTiming _timing;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestLoggingHandler{TRequest}"/> class.
+        /// </summary>
+        /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
+        public RequestLoggingHandler(ILoggerFactory? loggerFactory = null)
+        {
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RequestLoggingHandler<TRequest>>();
+        }
 
         /// <summary>
         /// Initializes from attribute parameters.
@@ -60,7 +70,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <returns>TRequest.</returns>
         public override TRequest Handle(TRequest request)
         {
-            Log.LogCommand(s_logger, _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), DateTime.UtcNow);
+            Log.LogCommand(_logger, _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(request, JsonSerialisationOptions.Options), DateTime.UtcNow);
             return base.Handle(request);
         }
 
@@ -85,7 +95,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <returns>TRequest.</returns>
         public override TRequest Fallback(TRequest command)
         {
-            Log.LogFailure(s_logger, typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
+            Log.LogFailure(_logger, typeof(TRequest), JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), DateTime.UtcNow);
             return base.Fallback(command);
         }
 

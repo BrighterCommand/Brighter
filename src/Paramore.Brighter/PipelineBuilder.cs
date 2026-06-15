@@ -30,6 +30,7 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Validation;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Inbox.Attributes;
 
 namespace Paramore.Brighter
@@ -37,7 +38,7 @@ namespace Paramore.Brighter
     public partial class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>
         where TRequest : class, IRequest
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<PipelineBuilder<TRequest>>();
+        private readonly ILogger _logger;
 
         private readonly IAmASubscriberRegistry? _subscriberRegistry;
         private readonly IAmASubscriberRegistryInspector? _subscriberRegistryInspector;
@@ -59,11 +60,13 @@ namespace Paramore.Brighter
         public PipelineBuilder(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactorySync syncHandlerFactory,
-            InboxConfiguration? inboxConfiguration = null) 
+            InboxConfiguration? inboxConfiguration = null,
+            ILoggerFactory? loggerFactory = null)
         {
             _subscriberRegistry = subscriberRegistry;
             _syncHandlerFactory = syncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PipelineBuilder<TRequest>>();
         }
 
         /// <summary>
@@ -76,11 +79,13 @@ namespace Paramore.Brighter
         public PipelineBuilder(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
-            InboxConfiguration? inboxConfiguration = null)
+            InboxConfiguration? inboxConfiguration = null,
+            ILoggerFactory? loggerFactory = null)
         {
             _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PipelineBuilder<TRequest>>();
         }
 
         /// <summary>
@@ -91,10 +96,12 @@ namespace Paramore.Brighter
         /// <param name="inboxConfiguration">Optional inbox configuration for global inbox attribute detection.</param>
         public PipelineBuilder(
             IAmASubscriberRegistryInspector subscriberRegistryInspector,
-            InboxConfiguration? inboxConfiguration = null)
+            InboxConfiguration? inboxConfiguration = null,
+            ILoggerFactory? loggerFactory = null)
         {
             _subscriberRegistryInspector = subscriberRegistryInspector;
             _inboxConfiguration = inboxConfiguration;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PipelineBuilder<TRequest>>();
         }
 
         /// <summary>
@@ -302,7 +309,7 @@ namespace Paramore.Brighter
             }
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
-            Log.NewHandlerPipelineCreated(s_logger, TracePipeline(firstInPipeline).ToString());
+            Log.NewHandlerPipelineCreated(_logger, TracePipeline(firstInPipeline).ToString());
             return firstInPipeline;
         }
 
@@ -343,7 +350,7 @@ namespace Paramore.Brighter
             }
 
             AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
-            Log.NewAsyncHandlerPipelineCreated(s_logger, TracePipeline(firstInPipeline).ToString());
+            Log.NewAsyncHandlerPipelineCreated(_logger, TracePipeline(firstInPipeline).ToString());
             return firstInPipeline;
         }
 

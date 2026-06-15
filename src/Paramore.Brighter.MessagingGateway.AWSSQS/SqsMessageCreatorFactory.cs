@@ -21,18 +21,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging;
+
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     internal sealed class SqsMessageCreatorFactory
     {
-        public static ISqsMessageCreator Create(bool rawMessageDelivery)
+        public static ISqsMessageCreator Create(bool rawMessageDelivery, ILoggerFactory? loggerFactory = null)
         {
             if (rawMessageDelivery)
             {
-                return new SqsMessageCreator();
+                return new SqsMessageCreator(loggerFactory);
             }
 
-            return new SqsInlineMessageCreator();
+            return new SqsInlineMessageCreator(loggerFactory);
         }
     }
 }

@@ -6,8 +6,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 {
@@ -18,7 +18,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
     public partial class MsSqlMessageQueue<T>
     {
         private const int RetryDelay = 100;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageQueue<T>>();
+        private readonly ILogger _logger;
         private readonly RelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
@@ -27,11 +27,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// </summary>
         /// <param name="configuration"></param>
         /// <param name="connectionProvider"></param>
-        public MsSqlMessageQueue(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider  connectionProvider)
+        public MsSqlMessageQueue(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider  connectionProvider, ILoggerFactory? loggerFactory = null)
         {
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MsSqlMessageQueue<T>>();
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _connectionProvider = connectionProvider;
-            Log.MsSqlMessageQueueCtor(s_logger, _configuration.ConnectionString, _configuration.QueueStoreTable);
+            Log.MsSqlMessageQueueCtor(_logger, _configuration.ConnectionString, _configuration.QueueStoreTable);
             ContinueOnCapturedContext = false;
         }
 
@@ -55,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         {
             timeOut ??= TimeSpan.FromMilliseconds(-1);
             
-            Log.Send(s_logger, typeof(T).FullName, topic);
+            Log.Send(_logger, typeof(T).FullName, topic);
 
             var parameters = InitAddDbParameters(topic.Value, message);
 
@@ -74,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <returns></returns>
         public async Task SendAsync(T message, string topic, TimeSpan? timeOut, CancellationToken cancellationToken = default)
         {
-            Log.SendAsync(s_logger, typeof(T).FullName, topic);
+            Log.SendAsync(_logger, typeof(T).FullName, topic);
 
             timeOut ??= TimeSpan.FromMilliseconds(-1);
             
@@ -96,7 +97,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         {
             timeout ??= TimeSpan.FromMilliseconds(-1);
             
-            Log.TryReceive(s_logger, typeof(T).FullName, timeout.Value.TotalMilliseconds);
+            Log.TryReceive(_logger, typeof(T).FullName, timeout.Value.TotalMilliseconds);
             
             var rc = TryReceive(topic);
             var timeLeft = timeout.Value.TotalMilliseconds;
@@ -117,7 +118,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <returns>The message received -or- ReceivedResult&lt;T&gt;.Empty when no message is waiting</returns>
         private ReceivedResult<T> TryReceive(string topic)
         {
-            Log.TryReceiveInner(s_logger, typeof(T).FullName);
+            Log.TryReceiveInner(_logger, typeof(T).FullName);
 
             var parameters = InitRemoveDbParameters(topic);
 
@@ -142,7 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public async Task<ReceivedResult<T>> TryReceiveAsync(string topic,
             CancellationToken cancellationToken = default)
         {
-            Log.TryReceiveAsync(s_logger, typeof(T).FullName);
+            Log.TryReceiveAsync(_logger, typeof(T).FullName);
 
             var parameters = InitRemoveDbParameters(topic);
 
@@ -182,7 +183,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// </summary>
         public void Purge()
         {
-            Log.Purge(s_logger);
+            Log.Purge(_logger);
 
             using var connection = _connectionProvider.GetConnection();
             var sqlCmd = InitPurgeDbCommand(connection);
