@@ -323,6 +323,8 @@
   <Project Path="src/Paramore.Brighter.Transformers.JustSaying/Paramore.Brighter.Transformers.JustSaying.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.MassTransit/Paramore.Brighter.Transformers.MassTransit.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.MongoGridFS/Paramore.Brighter.Transformers.MongoGridFS.csproj" />
+  <Project Path="src/Paramore.Brighter.Validation/Paramore.Brighter.Validation.csproj" />
+  <Project Path="src/Paramore.Brighter.Validation.FluentValidation/Paramore.Brighter.Validation.FluentValidation.csproj" />
   <Project Path="src/Paramore.Brighter/Paramore.Brighter.csproj" />
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/Paramore.Brighter.Benchmarks/Paramore.Brighter.Benchmarks.csproj" />

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Abstractions for request validation in Paramore.Brighter: the [ValidateQuery] attribute, the base ValidateRequestHandler pipeline handlers, and the framework-agnostic RequestValidationException. Reference a provider package (e.g. Paramore.Brighter.Validation.FluentValidation) to plug in a validation framework.</Description>
+    <Authors>Miguel Ramirez</Authors>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Validation;Command Processor;Pipeline;Brighter</PackageTags>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+
+</Project>
