@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Outbox.MySql
         /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
         public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration,
             IAmARelationalDbConnectionProvider connectionProvider,
-            ILogger? logger = null)
+            ILogger<MySqlOutbox>? logger = null)
             : base(DbSystem.MySql, configuration, connectionProvider,
                 new MySqlQueries(), logger ?? NullLogger<MySqlOutbox>.Instance)
         {
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Outbox.MySql
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
         /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
-        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger? logger = null)
+        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger<MySqlOutbox>? logger = null)
             : this(configuration, new MySqlConnectionProvider(configuration), logger)
         {
         }

@@ -51,10 +51,10 @@ public partial class DeferMessageOnErrorHandlerAsync<TRequest> : RequestHandlerA
     /// <summary>
     /// Initializes a new instance of the <see cref="DeferMessageOnErrorHandlerAsync{TRequest}"/> class.
     /// </summary>
-    /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
-    public DeferMessageOnErrorHandlerAsync(ILoggerFactory? loggerFactory = null)
+    /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
+    public DeferMessageOnErrorHandlerAsync(ILogger<DeferMessageOnErrorHandlerAsync<TRequest>>? logger = null)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<DeferMessageOnErrorHandlerAsync<TRequest>>();
+        _logger = logger ?? NullLogger<DeferMessageOnErrorHandlerAsync<TRequest>>.Instance;
     }
 
     /// <summary>

@@ -52,7 +52,7 @@ public class SqliteOutbox : RelationDatabaseOutbox
     public SqliteOutbox(
         IAmARelationalDatabaseConfiguration configuration,
         IAmARelationalDbConnectionProvider connectionProvider,
-        ILogger? logger = null
+        ILogger<SqliteOutbox>? logger = null
     )
         : base(DbSystem.Sqlite, configuration, connectionProvider,
             new SqliteQueries(), logger ?? NullLogger<SqliteOutbox>.Instance)
@@ -64,7 +64,7 @@ public class SqliteOutbox : RelationDatabaseOutbox
     /// </summary>
     /// <param name="configuration">The configuration to connect to this data store</param>
     /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
-    public SqliteOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger? logger = null)
+    public SqliteOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger<SqliteOutbox>? logger = null)
         : this(configuration, new SqliteConnectionProvider(configuration), logger)
     {
     }

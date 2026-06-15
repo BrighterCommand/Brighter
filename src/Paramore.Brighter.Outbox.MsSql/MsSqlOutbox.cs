@@ -51,7 +51,7 @@ public class MsSqlOutbox : RelationDatabaseOutbox
     /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
     public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration,
         IAmARelationalDbConnectionProvider connectionProvider,
-        ILogger? logger = null)
+        ILogger<MsSqlOutbox>? logger = null)
         : base(DbSystem.MsSql, configuration, connectionProvider,
             new MsSqlQueries(), logger ?? NullLogger<MsSqlOutbox>.Instance)
     {
@@ -62,7 +62,7 @@ public class MsSqlOutbox : RelationDatabaseOutbox
     /// </summary>
     /// <param name="configuration">The configuration.</param>
     /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
-    public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger? logger = null) : this(configuration,
+    public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger<MsSqlOutbox>? logger = null) : this(configuration,
         new MsSqlConnectionProvider(configuration), logger)
     {
     }

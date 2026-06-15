@@ -43,11 +43,11 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
         /// Initializes a new instance of the <see cref="ConfigurationCommandHandler" /> class.
         /// </summary>
         /// <param name="dispatcher"></param>
-        /// <param name="loggerFactory">The logger factory used to create an instance-scoped logger.</param>
-        public ConfigurationCommandHandler(IDispatcher dispatcher, ILoggerFactory? loggerFactory = null)
+        /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
+        public ConfigurationCommandHandler(IDispatcher dispatcher, ILogger<ConfigurationCommandHandler>? logger = null)
         {
             _dispatcher = dispatcher;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<ConfigurationCommandHandler>();
+            _logger = logger ?? NullLogger<ConfigurationCommandHandler>.Instance;
         }
 
         /// <summary>
