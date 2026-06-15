@@ -371,17 +371,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (status == PersistenceStatus.Persisted)
             {
+                // A Persisted report is always a success: the broker accepted the message. The id is
+                // expected (Brighter stamps MESSAGE_ID on every publish), but if it is ever missing we
+                // must NOT fall through to the failure path — doing so would trip the circuit breaker
+                // for a topic whose own delivery report says the message was persisted. Degrade to
+                // Id.Empty instead so the outcome still reflects the persisted status.
+                var persistedId = Id.Empty;
                 if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[]? messageIdBytes))
                 {
                     var val = messageIdBytes.FromByteArray();
                     if (!string.IsNullOrEmpty(val))
-                    {
-                        Task.Run(
-                            () => OnMessagePublished?.Invoke(new PublishConfirmationResult(true, val, topic, publishContext))
-                        );
-                        return;
-                    }
+                        persistedId = new Id(val);
                 }
+
+                Task.Run(
+                    () => OnMessagePublished?.Invoke(new PublishConfirmationResult(true, persistedId, topic, publishContext))
+                );
+                return;
             }
 
             //Not persisted (or no id on the persisted path): raise a failure confirmation carrying
