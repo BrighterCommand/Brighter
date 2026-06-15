@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public partial class RedisMessageCreator
     {
-        private static readonly ILogger s_logger = NullLoggerFactory.Instance.CreateLogger<RedisMessageCreator>();
+        private static readonly ILogger s_logger = NullLogger<RedisMessageCreator>.Instance;
         
         /// <summary>
         /// Create a Brighter Message from the Redis raw content

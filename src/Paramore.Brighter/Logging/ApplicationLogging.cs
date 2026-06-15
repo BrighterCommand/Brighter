@@ -14,8 +14,8 @@ namespace Paramore.Brighter.Logging
     /// <c>loggerFactory</c> constructor parameters added across the codebase). The DI extensions no longer copy the
     /// container's <see cref="ILoggerFactory"/> into this static, which previously caused use-after-dispose when the
     /// container was disposed and cross-talk between two Brighter instances in the same process.
-    /// It remains only as a crash-free, no-op fallback for code that has not yet been migrated, and will be removed
-    /// in a future release.
+    /// It remains only as a crash-free, no-op fallback for external callers that still reference it, and will be
+    /// removed in a future release.
     /// </remarks>
     [Obsolete("Brighter logging is now instance-scoped; inject an ILoggerFactory (via the DI extensions, " +
               "CommandProcessorBuilder.ConfigureLogging/DispatchBuilder.ConfigureLogging, or the optional loggerFactory " +

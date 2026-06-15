@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync;
 
 internal sealed partial class RmqMessageCreator
 {
-    private static readonly ILogger s_logger = NullLoggerFactory.Instance.CreateLogger<RmqMessageCreator>();
+    private static readonly ILogger s_logger = NullLogger<RmqMessageCreator>.Instance;
 
     public static Message CreateMessage(BasicDeliverEventArgs fromQueue)
     {

@@ -45,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// </summary>
     public partial class KafkaMessageCreator
     {
-        private static readonly ILogger s_logger = NullLoggerFactory.Instance.CreateLogger<KafkaMessageCreator>();
+        private static readonly ILogger s_logger = NullLogger<KafkaMessageCreator>.Instance;
 
         private sealed class MessageHeaderResults
         {
