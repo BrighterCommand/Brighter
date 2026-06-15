@@ -247,6 +247,11 @@ namespace Paramore.Brighter
                 }
                 _bus.Enqueue(item.Message);
                 var successResult = new PublishConfirmationResult(true, item.Message.Id, null, item.Context);
+                // NOTE: when the subscriber is an async-void callback (as the mediator's success branch is, which
+                // awaits MarkDispatchedAsync), Invoke returns at its first await — so this raise Task completes, and
+                // DisposeAsync's drain therefore awaits, only up to that first await, NOT the whole callback. Do not
+                // rely on DisposeAsync having flushed a success-path MarkDispatched. The failure path has no await
+                // before TripTopic, so it does drain to completion (which the trip/isolation tests depend on).
                 _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(successResult)));
             }
         }

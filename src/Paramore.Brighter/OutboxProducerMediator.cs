@@ -792,6 +792,17 @@ namespace Paramore.Brighter
                             TripTopic(result.Topic);
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        // This delegate is async void: an exception that escapes it is unobserved on the
+                        // producer's broker/threadpool thread and is process-terminating by default. Keep the
+                        // safety LOCAL and obvious rather than relying on ExecuteWithResiliencePipelineAsync
+                        // happening to absorb the MarkDispatched path — a future caller (or a throwing breaker,
+                        // logger or context copy) must not be able to crash the producer. The message is left
+                        // un-dispatched, so the Sweeper will retry it (C-1); we log at Warning, not Error,
+                        // because nothing is lost.
+                        Log.ConfirmationDispatchError(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
+                    }
                     finally
                     {
                         confirmationSpan?.Dispose();
@@ -861,6 +872,16 @@ namespace Paramore.Brighter
                             // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
                             TripTopic(result.Topic);
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        // This callback runs on the producer's invoking (broker/threadpool) thread; an
+                        // exception that escapes it can tear down that thread. Keep the safety LOCAL and obvious
+                        // rather than relying on ExecuteWithResiliencePipeline happening to absorb the
+                        // MarkDispatched path — a throwing breaker, logger or context copy must not be able to
+                        // crash the producer. The message is left un-dispatched, so the Sweeper will retry it
+                        // (C-1); we log at Warning, not Error, because nothing is lost.
+                        Log.ConfirmationDispatchError(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
                     }
                     finally
                     {
@@ -1283,6 +1304,9 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Error, "Observability failed while handling a publish confirmation; confirmation handling continued")]
             public static partial void ConfirmationObservabilityError(ILogger logger, Exception ex);
+
+            [LoggerMessage(LogLevel.Warning, "Error handling publish confirmation for message Id:{Id} on topic {Topic}; message left un-dispatched for Sweeper retry")]
+            public static partial void ConfirmationDispatchError(ILogger logger, string id, string topic, Exception ex);
             
             [LoggerMessage(LogLevel.Information, "Decoupled invocation of message: Topic:{Topic} Id:{Id}")]
             public static partial void DecoupledInvocationOfMessage(ILogger logger, string topic, string id);

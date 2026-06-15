@@ -205,6 +205,14 @@ public interface IAmABrighterTracer : IDisposable
     /// The span links back to the original publish span (via <paramref name="links"/>) rather than nesting under it,
     /// so the publish span is never reopened or mutated.
     /// </summary>
+    /// <remarks>
+    /// This method clears <see cref="Activity.Current"/> to force the confirmation span to be a true root and does
+    /// NOT restore the prior ambient activity — it deliberately leaves the confirmation span as the new
+    /// <see cref="Activity.Current"/> so that work done in the callback (e.g. the success-branch <c>MarkDispatched</c>
+    /// span) nests beneath it. It is therefore only safe to call from a context whose ambient activity is owned and
+    /// disposed by the caller (such as a confirmation callback running on a broker/threadpool thread). Calling it
+    /// inline on a thread that owns a meaningful ambient span would silently lose that <see cref="Activity.Current"/>.
+    /// </remarks>
     /// <param name="messageId">The id of the message the broker confirmed; <see cref="Id.Empty"/> records an "unknown" marker</param>
     /// <param name="topic">The wire topic the message was published to, recorded as the messaging destination</param>
     /// <param name="success">True if the broker confirmed persistence; false records the failure as an error outcome</param>
