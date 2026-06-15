@@ -267,7 +267,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Log.SubscribingToTopic(_logger, Topic);
             _consumer.Subscribe([Topic.Value]);
 
-            _creator = new KafkaMessageCreator();
+            _creator = new KafkaMessageCreator(_loggerFactory?.CreateLogger<KafkaMessageCreator>());
             
             MakeChannels = makeChannels;
             Topic = routingKey;

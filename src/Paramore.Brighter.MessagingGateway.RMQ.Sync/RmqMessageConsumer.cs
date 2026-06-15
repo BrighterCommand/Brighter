@@ -50,6 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync
     {
         private readonly ILogger _logger;
+        private readonly RmqMessageCreator _messageCreator;
 
         private PullConsumer? _consumer;
         private RmqMessageProducer? _requeueProducer;
@@ -138,6 +139,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             : base(connection, loggerFactory)
         {
             _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageConsumer>();
+            _messageCreator = new RmqMessageCreator(LoggerFactory.CreateLogger<RmqMessageCreator>());
             _queueName = queueName;
             _routingKeys = routingKeys;
             _isDurable = isDurable;
@@ -253,7 +255,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     var messages = new Message[resultCount];
                     for (var i = 0; i < resultCount; i++)
                     {
-                        var message = RmqMessageCreator.CreateMessage(results[i]);
+                        var message = _messageCreator.CreateMessage(results[i]);
                         messages[i] = message;
 
                         Log.ReceivedMessage(_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
