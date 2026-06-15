@@ -28,7 +28,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
@@ -37,7 +37,7 @@ using Polly.CircuitBreaker;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Class RequestHandlerAsync    
+    /// Class RequestHandlerAsync
     /// A target of the <see cref="CommandProcessor"/> either as the target of the Command Dispatcher to provide the domain logic required to handle the <see cref="Command"/>
     /// or <see cref="Event"/> or as an orthogonal handler used as part of the Command Processor pipeline.
     /// We recommend deriving your concrete handler from <see cref="RequestHandlerAsync{T}"/> instead of implementing the interface as it provides boilerplate
@@ -51,9 +51,9 @@ namespace Paramore.Brighter
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-    public abstract partial class RequestHandlerAsync<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
+    public abstract partial class RequestHandlerAsync<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All, ILoggerFactory? loggerFactory = null) : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandlerAsync<TRequest>>();
+        private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RequestHandlerAsync<TRequest>>();
 
         private IHandleRequestsAsync<TRequest>? _successor;
 
@@ -125,7 +125,7 @@ namespace Paramore.Brighter
             
             if (_successor != null)
             {
-                Log.PassingRequest(s_logger, Name, _successor.Name);
+                Log.PassingRequest(_logger, Name, _successor.Name);
                 return await _successor.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
 
@@ -161,7 +161,7 @@ namespace Paramore.Brighter
             
             if (_successor != null)
             {
-                Log.FallingBack(s_logger, Name, _successor.Name);
+                Log.FallingBack(_logger, Name, _successor.Name);
                 return await _successor.FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
 

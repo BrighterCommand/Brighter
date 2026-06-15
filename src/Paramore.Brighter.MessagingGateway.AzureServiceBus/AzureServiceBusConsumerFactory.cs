@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using IServiceBusClientProvider = Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider.IServiceBusClientProvider;
@@ -35,22 +36,26 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
 {
     private readonly IServiceBusClientProvider _clientProvider;
+    private readonly ILoggerFactory? _loggerFactory;
 
     /// <summary>
     /// Factory to create an Azure Service Bus Consumer
     /// </summary>
     /// <param name="configuration">The configuration to connect to <see cref="AzureServiceBusConfiguration"/></param>
-    public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration)
-        : this(new ServiceBusConnectionStringClientProvider(configuration.ConnectionString))
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers</param>
+    public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration, ILoggerFactory? loggerFactory = null)
+        : this(new ServiceBusConnectionStringClientProvider(configuration.ConnectionString), loggerFactory)
     { }
 
     /// <summary>
     /// Factory to create an Azure Service Bus Consumer
     /// </summary>
     /// <param name="clientProvider">A client Provider <see cref="IServiceBusClientProvider"/> to determine how to connect to ASB</param>
-    public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider)
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers</param>
+    public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, ILoggerFactory? loggerFactory = null)
     {
         _clientProvider = clientProvider;
+        _loggerFactory = loggerFactory;
     }
 
     /// <summary>
@@ -60,39 +65,43 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     /// <returns>IAmAMessageConsumerSync</returns>
     public IAmAMessageConsumerSync Create(Subscription subscription)
     {
-        var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider);
+        var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider, _loggerFactory);
 
         if (!(subscription is AzureServiceBusSubscription sub))
             throw new ArgumentException("Subscription is not of type AzureServiceBusSubscription.",
                 nameof(subscription));
 
-        var receiverProvider = new ServiceBusReceiverProvider(_clientProvider);
+        var receiverProvider = new ServiceBusReceiverProvider(_clientProvider, _loggerFactory);
 
         if (sub.Configuration.UseServiceBusQueue)
         {
             var messageProducer = new AzureServiceBusQueueMessageProducer(
                 nameSpaceManagerWrapper,
                 new ServiceBusSenderProvider(_clientProvider),
-                new AzureServiceBusPublication { MakeChannels = subscription.MakeChannels });
+                new AzureServiceBusPublication { MakeChannels = subscription.MakeChannels },
+                loggerFactory: _loggerFactory);
 
             return new AzureServiceBusQueueConsumer(
                 sub,
                 messageProducer,
                 nameSpaceManagerWrapper,
-                receiverProvider);
+                receiverProvider,
+                _loggerFactory);
         }
         else
         {
             var messageProducer = new AzureServiceBusTopicMessageProducer(
                 nameSpaceManagerWrapper,
                 new ServiceBusSenderProvider(_clientProvider),
-                new AzureServiceBusPublication { MakeChannels = subscription.MakeChannels });
+                new AzureServiceBusPublication { MakeChannels = subscription.MakeChannels },
+                loggerFactory: _loggerFactory);
 
             return new AzureServiceBusTopicConsumer(
                 sub,
                 messageProducer,
                 nameSpaceManagerWrapper,
-                receiverProvider);
+                receiverProvider,
+                _loggerFactory);
         }
     }
 

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -31,21 +32,25 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     {
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
         private readonly IEnumerable<Publication> _publications;
+        private readonly ILoggerFactory? _loggerFactory;
 
         /// <summary>
         /// Creates a collection of MsSQL message producers from the MsSQL publication information
         /// </summary>
         /// <param name="msSqlConfiguration">The connection to use to connect to MsSQL</param>
         /// <param name="publications">The publications describing the MySQL topics that we want to use</param>
+        /// <param name="loggerFactory">The optional <see cref="ILoggerFactory"/> used to create loggers</param>
         public MsSqlMessageProducerFactory(
             RelationalDatabaseConfiguration msSqlConfiguration,
-            IEnumerable<Publication> publications)
+            IEnumerable<Publication> publications,
+            ILoggerFactory? loggerFactory = null)
         {
-            _msSqlConfiguration = 
+            _msSqlConfiguration =
                 msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
             if (string.IsNullOrEmpty(msSqlConfiguration.QueueStoreTable))
                 throw new ArgumentNullException(nameof(msSqlConfiguration.QueueStoreTable));
             _publications = publications;
+            _loggerFactory = loggerFactory;
         }
 
         /// <summary>
@@ -60,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             foreach (var publication in _publications)
             {
                 if (publication.Topic is null) throw new ConfigurationException("MS SQL Message Producer Factory: Topic is missing from the publication");
-                var producer = new MsSqlMessageProducer(_msSqlConfiguration, publication);
+                var producer = new MsSqlMessageProducer(_msSqlConfiguration, publication, _loggerFactory);
                 producer.Publication = publication;
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);
                 if (producers.ContainsKey(producerKey))

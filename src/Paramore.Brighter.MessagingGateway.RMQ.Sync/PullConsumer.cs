@@ -27,7 +27,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -35,15 +35,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
     public partial class PullConsumer : DefaultBasicConsumer
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
-        
+        private readonly ILogger _logger;
+
         //we do end up creating a second buffer to the Brighter Channel, but controlling the flow from RMQ depends
         //on us being able to buffer up to the set QoS and then pull. This matches other implementations.
         private readonly ConcurrentQueue<BasicDeliverEventArgs> _messages = new ConcurrentQueue<BasicDeliverEventArgs>();
 
-        public PullConsumer(IModel channel, ushort batchSize)
+        public PullConsumer(IModel channel, ushort batchSize, ILoggerFactory? loggerFactory = null)
             : base(channel)
         {
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageConsumer>();
+
             //set the number of messages to fetch -- defaults to 1 unless set on subscription, no impact on
             //BasicGet, only works on BasicConsume
             channel.BasicQos(0, batchSize, false);
@@ -122,7 +124,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             catch (Exception e)
             {
                 //don't impede shutdown, just log
-                Log.NackUnhandledMessagesOnShutdownFailed(s_logger, e.Message);
+                Log.NackUnhandledMessagesOnShutdownFailed(_logger, e.Message);
             }
            
             base.OnCancel();

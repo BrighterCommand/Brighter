@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
@@ -35,18 +36,22 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     {
         private readonly RedisMessagingGatewayConfiguration _redisConfiguration;
         private readonly IEnumerable<RedisMessagePublication> _publications;
+        private readonly ILoggerFactory? _loggerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RedisMessageProducerFactory"/> class.
         /// </summary>
         /// <param name="redisConfiguration">The configuration settings for connecting to Redis.</param>
         /// <param name="publications">The collection of Redis message publications.</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the producers.</param>
         public RedisMessageProducerFactory(
             RedisMessagingGatewayConfiguration redisConfiguration,
-            IEnumerable<RedisMessagePublication> publications)
+            IEnumerable<RedisMessagePublication> publications,
+            ILoggerFactory? loggerFactory = null)
         {
             _redisConfiguration = redisConfiguration;
             _publications = publications;
+            _loggerFactory = loggerFactory;
         }
 
         /// <summary>
@@ -63,7 +68,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 if (publication.Topic is null)
                     throw new ConfigurationException("RmqMessageProducerFactory.Create => An RmqPublication must have a topic/routing key");    
 
-                var messageProducer = new RedisMessageProducer(_redisConfiguration, publication);
+                var messageProducer = new RedisMessageProducer(_redisConfiguration, publication, loggerFactory: _loggerFactory);
                 messageProducer.Publication = publication;
                 
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);

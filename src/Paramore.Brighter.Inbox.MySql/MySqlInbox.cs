@@ -25,8 +25,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Data;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MySqlConnector;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MySql;
 using Paramore.Brighter.Observability;
 
@@ -44,9 +45,10 @@ public class MySqlInbox : RelationalDatabaseInbox
     /// </summary>
     /// <param name="configuration">The configuration.</param>
     /// <param name="connectionProvider">The Connection Provider.</param>
-    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider)
-        : base(DbSystem.MySql, configuration, connectionProvider, 
-            new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlInbox>())
+    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<MySqlInbox>? logger = null)
+        : base(DbSystem.MySql, configuration, connectionProvider,
+            new MySqlQueries(), logger ?? NullLogger<MySqlInbox>.Instance)
     {
     }
 
@@ -54,8 +56,9 @@ public class MySqlInbox : RelationalDatabaseInbox
     ///     Initializes a new instance of the <see cref="MySqlInbox" /> class.
     /// </summary>
     /// <param name="configuration">The configuration.</param>
-    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration) : this(configuration,
-        new MySqlConnectionProvider(configuration))
+    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, ILogger<MySqlInbox>? logger = null) : this(configuration,
+        new MySqlConnectionProvider(configuration), logger)
     {
     }
 

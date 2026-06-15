@@ -61,9 +61,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly InstrumentationOptions _instrumentation;
 
         public KafkaMessageProducer(
-            KafkaMessagingGatewayConfiguration configuration, 
+            KafkaMessagingGatewayConfiguration configuration,
             KafkaPublication publication,
-            InstrumentationOptions instrumentation = InstrumentationOptions.All)
+            InstrumentationOptions instrumentation = InstrumentationOptions.All,
+            ILoggerFactory? loggerFactory = null)
+            : base(loggerFactory)
         {
             if (publication is null)
                 throw new ArgumentNullException(nameof(publication));
@@ -178,9 +180,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     _hasFatalProducerError = error.IsFatal;
                     
                     if (_hasFatalProducerError) 
-                        Log.FatalProducerError(s_logger, error.Code, error.Reason, true);
+                        Log.FatalProducerError(_logger, error.Code, error.Reason, true);
                     else
-                        Log.NonFatalProducerError(s_logger, error.Code, error.Reason, false);
+                        Log.NonFatalProducerError(_logger, error.Code, error.Reason, false);
                     
                 })
                 .Build();
@@ -256,29 +258,29 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             try
             {
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
-                Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
+                Log.SendingMessageToKafka(_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
                 _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers));
             }
             catch (ProduceException<string, string> pe)
             {
-                Log.ErrorSendingMessageToKafka(s_logger, pe, _producerConfig.BootstrapServers, pe.Error.Reason);
+                Log.ErrorSendingMessageToKafka(_logger, pe, _producerConfig.BootstrapServers, pe.Error.Reason);
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", pe);
             }
             catch (InvalidOperationException ioe)
             {
-                Log.ErrorSendingMessageToKafka(s_logger, ioe, _producerConfig.BootstrapServers, ioe.Message);
+                Log.ErrorSendingMessageToKafka(_logger, ioe, _producerConfig.BootstrapServers, ioe.Message);
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
 
             }
             catch (ArgumentException ae)
             {
-                Log.ErrorSendingMessageToKafka(s_logger, ae, _producerConfig.BootstrapServers, ae.Message);
+                Log.ErrorSendingMessageToKafka(_logger, ae, _producerConfig.BootstrapServers, ae.Message);
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
 
             }
             catch (KafkaException kafkaException)
             {
-                Log.KafkaExceptionError(s_logger, kafkaException, Topic?.Value ?? RoutingKey.Empty.Value);
+                Log.KafkaExceptionError(_logger, kafkaException, Topic?.Value ?? RoutingKey.Empty.Value);
 
                 if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
                     throw;
@@ -329,24 +331,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
              try
              {
                  BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
-                 Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
+                 Log.SendingMessageToKafka(_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
                  await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers), cancellationToken);
             
              }
              catch (ProduceException<string, string> pe)
              {
-                 Log.ErrorSendingMessageToKafka(s_logger, pe, _producerConfig.BootstrapServers, pe.Error.Reason);
+                 Log.ErrorSendingMessageToKafka(_logger, pe, _producerConfig.BootstrapServers, pe.Error.Reason);
                  throw new ChannelFailureException("Error talking to the broker, see inner exception for details", pe);
              }
              catch (InvalidOperationException ioe)
              {
-                 Log.ErrorSendingMessageToKafka(s_logger, ioe, _producerConfig.BootstrapServers, ioe.Message);
+                 Log.ErrorSendingMessageToKafka(_logger, ioe, _producerConfig.BootstrapServers, ioe.Message);
                  throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
             
              }
              catch (ArgumentException ae)
              {
-                 Log.ErrorSendingMessageToKafka(s_logger, ae, _producerConfig.BootstrapServers, ae.Message);
+                 Log.ErrorSendingMessageToKafka(_logger, ae, _producerConfig.BootstrapServers, ae.Message);
                  throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
                            
              }

@@ -21,16 +21,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging;
+
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     /// <inheritdoc />
     /// <summary>
-    /// A factory for creating a Kafka message consumer from a <see cref="Subscription{T}"/>> 
+    /// A factory for creating a Kafka message consumer from a <see cref="Subscription{T}"/>>
     /// </summary>
-    
+
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _configuration;
+        private readonly ILoggerFactory? _loggerFactory;
         private IAmAMessageScheduler? _scheduler;
 
         /// <summary>
@@ -48,13 +51,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="configuration">The <see cref="KafkaMessagingGatewayConfiguration"/> used to connect to the Broker</param>
         /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers</param>
         public KafkaMessageConsumerFactory(
             KafkaMessagingGatewayConfiguration configuration,
-            IAmAMessageScheduler? scheduler = null
+            IAmAMessageScheduler? scheduler = null,
+            ILoggerFactory? loggerFactory = null
             )
         {
             _configuration = configuration;
             _scheduler = scheduler;
+            _loggerFactory = loggerFactory;
         }
 
         /// <summary>
@@ -102,7 +108,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 invalidMessageRoutingKey: invalidMessageRoutingKey,
                 timeProvider: kafkaSubscription.TimeProvider,
-                scheduler: _scheduler
+                scheduler: _scheduler,
+                loggerFactory: _loggerFactory
                 );
         }
 

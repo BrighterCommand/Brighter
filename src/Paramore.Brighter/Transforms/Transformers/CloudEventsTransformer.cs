@@ -6,9 +6,9 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.Transforms.Transformers;
@@ -36,8 +36,17 @@ namespace Paramore.Brighter.Transforms.Transformers;
 /// </summary>
 public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageTransformAsync
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CloudEventsTransformer>();
+    private readonly ILogger _logger;
     private static readonly Uri s_defaultSource = new(MessageHeader.DefaultSource);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CloudEventsTransformer"/> class.
+    /// </summary>
+    /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
+    public CloudEventsTransformer(ILoggerFactory? loggerFactory = null)
+    {
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<CloudEventsTransformer>();
+    }
 
     private Uri? _source;
     private string? _type;
@@ -148,7 +157,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         return ReadCloudEventJsonMessage(message);
     }
 
-    private static Message ReadCloudEventJsonMessage(Message message)
+    private Message ReadCloudEventJsonMessage(Message message)
     {
         try
         {
@@ -214,7 +223,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         }
         catch(JsonException ex)
         {
-            Log.ErrorDuringDeserializerOnUnwrap(s_logger, ex);
+            Log.ErrorDuringDeserializerOnUnwrap(_logger, ex);
             return message;
         }
     }
@@ -302,7 +311,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         }
         catch (JsonException e)
         {
-            Log.ErrorDuringDeserializerAJsonOnWrap(s_logger, e);
+            Log.ErrorDuringDeserializerAJsonOnWrap(_logger, e);
             return message;
         }
     }

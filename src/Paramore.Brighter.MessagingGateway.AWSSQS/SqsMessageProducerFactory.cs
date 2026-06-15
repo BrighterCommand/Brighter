@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -11,17 +12,21 @@ public class SqsMessageProducerFactory : IAmAMessageProducerFactory
 {
     private readonly AWSMessagingGatewayConnection _connection;
     private readonly IEnumerable<SqsPublication> _publications;
+    private readonly ILoggerFactory? _loggerFactory;
 
     /// <summary>
     /// Initialize new instance of <see cref="SqsMessageProducerFactory"/>.
     /// </summary>
     /// <param name="connection">The <see cref="AWSMessagingGatewayConnection"/>.</param>
     /// <param name="publications">The collection of <see cref="SqsPublication"/>.</param>
+    /// <param name="loggerFactory">The factory used to create loggers for the producers.</param>
     public SqsMessageProducerFactory(AWSMessagingGatewayConnection connection,
-        IEnumerable<SqsPublication> publications)
+        IEnumerable<SqsPublication> publications,
+        ILoggerFactory? loggerFactory = null)
     {
         _connection = connection;
         _publications = publications;
+        _loggerFactory = loggerFactory;
     }
 
     /// <summary>
@@ -37,7 +42,7 @@ public class SqsMessageProducerFactory : IAmAMessageProducerFactory
             if (publication.Topic is null)
                 throw new ConfigurationException("Missing topic on Publication");
 
-            var producer = new SqsMessageProducer(_connection, publication);
+            var producer = new SqsMessageProducer(_connection, publication, loggerFactory: _loggerFactory);
             if (producer.ConfirmQueueExists())
             {
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);
@@ -68,7 +73,7 @@ public class SqsMessageProducerFactory : IAmAMessageProducerFactory
             if (publication.Topic is null)
                 throw new ConfigurationException("Missing topic on Publication");
 
-            var producer = new SqsMessageProducer(_connection, publication);
+            var producer = new SqsMessageProducer(_connection, publication, loggerFactory: _loggerFactory);
             if (await producer.ConfirmQueueExistsAsync())
             {
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);

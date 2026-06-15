@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Postgres;
 
@@ -9,19 +10,19 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// to publish messages to a PostgreSQL message queue. This factory takes a connection configuration and a collection
 /// of <see cref="PostgresPublication"/> configurations to build the registry.
 /// </summary>
-public class PostgresProducerRegistryFactory(PostgresMessagingGatewayConnection connection, IEnumerable<PostgresPublication> publications) : IAmAProducerRegistryFactory
+public class PostgresProducerRegistryFactory(PostgresMessagingGatewayConnection connection, IEnumerable<PostgresPublication> publications, ILoggerFactory? loggerFactory = null) : IAmAProducerRegistryFactory
 {
     /// <inheritdoc />
     public IAmAProducerRegistry Create()
-    { 
-        var producerFactory = new PostgresMessageProducerFactory(connection, publications);
+    {
+        var producerFactory = new PostgresMessageProducerFactory(connection, publications, loggerFactory);
         return new ProducerRegistry(producerFactory.Create());
     }
 
     /// <inheritdoc />
     public async Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
     {
-        var producerFactory = new PostgresMessageProducerFactory(connection, publications);
+        var producerFactory = new PostgresMessageProducerFactory(connection, publications, loggerFactory);
         return new ProducerRegistry(await producerFactory.CreateAsync());
     }
 }

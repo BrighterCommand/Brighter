@@ -26,7 +26,8 @@ THE SOFTWARE. */
 using System;
 using System.Data;
 using Microsoft.Data.Sqlite;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Sqlite;
 
@@ -45,9 +46,10 @@ public class SqliteInbox : RelationalDatabaseInbox
     /// </summary>
     /// <param name="connectionProvider">The connection provider for the database.</param>
     /// <param name="configuration">The configuration for the database.</param>
-    public SqliteInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider)
-        : base(DbSystem.Sqlite, configuration, connectionProvider, 
-            new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteInbox>())
+    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+    public SqliteInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<SqliteInbox>? logger = null)
+        : base(DbSystem.Sqlite, configuration, connectionProvider,
+            new SqliteQueries(), logger ?? NullLogger<SqliteInbox>.Instance)
     {
     }
 
@@ -55,8 +57,9 @@ public class SqliteInbox : RelationalDatabaseInbox
     ///     Initializes a new instance of the <see cref="SqliteInbox" /> class.
     /// </summary>
     /// <param name="configuration">The configuration for the database.</param>
-    public SqliteInbox(IAmARelationalDatabaseConfiguration configuration) 
-        : this(configuration, new SqliteConnectionProvider(configuration))
+    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+    public SqliteInbox(IAmARelationalDatabaseConfiguration configuration, ILogger<SqliteInbox>? logger = null)
+        : this(configuration, new SqliteConnectionProvider(configuration), logger)
     {
     }
 

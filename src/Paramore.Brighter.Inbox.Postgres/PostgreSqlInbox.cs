@@ -26,9 +26,10 @@ THE SOFTWARE. */
 using System;
 using System.Data;
 using System.Linq;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using NpgsqlTypes;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
@@ -36,14 +37,14 @@ namespace Paramore.Brighter.Inbox.Postgres;
 
 public class PostgreSqlInbox : RelationalDatabaseInbox
 {
-    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider)
-        : base(DbSystem.Postgresql, configuration, connectionProvider, 
-            new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlInbox>())
+    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<PostgreSqlInbox>? logger = null)
+        : base(DbSystem.Postgresql, configuration, connectionProvider,
+            new PostgreSqlQueries(), logger ?? NullLogger<PostgreSqlInbox>.Instance)
     {
     }
 
-    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration)
-        : this(configuration, new PostgreSqlConnectionProvider(configuration))
+    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, ILogger<PostgreSqlInbox>? logger = null)
+        : this(configuration, new PostgreSqlConnectionProvider(configuration), logger)
     {
     }
 

@@ -2,14 +2,14 @@ using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Storage.Azure;
 
-public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) : IAmAnArchiveProvider
+public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options, ILoggerFactory? loggerFactory = null) : IAmAnArchiveProvider
 {
     private readonly BlobContainerClient _containerClient = new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
-    private readonly ILogger _logger = ApplicationLogging.CreateLogger<AzureBlobArchiveProvider>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureBlobArchiveProvider>();
 
     /// <summary>
     /// Send a Message to the archive provider

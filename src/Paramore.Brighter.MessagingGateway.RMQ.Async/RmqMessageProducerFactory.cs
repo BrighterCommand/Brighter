@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async
 {
@@ -34,9 +35,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
     /// </summary>
     /// <param name="connection">The connection to use to connect to RabbitMQ</param>
     /// <param name="publications">The publications describing the RabbitMQ topics that we want to use</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the producers</param>
     public class RmqMessageProducerFactory(
         RmqMessagingGatewayConnection connection,
-        IEnumerable<RmqPublication> publications)
+        IEnumerable<RmqPublication> publications,
+        ILoggerFactory? loggerFactory = null)
         : IAmAMessageProducerFactory
     {
         /// <summary>
@@ -51,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             {
                 if (publication.Topic is null)
                     throw new ConfigurationException("RmqMessageProducerFactory.Create => An RmqPublication must have a topic/routing key");
-                var messageProducer = new RmqMessageProducer(connection, publication);
+                var messageProducer = new RmqMessageProducer(connection, publication, loggerFactory);
                 messageProducer.Publication = publication;
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);
                 if (producers.ContainsKey(producerKey))

@@ -27,6 +27,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
@@ -36,19 +37,23 @@ public class AzureServiceBusProducerRegistryFactory : IAmAProducerRegistryFactor
     private readonly IServiceBusClientProvider _clientProvider;
     private readonly IEnumerable<AzureServiceBusPublication> _asbPublications;
     private readonly int _bulkSendBatchSize;
+    private readonly ILoggerFactory? _loggerFactory;
 
     /// <summary>
     /// Creates a producer registry initialized with producers for ASB derived from the publications
     /// </summary>
     /// <param name="configuration">The configuration of the connection to ASB</param>
     /// <param name="asbPublications">A set of publications - topics on the server - to configure</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers</param>
     public AzureServiceBusProducerRegistryFactory(
-        AzureServiceBusConfiguration configuration, 
-        IEnumerable<AzureServiceBusPublication> asbPublications)
+        AzureServiceBusConfiguration configuration,
+        IEnumerable<AzureServiceBusPublication> asbPublications,
+        ILoggerFactory? loggerFactory = null)
     {
         _clientProvider = new ServiceBusConnectionStringClientProvider(configuration.ConnectionString);
         _asbPublications = asbPublications;
         _bulkSendBatchSize = configuration.BulkSendBatchSize;
+        _loggerFactory = loggerFactory;
     }
 
     /// <summary>
@@ -57,14 +62,17 @@ public class AzureServiceBusProducerRegistryFactory : IAmAProducerRegistryFactor
     /// <param name="clientProvider">The connection to ASB</param>
     /// <param name="asbPublications">A set of publications - topics on the server - to configure</param>
     /// <param name="bulkSendBatchSize">The maximum size to chunk messages when dispatching to ASB</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers</param>
     public AzureServiceBusProducerRegistryFactory(
         IServiceBusClientProvider clientProvider,
         IEnumerable<AzureServiceBusPublication> asbPublications,
-        int bulkSendBatchSize = 10)
+        int bulkSendBatchSize = 10,
+        ILoggerFactory? loggerFactory = null)
     {
         _clientProvider = clientProvider;
         _asbPublications = asbPublications;
         _bulkSendBatchSize = bulkSendBatchSize;
+        _loggerFactory = loggerFactory;
     }
 
     /// <summary>
@@ -73,7 +81,7 @@ public class AzureServiceBusProducerRegistryFactory : IAmAProducerRegistryFactor
     /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
     public IAmAProducerRegistry Create()
     {
-        var producerFactory = new AzureServiceBusMessageProducerFactory(_clientProvider, _asbPublications, _bulkSendBatchSize);
+        var producerFactory = new AzureServiceBusMessageProducerFactory(_clientProvider, _asbPublications, _bulkSendBatchSize, _loggerFactory);
 
         return new ProducerRegistry(producerFactory.Create());
     }

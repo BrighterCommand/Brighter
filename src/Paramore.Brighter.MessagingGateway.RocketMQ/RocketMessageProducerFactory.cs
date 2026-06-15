@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Org.Apache.Rocketmq;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -12,9 +12,12 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// Factory class for creating RocketMQ message producers in Brighter.
 /// Implements RocketMQ's producer group pattern and transactional message support.
 /// </summary>
-public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnection connection, IEnumerable<RocketMqPublication> publications) : IAmAMessageProducerFactory
+/// <param name="connection">The gateway connection configuration.</param>
+/// <param name="publications">The publications to create producers for.</param>
+/// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
+public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnection connection, IEnumerable<RocketMqPublication> publications, ILoggerFactory? loggerFactory = null) : IAmAMessageProducerFactory
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageProducerFactory>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RocketMessageProducerFactory>();
     
     /// <inheritdoc />
     public Dictionary<ProducerKey, IAmAMessageProducer> Create() 
@@ -34,7 +37,7 @@ public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnecti
 
             if (publication.MakeChannels == OnMissingChannel.Create)
             {
-                Log.CreateTopicIsNotSupported(s_logger, publication.Topic!.Value);
+                Log.CreateTopicIsNotSupported(_logger, publication.Topic!.Value);
             }
             
             producers[new ProducerKey(publication.Topic, publication.Type)] = new RocketMqMessageProducer(connection,

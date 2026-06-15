@@ -57,11 +57,13 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     /// <param name="messageProducer">The producer we want to send via</param>
     /// <param name="administrationClientWrapper">The admin client for ASB</param>
     /// <param name="isAsync">Whether the consumer is async</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers</param>
     protected AzureServiceBusConsumer(
-        AzureServiceBusSubscription subscription, 
+        AzureServiceBusSubscription subscription,
         IAmAMessageProducer messageProducer,
         IAdministrationClientWrapper administrationClientWrapper,
-        bool isAsync = false
+        bool isAsync = false,
+        ILoggerFactory? loggerFactory = null
     )
     {
         Subscription = subscription;
@@ -70,7 +72,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
         _messageProducer = messageProducer;
         AdministrationClientWrapper = administrationClientWrapper;
-        _azureServiceBusMesssageCreator = new AzureServiceBusMesssageCreator(subscription);
+        _azureServiceBusMesssageCreator = new AzureServiceBusMesssageCreator(subscription, loggerFactory);
     }
         
     /// <summary>

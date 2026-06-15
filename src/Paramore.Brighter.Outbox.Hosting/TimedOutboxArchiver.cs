@@ -27,7 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 // ReSharper disable StaticMemberInGenericType
 
 namespace Paramore.Brighter.Outbox.Hosting
@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Outbox.Hosting
     /// </summary>
     public partial class TimedOutboxArchiver<TMessage, TTransaction> : IHostedService, IDisposable where TMessage : Message
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
+        private readonly ILogger _logger;
         private Timer? _timer;
         private readonly OutboxArchiver<TMessage, TTransaction> _archiver;
         private readonly IDistributedLock _distributedLock;
@@ -49,14 +49,17 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="archiver">The archiver to use</param>
         /// <param name="distributedLock">Used to ensure that only one instance of the <see cref="TimedOutboxSweeper"/> is running</param>
         /// <param name="options">The <see cref="TimedOutboxArchiverOptions"/> that control how the archiver runs, such as interval</param>
+        /// <param name="logger">The logger; defaults to a no-op logger when not supplied</param>
         public TimedOutboxArchiver(
             OutboxArchiver<TMessage, TTransaction> archiver,
             IDistributedLock distributedLock,
-            TimedOutboxArchiverOptions options)
+            TimedOutboxArchiverOptions options,
+            ILogger<TimedOutboxArchiver<TMessage, TTransaction>>? logger = null)
         {
             _archiver = archiver;
             _distributedLock = distributedLock;
             _options = options;
+            _logger = logger ?? NullLogger<TimedOutboxArchiver<TMessage, TTransaction>>.Instance;
         }
 
         private const string LockingResourceName = "Archiver";
@@ -68,7 +71,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <returns>A completed task to allow other background services to run</returns>
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            Log.OutboxArchiverServiceIsStarting(s_logger);
+            Log.OutboxArchiverServiceIsStarting(_logger);
 
             _timer = new Timer(_ => Archive(cancellationToken).GetAwaiter().GetResult(), 
                 null,
@@ -85,7 +88,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <returns>A completed task to allow other background services to run</returns>
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            Log.OutboxArchiverServiceIsStopping(s_logger);
+            Log.OutboxArchiverServiceIsStopping(_logger);
 
             _timer?.Change(Timeout.Infinite, 0);
 
@@ -107,11 +110,11 @@ namespace Paramore.Brighter.Outbox.Hosting
                 var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken);
                 if (lockId == null)
                 {
-                    Log.OutboxArchiverIsStillRunningAbandoningAttempt(s_logger);
+                    Log.OutboxArchiverIsStillRunningAbandoningAttempt(_logger);
                     return;
                 }
 
-                Log.OutboxArchiverLookingForMessagesToArchive(s_logger);
+                Log.OutboxArchiverLookingForMessagesToArchive(_logger);
                 try
                 {
                     if (_archiver.HasAsyncOutbox())
@@ -119,7 +122,7 @@ namespace Paramore.Brighter.Outbox.Hosting
                     else if (_archiver.HasOutbox())
                         await Task.Run(() => _archiver.Archive(_options.MinimumAge, new RequestContext()), cancellationToken);
                     else
-                        Log.NoOutboxConfigured(s_logger);
+                        Log.NoOutboxConfigured(_logger);
                 }
                 finally
                 {
@@ -128,11 +131,11 @@ namespace Paramore.Brighter.Outbox.Hosting
             }
             catch (Exception e)
             {
-                Log.ErrorWhileSweepingTheOutbox(s_logger, e);
+                Log.ErrorWhileSweepingTheOutbox(_logger, e);
             }
             finally
             {
-                Log.OutboxSweeperSleeping(s_logger);
+                Log.OutboxSweeperSleeping(_logger);
             }
         }
 

@@ -5,10 +5,10 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.PostgreSql;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -22,10 +22,11 @@ public partial class PostgresMessageConsumer(
     RelationalDatabaseConfiguration configuration,
     PostgresSubscription subscription,
     RoutingKey? deadLetterRoutingKey = null,
-    RoutingKey? invalidMessageRoutingKey = null
+    RoutingKey? invalidMessageRoutingKey = null,
+    ILoggerFactory? loggerFactory = null
     ) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresMessageConsumer>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PostgresMessageConsumer>();
     private readonly RelationalDatabaseConfiguration _configuration = configuration;
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
     private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
@@ -34,9 +35,9 @@ public partial class PostgresMessageConsumer(
     // thread-safety mode is needed. None does not cache exceptions, allowing the factory
     // to retry on the next .Value access after a transient failure.
     private readonly Lazy<PostgresMessageProducer?>? _deadLetterProducer =
-        deadLetterRoutingKey != null ? new Lazy<PostgresMessageProducer?>(() => CreateProducer(configuration, deadLetterRoutingKey), LazyThreadSafetyMode.None) : null;
+        deadLetterRoutingKey != null ? new Lazy<PostgresMessageProducer?>(() => CreateProducer(configuration, deadLetterRoutingKey, loggerFactory), LazyThreadSafetyMode.None) : null;
     private readonly Lazy<PostgresMessageProducer?>? _invalidMessageProducer =
-        invalidMessageRoutingKey != null ? new Lazy<PostgresMessageProducer?>(() => CreateProducer(configuration, invalidMessageRoutingKey), LazyThreadSafetyMode.None) : null;
+        invalidMessageRoutingKey != null ? new Lazy<PostgresMessageProducer?>(() => CreateProducer(configuration, invalidMessageRoutingKey, loggerFactory), LazyThreadSafetyMode.None) : null;
 
     private string SchemaName => subscription.SchemaName ?? _configuration.SchemaName ?? "public";
     private string TableName => subscription.QueueStoreTable ?? _configuration.QueueStoreTable;
@@ -63,11 +64,11 @@ public partial class PostgresMessageConsumer(
             command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             command.ExecuteNonQuery();
-            Log.DeletedMessage(s_logger, message.Id.Value, receiptHandle, QueueName);
+            Log.DeletedMessage(_logger, message.Id.Value, receiptHandle, QueueName);
         }
         catch (Exception exception)
         {
-            Log.ErrorDeletingMessage(s_logger, exception, message.Id.Value, receiptHandle, QueueName);
+            Log.ErrorDeletingMessage(_logger, exception, message.Id.Value, receiptHandle, QueueName);
             throw;
         }
     }
@@ -87,11 +88,11 @@ public partial class PostgresMessageConsumer(
             command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             await command.ExecuteNonQueryAsync(cancellationToken);
-            Log.DeletedMessage(s_logger, message.Id.Value, receiptHandle, QueueName);
+            Log.DeletedMessage(_logger, message.Id.Value, receiptHandle, QueueName);
         }
         catch (Exception exception)
         {
-            Log.ErrorDeletingMessage(s_logger, exception, message.Id.Value, receiptHandle, QueueName);
+            Log.ErrorDeletingMessage(_logger, exception, message.Id.Value, receiptHandle, QueueName);
             throw;
         }
     }
@@ -101,18 +102,18 @@ public partial class PostgresMessageConsumer(
     {
         try
         {
-            Log.PurgingQueue(s_logger, TableName);
+            Log.PurgingQueue(_logger, TableName);
             await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
             command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"queue\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
             await command.ExecuteNonQueryAsync(cancellationToken);
             
-            Log.PurgedQueue(s_logger, QueueName);
+            Log.PurgedQueue(_logger, QueueName);
         }
         catch (Exception exception)
         {
-            Log.ErrorPurgingQueue(s_logger, exception, QueueName);
+            Log.ErrorPurgingQueue(_logger, exception, QueueName);
             throw;
         }
         
@@ -123,7 +124,7 @@ public partial class PostgresMessageConsumer(
     {
         try
         {
-            Log.RetrievingNextMessage(s_logger, QueueName);
+            Log.RetrievingNextMessage(_logger, QueueName);
             await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
             if (timeOut != null && timeOut != TimeSpan.Zero)
@@ -171,7 +172,7 @@ public partial class PostgresMessageConsumer(
         }
         catch (Exception exception)
         {
-            Log.ErrorListeningToQueue(s_logger, exception, QueueName);
+            Log.ErrorListeningToQueue(_logger, exception, QueueName);
             throw;
         }
     }
@@ -197,12 +198,12 @@ public partial class PostgresMessageConsumer(
             return false;
         }
 
-        Log.RejectingMessage(s_logger, message.Id.Value, receiptHandle, QueueName);
+        Log.RejectingMessage(_logger, message.Id.Value, receiptHandle, QueueName);
 
         if (_deadLetterProducer == null && _invalidMessageProducer == null)
         {
             if (reason != null)
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
+                Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, reason.RejectionReason.ToString());
 
             DeleteSourceMessage(receiptHandle);
             return true;
@@ -222,7 +223,7 @@ public partial class PostgresMessageConsumer(
             {
                 message.Header.Topic = routingKey!;
                 if (isFallingBackToDlq)
-                    Log.FallingBackToDlq(s_logger, message.Id.Value);
+                    Log.FallingBackToDlq(_logger, message.Id.Value);
 
                 if (routingKey == _invalidMessageRoutingKey)
                     producer = _invalidMessageProducer?.Value;
@@ -233,18 +234,18 @@ public partial class PostgresMessageConsumer(
             if (producer != null)
             {
                 producer.Send(message);
-                Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
+                Log.MessageSentToRejectionChannel(_logger, message.Id.Value, rejectionReason.ToString());
             }
             else
             {
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
+                Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, rejectionReason.ToString());
             }
         }
         catch (Exception ex)
         {
             // DLQ send failed — delete the source message (in finally) and return true
             // to prevent the message pump from retrying endlessly.
-            Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
+            Log.ErrorSendingToRejectionChannel(_logger, ex, message.Id.Value, rejectionReason.ToString());
             return true;
         }
         finally
@@ -263,12 +264,12 @@ public partial class PostgresMessageConsumer(
             return false;
         }
 
-        Log.RejectingMessage(s_logger, message.Id.Value, receiptHandle, QueueName);
+        Log.RejectingMessage(_logger, message.Id.Value, receiptHandle, QueueName);
 
         if (_deadLetterProducer == null && _invalidMessageProducer == null)
         {
             if (reason != null)
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
+                Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, reason.RejectionReason.ToString());
 
             await DeleteSourceMessageAsync(receiptHandle, cancellationToken);
             return true;
@@ -288,7 +289,7 @@ public partial class PostgresMessageConsumer(
             {
                 message.Header.Topic = routingKey!;
                 if (isFallingBackToDlq)
-                    Log.FallingBackToDlq(s_logger, message.Id.Value);
+                    Log.FallingBackToDlq(_logger, message.Id.Value);
 
                 if (routingKey == _invalidMessageRoutingKey)
                     producer = _invalidMessageProducer?.Value;
@@ -299,18 +300,18 @@ public partial class PostgresMessageConsumer(
             if (producer != null)
             {
                 await producer.SendAsync(message, cancellationToken);
-                Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
+                Log.MessageSentToRejectionChannel(_logger, message.Id.Value, rejectionReason.ToString());
             }
             else
             {
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
+                Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, rejectionReason.ToString());
             }
         }
         catch (Exception ex)
         {
             // DLQ send failed — delete the source message and return true
             // to prevent the message pump from retrying endlessly.
-            Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
+            Log.ErrorSendingToRejectionChannel(_logger, ex, message.Id.Value, rejectionReason.ToString());
             return true;
         }
         finally
@@ -333,7 +334,7 @@ public partial class PostgresMessageConsumer(
         
         try
         {
-            Log.RequeueingMessage(s_logger, message.Id.Value);
+            Log.RequeueingMessage(_logger, message.Id.Value);
 
             await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
@@ -344,13 +345,13 @@ public partial class PostgresMessageConsumer(
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             await command.ExecuteNonQueryAsync(cancellationToken);
             
-            Log.RequeuedMessage(s_logger, message.Id.Value);
+            Log.RequeuedMessage(_logger, message.Id.Value);
 
             return true;
         }
         catch (Exception exception)
         {
-            Log.ErrorRequeueingMessage(s_logger, exception, message.Id.Value, receiptHandle, QueueName);
+            Log.ErrorRequeueingMessage(_logger, exception, message.Id.Value, receiptHandle, QueueName);
             return false;
         }
     }
@@ -363,17 +364,17 @@ public partial class PostgresMessageConsumer(
     {
         try
         {
-            Log.PurgingQueue(s_logger, QueueName);
+            Log.PurgingQueue(_logger, QueueName);
             using var connection = _connectionProvider.GetConnection();
             using var command = connection.CreateCommand();
             command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"queue\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
             command.ExecuteNonQuery();
-            Log.PurgedQueue(s_logger, QueueName);
+            Log.PurgedQueue(_logger, QueueName);
         }
         catch (Exception exception)
         {
-            Log.ErrorPurgingQueue(s_logger, exception, QueueName);
+            Log.ErrorPurgingQueue(_logger, exception, QueueName);
             throw;
         }
     }
@@ -383,7 +384,7 @@ public partial class PostgresMessageConsumer(
     {
         try
         {
-            Log.RetrievingNextMessage(s_logger, QueueName);
+            Log.RetrievingNextMessage(_logger, QueueName);
             
             using var connection = _connectionProvider.GetConnection();
             using var command = connection.CreateCommand();
@@ -425,7 +426,7 @@ public partial class PostgresMessageConsumer(
         }
         catch (Exception exception)
         {
-            Log.ErrorListeningToQueue(s_logger, exception, QueueName);
+            Log.ErrorListeningToQueue(_logger, exception, QueueName);
             throw;
         }
     }
@@ -440,7 +441,7 @@ public partial class PostgresMessageConsumer(
         
         try
         {
-            Log.RequeueingMessage(s_logger, message.Id.Value);
+            Log.RequeueingMessage(_logger, message.Id.Value);
 
             using var connection = _connectionProvider.GetConnection();
             using var command = connection.CreateCommand();
@@ -452,13 +453,13 @@ public partial class PostgresMessageConsumer(
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             command.ExecuteNonQuery();
             
-            Log.RequeuedMessage(s_logger, message.Id.Value);
+            Log.RequeuedMessage(_logger, message.Id.Value);
 
             return true;
         }
         catch (Exception exception)
         {
-            Log.ErrorRequeueingMessage(s_logger, exception, message.Id.Value, receiptHandle, QueueName);
+            Log.ErrorRequeueingMessage(_logger, exception, message.Id.Value, receiptHandle, QueueName);
             return false;
         }
     }
@@ -517,15 +518,16 @@ public partial class PostgresMessageConsumer(
         return message;
     }
     
-    private static PostgresMessageProducer? CreateProducer(RelationalDatabaseConfiguration config, RoutingKey routingKey)
+    private static PostgresMessageProducer? CreateProducer(RelationalDatabaseConfiguration config, RoutingKey routingKey, ILoggerFactory? loggerFactory)
     {
         try
         {
-            return new PostgresMessageProducer(config, new PostgresPublication { Topic = routingKey });
+            return new PostgresMessageProducer(config, new PostgresPublication { Topic = routingKey }, loggerFactory: loggerFactory);
         }
         catch (Exception e)
         {
-            Log.ErrorCreatingProducer(s_logger, e, routingKey.Value);
+            var logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PostgresMessageConsumer>();
+            Log.ErrorCreatingProducer(logger, e, routingKey.Value);
             return null;
         }
     }
@@ -575,11 +577,11 @@ public partial class PostgresMessageConsumer(
             command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             command.ExecuteNonQuery();
-            Log.DeletedMessage(s_logger, "source", receiptHandle, QueueName);
+            Log.DeletedMessage(_logger, "source", receiptHandle, QueueName);
         }
         catch (Exception exception)
         {
-            Log.ErrorDeletingMessage(s_logger, exception, "source", receiptHandle, QueueName);
+            Log.ErrorDeletingMessage(_logger, exception, "source", receiptHandle, QueueName);
             throw;
         }
     }
@@ -593,11 +595,11 @@ public partial class PostgresMessageConsumer(
             command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"id\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             await command.ExecuteNonQueryAsync(cancellationToken);
-            Log.DeletedMessage(s_logger, "source", receiptHandle, QueueName);
+            Log.DeletedMessage(_logger, "source", receiptHandle, QueueName);
         }
         catch (Exception exception)
         {
-            Log.ErrorDeletingMessage(s_logger, exception, "source", receiptHandle, QueueName);
+            Log.ErrorDeletingMessage(_logger, exception, "source", receiptHandle, QueueName);
             throw;
         }
     }

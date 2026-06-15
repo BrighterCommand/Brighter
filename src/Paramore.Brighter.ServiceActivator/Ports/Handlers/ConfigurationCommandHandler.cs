@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
     /// </summary>
     public partial class ConfigurationCommandHandler : RequestHandler<ConfigurationCommand>
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<ConfigurationCommandHandler>();
+        private readonly ILogger _logger;
 
         private readonly IDispatcher _dispatcher;
 
@@ -42,9 +42,11 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
         /// Initializes a new instance of the <see cref="ConfigurationCommandHandler" /> class.
         /// </summary>
         /// <param name="dispatcher"></param>
-        public ConfigurationCommandHandler(IDispatcher dispatcher)
+        /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
+        public ConfigurationCommandHandler(IDispatcher dispatcher, ILogger<ConfigurationCommandHandler>? logger = null)
         {
             _dispatcher = dispatcher;
+            _logger = logger ?? NullLogger<ConfigurationCommandHandler>.Instance;
         }
 
         /// <summary>
@@ -54,34 +56,34 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
         /// <returns>TRequest.</returns>
         public override ConfigurationCommand Handle(ConfigurationCommand configurationCommand)
         {
-            Log.HandlingConfigurationCommand(s_logger, configurationCommand.Type);
+            Log.HandlingConfigurationCommand(_logger, configurationCommand.Type);
 
             switch (configurationCommand.Type)
             {
                 case ConfigurationCommandType.CM_STOPALL:
-                    Log.StoppingAllConsumersBegin(s_logger, DateTime.UtcNow.ToString("o"));
-                    Log.LogSeparator(s_logger);
-                    Log.LogEllipsis(s_logger);
+                    Log.StoppingAllConsumersBegin(_logger, DateTime.UtcNow.ToString("o"));
+                    Log.LogSeparator(_logger);
+                    Log.LogEllipsis(_logger);
                     _dispatcher.End().Wait();
-                    Log.AllConsumersStopped(s_logger, DateTime.UtcNow.ToString("o"));
-                    Log.LogSeparator(s_logger);
+                    Log.AllConsumersStopped(_logger, DateTime.UtcNow.ToString("o"));
+                    Log.LogSeparator(_logger);
                     break;
                 case ConfigurationCommandType.CM_STARTALL:
-                    Log.LogSeparator(s_logger);
-                    Log.StartingAllConsumersBegin(s_logger, DateTime.UtcNow.ToString("o"));
-                    Log.LogSeparator(s_logger);
+                    Log.LogSeparator(_logger);
+                    Log.StartingAllConsumersBegin(_logger, DateTime.UtcNow.ToString("o"));
+                    Log.LogSeparator(_logger);
                     _dispatcher.Receive();
                     break;
                 case ConfigurationCommandType.CM_STOPCHANNEL:
-                    Log.LogSeparator(s_logger);
-                    Log.StoppingChannel(s_logger, configurationCommand.SubscriptionName.Value);
-                    Log.LogSeparator(s_logger);
+                    Log.LogSeparator(_logger);
+                    Log.StoppingChannel(_logger, configurationCommand.SubscriptionName.Value);
+                    Log.LogSeparator(_logger);
                     _dispatcher.Shut(new SubscriptionName(configurationCommand.SubscriptionName.Value));
                     break;
                 case ConfigurationCommandType.CM_STARTCHANNEL:
-                    Log.LogSeparator(s_logger);
-                    Log.StartingChannel(s_logger, configurationCommand.SubscriptionName.Value);
-                    Log.LogSeparator(s_logger);
+                    Log.LogSeparator(_logger);
+                    Log.StartingChannel(_logger, configurationCommand.SubscriptionName.Value);
+                    Log.LogSeparator(_logger);
                     _dispatcher.Open(new SubscriptionName(configurationCommand.SubscriptionName.Value));
                     break;
                 default:

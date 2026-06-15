@@ -5,9 +5,9 @@ using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
@@ -23,15 +23,17 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// <param name="connection">The gateway connection configuration, used for lazy DLQ producer creation.</param>
 /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue topic.</param>
 /// <param name="invalidMessageRoutingKey">The routing key for the invalid message topic.</param>
+/// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
 public partial class RocketMessageConsumer(SimpleConsumer consumer,
     int bufferSize,
     TimeSpan invisibilityTimeout,
     RocketMessagingGatewayConnection? connection = null,
     RoutingKey? deadLetterRoutingKey = null,
-    RoutingKey? invalidMessageRoutingKey = null)
+    RoutingKey? invalidMessageRoutingKey = null,
+    ILoggerFactory? loggerFactory = null)
     : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageConsumer>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RocketMessageConsumer>();
 
     private readonly RocketMessagingGatewayConnection? _connection = connection;
     private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
@@ -123,12 +125,12 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             return false;
         }
 
-        Log.RejectingMessage(s_logger, message.Id.Value);
+        Log.RejectingMessage(_logger, message.Id.Value);
 
         if (_deadLetterRoutingKey == null && _invalidMessageRoutingKey == null)
         {
             if (reason != null)
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
+                Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, reason.RejectionReason.ToString());
 
             await consumer.Ack(view);
             return true;
@@ -147,7 +149,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             {
                 message.Header.Topic = routingKey!;
                 if (isFallingBackToDlq)
-                    Log.FallingBackToDlq(s_logger, message.Id.Value);
+                    Log.FallingBackToDlq(_logger, message.Id.Value);
 
                 producer = await GetProducerForRouteAsync(routingKey!);
             }
@@ -155,16 +157,16 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             if (producer != null)
             {
                 await producer.SendAsync(message, cancellationToken);
-                Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
+                Log.MessageSentToRejectionChannel(_logger, message.Id.Value, rejectionReason.ToString());
             }
             else
             {
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
+                Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, rejectionReason.ToString());
             }
         }
         catch (Exception ex)
         {
-            Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
+            Log.ErrorSendingToRejectionChannel(_logger, ex, message.Id.Value, rejectionReason.ToString());
             return true;
         }
         finally
@@ -206,7 +208,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
         }
         catch (Exception ackEx)
         {
-            Log.ErrorAckingSourceMessage(s_logger, ackEx);
+            Log.ErrorAckingSourceMessage(_logger, ackEx);
             return false;
         }
     }
@@ -240,7 +242,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
         }
         catch (Exception ex)
         {
-            Log.ErrorCreatingProducer(s_logger, ex, routingKey.Value);
+            Log.ErrorCreatingProducer(_logger, ex, routingKey.Value);
             return null;
         }
     }

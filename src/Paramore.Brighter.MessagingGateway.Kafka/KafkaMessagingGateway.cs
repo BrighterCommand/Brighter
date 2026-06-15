@@ -29,7 +29,7 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
@@ -41,13 +41,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// </summary>
     public partial class KafkaMessagingGateway
     {
-        protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageProducer>();
+        protected readonly ILogger _logger;
+        protected readonly ILoggerFactory? _loggerFactory;
         protected ClientConfig? ClientConfig;
         protected OnMissingChannel MakeChannels;
         protected RoutingKey? Topic;
         protected int NumPartitions;
         protected short ReplicationFactor;
         protected TimeSpan TopicFindTimeout;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="KafkaMessagingGateway"/> class.
+        /// </summary>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the gateway and any producers it creates.</param>
+        protected KafkaMessagingGateway(ILoggerFactory? loggerFactory = null)
+        {
+            _loggerFactory = loggerFactory;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<KafkaMessageProducer>();
+        }
 
         /// <summary>
         /// Ensure that the topic exists,  behaviour based on the MakeChannels flag of the publication
@@ -99,7 +110,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         $"An error occured creating topic {Topic.Value}: {e.Results[0].Error.Reason}");
                 }
 
-                Log.TopicAlreadyExists(s_logger, Topic.Value);
+                Log.TopicAlreadyExists(_logger, Topic.Value);
             }
         }
 
@@ -153,13 +164,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                                     $"topic is misconfigured => ReplicationFactor should be {ReplicationFactor} but is {matchingTopic.Partitions[0].Replicas.Length};";
                             }
 
-                            Log.TopicMisconfiguredWarning(s_logger, error);
+                            Log.TopicMisconfiguredWarning(_logger, error);
                         }
                     }
                 }
 
                 if (found)
-                    Log.TopicExists(s_logger, Topic.Value);
+                    Log.TopicExists(_logger, Topic.Value);
                     
                 return found;
             }

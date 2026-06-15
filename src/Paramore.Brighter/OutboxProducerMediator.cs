@@ -29,8 +29,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.CircuitBreaker;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
 using Polly;
@@ -49,7 +49,7 @@ namespace Paramore.Brighter
         IAmAnOutboxProducerMediator<TMessage, TTransaction>
         where TMessage : Message
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
+        private readonly ILogger _logger;
 
         private readonly ResiliencePipelineRegistry<string> _resiliencePipelineRegistry;
         private readonly TransformPipelineBuilder _transformPipelineBuilder;
@@ -117,8 +117,12 @@ namespace Paramore.Brighter
             TimeSpan? maxOutStandingCheckInterval = null,
             Dictionary<string, object>? outBoxBag = null,
             TimeProvider? timeProvider = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+            ILoggerFactory? loggerFactory = null)
         {
+            loggerFactory ??= NullLoggerFactory.Instance;
+            _logger = loggerFactory.CreateLogger<CommandProcessor>();
+
             _producerRegistry = producerRegistry ??
                                 throw new ConfigurationException("Missing Producer Registry for External Bus Services");
             _resiliencePipelineRegistry = resiliencePipelineRegistry ??
@@ -139,9 +143,9 @@ namespace Paramore.Brighter
             _timeProvider = timeProvider ?? TimeProvider.System;
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
 
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, instrumentationOptions);
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, instrumentationOptions, loggerFactory);
             _transformPipelineBuilderAsync =
-                new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync, instrumentationOptions);
+                new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync, instrumentationOptions, loggerFactory);
 
             //default to in-memory; expectation for an in memory box is Message and CommittableTransaction
             outbox ??= new InMemoryOutbox(TimeProvider.System);
@@ -316,7 +320,7 @@ namespace Paramore.Brighter
                 if (messages.Length != posts.Length)
                 {
                     var missingMessageIds = posts.Where(id => !messages.Any(m => m.Id == id));
-                    Log.OutboxMessagesNotFound(s_logger, string.Join(",", missingMessageIds));
+                    Log.OutboxMessagesNotFound(_logger, string.Join(",", missingMessageIds));
                 }
                 BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, false,
                         _instrumentationOptions);
@@ -385,7 +389,7 @@ namespace Paramore.Brighter
                 if (messages.Length != postArray.Length)
                 {
                     var missingMessageIds = postArray.Where(id => !messages.Any(m => m.Id == id));
-                    Log.OutboxMessagesNotFound(s_logger, string.Join(",", missingMessageIds));
+                    Log.OutboxMessagesNotFound(_logger, string.Join(",", missingMessageIds));
                 }
                 BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, true,
                         _instrumentationOptions);
@@ -636,7 +640,7 @@ namespace Paramore.Brighter
 
                     requestContext.Span = parentSpan;
 
-                    Log.FoundMessagesToClear(s_logger, messages.Length, amountToClear);
+                    Log.FoundMessagesToClear(_logger, messages.Length, amountToClear);
 
                     if (useBulk)
                     {
@@ -647,11 +651,11 @@ namespace Paramore.Brighter
                         await DispatchAsync(messages, requestContext, false, cancellationToken);
                     }
 
-                    Log.MessagesHaveBeenCleared(s_logger);
+                    Log.MessagesHaveBeenCleared(_logger);
                 }
                 catch (Exception e)
                 {
-                    Log.ErrorWhileDispatchingFromOutbox(s_logger, e);
+                    Log.ErrorWhileDispatchingFromOutbox(_logger, e);
                     requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
                     throw;
                 }
@@ -666,7 +670,7 @@ namespace Paramore.Brighter
             else
             {
                 requestContext.Span?.SetStatus(ActivityStatusCode.Error);
-                Log.SkippingDispatchOfMessages(s_logger);
+                Log.SkippingDispatchOfMessages(_logger);
             }
         }
 
@@ -676,7 +680,7 @@ namespace Paramore.Brighter
             if (!hasOutBox)
                 return;
 
-            Log.OutboxOutstandingMessageCount(s_logger, _outStandingCount);
+            Log.OutboxOutstandingMessageCount(_logger, _outStandingCount);
             // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
             bool exceedsOutstandingMessageLimit =
                 _maxOutStandingMessages != -1 && _outStandingCount > _maxOutStandingMessages;
@@ -692,15 +696,15 @@ namespace Paramore.Brighter
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
 
-            Log.TimeSinceLastCheck(s_logger, timeSinceLastCheck.TotalSeconds);
+            Log.TimeSinceLastCheck(_logger, timeSinceLastCheck.TotalSeconds);
 
             if (timeSinceLastCheck < _maxOutStandingCheckInterval)
             {
-                Log.CheckNotReadyToRunYet(s_logger);
+                Log.CheckNotReadyToRunYet(_logger);
                 return;
             }                                                    
 
-            Log.RunningOutstandingMessageCheck(s_logger, now, timeSinceLastCheck.TotalSeconds);
+            Log.RunningOutstandingMessageCheck(_logger, now, timeSinceLastCheck.TotalSeconds);
             //This is expensive, so use a background thread
             Task.Run(
                 () => OutstandingMessagesCheck(requestContext)
@@ -742,7 +746,7 @@ namespace Paramore.Brighter
                 {
                     if (success)
                     {
-                        Log.SentMessage(s_logger, id);
+                        Log.SentMessage(_logger, id);
                         if (_asyncOutbox != null)
                             await ExecuteWithResiliencePipelineAsync(
                                 async ct =>
@@ -769,7 +773,7 @@ namespace Paramore.Brighter
                 {
                     if (success)
                     {
-                        Log.SentMessage(s_logger, id);
+                        Log.SentMessage(_logger, id);
 
                         if (_outBox != null)
                             ExecuteWithResiliencePipeline(
@@ -819,7 +823,7 @@ namespace Paramore.Brighter
                     // Log the wire topic (Header.Topic) — where the message is going. Producer
                     // lookup uses GetProducerLookupTopic, which may differ from Header.Topic when
                     // a mapper overrode it (e.g. Reply messages routed to a dynamic reply address).
-                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic.Value, message.Id.Value);
+                    Log.DecoupledInvocationOfMessage(_logger, message.Header.Topic.Value, message.Id.Value);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
@@ -900,7 +904,7 @@ namespace Paramore.Brighter
                     {
                         var messages = topicBatch.ToArray();
 
-                        Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key.WireTopic.Value);
+                        Log.BulkDispatchingMessages(_logger, messages.Length, topicBatch.Key.WireTopic.Value);
 
                         foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
                         {
@@ -964,7 +968,7 @@ namespace Paramore.Brighter
                     // Log the wire topic (Header.Topic) — where the message is going. Producer
                     // lookup uses GetProducerLookupTopic, which may differ from Header.Topic when
                     // a mapper overrode it (e.g. Reply messages routed to a dynamic reply address).
-                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic.Value, message.Id.Value);
+                    Log.DecoupledInvocationOfMessage(_logger, message.Header.Topic.Value, message.Id.Value);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
@@ -1065,7 +1069,7 @@ namespace Paramore.Brighter
             s_checkOutstandingSemaphoreToken.Wait();
 
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
-            Log.BeginCountOfOutstandingMessages(s_logger);
+            Log.BeginCountOfOutstandingMessages(_logger);
             try
             {
                 if (_outBox != null)
@@ -1098,12 +1102,12 @@ namespace Paramore.Brighter
             catch (Exception ex)
             {
                 //if we can't talk to the outbox, swallow the exception on this thread
-                Log.ErrorGettingOutstandingMessageCount(s_logger, ex);
+                Log.ErrorGettingOutstandingMessageCount(_logger, ex);
                 _outStandingCount = 0;
             }
             finally
             {
-                Log.CurrentOutstandingCount(s_logger, _outStandingCount);
+                Log.CurrentOutstandingCount(_logger, _outStandingCount);
                 s_checkOutstandingSemaphoreToken.Release();
             }
         }
@@ -1127,7 +1131,7 @@ namespace Paramore.Brighter
             }
             catch (Exception ex)
             {
-                Log.ExceptionWhilstTryingToPublishMessage(s_logger, ex);
+                Log.ExceptionWhilstTryingToPublishMessage(_logger, ex);
                 CheckOutstandingMessages(requestContext);
                 return false;
             }
@@ -1159,7 +1163,7 @@ namespace Paramore.Brighter
             }
             catch (Exception ex)
             {
-                Log.ExceptionWhilstTryingToPublishMessage(s_logger, ex);
+                Log.ExceptionWhilstTryingToPublishMessage(_logger, ex);
                 CheckOutstandingMessages(requestContext);
                 return false;
             }

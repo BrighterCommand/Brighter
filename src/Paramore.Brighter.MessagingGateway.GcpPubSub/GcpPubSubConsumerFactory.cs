@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Google.Api.Gax;
 using Google.Cloud.PubSub.V1;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
@@ -12,10 +13,12 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// dedicated pull consumers, as well as ensuring the underlying subscription exists.
 /// </summary>
 /// <param name="connection">The connection details for the Google Cloud Pub/Sub gateway.</param>
-public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection)
+/// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers.</param>
+public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null)
     : GcpPubSubMessageGateway(connection), IAmAMessageConsumerFactory
 {
     private readonly GcpMessagingGatewayConnection _connection = connection;
+    private readonly ILoggerFactory? _loggerFactory = loggerFactory;
 
     /// <summary>
     /// Creates a synchronous message consumer for the given subscription.
@@ -81,7 +84,7 @@ public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection)
         {
             // Create a new, non-shared consumer that uses the Pull API for each request
             return new GcpPullMessageConsumer(_connection, subscriptionName,
-                pubSubSubscription.BufferSize, pubSubSubscription.TimeProvider);
+                pubSubSubscription.BufferSize, pubSubSubscription.TimeProvider, _loggerFactory);
         }
 
         // If not Pull, use Stream mode. Stream mode consumers are shared per subscription to manage
@@ -100,7 +103,8 @@ public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection)
             _connection,
             consumer,
             subscriptionName,
-            pubSubSubscription.TimeProvider);
+            pubSubSubscription.TimeProvider,
+            _loggerFactory);
     }
 
     private Google.Cloud.PubSub.V1.SubscriberClient CreateSubscriberClient(Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,

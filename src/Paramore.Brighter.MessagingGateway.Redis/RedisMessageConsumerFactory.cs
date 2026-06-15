@@ -22,11 +22,14 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
+
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public class RedisMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly RedisMessagingGatewayConfiguration _configuration;
+        private readonly ILoggerFactory? _loggerFactory;
         private IAmAMessageScheduler? _scheduler;
 
         /// <summary>
@@ -44,10 +47,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="configuration">The Redis messaging gateway configuration</param>
         /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
-        public RedisMessageConsumerFactory(RedisMessagingGatewayConfiguration configuration, IAmAMessageScheduler? scheduler = null)
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers</param>
+        public RedisMessageConsumerFactory(RedisMessagingGatewayConfiguration configuration, IAmAMessageScheduler? scheduler = null, ILoggerFactory? loggerFactory = null)
         {
             _configuration = configuration;
             _scheduler = scheduler;
+            _loggerFactory = loggerFactory;
         }
 
 
@@ -69,7 +74,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 subscription.RoutingKey,
                 _scheduler,
                 deadLetterRoutingKey,
-                invalidMessageRoutingKey);
+                invalidMessageRoutingKey,
+                _loggerFactory);
         }
 
         private static void RequireQueueName(Subscription subscription)
@@ -96,7 +102,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 subscription.RoutingKey,
                 _scheduler,
                 deadLetterRoutingKey,
-                invalidMessageRoutingKey);
+                invalidMessageRoutingKey,
+                _loggerFactory);
         }
     }
 }

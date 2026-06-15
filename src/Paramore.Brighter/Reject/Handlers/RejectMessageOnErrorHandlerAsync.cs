@@ -26,8 +26,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Actions;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Reject.Handlers;
 
@@ -44,7 +44,16 @@ namespace Paramore.Brighter.Reject.Handlers;
 public partial class RejectMessageOnErrorHandlerAsync<TRequest> : RequestHandlerAsync<TRequest>, IAmABackstopHandler
     where TRequest : class, IRequest
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RejectMessageOnErrorHandlerAsync<TRequest>>();
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RejectMessageOnErrorHandlerAsync{TRequest}"/> class.
+    /// </summary>
+    /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
+    public RejectMessageOnErrorHandlerAsync(ILogger<RejectMessageOnErrorHandlerAsync<TRequest>>? logger = null)
+    {
+        _logger = logger ?? NullLogger<RejectMessageOnErrorHandlerAsync<TRequest>>.Instance;
+    }
 
     /// <summary>
     /// Handles the request asynchronously by passing it to the next handler in the pipeline.
@@ -64,7 +73,7 @@ public partial class RejectMessageOnErrorHandlerAsync<TRequest> : RequestHandler
         }
         catch (Exception ex)
         {
-            Log.UnhandledExceptionRejectingMessage(s_logger, ex, typeof(TRequest).Name, ex.Message);
+            Log.UnhandledExceptionRejectingMessage(_logger, ex, typeof(TRequest).Name, ex.Message);
             throw new RejectMessageAction(ex.Message, ex);
         }
     }

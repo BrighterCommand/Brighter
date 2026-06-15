@@ -26,7 +26,7 @@ using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.BoxProvisioning;
 
@@ -52,10 +52,8 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     where TConnection : DbConnection
     where TTransaction : DbTransaction
 {
-    // Static logger keeps the ctor surface unchanged across the 8 concrete provisioners; only
-    // exercised by the pre-lock-hint failure swallow below (Spec 0029 T-PERM).
-    private static readonly ILogger s_logger =
-        ApplicationLogging.CreateLogger<SqlBoxProvisioner<TConnection, TTransaction>>();
+    // Logger is only exercised by the pre-lock-hint failure swallow below (Spec 0029 T-PERM).
+    private readonly ILogger _logger;
 
     private readonly IAmAVersionDetectingMigrationHelper<TConnection, TTransaction> _detectionHelper;
     private readonly IAmABoxMigrationCatalog _catalog;
@@ -73,7 +71,8 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         IAmABoxPayloadModeValidator<TConnection> payloadValidator,
         IAmARelationalDatabaseConfiguration configuration,
         IAmABoxMigrationRunner migrationRunner,
-        BoxType boxType)
+        BoxType boxType,
+        ILoggerFactory? loggerFactory = null)
     {
         _detectionHelper = detectionHelper;
         _catalog = catalog;
@@ -81,6 +80,8 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         _configuration = configuration;
         _migrationRunner = migrationRunner;
         BoxType = boxType;
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance)
+            .CreateLogger<SqlBoxProvisioner<TConnection, TTransaction>>();
     }
 
     /// <inheritdoc />
@@ -173,7 +174,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         }
         catch (DbException ex)
         {
-            s_logger.LogDebug(ex,
+            _logger.LogDebug(ex,
                 "Pre-lock historyExists hint for '{Schema}.{Table}' unavailable; deferring to the runner's under-lock authoritative detection.",
                 EffectiveSchemaName, BoxTableName);
             historyExists = false;
@@ -202,7 +203,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         }
         catch (DbException ex)
         {
-            s_logger.LogDebug(ex,
+            _logger.LogDebug(ex,
                 "Pre-lock maxVersion hint for '{Schema}.{Table}' unavailable; deferring to the runner's under-lock authoritative detection.",
                 EffectiveSchemaName, BoxTableName);
             maxVersion = 0;

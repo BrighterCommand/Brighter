@@ -25,8 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Inbox.Exceptions;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Inbox.Handlers
 {
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Inbox.Handlers
     /// <typeparam name="T"></typeparam>
     public partial class UseInboxHandler<T> : RequestHandler<T> where T: class, IRequest
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<UseInboxHandler<T>>();
+        private readonly ILogger _logger;
 
         private readonly IAmAnInboxSync _inbox;
         private bool _onceOnly;
@@ -53,9 +53,11 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}" /> class.
         /// </summary>
         /// <param name="inbox">The store for commands that pass into the system</param>
-        public UseInboxHandler(IAmAnInboxSync inbox)
+        /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
+        public UseInboxHandler(IAmAnInboxSync inbox, ILogger<UseInboxHandler<T>>? logger = null)
         {
             _inbox = inbox;
+            _logger = logger ?? NullLogger<UseInboxHandler<T>>.Instance;
         }
         
         public override void InitializeFromAttributeParams(params object?[] initializerList)
@@ -82,26 +84,26 @@ namespace Paramore.Brighter.Inbox.Handlers
             
             if (_onceOnly)
             {
-                 Log.CheckingIfCommandHasAlreadyBeenSeen(s_logger, request.Id.Value);
+                 Log.CheckingIfCommandHasAlreadyBeenSeen(_logger, request.Id.Value);
 
                  var exists = _inbox.Exists<T>(request.Id.Value, _contextKey, requestContext);
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
-                    Log.CommandHasAlreadyBeenSeenAsDebug(s_logger, request.Id.Value);
+                    Log.CommandHasAlreadyBeenSeenAsDebug(_logger, request.Id.Value);
                     throw new OnceOnlyException($"A command with id {request.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
-                    Log.CommandHasAlreadyBeenSeenAsWarning(s_logger, request.Id.Value);
+                    Log.CommandHasAlreadyBeenSeenAsWarning(_logger, request.Id.Value);
                     return request;
                 }
             }
 
             T handledCommand = base.Handle(request);
 
-            Log.WritingCommandToTheInbox(s_logger, request.Id.Value);
+            Log.WritingCommandToTheInbox(_logger, request.Id.Value);
 
             _inbox.Add(request, _contextKey, requestContext);
 

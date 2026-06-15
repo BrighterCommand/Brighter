@@ -30,8 +30,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
 using InvalidOperationException = System.InvalidOperationException;
@@ -51,12 +51,13 @@ public class InMemoryScheduler(
     TimeProvider timeProvider,
     Func<IRequest, string> getOrCreateRequestSchedulerId,
     Func<Message, string> getOrCreateMessageSchedulerId,
-    OnSchedulerConflict onConflict)
+    OnSchedulerConflict onConflict,
+    ILoggerFactory? loggerFactory = null)
     : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSync, IAmARequestSchedulerAsync, IDisposable, IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, (ITimer Timer, long Generation)> _timers = new();
     private long _generation;
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryScheduler>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<InMemoryScheduler>();
 
     /// <inheritdoc />
     public string Schedule(Message message, DateTimeOffset at)
@@ -296,7 +297,7 @@ public class InMemoryScheduler(
             return;
         }
 
-        s_logger.LogError("Invalid input during executing scheduler {Data}", state);
+        _logger.LogError("Invalid input during executing scheduler {Data}", state);
     }
 
     /// <summary>

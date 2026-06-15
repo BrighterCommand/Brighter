@@ -25,6 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -47,6 +49,7 @@ namespace Paramore.Brighter.ServiceActivator
         private IAmARequestContextFactory? _requestContextFactory;
         private IAmABrighterTracer? _tracer;
         private InstrumentationOptions _instrumentationOptions;
+        private ILoggerFactory _loggerFactory = NullLoggerFactory.Instance;
 
         private DispatchBuilder() { }
 
@@ -134,6 +137,13 @@ namespace Paramore.Brighter.ServiceActivator
             return this;
         }
 
+        /// <inheritdoc />
+        public IAmADispatchBuilder ConfigureLogging(ILoggerFactory loggerFactory)
+        {
+            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            return this;
+        }
+
         /// <summary>
         /// A list of subscriptions i.e. mappings of channels to commands or events
         /// </summary>
@@ -160,9 +170,9 @@ namespace Paramore.Brighter.ServiceActivator
             if (_commandProcessor is null || _subscriptions is null)
                 throw new ArgumentException("Command Processor Factory and Subscription are required.");
             
-            return new Dispatcher(_commandProcessor, _subscriptions, _messageMapperRegistry, 
-                _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync, 
-                _requestContextFactory, _tracer, _instrumentationOptions
+            return new Dispatcher(_commandProcessor, _subscriptions, _messageMapperRegistry,
+                _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync,
+                _requestContextFactory, _tracer, _instrumentationOptions, _loggerFactory
             );
         }
 
@@ -262,6 +272,14 @@ namespace Paramore.Brighter.ServiceActivator
     /// </summary>
     public interface IAmADispatchBuilder
     {
+        /// <summary>
+        /// Supplies the <see cref="ILoggerFactory"/> used to create instance-scoped loggers for the <see cref="Dispatcher"/>
+        /// and the message pumps it constructs. If not called, a no-op logger factory is used.
+        /// </summary>
+        /// <param name="loggerFactory">The logger factory.</param>
+        /// <returns>IAmADispatchBuilder.</returns>
+        IAmADispatchBuilder ConfigureLogging(ILoggerFactory loggerFactory);
+
         /// <summary>
         /// Builds this instance.
         /// </summary>

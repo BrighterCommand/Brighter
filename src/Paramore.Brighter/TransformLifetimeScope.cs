@@ -1,20 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
     public partial class TransformLifetimeScope : IAmATransformLifetime
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScope>();
+        private readonly ILogger _logger;
         private readonly IAmAMessageTransformerFactory _factory;
         private readonly IList<IAmAMessageTransform> _trackedObjects = new List<IAmAMessageTransform>();
 
-        public TransformLifetimeScope(IAmAMessageTransformerFactory factory)
+        public TransformLifetimeScope(IAmAMessageTransformerFactory factory, ILoggerFactory? loggerFactory = null)
         {
             _factory = factory;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<TransformLifetimeScope>();
         }
         
         public void Dispose()
@@ -31,7 +32,7 @@ namespace Paramore.Brighter
         public void Add(IAmAMessageTransform instance)
         {
             _trackedObjects.Add(instance);
-            Log.TrackingInstance(s_logger, instance.GetHashCode(), instance.GetType());
+            Log.TrackingInstance(_logger, instance.GetHashCode(), instance.GetType());
          }
         
         private void ReleaseTrackedObjects()
@@ -39,7 +40,7 @@ namespace Paramore.Brighter
               _trackedObjects.Each((trackedItem) =>
               {
                   _factory.Release(trackedItem);
-                  Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                  Log.ReleasingHandlerInstance(_logger, trackedItem.GetHashCode(), trackedItem.GetType());
               });
         }
 

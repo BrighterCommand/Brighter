@@ -30,8 +30,8 @@ using Amazon;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Transformers;
 
@@ -52,7 +52,12 @@ internal enum ARNAmazonSNS
 
 internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageCreator>();
+    private readonly ILogger _logger;
+
+    public SqsMessageCreator(ILoggerFactory? loggerFactory = null)
+    {
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SqsMessageCreator>();
+    }
 
     public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
     {
@@ -114,7 +119,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         }
         catch (Exception e)
         {
-            Log.FailedToCreateMessageFromAmqpMessage(s_logger, e);
+            Log.FailedToCreateMessageFromAmqpMessage(_logger, e);
             return Message.FailureMessage(topic.Result, messageId.Success ? messageId.Result : Id.Empty);
         }
     }

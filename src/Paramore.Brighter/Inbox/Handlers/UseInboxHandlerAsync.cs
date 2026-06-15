@@ -27,8 +27,8 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Inbox.Exceptions;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Inbox.Handlers
 {
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Inbox.Handlers
     /// <typeparam name="T"></typeparam>
     public partial class UseInboxHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<UseInboxHandlerAsync<T>>();
+        private readonly ILogger _logger;
 
         private readonly IAmAnInboxAsync _inbox;
         private bool _onceOnly;
@@ -54,9 +54,11 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// Initializes a new instance of the <see cref="UseInboxHandlerAsync{T}" /> class.
         /// </summary>
         /// <param name="inbox">The store for commands that pass into the system</param>
-        public UseInboxHandlerAsync(IAmAnInboxAsync inbox)
+        /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
+        public UseInboxHandlerAsync(IAmAnInboxAsync inbox, ILogger<UseInboxHandlerAsync<T>>? logger = null)
         {
             _inbox = inbox;
+            _logger = logger ?? NullLogger<UseInboxHandlerAsync<T>>.Instance;
         }
         
         
@@ -86,7 +88,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             
             if (_onceOnly)
             {
-                Log.CheckingIfCommandHasBeenSeen(s_logger, command.Id.Value);
+                Log.CheckingIfCommandHasBeenSeen(_logger, command.Id.Value);
                 //TODO: We should not use an infinite timeout here - how to configure
                 var exists =
                     await _inbox.ExistsAsync<T>(command.Id.Value, _contextKey, requestContext, -1, cancellationToken)
@@ -94,18 +96,18 @@ namespace Paramore.Brighter.Inbox.Handlers
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
-                    Log.CommandHasBeenSeen(s_logger, command.Id.Value);
+                    Log.CommandHasBeenSeen(_logger, command.Id.Value);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
-                    Log.CommandHasBeenSeenWarning(s_logger, command.Id.Value);
+                    Log.CommandHasBeenSeenWarning(_logger, command.Id.Value);
                     return command;
                 }
             }
 
-            Log.WritingCommandToInbox(s_logger, command.Id.Value);
+            Log.WritingCommandToInbox(_logger, command.Id.Value);
 
             T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 

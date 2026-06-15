@@ -28,7 +28,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Observability;
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     /// </summary>
     public partial class MsSqlMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageProducer>();
+        private readonly ILogger _logger;
         private readonly InstrumentationOptions _instrumentation;
         private readonly MsSqlMessageQueue<Message> _sqlQ;
 
@@ -69,10 +69,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             RelationalDatabaseConfiguration msSqlConfiguration,
             IAmARelationalDbConnectionProvider connectonProvider,
             Publication? publication = null,
-            InstrumentationOptions instrumentation = InstrumentationOptions.All
+            InstrumentationOptions instrumentation = InstrumentationOptions.All,
+            ILoggerFactory? loggerFactory = null
         )
         {
-            _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider);
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MsSqlMessageProducer>();
+            _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider, loggerFactory);
             _instrumentation = instrumentation;
             Publication = publication ?? new Publication { MakeChannels = OnMissingChannel.Create };
         }
@@ -84,8 +86,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="publication">The publication configuration.</param>
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
-            Publication? publication = null)
-            : this(msSqlConfiguration, new MsSqlConnectionProvider(msSqlConfiguration), publication)
+            Publication? publication = null,
+            ILoggerFactory? loggerFactory = null)
+            : this(msSqlConfiguration, new MsSqlConnectionProvider(msSqlConfiguration), publication, loggerFactory: loggerFactory)
         {
         }
 
@@ -139,7 +142,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             BrighterTracer.WriteProducerEvent(Span, "microsoft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
-            Log.SendMessage(s_logger, topic.Value, message.Id.Value);
+            Log.SendMessage(_logger, topic.Value, message.Id.Value);
 
             _sqlQ.Send(message, topic);
         }
@@ -176,7 +179,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             BrighterTracer.WriteProducerEvent(Span, "microsoft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
-            Log.SendMessageAsync(s_logger, topic.Value, message.Id.Value);
+            Log.SendMessageAsync(_logger, topic.Value, message.Id.Value);
 
             await _sqlQ.SendAsync(message, topic.Value, TimeSpan.Zero, cancellationToken);
         }

@@ -28,7 +28,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -55,17 +55,20 @@ public enum FullChannelStrategy
 public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
 {
     private readonly Channel<Job<TData>> _channel;
-    
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryJobChannel<TData>>();
+
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InMemoryJobChannel{TData}"/> class.
     /// </summary>
     /// <param name="boundedCapacity">The maximum number of jobs the channel can hold.</param>
     /// <param name="fullChannelStrategy">The strategy to use when the channel is full.</param>
+    /// <param name="loggerFactory">The factory used to create the logger for this channel.</param>
     /// <exception cref="System.ArgumentOutOfRangeException">Thrown when the bounded capacity is less than or equal to 0.</exception>
-    public InMemoryJobChannel(int boundedCapacity = 100, FullChannelStrategy fullChannelStrategy = FullChannelStrategy.Wait)
+    public InMemoryJobChannel(int boundedCapacity = 100, FullChannelStrategy fullChannelStrategy = FullChannelStrategy.Wait, ILoggerFactory? loggerFactory = null)
     {
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<InMemoryJobChannel<TData>>();
+
         if (boundedCapacity <= 0)
             throw new System.ArgumentOutOfRangeException(nameof(boundedCapacity), "Bounded capacity must be greater than 0");
 

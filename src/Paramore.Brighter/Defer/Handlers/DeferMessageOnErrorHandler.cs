@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Actions;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Defer.Handlers;
 
@@ -41,8 +41,17 @@ namespace Paramore.Brighter.Defer.Handlers;
 public partial class DeferMessageOnErrorHandler<TRequest> : RequestHandler<TRequest>, IAmABackstopHandler
     where TRequest : class, IRequest
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<DeferMessageOnErrorHandler<TRequest>>();
+    private readonly ILogger _logger;
     private int _delayMilliseconds;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DeferMessageOnErrorHandler{TRequest}"/> class.
+    /// </summary>
+    /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
+    public DeferMessageOnErrorHandler(ILogger<DeferMessageOnErrorHandler<TRequest>>? logger = null)
+    {
+        _logger = logger ?? NullLogger<DeferMessageOnErrorHandler<TRequest>>.Instance;
+    }
 
     /// <summary>
     /// Initializes from attribute parameters.
@@ -70,7 +79,7 @@ public partial class DeferMessageOnErrorHandler<TRequest> : RequestHandler<TRequ
         }
         catch (Exception ex)
         {
-            Log.UnhandledExceptionDeferringMessage(s_logger, ex, typeof(TRequest).Name, ex.Message);
+            Log.UnhandledExceptionDeferringMessage(_logger, ex, typeof(TRequest).Name, ex.Message);
             throw new DeferMessageAction(ex.Message, ex, _delayMilliseconds);
         }
     }

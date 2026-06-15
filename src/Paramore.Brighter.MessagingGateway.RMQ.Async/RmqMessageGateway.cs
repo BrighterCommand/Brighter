@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Tasks;
 using Polly;
 using RabbitMQ.Client;
@@ -54,11 +54,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// </summary>
 public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGateway>();
+    private readonly ILogger _logger;
     private readonly AsyncPolicy _circuitBreakerPolicy;
     private readonly ConnectionFactory _connectionFactory;
     private readonly AsyncPolicy _retryPolicy;
     private int _disposed;
+    protected readonly ILoggerFactory LoggerFactory;
     protected readonly RmqMessagingGatewayConnection Connection;
     protected IChannel? Channel;
 
@@ -67,11 +68,14 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
     ///  Use if you need to inject a test logger
     /// </summary>
     /// <param name="connection">The amqp uri and exchange to connect to</param>
-    protected RmqMessageGateway(RmqMessagingGatewayConnection connection)
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+    protected RmqMessageGateway(RmqMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null)
     {
+        LoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        _logger = LoggerFactory.CreateLogger<RmqMessageGateway>();
         Connection = connection;
 
-        var connectionPolicyFactory = new ConnectionPolicyFactory(Connection);
+        var connectionPolicyFactory = new ConnectionPolicyFactory(Connection, LoggerFactory);
 
         _retryPolicy = connectionPolicyFactory.RetryPolicyAsync;
         _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicyAsync;
@@ -140,7 +144,7 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
     {
         if (Channel == null || Channel.IsClosed)
         {
-            var connection = await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat)
+            var connection = await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat, LoggerFactory)
                 .GetConnectionAsync(_connectionFactory, cancellationToken);
 
            if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
@@ -148,7 +152,7 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
             connection.ConnectionBlockedAsync += HandleBlockedAsync;
             connection.ConnectionUnblockedAsync += HandleUnBlockedAsync;
 
-            Log.OpeningChannelToRabbitMq(s_logger, Connection.AmpqUri.GetSanitizedUri());
+            Log.OpeningChannelToRabbitMq(_logger, Connection.AmpqUri.GetSanitizedUri());
 
             Channel = await connection.CreateChannelAsync(
                 new CreateChannelOptions(
@@ -165,7 +169,7 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
     {
        if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
 
-        Log.SubscriptionBlocked(s_logger, Connection.AmpqUri.GetSanitizedUri(), args.Reason);
+        Log.SubscriptionBlocked(_logger, Connection.AmpqUri.GetSanitizedUri(), args.Reason);
 
         return Task.CompletedTask;
     }
@@ -174,13 +178,13 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
     {
        if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
 
-        Log.SubscriptionUnblocked(s_logger, Connection.AmpqUri.GetSanitizedUri());
+        Log.SubscriptionUnblocked(_logger, Connection.AmpqUri.GetSanitizedUri());
         return Task.CompletedTask;
     }
 
     protected async Task ResetConnectionToBrokerAsync(CancellationToken cancellationToken = default)
     {
-        await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnectionAsync(_connectionFactory, cancellationToken);
+        await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat, LoggerFactory).ResetConnectionAsync(_connectionFactory, cancellationToken);
     }
 
     ~RmqMessageGateway()
@@ -199,7 +203,7 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
             Channel = null;
         }
 
-        await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnectionAsync(_connectionFactory);
+        await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat, LoggerFactory).RemoveConnectionAsync(_connectionFactory);
     }
 
     protected virtual void Dispose(bool disposing)
@@ -212,7 +216,7 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
             Channel?.Dispose();
             Channel = null;
 
-            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnectionAsync(_connectionFactory)
+            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat, LoggerFactory).RemoveConnectionAsync(_connectionFactory)
                 .GetAwaiter()
                 .GetResult();
         }

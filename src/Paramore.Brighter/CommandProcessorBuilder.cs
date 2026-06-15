@@ -24,6 +24,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Observability;
@@ -102,6 +104,7 @@ namespace Paramore.Brighter
         private InstrumentationOptions? _instrumetationOptions;
         private IAmABrighterTracer? _tracer;
         private IAmARequestSchedulerFactory _requestSchedulerFactory = null!;
+        private ILoggerFactory _loggerFactory = NullLoggerFactory.Instance;
 
         private CommandProcessorBuilder()
         {
@@ -276,6 +279,13 @@ namespace Paramore.Brighter
             return this;
         }
 
+        /// <inheritdoc />
+        public IAmACommandProcessorBuilder ConfigureLogging(ILoggerFactory loggerFactory)
+        {
+            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            return this;
+        }
+
         /// <summary>
         /// Builds the <see cref="CommandProcessor"/> from the configuration.
         /// </summary>
@@ -310,7 +320,8 @@ namespace Paramore.Brighter
                     resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     featureSwitchRegistry: _featureSwitchRegistry,
                     instrumentationOptions: _instrumetationOptions.Value,
-                    requestSchedulerFactory: _requestSchedulerFactory);
+                    requestSchedulerFactory: _requestSchedulerFactory,
+                    loggerFactory: _loggerFactory);
             }
 
             if (!_useRequestReplyQueues)
@@ -326,7 +337,8 @@ namespace Paramore.Brighter
                     inboxConfiguration: _inboxConfiguration,
                     tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
-                    requestSchedulerFactory: _requestSchedulerFactory
+                    requestSchedulerFactory: _requestSchedulerFactory,
+                    loggerFactory: _loggerFactory
                 );
 
             if (_useRequestReplyQueues)
@@ -344,7 +356,8 @@ namespace Paramore.Brighter
                     responseChannelFactory: _responseChannelFactory,
                     tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
-                    requestSchedulerFactory: _requestSchedulerFactory
+                    requestSchedulerFactory: _requestSchedulerFactory,
+                    loggerFactory: _loggerFactory
                 );
 
             throw new ConfigurationException(
@@ -481,6 +494,14 @@ namespace Paramore.Brighter
     /// </summary>
     public interface IAmACommandProcessorBuilder
     {
+        /// <summary>
+        /// Supplies the <see cref="ILoggerFactory"/> used to create instance-scoped loggers for the <see cref="CommandProcessor"/>
+        /// and the object graph it constructs. If not called, a no-op logger factory is used.
+        /// </summary>
+        /// <param name="loggerFactory">The logger factory.</param>
+        /// <returns>IAmACommandProcessorBuilder.</returns>
+        IAmACommandProcessorBuilder ConfigureLogging(ILoggerFactory loggerFactory);
+
         /// <summary>
         /// Builds this instance.
         /// </summary>
