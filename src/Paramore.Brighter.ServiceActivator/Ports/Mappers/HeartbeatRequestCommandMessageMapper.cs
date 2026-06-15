@@ -18,7 +18,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
                 correlationId: request.ReplyAddress.CorrelationId, 
                 replyTo: request.ReplyAddress.Topic);
 
-            var json = JsonSerializer.Serialize(new HeartBeatRequestBody(request.Id), JsonSerialisationOptions.Options);
+            var json = JsonSerializer.Serialize(new HeartBeatRequestBody(request.Id.Value), JsonSerialisationOptions.Options);
             var body = new MessageBody(json);
             var message = new Message(header, body);
             return message;

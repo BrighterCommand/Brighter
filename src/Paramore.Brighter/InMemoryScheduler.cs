@@ -283,7 +283,7 @@ public class InMemoryScheduler(
         {
             var (processor, message) = (fireMessage.Value.Item1, fireMessage.Value.Item2);
             BrighterAsyncContext.Run(() => processor.SendAsync(message));
-            CleanupTimer(message.Id, generation);
+            CleanupTimer(message.Id.Value, generation);
             return;
         }
 
@@ -292,7 +292,7 @@ public class InMemoryScheduler(
         {
             var (processor, request) = (fireRequest.Value.Item1, fireRequest.Value.Item2);
             BrighterAsyncContext.Run(() => processor.SendAsync(request));
-            CleanupTimer(request.Id, generation);
+            CleanupTimer(request.Id.Value, generation);
             return;
         }
 

@@ -24,7 +24,10 @@ THE SOFTWARE. */
 #nullable enable
 
 using System;
+using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
@@ -34,7 +37,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_advisory_lock_deadline_is_evaluated_against_the_injected_time_provider_it_should_be_independent_of_wall_clock : IAsyncLifetime
+public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
 {
     // PostgreSqlAdvisoryLock previously read DateTime.UtcNow to compute the timeout deadline.
     // A wall-clock jump (NTP correction during a long lock wait, leap-second smear, container
@@ -45,8 +48,11 @@ public class When_postgres_advisory_lock_deadline_is_evaluated_against_the_injec
     // session must cause Acquire to throw TimeoutException — the wall clock barely moves,
     // proving the deadline check is driven by the injected provider, not DateTime.UtcNow.
 
-    // Mirror the namespace constant in PostgreSqlAdvisoryLock so the holder session's lock
-    // collides on the same (namespace, hashtext(key)) pair the production code uses.
+    // Mirror the namespace constant in PostgreSqlAdvisoryLock so the holder session's lock collides
+    // on the same derived bigint key the production code uses. DeriveLockKey is private in the
+    // production class (ADR 0062, NFR-3), so the derivation is replicated inline below: the namespace
+    // is folded into a composite prefix ("74726:<key>"), SHA-256 hashed, and the first 8 bytes read
+    // big-endian into a signed long, which is passed to the single-argument pg_advisory_lock(bigint).
     private const int LOCK_NAMESPACE = 74726;
 
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
@@ -56,7 +62,7 @@ public class When_postgres_advisory_lock_deadline_is_evaluated_against_the_injec
     private NpgsqlConnection? _contenderConnection;
 
     [Fact]
-    public async Task Should_throw_timeout_exception_when_fake_time_provider_advances_past_timeout_independent_of_wall_clock()
+    public async Task When_postgres_advisory_lock_deadline_is_evaluated_against_the_injected_time_provider_it_should_be_independent_of_wall_clock()
     {
         // Arrange — ensure database exists, then open two distinct sessions. The first
         //           genuinely holds the Postgres advisory lock (so any subsequent
@@ -68,9 +74,8 @@ public class When_postgres_advisory_lock_deadline_is_evaluated_against_the_injec
         await _holderConnection.OpenAsync();
         await using (var hold = _holderConnection.CreateCommand())
         {
-            hold.CommandText = "SELECT pg_advisory_lock(@ns, hashtext(@key))";
-            hold.Parameters.AddWithValue("@ns", LOCK_NAMESPACE);
-            hold.Parameters.AddWithValue("@key", _lockKey);
+            hold.CommandText = "SELECT pg_advisory_lock(@key)";
+            hold.Parameters.AddWithValue("@key", DeriveLockKey(_lockKey));
             await hold.ExecuteNonQueryAsync();
         }
 
@@ -109,6 +114,15 @@ public class When_postgres_advisory_lock_deadline_is_evaluated_against_the_injec
             $"Wall-clock elapsed {stopwatch.Elapsed.TotalSeconds:F2}s — deadline should have fired against the fake provider, not the wall clock.");
     }
 
+    // Replicates PostgreSqlAdvisoryLock.DeriveLockKey (private in production, ADR 0062) so the
+    // holder session contends on the byte-identical bigint key the system under test acquires.
+    private static long DeriveLockKey(string lockKey)
+    {
+        var composite = $"{LOCK_NAMESPACE}:{lockKey}";
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(composite));
+        return BinaryPrimitives.ReadInt64BigEndian(hash);
+    }
+
     public Task InitializeAsync() => Task.CompletedTask;
 
     public async Task DisposeAsync()
@@ -119,9 +133,8 @@ public class When_postgres_advisory_lock_deadline_is_evaluated_against_the_injec
             {
                 await using (var release = _holderConnection.CreateCommand())
                 {
-                    release.CommandText = "SELECT pg_advisory_unlock(@ns, hashtext(@key))";
-                    release.Parameters.AddWithValue("@ns", LOCK_NAMESPACE);
-                    release.Parameters.AddWithValue("@key", _lockKey);
+                    release.CommandText = "SELECT pg_advisory_unlock(@key)";
+                    release.Parameters.AddWithValue("@key", DeriveLockKey(_lockKey));
                     await release.ExecuteScalarAsync();
                 }
                 await _holderConnection.DisposeAsync();

@@ -148,9 +148,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message, _instrumentationOptions);
 
                     Log.PublishingMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri!.GetSanitizedUri(), delay.Value.TotalMilliseconds,
-                        message.Header.Topic, message.Persist, message.Id, message.Body.Value);
+                        message.Header.Topic.Value, message.Persist, message.Id.Value, message.Body.Value);
 
-                    _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, message.Id);
+                    _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, message.Id.Value);
 
                      if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
                      {
@@ -168,7 +168,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                      }
 
                     Log.PublishedMessage(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
-                        message.Header.Topic, message.Persist, message.Id,
+                        message.Header.Topic.Value, message.Persist, message.Id.Value,
                         JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow);
                 }
             }

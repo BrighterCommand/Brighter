@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_provisioning_uow_commit_release_returns_false_it_should_log_warning : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkCommitReleaseFalseTests : IAsyncLifetime
 {
     // Per ADR 0057 §5b: pg_advisory_unlock returns false when the calling session does not
     // currently hold the named lock — a diagnostic anomaly because the UoW just acquired it.
@@ -46,7 +46,7 @@ public class When_postgres_provisioning_uow_commit_release_returns_false_it_shou
     // This obligation was originally emitted by the runner under spec 0027. After the Phase 5.2
     // unit-of-work refactor the contract moves to CommitAsync — the runner no longer owns the
     // release call. The runner-level integration test
-    // When_postgres_advisory_unlock_returns_false_runner_should_log_warning_and_complete_normally
+    // PostgreSqlAdvisoryUnlockReturnsFalseTests
     // exercises the same behaviour through the public MigrateAsync surface; this test pins the
     // contract directly at the UoW boundary so a future regression surfaces here without
     // requiring a real database round-trip through the runner.
@@ -60,7 +60,7 @@ public class When_postgres_provisioning_uow_commit_release_returns_false_it_shou
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_log_one_warning_when_release_returns_false_and_complete_normally()
+    public async Task When_postgres_provisioning_uow_commit_release_returns_false_it_should_log_warning()
     {
         // Arrange
         await using var uow = new PostgreSqlProvisioningUnitOfWork(

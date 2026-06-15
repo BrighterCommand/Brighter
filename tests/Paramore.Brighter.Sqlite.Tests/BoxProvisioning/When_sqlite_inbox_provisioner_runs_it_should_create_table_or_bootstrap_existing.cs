@@ -20,7 +20,7 @@ public class InboxProvisionerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_create_inbox_table_on_fresh_database()
+    public async Task When_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table()
     {
         // Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -58,7 +58,7 @@ WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @ExpectedVersion";
     }
 
     [Fact]
-    public async Task Should_bootstrap_existing_table_without_history()
+    public async Task When_inbox_provisioner_runs_against_existing_table_without_history_it_should_bootstrap_existing()
     {
         // Arrange — create inbox table directly (simulating pre-migration install)
         using (var setupConn = new SqliteConnection(_connectionString))

@@ -252,6 +252,9 @@ ServiceFabricBackup/
 
 # SQLite files
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 *.sqlite
 *.sqlite3
 

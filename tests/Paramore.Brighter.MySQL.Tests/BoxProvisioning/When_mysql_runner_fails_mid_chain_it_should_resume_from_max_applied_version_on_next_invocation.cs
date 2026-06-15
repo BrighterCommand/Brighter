@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied_version_on_next_invocation : IAsyncLifetime
+public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
 {
     private const int SeedVersion = 3;
     private const int BrokenVersion = 6;
@@ -45,7 +45,7 @@ public class When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_keep_committed_history_rows_and_resume_from_max_v_on_retry()
+    public async Task When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied_version_on_next_invocation()
     {
         //Arrange — seed an outbox at V3 (no history) plus a marker row to prove preservation.
         MySqlOutboxLegacySeeder.SeedAtV(SeedVersion, _connectionString, _tableName);

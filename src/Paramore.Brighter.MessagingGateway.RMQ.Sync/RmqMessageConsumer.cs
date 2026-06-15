@@ -159,13 +159,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             try
             {
                 EnsureBroker();
-                Log.AcknowledgingMessage(s_logger, message.Id, deliveryTag);
+                Log.AcknowledgingMessage(s_logger, message.Id.Value, deliveryTag);
                 //NOTE: Ensure Broker will create a channel if it is not already created
                 Channel!.BasicAck(deliveryTag, false);
             }
             catch (Exception exception)
             {
-                Log.ErrorAcknowledgingMessage(s_logger, exception, message.Id, deliveryTag);
+                Log.ErrorAcknowledgingMessage(s_logger, exception, message.Id.Value, deliveryTag);
                 throw;
             }
         }
@@ -207,12 +207,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             try
             {
                 EnsureBroker();
-                Log.NackingMessage(s_logger, message.Id, deliveryTag);
+                Log.NackingMessage(s_logger, message.Id.Value, deliveryTag);
                 Channel!.BasicNack(deliveryTag, false, true);
             }
             catch (Exception exception)
             {
-                Log.ErrorNackingMessage(s_logger, exception, message.Id, deliveryTag);
+                Log.ErrorNackingMessage(s_logger, exception, message.Id.Value, deliveryTag);
                 throw;
             }
         }
@@ -296,7 +296,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
                 var description = reason is null ? "unknown" : reason.Description ?? "unknown";
             
-                Log.NoAckMessage(s_logger, message.Id, message.DeliveryTag, reasonString, description);
+                Log.NoAckMessage(s_logger, message.Id.Value, message.DeliveryTag, reasonString, description);
                 
                 //if we have a DLQ, this will force over to the DLQ
                 Channel!.BasicReject(message.DeliveryTag, false);
@@ -304,7 +304,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
             catch (Exception exception)
             {
-                Log.ErrorNoAckMessage(s_logger, exception, message.Id);
+                Log.ErrorNoAckMessage(s_logger, exception, message.Id.Value);
                 throw;
             }
         }
@@ -337,7 +337,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             try
             {
-                Log.RequeueingMessage(s_logger, message.Id, timeout.Value.TotalMilliseconds);
+                Log.RequeueingMessage(s_logger, message.Id.Value, timeout.Value.TotalMilliseconds);
                 EnsureBroker(_queueName);
 
                 // Step 1: Publish the message back to the queue first.
@@ -358,7 +358,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 // If this fails after a successful publish, the message may be duplicated (not lost).
                 // Consumers should be idempotent to handle potential duplicates.
                 var deliveryTag = message.DeliveryTag;
-                Log.DeletingMessage(s_logger, message.Id, deliveryTag);
+                Log.DeletingMessage(s_logger, message.Id.Value, deliveryTag);
                 
                 Channel!.BasicAck(deliveryTag, false);
 
@@ -366,7 +366,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             }
             catch (Exception exception)
             {
-                Log.ErrorRequeueingMessage(s_logger, exception, message.Id);
+                Log.ErrorRequeueingMessage(s_logger, exception, message.Id.Value);
                 return false;
             }
         }

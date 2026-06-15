@@ -32,7 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_runner_acquires_lock_resource_should_be_qualified_by_schema
+public class MsSqlRunnerLockResourceSchemaQualificationTests
 {
     // Two tables with the same name in different schemas (e.g. dbo.Outbox and billing.Outbox)
     // must acquire DISTINCT advisory locks. The pre-fix lock resource was
@@ -52,7 +52,7 @@ public class When_mssql_runner_acquires_lock_resource_should_be_qualified_by_sch
     [InlineData(null, "dbo")]
     [InlineData("dbo", "dbo")]
     [InlineData("billing", "billing")]
-    public async Task Should_qualify_lock_resource_with_effective_schema(
+    public async Task When_mssql_runner_acquires_lock_resource_should_be_qualified_by_schema(
         string? configuredSchema, string expectedSchemaInLockResource)
     {
         //Arrange
@@ -70,6 +70,10 @@ public class When_mssql_runner_acquires_lock_resource_should_be_qualified_by_sch
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
+        // configuredSchema is a string?; a null reaches MigrateAsync via the implicit
+        // string->SchemaName conversion as a SchemaName wrapping null. The runner must treat that
+        // (and a wrapped-empty) as "no schema supplied" — defaulting the lock resource to dbo —
+        // exactly as it did when this parameter was a string?. See SchemaName.IsNullOrEmpty.
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             runner.MigrateAsync(
                 tableName, configuredSchema, BoxType.Outbox, freshHint));

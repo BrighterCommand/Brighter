@@ -7,13 +7,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table : IAsyncLifetime
+public class MsSqlOutboxProvisionerFreshDatabaseTests : IAsyncLifetime
 {
     private readonly string _connectionString;
     private readonly string _tableName;
     private readonly MsSqlOutboxProvisioner _provisioner;
 
-    public When_mssql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table()
+    public MsSqlOutboxProvisionerFreshDatabaseTests()
     {
         var builder = new ConfigurationBuilder().AddEnvironmentVariables();
         var configuration = builder.Build();
@@ -35,7 +35,7 @@ public class When_mssql_outbox_provisioner_runs_on_fresh_database_it_should_crea
     }
 
     [Fact]
-    public async Task Should_create_outbox_table()
+    public async Task When_mssql_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table()
     {
         //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);

@@ -162,7 +162,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", message.Id}
+                {"db.operation.parameter.message.id", message.Id.Value}
             };
             var span = Tracer?.CreateDbSpan(
                 new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Add, _configuration.TableName, dbAttributes: dbAttributes),
@@ -392,7 +392,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", messageId}
+                {"db.operation.parameter.message.id", messageId.Value}
             };
             var span = Tracer?.CreateDbSpan(
                 new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Get, _configuration.TableName, dbAttributes: dbAttributes),
@@ -468,7 +468,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                {"db.operation.parameter.message.id", id}
+                {"db.operation.parameter.message.id", id.Value}
             };
             var span = Tracer?.CreateDbSpan(
                 new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.MarkDispatched, _configuration.TableName, dbAttributes: dbAttributes),

@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_two_postgres_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_history_row : IAsyncLifetime
+public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
 {
     private const int OutboxSeedVersion = 3;
     private const string OutboxMarkerMessageId = "outbox-marker-must-survive";
@@ -43,7 +43,7 @@ public class When_two_postgres_provisioners_race_on_legacy_table_they_should_pro
     private readonly string _inboxTableName = $"test_inbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_produce_exactly_one_synthetic_v3_when_two_outbox_provisioners_race()
+    public async Task When_two_outbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v3()
     {
         //Arrange — seed an outbox at V3 (no history row) plus a marker row to prove preservation.
         new PostgresSqlTestHelper().SetupDatabase();
@@ -89,7 +89,7 @@ public class When_two_postgres_provisioners_race_on_legacy_table_they_should_pro
     }
 
     [Fact]
-    public async Task Should_produce_exactly_one_synthetic_v1_when_two_inbox_provisioners_race()
+    public async Task When_two_inbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v1()
     {
         //Arrange — seed a V1 Postgres inbox (V1-only chain) plus a marker command row.
         new PostgresSqlTestHelper().SetupDatabase();

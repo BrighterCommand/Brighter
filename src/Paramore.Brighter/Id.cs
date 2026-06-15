@@ -92,7 +92,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="id">The <see cref="Id"/> to convert.</param>
         /// <returns>The <see cref="string"/> value of the identifier.</returns>
-        public static implicit operator string(Id id) => id.Value;
+        public static implicit operator string?(Id id) => id?.Value;
 
         /// <summary>
         /// Implicitly converts a string to an Id.

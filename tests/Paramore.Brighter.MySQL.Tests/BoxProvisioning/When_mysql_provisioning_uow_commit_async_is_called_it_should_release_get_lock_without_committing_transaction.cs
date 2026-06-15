@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_provisioning_uow_commit_async_is_called_it_should_release_get_lock_without_committing_transaction : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
 {
     // Per ADR 0058 §B.1 / ADR 0057 §5a / §5b: MySQL is the transactionless backend in the
     // relational family; CommitAsync's only meaningful side-effect is to release the
@@ -70,7 +70,7 @@ public class When_mysql_provisioning_uow_commit_async_is_called_it_should_releas
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_release_GET_LOCK_and_leave_Transaction_null()
+    public async Task When_mysql_provisioning_uow_commit_async_is_called_it_should_release_get_lock_without_committing_transaction()
     {
         // Arrange — UoW under test, BeginAsync acquires lock per 5.3.a contract
         await using var uow = new MySqlProvisioningUnitOfWork(

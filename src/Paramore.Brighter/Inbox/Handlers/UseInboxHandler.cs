@@ -82,26 +82,26 @@ namespace Paramore.Brighter.Inbox.Handlers
             
             if (_onceOnly)
             {
-                 Log.CheckingIfCommandHasAlreadyBeenSeen(s_logger, request.Id);
+                 Log.CheckingIfCommandHasAlreadyBeenSeen(s_logger, request.Id.Value);
 
-                 var exists = _inbox.Exists<T>(request.Id, _contextKey, requestContext); 
-                 
+                 var exists = _inbox.Exists<T>(request.Id.Value, _contextKey, requestContext);
+
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
-                {                    
-                    Log.CommandHasAlreadyBeenSeenAsDebug(s_logger, request.Id);
+                {
+                    Log.CommandHasAlreadyBeenSeenAsDebug(s_logger, request.Id.Value);
                     throw new OnceOnlyException($"A command with id {request.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
-                    Log.CommandHasAlreadyBeenSeenAsWarning(s_logger, request.Id);
+                    Log.CommandHasAlreadyBeenSeenAsWarning(s_logger, request.Id.Value);
                     return request;
-                }                
+                }
             }
-            
+
             T handledCommand = base.Handle(request);
 
-            Log.WritingCommandToTheInbox(s_logger, request.Id);
+            Log.WritingCommandToTheInbox(s_logger, request.Id.Value);
 
             _inbox.Add(request, _contextKey, requestContext);
 

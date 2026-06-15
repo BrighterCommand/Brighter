@@ -10,7 +10,7 @@ internal class FailingBoxProvisioner : IAmABoxProvisioner
     private readonly Exception _exception;
 
     public BoxType BoxType { get; }
-    public string BoxTableName { get; } = "stub_box";
+    public BoxTableName BoxTableName { get; } = "stub_box";
 
     public FailingBoxProvisioner(BoxType boxType, Exception exception)
     {
