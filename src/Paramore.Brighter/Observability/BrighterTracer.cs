@@ -743,7 +743,15 @@ public class BrighterTracer : IAmABrighterTracer
         if (!success)
             tags.Add(BrighterSemanticConventions.ErrorType, "delivery_failed");
 
-        //parentId is null: the confirmation span links to the publish span, it does not nest under it (or any ambient span)
+        // The confirmation span must LINK to the publish span, never NEST under it (or any other
+        // ambient span). Passing parentId: null is NOT sufficient: with both the string-parentId
+        // and the ActivityContext overloads, StartActivity falls back to Activity.Current as the
+        // parent whenever it is set (e.g. the InMemory async path flows the publish span into the
+        // callback via ExecutionContext). The only reliable way to force a root is to clear the
+        // ambient activity for the duration of the call. We do not restore it: this method
+        // deliberately makes the confirmation span the new Activity.Current below, so the
+        // success-branch MarkDispatched span nests under the confirmation span.
+        Activity.Current = null;
         var activity = ActivitySource.StartActivity(
             name: spanName,
             kind: kind,

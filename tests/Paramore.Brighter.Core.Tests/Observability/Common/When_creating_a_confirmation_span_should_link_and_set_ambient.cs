@@ -79,6 +79,34 @@ public class ConfirmationSpanTests
     }
 
     [Fact]
+    public void When_creating_a_confirmation_span_under_a_live_ambient_span_should_be_a_root()
+    {
+        // Arrange — an ambient publish span is still OPEN and current when the confirmation
+        // fires. This models the InMemory async-confirmation path, where ExecutionContext flows
+        // the publish span (S1) into the Task.Run callback, so Activity.Current is non-null at the
+        // moment CreateConfirmationSpan runs. The confirmation span must LINK to the publish span,
+        // never NEST under it (or any other ambient activity).
+        var publishSpan = new ActivitySource("Paramore.Brighter.Tests").StartActivity("publish");
+        var publishContext = publishSpan!.Context;
+        Activity.Current = publishSpan;
+
+        // Act
+        var confirmationSpan = _tracer.CreateConfirmationSpan(
+            new Id("message-id"),
+            new RoutingKey("MyTopic"),
+            success: true,
+            links: new[] { new ActivityLink(publishContext) });
+
+        // Assert — the confirmation span is a root (no parent), despite the live ambient publish
+        // span, and carries the publish context as a link rather than as its parent
+        Assert.NotNull(confirmationSpan);
+        Assert.Null(confirmationSpan!.Parent);
+        Assert.Null(confirmationSpan.ParentId);
+        Assert.Single(confirmationSpan.Links);
+        Assert.Equal(publishContext, confirmationSpan.Links.ToArray()[0].Context);
+    }
+
+    [Fact]
     public void When_creating_a_confirmation_span_without_a_context_should_have_no_link()
     {
         // Arrange
