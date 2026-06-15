@@ -44,7 +44,8 @@ namespace Paramore.Brighter
         private readonly System.Threading.Channels.Channel<WorkItem> _channel =
             System.Threading.Channels.Channel.CreateUnbounded<WorkItem>(new UnboundedChannelOptions { SingleReader = true });
         private readonly List<Task> _raiseTasks = new(); // drain worker is single-threaded; read only after worker completes
-        private Task? _worker;
+        // volatile so a DisposeAsync on another thread sees the worker the CAS winner publishes (NFR-3)
+        private volatile Task? _worker;
         private int _pumpStarted; // 0 = not started, 1 = started; CAS guard
 
         private readonly record struct WorkItem(Message Message, ActivityContext? Context);
@@ -139,7 +140,22 @@ namespace Paramore.Brighter
         public async ValueTask DisposeAsync()
         {
             _channel.Writer.TryComplete();
-            await (_worker ?? Task.CompletedTask);
+
+            // Key the drain off _pumpStarted, not a snapshot of _worker: the CAS winner flips
+            // _pumpStarted to 1 and only then publishes _worker, so a dispose racing the very first
+            // enqueue could otherwise read a null _worker and skip the drain. If the pump was started
+            // we spin (bounded — the publish is the next statement after the flip) until the volatile
+            // _worker is visible, then await it so every enqueued confirmation has been pumped.
+            if (Volatile.Read(ref _pumpStarted) == 1)
+            {
+                Task? worker;
+                while ((worker = _worker) is null)
+                    await Task.Yield();
+                await worker;
+            }
+
+            // Safe to read _raiseTasks now: the single-threaded worker has completed, so all its
+            // Add calls happened-before this point.
             await Task.WhenAll(_raiseTasks);
         }
 
