@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging;
+
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     /// <summary>
@@ -29,13 +31,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     public class SqsMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly AWSMessagingGatewayConnection _awsConnection;
+        private readonly ILoggerFactory? _loggerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageConsumerFactory"/> class.
         /// </summary>
-        public SqsMessageConsumerFactory(AWSMessagingGatewayConnection awsConnection)
+        public SqsMessageConsumerFactory(AWSMessagingGatewayConnection awsConnection, ILoggerFactory? loggerFactory = null)
         {
             _awsConnection = awsConnection;
+            _loggerFactory = loggerFactory;
         }
 
         /// <summary>
@@ -87,7 +91,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 makeChannels: sqsSubscription.MakeChannels,
                 isQueueUrl: (sqsSubscription.FindQueueBy == QueueFindBy.Url),
                 rawMessageDelivery: sqsSubscription.QueueAttributes.RawMessageDelivery,
-                queueAttributes: sqsSubscription.QueueAttributes
+                queueAttributes: sqsSubscription.QueueAttributes,
+                loggerFactory: _loggerFactory
             );
         }
     }

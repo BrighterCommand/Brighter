@@ -28,8 +28,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// </summary>
     internal sealed partial class RmqMessagePublisher
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessagePublisher>();
+        private readonly ILogger _logger;
         private static readonly HashSet<string> _headersToReset =
         [
             HeaderNames.DELAY_MILLISECONDS,
@@ -58,15 +58,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </summary>
         /// <param name="channel">The channel.</param>
         /// <param name="connection">The exchange we want to talk to.</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
         /// <exception cref="System.ArgumentNullException">
         /// channel
         /// or
         /// exchangeName
         /// </exception>
-        public RmqMessagePublisher(IModel channel, RmqMessagingGatewayConnection connection)
+        public RmqMessagePublisher(IModel channel, RmqMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null)
         {
             _connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _channel = channel ?? throw new ArgumentNullException(nameof(channel));
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessagePublisher>();
         }
 
         /// <summary>
@@ -116,7 +118,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             var messageId = Uuid.NewAsString();
             const string deliveryTag = "1";
 
-            Log.RequeueMessageInformation(s_logger, message.Id.Value, deliveryTag, messageId, 1);
+            Log.RequeueMessageInformation(_logger, message.Id.Value, deliveryTag, messageId, 1);
 
             Dictionary<string, object> headers = AddCloudEventHeaders(message);
 

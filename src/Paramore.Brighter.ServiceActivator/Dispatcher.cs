@@ -30,6 +30,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -46,7 +47,8 @@ namespace Paramore.Brighter.ServiceActivator
     /// </summary>
     public partial class Dispatcher : IDispatcher, IDisposable, IAsyncDisposable
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<Dispatcher>();
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory? _loggerFactory;
 
         private Task? _controlTask;
         //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange,
@@ -146,11 +148,14 @@ namespace Paramore.Brighter.ServiceActivator
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
             bool ownsRegistry = false,
             bool ownsTransformerFactories = false,
-            TimeSpan? shutdownTimeout = null)
+            TimeSpan? shutdownTimeout = null,
+            ILoggerFactory? loggerFactory = null)
         {
             CommandProcessor = commandProcessor;
             ShutdownTimeout = shutdownTimeout ?? TimeSpan.FromSeconds(10);
-            
+            _loggerFactory = loggerFactory;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<Dispatcher>();
+
             Subscriptions = subscriptions;
             _messageMapperRegistry = messageMapperRegistry;
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
@@ -224,11 +229,11 @@ namespace Paramore.Brighter.ServiceActivator
             try
             {
                 if (!End().Wait(ShutdownTimeout))
-                    Log.ShutdownDrainTimedOut(s_logger, ShutdownTimeout.TotalMilliseconds);
+                    Log.ShutdownDrainTimedOut(_logger, ShutdownTimeout.TotalMilliseconds);
             }
             catch (Exception e)
             {
-                Log.FailedToDrainPumpsOnShutdown(s_logger, e);
+                Log.FailedToDrainPumpsOnShutdown(_logger, e);
             }
 
             //dispose only what this Dispatcher owns, and each owned factory independently so one factory's fault
@@ -256,7 +261,7 @@ namespace Paramore.Brighter.ServiceActivator
         private static void DisposeQuietly(object? member)
         {
             try { (member as IDisposable)?.Dispose(); }
-            catch (Exception e) { Log.FailedToDisposeOwnedResource(s_logger, member?.GetType().Name ?? "null", e); }
+            catch (Exception e) { Log.FailedToDisposeOwnedResource(_logger, member?.GetType().Name ?? "null", e); }
         }
 
         /// <summary>
@@ -290,13 +295,13 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 var drain = End();
                 if (await Task.WhenAny(drain, Task.Delay(ShutdownTimeout)).ConfigureAwait(false) != drain)
-                    Log.ShutdownDrainTimedOut(s_logger, ShutdownTimeout.TotalMilliseconds);
+                    Log.ShutdownDrainTimedOut(_logger, ShutdownTimeout.TotalMilliseconds);
                 else
                     await drain.ConfigureAwait(false); //observe any fault the drain surfaced
             }
             catch (Exception e)
             {
-                Log.FailedToDrainPumpsOnShutdown(s_logger, e);
+                Log.FailedToDrainPumpsOnShutdown(_logger, e);
             }
 
             //dispose only what this Dispatcher owns, each independently, preferring the async path. Mirrors the
@@ -331,7 +336,7 @@ namespace Paramore.Brighter.ServiceActivator
                         break;
                 }
             }
-            catch (Exception e) { Log.FailedToDisposeOwnedResource(s_logger, member?.GetType().Name ?? "null", e); }
+            catch (Exception e) { Log.FailedToDisposeOwnedResource(_logger, member?.GetType().Name ?? "null", e); }
         }
 
         /// <summary>
@@ -342,7 +347,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                Log.StoppingDispatcher(s_logger);
+                Log.StoppingDispatcher(_logger);
                 Consumers.Each(consumer => consumer.Shut(consumer.Subscription.RoutingKey));
             }
 
@@ -364,7 +369,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="subscription">The subscription.</param>
         public void Open(Subscription subscription)
         {
-            Log.OpeningSubscription(s_logger, subscription.Name.Value);
+            Log.OpeningSubscription(_logger, subscription.Name.Value);
 
             AddSubscriptionToSubscriptions(subscription);
             var addedConsumers = CreateConsumers([subscription]);
@@ -423,7 +428,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                Log.StoppingSubscription(s_logger, subscription.Name.Value);
+                Log.StoppingSubscription(_logger, subscription.Name.Value);
                 var consumersForConnection = Consumers.Where(consumer => consumer.Subscription.Name == subscription.Name).ToArray();
                 var noOfConsumers = consumersForConnection.Length;
                 for (int i = 0; i < noOfConsumers; ++i)
@@ -498,7 +503,7 @@ namespace Paramore.Brighter.ServiceActivator
                 return;
             }
 
-            Log.DispatcherStarting(s_logger);
+            Log.DispatcherStarting(_logger);
 
             try
             {
@@ -508,17 +513,17 @@ namespace Paramore.Brighter.ServiceActivator
             }
             catch (Exception ex)
             {
-                Log.ErrorOnConsumer(s_logger, ex);
+                Log.ErrorOnConsumer(_logger, ex);
                 startup.TrySetException(ex);
                 throw;
             }
 
-            Log.DispatcherStartingPerformers(s_logger, _tasks.Count);
+            Log.DispatcherStartingPerformers(_logger, _tasks.Count);
 
             WaitForPerformersToStop();
 
             State = DispatcherState.DS_STOPPED;
-            Log.DispatcherStopped(s_logger);
+            Log.DispatcherStopped(_logger);
         }
 
         private void OpenConsumers()
@@ -543,7 +548,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     ae.Handle(ex =>
                     {
-                        Log.ErrorOnConsumer(s_logger, ex);
+                        Log.ErrorOnConsumer(_logger, ex);
                         return true;
                     });
                 }
@@ -555,7 +560,7 @@ namespace Paramore.Brighter.ServiceActivator
             var runningTasks = _tasks.Values.ToArray();
             var index = Task.WaitAny(runningTasks);
             var stoppingConsumer = runningTasks[index];
-            Log.PerformerStopped(s_logger, stoppingConsumer.Status);
+            Log.PerformerStopped(_logger, stoppingConsumer.Status);
 
             RemoveConsumerForTask(stoppingConsumer);
 
@@ -573,7 +578,7 @@ namespace Paramore.Brighter.ServiceActivator
             if (consumer is null)
                 return;
 
-            Log.RemovingConsumer(s_logger, consumer.Name.Value);
+            Log.RemovingConsumer(_logger, consumer.Name.Value);
 
             if (_consumers.TryRemove(consumer.Name.Value, out consumer))
             {
@@ -596,15 +601,15 @@ namespace Paramore.Brighter.ServiceActivator
         
         private Consumer CreateConsumer(Subscription subscription, int? consumerNumber)
         {
-            Log.CreatingConsumer(s_logger, consumerNumber, subscription.Name.Value);
+            Log.CreatingConsumer(_logger, consumerNumber, subscription.Name.Value);
                 
             if (subscription.MessagePumpType == MessagePumpType.Reactor)
             {
                 if (_messageMapperRegistry is null)
                     throw new ConfigurationException("You must provide a message mapper registry for the Dispatcher to work");
                 
-                var consumerFactory = new ConsumerFactory(CommandProcessor, subscription, _messageMapperRegistry, _messageTransformerFactory, 
-                    _requestContextFactory, _tracer, _instrumentationOptions);
+                var consumerFactory = new ConsumerFactory(CommandProcessor, subscription, _messageMapperRegistry, _messageTransformerFactory,
+                    _requestContextFactory, _tracer, _instrumentationOptions, _loggerFactory);
 
                 return consumerFactory.Create();
             }
@@ -613,8 +618,8 @@ namespace Paramore.Brighter.ServiceActivator
                 if (_messageMapperRegistryAsync is null)
                     throw new ConfigurationException("You must provide a message mapper registry for the Dispatcher to work");
                     
-                var consumerFactory = new ConsumerFactory(CommandProcessor, subscription, _messageMapperRegistryAsync, _messageTransformerFactoryAsync, 
-                    _requestContextFactory, _tracer, _instrumentationOptions);
+                var consumerFactory = new ConsumerFactory(CommandProcessor, subscription, _messageMapperRegistryAsync, _messageTransformerFactoryAsync,
+                    _requestContextFactory, _tracer, _instrumentationOptions, _loggerFactory);
 
                 return consumerFactory.Create();
             }

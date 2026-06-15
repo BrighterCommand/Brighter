@@ -6,7 +6,7 @@ using System.Linq;
 using Google.Cloud.Spanner.Data;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Spanner;
 
@@ -29,11 +29,9 @@ namespace Paramore.Brighter.Outbox.Spanner;
 /// encapsulates the Spanner-specific SQL queries for outbox operations.
 /// </para>
 /// </remarks>
-public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
-    : RelationDatabaseOutbox(DbSystem.Spanner, configuration, connectionProvider, new SpannerQueries(), s_logger)
+public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger? logger = null)
+    : RelationDatabaseOutbox(DbSystem.Spanner, configuration, connectionProvider, new SpannerQueries(), logger ?? NullLogger<SpannerOutbox>.Instance)
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SpannerOutbox>();
-    
     /// <summary>
     /// Initializes a new instance of the <see cref="SpannerOutbox"/> class with only
     /// the database configuration. This constructor internally creates a default
@@ -41,10 +39,11 @@ public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IA
     /// </summary>
     /// <param name="configuration">The configuration settings specific to the relational database,
     /// including connection string, database name, and outbox table name.</param>
-    public SpannerOutbox(IAmARelationalDatabaseConfiguration configuration)
-        : this(configuration, new SpannerConnectionProvider(configuration))
+    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+    public SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger? logger = null)
+        : this(configuration, new SpannerConnectionProvider(configuration), logger)
     {
-        
+
     }
     
     /// <inheritdoc />

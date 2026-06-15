@@ -27,6 +27,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
@@ -36,7 +37,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class NullOutboxArchiveProvider : IAmAnArchiveProvider
     {
-        private readonly ILogger _logger = ApplicationLogging.CreateLogger<NullOutboxArchiveProvider>();
+        private readonly ILogger _logger = NullLogger<NullOutboxArchiveProvider>.Instance;
 
         /// <summary>
         /// Send a Message to the archive provider

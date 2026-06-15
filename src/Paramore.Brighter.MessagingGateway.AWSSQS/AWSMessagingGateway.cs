@@ -36,20 +36,27 @@ using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AWSSQS.Extensions;
 using Paramore.Brighter.Tasks;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
+public class AwsMessagingGateway
 {
-    protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AwsMessagingGateway>();
+    protected readonly ILogger _logger;
 
-    private readonly AWSClientFactory _awsClientFactory = new(awsConnection);
-    protected readonly AWSMessagingGatewayConnection AwsConnection = awsConnection;
+    private readonly AWSClientFactory _awsClientFactory;
+    protected readonly AWSMessagingGatewayConnection AwsConnection;
+
+    public AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection, ILoggerFactory? loggerFactory = null)
+    {
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AwsMessagingGateway>();
+        _awsClientFactory = new AWSClientFactory(awsConnection);
+        AwsConnection = awsConnection;
+    }
 
     /// <summary>
     /// The Channel Address

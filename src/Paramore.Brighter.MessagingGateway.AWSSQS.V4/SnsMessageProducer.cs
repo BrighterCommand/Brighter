@@ -65,10 +65,11 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     /// <param name="connection">How do we connect to AWS in order to manage middleware</param>
     /// <param name="publication">Configuration of a producer</param>
     /// <param name="instrumentation"></param>
-    public SnsMessageProducer(AWSMessagingGatewayConnection connection, 
+    public SnsMessageProducer(AWSMessagingGatewayConnection connection,
         SnsPublication publication,
-        InstrumentationOptions instrumentation = InstrumentationOptions.All)
-        : base(connection)
+        InstrumentationOptions instrumentation = InstrumentationOptions.All,
+        ILoggerFactory? loggerFactory = null)
+        : base(connection, loggerFactory)
     {
         _publication = publication;
         _clientFactory = new AWSClientFactory(connection);
@@ -179,7 +180,7 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
         }
 
         BrighterTracer.WriteProducerEvent(Span, "aws_sns", message, _options);
-        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
+        Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
 
         await ConfirmTopicExistsAsync(message.Header.Topic, cancellationToken);
 
@@ -195,7 +196,7 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
             throw new InvalidOperationException(
                 $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
 
-        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, messageId);
+        Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, messageId);
     }
 
     private static partial class Log

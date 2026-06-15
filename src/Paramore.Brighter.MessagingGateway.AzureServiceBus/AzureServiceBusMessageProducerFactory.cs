@@ -27,6 +27,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
@@ -41,6 +42,7 @@ public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
     private readonly IServiceBusClientProvider _clientProvider;
     private readonly IEnumerable<AzureServiceBusPublication> _publications;
     private readonly int _bulkSendBatchSize;
+    private readonly ILoggerFactory? _loggerFactory;
 
     /// <summary>
     /// Factory to create a dictionary of Azure Service Bus Producers indexed by topic name
@@ -48,14 +50,17 @@ public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
     /// <param name="clientProvider">The connection to ASB</param>
     /// <param name="publications">A set of publications - topics on the server - to configure</param>
     /// <param name="bulkSendBatchSize">The maximum size to chunk messages when dispatching to ASB</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers</param>
     public AzureServiceBusMessageProducerFactory(
         IServiceBusClientProvider clientProvider,
         IEnumerable<AzureServiceBusPublication> publications,
-        int bulkSendBatchSize)
+        int bulkSendBatchSize,
+        ILoggerFactory? loggerFactory = null)
     {
         _clientProvider = clientProvider;
         _publications = publications;
         _bulkSendBatchSize = bulkSendBatchSize;
+        _loggerFactory = loggerFactory;
     }
 
     /// <summary>
@@ -66,7 +71,7 @@ public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
 
     public Dictionary<ProducerKey, IAmAMessageProducer> Create()
     {
-        var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider);
+        var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider, _loggerFactory);
         var topicClientProvider = new ServiceBusSenderProvider(_clientProvider);
 
         var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
@@ -74,16 +79,16 @@ public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
         {
             if (publication.Topic is null)
                 throw new ArgumentException("Publication must have a Topic.");
-            
+
             if (publication.UseServiceBusQueue)
             {
-                var producer = new AzureServiceBusQueueMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize);
+                var producer = new AzureServiceBusQueueMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize, _loggerFactory);
                 producer.Publication = publication;
                 RegisterProducer(publication, producers, producer);
             }
             else
             {
-                var producer = new AzureServiceBusTopicMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize);
+                var producer = new AzureServiceBusTopicMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize, _loggerFactory);
                 producer.Publication = publication;
                 RegisterProducer(publication, producers, producer);
 

@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
@@ -36,18 +37,22 @@ public class SqsProducerRegistryFactory : IAmAProducerRegistryFactory
 {
     private readonly AWSMessagingGatewayConnection _connection;
     private readonly IEnumerable<SqsPublication> _sqsPublications;
+    private readonly ILoggerFactory? _loggerFactory;
 
     /// <summary>
     /// Create a collection of producers from the publication information
     /// </summary>
     /// <param name="connection">The Connection to use to connect to AWS</param>
     /// <param name="sqsPublications">The publication describing the SNS topic that we want to use</param>
+    /// <param name="loggerFactory">The factory used to create loggers for the producers.</param>
     public SqsProducerRegistryFactory(
         AWSMessagingGatewayConnection connection,
-        IEnumerable<SqsPublication> sqsPublications)
+        IEnumerable<SqsPublication> sqsPublications,
+        ILoggerFactory? loggerFactory = null)
     {
         _connection = connection;
         _sqsPublications = sqsPublications;
+        _loggerFactory = loggerFactory;
     }
 
     /// <summary>
@@ -56,7 +61,7 @@ public class SqsProducerRegistryFactory : IAmAProducerRegistryFactory
     /// <returns>The <see cref="ProducerRegistry"/> with <see cref="SnsMessageProducerFactory"/>.</returns>
     public IAmAProducerRegistry Create()
     {
-        var producerFactory = new SqsMessageProducerFactory(_connection, _sqsPublications);
+        var producerFactory = new SqsMessageProducerFactory(_connection, _sqsPublications, _loggerFactory);
         return new ProducerRegistry(producerFactory.Create());
     }
 
@@ -67,7 +72,7 @@ public class SqsProducerRegistryFactory : IAmAProducerRegistryFactory
     /// <returns>The <see cref="ProducerRegistry"/> with <see cref="SnsMessageProducerFactory"/>.</returns>
     public async Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
     {
-        var producerFactory = new SqsMessageProducerFactory(_connection, _sqsPublications);
+        var producerFactory = new SqsMessageProducerFactory(_connection, _sqsPublications, _loggerFactory);
         return new ProducerRegistry(await producerFactory.CreateAsync());
     }
 }

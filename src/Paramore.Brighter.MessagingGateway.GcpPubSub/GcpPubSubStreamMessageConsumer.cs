@@ -1,7 +1,7 @@
 ﻿using Google.Cloud.PubSub.V1;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
@@ -19,10 +19,11 @@ public partial class GcpPubSubStreamMessageConsumer(
     GcpMessagingGatewayConnection connection,
     GcpStreamConsumer consumer,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-    TimeProvider timeProvider) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    TimeProvider timeProvider,
+    ILoggerFactory? loggerFactory = null) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
 
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPubSubStreamMessageConsumer>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<GcpPubSubStreamMessageConsumer>();
     
     /// <summary>
     /// Synchronously acknowledges a message, signalling the Pub/Sub service that the message
@@ -37,7 +38,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         }
         
         gcpStreamMessage.Accepted();
-        Log.AcknowledgeSuccess(s_logger, message.Id.Value, "", subscriptionName.ToString());
+        Log.AcknowledgeSuccess(_logger, message.Id.Value, "", subscriptionName.ToString());
     }
     
     /// <summary>
@@ -89,7 +90,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         }
         
         gcpStreamMessage.Accepted();
-        Log.RejectMessage(s_logger, message.Id.Value, "", subscriptionName.ToString());
+        Log.RejectMessage(_logger, message.Id.Value, "", subscriptionName.ToString());
         return true;
     }
     
@@ -117,18 +118,18 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
 
-            Log.PurgeStart(s_logger, subscriptionName.ToString());
+            Log.PurgeStart(_logger, subscriptionName.ToString());
 
             client.Seek(new SeekRequest
             {
                 Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1))
             });
 
-            Log.PurgeComplete(s_logger, subscriptionName.ToString());
+            Log.PurgeComplete(_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
+            Log.PurgeError(_logger, ex, subscriptionName.ToString());
             throw;
         }
     }
@@ -146,17 +147,17 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
 
-            Log.PurgeStart(s_logger, subscriptionName.ToString());
+            Log.PurgeStart(_logger, subscriptionName.ToString());
 
             await client.SeekAsync(
                 new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) },
                 cancellationToken);
 
-            Log.PurgeComplete(s_logger, subscriptionName.ToString());
+            Log.PurgeComplete(_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
+            Log.PurgeError(_logger, ex, subscriptionName.ToString());
             throw;
         }
     }
@@ -222,7 +223,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         }
         
         gcpStreamMessage.Reject();
-        Log.RequeueComplete(s_logger, message.Id.Value);
+        Log.RequeueComplete(_logger, message.Id.Value);
         return true;
     }
 

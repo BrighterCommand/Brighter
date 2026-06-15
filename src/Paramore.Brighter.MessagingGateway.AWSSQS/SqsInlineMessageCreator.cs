@@ -30,17 +30,22 @@ using System.Text.Json;
 using Amazon;
 using Amazon.SQS;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
 internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsInlineMessageCreator>();
+    private readonly ILogger _logger;
 
     private Dictionary<string, JsonElement> _messageAttributes = new();
+
+    public SqsInlineMessageCreator(ILoggerFactory? loggerFactory = null)
+    {
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SqsInlineMessageCreator>();
+    }
 
     public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
     {
@@ -112,12 +117,12 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         }
         catch (Exception e)
         {
-            Log.FailedToCreateMessageFromAwsSqsMessage(s_logger, e);
+            Log.FailedToCreateMessageFromAwsSqsMessage(_logger, e);
             return Message.FailureMessage(topic.Result, messageId.Result);
         }
     }
 
-    private static Dictionary<string, JsonElement> ReadMessageAttributes(JsonDocument jsonDocument)
+    private Dictionary<string, JsonElement> ReadMessageAttributes(JsonDocument jsonDocument)
     {
         var messageAttributes = new Dictionary<string, JsonElement>();
 
@@ -132,7 +137,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         }
         catch (Exception ex)
         {
-            Log.FailedWhileDeserializingSqsMessageBody(s_logger, ex);
+            Log.FailedWhileDeserializingSqsMessageBody(_logger, ex);
         }
 
         return messageAttributes ?? new Dictionary<string, JsonElement>();
@@ -429,13 +434,13 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
           }
           catch (Exception ex)
           {
-              Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
+              Log.FailedToParseSqsMessageBodyToValidJsonDocument(_logger, ex);
           }
 
           return new HeaderResult<string?>(null, true);
     }
 
-    private static MessageBody ReadMessageBody(JsonDocument jsonDocument)
+    private MessageBody ReadMessageBody(JsonDocument jsonDocument)
     {
         try
         {
@@ -446,7 +451,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         }
         catch (Exception ex)
         {
-            Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
+            Log.FailedToParseSqsMessageBodyToValidJsonDocument(_logger, ex);
         }
 
         return new MessageBody(string.Empty);

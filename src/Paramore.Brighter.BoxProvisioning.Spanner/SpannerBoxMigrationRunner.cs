@@ -31,7 +31,6 @@ using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Inbox.Spanner;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Spanner;
 
@@ -86,12 +85,13 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> detectionHelper,
         IAmARelationalDatabaseConfiguration configuration,
         IAmABrighterTracer? tracer = null,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        ILoggerFactory? loggerFactory = null)
     {
         _detectionHelper = detectionHelper;
         _configuration = configuration;
         _tracer = tracer;
-        _logger = logger ?? ApplicationLogging.CreateLogger<SpannerBoxMigrationRunner>();
+        _logger = logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SpannerBoxMigrationRunner>();
     }
 
     /// <summary>
@@ -102,8 +102,9 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     public SpannerBoxMigrationRunner(
         IAmARelationalDatabaseConfiguration configuration,
         IAmABrighterTracer? tracer = null,
-        ILogger? logger = null)
-        : this(new SpannerBoxDetectionHelper(), configuration, tracer, logger)
+        ILogger? logger = null,
+        ILoggerFactory? loggerFactory = null)
+        : this(new SpannerBoxDetectionHelper(), configuration, tracer, logger, loggerFactory)
     {
     }
 

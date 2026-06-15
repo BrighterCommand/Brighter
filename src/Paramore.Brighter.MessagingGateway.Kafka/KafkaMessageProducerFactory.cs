@@ -25,6 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -36,22 +37,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
         private readonly IEnumerable<KafkaPublication> _publications;
+        private readonly ILoggerFactory? _loggerFactory;
         private Action<ProducerConfig>? _configHook;
 
         /// <summary>
         /// This constructs a <see cref="KafkaMessageProducerFactory"/> which can be used to create a dictionary of <see cref="KafkaMessageProducer"/>
         /// instances indexed by topic name.
-        /// It takes a dependency on a <see cref="KafkaMessagingGatewayConfiguration"/> to connect to the broker, and a collection of 
+        /// It takes a dependency on a <see cref="KafkaMessagingGatewayConfiguration"/> to connect to the broker, and a collection of
         /// <see cref="KafkaPublication"/> instances that determine how we publish to Kafka and the parameters of any topics if required.
         /// </summary>
         /// <param name="globalConfiguration">Configures how we connect to the broker</param>
         /// <param name="publications">The list of topics that we want to publish to</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the producers</param>
         public KafkaMessageProducerFactory(
-            KafkaMessagingGatewayConfiguration globalConfiguration, 
-            IEnumerable<KafkaPublication> publications)
+            KafkaMessagingGatewayConfiguration globalConfiguration,
+            IEnumerable<KafkaPublication> publications,
+            ILoggerFactory? loggerFactory = null)
         {
             _globalConfiguration = globalConfiguration;
             _publications = publications;
+            _loggerFactory = loggerFactory;
             _configHook = null;
         }
 
@@ -65,7 +70,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             foreach (var publication in _publications)
             {
                 if (publication.Topic is null) continue;
-                var producer = new KafkaMessageProducer(_globalConfiguration, publication);
+                var producer = new KafkaMessageProducer(_globalConfiguration, publication, loggerFactory: _loggerFactory);
                 if (_configHook != null)
                     producer.ConfigHook(_configHook);
                 producer.Init();

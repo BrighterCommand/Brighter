@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 
@@ -63,7 +64,8 @@ namespace Paramore.Brighter.Outbox.Hosting
                 provider.GetService<IAmARequestContextFactory>(),
                 options.ArchiveBatchSize,
                 provider.GetService<IAmABrighterTracer>(),
-                options.Instrumentation));
+                options.Instrumentation,
+                provider.GetService<ILoggerFactory>()));
             
             brighterBuilder.Services.AddHostedService<TimedOutboxArchiver<Message, TTransaction>>();
 

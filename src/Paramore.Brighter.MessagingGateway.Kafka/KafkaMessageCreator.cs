@@ -30,8 +30,8 @@ using System.Net.Mime;
 using System.Text;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// </summary>
     public partial class KafkaMessageCreator
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageCreator>();
+        private static readonly ILogger s_logger = NullLoggerFactory.Instance.CreateLogger<KafkaMessageCreator>();
 
         private sealed class MessageHeaderResults
         {

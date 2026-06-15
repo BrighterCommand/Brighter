@@ -31,8 +31,8 @@ using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -42,9 +42,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// </summary>
     public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageConsumer>();
+        private readonly ILogger _logger;
 
         private readonly AWSMessagingGatewayConnection _connection;
+        private readonly ILoggerFactory? _loggerFactory;
         private readonly AWSClientFactory _clientFactory;
         private readonly string _queueName;
         private readonly int _batchSize;
@@ -70,6 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="isQueueUrl">Is the queue name a queue url?</param>
         /// <param name="rawMessageDelivery">Do we have Raw Message Delivery enabled?</param>
         /// <param name="queueAttributes">The <see cref="SqsAttributes"/> for the queue (used by DLQ producers for FIFO support)</param>
+        /// <param name="loggerFactory">The factory used to create a logger for this consumer</param>
         public SqsMessageConsumer(
             AWSMessagingGatewayConnection awsConnection,
             string? queueName,
@@ -79,11 +81,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             bool isQueueUrl = false,
             bool rawMessageDelivery = true,
-            SqsAttributes? queueAttributes = null)
+            SqsAttributes? queueAttributes = null,
+            ILoggerFactory? loggerFactory = null)
         {
             if (string.IsNullOrEmpty(queueName))
                 throw new ConfigurationException("QueueName is mandatory");
 
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SqsMessageConsumer>();
+            _loggerFactory = loggerFactory;
             _connection = awsConnection;
             _clientFactory = new AWSClientFactory(awsConnection);
             _queueName = queueName!;
@@ -145,16 +150,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             try
             {
                 using var client = _clientFactory.CreateSqsClient();
-                Log.PurgingQueue(s_logger, _queueName);
+                Log.PurgingQueue(_logger, _queueName);
 
                 await EnsureChannelUrl(client, cancellationToken);
                 await client.PurgeQueueAsync(_channelUrl, cancellationToken);
 
-                Log.PurgedQueue(s_logger, _queueName);
+                Log.PurgedQueue(_logger, _queueName);
             }
             catch (Exception exception)
             {
-                Log.ErrorPurgingQueue(s_logger, exception, _queueName);
+                Log.ErrorPurgingQueue(_logger, exception, _queueName);
                 throw;
             }
         }
@@ -183,7 +188,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 await EnsureChannelUrl(client, cancellationToken);
                 timeOut ??= TimeSpan.Zero;
 
-                Log.RetrievingNextMessage(s_logger,_channelUrl!);
+                Log.RetrievingNextMessage(_logger,_channelUrl!);
 
                 var request = new ReceiveMessageRequest(_channelUrl)
                 {
@@ -199,17 +204,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (InvalidOperationException ioe)
             {
-                Log.CouldNotDetermineNumberOfMessagesToRetrieve(s_logger);
+                Log.CouldNotDetermineNumberOfMessagesToRetrieve(_logger);
                 throw new ChannelFailureException("Error connecting to SQS, see inner exception for details", ioe);
             }
             catch (OperationCanceledException oce)
             {
-                Log.CouldNotFindMessagesToRetrieve(s_logger);
+                Log.CouldNotFindMessagesToRetrieve(_logger);
                 throw new ChannelFailureException("Error connecting to SQS, see inner exception for details", oce);
             }
             catch (Exception e)
             {
-                Log.ErrorListeningToQueue(s_logger, e, _queueName);
+                Log.ErrorListeningToQueue(_logger, e, _queueName);
                 throw;
             }
             finally
@@ -225,8 +230,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var messages = new Message[sqsMessages.Length];
             for (int i = 0; i < sqsMessages.Length; i++)
             {
-                var message = SqsMessageCreatorFactory.Create(_rawMessageDelivery).CreateMessage(sqsMessages[i]);
-                Log.ReceivedMessageFromQueue(s_logger, _queueName, Environment.NewLine, JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
+                var message = SqsMessageCreatorFactory.Create(_rawMessageDelivery, _loggerFactory).CreateMessage(sqsMessages[i]);
+                Log.ReceivedMessageFromQueue(_logger, _queueName, Environment.NewLine, JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
                 messages[i] = message;
             }
 
@@ -258,14 +263,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
             var description = reason is null ? "unknown" : reason.Description ?? "unknown";
 
-            Log.RejectingMessage(s_logger, message.Id.Value, receiptHandle, _queueName, reasonString, description);
+            Log.RejectingMessage(_logger, message.Id.Value, receiptHandle, _queueName, reasonString, description);
 
             // If no channels configured, just delete the original message
             if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
                 if (reason != null)
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, reason.RejectionReason.ToString());
                 }
 
                 await AcknowledgeAsync(message, cancellationToken);
@@ -286,7 +291,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDlq(s_logger, message.Id.Value);
+                        Log.FallingBackToDlq(_logger, message.Id.Value);
 
                     if (routingKey == _invalidMessageRoutingKey)
                         producer = _invalidMessageProducer?.Value;
@@ -297,18 +302,18 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 if (producer != null)
                 {
                     await producer.SendAsync(message, cancellationToken);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(_logger, message.Id.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
             {
                 // Sending to DLQ failed — delete the original to prevent infinite
                 // reprocessing. The message is lost rather than stuck in a retry loop.
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
+                Log.ErrorSendingToRejectionChannel(_logger, ex, message.Id.Value, rejectionReason.ToString());
                 await DeleteSourceMessageAsync(receiptHandle!, message.Id.Value, cancellationToken);
                 return true;
             }
@@ -340,7 +345,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                Log.NackingMessage(s_logger, message.Id.Value, receiptHandle, _queueName);
+                Log.NackingMessage(_logger, message.Id.Value, receiptHandle, _queueName);
 
                 using var client = _clientFactory.CreateSqsClient();
                 await EnsureChannelUrl(client, cancellationToken);
@@ -349,7 +354,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     cancellationToken
                 );
 
-                Log.NackedMessage(s_logger, message.Id.Value, receiptHandle, _channelUrl!);
+                Log.NackedMessage(_logger, message.Id.Value, receiptHandle, _channelUrl!);
             }
             catch (ReceiptHandleIsInvalidException ex)
             {
@@ -357,11 +362,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 // SQS has already made the message visible again for redelivery by another consumer.
                 // Nack sets visibility to zero for immediate redelivery — but the message is already
                 // visible again, so the net effect is the same. Log a warning and continue.
-                Log.NackFailedReceiptHandleExpired(s_logger, ex, message.Id.Value, receiptHandle, _queueName);
+                Log.NackFailedReceiptHandleExpired(_logger, ex, message.Id.Value, receiptHandle, _queueName);
             }
             catch (Exception exception)
             {
-                Log.ErrorNackingMessage(s_logger, exception, message.Id.Value, receiptHandle, _queueName);
+                Log.ErrorNackingMessage(_logger, exception, message.Id.Value, receiptHandle, _queueName);
                 throw;
             }
         }
@@ -393,7 +398,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                Log.RequeueingMessage(s_logger, message.Id.Value);
+                Log.RequeueingMessage(_logger, message.Id.Value);
 
                 using (var client = _clientFactory.CreateSqsClient())
                 {
@@ -404,7 +409,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     );
                 }
 
-                Log.RequeuedMessage(s_logger, message.Id.Value);
+                Log.RequeuedMessage(_logger, message.Id.Value);
 
                 return true;
             }
@@ -413,12 +418,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 // Receipt handle is invalid (most likely because the visibility timeout elapsed).
                 // SQS has already made the message visible again for redelivery by another consumer,
                 // but without the intended delay. Log a warning so operators are aware.
-                Log.RequeueFailedReceiptHandleExpired(s_logger, ex, message.Id.Value, receiptHandle, _queueName, delay.Value);
+                Log.RequeueFailedReceiptHandleExpired(_logger, ex, message.Id.Value, receiptHandle, _queueName, delay.Value);
                 return false;
             }
             catch (Exception exception)
             {
-                Log.ErrorRequeueingMessage(s_logger, exception, message.Id.Value, receiptHandle, _queueName);
+                Log.ErrorRequeueingMessage(_logger, exception, message.Id.Value, receiptHandle, _queueName);
                 return false;
             }
         }
@@ -465,11 +470,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 // We must NOT call the sync ConfirmQueueExists here because the lazy is resolved
                 // inside RejectAsync, which may already be running inside BrighterAsyncContext.Run
                 // from the sync Reject path — nesting would deadlock.
-                return new SqsMessageProducer(_connection, publication);
+                return new SqsMessageProducer(_connection, publication, loggerFactory: _loggerFactory);
             }
             catch (Exception e)
             {
-                Log.ErrorCreatingDlqProducerException(s_logger, e, _deadLetterRoutingKey.Value);
+                Log.ErrorCreatingDlqProducerException(_logger, e, _deadLetterRoutingKey.Value);
                 return null;
             }
         }
@@ -484,11 +489,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             try
             {
                 // Queue existence is confirmed on first SendAsync via ConfirmQueueExistsAsync.
-                return new SqsMessageProducer(_connection, publication);
+                return new SqsMessageProducer(_connection, publication, loggerFactory: _loggerFactory);
             }
             catch (Exception e)
             {
-                Log.ErrorCreatingInvalidMessageProducerException(s_logger, e, _invalidMessageRoutingKey.Value);
+                Log.ErrorCreatingInvalidMessageProducerException(_logger, e, _invalidMessageRoutingKey.Value);
                 return null;
             }
         }
@@ -521,7 +526,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 await client.DeleteMessageAsync(new DeleteMessageRequest(_channelUrl, receiptHandle),
                     cancellationToken);
 
-                Log.DeletedMessage(s_logger, messageId, receiptHandle, _channelUrl!);
+                Log.DeletedMessage(_logger, messageId, receiptHandle, _channelUrl!);
             }
             catch (ReceiptHandleIsInvalidException ex)
             {
@@ -529,11 +534,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 // SQS has already made the message visible again for redelivery by another consumer.
                 // This is an error because the message was not deleted and may be processed again;
                 // handlers should be idempotent, but an operator may need to investigate.
-                Log.DeleteFailedReceiptHandleExpired(s_logger, ex, messageId, receiptHandle, _queueName);
+                Log.DeleteFailedReceiptHandleExpired(_logger, ex, messageId, receiptHandle, _queueName);
             }
             catch (Exception exception)
             {
-                Log.ErrorDeletingMessage(s_logger, exception, messageId, receiptHandle, _queueName);
+                Log.ErrorDeletingMessage(_logger, exception, messageId, receiptHandle, _queueName);
                 throw;
             }
         }

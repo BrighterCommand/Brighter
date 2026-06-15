@@ -1,16 +1,23 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    public partial class TransformLifetimeScopeAsync(IAmAMessageTransformerFactoryAsync factory)
-        : IAmATransformLifetimeAsync
+    public partial class TransformLifetimeScopeAsync : IAmATransformLifetimeAsync
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScopeAsync>();
+        private readonly ILogger _logger;
+        private readonly IAmAMessageTransformerFactoryAsync _factory;
         private readonly IList<Lease<IAmAMessageTransformAsync>> _trackedObjects = new List<Lease<IAmAMessageTransformAsync>>();
+
+        public TransformLifetimeScopeAsync(IAmAMessageTransformerFactoryAsync factory, ILoggerFactory? loggerFactory = null)
+        {
+            _factory = factory;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<TransformLifetimeScopeAsync>();
+        }
 
         public void Dispose()
         {
@@ -51,7 +58,7 @@ namespace Paramore.Brighter
         public void Add(Lease<IAmAMessageTransformAsync> lease)
         {
             _trackedObjects.Add(lease);
-            Log.TrackingInstance(s_logger, lease.Instance.GetHashCode(), lease.Instance.GetType());
+            Log.TrackingInstance(_logger, lease.Instance.GetHashCode(), lease.Instance.GetType());
          }
 
         private void ReleaseTrackedObjects()
@@ -71,7 +78,7 @@ namespace Paramore.Brighter
                 try
                 {
                     factory.Release(trackedItem);
-                    Log.ReleasingHandlerInstance(s_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
+                    Log.ReleasingHandlerInstance(_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
                 }
                 catch (Exception ex)
                 {
@@ -100,7 +107,7 @@ namespace Paramore.Brighter
                 try
                 {
                     await factory.ReleaseAsync(trackedItem).ConfigureAwait(false);
-                    Log.ReleasingHandlerInstance(s_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
+                    Log.ReleasingHandlerInstance(_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
                 }
                 catch (Exception ex)
                 {
@@ -122,4 +129,5 @@ namespace Paramore.Brighter
         }
     }
 }
+
 

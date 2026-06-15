@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
@@ -71,15 +70,16 @@ public class PostgreSqlBoxDetectionHelper :
     }
 
     /// <summary>
-    /// Initialises the detection helper with an optional logger. When unspecified, falls back
-    /// to <see cref="ApplicationLogging.CreateLogger{T}"/>. Existing callers that use the
-    /// parameterless form continue to work — the logger is currently only consumed for the
+    /// Initialises the detection helper with an optional logger. When unspecified, the logger is
+    /// sourced from the supplied <see cref="ILoggerFactory"/> (or
+    /// <see cref="NullLoggerFactory.Instance"/> when that is also null). Existing callers that use
+    /// the parameterless form continue to work — the logger is currently only consumed for the
     /// rare <c>UndefinedTable</c>-swallow Debug emission in
     /// <see cref="DoesHistoryExistAsync"/>; the helper remains a safe DI singleton.
     /// </summary>
-    public PostgreSqlBoxDetectionHelper(ILogger? logger = null)
+    public PostgreSqlBoxDetectionHelper(ILogger? logger = null, ILoggerFactory? loggerFactory = null)
     {
-        _logger = logger ?? ApplicationLogging.CreateLogger<PostgreSqlBoxDetectionHelper>();
+        _logger = logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PostgreSqlBoxDetectionHelper>();
     }
 
     /// <summary>

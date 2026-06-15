@@ -41,6 +41,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     private readonly SqsPublication _publication;
     private readonly AWSClientFactory _clientFactory;
     private readonly InstrumentationOptions _instrumentation;
+    private readonly ILoggerFactory? _loggerFactory;
 
     /// <summary>
     /// The publication configuration for this producer
@@ -61,16 +62,18 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     /// <param name="connection">How do we connect to AWS in order to manage middleware</param>
     /// <param name="publication">Configuration of a producer. Required.</param>
     /// <param name="instrumentation"></param>
-    public SqsMessageProducer(AWSMessagingGatewayConnection connection, 
+    public SqsMessageProducer(AWSMessagingGatewayConnection connection,
         SqsPublication publication,
-        InstrumentationOptions instrumentation = InstrumentationOptions.All)
-        : base(connection)
+        InstrumentationOptions instrumentation = InstrumentationOptions.All,
+        ILoggerFactory? loggerFactory = null)
+        : base(connection, loggerFactory)
     {
         _publication = publication ?? throw new ArgumentNullException(nameof(publication));
-        if (_publication.ChannelName is null) 
+        if (_publication.ChannelName is null)
             throw new InvalidOperationException($"We must have a valid Channel Name on the Publication, either a queue name or a Url");
         _clientFactory = new AWSClientFactory(connection);
         _instrumentation = instrumentation;
+        _loggerFactory = loggerFactory;
 
         if (publication.FindQueueBy == QueueFindBy.Url)
         {
@@ -158,12 +161,12 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
         }
         
         BrighterTracer.WriteProducerEvent(Span, MessagingSystem.AWSSQS, message, _instrumentation);
-        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
+        Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
 
         await ConfirmQueueExistsAsync(cancellationToken);
 
         using var client = _clientFactory.CreateSqsClient();
-        var sender = new SqsMessageSender(ChannelQueueUrl!, client);
+        var sender = new SqsMessageSender(ChannelQueueUrl!, client, _loggerFactory);
         var messageId = await sender.SendAsync(message, delay, cancellationToken);
 
         if (messageId == null)
@@ -172,7 +175,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
                 $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
         }
 
-        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, messageId);
+        Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, messageId);
     }
 
     public void Send(Message message) => SendWithDelay(message, null);

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Postgres;
 
@@ -10,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// ensures the underlying queue store exists for each publication, and creates a corresponding
 /// <see cref="PostgresMessageProducer"/> instance, keyed by the publication's topic.
 /// </summary>
-public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection connection, IEnumerable<PostgresPublication> publications) :  PostgresMessagingGateway(connection), IAmAMessageProducerFactory
+public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection connection, IEnumerable<PostgresPublication> publications, ILoggerFactory? loggerFactory = null) :  PostgresMessagingGateway(connection), IAmAMessageProducerFactory
 {
     /// <summary>
     /// Creates a dictionary of in-memory message producers.
@@ -31,7 +32,7 @@ public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection c
             
             EnsureQueueStoreExists(schemaName, tableName, binaryMessagePayload, publication.MakeChannels);
             
-            var producer = new PostgresMessageProducer(Connection.Configuration, publication);
+            var producer = new PostgresMessageProducer(Connection.Configuration, publication, loggerFactory: loggerFactory);
             
             producer.Publication = publication;
             var producerKey = new ProducerKey(publication.Topic, publication.Type);
@@ -64,7 +65,7 @@ public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection c
             
             await EnsureQueueStoreExistsAsync(schemaName, tableName, binaryMessagePayload, publication.MakeChannels, CancellationToken.None);
             
-            var producer = new PostgresMessageProducer(Connection.Configuration, publication);
+            var producer = new PostgresMessageProducer(Connection.Configuration, publication, loggerFactory: loggerFactory);
             
             producer.Publication = publication;
             var producerKey = new ProducerKey(publication.Topic, publication.Type);

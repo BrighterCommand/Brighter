@@ -27,7 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.Sqlite;
@@ -96,9 +96,10 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         TimeSpan? lockTimeout = null,
         bool enableWalMode = true,
         IAmABrighterTracer? tracer = null,
-        MigrationHistoryScope scope = MigrationHistoryScope.Global)
+        MigrationHistoryScope scope = MigrationHistoryScope.Global,
+        ILoggerFactory? loggerFactory = null)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? ApplicationLogging.CreateLogger<SqliteBoxMigrationRunner>(),
+            logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SqliteBoxMigrationRunner>(),
             tracer, scope)
     {
         _enableWalMode = enableWalMode;
@@ -117,8 +118,9 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         TimeSpan lockTimeout,
         bool enableWalMode = true,
         IAmABrighterTracer? tracer = null,
-        MigrationHistoryScope scope = MigrationHistoryScope.Global)
-        : this(new SqliteBoxDetectionHelper(), catalog, configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer, scope: scope)
+        MigrationHistoryScope scope = MigrationHistoryScope.Global,
+        ILoggerFactory? loggerFactory = null)
+        : this(new SqliteBoxDetectionHelper(), catalog, configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer, scope: scope, loggerFactory: loggerFactory)
     {
     }
 

@@ -22,11 +22,14 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
+
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async
 {
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly RmqMessagingGatewayConnection _rmqConnection;
+        private readonly ILoggerFactory? _loggerFactory;
         private IAmAMessageScheduler? _scheduler;
 
         /// <summary>
@@ -44,10 +47,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// </summary>
         /// <param name="rmqConnection">The subscription to the broker hosting the queue</param>
         /// <param name="scheduler">Optional scheduler for delayed requeue operations</param>
-        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection rmqConnection, IAmAMessageScheduler? scheduler = null)
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers</param>
+        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection rmqConnection, IAmAMessageScheduler? scheduler = null, ILoggerFactory? loggerFactory = null)
         {
             _rmqConnection = rmqConnection;
             _scheduler = scheduler;
+            _loggerFactory = loggerFactory;
         }
 
         /// <summary>
@@ -80,7 +85,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
                 rmqSubscription.MaxQueueLength,
                 subscription.MakeChannels,
                 rmqSubscription.QueueType,
-                scheduler: _scheduler);
+                scheduler: _scheduler,
+                loggerFactory: _loggerFactory);
         }
 
         public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
@@ -102,7 +108,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
                 rmqSubscription.MaxQueueLength,
                 subscription.MakeChannels,
                 rmqSubscription.QueueType,
-                scheduler: _scheduler);
+                scheduler: _scheduler,
+                loggerFactory: _loggerFactory);
         }
     }
 }

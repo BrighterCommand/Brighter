@@ -2,7 +2,7 @@
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
@@ -15,10 +15,11 @@ public partial class GcpPullMessageConsumer(
     GcpMessagingGatewayConnection connection,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
     int batchSize,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILoggerFactory? loggerFactory = null)
     : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPullMessageConsumer>();
+    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<GcpPullMessageConsumer>();
     
     /// <summary>
     /// Synchronously acknowledges a message.
@@ -35,11 +36,11 @@ public partial class GcpPullMessageConsumer(
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
             client.Acknowledge(subscriptionName, [ackId]);
-            Log.AcknowledgeSuccess(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.AcknowledgeSuccess(_logger, message.Id.Value, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.AcknowledgeError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.AcknowledgeError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             throw;
         }
     }
@@ -61,11 +62,11 @@ public partial class GcpPullMessageConsumer(
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
             await client.AcknowledgeAsync(subscriptionName, [ackId], cancellationToken);
-            Log.AcknowledgeSuccess(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.AcknowledgeSuccess(_logger, message.Id.Value, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.AcknowledgeError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.AcknowledgeError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             throw;
         }
     }
@@ -98,14 +99,14 @@ public partial class GcpPullMessageConsumer(
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
 
-            Log.PurgeStart(s_logger, subscriptionName.ToString());
+            Log.PurgeStart(_logger, subscriptionName.ToString());
             client.Seek(
                 new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) });
-            Log.PurgeComplete(s_logger, subscriptionName.ToString());
+            Log.PurgeComplete(_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
+            Log.PurgeError(_logger, ex, subscriptionName.ToString());
             throw;
         }
     }
@@ -122,17 +123,17 @@ public partial class GcpPullMessageConsumer(
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
 
-            Log.PurgeStart(s_logger, subscriptionName.ToString());
+            Log.PurgeStart(_logger, subscriptionName.ToString());
 
             await client.SeekAsync(
                 new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) },
                 cancellationToken);
 
-            Log.PurgeComplete(s_logger, subscriptionName.ToString());
+            Log.PurgeComplete(_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
+            Log.PurgeError(_logger, ex, subscriptionName.ToString());
             throw;
         }
     }
@@ -164,13 +165,13 @@ public partial class GcpPullMessageConsumer(
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
         {
-            Log.ReceiveConnectionError(s_logger);
+            Log.ReceiveConnectionError(_logger);
             throw new ChannelFailureException("Error connecting to Pub/Sub, see inner exception for details",
                 rcpException);
         }
         catch (Exception e)
         {
-            Log.ReceiveError(s_logger, e, subscriptionName.ToString());
+            Log.ReceiveError(_logger, e, subscriptionName.ToString());
             throw;
         }
 
@@ -202,13 +203,13 @@ public partial class GcpPullMessageConsumer(
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
         {
-            Log.ReceiveConnectionError(s_logger);
+            Log.ReceiveConnectionError(_logger);
             throw new ChannelFailureException("Error connecting to Pub/Sub, see inner exception for details",
                 rcpException);
         }
         catch (Exception e)
         {
-            Log.ReceiveError(s_logger, e, subscriptionName.ToString());
+            Log.ReceiveError(_logger, e, subscriptionName.ToString());
             throw;
         }
 
@@ -232,12 +233,12 @@ public partial class GcpPullMessageConsumer(
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
 
-            Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.RejectMessage(_logger, message.Id.Value, ackId, subscriptionName.ToString());
             client.Acknowledge(subscriptionName, [ackId]);
         }
         catch (Exception ex)
         {
-            Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.RejectError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             throw;
         }
 
@@ -261,12 +262,12 @@ public partial class GcpPullMessageConsumer(
         try
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
-            Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.RejectMessage(_logger, message.Id.Value, ackId, subscriptionName.ToString());
             await client.AcknowledgeAsync(subscriptionName, [ackId], cancellationToken);
         }
         catch (Exception ex)
         {
-            Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.RejectError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             throw;
         }
 
@@ -291,17 +292,17 @@ public partial class GcpPullMessageConsumer(
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
 
-            Log.RequeueStart(s_logger, message.Id.Value);
+            Log.RequeueStart(_logger, message.Id.Value);
 
             // The requeue policy is defined by subscription, during its creation
             client.ModifyAckDeadline(subscriptionName, [ackId], 0);
 
-            Log.RequeueComplete(s_logger, message.Id.Value);
+            Log.RequeueComplete(_logger, message.Id.Value);
             return true;
         }
         catch (Exception ex)
         {
-            Log.RequeueError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.RequeueError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             return false;
         }
     }
@@ -326,7 +327,7 @@ public partial class GcpPullMessageConsumer(
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
 
-            Log.RequeueStart(s_logger, message.Id.Value);
+            Log.RequeueStart(_logger, message.Id.Value);
 
             // The requeue policy is defined by subscription, during its creation
             await client.ModifyAckDeadlineAsync(new ModifyAckDeadlineRequest
@@ -336,12 +337,12 @@ public partial class GcpPullMessageConsumer(
                 AckDeadlineSeconds = 0
             }, cancellationToken);
 
-            Log.RequeueComplete(s_logger, message.Id.Value);
+            Log.RequeueComplete(_logger, message.Id.Value);
             return true;
         }
         catch (Exception ex)
         {
-            Log.RequeueError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            Log.RequeueError(_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
             return false;
         }
     }

@@ -29,8 +29,8 @@ using System.Linq;
 using System.Net.Mime;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
 internal sealed partial class RmqMessageCreator
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageCreator>();
+    private static readonly ILogger s_logger = NullLoggerFactory.Instance.CreateLogger<RmqMessageCreator>();
 
     public static Message CreateMessage(BasicDeliverEventArgs fromQueue)
     {

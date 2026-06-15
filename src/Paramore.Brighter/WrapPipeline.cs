@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -38,7 +39,7 @@ namespace Paramore.Brighter
     /// </summary>
     public partial class WrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest: class, IRequest
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<WrapPipeline<TRequest>>();
+        private readonly ILogger _logger;
             
         private readonly InstrumentationOptions _instrumentationOptions;
 
@@ -50,14 +51,17 @@ namespace Paramore.Brighter
         /// <param name="transformLeases">The leases over the transforms applied after the message mapper</param>
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
+        /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
         public WrapPipeline(
             Lease<IAmAMessageMapper<TRequest>> messageMapperLease,
             IAmAMessageTransformerFactory? messageTransformerFactory,
             IEnumerable<Lease<IAmAMessageTransform>> transformLeases,
             InstrumentationOptions instrumentationOptions,
-            IAmAMessageMapperRegistry? mapperRegistry = null
+            IAmAMessageMapperRegistry? mapperRegistry = null,
+            ILoggerFactory? loggerFactory = null
             ) : base(messageMapperLease, transformLeases, mapperRegistry)
         {
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<WrapPipeline<TRequest>>();
             _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactory != null)
             {
@@ -94,7 +98,7 @@ namespace Paramore.Brighter
 
             if (message.Header.Topic != publication.Topic)
             {
-                Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic.Value);
+                Log.DifferentPublicationAndMessageTopic(_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic.Value);
                 if (publication.Topic is not null)
                 {
                     message.Header.Bag[Message.ProducerTopicHeaderName] = publication.Topic.Value;
@@ -125,3 +129,4 @@ namespace Paramore.Brighter
         }
     }
 }
+

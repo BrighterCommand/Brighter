@@ -9,10 +9,10 @@ using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -21,9 +21,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// </summary>
 public partial class SqsMessageSender
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageSender>();
     private static readonly TimeSpan s_maxDelay = TimeSpan.FromSeconds(900);
-    
+
+    private readonly ILogger _logger;
     private readonly string _queueUrl;
     private readonly AmazonSQSClient _client;
 
@@ -32,8 +32,10 @@ public partial class SqsMessageSender
     /// </summary>
     /// <param name="queueUrl">The queue ARN</param>
     /// <param name="client">The SQS Client</param>
-    public SqsMessageSender(string queueUrl, AmazonSQSClient client)
+    /// <param name="loggerFactory">The factory used to create a logger for this sender</param>
+    public SqsMessageSender(string queueUrl, AmazonSQSClient client, ILoggerFactory? loggerFactory = null)
     {
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SqsMessageSender>();
         _queueUrl = queueUrl;
         _client = client;
     }
@@ -74,7 +76,7 @@ public partial class SqsMessageSender
         return request;
     }
 
-    private static void SetMessageDelay(SendMessageRequest request, TimeSpan? delay)
+    private void SetMessageDelay(SendMessageRequest request, TimeSpan? delay)
     {
         delay ??= TimeSpan.Zero;
         if (delay > TimeSpan.Zero)
@@ -82,7 +84,7 @@ public partial class SqsMessageSender
             if (delay.Value > s_maxDelay)
             {
                 delay = s_maxDelay;
-                Log.DelaySetToMaximum(s_logger, delay);
+                Log.DelaySetToMaximum(_logger, delay);
             }
 
             request.DelaySeconds = (int)delay.Value.TotalSeconds;

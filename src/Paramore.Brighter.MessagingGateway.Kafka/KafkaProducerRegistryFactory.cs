@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -37,6 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
         private readonly IEnumerable<KafkaPublication> _publications;
+        private readonly ILoggerFactory? _loggerFactory;
         private Action<ProducerConfig>? _configHook;
 
         /// <summary>
@@ -46,15 +48,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="globalConfiguration">Configures how we connect to the broker</param>
         /// <param name="publications">The list of topics that we want to publish to</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the producers</param>
         public KafkaProducerRegistryFactory(
-            KafkaMessagingGatewayConfiguration globalConfiguration, 
-            IEnumerable<KafkaPublication> publications)
+            KafkaMessagingGatewayConfiguration globalConfiguration,
+            IEnumerable<KafkaPublication> publications,
+            ILoggerFactory? loggerFactory = null)
         {
             _globalConfiguration = globalConfiguration;
             _publications = publications;
+            _loggerFactory = loggerFactory;
             _configHook = null;
         }
-        
+
         /// <summary>
         /// Create a producer registry from the <see cref="KafkaMessagingGatewayConfiguration"/> and <see cref="KafkaPublication"/> instances supplied
         /// to the constructor
@@ -62,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>An <see cref="IAmAProducerRegistry"/> that represents a collection of Kafka Message Producers</returns>
         public IAmAProducerRegistry Create()
         {
-            var producerFactory = new KafkaMessageProducerFactory(_globalConfiguration, _publications);
+            var producerFactory = new KafkaMessageProducerFactory(_globalConfiguration, _publications, _loggerFactory);
             producerFactory.SetConfigHook(_configHook);
 
             return new ProducerRegistry(producerFactory.Create());

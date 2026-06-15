@@ -1,14 +1,22 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    public partial class TransformLifetimeScope(IAmAMessageTransformerFactory factory) : IAmATransformLifetime
+    public partial class TransformLifetimeScope : IAmATransformLifetime
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScope>();
+        private readonly ILogger _logger;
+        private readonly IAmAMessageTransformerFactory _factory;
         private readonly IList<Lease<IAmAMessageTransform>> _trackedObjects = new List<Lease<IAmAMessageTransform>>();
+
+        public TransformLifetimeScope(IAmAMessageTransformerFactory factory, ILoggerFactory? loggerFactory = null)
+        {
+            _factory = factory;
+            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<TransformLifetimeScope>();
+        }
 
         public void Dispose()
         {
@@ -35,7 +43,7 @@ namespace Paramore.Brighter
         public void Add(Lease<IAmAMessageTransform> lease)
         {
             _trackedObjects.Add(lease);
-            Log.TrackingInstance(s_logger, lease.Instance.GetHashCode(), lease.Instance.GetType());
+            Log.TrackingInstance(_logger, lease.Instance.GetHashCode(), lease.Instance.GetType());
          }
         
         private void ReleaseTrackedObjects()
@@ -57,7 +65,7 @@ namespace Paramore.Brighter
                 try
                 {
                     factory.Release(trackedItem);
-                    Log.ReleasingHandlerInstance(s_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
+                    Log.ReleasingHandlerInstance(_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
                 }
                 catch (Exception ex)
                 {
@@ -79,4 +87,5 @@ namespace Paramore.Brighter
         }
     }
 }
+
 

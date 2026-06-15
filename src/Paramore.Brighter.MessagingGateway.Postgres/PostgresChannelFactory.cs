@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Postgres;
 
@@ -8,9 +9,9 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// This factory is responsible for ensuring the underlying queue store exists and for creating channels
 /// configured according to the provided <see cref="PostgresSubscription"/>.
 /// </summary>
-public class PostgresChannelFactory(PostgresMessagingGatewayConnection connection): PostgresMessagingGateway(connection), IAmAChannelFactory
+public class PostgresChannelFactory(PostgresMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null): PostgresMessagingGateway(connection), IAmAChannelFactory
 {
-    private readonly PostgresConsumerFactory _factory = new(connection);
+    private readonly PostgresConsumerFactory _factory = new(connection, loggerFactory);
     
     /// <inheritdoc />
     public IAmAChannelSync CreateSyncChannel(Subscription subscription)

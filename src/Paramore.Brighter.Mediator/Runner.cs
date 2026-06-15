@@ -27,7 +27,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -43,7 +43,7 @@ public class Runner<TData>
     private readonly Scheduler<TData> _scheduler;
     private readonly string _runnerName = Uuid.New().ToString("N");
 
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Runner<TData>>();
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Runner{TData}"/> class.
@@ -52,12 +52,14 @@ public class Runner<TData>
     /// <param name="stateStore">The job store to save job states.</param>
     /// <param name="commandProcessor">The command processor to handle commands.</param>
     /// <param name="scheduler">The scheduler which allows us to queue work that should be deferred</param>
-    public Runner(IAmAJobChannel<TData> channel, IAmAStateStoreAsync stateStore, IAmACommandProcessor commandProcessor, Scheduler<TData> scheduler)
+    /// <param name="loggerFactory">The factory used to create the logger for this runner.</param>
+    public Runner(IAmAJobChannel<TData> channel, IAmAStateStoreAsync stateStore, IAmACommandProcessor commandProcessor, Scheduler<TData> scheduler, ILoggerFactory? loggerFactory = null)
     {
         _channel = channel;
         _stateStore = stateStore;
         _commandProcessor = commandProcessor;
         _scheduler = scheduler;
+        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<Runner<TData>>();
     }
 
     /// <summary>
@@ -67,7 +69,7 @@ public class Runner<TData>
     /// <returns>A task that completes when the job processing loop exits (via cancellation or channel closure).</returns>
     public async Task RunAsync(CancellationToken cancellationToken = default(CancellationToken))
     {
-        s_logger.LogInformation("Starting runner {RunnerName}", _runnerName);
+        _logger.LogInformation("Starting runner {RunnerName}", _runnerName);
 
         try
         {
@@ -75,7 +77,7 @@ public class Runner<TData>
         }
         finally
         {
-            s_logger.LogInformation("Finished runner {RunnerName}", _runnerName);
+            _logger.LogInformation("Finished runner {RunnerName}", _runnerName);
         }
     }
 
@@ -84,7 +86,7 @@ public class Runner<TData>
         if (job is null)
             return;
         
-        s_logger.LogInformation("Executing job {JobId} on runner {RunnerName}", job.Id, _runnerName);
+        _logger.LogInformation("Executing job {JobId} on runner {RunnerName}", job.Id, _runnerName);
         
         job.State = JobState.Running;
         await _stateStore.SaveJobAsync(job, cancellationToken);
@@ -92,7 +94,7 @@ public class Runner<TData>
         var step = job.CurrentStep();
         while (step is not null)
         {
-            s_logger.LogInformation("Step is {StepName} with state {StepStste}", step.Name, step.State);
+            _logger.LogInformation("Step is {StepName} with state {StepStste}", step.Name, step.State);
             if (step.State == StepState.Queued)
             {
                 await step.ExecuteAsync(_stateStore, _commandProcessor, _scheduler, cancellationToken);
@@ -104,7 +106,7 @@ public class Runner<TData>
             
             //assume execute has advanced he step, if you your step loops endlessly it has not advanced the step!!
             step = job.CurrentStep();
-            s_logger.LogInformation(
+            _logger.LogInformation(
                 "Next step is {StepName} with state {StepState}", 
                 step is not null ? step.Name : "flow ends", 
                 step is not null ? step.State : StepState.Done);
@@ -113,7 +115,7 @@ public class Runner<TData>
         if (job.State != JobState.Waiting) 
             job.State = JobState.Done;
         
-        s_logger.LogInformation("Finished executing job {JobId} on {RunnerName}", job.Id, _runnerName);
+        _logger.LogInformation("Finished executing job {JobId} on {RunnerName}", job.Id, _runnerName);
     }
 
     private async Task ProcessJobs(CancellationToken cancellationToken = default(CancellationToken))
@@ -126,14 +128,14 @@ public class Runner<TData>
             if (_channel.IsClosed())
                 break;
 
-            s_logger.LogInformation("Looking for jobs on {RunnerName}", _runnerName);
+            _logger.LogInformation("Looking for jobs on {RunnerName}", _runnerName);
             var job = await _channel.DequeueJobAsync(cancellationToken);
             if (job is null)
                 continue;
             
-            s_logger.LogInformation("Executing job {JobId} on {RunnerName}", job.Id, _runnerName);
+            _logger.LogInformation("Executing job {JobId} on {RunnerName}", job.Id, _runnerName);
             await Execute(job, cancellationToken);
-            s_logger.LogInformation("Finished job {JobId} on {RunnerName}", job.Id, _runnerName);
+            _logger.LogInformation("Finished job {JobId} on {RunnerName}", job.Id, _runnerName);
         }
     }
 }

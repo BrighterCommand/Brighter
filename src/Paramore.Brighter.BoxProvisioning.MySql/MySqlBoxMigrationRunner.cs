@@ -26,8 +26,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MySqlConnector;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.MySql;
@@ -65,9 +65,10 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         IAmABrighterTracer? tracer = null,
-        MigrationHistoryScope scope = MigrationHistoryScope.Global)
+        MigrationHistoryScope scope = MigrationHistoryScope.Global,
+        ILoggerFactory? loggerFactory = null)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>(),
+            logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MySqlBoxMigrationRunner>(),
             tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
@@ -86,8 +87,9 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         IAmABrighterTracer? tracer = null,
-        MigrationHistoryScope scope = MigrationHistoryScope.Global)
-        : this(new MySqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope)
+        MigrationHistoryScope scope = MigrationHistoryScope.Global,
+        ILoggerFactory? loggerFactory = null)
+        : this(new MySqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope, loggerFactory)
     {
     }
 
