@@ -37,7 +37,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BindingAttributes;
 using Paramore.Brighter.FeatureSwitch;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;

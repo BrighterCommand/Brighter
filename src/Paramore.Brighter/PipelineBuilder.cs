@@ -27,7 +27,6 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Collections.Generic;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Validation;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

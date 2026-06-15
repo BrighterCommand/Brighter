@@ -27,7 +27,6 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Inbox.Exceptions;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Inbox.Handlers
 {

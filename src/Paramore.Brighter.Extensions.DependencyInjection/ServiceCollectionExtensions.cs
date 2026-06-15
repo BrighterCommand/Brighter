@@ -33,7 +33,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.FeatureSwitch;
-using Paramore.Brighter.Logging;
 using System.Text.Json;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.JsonConverters;

@@ -32,7 +32,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
 using InvalidOperationException = System.InvalidOperationException;
