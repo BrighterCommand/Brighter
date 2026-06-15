@@ -43,6 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private readonly ILogger _logger;
         private readonly ILoggerFactory? _loggerFactory;
+        private readonly RedisMessageCreator _messageCreator;
         private const string QUEUES = "queues";
 
         private readonly ChannelName _queueName;
@@ -79,6 +80,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             _loggerFactory = loggerFactory;
             _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RedisMessageConsumer>();
+            _messageCreator = new RedisMessageCreator((_loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RedisMessageCreator>());
             _queueName = queueName;
             _redisConfiguration = redisMessagingGatewayConfiguration;
             _scheduler = scheduler;
@@ -254,7 +256,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 if (redisMessage.msgId == null || string.IsNullOrEmpty(redisMessage.rawMsg))
                     return [];
                 
-                var message = RedisMessageCreator.CreateMessage(redisMessage.rawMsg);
+                var message = _messageCreator.CreateMessage(redisMessage.rawMsg);
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
                 {
                     _inflight.Add(message.Id.Value, redisMessage.msgId);
@@ -302,7 +304,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 if (redisMessage.msgId == null || string.IsNullOrEmpty(redisMessage.rawMsg))
                     return [];
                 
-                var message = RedisMessageCreator.CreateMessage(redisMessage.rawMsg);
+                var message = _messageCreator.CreateMessage(redisMessage.rawMsg);
 
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
                 {
