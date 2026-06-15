@@ -65,12 +65,12 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// <param name="inbox">The store for commands that pass into the system</param>
         /// <param name="outbox">An optional causation-tracking outbox, used to replay messages when a duplicate is
         /// seen and <see cref="OnceOnlyAction.Replay"/> is configured. Resolved from DI when registered.</param>
-        /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
-        public UseInboxHandlerAsync(IAmAnInboxAsync inbox, IAmACausationTrackingOutbox? outbox = null, ILoggerFactory? loggerFactory = null)
+        /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
+        public UseInboxHandlerAsync(IAmAnInboxAsync inbox, IAmACausationTrackingOutbox? outbox = null, ILogger<UseInboxHandlerAsync<T>>? logger = null)
         {
             _inbox = inbox;
             _outbox = outbox;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<UseInboxHandlerAsync<T>>();
+            _logger = logger ?? NullLogger<UseInboxHandlerAsync<T>>.Instance;
         }
         
         

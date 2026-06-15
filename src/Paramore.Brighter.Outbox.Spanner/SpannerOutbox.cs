@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Outbox.Spanner;
 /// encapsulates the Spanner-specific SQL queries for outbox operations.
 /// </para>
 /// </remarks>
-public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger? logger = null)
+public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<SpannerOutbox>? logger = null)
     : RelationDatabaseOutbox(DbSystem.Spanner, configuration, connectionProvider, new SpannerQueries(), logger ?? NullLogger<SpannerOutbox>.Instance)
 {
     /// <summary>
@@ -40,7 +40,7 @@ public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IA
     /// <param name="configuration">The configuration settings specific to the relational database,
     /// including connection string, database name, and outbox table name.</param>
     /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
-    public SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger? logger = null)
+    public SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger<SpannerOutbox>? logger = null)
         : this(configuration, new SpannerConnectionProvider(configuration), logger)
     {
 

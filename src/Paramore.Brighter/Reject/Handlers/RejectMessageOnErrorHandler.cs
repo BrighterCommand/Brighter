@@ -47,10 +47,10 @@ public partial class RejectMessageOnErrorHandler<TRequest> : RequestHandler<TReq
     /// <summary>
     /// Initializes a new instance of the <see cref="RejectMessageOnErrorHandler{TRequest}"/> class.
     /// </summary>
-    /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
-    public RejectMessageOnErrorHandler(ILoggerFactory? loggerFactory = null)
+    /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
+    public RejectMessageOnErrorHandler(ILogger<RejectMessageOnErrorHandler<TRequest>>? logger = null)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RejectMessageOnErrorHandler<TRequest>>();
+        _logger = logger ?? NullLogger<RejectMessageOnErrorHandler<TRequest>>.Instance;
     }
 
     /// <summary>

@@ -50,10 +50,10 @@ public partial class RejectMessageOnErrorHandlerAsync<TRequest> : RequestHandler
     /// <summary>
     /// Initializes a new instance of the <see cref="RejectMessageOnErrorHandlerAsync{TRequest}"/> class.
     /// </summary>
-    /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
-    public RejectMessageOnErrorHandlerAsync(ILoggerFactory? loggerFactory = null)
+    /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
+    public RejectMessageOnErrorHandlerAsync(ILogger<RejectMessageOnErrorHandlerAsync<TRequest>>? logger = null)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RejectMessageOnErrorHandlerAsync<TRequest>>();
+        _logger = logger ?? NullLogger<RejectMessageOnErrorHandlerAsync<TRequest>>.Instance;
     }
 
     /// <summary>

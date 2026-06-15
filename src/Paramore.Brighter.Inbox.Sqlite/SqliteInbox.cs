@@ -47,7 +47,7 @@ public class SqliteInbox : RelationalDatabaseInbox
     /// <param name="connectionProvider">The connection provider for the database.</param>
     /// <param name="configuration">The configuration for the database.</param>
     /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
-    public SqliteInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger? logger = null)
+    public SqliteInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<SqliteInbox>? logger = null)
         : base(DbSystem.Sqlite, configuration, connectionProvider,
             new SqliteQueries(), logger ?? NullLogger<SqliteInbox>.Instance)
     {
@@ -58,7 +58,7 @@ public class SqliteInbox : RelationalDatabaseInbox
     /// </summary>
     /// <param name="configuration">The configuration for the database.</param>
     /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
-    public SqliteInbox(IAmARelationalDatabaseConfiguration configuration, ILogger? logger = null)
+    public SqliteInbox(IAmARelationalDatabaseConfiguration configuration, ILogger<SqliteInbox>? logger = null)
         : this(configuration, new SqliteConnectionProvider(configuration), logger)
     {
     }

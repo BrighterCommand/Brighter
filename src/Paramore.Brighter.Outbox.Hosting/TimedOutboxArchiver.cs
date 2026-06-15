@@ -49,17 +49,17 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="archiver">The archiver to use</param>
         /// <param name="distributedLock">Used to ensure that only one instance of the <see cref="TimedOutboxSweeper"/> is running</param>
         /// <param name="options">The <see cref="TimedOutboxArchiverOptions"/> that control how the archiver runs, such as interval</param>
-        /// <param name="loggerFactory">The logger factory used to create a logger; defaults to a null logger factory when not supplied</param>
+        /// <param name="logger">The logger; defaults to a no-op logger when not supplied</param>
         public TimedOutboxArchiver(
             OutboxArchiver<TMessage, TTransaction> archiver,
             IDistributedLock distributedLock,
             TimedOutboxArchiverOptions options,
-            ILoggerFactory? loggerFactory = null)
+            ILogger<TimedOutboxArchiver<TMessage, TTransaction>>? logger = null)
         {
             _archiver = archiver;
             _distributedLock = distributedLock;
             _options = options;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<TimedOutboxSweeper>();
+            _logger = logger ?? NullLogger<TimedOutboxArchiver<TMessage, TTransaction>>.Instance;
         }
 
         private const string LockingResourceName = "Archiver";

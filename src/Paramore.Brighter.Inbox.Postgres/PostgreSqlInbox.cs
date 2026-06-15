@@ -37,13 +37,13 @@ namespace Paramore.Brighter.Inbox.Postgres;
 
 public class PostgreSqlInbox : RelationalDatabaseInbox
 {
-    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger? logger = null)
+    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<PostgreSqlInbox>? logger = null)
         : base(DbSystem.Postgresql, configuration, connectionProvider,
             new PostgreSqlQueries(), logger ?? NullLogger<PostgreSqlInbox>.Instance)
     {
     }
 
-    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, ILogger? logger = null)
+    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, ILogger<PostgreSqlInbox>? logger = null)
         : this(configuration, new PostgreSqlConnectionProvider(configuration), logger)
     {
     }

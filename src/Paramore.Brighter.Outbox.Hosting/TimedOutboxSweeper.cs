@@ -54,18 +54,18 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="serviceScopeFactory">Needed to create a scope within which to create a <see cref="CommandProcessor"/></param>
         /// <param name="distributedLock">Used to ensure that only one instance of the <see cref="TimedOutboxSweeper"/> is running</param>
         /// <param name="options">The <see cref="TimedOutboxSweeperOptions"/> that can be used to configure how this runs, such as interval or age</param>
-        /// <param name="loggerFactory">The logger factory used to create a logger; defaults to a null logger factory when not supplied</param>
+        /// <param name="logger">The logger; defaults to a no-op logger when not supplied</param>
         public TimedOutboxSweeper(
             IServiceScopeFactory serviceScopeFactory,
             IDistributedLock distributedLock,
             TimedOutboxSweeperOptions options,
-            ILoggerFactory? loggerFactory = null
+            ILogger<TimedOutboxSweeper>? logger = null
         )
         {
             _serviceScopeFactory = serviceScopeFactory;
             _distributedLock = distributedLock;
             _options = options;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<TimedOutboxSweeper>();
+            _logger = logger ?? NullLogger<TimedOutboxSweeper>.Instance;
         }
 
         /// <summary>

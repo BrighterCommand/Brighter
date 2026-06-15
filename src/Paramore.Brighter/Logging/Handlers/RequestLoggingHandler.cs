@@ -48,10 +48,10 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestLoggingHandler{TRequest}"/> class.
         /// </summary>
-        /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
-        public RequestLoggingHandler(ILoggerFactory? loggerFactory = null)
+        /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
+        public RequestLoggingHandler(ILogger<RequestLoggingHandler<TRequest>>? logger = null)
         {
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RequestLoggingHandler<TRequest>>();
+            _logger = logger ?? NullLogger<RequestLoggingHandler<TRequest>>.Instance;
         }
 
         /// <summary>
