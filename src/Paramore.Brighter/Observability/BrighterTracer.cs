@@ -758,6 +758,14 @@ public class BrighterTracer : IAmABrighterTracer
         // ambient activity for the duration of the call. We do not restore it: this method
         // deliberately makes the confirmation span the new Activity.Current below, so the
         // success-branch MarkDispatched span nests under the confirmation span.
+        //
+        // We capture no "previous" activity to restore on EndSpan, and that is safe: because the span
+        // is a forced root (Parent == null), disposing it while it is Current makes the runtime revert
+        // Activity.Current to that null parent — so Current self-clears rather than dangling at the
+        // disposed span. Even setting that aside, a disposed confirmation activity cannot leak into
+        // unrelated work: every producer raises the callback on a pooled (Task.Run) or dedicated
+        // ack/nack thread whose ExecutionContext — and thus the AsyncLocal-backed Activity.Current —
+        // is reset before the thread is reused, and the next confirmation re-clears Current here first.
         Activity.Current = null;
         var activity = ActivitySource.StartActivity(
             name: spanName,

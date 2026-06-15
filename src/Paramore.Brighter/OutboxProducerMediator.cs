@@ -736,9 +736,9 @@ namespace Paramore.Brighter
         /// <returns></returns>
         private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducerAsync producer, RequestContext requestContext)
         {
-            if (producer is ISupportPublishConfirmation producerSync)
+            if (producer is ISupportPublishConfirmation confirmingProducer)
             {
-                producerSync.OnMessagePublished += async delegate(PublishConfirmationResult result)
+                confirmingProducer.OnMessagePublished += async delegate(PublishConfirmationResult result)
                 {
                     // Emit a standalone confirmation span FIRST on every invocation (success or
                     // failure). It links back to the original publish span (when its context was
