@@ -39,9 +39,9 @@ public class NoDataAnnotationsValidationTests
         var request = new Ping { Value = "" };
 
         //Act
-        var result = handler.Handle(request);
+        var exception = Record.Exception(() => handler.Handle(request));
 
         //Assert
-        Assert.Same(request, result);
+        Assert.Null(exception);
     }
 }

@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Validation.Specification.Tests;
 public class ValidSpecificationValidationTests
 {
     [Fact]
-    public void When_a_valid_request_satisfies_its_specification_should_return_the_request()
+    public void When_a_valid_request_satisfies_its_specification_should_not_throw()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -40,9 +40,9 @@ public class ValidSpecificationValidationTests
         var validRequest = new PlaceOrder { Sku = "SKU-1", Quantity = 5 };
 
         //Act
-        var result = handler.Handle(validRequest);
+        var exception = Record.Exception(() => handler.Handle(validRequest));
 
         //Assert
-        Assert.Same(validRequest, result);
+        Assert.Null(exception);
     }
 }

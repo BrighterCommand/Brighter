@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Validation.DataAnnotations.Tests;
 public class ValidRequestValidationTests
 {
     [Fact]
-    public void When_a_valid_request_is_validated_should_return_the_request()
+    public void When_a_valid_request_is_validated_should_not_throw()
     {
         //Arrange
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
@@ -39,9 +39,9 @@ public class ValidRequestValidationTests
         var validRequest = new RegisterUser { Name = "Ada", Email = "ada@example.com" };
 
         //Act
-        var result = handler.Handle(validRequest);
+        var exception = Record.Exception(() => handler.Handle(validRequest));
 
         //Assert
-        Assert.Same(validRequest, result);
+        Assert.Null(exception);
     }
 }

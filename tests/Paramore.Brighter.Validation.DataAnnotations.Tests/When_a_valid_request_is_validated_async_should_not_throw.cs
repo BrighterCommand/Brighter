@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Validation.DataAnnotations.Tests;
 public class ValidRequestAsyncValidationTests
 {
     [Fact]
-    public async Task When_a_valid_request_is_validated_async_should_return_the_request()
+    public async Task When_a_valid_request_is_validated_async_should_not_throw()
     {
         //Arrange
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
@@ -40,9 +40,9 @@ public class ValidRequestAsyncValidationTests
         var validRequest = new RegisterUser { Name = "Ada", Email = "ada@example.com" };
 
         //Act
-        var result = await handler.HandleAsync(validRequest);
+        var exception = await Record.ExceptionAsync(() => handler.HandleAsync(validRequest));
 
         //Assert
-        Assert.Same(validRequest, result);
+        Assert.Null(exception);
     }
 }

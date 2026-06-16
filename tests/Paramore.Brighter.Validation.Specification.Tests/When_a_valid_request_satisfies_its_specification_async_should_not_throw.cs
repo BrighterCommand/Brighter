@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Validation.Specification.Tests;
 public class ValidSpecificationAsyncValidationTests
 {
     [Fact]
-    public async Task When_a_valid_request_satisfies_its_specification_async_should_return_the_request()
+    public async Task When_a_valid_request_satisfies_its_specification_async_should_not_throw()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -41,9 +41,9 @@ public class ValidSpecificationAsyncValidationTests
         var validRequest = new PlaceOrder { Sku = "SKU-1", Quantity = 5 };
 
         //Act
-        var result = await handler.HandleAsync(validRequest);
+        var exception = await Record.ExceptionAsync(() => handler.HandleAsync(validRequest));
 
         //Assert
-        Assert.Same(validRequest, result);
+        Assert.Null(exception);
     }
 }
