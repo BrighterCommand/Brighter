@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Observability;
 /// </summary>
 public class BrighterTracer : IAmABrighterTracer
 {
+    private const string PreviousActivityCustomPropertyName = "Paramore.Brighter.PreviousActivity";
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -142,7 +143,8 @@ public class BrighterTracer : IAmABrighterTracer
  
 
     /// <summary>
-    /// Create a span when we consume a message from a queue or stream
+    /// Create a span when we consume a message from a queue or stream. If the message has no propagated
+    /// trace context, the span is created as a root span instead of inheriting the long-running pump span.
     /// </summary>
     /// <param name="operation">How did we obtain the message. InstrumentationOptions.Receive => pull; InstrumentationOptions.Process => push</param>
     /// <param name="message">What is the <see cref="Message"/> that we received; if they have a traceparentid we will use that as a parent for this trace</param>
@@ -159,7 +161,6 @@ public class BrighterTracer : IAmABrighterTracer
         var spanName = $"{message.Header.Topic} {operation.ToSpanName()}";
         var kind = ActivityKind.Consumer;
         var parentId = message.Header.TraceParent?.Value;
-        var baggage = message.Header.Baggage.ToString();
         var traceState = message.Header.TraceState?.Value;
         var now = _timeProvider.GetUtcNow();
         
@@ -197,12 +198,12 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
         }
         
-        var activity = ActivitySource.StartActivity(
-            name: spanName,
-            kind: kind,
-            parentId: parentId,
-            tags: tags,
-            startTime: now);
+        var activity = StartConsumerActivity(
+            spanName,
+            kind,
+            parentId,
+            tags,
+            now);
 
         if (activity == null)
             return Activity.Current;
@@ -219,9 +220,9 @@ public class BrighterTracer : IAmABrighterTracer
     }
 
     /// <summary>
-    /// Creates a receive span before the broker call so that the span's <see cref="Activity.Duration"/> reflects only
-    /// broker latency. Tags derived from the received <see cref="Message"/> are added later via
-    /// <see cref="EnrichReceiveSpan"/>.
+    /// Creates a root receive span before the broker call so that the span's <see cref="Activity.Duration"/> reflects
+    /// only broker latency without inheriting the long-running pump span. Tags derived from the received
+    /// <see cref="Message"/> are added later via <see cref="EnrichReceiveSpan"/>.
     /// </summary>
     /// <param name="topic">The <see cref="RoutingKey"/> we are receiving from</param>
     /// <param name="messagingSystem">The <see cref="MessagingSystem"/> we are receiving from</param>
@@ -245,11 +246,11 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
         }
 
-        var activity = ActivitySource.StartActivity(
-            name: $"{topic} {operation.ToSpanName()}",
-            kind: ActivityKind.Consumer,
-            tags: tags,
-            startTime: _timeProvider.GetUtcNow());
+        var activity = StartRootActivity(
+            $"{topic} {operation.ToSpanName()}",
+            ActivityKind.Consumer,
+            tags,
+            _timeProvider.GetUtcNow());
 
         if (activity is not null)
             Activity.Current = activity;
@@ -790,10 +791,16 @@ public class BrighterTracer : IAmABrighterTracer
     public void EndSpan(Activity? span)
     {
         if (span is null) return;
+        var previousActivity = span.GetCustomProperty(PreviousActivityCustomPropertyName) as Activity;
+        var shouldRestorePreviousActivity = previousActivity is not null && Activity.Current == span;
+
         if (span.Status == ActivityStatusCode.Unset)
             span.SetStatus(ActivityStatusCode.Ok);
         span.SetEndTime(_timeProvider.GetUtcNow().UtcDateTime);
         span.Dispose();
+
+        if (shouldRestorePreviousActivity)
+            Activity.Current = previousActivity;
     }
 
     /// <summary>
@@ -1039,6 +1046,76 @@ public class BrighterTracer : IAmABrighterTracer
         PropogateTraceString(parentActivity, activity);
         PropogateBaggage(parentActivity, activity);
     }
+
+    private Activity? StartConsumerActivity(
+        string spanName,
+        ActivityKind kind,
+        string? parentId,
+        ActivityTagsCollection tags,
+        DateTimeOffset startTime)
+    {
+        if (!string.IsNullOrEmpty(parentId))
+        {
+            // The span is a child of the producer's trace, but the message pump that drove this consume
+            // is not its temporal parent, so associate the pump with a link rather than parent/child.
+            return ActivitySource.StartActivity(
+                name: spanName,
+                kind: kind,
+                parentId: parentId,
+                tags: tags,
+                links: GetMessagePumpLinks(Activity.Current),
+                startTime: startTime);
+        }
+
+        return StartRootActivity(spanName, kind, tags, startTime);
+    }
+
+    private Activity? StartRootActivity(
+        string spanName,
+        ActivityKind kind,
+        ActivityTagsCollection tags,
+        DateTimeOffset startTime)
+    {
+        var current = Activity.Current;
+        Activity? activity;
+
+        try
+        {
+            // ActivitySource treats a null parentId as "use Activity.Current", so suppress the ambient span to create a root.
+            Activity.Current = null;
+            // Link the suppressed ambient span (the message pump) so the root span stays associated with it.
+            activity = ActivitySource.StartActivity(
+                name: spanName,
+                kind: kind,
+                parentId: null,
+                tags: tags,
+                links: GetMessagePumpLinks(current),
+                startTime: startTime);
+        }
+        finally
+        {
+            Activity.Current = current;
+        }
+
+        if (current is not null && activity is not null)
+            activity.SetCustomProperty(PreviousActivityCustomPropertyName, current);
+
+        return activity;
+    }
+
+    /// <summary>
+    /// Builds the set of links used to associate a consumer span with the ambient message pump span.
+    /// </summary>
+    /// <remarks>
+    /// The message pump drives each consume/process iteration but is not its temporal parent, so the
+    /// relationship is expressed as an <see cref="ActivityLink"/> (per the OTel messaging semantic
+    /// conventions) rather than parent/child. This keeps the spans' durations measurable independently
+    /// while still correlating them. Returns <c>null</c> when no pump span is active.
+    /// </remarks>
+    /// <param name="messagePump">The ambient message pump <see cref="Activity"/>, if any.</param>
+    /// <returns>A single-element link collection to the pump's context, or <c>null</c> when none is active.</returns>
+    private static IEnumerable<ActivityLink>? GetMessagePumpLinks(Activity? messagePump)
+        => messagePump is not null ? new[] { new ActivityLink(messagePump.Context) } : null;
     
     private static void PropogateTraceString(Activity? parentActivity, Activity? activity)
     {

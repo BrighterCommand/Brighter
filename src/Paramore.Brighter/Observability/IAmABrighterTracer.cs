@@ -38,7 +38,8 @@ public interface IAmABrighterTracer : IDisposable
     ActivitySource ActivitySource { get; }
     
     /// <summary>
-    /// Create a span when we consume a message from a queue or stream
+    /// Create a span when we consume a message from a queue or stream. If the message has no propagated
+    /// trace context, the span is created as a root span instead of inheriting the long-running pump span.
     /// </summary>
     /// <param name="operation">How did we obtain the message. InstrumentationOptions.Receive => pull; InstrumentationOptions.Process => push</param>
     /// <param name="message">What is the <see cref="Message"/> that we received; if they have a traceparentid we will use that as a parent for this trace</param>
@@ -53,9 +54,9 @@ public interface IAmABrighterTracer : IDisposable
     );
 
     /// <summary>
-    /// Creates a receive span before the broker call so that the span's <see cref="Activity.Duration"/> reflects only
-    /// broker latency. Tags derived from the received <see cref="Message"/> are added later via
-    /// <see cref="EnrichReceiveSpan"/>.
+    /// Creates a root receive span before the broker call so that the span's <see cref="Activity.Duration"/> reflects
+    /// only broker latency without inheriting the long-running pump span. Tags derived from the received
+    /// <see cref="Message"/> are added later via <see cref="EnrichReceiveSpan"/>.
     /// </summary>
     /// <param name="topic">The <see cref="RoutingKey"/> we are receiving from</param>
     /// <param name="messagingSystem">The <see cref="MessagingSystem"/> we are receiving from</param>
