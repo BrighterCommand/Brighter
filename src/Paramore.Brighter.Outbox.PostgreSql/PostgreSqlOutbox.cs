@@ -48,7 +48,7 @@ public class PostgreSqlOutbox : RelationDatabaseOutbox
     public PostgreSqlOutbox(
         IAmARelationalDatabaseConfiguration configuration,
         IAmARelationalDbConnectionProvider connectionProvider,
-        ILogger<PostgreSqlOutbox>? logger = null)
+        ILogger<PostgreSqlOutbox>? logger)
         : base(DbSystem.Postgresql, configuration, connectionProvider,
             new PostgreSqlQueries(), logger ?? NullLogger<PostgreSqlOutbox>.Instance)
     {
@@ -65,7 +65,7 @@ public class PostgreSqlOutbox : RelationDatabaseOutbox
     public PostgreSqlOutbox(
         IAmARelationalDatabaseConfiguration configuration,
         NpgsqlDataSource? dataSource = null,
-        ILogger<PostgreSqlOutbox>? logger = null)
+        ILogger<PostgreSqlOutbox> logger)
         : this(configuration, new PostgreSqlConnectionProvider(configuration, dataSource), logger)
     {
     }

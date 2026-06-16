@@ -30,7 +30,7 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
     /// <param name="msSqlMessageConsumerFactory">The factory for creating MS SQL message consumers.</param>
     /// <param name="logger">The optional logger; defaults to a no-op logger.</param>
     /// <exception cref="ArgumentNullException">Thrown when the msSqlMessageConsumerFactory is null.</exception>
-    public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory, ILogger<ChannelFactory>? logger = null)
+    public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory, ILogger<ChannelFactory>? logger)
     {
         _msSqlMessageConsumerFactory = msSqlMessageConsumerFactory ??
                                        throw new ArgumentNullException(nameof(msSqlMessageConsumerFactory));

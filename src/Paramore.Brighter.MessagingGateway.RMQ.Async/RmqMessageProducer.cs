@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// </summary>
 public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation, ISupportPublishConfirmationAsync
 {
-    private readonly InstrumentationOptions _instrumentationOptions;
+    private readonly InstrumentationOptions _insredismesstrumentationOptions;
     private readonly ILogger _logger;
 
     // Used to bound the active-send wait when the user opts out of confirms (timeout=0).

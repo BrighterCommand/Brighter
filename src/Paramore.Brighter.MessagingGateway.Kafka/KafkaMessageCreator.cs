@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private readonly ILogger _logger;
 
-        public KafkaMessageCreator(ILogger<KafkaMessageCreator>? logger = null)
+        public KafkaMessageCreator(ILogger<KafkaMessageCreator>? logger)
         {
             _logger = logger ?? NullLogger<KafkaMessageCreator>.Instance;
         }

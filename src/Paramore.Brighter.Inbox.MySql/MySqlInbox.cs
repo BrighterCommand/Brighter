@@ -46,7 +46,7 @@ public class MySqlInbox : RelationalDatabaseInbox
     /// <param name="configuration">The configuration.</param>
     /// <param name="connectionProvider">The Connection Provider.</param>
     /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
-    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<MySqlInbox>? logger = null)
+    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<MySqlInbox>? logger)
         : base(DbSystem.MySql, configuration, connectionProvider,
             new MySqlQueries(), logger ?? NullLogger<MySqlInbox>.Instance)
     {
@@ -57,7 +57,7 @@ public class MySqlInbox : RelationalDatabaseInbox
     /// </summary>
     /// <param name="configuration">The configuration.</param>
     /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
-    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, ILogger<MySqlInbox>? logger = null) : this(configuration,
+    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, ILogger<MySqlInbox> logger) : this(configuration,
         new MySqlConnectionProvider(configuration), logger)
     {
     }

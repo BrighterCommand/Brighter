@@ -138,7 +138,7 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <inheritdoc />
-        public IAmADispatchBuilder ConfigureLogging(ILoggerFactory loggerFactory)
+        public IAmADispatchBuilder ConfigureLogging(ILoggerFactory? loggerFactory)
         {
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             return this;

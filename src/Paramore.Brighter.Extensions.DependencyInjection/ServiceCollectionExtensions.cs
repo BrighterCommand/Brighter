@@ -246,7 +246,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The Brighter builder to allow chaining of requests</returns>
         public static IBrighterBuilder AddProducers(
             this IBrighterBuilder brighterBuilder,
-            Action<ProducersConfiguration> configure,
+            Action<ProducersConfiguration>? configure,
             ServiceLifetime serviceLifetime = ServiceLifetime.Transient)
         {
             if (brighterBuilder is null)

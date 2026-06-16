@@ -31,11 +31,11 @@ namespace Paramore.Brighter.Inbox.Spanner;
 public class SpannerInboxAsync(
     IAmARelationalDatabaseConfiguration configuration,
     IAmARelationalDbConnectionProvider connectionProvider,
-    ILogger<SpannerInboxAsync>? logger = null)
+    ILogger<SpannerInboxAsync>? logger)
     : RelationalDatabaseInbox(DbSystem.Spanner, configuration, connectionProvider,
         new SpannerSqlQueries(), logger ?? NullLogger<SpannerInboxAsync>.Instance)
 {
-    public SpannerInboxAsync(IAmARelationalDatabaseConfiguration configuration, ILogger<SpannerInboxAsync>? logger = null)
+    public SpannerInboxAsync(IAmARelationalDatabaseConfiguration configuration, ILogger<SpannerInboxAsync> logger)
         : this(configuration, new SpannerConnectionProvider(configuration), logger)
     {
 

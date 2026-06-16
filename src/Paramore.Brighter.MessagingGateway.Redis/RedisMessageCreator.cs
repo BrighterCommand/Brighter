@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     {
         private readonly ILogger _logger;
 
-        public RedisMessageCreator(ILogger<RedisMessageCreator>? logger = null)
+        public RedisMessageCreator(ILogger<RedisMessageCreator>? logger)
         {
             _logger = logger ?? NullLogger<RedisMessageCreator>.Instance;
         }

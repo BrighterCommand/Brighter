@@ -43,7 +43,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
         /// </summary>
         /// <param name="dispatcher"></param>
         /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
-        public ConfigurationCommandHandler(IDispatcher dispatcher, ILogger<ConfigurationCommandHandler>? logger = null)
+        public ConfigurationCommandHandler(IDispatcher dispatcher, ILogger<ConfigurationCommandHandler>? logger)
         {
             _dispatcher = dispatcher;
             _logger = logger ?? NullLogger<ConfigurationCommandHandler>.Instance;

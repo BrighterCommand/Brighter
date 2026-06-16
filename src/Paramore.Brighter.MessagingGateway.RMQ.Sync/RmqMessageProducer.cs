@@ -119,7 +119,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         ///     Make Channels = Create
         /// </param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection, RmqPublication publication, ILoggerFactory? loggerFactory = null)
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection, RmqPublication? publication, ILoggerFactory? loggerFactory = null)
             : base(connection, loggerFactory)
         {
             _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageProducer>();

@@ -66,7 +66,7 @@ namespace Paramore.Brighter.BoxProvisioning
         /// </summary>
         /// <param name="value">The <see cref="SqlScript"/> to convert.</param>
         /// <returns>The underlying SQL text, or <see langword="null"/> if <paramref name="value"/> is <see langword="null"/>.</returns>
-        public static implicit operator string?(SqlScript value) => value?.Value;
+        public static implicit operator string?(SqlScript? value) => value?.Value;
 
         /// <summary>
         /// Implicitly converts a <see cref="string"/> to a <see cref="SqlScript"/>.

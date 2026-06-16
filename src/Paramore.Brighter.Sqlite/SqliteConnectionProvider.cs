@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Sqlite
         /// Create a connection provider for Sqlite using a connection string for Db access
         /// </summary>
         /// <param name="configuration">The configuration of the Sqlite database</param>
-        public SqliteConnectionProvider(IAmARelationalDatabaseConfiguration configuration)
+        public SqliteConnectionProvider(IAmARelationalDatabaseConfiguration? configuration)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString)); 

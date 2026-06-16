@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Outbox.Hosting
             IServiceScopeFactory serviceScopeFactory,
             IDistributedLock distributedLock,
             TimedOutboxSweeperOptions options,
-            ILogger<TimedOutboxSweeper>? logger = null
+            ILogger<TimedOutboxSweeper>? logger
         )
         {
             _serviceScopeFactory = serviceScopeFactory;

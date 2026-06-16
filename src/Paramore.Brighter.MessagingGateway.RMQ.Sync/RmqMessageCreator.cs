@@ -41,7 +41,7 @@ internal sealed partial class RmqMessageCreator
 {
     private readonly ILogger _logger;
 
-    public RmqMessageCreator(ILogger<RmqMessageCreator>? logger = null)
+    public RmqMessageCreator(ILogger<RmqMessageCreator>? logger)
     {
         _logger = logger ?? NullLogger<RmqMessageCreator>.Instance;
     }
