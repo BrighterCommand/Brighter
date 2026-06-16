@@ -228,6 +228,9 @@
     <Project Path="tests/Paramore.Brighter.Testing.Tests/Paramore.Brighter.Testing.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.TickerQ.Tests/Paramore.Brighter.TickerQ.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Validation.DataAnnotations.Tests/Paramore.Brighter.Validation.DataAnnotations.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Validation.Specification.Tests/Paramore.Brighter.Validation.Specification.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Validation.FluentValidation.Tests/Paramore.Brighter.Validation.FluentValidation.Tests.csproj" />
     <Project Path="tests/Paramore.Test.Helpers/Paramore.Test.Helpers.csproj" />
   </Folder>
   <Folder Name="/tools/">
@@ -323,6 +326,9 @@
   <Project Path="src/Paramore.Brighter.Transformers.JustSaying/Paramore.Brighter.Transformers.JustSaying.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.MassTransit/Paramore.Brighter.Transformers.MassTransit.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.MongoGridFS/Paramore.Brighter.Transformers.MongoGridFS.csproj" />
+  <Project Path="src/Paramore.Brighter.Validation.DataAnnotations/Paramore.Brighter.Validation.DataAnnotations.csproj" />
+  <Project Path="src/Paramore.Brighter.Validation.Specification/Paramore.Brighter.Validation.Specification.csproj" />
+  <Project Path="src/Paramore.Brighter.Validation.FluentValidation/Paramore.Brighter.Validation.FluentValidation.csproj" />
   <Project Path="src/Paramore.Brighter/Paramore.Brighter.csproj" />
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/Paramore.Brighter.Benchmarks/Paramore.Brighter.Benchmarks.csproj" />

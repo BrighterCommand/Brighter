@@ -137,6 +137,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Tarun Pothulapati](https://github.com/Pothulapati)**
   * PostgreSQL Outbox
 
+**[Miguel Ramirez](https://github.com/xbizzybone)**
+  * Request validation handler with FluentValidation, DataAnnotations and Specification providers
+
 **[Ravriel](https://github.com/ravriel)**
  * RabbitMQ Fixes
 
