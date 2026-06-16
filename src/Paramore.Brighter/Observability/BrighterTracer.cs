@@ -704,6 +704,87 @@ public class BrighterTracer : IAmABrighterTracer
     }
 
     /// <summary>
+    /// Create a standalone span that represents a broker confirmation (ack/nack) of a previously produced message.
+    /// The span links back to the original publish span (via <paramref name="links"/>) rather than nesting under it,
+    /// so the publish span is never reopened or mutated. The new span becomes <see cref="Activity.Current"/> so that
+    /// work performed inside the confirmation callback (such as the success-branch <c>MarkDispatched</c> database span)
+    /// nests beneath it.
+    /// </summary>
+    /// <remarks>
+    /// This method clears <see cref="Activity.Current"/> to force the confirmation span to be a true root and does
+    /// NOT restore the prior ambient activity. It is therefore only safe to call from a context whose ambient activity
+    /// is owned and disposed by the caller (such as a confirmation callback running on a broker/threadpool thread).
+    /// Calling it inline on a thread that owns a meaningful ambient span would silently lose that
+    /// <see cref="Activity.Current"/>.
+    /// </remarks>
+    /// <param name="messageId">The id of the message the broker confirmed; <see cref="Id.Empty"/> records an "unknown" marker</param>
+    /// <param name="topic">The wire topic the message was published to, recorded as the messaging destination</param>
+    /// <param name="success">True if the broker confirmed persistence; false records the failure as an error outcome</param>
+    /// <param name="links">Links to the original publish span, if its context was captured at send time; null when absent</param>
+    /// <param name="options">How deep should the instrumentation go?</param>
+    /// <returns>The confirmation span, which also becomes <see cref="Activity.Current"/>, or null if the source has no listeners</returns>
+    public Activity? CreateConfirmationSpan(
+        Id messageId,
+        RoutingKey? topic,
+        bool success,
+        ActivityLink[]? links = null,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        const string operation = "settle";
+        var spanName = $"{topic} {operation}";
+        var kind = ActivityKind.Producer;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = GetNewTagsCollection(options);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation);
+
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessageId, Id.IsNullOrEmpty(messageId) ? "unknown" : messageId.Value);
+            if (topic is not null)
+                tags.Add(BrighterSemanticConventions.MessagingDestination, topic.Value);
+        }
+
+        //An ack/nack failure is the outcome this span exists to surface, so we always record it regardless of depth
+        if (!success)
+            tags.Add(BrighterSemanticConventions.ErrorType, "delivery_failed");
+
+        // The confirmation span must LINK to the publish span, never NEST under it (or any other
+        // ambient span). Passing parentId: null is NOT sufficient: with both the string-parentId
+        // and the ActivityContext overloads, StartActivity falls back to Activity.Current as the
+        // parent whenever it is set (e.g. the InMemory async path flows the publish span into the
+        // callback via ExecutionContext). The only reliable way to force a root is to clear the
+        // ambient activity for the duration of the call. We do not restore it: this method
+        // deliberately makes the confirmation span the new Activity.Current below, so the
+        // success-branch MarkDispatched span nests under the confirmation span.
+        //
+        // We capture no "previous" activity to restore on EndSpan, and that is safe: because the span
+        // is a forced root (Parent == null), disposing it while it is Current makes the runtime revert
+        // Activity.Current to that null parent — so Current self-clears rather than dangling at the
+        // disposed span. Even setting that aside, a disposed confirmation activity cannot leak into
+        // unrelated work: every producer raises the callback on a pooled (Task.Run) or dedicated
+        // ack/nack thread whose ExecutionContext — and thus the AsyncLocal-backed Activity.Current —
+        // is reset before the thread is reused, and the next confirmation re-clears Current here first.
+        Activity.Current = null;
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: null,
+            tags: tags,
+            links: links,
+            startTime: now);
+
+        if (activity is not null && !success)
+            activity.SetStatus(ActivityStatusCode.Error);
+
+        Activity.Current = activity;
+
+        return activity;
+    }
+
+    /// <summary>
     /// Ends a span by correctly setting its status and then disposing of it
     /// </summary>
     /// <param name="span">The span to end</param>

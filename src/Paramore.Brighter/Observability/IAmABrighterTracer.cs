@@ -196,10 +196,36 @@ public interface IAmABrighterTracer : IDisposable
     /// <param name="instrumentationOptions">How deep should the instrumentation go?</param>
     /// <returns>A new span named channel publish</returns>
     Activity? CreateProducerSpan(
-        Publication publication, 
-        Message? message, 
-        Activity? parentActivity, 
+        Publication publication,
+        Message? message,
+        Activity? parentActivity,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All);
+
+    /// <summary>
+    /// Create a standalone span that represents a broker confirmation (ack/nack) of a previously produced message.
+    /// The span links back to the original publish span (via <paramref name="links"/>) rather than nesting under it,
+    /// so the publish span is never reopened or mutated.
+    /// </summary>
+    /// <remarks>
+    /// This method clears <see cref="Activity.Current"/> to force the confirmation span to be a true root and does
+    /// NOT restore the prior ambient activity — it deliberately leaves the confirmation span as the new
+    /// <see cref="Activity.Current"/> so that work done in the callback (e.g. the success-branch <c>MarkDispatched</c>
+    /// span) nests beneath it. It is therefore only safe to call from a context whose ambient activity is owned and
+    /// disposed by the caller (such as a confirmation callback running on a broker/threadpool thread). Calling it
+    /// inline on a thread that owns a meaningful ambient span would silently lose that <see cref="Activity.Current"/>.
+    /// </remarks>
+    /// <param name="messageId">The id of the message the broker confirmed; <see cref="Id.Empty"/> records an "unknown" marker</param>
+    /// <param name="topic">The wire topic the message was published to, recorded as the messaging destination</param>
+    /// <param name="success">True if the broker confirmed persistence; false records the failure as an error outcome</param>
+    /// <param name="links">Links to the original publish span, if its context was captured at send time; null when absent</param>
+    /// <param name="options">How deep should the instrumentation go?</param>
+    /// <returns>The confirmation span, which also becomes <see cref="Activity.Current"/>, or null if the source has no listeners</returns>
+    Activity? CreateConfirmationSpan(
+        Id messageId,
+        RoutingKey? topic,
+        bool success,
+        ActivityLink[]? links = null,
+        InstrumentationOptions options = InstrumentationOptions.All);
 
     /// <summary>
     /// Ends a span by correctly setting its status and then disposing of it
