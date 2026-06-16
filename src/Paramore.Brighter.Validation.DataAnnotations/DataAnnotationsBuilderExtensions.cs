@@ -50,7 +50,7 @@ public static class DataAnnotationsBuilderExtensions
     /// managed by Brighter's <c>ServiceProviderHandlerFactory</c>. Nothing else needs registering — the
     /// validation constraints are declared as attributes on each request type.
     /// </remarks>
-    public static IBrighterBuilder UseDataAnnotationsValidation(this IBrighterBuilder brighterBuilder)
+    public static IBrighterBuilder UseDataAnnotations(this IBrighterBuilder brighterBuilder)
     {
         if (brighterBuilder is null)
             throw new ArgumentNullException(nameof(brighterBuilder));

@@ -30,7 +30,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Validation.Specification.Tests;
 
-public class UseSpecificationValidationRegistrationTests
+public class UseSpecificationRegistrationTests
 {
     [Fact]
     public void When_use_specification_validation_is_registered_should_validate_through_the_pipeline()
@@ -39,7 +39,7 @@ public class UseSpecificationValidationRegistrationTests
         var services = new ServiceCollection();
         services.AddSingleton<HandlerReceipt>();
         services.AddSingleton<ISpecification<PlaceOrder>>(OrderSpecification.Create());
-        services.AddBrighter().UseSpecificationValidation();
+        services.AddBrighter().UseSpecification();
         var commandProcessor = services.BuildServiceProvider().GetRequiredService<IAmACommandProcessor>();
 
         var invalidRequest = new PlaceOrder { Sku = "", Quantity = 0 };

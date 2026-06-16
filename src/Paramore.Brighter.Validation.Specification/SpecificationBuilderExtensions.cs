@@ -47,9 +47,11 @@ public static class SpecificationBuilderExtensions
     /// <remarks>
     /// The handlers are registered as <see cref="ServiceLifetime.Transient"/>; their effective lifetime is
     /// managed by Brighter's <c>ServiceProviderHandlerFactory</c>. You must still register an
-    /// <c>ISpecification&lt;TRequest&gt;</c> for each validated request.
+    /// <c>ISpecification&lt;TRequest&gt;</c> for each validated request — and register it with a per-request
+    /// lifetime (transient or scoped), because Brighter's <see cref="Specification{T}"/> records
+    /// per-evaluation state, so a single shared instance is not safe to evaluate from concurrent requests.
     /// </remarks>
-    public static IBrighterBuilder UseSpecificationValidation(this IBrighterBuilder brighterBuilder)
+    public static IBrighterBuilder UseSpecification(this IBrighterBuilder brighterBuilder)
     {
         if (brighterBuilder is null)
             throw new ArgumentNullException(nameof(brighterBuilder));

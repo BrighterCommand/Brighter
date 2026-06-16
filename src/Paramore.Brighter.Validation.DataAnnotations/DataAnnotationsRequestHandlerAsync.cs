@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Validation.DataAnnotations;
 /// handler, the counterpart of <see cref="DataAnnotationsRequestHandler{TRequest}"/>. Data-annotation
 /// validation is synchronous and CPU-bound, so this handler runs it inline and returns a completed task;
 /// it honours the pipeline's cancellation token before doing the work. Register it with
-/// <see cref="DataAnnotationsBuilderExtensions.UseDataAnnotationsValidation"/>.
+/// <see cref="DataAnnotationsBuilderExtensions.UseDataAnnotations"/>.
 /// </summary>
 /// <typeparam name="TRequest">The type of the request being validated.</typeparam>
 public class DataAnnotationsRequestHandlerAsync<TRequest>(IServiceProvider serviceProvider) : ValidateRequestHandlerAsync<TRequest>

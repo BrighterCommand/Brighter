@@ -30,7 +30,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Validation.DataAnnotations.Tests;
 
-public class UseDataAnnotationsValidationRegistrationTests
+public class UseDataAnnotationsRegistrationTests
 {
     [Fact]
     public void When_use_data_annotations_validation_is_registered_should_validate_through_the_pipeline()
@@ -38,7 +38,7 @@ public class UseDataAnnotationsValidationRegistrationTests
         //Arrange
         var services = new ServiceCollection();
         services.AddSingleton<HandlerReceipt>();
-        services.AddBrighter().UseDataAnnotationsValidation();
+        services.AddBrighter().UseDataAnnotations();
         var commandProcessor = services.BuildServiceProvider().GetRequiredService<IAmACommandProcessor>();
 
         var invalidRequest = new RegisterUser { Name = "", Email = "" };

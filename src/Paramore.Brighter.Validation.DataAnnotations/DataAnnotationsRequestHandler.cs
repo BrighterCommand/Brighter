@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Validation.DataAnnotations;
 /// (for example <c>[Required]</c> or <c>[EmailAddress]</c>) and returns the failures to the base
 /// <see cref="ValidateRequestHandler{TRequest}"/>, which throws a <see cref="RequestValidationException"/>
 /// when the request is invalid. Register it with
-/// <see cref="DataAnnotationsBuilderExtensions.UseDataAnnotationsValidation"/>.
+/// <see cref="DataAnnotationsBuilderExtensions.UseDataAnnotations"/>.
 /// </summary>
 /// <typeparam name="TRequest">The type of the request being validated.</typeparam>
 /// <remarks>

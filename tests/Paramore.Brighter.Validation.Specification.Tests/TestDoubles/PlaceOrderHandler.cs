@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Validation.Specification.Tests.TestDoubles;
 /// <summary>
 /// The single synchronous handler for <see cref="PlaceOrder"/>, attributed with
 /// <see cref="ValidateRequestAttribute"/>, used by the registration test to drive the real
-/// <c>AddBrighter().UseSpecificationValidation()</c> pipeline. <see cref="PlaceOrder"/> has no async handler,
+/// <c>AddBrighter().UseSpecification()</c> pipeline. <see cref="PlaceOrder"/> has no async handler,
 /// so it is safe to send synchronously under Brighter's assembly auto-scan.
 /// </summary>
 public class PlaceOrderHandler(HandlerReceipt receipt) : RequestHandler<PlaceOrder>

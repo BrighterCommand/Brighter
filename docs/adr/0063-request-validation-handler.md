@@ -70,9 +70,9 @@ they need.
   `RequestValidationError`. `UseFluentValidation()` maps the abstract handler types
   to the FluentValidation implementations on the container.
 - `Paramore.Brighter.Validation.DataAnnotations` — validates with
-  `System.ComponentModel.DataAnnotations`; `UseDataAnnotationsValidation()`.
+  `System.ComponentModel.DataAnnotations`; `UseDataAnnotations()`.
 - `Paramore.Brighter.Validation.Specification` — validates with Brighter's own
-  Specification pattern (ADR 0040); `UseSpecificationValidation()`.
+  Specification pattern (ADR 0040); `UseSpecification()`.
 
 Because the attribute targets the abstract handler and each provider package maps
 it to a concrete implementation, **one `[ValidateRequest]` attribute works for

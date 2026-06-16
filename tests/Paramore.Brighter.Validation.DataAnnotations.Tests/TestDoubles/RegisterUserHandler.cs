@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Validation.DataAnnotations.Tests.TestDoubles;
 /// <summary>
 /// The single synchronous handler for <see cref="RegisterUser"/>, attributed with
 /// <see cref="ValidateRequestAttribute"/>, used by the registration test to drive the real
-/// <c>AddBrighter().UseDataAnnotationsValidation()</c> pipeline. <see cref="RegisterUser"/> has no async
+/// <c>AddBrighter().UseDataAnnotations()</c> pipeline. <see cref="RegisterUser"/> has no async
 /// handler, so it is safe to send synchronously under Brighter's assembly auto-scan.
 /// </summary>
 public class RegisterUserHandler(HandlerReceipt receipt) : RequestHandler<RegisterUser>

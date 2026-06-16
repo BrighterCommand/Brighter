@@ -36,9 +36,14 @@ namespace Paramore.Brighter.Validation.Specification;
 /// <see cref="SpecificationRequestHandler{TRequest}"/>. Specification evaluation is synchronous, so this
 /// handler runs it inline and returns a completed task; it honours the pipeline's cancellation token before
 /// doing the work. Register it with
-/// <see cref="SpecificationBuilderExtensions.UseSpecificationValidation"/>.
+/// <see cref="SpecificationBuilderExtensions.UseSpecification"/>.
 /// </summary>
 /// <typeparam name="TRequest">The type of the request being validated.</typeparam>
+/// <remarks>
+/// As with <see cref="SpecificationRequestHandler{TRequest}"/>, register the <see cref="ISpecification{T}"/>
+/// with a per-request lifetime (transient or scoped): Brighter's <see cref="Specification{T}"/> carries
+/// per-evaluation state, so a single shared instance is not safe to evaluate from concurrent requests.
+/// </remarks>
 public class SpecificationRequestHandlerAsync<TRequest>(IServiceProvider serviceProvider) : ValidateRequestHandlerAsync<TRequest>
     where TRequest : class, IRequest
 {

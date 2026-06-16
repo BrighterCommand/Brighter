@@ -34,13 +34,16 @@ namespace Paramore.Brighter.Validation.Specification;
 /// <see cref="ISpecification{T}"/> for the request from the container, evaluates it, and returns the failures
 /// to the base <see cref="ValidateRequestHandler{TRequest}"/>, which throws a
 /// <see cref="RequestValidationException"/> when the request is invalid. Register it with
-/// <see cref="SpecificationBuilderExtensions.UseSpecificationValidation"/>.
+/// <see cref="SpecificationBuilderExtensions.UseSpecification"/>.
 /// </summary>
 /// <typeparam name="TRequest">The type of the request being validated.</typeparam>
 /// <remarks>
 /// The specification is resolved through <see cref="IServiceProvider"/> on each call so a missing
-/// registration can be reported as a <see cref="ConfigurationException"/>. The handler holds no per-request
-/// state, so it is safe to reuse across concurrent pipelines.
+/// registration can be reported as a <see cref="ConfigurationException"/>. The handler itself holds no
+/// per-request state. Brighter's <see cref="Specification{T}"/>, however, records the failures from the most
+/// recent <c>IsSatisfiedBy</c> for the visitor to collect, so it carries per-evaluation state: register the
+/// <see cref="ISpecification{T}"/> with a per-request lifetime (transient or scoped) — a single shared
+/// instance is not safe to evaluate from concurrent requests.
 /// </remarks>
 public class SpecificationRequestHandler<TRequest>(IServiceProvider serviceProvider) : ValidateRequestHandler<TRequest>
     where TRequest : class, IRequest
