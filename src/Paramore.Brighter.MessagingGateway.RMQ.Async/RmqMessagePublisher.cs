@@ -68,7 +68,7 @@ internal sealed partial class RmqMessagePublisher
     /// or
     /// exchangeName
     /// </exception>
-    public RmqMessagePublisher(IChannel channel, RmqMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null)
+    public RmqMessagePublisher(IChannel channel, RmqMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
     {
         if (channel is null)
         {
@@ -80,7 +80,7 @@ internal sealed partial class RmqMessagePublisher
             throw new ArgumentNullException(nameof(connection));
         }
 
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessagePublisher>();
+        _logger = (loggerFactory).CreateLogger<RmqMessagePublisher>();
 
         _connection = connection;
 

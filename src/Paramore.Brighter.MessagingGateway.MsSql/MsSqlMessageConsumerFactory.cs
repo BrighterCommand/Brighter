@@ -28,12 +28,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="msSqlConfiguration">The configuration for connecting to the MsSql database</param>
         /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
         /// <param name="loggerFactory">The optional <see cref="ILoggerFactory"/> used to create loggers</param>
-        public MsSqlMessageConsumerFactory(RelationalDatabaseConfiguration msSqlConfiguration, IAmAMessageScheduler? scheduler = null, ILoggerFactory? loggerFactory = null)
+        public MsSqlMessageConsumerFactory(RelationalDatabaseConfiguration msSqlConfiguration, IAmAMessageScheduler? scheduler = null, ILoggerFactory loggerFactory)
         {
             _msSqlConfiguration = msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
             _scheduler = scheduler;
             _loggerFactory = loggerFactory;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MsSqlMessageConsumerFactory>();
+            _logger = (loggerFactory).CreateLogger<MsSqlMessageConsumerFactory>();
         }
 
         /// <summary>

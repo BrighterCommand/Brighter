@@ -48,7 +48,7 @@ public class SnsProducerRegistryFactory : IAmAProducerRegistryFactory
     public SnsProducerRegistryFactory(
         AWSMessagingGatewayConnection connection,
         IEnumerable<SnsPublication> snsPublications,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
     {
         _connection = connection;
         _snsPublications = snsPublications;

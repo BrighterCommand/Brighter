@@ -51,7 +51,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmARequestContextFactory requestContextFactory,
             IAmABrighterTracer? tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _commandProcessor = commandProcessor;
             _messageMapperRegistry = messageMapperRegistry;
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmARequestContextFactory requestContextFactory,
             IAmABrighterTracer? tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _commandProcessor = commandProcessor;
             _messageMapperRegistryAsync = messageMapperRegistryAsync;

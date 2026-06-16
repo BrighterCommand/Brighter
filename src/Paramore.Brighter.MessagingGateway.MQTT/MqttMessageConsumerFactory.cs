@@ -54,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         public MqttMessageConsumerFactory(
             MqttMessagingGatewayConsumerConfiguration configuration,
             IAmAMessageScheduler? scheduler = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _configuration = configuration;
             _scheduler = scheduler;

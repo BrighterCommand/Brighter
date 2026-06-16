@@ -65,9 +65,9 @@ public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
     /// <param name="fullChannelStrategy">The strategy to use when the channel is full.</param>
     /// <param name="loggerFactory">The factory used to create the logger for this channel.</param>
     /// <exception cref="System.ArgumentOutOfRangeException">Thrown when the bounded capacity is less than or equal to 0.</exception>
-    public InMemoryJobChannel(int boundedCapacity = 100, FullChannelStrategy fullChannelStrategy = FullChannelStrategy.Wait, ILoggerFactory? loggerFactory = null)
+    public InMemoryJobChannel(int boundedCapacity = 100, FullChannelStrategy fullChannelStrategy = FullChannelStrategy.Wait, ILoggerFactory loggerFactory)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<InMemoryJobChannel<TData>>();
+        _logger = (loggerFactory).CreateLogger<InMemoryJobChannel<TData>>();
 
         if (boundedCapacity <= 0)
             throw new System.ArgumentOutOfRangeException(nameof(boundedCapacity), "Bounded capacity must be greater than 0");

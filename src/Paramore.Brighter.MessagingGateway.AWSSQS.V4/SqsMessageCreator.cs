@@ -54,9 +54,9 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 {
     private readonly ILogger _logger;
 
-    public SqsMessageCreator(ILoggerFactory? loggerFactory = null)
+    public SqsMessageCreator(ILoggerFactory loggerFactory)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SqsMessageCreator>();
+        _logger = (loggerFactory).CreateLogger<SqsMessageCreator>();
     }
 
     public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)

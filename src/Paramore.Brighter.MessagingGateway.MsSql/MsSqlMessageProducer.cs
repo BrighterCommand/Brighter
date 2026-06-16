@@ -70,10 +70,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             IAmARelationalDbConnectionProvider connectonProvider,
             Publication? publication = null,
             InstrumentationOptions instrumentation = InstrumentationOptions.All,
-            ILoggerFactory? loggerFactory = null
+            ILoggerFactory loggerFactory
         )
         {
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MsSqlMessageProducer>();
+            _logger = (loggerFactory).CreateLogger<MsSqlMessageProducer>();
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider, loggerFactory);
             _instrumentation = instrumentation;
             Publication = publication ?? new Publication { MakeChannels = OnMissingChannel.Create };
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
             Publication? publication = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
             : this(msSqlConfiguration, new MsSqlConnectionProvider(msSqlConfiguration), publication, loggerFactory: loggerFactory)
         {
         }

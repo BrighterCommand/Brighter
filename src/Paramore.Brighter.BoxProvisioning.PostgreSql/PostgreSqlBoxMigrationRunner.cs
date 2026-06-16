@@ -66,9 +66,9 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         TimeSpan? lockTimeout = null,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PostgreSqlBoxMigrationRunner>(),
+            logger ?? (loggerFactory).CreateLogger<PostgreSqlBoxMigrationRunner>(),
             tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new PostgreSqlAdvisoryLock();
@@ -88,7 +88,7 @@ public class PostgreSqlBoxMigrationRunner : SqlBoxMigrationRunner<NpgsqlConnecti
         ILogger? logger = null,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : this(new PostgreSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope, loggerFactory)
     {
     }

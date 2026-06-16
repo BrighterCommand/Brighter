@@ -41,10 +41,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         //on us being able to buffer up to the set QoS and then pull. This matches other implementations.
         private readonly ConcurrentQueue<BasicDeliverEventArgs> _messages = new ConcurrentQueue<BasicDeliverEventArgs>();
 
-        public PullConsumer(IModel channel, ushort batchSize, ILoggerFactory? loggerFactory = null)
+        public PullConsumer(IModel channel, ushort batchSize, ILoggerFactory loggerFactory)
             : base(channel)
         {
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageConsumer>();
+            _logger = (loggerFactory).CreateLogger<RmqMessageConsumer>();
 
             //set the number of messages to fetch -- defaults to 1 unless set on subscription, no impact on
             //BasicGet, only works on BasicConsume

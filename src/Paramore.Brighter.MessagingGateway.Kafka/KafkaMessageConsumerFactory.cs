@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public KafkaMessageConsumerFactory(
             KafkaMessagingGatewayConfiguration configuration,
             IAmAMessageScheduler? scheduler = null,
-            ILoggerFactory? loggerFactory = null
+            ILoggerFactory loggerFactory
             )
         {
             _configuration = configuration;

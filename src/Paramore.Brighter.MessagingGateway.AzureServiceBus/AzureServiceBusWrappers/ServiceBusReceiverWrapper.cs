@@ -44,10 +44,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="messageReceiver">The <see cref="ServiceBusReceiver"/> to wrap.</param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
-        public ServiceBusReceiverWrapper(ServiceBusReceiver messageReceiver, ILoggerFactory? loggerFactory = null)
+        public ServiceBusReceiverWrapper(ServiceBusReceiver messageReceiver, ILoggerFactory loggerFactory)
         {
             _messageReceiver = messageReceiver;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<ServiceBusReceiverWrapper>();
+            _logger = (loggerFactory).CreateLogger<ServiceBusReceiverWrapper>();
         }
 
         /// <summary>

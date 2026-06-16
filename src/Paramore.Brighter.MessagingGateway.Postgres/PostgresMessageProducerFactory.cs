@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// ensures the underlying queue store exists for each publication, and creates a corresponding
 /// <see cref="PostgresMessageProducer"/> instance, keyed by the publication's topic.
 /// </summary>
-public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection connection, IEnumerable<PostgresPublication> publications, ILoggerFactory? loggerFactory = null) :  PostgresMessagingGateway(connection), IAmAMessageProducerFactory
+public class PostgresMessageProducerFactory(PostgresMessagingGatewayConnection connection, IEnumerable<PostgresPublication> publications, ILoggerFactory loggerFactory) :  PostgresMessagingGateway(connection), IAmAMessageProducerFactory
 {
     /// <summary>
     /// Creates a dictionary of in-memory message producers.

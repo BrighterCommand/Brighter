@@ -7,7 +7,7 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// This factory is responsible for instantiating <see cref="PostgresMessageConsumer"/> instances based on the
 /// provided <see cref="Subscription"/> configuration.
 /// </summary>
-public class PostgresConsumerFactory(PostgresMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null) : IAmAMessageConsumerFactory
+public class PostgresConsumerFactory(PostgresMessagingGatewayConnection connection, ILoggerFactory loggerFactory) : IAmAMessageConsumerFactory
 {
     /// <inheritdoc />
     public IAmAMessageConsumerSync Create(Subscription subscription)

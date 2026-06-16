@@ -66,9 +66,9 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         TimeSpan? lockTimeout = null,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MsSqlBoxMigrationRunner>(),
+            logger ?? (loggerFactory).CreateLogger<MsSqlBoxMigrationRunner>(),
             tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new MsSqlAdvisoryLock();
@@ -88,7 +88,7 @@ public class MsSqlBoxMigrationRunner : SqlBoxMigrationRunner<SqlConnection, SqlT
         ILogger? logger = null,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : this(new MsSqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope, loggerFactory)
     {
     }

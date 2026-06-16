@@ -65,10 +65,10 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAChannelSync channel,
+            ILoggerFactory loggerFactory,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            TimeProvider? timeProvider = null,
-            ILoggerFactory? loggerFactory = null) 
+            TimeProvider? timeProvider = null) 
             : base(commandProcessor, requestContextFactory, tracer,  instrumentationOptions, timeProvider, loggerFactory)
         {
             _mapRequestType = mapRequestType;

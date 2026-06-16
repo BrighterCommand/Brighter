@@ -38,12 +38,12 @@ namespace Paramore.Brighter.Locking.MsSql;
 /// </summary>
 /// <param name="connectionProvider">The Sql Server connection Provider</param>
 /// <param name="loggerFactory">The factory used to create the logger for this provider</param>
-public class MsSqlLockingProvider(MsSqlConnectionProvider connectionProvider, ILoggerFactory? loggerFactory = null)
+public class MsSqlLockingProvider(MsSqlConnectionProvider connectionProvider, ILoggerFactory loggerFactory)
     : IDistributedLock, IAsyncDisposable, IDisposable
 {
     private readonly ConcurrentDictionary<string, DbConnection> _connections = new();
 
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MsSqlLockingProvider>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<MsSqlLockingProvider>();
 
     /// <summary>
     /// Attempt to obtain a lock on a resource

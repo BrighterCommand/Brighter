@@ -97,9 +97,9 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         bool enableWalMode = true,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SqliteBoxMigrationRunner>(),
+            logger ?? (loggerFactory).CreateLogger<SqliteBoxMigrationRunner>(),
             tracer, scope)
     {
         _enableWalMode = enableWalMode;
@@ -119,7 +119,7 @@ public class SqliteBoxMigrationRunner : SqlBoxMigrationRunner<SqliteConnection, 
         bool enableWalMode = true,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : this(new SqliteBoxDetectionHelper(), catalog, configuration, logger: null, lockTimeout: lockTimeout, enableWalMode: enableWalMode, tracer: tracer, scope: scope, loggerFactory: loggerFactory)
     {
     }

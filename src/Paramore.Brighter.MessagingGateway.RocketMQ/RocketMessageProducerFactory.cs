@@ -15,9 +15,9 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// <param name="connection">The gateway connection configuration.</param>
 /// <param name="publications">The publications to create producers for.</param>
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
-public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnection connection, IEnumerable<RocketMqPublication> publications, ILoggerFactory? loggerFactory = null) : IAmAMessageProducerFactory
+public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnection connection, IEnumerable<RocketMqPublication> publications, ILoggerFactory loggerFactory) : IAmAMessageProducerFactory
 {
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RocketMessageProducerFactory>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<RocketMessageProducerFactory>();
     
     /// <inheritdoc />
     public Dictionary<ProducerKey, IAmAMessageProducer> Create() 

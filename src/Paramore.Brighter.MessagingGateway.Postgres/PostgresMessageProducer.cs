@@ -22,9 +22,9 @@ public partial class PostgresMessageProducer(
     RelationalDatabaseConfiguration configuration,
     PostgresPublication publication,
     InstrumentationOptions instrumentations = InstrumentationOptions.All,
-    ILoggerFactory? loggerFactory = null) : IAmAMessageProducerAsync, IAmAMessageProducerSync
+    ILoggerFactory loggerFactory) : IAmAMessageProducerAsync, IAmAMessageProducerSync
 {
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PostgresMessageProducer>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<PostgresMessageProducer>();
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
     private PostgresPublication _publication = publication;
 

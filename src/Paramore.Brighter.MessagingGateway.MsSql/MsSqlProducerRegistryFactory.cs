@@ -17,7 +17,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public MsSqlProducerRegistryFactory(
             RelationalDatabaseConfiguration msSqlConfiguration,
             IEnumerable<Publication> publications,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _msSqlConfiguration =
                 msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
@@ -25,7 +25,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 throw new ArgumentNullException(nameof(msSqlConfiguration.QueueStoreTable));
             _publications = publications;
             _loggerFactory = loggerFactory;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MsSqlProducerRegistryFactory>();
+            _logger = (loggerFactory).CreateLogger<MsSqlProducerRegistryFactory>();
         }
 
         /// <summary>

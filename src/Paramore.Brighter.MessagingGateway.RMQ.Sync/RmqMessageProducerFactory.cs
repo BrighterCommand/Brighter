@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     public class RmqMessageProducerFactory(
         RmqMessagingGatewayConnection connection,
         IEnumerable<RmqPublication> publications,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : IAmAMessageProducerFactory
     {
         /// <summary>

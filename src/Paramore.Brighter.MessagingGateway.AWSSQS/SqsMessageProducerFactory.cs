@@ -22,7 +22,7 @@ public class SqsMessageProducerFactory : IAmAMessageProducerFactory
     /// <param name="loggerFactory">The factory used to create loggers for the producers.</param>
     public SqsMessageProducerFactory(AWSMessagingGatewayConnection connection,
         IEnumerable<SqsPublication> publications,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
     {
         _connection = connection;
         _publications = publications;

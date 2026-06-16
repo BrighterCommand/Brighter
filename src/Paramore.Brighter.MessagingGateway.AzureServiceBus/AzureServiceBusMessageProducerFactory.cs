@@ -55,7 +55,7 @@ public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
         IServiceBusClientProvider clientProvider,
         IEnumerable<AzureServiceBusPublication> publications,
         int bulkSendBatchSize,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
     {
         _clientProvider = clientProvider;
         _publications = publications;

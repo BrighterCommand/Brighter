@@ -282,7 +282,7 @@ namespace Paramore.Brighter
         /// <inheritdoc />
         public IAmACommandProcessorBuilder ConfigureLogging(ILoggerFactory? loggerFactory)
         {
-            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            _loggerFactory = loggerFactory;
             return this;
         }
 

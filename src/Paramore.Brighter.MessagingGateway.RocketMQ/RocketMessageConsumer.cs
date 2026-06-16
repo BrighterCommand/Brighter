@@ -30,10 +30,10 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     RocketMessagingGatewayConnection? connection = null,
     RoutingKey? deadLetterRoutingKey = null,
     RoutingKey? invalidMessageRoutingKey = null,
-    ILoggerFactory? loggerFactory = null)
+    ILoggerFactory loggerFactory)
     : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RocketMessageConsumer>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<RocketMessageConsumer>();
 
     private readonly RocketMessagingGatewayConnection? _connection = connection;
     private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;

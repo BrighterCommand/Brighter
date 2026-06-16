@@ -16,10 +16,10 @@ public partial class GcpPullMessageConsumer(
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
     int batchSize,
     TimeProvider timeProvider,
-    ILoggerFactory? loggerFactory = null)
+    ILoggerFactory loggerFactory)
     : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<GcpPullMessageConsumer>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<GcpPullMessageConsumer>();
     
     /// <summary>
     /// Synchronously acknowledges a message.

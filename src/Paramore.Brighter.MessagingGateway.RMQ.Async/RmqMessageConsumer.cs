@@ -101,7 +101,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         QueueType queueType = QueueType.Classic,
         IAmAMessageScheduler? scheduler = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : this(connection, queueName, new RoutingKeys(routingKey), isDurable, highAvailability,
             batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, queueType, scheduler, loggerFactory)
     {
@@ -138,10 +138,10 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         QueueType queueType = QueueType.Classic,
         IAmAMessageScheduler? scheduler = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : base(connection, loggerFactory)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageConsumer>();
+        _logger = (loggerFactory).CreateLogger<RmqMessageConsumer>();
         _messageCreator = new RmqMessageCreator(LoggerFactory.CreateLogger<RmqMessageCreator>());
         _queueName = queueName;
         _routingKeys = routingKeys;

@@ -6,10 +6,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Storage.Azure;
 
-public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options, ILoggerFactory? loggerFactory = null) : IAmAnArchiveProvider
+public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options, ILoggerFactory loggerFactory) : IAmAnArchiveProvider
 {
     private readonly BlobContainerClient _containerClient = new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureBlobArchiveProvider>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<AzureBlobArchiveProvider>();
 
     /// <summary>
     /// Send a Message to the archive provider

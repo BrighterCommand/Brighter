@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public MsSqlMessageProducerFactory(
             RelationalDatabaseConfiguration msSqlConfiguration,
             IEnumerable<Publication> publications,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _msSqlConfiguration =
                 msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));

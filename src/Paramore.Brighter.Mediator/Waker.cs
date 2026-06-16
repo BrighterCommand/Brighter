@@ -48,11 +48,11 @@ public class Waker<TData>
     /// <param name="jobAge">The age of the job to determine if it is due.</param>
     /// <param name="scheduler">The scheduler to trigger due jobs.</param>
     /// <param name="loggerFactory">The factory used to create the logger for this waker.</param>
-    public Waker(TimeSpan jobAge, Scheduler<TData> scheduler, ILoggerFactory? loggerFactory = null)
+    public Waker(TimeSpan jobAge, Scheduler<TData> scheduler, ILoggerFactory loggerFactory)
     {
         _jobAge = jobAge;
         _scheduler = scheduler;
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<Waker<TData>>();
+        _logger = (loggerFactory).CreateLogger<Waker<TData>>();
     }
 
     /// <summary>

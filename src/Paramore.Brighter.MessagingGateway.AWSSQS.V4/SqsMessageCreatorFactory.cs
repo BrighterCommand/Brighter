@@ -27,7 +27,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
 internal sealed class SqsMessageCreatorFactory
 {
-    public static ISqsMessageCreator Create(bool rawMessageDelivery, ILoggerFactory? loggerFactory = null)
+    public static ISqsMessageCreator Create(bool rawMessageDelivery, ILoggerFactory loggerFactory)
     {
         if (rawMessageDelivery)
         {

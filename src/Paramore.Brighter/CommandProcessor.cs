@@ -163,9 +163,9 @@ namespace Paramore.Brighter
             InboxConfiguration? inboxConfiguration = null,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
-            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            _loggerFactory = loggerFactory;
             _logger = _loggerFactory.CreateLogger<CommandProcessor>();
 
             _subscriberRegistry = subscriberRegistry;
@@ -226,7 +226,7 @@ namespace Paramore.Brighter
             IAmAChannelFactory? responseChannelFactory = null,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry,
                 resilienceResiliencePipelineRegistry, requestSchedulerFactory, featureSwitchRegistry, inboxConfiguration,
                 loggerFactory: loggerFactory)
@@ -268,9 +268,9 @@ namespace Paramore.Brighter
             IEnumerable<Subscription>? replySubscriptions = null,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
-            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            _loggerFactory = loggerFactory;
             _logger = _loggerFactory.CreateLogger<CommandProcessor>();
 
             _requestContextFactory = requestContextFactory;

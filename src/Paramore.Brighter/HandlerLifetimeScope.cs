@@ -39,19 +39,19 @@ namespace Paramore.Brighter
         private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
 
-        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, ILoggerFactory? loggerFactory = null)
+        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, ILoggerFactory loggerFactory)
             : this(handlerFactorySync, null, loggerFactory)
         {}
 
-        public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory, ILoggerFactory? loggerFactory = null)
+        public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory, ILoggerFactory loggerFactory)
             : this(null, asyncHandlerFactory, loggerFactory)
         {}
 
-        public HandlerLifetimeScope(IAmAHandlerFactorySync? handlerFactorySync, IAmAHandlerFactoryAsync? asyncHandlerFactory, ILoggerFactory? loggerFactory = null)
+        public HandlerLifetimeScope(IAmAHandlerFactorySync? handlerFactorySync, IAmAHandlerFactoryAsync? asyncHandlerFactory, ILoggerFactory loggerFactory)
         {
             _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<HandlerLifetimeScope>();
+            _logger = (loggerFactory).CreateLogger<HandlerLifetimeScope>();
         }
 
         public int TrackedItemCount => _trackedObjects.Count + _trackedAsyncObjects.Count;

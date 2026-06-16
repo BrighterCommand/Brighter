@@ -43,9 +43,9 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     /// Initializes a new instance of the <see cref="CloudEventsTransformer"/> class.
     /// </summary>
     /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
-    public CloudEventsTransformer(ILoggerFactory? loggerFactory = null)
+    public CloudEventsTransformer(ILoggerFactory loggerFactory)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<CloudEventsTransformer>();
+        _logger = (loggerFactory).CreateLogger<CloudEventsTransformer>();
     }
 
     private Uri? _source;

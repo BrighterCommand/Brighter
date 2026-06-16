@@ -28,7 +28,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    internal sealed class ServiceBusReceiverProvider(IServiceBusClientProvider clientProvider, ILoggerFactory? loggerFactory = null) : IServiceBusReceiverProvider
+    internal sealed class ServiceBusReceiverProvider(IServiceBusClientProvider clientProvider, ILoggerFactory loggerFactory) : IServiceBusReceiverProvider
     {
         private readonly ServiceBusClient _client = clientProvider.GetServiceBusClient();
         private readonly ILoggerFactory? _loggerFactory = loggerFactory;

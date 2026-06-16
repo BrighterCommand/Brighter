@@ -55,10 +55,10 @@ public partial class AzureServiceBusTopicMessageProducer : AzureServiceBusMessag
         IServiceBusSenderProvider serviceBusSenderProvider,
         AzureServiceBusPublication publication,
         int bulkSendBatchSize = 10,
-        ILoggerFactory? loggerFactory = null
+        ILoggerFactory loggerFactory
     ) : base(serviceBusSenderProvider, publication, bulkSendBatchSize)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureServiceBusTopicMessageProducer>();
+        _logger = (loggerFactory).CreateLogger<AzureServiceBusTopicMessageProducer>();
         _administrationClientWrapper = administrationClientWrapper;
     }
 

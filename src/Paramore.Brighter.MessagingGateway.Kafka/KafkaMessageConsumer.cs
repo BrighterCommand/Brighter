@@ -118,6 +118,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             KafkaMessagingGatewayConfiguration configuration,
             RoutingKey routingKey,
             string? groupId,
+            ILoggerFactory loggerFactory,
             AutoOffsetReset offsetDefault = AutoOffsetReset.Earliest,
             TimeSpan? sessionTimeout = null,
             TimeSpan? maxPollInterval = null,
@@ -136,8 +137,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeProvider? timeProvider = null,
             IAmAMessageScheduler? scheduler = null,
             IGroupProtocol? groupProtocol = null,
-            Func<Error, LogLevel>? errorLogLevel = null,
-            ILoggerFactory? loggerFactory = null)
+            Func<Error, LogLevel>? errorLogLevel = null)
             : base(loggerFactory)
         {
             if (groupId is null)

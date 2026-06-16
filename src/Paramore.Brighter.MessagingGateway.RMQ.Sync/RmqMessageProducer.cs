@@ -105,7 +105,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
         /// Make Channels = Create
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All, ILoggerFactory? loggerFactory = null)
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All, ILoggerFactory loggerFactory)
             : this(connection, new RmqPublication { MakeChannels = OnMissingChannel.Create }, loggerFactory)
         {
             _instrumentationOptions = instrumentationOptions;
@@ -119,10 +119,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         ///     Make Channels = Create
         /// </param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection, RmqPublication? publication, ILoggerFactory? loggerFactory = null)
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection, RmqPublication? publication, ILoggerFactory loggerFactory)
             : base(connection, loggerFactory)
         {
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageProducer>();
+            _logger = (loggerFactory).CreateLogger<RmqMessageProducer>();
             _publication = publication ?? new RmqPublication { MakeChannels = OnMissingChannel.Create };
             _waitForConfirmsTimeOutInMilliseconds = _publication.WaitForConfirmsTimeOutInMilliseconds;
         }

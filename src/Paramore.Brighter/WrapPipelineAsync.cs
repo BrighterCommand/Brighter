@@ -60,11 +60,11 @@ namespace Paramore.Brighter
             IAmAMessageTransformerFactoryAsync? messageTransformerFactoryAsync,
             IEnumerable<Lease<IAmAMessageTransformAsync>> transformLeases,
             InstrumentationOptions instrumentationOptions,
-            IAmAMessageMapperRegistryAsync? mapperRegistry = null,
-            ILoggerFactory? loggerFactory = null
+            ILoggerFactory loggerFactory,
+            IAmAMessageMapperRegistryAsync? mapperRegistry = null
             ) : base(messageMapperLease, transformLeases, mapperRegistry)
         {
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<WrapPipelineAsync<TRequest>>();
+            _logger = loggerFactory.CreateLogger<WrapPipelineAsync<TRequest>>();
             _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactoryAsync != null)
             {

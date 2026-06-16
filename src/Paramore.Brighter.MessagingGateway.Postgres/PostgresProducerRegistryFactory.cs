@@ -10,7 +10,7 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// to publish messages to a PostgreSQL message queue. This factory takes a connection configuration and a collection
 /// of <see cref="PostgresPublication"/> configurations to build the registry.
 /// </summary>
-public class PostgresProducerRegistryFactory(PostgresMessagingGatewayConnection connection, IEnumerable<PostgresPublication> publications, ILoggerFactory? loggerFactory = null) : IAmAProducerRegistryFactory
+public class PostgresProducerRegistryFactory(PostgresMessagingGatewayConnection connection, IEnumerable<PostgresPublication> publications, ILoggerFactory loggerFactory) : IAmAProducerRegistryFactory
 {
     /// <inheritdoc />
     public IAmAProducerRegistry Create()

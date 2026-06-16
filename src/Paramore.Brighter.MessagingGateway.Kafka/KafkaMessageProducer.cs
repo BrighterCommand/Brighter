@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             KafkaMessagingGatewayConfiguration configuration,
             KafkaPublication publication,
             InstrumentationOptions instrumentation = InstrumentationOptions.All,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
             : base(loggerFactory)
         {
             if (publication is null)

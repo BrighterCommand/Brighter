@@ -159,14 +159,14 @@ namespace Paramore.Brighter.ServiceActivator
             IAmABrighterTracer? tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
             TimeProvider? timeProvider = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             CommandProcessor = commandProcessor;
             RequestContextFactory = requestContextFactory;
             Tracer = tracer;
             InstrumentationOptions = instrumentationOptions;
             PumpTimeProvider = timeProvider ?? TimeProvider.System;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MessagePump>();
+            _logger = (loggerFactory).CreateLogger<MessagePump>();
         }
 
 

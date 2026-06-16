@@ -43,7 +43,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     /// </summary>
     /// <param name="configuration">The configuration to connect to <see cref="AzureServiceBusConfiguration"/></param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers</param>
-    public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration, ILoggerFactory? loggerFactory = null)
+    public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration, ILoggerFactory loggerFactory)
         : this(new ServiceBusConnectionStringClientProvider(configuration.ConnectionString), loggerFactory)
     { }
 
@@ -52,7 +52,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     /// </summary>
     /// <param name="clientProvider">A client Provider <see cref="IServiceBusClientProvider"/> to determine how to connect to ASB</param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers</param>
-    public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, ILoggerFactory? loggerFactory = null)
+    public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, ILoggerFactory loggerFactory)
     {
         _clientProvider = clientProvider;
         _loggerFactory = loggerFactory;

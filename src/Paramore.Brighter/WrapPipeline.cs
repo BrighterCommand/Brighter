@@ -56,11 +56,11 @@ namespace Paramore.Brighter
             IAmAMessageTransformerFactory? messageTransformerFactory,
             IEnumerable<Lease<IAmAMessageTransform>> transformLeases,
             InstrumentationOptions instrumentationOptions,
-            IAmAMessageMapperRegistry? mapperRegistry = null,
-            ILoggerFactory? loggerFactory = null
+            ILoggerFactory loggerFactory,
+            IAmAMessageMapperRegistry? mapperRegistry = null
             ) : base(messageMapperLease, transformLeases, mapperRegistry)
         {
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<WrapPipeline<TRequest>>();
+            _logger = loggerFactory.CreateLogger<WrapPipeline<TRequest>>();
             _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactory != null)
             {

@@ -60,12 +60,12 @@ namespace Paramore.Brighter
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactorySync syncHandlerFactory,
             InboxConfiguration? inboxConfiguration = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _subscriberRegistry = subscriberRegistry;
             _syncHandlerFactory = syncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PipelineBuilder<TRequest>>();
+            _logger = (loggerFactory).CreateLogger<PipelineBuilder<TRequest>>();
         }
 
         /// <summary>
@@ -79,12 +79,12 @@ namespace Paramore.Brighter
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             InboxConfiguration? inboxConfiguration = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PipelineBuilder<TRequest>>();
+            _logger = (loggerFactory).CreateLogger<PipelineBuilder<TRequest>>();
         }
 
         /// <summary>
@@ -96,11 +96,11 @@ namespace Paramore.Brighter
         public PipelineBuilder(
             IAmASubscriberRegistryInspector subscriberRegistryInspector,
             InboxConfiguration? inboxConfiguration = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _subscriberRegistryInspector = subscriberRegistryInspector;
             _inboxConfiguration = inboxConfiguration;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PipelineBuilder<TRequest>>();
+            _logger = (loggerFactory).CreateLogger<PipelineBuilder<TRequest>>();
         }
 
         /// <summary>

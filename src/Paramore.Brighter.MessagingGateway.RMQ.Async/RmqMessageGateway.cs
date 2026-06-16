@@ -69,9 +69,9 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="connection">The amqp uri and exchange to connect to</param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
-    protected RmqMessageGateway(RmqMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null)
+    protected RmqMessageGateway(RmqMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
     {
-        LoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        LoggerFactory = loggerFactory;
         _logger = LoggerFactory.CreateLogger<RmqMessageGateway>();
         Connection = connection;
 

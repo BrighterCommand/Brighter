@@ -81,12 +81,12 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
         bool isQueueUrl = false,
         bool rawMessageDelivery = true,
         SqsAttributes? queueAttributes = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
     {
         if (string.IsNullOrEmpty(queueName))
             throw new ConfigurationException("QueueName is mandatory");
 
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SqsMessageConsumer>();
+        _logger = (loggerFactory).CreateLogger<SqsMessageConsumer>();
         _loggerFactory = loggerFactory;
         _connection = awsConnection;
         _clientFactory = new AWSClientFactory(awsConnection);

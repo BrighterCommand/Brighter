@@ -19,10 +19,10 @@ public class AzureServiceBusScheduler(
     ServiceBusSender sender,
     RoutingKey schedulerTopic,
     TimeProvider timeProvider,
-    ILoggerFactory? loggerFactory = null)
+    ILoggerFactory loggerFactory)
     : IAmAMessageSchedulerAsync, IAmAMessageSchedulerSync, IAmARequestSchedulerAsync, IAmARequestSchedulerSync
 {
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureServiceBusScheduler>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<AzureServiceBusScheduler>();
 
     /// <inheritdoc />
     public async Task<string> ScheduleAsync(Message message, DateTimeOffset at,

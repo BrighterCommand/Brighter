@@ -57,11 +57,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
         RedisMessagePublication publication,
         InstrumentationOptions instrumentation = InstrumentationOptions.All,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : RedisMessageGateway(redisMessagingGatewayConfiguration, publication.Topic!), IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
 
-        private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RedisMessageProducer>();
+        private readonly ILogger _logger = (loggerFactory).CreateLogger<RedisMessageProducer>();
         private Publication _publication = publication;
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";

@@ -75,12 +75,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
             :base(redisMessagingGatewayConfiguration, topic)
         {
             _loggerFactory = loggerFactory;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RedisMessageConsumer>();
-            _messageCreator = new RedisMessageCreator((_loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RedisMessageCreator>());
+            _logger = (loggerFactory).CreateLogger<RedisMessageConsumer>();
+            _messageCreator = new RedisMessageCreator((_loggerFactory).CreateLogger<RedisMessageCreator>());
             _queueName = queueName;
             _redisConfiguration = redisMessagingGatewayConfiguration;
             _scheduler = scheduler;

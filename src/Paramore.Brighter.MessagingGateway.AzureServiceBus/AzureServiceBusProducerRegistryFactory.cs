@@ -48,7 +48,7 @@ public class AzureServiceBusProducerRegistryFactory : IAmAProducerRegistryFactor
     public AzureServiceBusProducerRegistryFactory(
         AzureServiceBusConfiguration configuration,
         IEnumerable<AzureServiceBusPublication> asbPublications,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
     {
         _clientProvider = new ServiceBusConnectionStringClientProvider(configuration.ConnectionString);
         _asbPublications = asbPublications;
@@ -67,7 +67,7 @@ public class AzureServiceBusProducerRegistryFactory : IAmAProducerRegistryFactor
         IServiceBusClientProvider clientProvider,
         IEnumerable<AzureServiceBusPublication> asbPublications,
         int bulkSendBatchSize = 10,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
     {
         _clientProvider = clientProvider;
         _asbPublications = asbPublications;

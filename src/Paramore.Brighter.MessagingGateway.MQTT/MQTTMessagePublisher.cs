@@ -28,9 +28,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// </summary>
         /// <param name="config">The Publisher configuration.</param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
-        public MqttMessagePublisher(MqttMessagingGatewayConfiguration config, ILoggerFactory? loggerFactory = null)
+        public MqttMessagePublisher(MqttMessagingGatewayConfiguration config, ILoggerFactory loggerFactory)
         {
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MqttMessageProducer>();
+            _logger = (loggerFactory).CreateLogger<MqttMessageProducer>();
             _config = config;
 
             _mqttClient = new MqttFactory().CreateMqttClient();

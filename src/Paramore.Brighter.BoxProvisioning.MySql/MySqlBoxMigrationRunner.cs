@@ -66,9 +66,9 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         TimeSpan? lockTimeout = null,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MySqlBoxMigrationRunner>(),
+            logger ?? (loggerFactory).CreateLogger<MySqlBoxMigrationRunner>(),
             tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
@@ -88,7 +88,7 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         ILogger? logger = null,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : this(new MySqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope, loggerFactory)
     {
     }

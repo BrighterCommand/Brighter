@@ -51,7 +51,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
     /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
     /// </summary>
     /// <param name="awsConnection">The details of the subscription to AWS.</param>
-    public ChannelFactory(AWSMessagingGatewayConnection awsConnection, ILoggerFactory? loggerFactory = null)
+    public ChannelFactory(AWSMessagingGatewayConnection awsConnection, ILoggerFactory loggerFactory)
         : base(awsConnection, loggerFactory)
     {
         _messageConsumerFactory = new SqsMessageConsumerFactory(awsConnection, loggerFactory);

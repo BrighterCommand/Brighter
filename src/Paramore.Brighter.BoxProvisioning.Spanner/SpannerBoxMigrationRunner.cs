@@ -86,12 +86,12 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         IAmARelationalDatabaseConfiguration configuration,
         IAmABrighterTracer? tracer = null,
         ILogger? logger = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
     {
         _detectionHelper = detectionHelper;
         _configuration = configuration;
         _tracer = tracer;
-        _logger = logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SpannerBoxMigrationRunner>();
+        _logger = logger ?? (loggerFactory).CreateLogger<SpannerBoxMigrationRunner>();
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         IAmARelationalDatabaseConfiguration configuration,
         IAmABrighterTracer? tracer = null,
         ILogger? logger = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : this(new SpannerBoxDetectionHelper(), configuration, tracer, logger, loggerFactory)
     {
     }

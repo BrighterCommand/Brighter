@@ -35,17 +35,17 @@ namespace Paramore.Brighter.Locking.DynamoDb
 
         private readonly ILogger _logger;
 
-        public DynamoDbLockingProvider(IAmazonDynamoDB dynamoDb, DynamoDbLockingProviderOptions options, ILoggerFactory? loggerFactory = null)
+        public DynamoDbLockingProvider(IAmazonDynamoDB dynamoDb, DynamoDbLockingProviderOptions options, ILoggerFactory loggerFactory)
             :this(dynamoDb, options, TimeProvider.System, loggerFactory)
         {
         }
 
-        public DynamoDbLockingProvider(IAmazonDynamoDB dynamoDb, DynamoDbLockingProviderOptions options, TimeProvider timeProvider, ILoggerFactory? loggerFactory = null)
+        public DynamoDbLockingProvider(IAmazonDynamoDB dynamoDb, DynamoDbLockingProviderOptions options, TimeProvider timeProvider, ILoggerFactory loggerFactory)
         {
             _dynamoDb = dynamoDb;
             _options = options;
             _timeProvider = timeProvider;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<DynamoDbLockingProvider>();
+            _logger = (loggerFactory).CreateLogger<DynamoDbLockingProvider>();
         }
 
         /// <summary>

@@ -53,13 +53,13 @@ public class Runner<TData>
     /// <param name="commandProcessor">The command processor to handle commands.</param>
     /// <param name="scheduler">The scheduler which allows us to queue work that should be deferred</param>
     /// <param name="loggerFactory">The factory used to create the logger for this runner.</param>
-    public Runner(IAmAJobChannel<TData> channel, IAmAStateStoreAsync stateStore, IAmACommandProcessor commandProcessor, Scheduler<TData> scheduler, ILoggerFactory? loggerFactory = null)
+    public Runner(IAmAJobChannel<TData> channel, IAmAStateStoreAsync stateStore, IAmACommandProcessor commandProcessor, Scheduler<TData> scheduler, ILoggerFactory loggerFactory)
     {
         _channel = channel;
         _stateStore = stateStore;
         _commandProcessor = commandProcessor;
         _scheduler = scheduler;
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<Runner<TData>>();
+        _logger = (loggerFactory).CreateLogger<Runner<TData>>();
     }
 
     /// <summary>

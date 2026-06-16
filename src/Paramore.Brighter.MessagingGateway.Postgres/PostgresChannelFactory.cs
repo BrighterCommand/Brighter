@@ -9,7 +9,7 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// This factory is responsible for ensuring the underlying queue store exists and for creating channels
 /// configured according to the provided <see cref="PostgresSubscription"/>.
 /// </summary>
-public class PostgresChannelFactory(PostgresMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null): PostgresMessagingGateway(connection), IAmAChannelFactory
+public class PostgresChannelFactory(PostgresMessagingGatewayConnection connection, ILoggerFactory loggerFactory): PostgresMessagingGateway(connection), IAmAChannelFactory
 {
     private readonly PostgresConsumerFactory _factory = new(connection, loggerFactory);
     

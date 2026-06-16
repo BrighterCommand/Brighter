@@ -12,10 +12,10 @@ namespace Paramore.Brighter
         private readonly IAmAMessageTransformerFactoryAsync _factory;
         private readonly IList<Lease<IAmAMessageTransformAsync>> _trackedObjects = new List<Lease<IAmAMessageTransformAsync>>();
 
-        public TransformLifetimeScopeAsync(IAmAMessageTransformerFactoryAsync factory, ILoggerFactory? loggerFactory = null)
+        public TransformLifetimeScopeAsync(IAmAMessageTransformerFactoryAsync factory, ILoggerFactory loggerFactory)
         {
             _factory = factory;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<TransformLifetimeScopeAsync>();
+            _logger = loggerFactory.CreateLogger<TransformLifetimeScopeAsync>();
         }
 
         public void Dispose()

@@ -65,7 +65,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     public SqsMessageProducer(AWSMessagingGatewayConnection connection,
         SqsPublication publication,
         InstrumentationOptions instrumentation = InstrumentationOptions.All,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : base(connection, loggerFactory)
     {
         _publication = publication ?? throw new ArgumentNullException(nameof(publication));

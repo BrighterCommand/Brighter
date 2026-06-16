@@ -82,7 +82,7 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
     /// </summary>
     /// <param name="options">The <see cref="S3LuggageOptions"/> containing the S3 client, bucket details, and other configuration.</param>
     /// <param name="loggerFactory">The factory used to create the logger for this store.</param>
-    public S3LuggageStore(S3LuggageOptions options, ILoggerFactory? loggerFactory = null)
+    public S3LuggageStore(S3LuggageOptions options, ILoggerFactory loggerFactory)
     {
         _client = options.Client;
         _luggagePrefix = options.LuggagePrefix;
@@ -91,7 +91,7 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
 
         _spanAttributes["claim_check.aws-s3.region"] = options.BucketRegion.Value;
 
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<S3LuggageStore>();
+        _logger = (loggerFactory).CreateLogger<S3LuggageStore>();
     }
 
     /// <inheritdoc cref="IAmAStorageProvider.Tracer"/>

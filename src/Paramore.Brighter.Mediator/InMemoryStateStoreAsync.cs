@@ -47,10 +47,10 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
     /// <summary>
     /// Represents an in-memory store for jobs.
     /// </summary>
-    public InMemoryStateStoreAsync(TimeProvider? timeProvider = null, ILoggerFactory? loggerFactory = null)
+    public InMemoryStateStoreAsync(TimeProvider? timeProvider = null, ILoggerFactory loggerFactory)
     {
         _timeProvider = timeProvider ??  TimeProvider.System;
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<InMemoryStateStoreAsync>();
+        _logger = (loggerFactory).CreateLogger<InMemoryStateStoreAsync>();
     }
 
     /// <summary>

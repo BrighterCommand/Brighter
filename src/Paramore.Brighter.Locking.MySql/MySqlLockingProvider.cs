@@ -18,9 +18,9 @@ namespace Paramore.Brighter.Locking.MySql;
 /// </summary>
 /// <param name="connectionProvider">The MySQL connection Provider.</param>
 /// <param name="loggerFactory">The factory used to create the logger for this provider.</param>
-public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider, ILoggerFactory? loggerFactory = null) : IDistributedLock, IAsyncDisposable
+public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider, ILoggerFactory loggerFactory) : IDistributedLock, IAsyncDisposable
 {
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MySqlConnectionProvider>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<MySqlConnectionProvider>();
     private readonly ConcurrentDictionary<string, DbConnection> _connections = new();
 
     /// <summary>

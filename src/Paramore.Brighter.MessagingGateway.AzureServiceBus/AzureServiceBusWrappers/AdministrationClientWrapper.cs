@@ -46,11 +46,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="clientProvider"></param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
-        public AdministrationClientWrapper(IServiceBusClientProvider clientProvider, ILoggerFactory? loggerFactory = null)
+        public AdministrationClientWrapper(IServiceBusClientProvider clientProvider, ILoggerFactory loggerFactory)
         {
             _clientProvider = clientProvider;
             _administrationClient = _clientProvider.GetServiceBusAdministrationClient();
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AdministrationClientWrapper>();
+            _logger = (loggerFactory).CreateLogger<AdministrationClientWrapper>();
         }
 
         /// <summary>

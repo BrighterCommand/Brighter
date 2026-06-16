@@ -54,10 +54,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Initializes a new instance of the <see cref="KafkaMessagingGateway"/> class.
         /// </summary>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the gateway and any producers it creates.</param>
-        protected KafkaMessagingGateway(ILoggerFactory? loggerFactory = null)
+        protected KafkaMessagingGateway(ILoggerFactory loggerFactory)
         {
             _loggerFactory = loggerFactory;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<KafkaMessageProducer>();
+            _logger = (loggerFactory).CreateLogger<KafkaMessageProducer>();
         }
 
         /// <summary>

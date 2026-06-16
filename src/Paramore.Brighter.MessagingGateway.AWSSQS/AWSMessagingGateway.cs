@@ -51,9 +51,9 @@ public class AwsMessagingGateway
     private readonly AWSClientFactory _awsClientFactory;
     protected readonly AWSMessagingGatewayConnection AwsConnection;
 
-    public AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection, ILoggerFactory? loggerFactory = null)
+    public AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection, ILoggerFactory loggerFactory)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AwsMessagingGateway>();
+        _logger = (loggerFactory).CreateLogger<AwsMessagingGateway>();
         _awsClientFactory = new AWSClientFactory(awsConnection);
         AwsConnection = awsConnection;
     }

@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public RedisMessageProducerFactory(
             RedisMessagingGatewayConfiguration redisConfiguration,
             IEnumerable<RedisMessagePublication> publications,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _redisConfiguration = redisConfiguration;
             _publications = publications;

@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <param name="rmqConnection">The subscription to the broker hosting the queue</param>
         /// <param name="scheduler">Optional scheduler for delayed requeue operations</param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers</param>
-        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection rmqConnection, IAmAMessageScheduler? scheduler = null, ILoggerFactory? loggerFactory = null)
+        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection rmqConnection, IAmAMessageScheduler? scheduler = null, ILoggerFactory loggerFactory)
         {
             _rmqConnection = rmqConnection;
             _scheduler = scheduler;

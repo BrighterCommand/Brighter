@@ -36,12 +36,12 @@ namespace Paramore.Brighter.Locking.Azure;
 /// </summary>
 /// <param name="options"></param>
 /// <param name="loggerFactory"></param>
-public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options, ILoggerFactory? loggerFactory = null) : IDistributedLock
+public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options, ILoggerFactory loggerFactory) : IDistributedLock
 {
     private readonly BlobContainerClient _containerClient =
         new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
 
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureBlobLockingProviderOptions>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<AzureBlobLockingProviderOptions>();
 
     /// <summary>
     /// Attempt to obtain a lock on a resource

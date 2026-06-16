@@ -138,6 +138,7 @@ namespace Paramore.Brighter.ServiceActivator
         public Dispatcher(
             IAmACommandProcessor commandProcessor,
             IEnumerable<Subscription> subscriptions,
+            ILoggerFactory loggerFactory,
             IAmAMessageMapperRegistry? messageMapperRegistry = null,
             IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync = null,
             IAmAMessageTransformerFactory? messageTransformerFactory = null,
@@ -147,13 +148,12 @@ namespace Paramore.Brighter.ServiceActivator
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
             bool ownsRegistry = false,
             bool ownsTransformerFactories = false,
-            TimeSpan? shutdownTimeout = null,
-            ILoggerFactory? loggerFactory = null)
+            TimeSpan? shutdownTimeout = null)
         {
             CommandProcessor = commandProcessor;
             ShutdownTimeout = shutdownTimeout ?? TimeSpan.FromSeconds(10);
             _loggerFactory = loggerFactory;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<Dispatcher>();
+            _logger = loggerFactory.CreateLogger<Dispatcher>();
 
             Subscriptions = subscriptions;
             _messageMapperRegistry = messageMapperRegistry;

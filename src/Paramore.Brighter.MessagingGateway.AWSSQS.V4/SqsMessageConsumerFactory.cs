@@ -36,7 +36,7 @@ public class SqsMessageConsumerFactory : IAmAMessageConsumerFactory
     /// <summary>
     /// Initializes a new instance of the <see cref="SqsMessageConsumerFactory"/> class.
     /// </summary>
-    public SqsMessageConsumerFactory(AWSMessagingGatewayConnection awsConnection, ILoggerFactory? loggerFactory = null)
+    public SqsMessageConsumerFactory(AWSMessagingGatewayConnection awsConnection, ILoggerFactory loggerFactory)
     {
         _awsConnection = awsConnection;
         _loggerFactory = loggerFactory;

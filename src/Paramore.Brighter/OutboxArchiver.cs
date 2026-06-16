@@ -60,14 +60,14 @@ namespace Paramore.Brighter
             int archiveBatchSize = 100,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _archiveProvider = archiveProvider;
             _archiveBatchSize = archiveBatchSize;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
             _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
+            _logger = (loggerFactory).CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
             
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
             if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;

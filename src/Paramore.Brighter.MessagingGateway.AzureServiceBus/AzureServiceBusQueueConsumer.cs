@@ -58,10 +58,10 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
         IAmAMessageProducerSync messageProducer,
         IAdministrationClientWrapper administrationClientWrapper,
         IServiceBusReceiverProvider serviceBusReceiverProvider,
-        ILoggerFactory? loggerFactory = null) : base(subscription,
+        ILoggerFactory loggerFactory) : base(subscription,
         messageProducer, administrationClientWrapper, loggerFactory: loggerFactory)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureServiceBusQueueConsumer>();
+        _logger = (loggerFactory).CreateLogger<AzureServiceBusQueueConsumer>();
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
     }
 

@@ -77,9 +77,9 @@ public class PostgreSqlBoxDetectionHelper :
     /// rare <c>UndefinedTable</c>-swallow Debug emission in
     /// <see cref="DoesHistoryExistAsync"/>; the helper remains a safe DI singleton.
     /// </summary>
-    public PostgreSqlBoxDetectionHelper(ILogger? logger = null, ILoggerFactory? loggerFactory = null)
+    public PostgreSqlBoxDetectionHelper(ILogger? logger = null, ILoggerFactory loggerFactory)
     {
-        _logger = logger ?? (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PostgreSqlBoxDetectionHelper>();
+        _logger = logger ?? (loggerFactory).CreateLogger<PostgreSqlBoxDetectionHelper>();
     }
 
     /// <summary>

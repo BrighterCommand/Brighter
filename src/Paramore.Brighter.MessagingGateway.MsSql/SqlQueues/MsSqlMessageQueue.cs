@@ -27,9 +27,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// </summary>
         /// <param name="configuration"></param>
         /// <param name="connectionProvider"></param>
-        public MsSqlMessageQueue(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider  connectionProvider, ILoggerFactory? loggerFactory = null)
+        public MsSqlMessageQueue(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider  connectionProvider, ILoggerFactory loggerFactory)
         {
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MsSqlMessageQueue<T>>();
+            _logger = (loggerFactory).CreateLogger<MsSqlMessageQueue<T>>();
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _connectionProvider = connectionProvider;
             Log.MsSqlMessageQueueCtor(_logger, _configuration.ConnectionString, _configuration.QueueStoreTable);

@@ -42,9 +42,9 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
     private Dictionary<string, JsonElement> _messageAttributes = new();
 
-    public SqsInlineMessageCreator(ILoggerFactory? loggerFactory = null)
+    public SqsInlineMessageCreator(ILoggerFactory loggerFactory)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SqsInlineMessageCreator>();
+        _logger = (loggerFactory).CreateLogger<SqsInlineMessageCreator>();
     }
 
     public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)

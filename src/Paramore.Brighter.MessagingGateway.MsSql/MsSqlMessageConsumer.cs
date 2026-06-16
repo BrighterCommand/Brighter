@@ -31,10 +31,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _loggerFactory = loggerFactory;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MsSqlMessageConsumer>();
+            _logger = (loggerFactory).CreateLogger<MsSqlMessageConsumer>();
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
             _msSqlConfiguration = msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
             _sqlMessageQueue = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider, loggerFactory);
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
             : this(msSqlConfiguration, topic, new MsSqlConnectionProvider(msSqlConfiguration), scheduler, deadLetterRoutingKey, invalidMessageRoutingKey, loggerFactory)
         {}
 

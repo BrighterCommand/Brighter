@@ -51,9 +51,9 @@ namespace Paramore.Brighter
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-    public abstract partial class RequestHandlerAsync<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All, ILoggerFactory? loggerFactory = null) : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
+    public abstract partial class RequestHandlerAsync<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All, ILoggerFactory loggerFactory) : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
     {
-        private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RequestHandlerAsync<TRequest>>();
+        private readonly ILogger _logger = (loggerFactory).CreateLogger<RequestHandlerAsync<TRequest>>();
 
         private IHandleRequestsAsync<TRequest>? _successor;
 

@@ -39,10 +39,10 @@ namespace Paramore.Brighter.Transformers.Gcp;
 /// Integrates with Brighter's tracing via <see cref="IAmABrighterTracer"/> and provides structured logging through <see cref="ILogger"/>.
 /// </para>
 /// </remarks>
-public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory? loggerFactory = null) : IAmAStorageProvider, IAmAStorageProviderAsync
+public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory loggerFactory) : IAmAStorageProvider, IAmAStorageProviderAsync
 {
     private const string ClaimCheckProvider = "gcp_gcs";
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<GcsLuggageStore>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<GcsLuggageStore>();
     private static readonly Dictionary<string, string> s_spanAttributes = new();
     
     /// <inheritdoc cref="IAmAStorageProvider.Tracer" />

@@ -53,13 +53,13 @@ public abstract class Step<TData>(
     Sequential<TData>? next,
     IStepTask<TData>? stepTask = null,
     Action? onCompletion = null,
-    ILoggerFactory? loggerFactory = null)
+    ILoggerFactory loggerFactory)
 {
     /// <summary> Which job is being executed by the step. </summary>
     protected Job<TData>? Job ;
 
     /// <summary> The logger for the step. </summary>
-    protected readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<Step<TData>>();
+    protected readonly ILogger _logger = (loggerFactory).CreateLogger<Step<TData>>();
     
     /// <summary>The name of the step, used for tracing execution</summary>
     public string Name { get; init; } = name;
@@ -118,7 +118,7 @@ public class ExclusiveChoice<TData>(
     Action? onCompletion,
     Sequential<TData>? nextTrue,
     Sequential<TData>? nextFalse,
-    ILoggerFactory? loggerFactory = null
+    ILoggerFactory loggerFactory
 )
     : Step<TData>(name, null, null, onCompletion, loggerFactory)
 {
@@ -161,7 +161,7 @@ public class ExclusiveChoice<TData>(
 public class ParallelSplit<TData>(
     string name,
     Func<TData, IEnumerable<Step<TData>>>? onMap,
-    ILoggerFactory? loggerFactory = null)
+    ILoggerFactory loggerFactory)
     : Step<TData>(name, null, loggerFactory: loggerFactory)
 {
     /// <summary>
@@ -232,7 +232,7 @@ public class Sequential<TData>(
     Sequential<TData>? next,
     Action? onFaulted = null,
     Sequential<TData>? faultNext = null,
-    ILoggerFactory? loggerFactory = null
+    ILoggerFactory loggerFactory
 )
     : Step<TData>(name, next, stepTask, onCompletion, loggerFactory)
 {
@@ -309,7 +309,7 @@ public class Wait<TData> : Step<TData>
     /// <param name="next">The next step in the sequence, null if this is the last step.</param>
     /// <param name="loggerFactory">The factory used to create the logger for this step.</param>
     /// <typeparam name="TData">The data that the step operates over</typeparam>
-    public Wait(string name, TimeSpan duration, Sequential<TData>? next, ILoggerFactory? loggerFactory = null)
+    public Wait(string name, TimeSpan duration, Sequential<TData>? next, ILoggerFactory loggerFactory)
         : base(name, next, loggerFactory: loggerFactory)
     {
         _duration = duration;

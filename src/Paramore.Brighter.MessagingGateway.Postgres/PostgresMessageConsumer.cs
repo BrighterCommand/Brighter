@@ -23,10 +23,10 @@ public partial class PostgresMessageConsumer(
     PostgresSubscription subscription,
     RoutingKey? deadLetterRoutingKey = null,
     RoutingKey? invalidMessageRoutingKey = null,
-    ILoggerFactory? loggerFactory = null
+    ILoggerFactory loggerFactory
     ) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PostgresMessageConsumer>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<PostgresMessageConsumer>();
     private readonly RelationalDatabaseConfiguration _configuration = configuration;
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
     private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
@@ -536,7 +536,7 @@ public partial class PostgresMessageConsumer(
         }
         catch (Exception e)
         {
-            var logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<PostgresMessageConsumer>();
+            var logger = (loggerFactory).CreateLogger<PostgresMessageConsumer>();
             Log.ErrorCreatingProducer(logger, e, routingKey.Value);
             return null;
         }

@@ -100,7 +100,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             int? maxQueueLength = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             IAmAMessageScheduler? scheduler = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
             : this(connection, queueName, new RoutingKeys([routingKey]), isDurable, highAvailability,
                 batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, scheduler, loggerFactory)
         {
@@ -135,10 +135,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             int? maxQueueLength = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             IAmAMessageScheduler? scheduler = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
             : base(connection, loggerFactory)
         {
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageConsumer>();
+            _logger = (loggerFactory).CreateLogger<RmqMessageConsumer>();
             _messageCreator = new RmqMessageCreator(LoggerFactory.CreateLogger<RmqMessageCreator>());
             _queueName = queueName;
             _routingKeys = routingKeys;

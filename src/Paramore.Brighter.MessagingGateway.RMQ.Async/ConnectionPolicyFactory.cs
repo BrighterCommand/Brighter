@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectionPolicyFactory"/> class.
         /// </summary>
-        public ConnectionPolicyFactory(ILoggerFactory? loggerFactory = null)
+        public ConnectionPolicyFactory(ILoggerFactory loggerFactory)
            : this(new RmqMessagingGatewayConnection(), loggerFactory)
         {}
 
@@ -50,9 +50,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// </summary>
         /// <param name="connection"></param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
-        public ConnectionPolicyFactory(RmqMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null)
+        public ConnectionPolicyFactory(RmqMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
         {
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<ConnectionPolicyFactory>();
+            _logger = (loggerFactory).CreateLogger<ConnectionPolicyFactory>();
 
             if (connection.Exchange is null) throw new ConfigurationException("RabbitMQ Exchange is not set");
             if (connection.AmpqUri is null) throw new ConfigurationException("RabbitMQ Broker URL is not set");

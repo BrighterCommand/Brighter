@@ -39,12 +39,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// <summary>
 /// Class MessageGatewayConnectionPool.
 /// </summary>
-public partial class RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat, ILoggerFactory? loggerFactory = null)
+public partial class RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat, ILoggerFactory loggerFactory)
 {
     private static readonly Dictionary<string, PooledConnection> s_connectionPool = new();
 
     private static readonly SemaphoreSlim s_lock = new SemaphoreSlim(1, 1);
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageGatewayConnectionPool>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<RmqMessageGatewayConnectionPool>();
     private static readonly Random jitter = new Random();
 
     /// <summary>

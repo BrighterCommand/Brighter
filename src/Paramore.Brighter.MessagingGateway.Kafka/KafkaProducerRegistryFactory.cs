@@ -52,7 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public KafkaProducerRegistryFactory(
             KafkaMessagingGatewayConfiguration globalConfiguration,
             IEnumerable<KafkaPublication> publications,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _globalConfiguration = globalConfiguration;
             _publications = publications;

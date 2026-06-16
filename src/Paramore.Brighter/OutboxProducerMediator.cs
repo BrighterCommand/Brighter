@@ -130,6 +130,7 @@ namespace Paramore.Brighter
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
             IAmABrighterTracer? tracer,
             IAmAPublicationFinder publicationFinder,
+            ILoggerFactory loggerFactory,
             IAmAnOutbox? outbox = null,
             IAmAnOutboxCircuitBreaker? outboxCircuitBreaker = null,
             IAmARequestContextFactory? requestContextFactory = null,
@@ -140,10 +141,8 @@ namespace Paramore.Brighter
             TimeProvider? timeProvider = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
             bool ownsRegistry = false,
-            bool ownsTransformerFactories = false,
-            ILoggerFactory? loggerFactory = null)
+            bool ownsTransformerFactories = false)
         {
-            loggerFactory ??= NullLoggerFactory.Instance;
             _logger = loggerFactory.CreateLogger<CommandProcessor>();
 
             _producerRegistry = producerRegistry ??

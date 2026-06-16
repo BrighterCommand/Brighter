@@ -72,7 +72,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         IAmARelationalDatabaseConfiguration configuration,
         IAmABoxMigrationRunner migrationRunner,
         BoxType boxType,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
     {
         _detectionHelper = detectionHelper;
         _catalog = catalog;
@@ -80,7 +80,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         _configuration = configuration;
         _migrationRunner = migrationRunner;
         BoxType = boxType;
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance)
+        _logger = (loggerFactory)
             .CreateLogger<SqlBoxProvisioner<TConnection, TTransaction>>();
     }
 

@@ -63,7 +63,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         IAmAMessageProducer messageProducer,
         IAdministrationClientWrapper administrationClientWrapper,
         bool isAsync = false,
-        ILoggerFactory? loggerFactory = null
+        ILoggerFactory loggerFactory
     )
     {
         Subscription = subscription;

@@ -64,11 +64,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// or
         /// exchangeName
         /// </exception>
-        public RmqMessagePublisher(IModel channel, RmqMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null)
+        public RmqMessagePublisher(IModel channel, RmqMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
         {
             _connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _channel = channel ?? throw new ArgumentNullException(nameof(channel));
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessagePublisher>();
+            _logger = (loggerFactory).CreateLogger<RmqMessagePublisher>();
         }
 
         /// <summary>

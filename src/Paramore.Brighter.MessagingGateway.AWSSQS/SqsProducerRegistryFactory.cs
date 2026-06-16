@@ -48,7 +48,7 @@ public class SqsProducerRegistryFactory : IAmAProducerRegistryFactory
     public SqsProducerRegistryFactory(
         AWSMessagingGatewayConnection connection,
         IEnumerable<SqsPublication> sqsPublications,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
     {
         _connection = connection;
         _sqsPublications = sqsPublications;

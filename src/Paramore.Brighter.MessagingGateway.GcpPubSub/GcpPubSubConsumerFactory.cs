@@ -14,7 +14,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// </summary>
 /// <param name="connection">The connection details for the Google Cloud Pub/Sub gateway.</param>
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers.</param>
-public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection, ILoggerFactory? loggerFactory = null)
+public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
     : GcpPubSubMessageGateway(connection), IAmAMessageConsumerFactory
 {
     private readonly GcpMessagingGatewayConnection _connection = connection;

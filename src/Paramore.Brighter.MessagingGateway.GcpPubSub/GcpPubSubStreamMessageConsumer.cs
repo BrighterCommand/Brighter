@@ -20,10 +20,10 @@ public partial class GcpPubSubStreamMessageConsumer(
     GcpStreamConsumer consumer,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
     TimeProvider timeProvider,
-    ILoggerFactory? loggerFactory = null) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    ILoggerFactory loggerFactory) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
 
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<GcpPubSubStreamMessageConsumer>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<GcpPubSubStreamMessageConsumer>();
     
     /// <summary>
     /// Synchronously acknowledges a message, signalling the Pub/Sub service that the message

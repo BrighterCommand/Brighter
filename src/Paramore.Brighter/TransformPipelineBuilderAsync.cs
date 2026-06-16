@@ -75,7 +75,7 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistryAsync mapperRegistryAsync,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
             InstrumentationOptions instrumentationOptions,
-            ILoggerFactory? loggerFactory = null
+            ILoggerFactory loggerFactory
         )
         {
             _mapperRegistryAsync = mapperRegistryAsync ??
@@ -83,7 +83,7 @@ namespace Paramore.Brighter
                                        "TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
             _instrumentationOptions = instrumentationOptions;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<TransformPipelineBuilder>();
+            _logger = (loggerFactory).CreateLogger<TransformPipelineBuilder>();
         }
 
         /// <summary>

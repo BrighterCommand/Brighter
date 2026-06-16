@@ -44,11 +44,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private static readonly object s_lock = new object();
         private static readonly Random jitter = new Random();
 
-        public RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat, ILoggerFactory? loggerFactory = null)
+        public RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat, ILoggerFactory loggerFactory)
         {
             _connectionName = connectionName;
             _connectionHeartbeat = connectionHeartbeat;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<RmqMessageGatewayConnectionPool>();
+            _logger = (loggerFactory).CreateLogger<RmqMessageGatewayConnectionPool>();
         }
         
         /// <summary>

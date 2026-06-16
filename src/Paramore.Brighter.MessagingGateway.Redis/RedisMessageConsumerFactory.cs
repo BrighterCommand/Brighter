@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="configuration">The Redis messaging gateway configuration</param>
         /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers</param>
-        public RedisMessageConsumerFactory(RedisMessagingGatewayConfiguration configuration, IAmAMessageScheduler? scheduler = null, ILoggerFactory? loggerFactory = null)
+        public RedisMessageConsumerFactory(RedisMessagingGatewayConfiguration configuration, IAmAMessageScheduler? scheduler = null, ILoggerFactory loggerFactory)
         {
             _configuration = configuration;
             _scheduler = scheduler;

@@ -52,12 +52,12 @@ public class InMemoryScheduler(
     Func<IRequest, string> getOrCreateRequestSchedulerId,
     Func<Message, string> getOrCreateMessageSchedulerId,
     OnSchedulerConflict onConflict,
-    ILoggerFactory? loggerFactory = null)
+    ILoggerFactory loggerFactory)
     : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSync, IAmARequestSchedulerAsync, IDisposable, IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, (ITimer Timer, long Generation)> _timers = new();
     private long _generation;
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<InMemoryScheduler>();
+    private readonly ILogger _logger = (loggerFactory).CreateLogger<InMemoryScheduler>();
 
     /// <inheritdoc />
     public string Schedule(Message message, DateTimeOffset at)

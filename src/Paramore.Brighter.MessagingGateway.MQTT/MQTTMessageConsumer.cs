@@ -68,10 +68,10 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory loggerFactory)
         {
             _loggerFactory = loggerFactory;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<MqttMessageConsumer>();
+            _logger = (loggerFactory).CreateLogger<MqttMessageConsumer>();
             _configuration = configuration;
             _scheduler = scheduler;
             _deadLetterRoutingKey = deadLetterRoutingKey;

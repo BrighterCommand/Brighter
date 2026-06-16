@@ -37,10 +37,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// </summary>
 /// <param name="subscription">Subscription information, used to help populate the message</param>
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
-public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription subscription, ILoggerFactory? loggerFactory = null)
+public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription subscription, ILoggerFactory loggerFactory)
 {
     private readonly RoutingKey _topic = subscription.RoutingKey;
-    private readonly ILogger _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureServiceBusMessageCreator>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<AzureServiceBusMessageCreator>();
 
     /// <summary>
     /// Maps an Azure Service Bus message to a Brighter <see cref="Message"/>.

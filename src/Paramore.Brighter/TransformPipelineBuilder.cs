@@ -75,7 +75,7 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            ILoggerFactory? loggerFactory = null
+            ILoggerFactory loggerFactory
             )
         {
             _mapperRegistry = mapperRegistry ??
@@ -83,7 +83,7 @@ namespace Paramore.Brighter
 
             _messageTransformerFactory = messageTransformerFactory;
             _instrumentationOptions = instrumentationOptions;
-            _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<TransformPipelineBuilder>();
+            _logger = (loggerFactory).CreateLogger<TransformPipelineBuilder>();
         }
 
         /// <summary>

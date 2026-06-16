@@ -31,9 +31,9 @@ public partial class SqsMessageSender
     /// <param name="queueUrl">The queue ARN</param>
     /// <param name="client">The SQS Client</param>
     /// <param name="loggerFactory">The factory used to create a logger for this sender</param>
-    public SqsMessageSender(string queueUrl, AmazonSQSClient client, ILoggerFactory? loggerFactory = null)
+    public SqsMessageSender(string queueUrl, AmazonSQSClient client, ILoggerFactory loggerFactory)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<SqsMessageSender>();
+        _logger = (loggerFactory).CreateLogger<SqsMessageSender>();
         _queueUrl = queueUrl;
         _client = client;
     }

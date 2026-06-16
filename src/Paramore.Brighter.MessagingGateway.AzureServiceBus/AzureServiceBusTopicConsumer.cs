@@ -60,10 +60,10 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         IAmAMessageProducer messageProducer,
         IAdministrationClientWrapper administrationClientWrapper,
         IServiceBusReceiverProvider serviceBusReceiverProvider,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory loggerFactory)
         : base(subscription, messageProducer, administrationClientWrapper, loggerFactory: loggerFactory)
     {
-        _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<AzureServiceBusTopicConsumer>();
+        _logger = (loggerFactory).CreateLogger<AzureServiceBusTopicConsumer>();
         _subscriptionName = subscription.ChannelName.Value;
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
     }
