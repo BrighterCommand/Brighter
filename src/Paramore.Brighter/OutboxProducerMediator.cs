@@ -736,20 +736,79 @@ namespace Paramore.Brighter
         /// <returns></returns>
         private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducerAsync producer, RequestContext requestContext)
         {
-            if (producer is ISupportPublishConfirmation producerSync)
+            if (producer is ISupportPublishConfirmation confirmingProducer)
             {
-                producerSync.OnMessagePublished += async delegate(bool success, string id)
+                confirmingProducer.OnMessagePublished += async delegate(PublishConfirmationResult result)
                 {
-                    if (success)
+                    // Emit a standalone confirmation span FIRST on every invocation (success or
+                    // failure). It links back to the original publish span (when its context was
+                    // captured at send time) rather than reopening it, and degrades to no link when
+                    // the context is absent. The observability work is isolated in try/catch so a
+                    // tracing fault can never destabilise the producer thread (NFR-4); the span is
+                    // disposed in the finally so it starts and stops within the callback (NFR-2).
+                    Activity? confirmationSpan = null;
+                    try
                     {
-                        Log.SentMessage(s_logger, id);
-                        if (_asyncOutbox != null)
-                            await ExecuteWithResiliencePipelineAsync(
-                                async ct =>
-                                    await _asyncOutbox.MarkDispatchedAsync(id, requestContext, _timeProvider.GetUtcNow(),
-                                        cancellationToken: ct),
-                                requestContext
-                            );
+                        var links = result.PublishSpanContext is { } publishContext
+                            ? new[] { new ActivityLink(publishContext) }
+                            : null;
+                        confirmationSpan = _tracer?.CreateConfirmationSpan(
+                            result.MessageId, result.Topic, result.Success, links);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.ConfirmationObservabilityFault(s_logger, ex);
+                    }
+
+                    try
+                    {
+                        if (result.Success)
+                        {
+                            Log.SentMessage(s_logger, result.MessageId.Value);
+                            if (_asyncOutbox != null)
+                            {
+                                // Explicitly re-parent the MarkDispatched DB span to the confirmation
+                                // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
+                                // per-callback copy whose Span is S2 rather than relying on the ambient
+                                // Activity.Current fallback (C-6). A copy is required because
+                                // RequestContext.Span is thread-keyed and its setter ignores null, so we
+                                // must not mutate the shared construction-time context.
+                                var dispatchedContext = (RequestContext)requestContext.CreateCopy();
+                                dispatchedContext.Span = confirmationSpan;
+                                await ExecuteWithResiliencePipelineAsync(
+                                    async ct =>
+                                        await _asyncOutbox.MarkDispatchedAsync(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow(),
+                                            cancellationToken: ct),
+                                    dispatchedContext
+                                );
+                            }
+                        }
+                        else
+                        {
+                            Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                            // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
+                            // not the Publication topic — exact parity with the non-confirmation send
+                            // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
+                            TripTopic(result.Topic);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // This delegate is async void: an exception that escapes it is unobserved on the
+                        // producer's broker/threadpool thread and is process-terminating by default. Keep the
+                        // safety LOCAL and obvious rather than relying on ExecuteWithResiliencePipelineAsync
+                        // happening to absorb the MarkDispatched path — a future caller (or a throwing breaker,
+                        // logger or context copy) must not be able to crash the producer. The message is left
+                        // un-dispatched, so the Sweeper will retry it (C-1); we log at Warning, not Error,
+                        // because nothing is lost.
+                        Log.ConfirmationDispatchError(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
+                    }
+                    finally
+                    {
+                        // End via the tracer (not raw Dispose) so the end time is stamped from the tracer's
+                        // TimeProvider — matching the start time set in CreateConfirmationSpan — and a
+                        // successful span gets Ok status, consistent with every other span in this file.
+                        _tracer?.EndSpan(confirmationSpan);
                     }
                 };
             }
@@ -765,16 +824,74 @@ namespace Paramore.Brighter
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {
-                producerSync.OnMessagePublished += delegate(bool success, string id)
+                producerSync.OnMessagePublished += delegate(PublishConfirmationResult result)
                 {
-                    if (success)
+                    // Emit a standalone confirmation span FIRST on every invocation (success or
+                    // failure). It links back to the original publish span (when its context was
+                    // captured at send time) rather than reopening it, and degrades to no link when
+                    // the context is absent. The observability work is isolated in try/catch so a
+                    // tracing fault can never destabilise the producer thread (NFR-4); the span is
+                    // disposed in the finally so it starts and stops within the callback (NFR-2).
+                    Activity? confirmationSpan = null;
+                    try
                     {
-                        Log.SentMessage(s_logger, id);
+                        var links = result.PublishSpanContext is { } publishContext
+                            ? new[] { new ActivityLink(publishContext) }
+                            : null;
+                        confirmationSpan = _tracer?.CreateConfirmationSpan(
+                            result.MessageId, result.Topic, result.Success, links);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.ConfirmationObservabilityFault(s_logger, ex);
+                    }
 
-                        if (_outBox != null)
-                            ExecuteWithResiliencePipeline(
-                                () => _outBox.MarkDispatched(id, requestContext, _timeProvider.GetUtcNow()),
-                                requestContext);
+                    try
+                    {
+                        if (result.Success)
+                        {
+                            Log.SentMessage(s_logger, result.MessageId.Value);
+
+                            if (_outBox != null)
+                            {
+                                // Explicitly re-parent the MarkDispatched DB span to the confirmation
+                                // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
+                                // per-callback copy whose Span is S2 rather than relying on the ambient
+                                // Activity.Current fallback (C-6). A copy is required because
+                                // RequestContext.Span is thread-keyed and its setter ignores null, so we
+                                // must not mutate the shared construction-time context.
+                                var dispatchedContext = (RequestContext)requestContext.CreateCopy();
+                                dispatchedContext.Span = confirmationSpan;
+                                ExecuteWithResiliencePipeline(
+                                    () => _outBox.MarkDispatched(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow()),
+                                    dispatchedContext);
+                            }
+                        }
+                        else
+                        {
+                            Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                            // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
+                            // not the Publication topic — exact parity with the non-confirmation send
+                            // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
+                            TripTopic(result.Topic);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // This callback runs on the producer's invoking (broker/threadpool) thread; an
+                        // exception that escapes it can tear down that thread. Keep the safety LOCAL and obvious
+                        // rather than relying on ExecuteWithResiliencePipeline happening to absorb the
+                        // MarkDispatched path — a throwing breaker, logger or context copy must not be able to
+                        // crash the producer. The message is left un-dispatched, so the Sweeper will retry it
+                        // (C-1); we log at Warning, not Error, because nothing is lost.
+                        Log.ConfirmationDispatchError(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
+                    }
+                    finally
+                    {
+                        // End via the tracer (not raw Dispose) so the end time is stamped from the tracer's
+                        // TimeProvider — matching the start time set in CreateConfirmationSpan — and a
+                        // successful span gets Ok status, consistent with every other span in this file.
+                        _tracer?.EndSpan(confirmationSpan);
                     }
                 };
                 return true;
@@ -896,7 +1013,7 @@ namespace Paramore.Brighter
                         producerSpans.TryAdd(Uuid.NewAsString(), span);
                     }
 
-                    if (producer is IAmABulkMessageProducerAsync bulkMessageProducer and not ISupportPublishConfirmation)
+                    if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
                     {
                         var messages = topicBatch.ToArray();
 
@@ -1187,6 +1304,15 @@ namespace Paramore.Brighter
             
             [LoggerMessage(LogLevel.Information, "Sent message: Id:{Id}")]
             public static partial void SentMessage(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Warning, "Publish confirmation failed for message Id:{Id} on topic {Topic}")]
+            public static partial void ConfirmationFailed(ILogger logger, string id, string topic);
+
+            [LoggerMessage(LogLevel.Warning, "Observability failed while handling a publish confirmation; confirmation handling continued")]
+            public static partial void ConfirmationObservabilityFault(ILogger logger, Exception ex);
+
+            [LoggerMessage(LogLevel.Warning, "Error handling publish confirmation for message Id:{Id} on topic {Topic}; message left un-dispatched for Sweeper retry")]
+            public static partial void ConfirmationDispatchError(ILogger logger, string id, string topic, Exception ex);
             
             [LoggerMessage(LogLevel.Information, "Decoupled invocation of message: Topic:{Topic} Id:{Id}")]
             public static partial void DecoupledInvocationOfMessage(ILogger logger, string topic, string id);

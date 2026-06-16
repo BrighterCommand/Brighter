@@ -114,9 +114,9 @@ public class KafkaMessageProducerSendTests : IDisposable
         var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
         producer.Send(message);
         var producerConfirm = producer as ISupportPublishConfirmation;
-        producerConfirm.OnMessagePublished += delegate(bool success, string id)
+        producerConfirm.OnMessagePublished += delegate(PublishConfirmationResult result)
         {
-            if (success) messagePublished = true;
+            if (result.Success) messagePublished = true;
         };
 
         //ensure that the messages have flushed
