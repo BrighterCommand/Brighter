@@ -35,16 +35,11 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
-    // Regression-locks the BulkDispatchAsync guard change: the producer-type test in
-    // OutboxProducerMediator was relaxed from `IAmABulkMessageProducerAsync and not
-    // ISupportPublishConfirmation` to just `IAmABulkMessageProducerAsync`, so a producer that is
-    // BOTH bulk and confirming (Kafka in production; InMemoryMessageProducer here) now enters the
-    // bulk branch instead of falling through to the `else` that throws
-    // "No async bulk message producer defined.". The inner `is not ISupportPublishConfirmation &&
-    // sent` guard still defers MarkDispatched to the confirmation callback, so a confirming bulk
-    // producer must send the batch but never mark a message dispatched inline on send — only when
-    // the confirmation acks.
-    public class BulkDispatchConfirmingProducerTests
+    // Companion to BulkDispatchConfirmingProducerTests: locks the failure half of the bulk-dispatch
+    // guard change. PublishFailurePredicate is init-only on InMemoryMessageProducer (deliberately, so
+    // it can't be flipped at runtime), so this lives in its own fixture whose constructor seeds the
+    // always-nack predicate via the object initializer rather than assigning it inline in the test.
+    public class BulkDispatchConfirmingProducerConfirmationFailsTests
     {
         private readonly RoutingKey _topic = new("Bulk.Confirming.Producer.Topic");
         private readonly FakeTimeProvider _timeProvider = new();
@@ -54,17 +49,17 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
         private readonly InMemoryMessageProducer _producer;
         private readonly OutboxProducerMediator<Message, CommittableTransaction> _mediator;
 
-        public BulkDispatchConfirmingProducerTests()
+        public BulkDispatchConfirmingProducerConfirmationFailsTests()
         {
             // Arrange: an InMemory producer that is both a bulk producer and a confirming producer,
-            // with its async confirmation pump enabled so confirmations are raised through the
-            // mediator callback (rather than inline on send). A frozen clock keeps the outbox
-            // outstanding/dispatched windows deterministic.
+            // with its async confirmation pump enabled and every confirmation set to nack. A frozen
+            // clock keeps the outbox outstanding/dispatched windows deterministic.
             var bus = new InternalBus();
             _outbox = new InMemoryOutbox(_timeProvider);
             _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
             {
-                UseAsyncPublishConfirmation = true
+                UseAsyncPublishConfirmation = true,
+                PublishFailurePredicate = _ => true
             };
 
             var producerRegistry = new ProducerRegistry(
@@ -91,26 +86,30 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             new MessageBody("test"));
 
         [Fact]
-        public async Task When_bulk_dispatching_a_confirming_producer_dispatches_via_confirmation()
+        public async Task When_a_confirming_bulk_producer_confirmation_fails_does_not_dispatch_inline()
         {
-            // Arrange: two outstanding messages on one topic, so the bulk sweep forms a single batch.
-            var first = MessageOn(_topic);
-            var second = MessageOn(_topic);
-            _outbox.Add(first, _requestContext);
-            _outbox.Add(second, _requestContext);
+            // Arrange: the producer sends successfully but every confirmation nacks. InMemory's send
+            // always reports success, so `sent` is true — the only thing that could mark the message
+            // dispatched is the inline bulk path, which must be skipped for a confirming producer.
+            var message = MessageOn(_topic);
+            _outbox.Add(message, _requestContext);
 
-            // Act: bulk-clear the outbox. Before the guard change this threw
-            // InvalidOperationException for the confirming producer (caught and swallowed by the
-            // background clear), leaving both messages outstanding. DisposeAsync drains the pump so
-            // the success confirmations — and the MarkDispatched they defer — have flushed.
+            // Act: bulk-clear, then drain the failure confirmations (the failure path has no await
+            // before TripTopic, so DisposeAsync drains it to completion).
             await _mediator.ClearOutstandingFromOutboxAsync(
                 amountToClear: 10, minimumAge: TimeSpan.Zero, useBulk: true, _requestContext);
             await _producer.DisposeAsync();
 
-            // Assert: the batch was sent and each message marked dispatched via its confirmation.
+            // Assert: despite a successful send, the message is NOT dispatched — MarkDispatched was
+            // correctly deferred to a confirmation that never acked — so it stays outstanding for the
+            // Sweeper, and the failed confirmation tripped the breaker on the wire topic (FR-3). The
+            // trip also proves the bulk branch was entered: the pre-change throw would have sent
+            // nothing and tripped nothing.
             var dispatched = _outbox.DispatchedMessages(TimeSpan.Zero, _requestContext).ToList();
-            Assert.Contains(dispatched, m => m.Id == first.Id);
-            Assert.Contains(dispatched, m => m.Id == second.Id);
+            var outstanding = _outbox.OutstandingMessages(TimeSpan.Zero, _requestContext).ToList();
+            Assert.DoesNotContain(dispatched, m => m.Id == message.Id);
+            Assert.Contains(outstanding, m => m.Id == message.Id);
+            Assert.Contains(_topic, _circuitBreaker.TrippedTopics);
         }
     }
 }
