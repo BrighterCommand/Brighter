@@ -34,14 +34,14 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
         public void When_an_invalid_request_is_sent_should_throw_request_validation_exception()
         {
             //Arrange
-            var pipeline = ValidationPipeline.With(new GreetingCommandValidator());
+            var harness = CommandProcessorHarness.With(new GreetingCommandValidator());
             var command = new GreetingCommand { Name = "", Email = "ada@example.com" };
 
             //Act
-            var exception = Assert.Throws<RequestValidationException>(() => pipeline.CommandProcessor.Send(command));
+            var exception = Assert.Throws<RequestValidationException>(() => harness.CommandProcessor.Send(command));
 
             //Assert
-            Assert.False(pipeline.Receipt.Handled);
+            Assert.False(harness.Receipt.Handled);
             var error = Assert.Single(exception.Errors);
             Assert.Equal(nameof(GreetingCommand.Name), error.PropertyName);
             Assert.False(string.IsNullOrWhiteSpace(error.ErrorMessage));

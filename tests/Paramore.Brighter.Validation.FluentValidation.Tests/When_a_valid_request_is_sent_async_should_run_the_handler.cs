@@ -34,15 +34,15 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
         public async Task When_a_valid_request_is_sent_async_should_run_the_handler()
         {
             //Arrange
-            var pipeline = ValidationPipeline.WithAsync(new GreetingCommandValidator());
+            var harness = CommandProcessorHarness.WithAsync(new GreetingCommandValidator());
             var command = new GreetingCommand { Name = "Grace", Email = "grace@example.com" };
 
             //Act
-            await pipeline.CommandProcessor.SendAsync(command);
+            await harness.CommandProcessor.SendAsync(command);
 
             //Assert
-            Assert.True(pipeline.Receipt.Handled);
-            Assert.Equal("Grace", pipeline.Receipt.HandledName);
+            Assert.True(harness.Receipt.Handled);
+            Assert.Equal("Grace", harness.Receipt.HandledName);
         }
     }
 }

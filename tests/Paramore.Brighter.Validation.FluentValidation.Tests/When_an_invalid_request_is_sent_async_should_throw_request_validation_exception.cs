@@ -35,15 +35,15 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
         public async Task When_an_invalid_request_is_sent_async_should_throw_request_validation_exception()
         {
             //Arrange
-            var pipeline = ValidationPipeline.WithAsync(new GreetingCommandValidator());
+            var harness = CommandProcessorHarness.WithAsync(new GreetingCommandValidator());
             var command = new GreetingCommand { Name = "", Email = "" };
 
             //Act
             var exception = await Assert.ThrowsAsync<RequestValidationException>(
-                () => pipeline.CommandProcessor.SendAsync(command));
+                () => harness.CommandProcessor.SendAsync(command));
 
             //Assert
-            Assert.False(pipeline.Receipt.Handled);
+            Assert.False(harness.Receipt.Handled);
             Assert.NotEmpty(exception.Errors);
         }
     }

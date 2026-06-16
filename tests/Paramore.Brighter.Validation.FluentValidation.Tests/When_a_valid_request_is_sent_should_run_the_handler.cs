@@ -33,15 +33,15 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
         public void When_a_valid_request_is_sent_should_run_the_handler()
         {
             //Arrange
-            var pipeline = ValidationPipeline.With(new GreetingCommandValidator());
+            var harness = CommandProcessorHarness.With(new GreetingCommandValidator());
             var command = new GreetingCommand { Name = "Ada", Email = "ada@example.com" };
 
             //Act
-            pipeline.CommandProcessor.Send(command);
+            harness.CommandProcessor.Send(command);
 
             //Assert
-            Assert.True(pipeline.Receipt.Handled);
-            Assert.Equal("Ada", pipeline.Receipt.HandledName);
+            Assert.True(harness.Receipt.Handled);
+            Assert.Equal("Ada", harness.Receipt.HandledName);
         }
     }
 }

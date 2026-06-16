@@ -31,13 +31,14 @@ using global::FluentValidation;
 namespace Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles
 {
     /// <summary>
-    /// Test Data Builder that wires a real Brighter pipeline for <see cref="GreetingCommand"/> with the
-    /// FluentValidation handlers attached, so a test can focus on the evident data (the validator and the
-    /// request) rather than the container plumbing.
+    /// Test Data Builder that wires a real Brighter <see cref="Brighter.CommandProcessor"/> for
+    /// <see cref="GreetingCommand"/> with the FluentValidation handlers attached, and bundles it with the
+    /// <see cref="HandlerReceipt"/> the handler writes to, so a test can focus on the evident data (the
+    /// validator and the request) rather than the container plumbing.
     /// </summary>
-    internal sealed class ValidationPipeline
+    internal sealed class CommandProcessorHarness
     {
-        private ValidationPipeline(CommandProcessor commandProcessor, HandlerReceipt receipt)
+        private CommandProcessorHarness(CommandProcessor commandProcessor, HandlerReceipt receipt)
         {
             CommandProcessor = commandProcessor;
             Receipt = receipt;
@@ -51,17 +52,17 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles
         /// Builds a synchronous pipeline. Pass <paramref name="validator"/> as null to simulate a missing
         /// validator registration.
         /// </summary>
-        public static ValidationPipeline With(IValidator<GreetingCommand>? validator)
+        public static CommandProcessorHarness With(IValidator<GreetingCommand>? validator)
             => Build(validator, async: false);
 
         /// <summary>
         /// Builds an asynchronous pipeline. Pass <paramref name="validator"/> as null to simulate a missing
         /// validator registration.
         /// </summary>
-        public static ValidationPipeline WithAsync(IValidator<GreetingCommand>? validator)
+        public static CommandProcessorHarness WithAsync(IValidator<GreetingCommand>? validator)
             => Build(validator, async: true);
 
-        private static ValidationPipeline Build(IValidator<GreetingCommand>? validator, bool async)
+        private static CommandProcessorHarness Build(IValidator<GreetingCommand>? validator, bool async)
         {
             var receipt = new HandlerReceipt();
 
@@ -93,7 +94,7 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles
                 new ResiliencePipelineRegistry<string>(),
                 new InMemorySchedulerFactory());
 
-            return new ValidationPipeline(commandProcessor, receipt);
+            return new CommandProcessorHarness(commandProcessor, receipt);
         }
     }
 }
