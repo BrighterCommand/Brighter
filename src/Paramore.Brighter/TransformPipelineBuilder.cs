@@ -221,25 +221,29 @@ namespace Paramore.Brighter
                 return null;
 
             var wrapTransforms = UnionTransformSteps(
-                DescribeWrapSteps(syncMapperType, requestType, async: false),
-                DescribeWrapSteps(asyncMapperType, requestType, async: true));
+                DescribeWrapSteps(syncMapperType, requestType, fromAsyncMapper: false),
+                DescribeWrapSteps(asyncMapperType, requestType, fromAsyncMapper: true));
 
             var unwrapTransforms = UnionTransformSteps(
-                DescribeUnwrapSteps(syncMapperType, async: false),
-                DescribeUnwrapSteps(asyncMapperType, async: true));
+                DescribeUnwrapSteps(syncMapperType, fromAsyncMapper: false),
+                DescribeUnwrapSteps(asyncMapperType, fromAsyncMapper: true));
 
             var mapperType = syncMapperType ?? asyncMapperType!;
-            var isDefault = syncMapperType != null ? syncIsDefault : asyncIsDefault;
+
+            // The description is "from the default mapper" only when every mapper that contributed to it is a
+            // default; if any custom mapper resolved (e.g. an async-only registration while the sync side falls
+            // back to the default), its transforms must still be evaluated.
+            var isDefault = (syncMapperType is null || syncIsDefault) && (asyncMapperType is null || asyncIsDefault);
 
             return new TransformPipelineDescription(mapperType, isDefault, wrapTransforms, unwrapTransforms);
         }
 
-        private static List<TransformStepDescription> DescribeWrapSteps(Type? mapperType, Type requestType, bool async)
+        private static List<TransformStepDescription> DescribeWrapSteps(Type? mapperType, Type requestType, bool fromAsyncMapper)
         {
             if (mapperType == null)
                 return new List<TransformStepDescription>();
 
-            var mapToMessage = async
+            var mapToMessage = fromAsyncMapper
                 ? MapperMethodDiscovery.FindMapToMessageAsync(mapperType, requestType)
                 : MapperMethodDiscovery.FindMapToMessage(mapperType, requestType);
 
@@ -250,12 +254,12 @@ namespace Paramore.Brighter
                 : new List<TransformStepDescription>();
         }
 
-        private static List<TransformStepDescription> DescribeUnwrapSteps(Type? mapperType, bool async)
+        private static List<TransformStepDescription> DescribeUnwrapSteps(Type? mapperType, bool fromAsyncMapper)
         {
             if (mapperType == null)
                 return new List<TransformStepDescription>();
 
-            var mapToRequest = async
+            var mapToRequest = fromAsyncMapper
                 ? MapperMethodDiscovery.FindMapToRequestAsync(mapperType)
                 : MapperMethodDiscovery.FindMapToRequest(mapperType);
 
@@ -267,8 +271,8 @@ namespace Paramore.Brighter
         }
 
         private static List<TransformStepDescription> UnionTransformSteps(
-            IEnumerable<TransformStepDescription> sync, IEnumerable<TransformStepDescription> async)
-            => sync.Concat(async)
+            IEnumerable<TransformStepDescription> syncSteps, IEnumerable<TransformStepDescription> asyncSteps)
+            => syncSteps.Concat(asyncSteps)
                 .GroupBy(step => (step.TransformType, step.Step))
                 .Select(group => group.First())
                 .OrderByDescending(step => step.Step)
