@@ -80,7 +80,7 @@ This is a **tidy-first structural change** — adding a read-only `IAmAnOutbox? 
 
 ---
 
-## Task 5: Structural — New types: `OnceOnlyAction.Replay`, CausationId constants, role interfaces
+## Task 5: Structural — New types: `OnceOnlyAction.Replay`, CausationId constants, role interfaces ✅
 
 This is a **structural change** adding the new types needed before behavioral work. No behavior yet — just type definitions.
 

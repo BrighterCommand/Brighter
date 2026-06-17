@@ -36,6 +36,12 @@ namespace Paramore.Brighter.Inbox
         /// <summary>
         /// Log a WARN message when OnceOnly is true
         /// </summary>
-        Warn
+        Warn,
+        /// <summary>
+        /// When OnceOnly is true and a duplicate is detected, replay the outbox messages produced during the
+        /// original handling (by clearing their dispatched state so the sweeper resends them) instead of
+        /// re-running the handler. Requires causation-tracking inbox and outbox support.
+        /// </summary>
+        Replay
     }
 }
