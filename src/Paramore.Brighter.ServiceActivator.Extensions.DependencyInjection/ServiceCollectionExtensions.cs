@@ -210,6 +210,20 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             });
             services.AddSingleton<ISpecification<Subscription>>(_ =>
                 ConsumerValidationRules.RequestTypeSubtype());
+            services.AddSingleton<ISpecification<Subscription>>(sp =>
+            {
+                // The transformer-resolvability probe is registered by ValidatePipelines (a complete snapshot
+                // of the service collection). When it — or the mapper registry — is absent (e.g. AddConsumers
+                // without ValidatePipelines), the check is inert; validation only runs when ValidatePipelines
+                // is enabled, so the inert specification is never evaluated in that case.
+                var probe = sp.GetService<IAmATransformerResolvabilityProbe>();
+                var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
+                if (probe is null || mapperRegistryBuilder is null)
+                    return new Specification<Subscription>(_ => Array.Empty<ValidationResult>());
+
+                return ConsumerValidationRules.UnwrapTransformResolvable(
+                    ServiceCollectionExtensions.MessageMapperRegistry(sp), probe);
+            });
         }
     }
 }
