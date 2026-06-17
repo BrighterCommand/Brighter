@@ -181,7 +181,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ## Task 10: TEST + IMPLEMENT — Sync UseInboxHandler replays outbox on duplicate when Replay configured
 
-- [ ] **TEST + IMPLEMENT: Sync UseInboxHandler replays outbox messages when duplicate detected and OnceOnlyAction is Replay**
+- [x] **TEST + IMPLEMENT: Sync UseInboxHandler replays outbox messages when duplicate detected and OnceOnlyAction is Replay**
   - **USE COMMAND**: `/test-first when sync inbox handler detects duplicate with replay configured should clear outbox dispatch state`
   - Test location: `tests/Paramore.Brighter.Core.Tests/OnceOnly/`
   - Test file: `When_handling_duplicate_command_with_replay_should_clear_outbox_dispatch.cs`
