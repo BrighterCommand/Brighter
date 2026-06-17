@@ -142,7 +142,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ## Task 8: TEST + IMPLEMENT — Sync UseInboxHandler generates CausationId in Bag on first handling
 
-- [ ] **TEST + IMPLEMENT: Sync UseInboxHandler sets CausationId in RequestContext.Bag when handling a new command**
+- [x] **TEST + IMPLEMENT: Sync UseInboxHandler sets CausationId in RequestContext.Bag when handling a new command**
   - **USE COMMAND**: `/test-first when sync inbox handler handles new command should set causation id in context bag`
   - Test location: `tests/Paramore.Brighter.Core.Tests/OnceOnly/`
   - Test file: `When_handling_new_command_should_set_causation_id_in_context_bag.cs`

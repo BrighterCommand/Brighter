@@ -79,6 +79,9 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             var requestContext = Context as RequestContext;
 
+            if (requestContext is not null && !requestContext.Bag.ContainsKey(RequestContextBagNames.CausationId))
+                requestContext.Bag[RequestContextBagNames.CausationId] = request.Id.Value;
+
             if (_onceOnly)
             {
                  Log.CheckingIfCommandHasAlreadyBeenSeen(s_logger, request.Id.Value);
