@@ -72,7 +72,7 @@ public static class BrighterPipelineValidationExtensions
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
                 ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
-            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, ResolveInboxConfiguration(sp));
 
             var publications = ResolvePublications(sp);
             var subscriptions = ResolveSubscriptions(sp);
@@ -110,7 +110,7 @@ public static class BrighterPipelineValidationExtensions
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
                 ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
-            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, ResolveInboxConfiguration(sp));
             var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<PipelineDiagnosticWriter>();
 
             var publications = ResolvePublications(sp);
@@ -144,4 +144,12 @@ public static class BrighterPipelineValidationExtensions
         var subscriptions = consumerOptions?.Subscriptions?.ToList();
         return subscriptions is { Count: > 0 } ? subscriptions : null;
     }
+
+    /// <summary>
+    /// Resolves the global <see cref="InboxConfiguration"/> the runtime pipeline would use, so the
+    /// describe/validate paths inject the same global inbox attribute as <c>Build()</c> and do not drift.
+    /// Returns null when no consumer options are registered (matching the runtime, which receives null too).
+    /// </summary>
+    private static InboxConfiguration? ResolveInboxConfiguration(IServiceProvider sp)
+        => sp.GetService<IAmConsumerOptions>()?.InboxConfiguration;
 }

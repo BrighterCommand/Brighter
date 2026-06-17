@@ -50,7 +50,7 @@ This is a **tidy-first structural change** — adding a non-positional `Attribut
 
 ---
 
-## Task 3: Structural — `Describe()` includes global inbox attributes + `InboxConfiguration` passed to validation path
+## Task 3: Structural — `Describe()` includes global inbox attributes + `InboxConfiguration` passed to validation path ✅
 
 This is a **tidy-first structural change** — ensuring `PipelineBuilder.Describe()` includes global inbox attributes (matching what `Build()` does) and that `ValidatePipelines()` passes `InboxConfiguration` through.
 
