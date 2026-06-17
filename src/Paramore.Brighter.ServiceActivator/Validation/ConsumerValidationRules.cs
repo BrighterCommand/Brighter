@@ -141,7 +141,7 @@ public static class ConsumerValidationRules
                 return [];
 
             var description = TransformPipelineBuilder.DescribeTransforms(
-                mapperRegistry, subscription.RequestType);
+                mapperRegistry, subscription.RequestType, includeAsync: true);
 
             if (description is null)
                 return [];

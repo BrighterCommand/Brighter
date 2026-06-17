@@ -196,29 +196,83 @@ namespace Paramore.Brighter
         /// <returns>A <see cref="TransformPipelineDescription"/>, or null if no mapper is registered.</returns>
         public static TransformPipelineDescription? DescribeTransforms(
             MessageMapperRegistry mapperRegistry, Type requestType)
+            => DescribeTransforms(mapperRegistry, requestType, includeAsync: false);
+
+        /// <summary>
+        /// Describes the transform pipeline for a given request type using reflection only —
+        /// no mappers or transforms are instantiated. When <paramref name="includeAsync"/> is
+        /// <c>true</c>, the transforms declared by the async-resolved mapper are unioned with those
+        /// of the sync-resolved mapper (de-duplicated by transformer type and step), so a request
+        /// type served only by an async mapper is still described.
+        /// </summary>
+        /// <param name="mapperRegistry">The message mapper registry to resolve mapper types from.</param>
+        /// <param name="requestType">The request type to describe transforms for.</param>
+        /// <param name="includeAsync">Whether to also include the async-resolved mapper's transforms.</param>
+        /// <returns>A <see cref="TransformPipelineDescription"/>, or null if no mapper (sync or async) is registered.</returns>
+        public static TransformPipelineDescription? DescribeTransforms(
+            MessageMapperRegistry mapperRegistry, Type requestType, bool includeAsync)
         {
-            var (mapperType, isDefault) = mapperRegistry.ResolveMapperInfo(requestType);
-            if (mapperType == null)
+            var (syncMapperType, syncIsDefault) = mapperRegistry.ResolveMapperInfo(requestType);
+            var (asyncMapperType, asyncIsDefault) = includeAsync
+                ? mapperRegistry.ResolveAsyncMapperInfo(requestType)
+                : ((Type?)null, false);
+
+            if (syncMapperType == null && asyncMapperType == null)
                 return null;
 
-            var mapToMessage = MapperMethodDiscovery.FindMapToMessage(mapperType, requestType);
-            var wrapTransforms = mapToMessage != null
-                ? mapToMessage.GetOtherWrapsInPipeline()
-                    .OrderByDescending(a => a.Step)
-                    .Select(a => new TransformStepDescription(a.GetType(), a.GetHandlerType(), a.Step))
-                    .ToList()
-                : new List<TransformStepDescription>();
+            var wrapTransforms = UnionTransformSteps(
+                DescribeWrapSteps(syncMapperType, requestType, async: false),
+                DescribeWrapSteps(asyncMapperType, requestType, async: true));
 
-            var mapToRequest = MapperMethodDiscovery.FindMapToRequest(mapperType);
-            var unwrapTransforms = mapToRequest != null
-                ? mapToRequest.GetOtherUnwrapsInPipeline()
-                    .OrderByDescending(a => a.Step)
-                    .Select(a => new TransformStepDescription(a.GetType(), a.GetHandlerType(), a.Step))
-                    .ToList()
-                : new List<TransformStepDescription>();
+            var unwrapTransforms = UnionTransformSteps(
+                DescribeUnwrapSteps(syncMapperType, async: false),
+                DescribeUnwrapSteps(asyncMapperType, async: true));
+
+            var mapperType = syncMapperType ?? asyncMapperType!;
+            var isDefault = syncMapperType != null ? syncIsDefault : asyncIsDefault;
 
             return new TransformPipelineDescription(mapperType, isDefault, wrapTransforms, unwrapTransforms);
         }
+
+        private static List<TransformStepDescription> DescribeWrapSteps(Type? mapperType, Type requestType, bool async)
+        {
+            if (mapperType == null)
+                return new List<TransformStepDescription>();
+
+            var mapToMessage = async
+                ? MapperMethodDiscovery.FindMapToMessageAsync(mapperType, requestType)
+                : MapperMethodDiscovery.FindMapToMessage(mapperType, requestType);
+
+            return mapToMessage != null
+                ? mapToMessage.GetOtherWrapsInPipeline()
+                    .Select(a => new TransformStepDescription(a.GetType(), a.GetHandlerType(), a.Step))
+                    .ToList()
+                : new List<TransformStepDescription>();
+        }
+
+        private static List<TransformStepDescription> DescribeUnwrapSteps(Type? mapperType, bool async)
+        {
+            if (mapperType == null)
+                return new List<TransformStepDescription>();
+
+            var mapToRequest = async
+                ? MapperMethodDiscovery.FindMapToRequestAsync(mapperType)
+                : MapperMethodDiscovery.FindMapToRequest(mapperType);
+
+            return mapToRequest != null
+                ? mapToRequest.GetOtherUnwrapsInPipeline()
+                    .Select(a => new TransformStepDescription(a.GetType(), a.GetHandlerType(), a.Step))
+                    .ToList()
+                : new List<TransformStepDescription>();
+        }
+
+        private static List<TransformStepDescription> UnionTransformSteps(
+            IEnumerable<TransformStepDescription> sync, IEnumerable<TransformStepDescription> async)
+            => sync.Concat(async)
+                .GroupBy(step => (step.TransformType, step.Step))
+                .Select(group => group.First())
+                .OrderByDescending(step => step.Step)
+                .ToList();
 
         public static void ClearPipelineCache()
         {
