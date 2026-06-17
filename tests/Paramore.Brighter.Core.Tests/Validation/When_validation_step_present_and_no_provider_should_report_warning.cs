@@ -133,6 +133,26 @@ public class ValidationProviderRegisteredTests
     }
 
     [Fact]
+    public void When_sync_validation_step_present_and_only_async_provider_registered_should_report_warning()
+    {
+        // Arrange — sync validation step; only the ASYNC provider is registered, so the sync step is unbacked.
+        // The mirror of the async-step/only-sync-provider case — the rule must match modality to the right flag.
+        var description = DescriptionWith(
+            typeof(ValidateRequestAttribute), typeof(ValidateRequestHandler<>), isAsync: false, typeof(MyPublicSyncHandler));
+        var spec = HandlerPipelineValidationRules.ValidationProviderRegistered(
+            new ValidationProviderRegistrations(Sync: false, Async: true));
+
+        // Act
+        var satisfied = spec.IsSatisfiedBy(description);
+        var results = Evaluate(spec);
+
+        // Assert
+        Assert.False(satisfied);
+        Assert.Single(results);
+        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
+    }
+
+    [Fact]
     public void When_sync_validation_step_present_and_sync_provider_registered_should_report_no_warning()
     {
         // Arrange — sync validation step, sync provider registered

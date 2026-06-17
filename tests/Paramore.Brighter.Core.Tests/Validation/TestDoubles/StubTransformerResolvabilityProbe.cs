@@ -5,7 +5,7 @@ namespace Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 
 /// <summary>
 /// A configurable <see cref="IAmATransformerResolvabilityProbe"/> for tests. The supplied delegate
-/// decides resolvability per transformer type, and may throw to exercise the rule's error guard.
+/// decides resolvability per transformer type.
 /// </summary>
 public sealed class StubTransformerResolvabilityProbe(Func<Type, bool> resolves) : IAmATransformerResolvabilityProbe
 {

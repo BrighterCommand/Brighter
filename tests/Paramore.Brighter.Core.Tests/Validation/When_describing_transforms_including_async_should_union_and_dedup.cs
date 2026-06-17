@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
+using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
@@ -32,6 +33,28 @@ public class DescribeTransformsIncludingAsyncTests
     private static MessageMapperRegistry EmptyRegistry() => new(
         new SimpleMessageMapperFactory(_ => null!),
         new SimpleMessageMapperFactoryAsync(_ => null!));
+
+    [Fact]
+    public void When_describing_multiple_transforms_they_are_unioned_and_ordered_by_descending_step()
+    {
+        // Arrange — a mapper declaring two distinct wrap transforms: MyDescribableTransform at step 1 and
+        // CompressPayloadTransformer at step 0. The union must keep both and order them by descending step.
+        var registry = EmptyRegistry();
+        registry.Register<MyDescribableCommand, MyTwoWrapDescribableCommandMessageMapper>();
+        TransformPipelineBuilder.ClearPipelineCache();
+
+        // Act
+        var description = TransformPipelineBuilder.DescribeTransforms(
+            registry, typeof(MyDescribableCommand), includeAsync: true);
+
+        // Assert — both transforms present, highest step first
+        Assert.NotNull(description);
+        Assert.Equal(2, description!.WrapTransforms.Count);
+        Assert.Equal(typeof(MyDescribableTransform), description.WrapTransforms[0].TransformType);
+        Assert.Equal(1, description.WrapTransforms[0].Step);
+        Assert.Equal(typeof(CompressPayloadTransformer), description.WrapTransforms[1].TransformType);
+        Assert.Equal(0, description.WrapTransforms[1].Step);
+    }
 
     [Fact]
     public void When_describing_with_async_a_transform_declared_on_both_mappers_is_reported_once()
