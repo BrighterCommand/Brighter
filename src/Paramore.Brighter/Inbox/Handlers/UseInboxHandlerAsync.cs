@@ -45,6 +45,7 @@ namespace Paramore.Brighter.Inbox.Handlers
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<UseInboxHandlerAsync<T>>();
 
         private readonly IAmAnInboxAsync _inbox;
+        private readonly IAmACausationTrackingOutbox? _outbox;
         private bool _onceOnly;
         private string? _contextKey;
         private OnceOnlyAction _onceOnlyAction;
@@ -53,9 +54,12 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// Initializes a new instance of the <see cref="UseInboxHandlerAsync{T}" /> class.
         /// </summary>
         /// <param name="inbox">The store for commands that pass into the system</param>
-        public UseInboxHandlerAsync(IAmAnInboxAsync inbox)
+        /// <param name="outbox">An optional causation-tracking outbox, used to replay messages when a duplicate is
+        /// seen and <see cref="OnceOnlyAction.Replay"/> is configured. Resolved from DI when registered.</param>
+        public UseInboxHandlerAsync(IAmAnInboxAsync inbox, IAmACausationTrackingOutbox? outbox = null)
         {
             _inbox = inbox;
+            _outbox = outbox;
         }
         
         
@@ -103,6 +107,23 @@ namespace Paramore.Brighter.Inbox.Handlers
                     Log.CommandHasBeenSeenWarning(s_logger, command.Id.Value);
                     return command;
                 }
+
+                if (exists && _onceOnlyAction is OnceOnlyAction.Replay)
+                {
+                    Log.CommandHasBeenSeenReplayingOutbox(s_logger, command.Id.Value);
+
+                    if (_inbox is IAmACausationTrackingInbox trackingInbox && _outbox is not null)
+                    {
+                        var causationId = await trackingInbox
+                            .GetCausationIdAsync(command.Id.Value, _contextKey, requestContext, -1, cancellationToken)
+                            .ConfigureAwait(ContinueOnCapturedContext);
+                        if (causationId is not null)
+                            await _outbox.ReplayCausationAsync(causationId, requestContext, cancellationToken: cancellationToken)
+                                .ConfigureAwait(ContinueOnCapturedContext);
+                    }
+
+                    return command;
+                }
             }
 
             Log.WritingCommandToInbox(s_logger, command.Id.Value);
@@ -126,6 +147,9 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             [LoggerMessage(LogLevel.Warning, "Command {Id} has already been seen")]
             public static partial void CommandHasBeenSeenWarning(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Debug, "Command {Id} has already been seen; replaying its outbox messages")]
+            public static partial void CommandHasBeenSeenReplayingOutbox(ILogger logger, string id);
 
             [LoggerMessage(LogLevel.Debug, "Writing command {Id} to the Inbox")]
             public static partial void WritingCommandToInbox(ILogger logger, string id);
