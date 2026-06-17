@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
@@ -78,8 +77,8 @@ namespace Paramore.Brighter.Inbox.Handlers
             if (_contextKey is null)
                 throw new ArgumentException("ContextKey must be set before Handling");
 
-            var requestContext = InitRequestContext();
-            
+            var requestContext = Context as RequestContext;
+
             if (_onceOnly)
             {
                  Log.CheckingIfCommandHasAlreadyBeenSeen(s_logger, request.Id.Value);
@@ -106,14 +105,6 @@ namespace Paramore.Brighter.Inbox.Handlers
             _inbox.Add(request, _contextKey, requestContext);
 
             return handledCommand;
-        }
-
-        private RequestContext InitRequestContext()
-        {
-            return new RequestContext()
-            {
-                Span = Activity.Current
-            };
         }
 
         private static partial class Log

@@ -62,6 +62,12 @@ namespace Paramore.Brighter
         public IRequestContext? Context { get; set; }
 
         /// <summary>
+        /// Gets the <see cref="InstrumentationOptions"/> configured for this handler, controlling how deep instrumentation goes.
+        /// Exposed to derived handlers so they can gate their own telemetry on <see cref="InstrumentationOptions.Brighter"/>.
+        /// </summary>
+        protected InstrumentationOptions InstrumentationOptions => instrumentationOptions;
+
+        /// <summary>
         /// Gets the name.
         /// </summary>
         /// <value>The name.</value>

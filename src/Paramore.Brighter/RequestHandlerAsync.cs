@@ -64,6 +64,12 @@ namespace Paramore.Brighter
         public IRequestContext? Context { get; set; }
 
         /// <summary>
+        /// Gets the <see cref="InstrumentationOptions"/> configured for this handler, controlling how deep instrumentation goes.
+        /// Exposed to derived handlers so they can gate their own telemetry on <see cref="InstrumentationOptions.Brighter"/>.
+        /// </summary>
+        protected InstrumentationOptions InstrumentationOptions => instrumentationOptions;
+
+        /// <summary>
         /// If false we use a thread from the thread pool to run any continuation, if true we use the originating thread.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
         /// or access the Result or otherwise block. You may need the originating thread if you need to access thread specific storage

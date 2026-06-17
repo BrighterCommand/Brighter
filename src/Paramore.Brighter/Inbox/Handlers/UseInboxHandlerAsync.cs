@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -65,9 +64,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             _onceOnly = (bool?) initializerList[0] ?? false;
             _contextKey = (string?)initializerList[1];
             _onceOnlyAction = (OnceOnlyAction?)initializerList[2] ?? OnceOnlyAction.Throw;
-            
-            base.InitializeFromAttributeParams(initializerList);
-            
+
             base.InitializeFromAttributeParams(initializerList);
         }
 
@@ -82,8 +79,8 @@ namespace Paramore.Brighter.Inbox.Handlers
             if (_contextKey is null)
                 throw new ArgumentException("ContextKey must be set before Handling");
 
-            var requestContext = InitRequestContext();
-            
+            var requestContext = Context as RequestContext;
+
             if (_onceOnly)
             {
                 Log.CheckingIfCommandHasBeenSeen(s_logger, command.Id.Value);
@@ -116,14 +113,6 @@ namespace Paramore.Brighter.Inbox.Handlers
             return handledCommand;
         }
 
-        private RequestContext InitRequestContext()
-        {
-            return new RequestContext()
-            {
-                Span = Activity.Current
-            };
-        }
-        
         private static partial class Log
         {
             [LoggerMessage(LogLevel.Debug, "Checking if command {Id} has already been seen")]
