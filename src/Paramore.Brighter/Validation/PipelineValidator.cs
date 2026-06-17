@@ -36,16 +36,20 @@ namespace Paramore.Brighter.Validation;
 /// <param name="publications">Optional publications to validate against producer rules.</param>
 /// <param name="subscriptions">Optional subscriptions to validate against consumer rules.</param>
 /// <param name="consumerSpecs">Optional consumer validation specifications.</param>
+/// <param name="providerRegistrations">Optional validation-provider registrations. When supplied, the
+/// validation-provider check runs over handler pipelines; null (the default) leaves it inert.</param>
 public class PipelineValidator(
     PipelineBuilder<IRequest> pipelineBuilder,
     IEnumerable<Publication>? publications = null,
     IEnumerable<Subscription>? subscriptions = null,
-    IEnumerable<ISpecification<Subscription>>? consumerSpecs = null) : IAmAPipelineValidator
+    IEnumerable<ISpecification<Subscription>>? consumerSpecs = null,
+    ValidationProviderRegistrations? providerRegistrations = null) : IAmAPipelineValidator
 {
     private readonly PipelineBuilder<IRequest> _pipelineBuilder = pipelineBuilder;
     private readonly IEnumerable<Publication>? _publications = publications;
     private readonly IEnumerable<Subscription>? _subscriptions = subscriptions;
     private readonly IEnumerable<ISpecification<Subscription>>? _consumerSpecs = consumerSpecs;
+    private readonly ValidationProviderRegistrations? _providerRegistrations = providerRegistrations;
 
     /// <inheritdoc />
     public PipelineValidationResult Validate()
@@ -65,12 +69,15 @@ public class PipelineValidator(
     private void ValidateHandlerPipelines(List<ValidationError> findings)
     {
         var descriptions = _pipelineBuilder.Describe();
-        var specs = new ISpecification<HandlerPipelineDescription>[]
+        var specs = new List<ISpecification<HandlerPipelineDescription>>
         {
             HandlerPipelineValidationRules.HandlerTypeVisibility(),
             HandlerPipelineValidationRules.BackstopAttributeOrdering(),
             HandlerPipelineValidationRules.AttributeAsyncConsistency()
         };
+
+        if (_providerRegistrations is not null)
+            specs.Add(HandlerPipelineValidationRules.ValidationProviderRegistered(_providerRegistrations));
 
         EvaluateSpecs(descriptions, specs, findings);
     }

@@ -29,6 +29,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.RequestValidation.Handlers;
 using Paramore.Brighter.Validation;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection;
@@ -52,6 +53,10 @@ public static class BrighterPipelineValidationExtensions
 
         builder.Services.Configure<BrighterPipelineValidationOptions>(o => o.ThrowOnError = throwOnError);
 
+        var providerRegistrations = new ValidationProviderRegistrations(
+            Sync: builder.Services.Any(d => d.ServiceType == typeof(ValidateRequestHandler<>)),
+            Async: builder.Services.Any(d => d.ServiceType == typeof(ValidateRequestHandlerAsync<>)));
+
         builder.Services.TryAddSingleton<IAmAPipelineValidator>(sp =>
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
@@ -63,7 +68,7 @@ public static class BrighterPipelineValidationExtensions
             var consumerSpecs = sp.GetServices<ISpecification<Subscription>>();
             var consumerSpecList = consumerSpecs.Any() ? consumerSpecs : null;
 
-            return new PipelineValidator(pipelineBuilder, publications, subscriptions, consumerSpecList);
+            return new PipelineValidator(pipelineBuilder, publications, subscriptions, consumerSpecList, providerRegistrations);
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterValidationHostedService>();
