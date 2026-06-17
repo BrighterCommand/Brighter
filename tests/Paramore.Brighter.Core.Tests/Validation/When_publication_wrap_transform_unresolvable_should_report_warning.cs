@@ -141,6 +141,30 @@ public class WrapTransformResolvableTests
     }
 
     [Fact]
+    public void When_publication_resolves_to_default_mapper_should_report_no_warning()
+    {
+        // Arrange — no custom mapper is registered, so the request type resolves to the default
+        // JsonMessageMapper, which declares a [CloudEvents] wrap transform. The default mapper's transforms
+        // are Brighter built-ins and out of scope, so even a probe that resolves nothing must not warn.
+        var registry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => null!),
+            new SimpleMessageMapperFactoryAsync(_ => null!),
+            typeof(JsonMessageMapper<>),
+            typeof(JsonMessageMapper<>));
+        TransformPipelineBuilder.ClearPipelineCache();
+        var spec = ProducerValidationRules.WrapTransformResolvable(registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+        var publication = PublicationFor<MyDescribableCommand>("greeting");
+
+        // Act
+        var satisfied = spec.IsSatisfiedBy(publication);
+        var results = spec.Accept(new ValidationResultCollector<Publication>()).ToList();
+
+        // Assert — the default mapper's declared transform is skipped, so no warning
+        Assert.True(satisfied);
+        Assert.Empty(results);
+    }
+
+    [Fact]
     public void When_publication_has_resolvable_and_unresolvable_wrap_transforms_should_report_one_warning()
     {
         // Arrange — mapper declares two wrap transforms; the probe resolves one (MyDescribableTransform)

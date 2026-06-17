@@ -65,8 +65,9 @@ public static class ProducerValidationRules
     /// A declared transform whose transformer type is not registered is a strong signal that its assembly
     /// was not scanned. Reports one <see cref="ValidationSeverity.Warning"/> per
     /// unresolvable transform, naming the request type, the transformer type, the topic, and prompting an
-    /// <c>AutoFromAssemblies</c> check. Publications with a null <see cref="Publication.RequestType"/> — or
-    /// whose request type resolves to no mapper — are skipped.
+    /// <c>AutoFromAssemblies</c> check. Publications with a null <see cref="Publication.RequestType"/>, whose
+    /// request type resolves to no mapper, or whose request type resolves to the default mapper (whose
+    /// transforms are Brighter built-ins and out of scope) are skipped.
     /// </summary>
     /// <param name="mapperRegistry">The mapper registry used to describe the publication's transforms.</param>
     /// <param name="probe">Answers whether a declared transformer type is resolvable, without instantiating it.</param>
@@ -81,7 +82,7 @@ public static class ProducerValidationRules
             var description = TransformPipelineBuilder.DescribeTransforms(
                 mapperRegistry, publication.RequestType, includeAsync: true);
 
-            if (description is null)
+            if (description is null || description.IsDefaultMapper)
                 return [];
 
             return description.WrapTransforms
