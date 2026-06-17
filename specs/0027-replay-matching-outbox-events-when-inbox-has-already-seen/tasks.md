@@ -118,7 +118,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ## Task 7: TEST + IMPLEMENT — InMemoryOutbox stores CausationId and replays by clearing dispatch state
 
-- [ ] **TEST + IMPLEMENT: InMemoryOutbox reads CausationId from RequestContext.Bag on Add and ReplayCausation clears TimeFlushed**
+- [x] **TEST + IMPLEMENT: InMemoryOutbox reads CausationId from RequestContext.Bag on Add and ReplayCausation clears TimeFlushed**
   - **USE COMMAND**: `/test-first when replaying causation on outbox should clear dispatch state for matching messages`
   - Test location: `tests/Paramore.Brighter.Core.Tests/OnceOnly/`
   - Test file: `When_replaying_causation_on_outbox_should_clear_dispatch_state.cs`
