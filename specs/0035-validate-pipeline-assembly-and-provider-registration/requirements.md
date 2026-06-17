@@ -50,9 +50,9 @@ For each configured `Subscription`, if the resolved mapper for its `RequestType`
 Each missing transform MUST be reported as its own warning; a resolvable transform MUST NOT suppress a warning about a different, missing transform on the same mapper.
 - Example: A mapper declaring `[Compress]` (resolvable) and a second custom wrap transform (not resolvable) produces exactly one warning — for the unresolvable transform.
 
-**FR-4 — No warning when all declared transforms resolve, or none are declared.**
-For a `Publication`/`Subscription` whose resolved mapper declares no transforms, or declares only transforms whose transformer types all resolve, check (A) MUST NOT emit any warning for that entity. In particular, the default mapper (`JsonMessageMapper<>`) declares a `[CloudEvents]` wrap transform whose transformer (`CloudEventsTransformer`) is registered by default and therefore resolves — so a publication/subscription resolving to the default mapper MUST NOT produce a transform warning (the declared transform resolves; it is not that none is declared).
-- Example: A `Publication` for `RequestType = FarewellMade` resolving to the default `JsonMessageMapper`, whose `[CloudEvents]` transform resolves to the registered `CloudEventsTransformer`, produces zero (A) warnings.
+**FR-4 — No warning when all declared transforms resolve, none are declared, or the default mapper is used.**
+For a `Publication`/`Subscription` whose resolved mapper declares no transforms, or declares only transforms whose transformer types all resolve, check (A) MUST NOT emit any warning for that entity. In particular, a publication/subscription whose request type resolves to the **default mapper** (the built-in `JsonMessageMapper<>`, which declares a `[CloudEvents]` wrap transform) MUST NOT produce a transform warning: the default mapper is a Brighter built-in and is **out of scope** for check (A), so its transforms are not checked — regardless of whether the transformer happens to be registered. (This keeps a configuration that relies on the default mapper from being warned about Brighter's own built-in transform — NFR-5.)
+- Example: A `Publication` for `RequestType = FarewellMade` resolving to the default `JsonMessageMapper` (which declares a `[CloudEvents]` transform) produces zero (A) warnings — the default mapper's transforms are out of scope.
 
 **FR-5 — Transforms reflected from each registered mapper type; identity is the transformer type.**
 Transform attributes MUST be reflected from each mapper type that `ResolveMapperInfo` / `ResolveAsyncMapperInfo` resolves for the request (sync and/or async — the union, so a transform declared only on the async mapper is still evaluated when only the async mapper is resolved). The reported transform identity MUST be the transformer type name returned by the attribute's `GetHandlerType()` (e.g. `CompressPayloadTransformer`), not the attribute name.
@@ -135,10 +135,10 @@ Given a `Publication` whose resolved mapper declares two wrap transforms, one wh
 When `ValidatePipelines()` runs,
 Then exactly one (A) warning is produced — for the unresolvable transform.
 
-**AC-4** (FR-4) — *All transforms resolvable yields no (A) warning.*
-Given a `Publication` for `RequestType = FarewellMade` resolving to the default `JsonMessageMapper`, whose declared `[CloudEvents]` transform resolves to the registered `CloudEventsTransformer`,
+**AC-4** (FR-4) — *Default mapper / all-resolvable yields no (A) warning.*
+Given a `Publication` for `RequestType = FarewellMade` resolving to the default `JsonMessageMapper` (which declares a `[CloudEvents]` transform),
 When `ValidatePipelines()` runs,
-Then no (A) warnings are produced for that publication.
+Then no (A) warnings are produced for that publication (the default mapper's transforms are out of scope).
 
 **AC-5** (FR-5) — *Transform on an async-only resolved mapper is evaluated and reported by transformer type.*
 Given a `Subscription` with `RequestType = GreetingMade` for which only an async mapper resolves, that mapper declares `[Decompress]`, and `CompressPayloadTransformer` is not registered,

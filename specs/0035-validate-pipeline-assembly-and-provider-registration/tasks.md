@@ -84,18 +84,18 @@ Ordered so dependencies come first: default probe → producer (A) rule → cons
   - Depends on: the `WrapTransformResolvable` task above.
   - Traces to: FR-3, AC-3.
 
-- [ ] **TEST + IMPLEMENT: All wrap transforms resolvable (incl. default mapper's `[CloudEvents]`) yields no (A) warning.**
-  - **USE COMMAND**: `/test-first a Publication resolving to the default JsonMessageMapper whose [CloudEvents] transform resolves to the registered CloudEventsTransformer produces zero wrap-transform warnings`
+- [ ] **TEST + IMPLEMENT: A publication resolving to the default mapper yields no (A) warning (default mapper out of scope).**
+  - **USE COMMAND**: `/test-first a Publication that resolves to the default mapper produces no producer wrap-transform warning even when that default mapper's declared transformer is not resolvable`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation/"
-  - Test file: `When_publication_all_wrap_transforms_resolvable_should_report_no_warning.cs`
+  - Test fact: `When_publication_resolves_to_default_mapper_should_report_no_warning` (added to the existing `WrapTransformResolvableTests` class)
   - Test should verify:
-    - For a `Publication` (`RequestType = FarewellMade`) resolving to the default `JsonMessageMapper<>` whose `[CloudEvents]` transform's `CloudEventsTransformer` the probe reports as resolving, `IsSatisfiedBy` is true and zero findings are produced.
-    - A publication whose mapper declares no transforms also produces zero findings.
+    - For a `Publication` resolving to the default `JsonMessageMapper<>` (registry built with `JsonMessageMapper<>` as the default, no custom mapper for the request type) and a probe that resolves **nothing**, `IsSatisfiedBy` is true and zero findings are produced — the default mapper's `[CloudEvents]` wrap transform is skipped.
+    - A publication whose mapper declares no transforms also produces zero findings (existing facts).
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Be satisfied by `WrapTransformResolvable` already (a resolving probe yields nothing). No new production code expected; this pins FR-4 behavior.
+    - Add a short-circuit to `WrapTransformResolvable`: `if (description is null || description.IsDefaultMapper) return [];` so the default mapper's built-in transforms are never checked (FR-4/NFR-5). The consumer rule needs no guard (the default mapper declares no unwrap transform).
   - Depends on: the `WrapTransformResolvable` task.
-  - Traces to: FR-4, AC-4.
+  - Traces to: FR-4, AC-4, NFR-5.
 
 - [ ] **TEST + IMPLEMENT: Wrap transform on an async-only-resolved mapper is evaluated (producer FR-5).**
   - **USE COMMAND**: `/test-first a Publication for which only an async mapper resolves, declaring a wrap transform whose transformer type is not resolvable, still produces a Warning naming the request type and the transformer type`
@@ -245,7 +245,7 @@ Ordered so dependencies come first: default probe → producer (A) rule → cons
 | FR-1 (missing wrap transform → Warning) | "Missing wrap-transform on a Publication produces a Warning" |
 | FR-2 (missing unwrap transform → Warning; null RequestType skipped) | "Missing unwrap-transform on a Subscription produces a Warning (and null-RequestType subscription is skipped)" |
 | FR-3 (independent per-transform; resolvable doesn't suppress) | "A resolvable wrap transform does not suppress an unresolvable one" |
-| FR-4 (all resolve / none declared → no (A) warning; default mapper `[CloudEvents]`) | "All wrap transforms resolvable … yields no (A) warning" |
+| FR-4 (all resolve / none declared / default mapper → no (A) warning) | "A publication resolving to the default mapper yields no (A) warning" + the custom-mapper all-resolvable / no-transforms facts |
 | FR-5 (async-only-resolved mapper evaluated, publications **and** subscriptions; identity = `GetHandlerType()`) | Consumer "Transform on an async-only-resolved mapper is evaluated …" (adds the async-aware `DescribeTransforms` overload test-first) + producer "Wrap transform on an async-only-resolved mapper is evaluated (producer FR-5)" |
 | FR-6 (message from configured/declared info only) | "Missing wrap-transform … produces a Warning" (message-content assertions) |
 | FR-7 (validation step + no provider → Warning naming three Use*()) | "A validation pipeline step present with no provider registered produces a Warning …" |
