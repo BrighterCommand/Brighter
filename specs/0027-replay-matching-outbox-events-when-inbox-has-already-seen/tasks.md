@@ -97,7 +97,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ## Task 6: TEST + IMPLEMENT — InMemoryInbox stores CausationId and retrieves it
 
-- [ ] **TEST + IMPLEMENT: InMemoryInbox reads CausationId from RequestContext.Bag on Add and returns it via GetCausationId**
+- [x] **TEST + IMPLEMENT: InMemoryInbox reads CausationId from RequestContext.Bag on Add and returns it via GetCausationId**
   - **USE COMMAND**: `/test-first when adding to inbox with CausationId in context bag should store and retrieve it`
   - Test location: `tests/Paramore.Brighter.Core.Tests/OnceOnly/`
   - Test file: `When_adding_to_inbox_with_causation_id_should_store_and_retrieve.cs`
