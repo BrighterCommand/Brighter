@@ -57,6 +57,9 @@ public static class BrighterPipelineValidationExtensions
             Sync: builder.Services.Any(d => d.ServiceType == typeof(ValidateRequestHandler<>)),
             Async: builder.Services.Any(d => d.ServiceType == typeof(ValidateRequestHandlerAsync<>)));
 
+        builder.Services.TryAddSingleton<IAmATransformerResolvabilityProbe>(
+            new ServiceCollectionTransformerResolvabilityProbe(builder.Services));
+
         builder.Services.TryAddSingleton<IAmAPipelineValidator>(sp =>
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
@@ -68,7 +71,15 @@ public static class BrighterPipelineValidationExtensions
             var consumerSpecs = sp.GetServices<ISpecification<Subscription>>();
             var consumerSpecList = consumerSpecs.Any() ? consumerSpecs : null;
 
-            return new PipelineValidator(pipelineBuilder, publications, subscriptions, consumerSpecList, providerRegistrations);
+            var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
+            var mapperRegistry = mapperRegistryBuilder != null
+                ? ServiceCollectionExtensions.MessageMapperRegistry(sp)
+                : null;
+            var transformerProbe = sp.GetService<IAmATransformerResolvabilityProbe>();
+
+            return new PipelineValidator(
+                pipelineBuilder, publications, subscriptions, consumerSpecList,
+                providerRegistrations, mapperRegistry, transformerProbe);
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterValidationHostedService>();

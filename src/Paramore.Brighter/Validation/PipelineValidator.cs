@@ -38,18 +38,26 @@ namespace Paramore.Brighter.Validation;
 /// <param name="consumerSpecs">Optional consumer validation specifications.</param>
 /// <param name="providerRegistrations">Optional validation-provider registrations. When supplied, the
 /// validation-provider check runs over handler pipelines; null (the default) leaves it inert.</param>
+/// <param name="mapperRegistry">Optional mapper registry used to describe a publication's transforms.
+/// Together with <paramref name="transformerProbe"/> it enables the producer wrap-transform check.</param>
+/// <param name="transformerProbe">Optional probe answering whether a declared transformer type is resolvable.
+/// Together with <paramref name="mapperRegistry"/> it enables the producer wrap-transform check.</param>
 public class PipelineValidator(
     PipelineBuilder<IRequest> pipelineBuilder,
     IEnumerable<Publication>? publications = null,
     IEnumerable<Subscription>? subscriptions = null,
     IEnumerable<ISpecification<Subscription>>? consumerSpecs = null,
-    ValidationProviderRegistrations? providerRegistrations = null) : IAmAPipelineValidator
+    ValidationProviderRegistrations? providerRegistrations = null,
+    MessageMapperRegistry? mapperRegistry = null,
+    IAmATransformerResolvabilityProbe? transformerProbe = null) : IAmAPipelineValidator
 {
     private readonly PipelineBuilder<IRequest> _pipelineBuilder = pipelineBuilder;
     private readonly IEnumerable<Publication>? _publications = publications;
     private readonly IEnumerable<Subscription>? _subscriptions = subscriptions;
     private readonly IEnumerable<ISpecification<Subscription>>? _consumerSpecs = consumerSpecs;
     private readonly ValidationProviderRegistrations? _providerRegistrations = providerRegistrations;
+    private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistry;
+    private readonly IAmATransformerResolvabilityProbe? _transformerProbe = transformerProbe;
 
     /// <inheritdoc />
     public PipelineValidationResult Validate()
@@ -86,11 +94,14 @@ public class PipelineValidator(
     {
         if (_publications == null) return;
 
-        var specs = new ISpecification<Publication>[]
+        var specs = new List<ISpecification<Publication>>
         {
             ProducerValidationRules.PublicationRequestTypeSet(),
             ProducerValidationRules.PublicationRequestTypeImplementsIRequest()
         };
+
+        if (_mapperRegistry is not null && _transformerProbe is not null)
+            specs.Add(ProducerValidationRules.WrapTransformResolvable(_mapperRegistry, _transformerProbe));
 
         EvaluateSpecs(_publications, specs, findings);
     }
