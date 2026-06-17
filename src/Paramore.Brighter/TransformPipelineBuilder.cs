@@ -217,57 +217,42 @@ namespace Paramore.Brighter
                 ? mapperRegistry.ResolveAsyncMapperInfo(requestType)
                 : ((Type?)null, false);
 
-            if (syncMapperType == null && asyncMapperType == null)
+            if (syncMapperType is null && asyncMapperType is null)
                 return null;
 
             var wrapTransforms = UnionTransformSteps(
-                DescribeWrapSteps(syncMapperType, requestType, fromAsyncMapper: false),
-                DescribeWrapSteps(asyncMapperType, requestType, fromAsyncMapper: true));
+                DescribeSteps(syncMapperType, type => MapperMethodDiscovery.FindMapToMessage(type, requestType), method => method.GetOtherWrapsInPipeline()),
+                DescribeSteps(asyncMapperType, type => MapperMethodDiscovery.FindMapToMessageAsync(type, requestType), method => method.GetOtherWrapsInPipeline()));
 
             var unwrapTransforms = UnionTransformSteps(
-                DescribeUnwrapSteps(syncMapperType, fromAsyncMapper: false),
-                DescribeUnwrapSteps(asyncMapperType, fromAsyncMapper: true));
+                DescribeSteps(syncMapperType, MapperMethodDiscovery.FindMapToRequest, method => method.GetOtherUnwrapsInPipeline()),
+                DescribeSteps(asyncMapperType, MapperMethodDiscovery.FindMapToRequestAsync, method => method.GetOtherUnwrapsInPipeline()));
 
             var mapperType = syncMapperType ?? asyncMapperType!;
-
-            // The description is "from the default mapper" only when every mapper that contributed to it is a
-            // default; if any custom mapper resolved (e.g. an async-only registration while the sync side falls
-            // back to the default), its transforms must still be evaluated.
-            var isDefault = (syncMapperType is null || syncIsDefault) && (asyncMapperType is null || asyncIsDefault);
+            var isDefault = AllResolvedMappersAreDefault(syncMapperType, syncIsDefault, asyncMapperType, asyncIsDefault);
 
             return new TransformPipelineDescription(mapperType, isDefault, wrapTransforms, unwrapTransforms);
         }
 
-        private static List<TransformStepDescription> DescribeWrapSteps(Type? mapperType, Type requestType, bool fromAsyncMapper)
+        // The description is "from the default mapper" only when every mapper that contributed to it is a default;
+        // if any custom mapper resolved (e.g. an async-only registration while the sync side falls back to the
+        // default), its transforms must still be evaluated.
+        private static bool AllResolvedMappersAreDefault(
+            Type? syncMapperType, bool syncIsDefault, Type? asyncMapperType, bool asyncIsDefault)
+            => (syncMapperType is null || syncIsDefault) && (asyncMapperType is null || asyncIsDefault);
+
+        private static List<TransformStepDescription> DescribeSteps(
+            Type? mapperType,
+            Func<Type, MethodInfo?> findMapperMethod,
+            Func<MethodInfo, IEnumerable<TransformAttribute>> getTransforms)
         {
-            if (mapperType == null)
-                return new List<TransformStepDescription>();
-
-            var mapToMessage = fromAsyncMapper
-                ? MapperMethodDiscovery.FindMapToMessageAsync(mapperType, requestType)
-                : MapperMethodDiscovery.FindMapToMessage(mapperType, requestType);
-
-            return mapToMessage != null
-                ? mapToMessage.GetOtherWrapsInPipeline()
-                    .Select(a => new TransformStepDescription(a.GetType(), a.GetHandlerType(), a.Step))
-                    .ToList()
-                : new List<TransformStepDescription>();
-        }
-
-        private static List<TransformStepDescription> DescribeUnwrapSteps(Type? mapperType, bool fromAsyncMapper)
-        {
-            if (mapperType == null)
-                return new List<TransformStepDescription>();
-
-            var mapToRequest = fromAsyncMapper
-                ? MapperMethodDiscovery.FindMapToRequestAsync(mapperType)
-                : MapperMethodDiscovery.FindMapToRequest(mapperType);
-
-            return mapToRequest != null
-                ? mapToRequest.GetOtherUnwrapsInPipeline()
-                    .Select(a => new TransformStepDescription(a.GetType(), a.GetHandlerType(), a.Step))
-                    .ToList()
-                : new List<TransformStepDescription>();
+            var mapperMethod = mapperType is null ? null : findMapperMethod(mapperType);
+            return mapperMethod is null
+                ? new List<TransformStepDescription>()
+                : getTransforms(mapperMethod)
+                    .Select(transform => new TransformStepDescription(
+                        transform.GetType(), transform.GetHandlerType(), transform.Step))
+                    .ToList();
         }
 
         private static List<TransformStepDescription> UnionTransformSteps(
