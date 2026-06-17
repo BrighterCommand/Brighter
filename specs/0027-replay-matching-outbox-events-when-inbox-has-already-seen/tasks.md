@@ -11,7 +11,7 @@
 
 ---
 
-## Task 1: Structural — UseInboxHandler uses pipeline's `this.Context` instead of `InitRequestContext()`, expose `InstrumentationOptions`
+## Task 1: Structural — UseInboxHandler uses pipeline's `this.Context` instead of `InitRequestContext()`, expose `InstrumentationOptions` ✅ (a7b743f85)
 
 This is a **tidy-first structural change** with two parts:
 
@@ -37,7 +37,7 @@ This is a **tidy-first structural change** with two parts:
 
 ---
 
-## Task 2: Structural — Enrich `PipelineStepDescription` with `Attribute` property
+## Task 2: Structural — Enrich `PipelineStepDescription` with `Attribute` property ✅
 
 This is a **tidy-first structural change** — adding a non-positional `Attribute` property to `PipelineStepDescription` so validation rules can inspect attribute properties like `OnceOnlyAction`.
 

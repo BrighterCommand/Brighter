@@ -119,14 +119,14 @@ namespace Paramore.Brighter
                 var beforeSteps = attributes
                     .Where(a => a.Timing == HandlerTiming.Before)
                     .OrderByDescending(a => a.Step)
-                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing))
+                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing) { Attribute = a })
                     .ToList()
                     .AsReadOnly();
 
                 var afterSteps = attributes
                     .Where(a => a.Timing == HandlerTiming.After)
                     .OrderByDescending(a => a.Step)
-                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing))
+                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing) { Attribute = a })
                     .ToList()
                     .AsReadOnly();
 
