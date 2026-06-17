@@ -24,7 +24,9 @@ THE SOFTWARE. */
 
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
+using Paramore.Brighter.MessageMappers;
 using Paramore.Brighter.ServiceActivator.Validation;
+using Paramore.Brighter.Transforms.Transformers;
 using Paramore.Brighter.Validation;
 using Xunit;
 
@@ -147,5 +149,76 @@ public class UnwrapTransformResolvableTests
         // Assert
         Assert.True(satisfied);
         Assert.Empty(results);
+    }
+
+    [Fact]
+    public void When_subscription_has_resolvable_and_unresolvable_unwrap_transforms_should_report_one_warning()
+    {
+        // Arrange — mapper declares two unwrap transforms; the probe resolves one (MyDescribableTransform)
+        // but not the other (CompressPayloadTransformer)
+        var registry = RegistryWith<MyTwoUnwrapDescribableCommandMessageMapper>();
+        var probe = new StubTransformerResolvabilityProbe(t => t != typeof(CompressPayloadTransformer));
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, probe);
+        var subscription = SubscriptionFor<MyDescribableCommand>("greeting-subscription");
+
+        // Act
+        var satisfied = spec.IsSatisfiedBy(subscription);
+        var results = spec.Accept(new ValidationResultCollector<Subscription>()).ToList();
+
+        // Assert — exactly one Warning, for the unresolvable transform only (resolvable one is not reported)
+        Assert.False(satisfied);
+        Assert.Single(results);
+        Assert.Contains(nameof(CompressPayloadTransformer), results[0].Error!.Message);
+        Assert.DoesNotContain(nameof(MyDescribableTransform), results[0].Error!.Message);
+    }
+
+    [Fact]
+    public void When_subscription_resolves_to_default_mapper_should_report_no_warning()
+    {
+        // Arrange — no custom mapper, so the request type resolves to the default JsonMessageMapper, which
+        // declares no unwrap transform — so a subscription on the default mapper produces no warning.
+        var registry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => null!),
+            new SimpleMessageMapperFactoryAsync(_ => null!),
+            typeof(JsonMessageMapper<>),
+            typeof(JsonMessageMapper<>));
+        TransformPipelineBuilder.ClearPipelineCache();
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+        var subscription = SubscriptionFor<MyDescribableCommand>("greeting-subscription");
+
+        // Act
+        var satisfied = spec.IsSatisfiedBy(subscription);
+        var results = spec.Accept(new ValidationResultCollector<Subscription>()).ToList();
+
+        // Assert
+        Assert.True(satisfied);
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void When_subscription_has_only_an_async_custom_mapper_with_a_default_present_should_still_report_warning()
+    {
+        // Arrange — a default mapper IS configured (as AddBrighter does), but the request type has only a
+        // custom async mapper declaring an unresolvable unwrap transform. The sync side falls back to the
+        // default; the custom async mapper's transform must still be evaluated — the default-mapper guard must
+        // not mask a real custom mapper's transforms (FR-5).
+        var registry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => null!),
+            new SimpleMessageMapperFactoryAsync(_ => null!),
+            typeof(JsonMessageMapper<>),
+            typeof(JsonMessageMapper<>));
+        registry.RegisterAsync<MyDescribableCommand, MyDescribableCommandMessageMapperAsync>();
+        TransformPipelineBuilder.ClearPipelineCache();
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+        var subscription = SubscriptionFor<MyDescribableCommand>("greeting-subscription");
+
+        // Act
+        var satisfied = spec.IsSatisfiedBy(subscription);
+        var results = spec.Accept(new ValidationResultCollector<Subscription>()).ToList();
+
+        // Assert — the custom async mapper's unwrap transform is still reported
+        Assert.False(satisfied);
+        Assert.Single(results);
+        Assert.Contains(nameof(MyDescribableTransform), results[0].Error!.Message);
     }
 }

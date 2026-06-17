@@ -167,4 +167,31 @@ public class ValidationProviderRegisteredTests
         Assert.True(satisfied);
         Assert.Empty(results);
     }
+
+    [Fact]
+    public void When_validation_step_present_in_after_steps_and_no_provider_should_report_warning()
+    {
+        // Arrange — the validation step appears as an after-step; the rule scans both before and after steps
+        var description = new HandlerPipelineDescription(
+            requestType: typeof(MyDescribableCommand),
+            handlerType: typeof(MyPublicAsyncHandler),
+            isAsync: true,
+            beforeSteps: [],
+            afterSteps:
+            [
+                new PipelineStepDescription(
+                    typeof(ValidateRequestAsyncAttribute), typeof(ValidateRequestHandlerAsync<>), Step: 1, HandlerTiming.After)
+            ]);
+        var spec = HandlerPipelineValidationRules.ValidationProviderRegistered(
+            new ValidationProviderRegistrations(Sync: false, Async: false));
+
+        // Act
+        var satisfied = spec.IsSatisfiedBy(description);
+        var results = Evaluate(spec);
+
+        // Assert — the after-step is detected and warned
+        Assert.False(satisfied);
+        Assert.Single(results);
+        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
+    }
 }

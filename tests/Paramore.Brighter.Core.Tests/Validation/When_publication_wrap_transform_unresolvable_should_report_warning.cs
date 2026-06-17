@@ -184,4 +184,33 @@ public class WrapTransformResolvableTests
         Assert.Contains(nameof(CompressPayloadTransformer), results[0].Error!.Message);
         Assert.DoesNotContain(nameof(MyDescribableTransform), results[0].Error!.Message);
     }
+
+    [Fact]
+    public void When_publication_has_only_an_async_custom_mapper_with_a_default_present_should_still_report_warning()
+    {
+        // Arrange — a default mapper IS configured (as AddBrighter does), but the request type has only a
+        // custom async mapper declaring an unresolvable wrap transform. The sync side falls back to the default;
+        // the custom async mapper's transform must still be evaluated — the default-mapper guard must not mask
+        // a real custom mapper's transforms (FR-5). The probe resolves the default's [CloudEvents] transformer
+        // but not the custom one, isolating a single warning.
+        var registry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => null!),
+            new SimpleMessageMapperFactoryAsync(_ => null!),
+            typeof(JsonMessageMapper<>),
+            typeof(JsonMessageMapper<>));
+        registry.RegisterAsync<MyDescribableCommand, MyDescribableCommandMessageMapperAsync>();
+        TransformPipelineBuilder.ClearPipelineCache();
+        var probe = new StubTransformerResolvabilityProbe(t => t != typeof(MyDescribableTransform));
+        var spec = ProducerValidationRules.WrapTransformResolvable(registry, probe);
+        var publication = PublicationFor<MyDescribableCommand>("greeting");
+
+        // Act
+        var satisfied = spec.IsSatisfiedBy(publication);
+        var results = spec.Accept(new ValidationResultCollector<Publication>()).ToList();
+
+        // Assert — the custom async mapper's wrap transform is still reported
+        Assert.False(satisfied);
+        Assert.Single(results);
+        Assert.Contains(nameof(MyDescribableTransform), results[0].Error!.Message);
+    }
 }
