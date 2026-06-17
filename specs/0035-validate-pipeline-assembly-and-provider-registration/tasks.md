@@ -6,14 +6,16 @@
 
 ## Overview
 
-Adds two non-blocking (Warning) checks to `ValidatePipelines()`: (A) missing wrap/unwrap transforms (producer in core, consumer in ServiceActivator) and (B) a validation pipeline step present with no provider registered (core). Per ADR 0064, structural changes (new record/interface/overload/widened ctor) land first and separately from behavioral (TDD) changes, with all new findings emitted at `ValidationSeverity.Warning`.
+Adds two non-blocking (Warning) checks to `ValidatePipelines()`: (A) missing wrap/unwrap transforms (producer in core, consumer in ServiceActivator) and (B) a validation pipeline step present with no provider registered (core). Per ADR 0064, structural changes (new record/interface/widened ctor) land first and separately from behavioral (TDD) changes, with all new findings emitted at `ValidationSeverity.Warning`.
+
+> **Implementation alignment (respect the solution pattern).** Two items from the original plan were dropped to match the codebase's established patterns: (1) **no §3a inline `try`/`catch` guard** — validation rules do not catch; the `Specification<T>` framework reports any evaluation exception as `Error` like every other rule (intended findings stay Warning). (2) **No standalone "async `DescribeTransforms` overload" structural task** — that would be untested speculative code; the async (sync∪async union) describe is added **test-first inside the (A)-consumer async-only cycle (FR-5)**. The producer rule uses the existing 2-arg `DescribeTransforms`.
 
 ## Structural tasks (tidy-first, do first)
 
 These are pure structural additions — new types, an overload, and an additive ctor widening. No behavior is added here; behavior arrives in the Behavioral section. Each is verified by "compiles + all existing tests still green". Keep each as its own commit.
 
 - [ ] **STRUCTURAL: Add the `ValidationProviderRegistrations` record (core).**
-  - Add `public readonly record struct ValidationProviderRegistrations(bool Sync, bool Async);` in `Paramore.Brighter` core (namespace `Paramore.Brighter.Validation`), as specified in ADR §5.
+  - Add `public record ValidationProviderRegistrations(bool Sync, bool Async);` in `Paramore.Brighter` core (namespace `Paramore.Brighter.Validation`), as specified in ADR §5. (Record class, not `record struct` — the solution uses `record` value holders throughout and has no `record struct`.)
   - No behavior; not referenced by any rule yet.
   - Verified by: solution compiles; existing `tests/Paramore.Brighter.Core.Tests/Validation/` tests remain green.
   - Traces to: ADR Key Component #5; FR-7/FR-8/FR-9 (consumed later).
@@ -23,11 +25,7 @@ These are pure structural additions — new types, an overload, and an additive 
   - Verified by: compiles; existing tests green.
   - Traces to: ADR Key Component #1 (RDD rationale); C-11.
 
-- [ ] **STRUCTURAL: Add the async-aware `DescribeTransforms` overload to `TransformPipelineBuilder` (core).**
-  - Add an overload of `TransformPipelineBuilder.DescribeTransforms(MessageMapperRegistry, Type)` that also consults `MessageMapperRegistry.ResolveAsyncMapperInfo` + `MapperMethodDiscovery.FindMapToMessageAsync`/`FindMapToRequestAsync` (all exist) and returns the sync∪async union of `WrapTransforms`/`UnwrapTransforms`, de-duplicated by `(TransformType, Step)` (ADR Implementation Approach §A-producer.1, FR-5). This is a pure describe extension — its behavior is exercised by later (A) tests; the overload itself is a structural addition.
-  - File: `src/Paramore.Brighter/TransformPipelineBuilder.cs` (existing `DescribeTransforms` at ~line 197).
-  - Verified by: compiles; existing transform-describe test still green (sync overload unchanged).
-  - Traces to: ADR C-5 / FR-5; Implementation Approach §A-producer.1.
+> The async-aware `DescribeTransforms` overload (sync∪async union, ADR C-5 / FR-5) is **not** a structural task — it is added **test-first** in the (A)-consumer async-only cycle below, driven by its FR-5 test. The producer rule uses the existing 2-arg `DescribeTransforms`.
 
 - [ ] **STRUCTURAL: Widen the `PipelineValidator` constructor with trailing optional params (core).**
   - Append three optional, defaulted parameters to `PipelineValidator`'s primary ctor (`src/Paramore.Brighter/Validation/PipelineValidator.cs`): `MessageMapperRegistry? mapperRegistry = null`, `IAmATransformerResolvabilityProbe? transformerProbe = null`, `ValidationProviderRegistrations providerRegistrations = default` (i.e. `(false,false)` — inert). Store them; do NOT yet append any rule to `ValidateProducers`/`ValidateHandlerPipelines` (that is behavioral). Appended + optional so existing positional callers (incl. core tests constructing `PipelineValidator` directly) compile unchanged.
@@ -36,7 +34,7 @@ These are pure structural additions — new types, an overload, and an additive 
 
 ## Behavioral tasks (TDD)
 
-Ordered so dependencies come first: default probe → producer (A) rule → consumer (A) rule → (B) → §3a guard → plumbing/regression. Each combines TEST+IMPLEMENT with the approval gate. Test style must match the existing Core.Tests validation tests (read one first): xUnit `[Fact]`, Given/When/Then comments, construct the spec, call `IsSatisfiedBy` + `Accept(new ValidationResultCollector<T>())`, assert on `results[0].Error!`.
+Ordered so dependencies come first: default probe → producer (A) rule → consumer (A) rule (adds async describe test-first) → (B) → plumbing/regression. Each combines TEST+IMPLEMENT with the approval gate. Test style must match the existing Core.Tests validation tests (read one first): xUnit `[Fact]`, Given/When/Then comments, construct the spec, call `IsSatisfiedBy` + `Accept(new ValidationResultCollector<T>())`, assert on `results[0].Error!`.
 
 > Some tasks below note "no new production code expected" — they pin a behavior already implemented by a prior task (legitimate TDD characterization tests, each targeting a distinct behavior). If such a test passes on first run, confirm the red→green moment by temporarily reverting the enabling change so you've seen the test fail.
 
@@ -68,11 +66,10 @@ Ordered so dependencies come first: default probe → producer (A) rule → cons
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Add `public static ISpecification<Publication> WrapTransformResolvable(MessageMapperRegistry mapperRegistry, IAmATransformerResolvabilityProbe probe)` to `src/Paramore.Brighter/Validation/ProducerValidationRules.cs` using the collapsed `Specification<Publication>(Func<…,IEnumerable<ValidationResult>>)` ctor (one finding per missing transform).
-    - For each `Publication`, call the async-aware `DescribeTransforms` overload, iterate `WrapTransforms`, and for each `TransformStepDescription` whose `TransformType` the probe reports as not resolving, yield a `ValidationError(Warning, $"Publication '{p.Topic}'", …)` matching the ADR §2 message template.
-    - **§3a guard (land it now, not later):** wrap the `DescribeTransforms` + probe work in `try`/`catch`, materialising the describe enumeration inside the guard, and on any exception yield a single `ValidationSeverity.Warning` ("could not inspect transforms for request '…' — {reason}") so the exception never reaches the collapsed evaluator (which would escalate to a blocking `Error`, `Specification.cs:161-169`). The rule MUST NOT ship unguarded; the dedicated guard test below asserts this.
+    - For each `Publication`, call `DescribeTransforms(mapperRegistry, publication.RequestType)` (the existing 2-arg overload), iterate `WrapTransforms`, and for each `TransformStepDescription` whose `TransformType` the probe reports as not resolving, yield a `ValidationError(Warning, $"Publication '{p.Topic}'", …)` matching the ADR §2 message template. The rule does NOT catch exceptions — it follows the framework pattern (the `Specification<T>` evaluator reports evaluation errors as `Error`, like every rule; §3a).
     - Append `WrapTransformResolvable(mapperRegistry, probe)` to the producer spec array in `PipelineValidator.ValidateProducers`, guarded so it is added only when the threaded `mapperRegistry` and `transformerProbe` fields are both non-null (inert for pure-CQRS/no-producer configs, NFR-2/-4). This mirrors how the (B) rule self-appends to `ValidateHandlerPipelines`, leaving the plumbing task as pure dependency-threading.
-  - Depends on: the async `DescribeTransforms` overload task; the `IAmATransformerResolvabilityProbe` interface task; the widened `PipelineValidator` ctor task (for the threaded fields).
-  - Traces to: FR-1, FR-6, AC-1, ADR §3a, C-8.
+  - Depends on: the `IAmATransformerResolvabilityProbe` interface task; the widened `PipelineValidator` ctor task (for the threaded fields).
+  - Traces to: FR-1, FR-6, AC-1, C-8.
 
 - [ ] **TEST + IMPLEMENT: A resolvable wrap transform does not suppress an unresolvable one (one Warning per missing transform).**
   - **USE COMMAND**: `/test-first a Publication whose resolved mapper declares two wrap transforms, one resolvable and one not, produces exactly one Warning for the unresolvable transform`
@@ -111,10 +108,10 @@ Ordered so dependencies come first: default probe → producer (A) rule → cons
     - A `Subscription` whose `RequestType` is null is skipped (`IsSatisfiedBy` true, zero findings).
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Add `public static ISpecification<Subscription> UnwrapTransformResolvable(MessageMapperRegistry mapperRegistry, IAmATransformerResolvabilityProbe probe)` to `src/Paramore.Brighter.ServiceActivator/Validation/ConsumerValidationRules.cs`, collapsed-ctor, keyed on `Subscription.RequestType` (skip when null, mirroring `HandlerRegistered`), iterating `UnwrapTransforms` from the async-aware `DescribeTransforms`, naming `Subscription.Name`.
-    - **§3a guard (land it now, symmetric with the producer rule):** wrap the describe/probe work in `try`/`catch` and downgrade any exception to a single `ValidationSeverity.Warning`, materialising the enumeration inside the guard (same rationale as the producer rule — `Specification.cs` escalates rule-body exceptions to `Error`).
+    - This cycle includes the **async-only mapper** fact (FR-5), so first add (test-first, driven by that fact) the async-aware `DescribeTransforms` overload to `TransformPipelineBuilder`: it unions the sync- and async-resolved mappers' transforms (`ResolveAsyncMapperInfo` + `FindMapToMessageAsync`/`FindMapToRequestAsync`), de-duplicated by `(TransformType, Step)`. The producer rule can then switch to this overload too if async coverage is wanted there.
+    - Add `public static ISpecification<Subscription> UnwrapTransformResolvable(MessageMapperRegistry mapperRegistry, IAmATransformerResolvabilityProbe probe)` to `src/Paramore.Brighter.ServiceActivator/Validation/ConsumerValidationRules.cs`, collapsed-ctor, keyed on `Subscription.RequestType` (skip when null, mirroring `HandlerRegistered`), iterating `UnwrapTransforms` from the async-aware `DescribeTransforms`, naming `Subscription.Name`. The rule does NOT catch exceptions (framework pattern, §3a).
     - Register it in `RegisterConsumerValidationSpecs` (`src/Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs`, ~line 197) as another `services.AddSingleton<ISpecification<Subscription>>(sp => …)` resolving `MessageMapperRegistry` and `IAmATransformerResolvabilityProbe` from `sp`. It rides the existing `consumerSpecs` DI channel — no `PipelineValidator` change.
-  - Depends on: the async `DescribeTransforms` overload task; the `IAmATransformerResolvabilityProbe` interface + default impl tasks.
+  - Depends on: the `IAmATransformerResolvabilityProbe` interface + default impl tasks. (This task itself adds the async-aware `DescribeTransforms` overload test-first, driven by the async-only fact.)
   - Traces to: FR-2, AC-2.
 
 - [ ] **TEST + IMPLEMENT: Transform on an async-only-resolved mapper is evaluated; identity is the `GetHandlerType()` transformer type.**
@@ -126,7 +123,7 @@ Ordered so dependencies come first: default probe → producer (A) rule → cons
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
     - Be satisfied by the async∪sync union in the `DescribeTransforms` overload and `UnwrapTransformResolvable`. No new production code expected beyond confirming the union reads async-resolved mappers; add a TestDouble async mapper if one is not already present in `TestDoubles/`.
-  - Depends on: the `UnwrapTransformResolvable` task; the async `DescribeTransforms` overload task.
+  - Depends on: the `UnwrapTransformResolvable` task (this fact drives adding the async-aware `DescribeTransforms` overload test-first).
   - Traces to: FR-5, AC-5.
 
 ### (B) — `HandlerPipelineValidationRules.ValidationProviderRegistered`
@@ -168,21 +165,9 @@ Ordered so dependencies come first: default probe → producer (A) rule → cons
   - Depends on: the `ValidationProviderRegistered` task.
   - Traces to: FR-9, AC-8.
 
-### §3a guard (risk mitigation — see also Risk-mitigation section)
+### §3a guard — REMOVED (rules follow the framework pattern)
 
-- [ ] **TEST + IMPLEMENT: An (A) rule whose describe/probe throws yields a non-blocking Warning (not an Error) — producer AND consumer.**
-  - **USE COMMAND**: `/test-first when an A rule's describe or probe work throws, the producer and consumer rules each yield a single Warning rather than letting the Specification escalate it to a blocking Error`
-  - Test location: "tests/Paramore.Brighter.Core.Tests/Validation/"
-  - Test file: `When_transform_describe_throws_should_report_warning_not_error.cs`
-  - Test should verify:
-    - With a probe (or mapper-registry state) that throws during the rule body, `WrapTransformResolvable` (producer) yields exactly one finding with `Severity == ValidationSeverity.Warning` (NOT `Error`), message indicating the inspection could not be completed for the request.
-    - The same for `UnwrapTransformResolvable` (consumer) — a symmetric assertion so the consumer guard is not left untested.
-    - In both cases the finding is NOT the framework's "Rule evaluation failed: …" Error (confirming the guard caught the exception before the collapsed evaluator, `Specification.cs:161-169`).
-  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
-  - Implementation should:
-    - Require NO new production code if the §3a guard was already folded into the `WrapTransformResolvable` and `UnwrapTransformResolvable` tasks (as those tasks now specify). This task is the regression test that pins the guard on both rules. If a guard is missing, add the `try`/`catch` per ADR §3a.
-  - Depends on: the `WrapTransformResolvable` and `UnwrapTransformResolvable` tasks (the guard ships with them).
-  - Traces to: ADR §3a; Risks "an (A) rule-body exception escalating to a blocking Error"; supports FR-10/AC-9.
+> There is **no §3a guard task**. The rules do not catch exceptions; the `Specification<T>` framework reports any evaluation exception as `Error`, exactly as it does for every existing rule (intended findings stay Warning). This respects the solution pattern — see the Implementation-alignment note at the top and ADR 0064 §3a. The intended Warning findings are covered by the (A) producer/consumer tests; there is no throwing-probe test because no bespoke guard exists to pin.
 
 ### Plumbing / wiring and regression
 
@@ -206,13 +191,13 @@ Ordered so dependencies come first: default probe → producer (A) rule → cons
     - With both an (A) and a (B) trigger configured and `.ValidatePipelines(throwOnError: true)`, resolving the validator and validating does NOT throw, `result.IsValid` is true, and both warnings are present in `result.Warnings`.
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - Be satisfied by the Warning severity of both rules + the §3a guard; no new production code expected beyond the wiring task. If `IsValid` incorrectly treats warnings as blocking, the defect is in rule severity (must be `Warning`).
-  - Depends on: the plumbing/wiring task; the §3a guard task.
+    - Be satisfied by the Warning severity of both rules; no new production code expected beyond the wiring task. If `IsValid` incorrectly treats warnings as blocking, the defect is in rule severity (must be `Warning`).
+  - Depends on: the plumbing/wiring task.
   - Traces to: FR-10, AC-9.
 
 ## Risk-mitigation tasks
 
-- [ ] **§3a guard test (already in Behavioral section): `When_transform_describe_throws_should_report_warning_not_error.cs`.** Asserts a deliberately-throwing describe/probe yields a non-blocking Warning (NOT the framework's escalated Error) for BOTH the producer and consumer rules — closing the "rule-body exception → blocking Error" risk. The guard itself now ships inside the `WrapTransformResolvable`/`UnwrapTransformResolvable` tasks (not a separate later task), so the (A) rules are never unguarded. (Mitigates ADR Risk "an (A) rule-body exception escalating to a blocking Error".)
+> No §3a guard test (the guard was removed — rules follow the framework pattern). An inspection exception surfaces as the framework's `Error`, the same as every existing rule; the intended Warning findings are pinned by the (A) producer/consumer rule tests.
 
 - [ ] **TEST + IMPLEMENT: AC-11 regression — existing `ConsumerValidationRules.HandlerRegistered` still produces a blocking Error.**
   - **USE COMMAND**: `/test-first after adding the new warning checks, a subscription with no registered handler still produces a blocking Error under ValidatePipelines(throwOnError true)`
@@ -248,12 +233,12 @@ Ordered so dependencies come first: default probe → producer (A) rule → cons
 | FR-2 (missing unwrap transform → Warning; null RequestType skipped) | "Missing unwrap-transform on a Subscription produces a Warning (and null-RequestType subscription is skipped)" |
 | FR-3 (independent per-transform; resolvable doesn't suppress) | "A resolvable wrap transform does not suppress an unresolvable one" |
 | FR-4 (all resolve / none declared → no (A) warning; default mapper `[CloudEvents]`) | "All wrap transforms resolvable … yields no (A) warning" |
-| FR-5 (async-only-resolved mapper evaluated; identity = `GetHandlerType()`) | "Transform on an async-only-resolved mapper is evaluated …" + structural "async-aware `DescribeTransforms` overload" |
+| FR-5 (async-only-resolved mapper evaluated; identity = `GetHandlerType()`) | "Transform on an async-only-resolved mapper is evaluated …" (this fact adds the async-aware `DescribeTransforms` overload test-first) |
 | FR-6 (message from configured/declared info only) | "Missing wrap-transform … produces a Warning" (message-content assertions) |
 | FR-7 (validation step + no provider → Warning naming three Use*()) | "A validation pipeline step present with no provider registered produces a Warning …" |
 | FR-8 (provider registered → no (B) warning) | "Provider registered suppresses the (B) warning" |
 | FR-9 (no validation step → no (B) warning) | "No validation pipeline step yields no (B) warning …" |
-| FR-10 (non-blocking under throwOnError) | "Both checks are non-blocking under `throwOnError: true` …" + §3a guard task |
+| FR-10 (non-blocking under throwOnError) | "Both checks are non-blocking under `throwOnError: true` …" (all new findings are Warning) |
 | FR-11 (additive; in `Warnings` as `ValidationError(Warning,…)`; existing rules unchanged) | Plumbing/wiring task (warnings surface) + AC-11 regression task |
 | FR-12 (deterministic per-entity warnings) | "Two publications same request different topics → two ordered warnings" |
 | NFR-1 (ISpecification + ValidationResultCollector pattern) | All (A)/(B) behavioral tasks (use collapsed `Specification<T>` + `ValidationResultCollector`) |
@@ -265,14 +250,14 @@ Ordered so dependencies come first: default probe → producer (A) rule → cons
 | ADR new type: `ValidationProviderRegistrations` record | Structural "Add the `ValidationProviderRegistrations` record" |
 | ADR new type: `IAmATransformerResolvabilityProbe` interface (core) | Structural "Add the `IAmATransformerResolvabilityProbe` interface" |
 | ADR new type: default probe impl (DependencyInjection) + its membership-test behavior | Behavioral "The default probe resolves a registered transformer type and not an unregistered one" |
-| ADR: async-aware `DescribeTransforms` overload (C-5) | Structural "Add the async-aware `DescribeTransforms` overload" |
+| ADR: async-aware `DescribeTransforms` overload (C-5) | Added test-first in the (A)-consumer async-only cycle (FR-5) |
 | ADR: widened `PipelineValidator` ctor (appended optional params) | Structural "Widen the `PipelineValidator` constructor" |
 | ADR §2: (A)-producer rule placement = core `ProducerValidationRules` (C-8) | "Missing wrap-transform on a Publication …" (adds to `src/Paramore.Brighter/Validation/ProducerValidationRules.cs`) |
 | ADR §3: (A)-consumer rule placement = ServiceActivator `ConsumerValidationRules` (C-8) | "Missing unwrap-transform on a Subscription …" (adds to ServiceActivator + `RegisterConsumerValidationSpecs`) |
 | ADR §4: (B) rule placement = core `HandlerPipelineValidationRules` (no ServiceActivator dep) (C-8) | "A validation pipeline step present with no provider registered …" |
-| ADR §3a: try/catch guard downgrades rule-body exceptions to Warning | §3a guard task "An (A) rule whose describe/probe throws yields a non-blocking Warning" |
+| ADR §3a: rules follow the framework pattern (no inline guard) | (A) producer/consumer rule tasks — rules do not catch; `Specification<T>` reports evaluation errors as Error like every rule |
 | ADR Plumbing (C-12): thread mapper registry + probe + registrations via `ValidatePipelines` | Plumbing/wiring task |
-| ADR: severity = Warning for all new findings (C-2) | FR-1/FR-2/FR-7 tasks (assert `Warning`); FR-10 + §3a tasks (never block) |
+| ADR: severity = Warning for all new findings (C-2) | FR-1/FR-2/FR-7 tasks (assert `Warning`); FR-10 task (never blocks) |
 | ADR C-4 ((B) via `GetHandlerType()` open generics, provider-agnostic) | "A validation pipeline step present with no provider registered …" (compares `HandlerType` to `ValidateRequestHandler<>`/`Async<>`) |
 | ADR C-7 / C-11 (resolvability/provider check without build or instantiation) | Default probe impl task (membership test); (B) task (reuses reflection-only `Describe()`) |
 
