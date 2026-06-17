@@ -151,6 +151,12 @@
     <Project Path="samples/Transforms/MassTransit/MassTransitSide/MassTransitSide.csproj" />
     <Project Path="samples/Transforms/MassTransit/MBrigtherSide/MBrigtherSide.csproj" />
   </Folder>
+  <Folder Name="/samples/Validation/">
+    <File Path="samples\Validation\README.md" />
+    <Project Path="samples/Validation/DataAnnotationsSample/DataAnnotationsSample.csproj" />
+    <Project Path="samples/Validation/FluentValidationSample/FluentValidationSample.csproj" />
+    <Project Path="samples/Validation/SpecificationSample/SpecificationSample.csproj" />
+  </Folder>
   <Folder Name="/samples/WebAPI/" />
   <Folder Name="/samples/WebAPI/WebAPI_Common/">
     <File Path="samples/WebAPI/WebAPI_Common/README.md" />
