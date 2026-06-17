@@ -38,7 +38,7 @@ From a user perspective:
 
 - **Non-breaking change**: Existing inbox/outbox implementations that do not support `CausationId` must continue to work without modification. The new behavior is opt-in.
 - **Pipeline validation**: At startup, if replay-on-duplicate is configured, pipeline validation must verify that both the inbox and outbox implementations support `CausationId`. Unsupported implementations should produce a clear validation error.
-- **Performance**: Clearing `DispatchedAt` on outbox messages by `CausationId` should be efficient. The outbox store may need an index on `CausationId`.
+- **Performance**: Clearing `DispatchedAt` on outbox messages by `CausationId` should be efficient. The outbox store indexes `CausationId` (where the store supports a secondary index) so replay queries do not table-scan; this index is delivered as part of the schema evolution in AC9.
 - **Observability**: Replay events should be traceable — when messages are replayed, this should be visible in logs and telemetry.
 
 ### Constraints and Assumptions
@@ -46,6 +46,7 @@ From a user perspective:
 - Only the outbox sweeper is used for re-dispatch; immediate send is not supported for replay (as noted in the issue: "if you don't have a sweeper it's unlikely you also want this kind of support").
 - The `CausationId` is separate from the existing `CorrelationId` (used for request-reply) and `JobId`/`WorkflowId` (reserved for future workflow orchestration). It specifically represents "the set of outbox messages caused by handling this inbox entry."
 - The existing `JobId` and `WorkflowId` fields on `MessageHeader` are reserved for future use and should not be repurposed for this feature.
+- **Schema evolution is delivered through BoxProvisioning.** The `CausationId` column is added to the Brighter-maintained relational inbox/outbox schemas as a new BoxProvisioning migration version (idempotent `ALTER TABLE ADD ... NULL`) for the catalog-based stores (MsSql, MySql, PostgreSql, Sqlite), and through the provisioner for Spanner. NoSQL stores (DynamoDB, DynamoDB.V4, Firestore, MongoDb) are schemaless and need no migration. This work is part of this spec, not a separate PR.
 
 
 ### Out of Scope
@@ -53,7 +54,7 @@ From a user perspective:
 - Saga/workflow orchestration — this feature enables replay of a single step's downstream messages, not orchestration of multi-step workflows.
 - Immediate send replay — only sweeper-based re-dispatch is supported.
 - Automatic retry of the handler logic itself — the handler is not re-executed, only its previously-produced outbox messages are replayed.
-- Migration tooling for existing outbox/inbox data — new columns will be nullable; existing rows will have null `CausationId`.
+- Data backfill for existing outbox/inbox rows — the new `CausationId` column is nullable; existing rows keep a null `CausationId` and cannot be replayed. Schema *evolution* (adding the column) is in scope via BoxProvisioning; *data* migration is not.
 
 ## Acceptance Criteria
 
@@ -65,6 +66,7 @@ From a user perspective:
 6. The `CausationId` is independent of `JobId` — replaying one step does not affect other steps in the same job.
 7. In-memory inbox and outbox implementations support `CausationId` for testing.
 8. All persistent inbox and outbox implementations support `CausationId`. Base tests in `Paramore.Brighter.Base.Test` verify the causation tracking interfaces; persistent store tests are derived from the base tests (outbox via the Liquid template generator, inbox manually).
+9. The `CausationId` column is added to the relational stores through BoxProvisioning. ("Catalog-based" stores carry versioned migration catalogs that BoxProvisioning replays; Spanner has no catalog and provisions the column directly.) For the catalog-based stores (MsSql, MySql, PostgreSql, Sqlite) the column is added as a new migration version plus the matching live-builder DDL; Spanner adds it through its provisioner and live builder. Verifiable end-state: a fresh install and a migrated upgrade both end with (a) the `CausationId` column present, (b) for the outbox, an index on `CausationId` where the store supports one, and (c) `SupportsCausationTracking()` returning `true`. The live-builder DDL and the migration chain must produce identical column sets (this parity is what the existing drift test enforces, but the acceptance is the identical-column-set outcome, not the test by name).
 
 ## Additional Context
 

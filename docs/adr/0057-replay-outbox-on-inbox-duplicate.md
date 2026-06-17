@@ -20,7 +20,7 @@ We need to allow the inbox to trigger a replay of the outbox messages that were 
 - The outbox is generic over a transaction type (`IAmAnOutboxSync<TMessage, TTransaction>`), making it difficult to inject directly into the inbox handler without knowing the transaction type.
 - Not all inbox/outbox implementations will support this feature (e.g., third-party or older implementations). The change must be non-breaking and opt-in.
 - Some handlers have an inbox but no outbox (terminal steps). The design must handle this gracefully.
-- All Brighter-maintained persistent store schemas (inbox and outbox) will add the `CausationId` column. However, users upgrading Brighter are not required to migrate their store schema unless they intend to use `OnceOnlyAction.Replay`. A separate PR provides inbox/outbox schema migration tooling and will be merged into master before this feature, then merged into this branch. `SupportsCausationTracking()` performs a runtime schema check so that users running new Brighter code against an old (un-migrated) schema get a clear validation error at startup rather than a runtime failure.
+- All Brighter-maintained persistent store schemas (inbox and outbox) will add the `CausationId` column. However, users upgrading Brighter are not required to migrate their store schema unless they intend to use `OnceOnlyAction.Replay`. The schema change is delivered through **BoxProvisioning** (already present in the codebase): for the catalog-based relational stores it is a new migration version plus the matching live-builder DDL; for Spanner it is added through the Spanner provisioner. `SupportsCausationTracking()` performs a runtime schema check so that users running new Brighter code against an old (un-migrated) schema get a clear validation error at startup rather than a runtime failure. See "Schema Evolution via BoxProvisioning" below.
 
 ## Decision
 
@@ -232,6 +232,24 @@ Each persistent store:
 3. Implements `IAmACausationTrackingInbox` or `IAmACausationTrackingOutbox` as appropriate
 4. Indexes `CausationId` in the outbox for efficient replay queries
 5. Returns `true` from `SupportsCausationTracking()` once the schema supports it
+
+### Schema Evolution via BoxProvisioning
+
+The `CausationId` column is added to the relational store schemas through BoxProvisioning rather than as a hand-rolled migration or a separate PR. There are three classes of store, handled differently:
+
+**Catalog-based relational stores — MsSql, MySql, PostgreSql, Sqlite (inbox and outbox).** Each has a versioned `*MigrationCatalog` (e.g. `MsSqlOutboxMigrationCatalog`, `MsSqlInboxMigrationCatalog`) that lists migrations `V1..Vn`. Adding `CausationId` means:
+
+1. **New migration version.** Append a `BoxMigration` entry with an idempotent `ALTER TABLE ADD [CausationId] <type> NULL` `UpScript`, guarded by the catalog's existing column-existence guard (`IF COL_LENGTH(...) IS NULL` on MsSql, the equivalent per backend) so chain replay is safe. Extend the catalog's `s_vNAddedColumns` set and `Cumulative()` so the new version's `LogicalColumns` include `CausationId`. Record a `SourceReference` of `#2541`. **The next version differs per catalog** — verify each rather than assuming a uniform number:
+   - **Outbox** catalogs are all at V7 today → new version is **V8** for all four.
+   - **Inbox** catalogs are *not* uniform: MsSql, MySql, Sqlite are at V2 → new version **V3**; **PostgreSql inbox is V1-only** (its V1 already carries `ContextKey`) → new version **V2**.
+2. **Live builder DDL.** Update the fresh-install builder (`SqlOutboxBuilder`, `MySqlOutboxBuilder`, `PostgreSqlOutboxBuilder`, `SqliteOutboxBuilder`; and the matching `*InboxBuilder`s) to emit the `CausationId` column, so a fresh install lands the same shape a migrated upgrade does. The outbox builders also gain a *new* `CREATE INDEX` on `CausationId` (none of them index any column today, so this is a new statement, not an amendment).
+3. **Drift parity test.** Each backend has a builder/migration drift test (`When_<backend>_outbox_and_inbox_builders_are_compared_to_latest_migration_columns_they_should_have_identical_expected_column_sets`, and the MsSql `..._v7_migration_columns` / `..._v2_migration_columns` variants) that asserts the live builder's *column set* equals the accumulated `LogicalColumns`. The new version and the builder change must move together (ideally one commit); the drift test is the gate that proves they did. Note: this test compares *columns only* — the new `CausationId` *index* is not covered by it and must be asserted separately if index parity matters.
+
+**Provisioner-based relational store — Spanner (inbox and outbox).** Spanner has BoxProvisioning support but no versioned migration catalog; it provisions through `SpannerOutboxProvisioner` / `SpannerInboxProvisioner`. `CausationId` is added through those provisioners and the live `SpannerOutboxBuilder` / `SpannerInboxBuilder`. **Crucially, Spanner mirrors the relational chains via two hard-coded constants in `SpannerBoxMigrationRunner` — `VLatestOutbox` (currently 7) and `VLatestInbox` (currently 2) — guarded by a cross-backend test (`When_spanner_v_latest_constants_are_compared_to_relational_catalogs_they_should_match_every_backend`).** Bumping any relational catalog forces a matching bump of these constants: `VLatestOutbox` → 8, `VLatestInbox` → 3 (to match the MsSql/MySql/Sqlite inbox count). Because PostgreSql inbox stays one version behind the other three, that cross-backend test carries a deliberate PostgreSql carve-out whose expected count must be re-derived (it becomes 2, not the others' 3). Spanner's builder/migration drift parity test moves with the builder change as well. For Spanner, `SupportsCausationTracking()` is evaluated as a live column-existence probe (there is no migration-version to inspect).
+
+**NoSQL stores — DynamoDB, DynamoDB.V4, Firestore, MongoDb.** These are schemaless and outside BoxProvisioning. No DDL migration is required: the `CausationId` attribute/field is simply written on `Add` and read back. `SupportsCausationTracking()` returns `true` for these stores (the attribute model always supports the field); the outbox stores add a secondary index on `CausationId` where the store supports one for efficient replay.
+
+In all cases `SupportsCausationTracking()` remains a runtime check: for catalog stores it reflects whether the `CausationId`-adding migration version has been applied to the live schema, so a user who upgrades Brighter but has not run provisioning gets a clear startup validation finding rather than a runtime failure.
 
 #### Test Strategy
 
@@ -485,7 +503,7 @@ This approach works because:
 - The outbox instance is captured by the specification's closure, keeping `PipelineValidator` generic — it does not need to know about replay semantics
 - The rule is composable and independently testable, consistent with the Specification pattern established in ADR 0053
 
-The `SupportsCausationTracking()` method is a permanent runtime schema check. It allows users to upgrade Brighter without being forced to migrate their store schema — the feature is only available once the schema supports it. A separate PR provides inbox/outbox migration tooling and will be merged before this feature.
+The `SupportsCausationTracking()` method is a permanent runtime schema check. It allows users to upgrade Brighter without being forced to migrate their store schema — the feature is only available once the schema supports it. The schema migration itself ships in this work via BoxProvisioning (see "Schema Evolution via BoxProvisioning"); users opt in by running provisioning when they adopt `OnceOnlyAction.Replay`.
 
 ### Observability
 
@@ -583,7 +601,7 @@ When the outbox does not implement `IAmACausationTrackingOutbox`, no registratio
 
 - `UseInboxHandler` gains an optional outbox dependency, adding complexity to its constructor and DI registration
 - All 18 Brighter-maintained store implementations (9 inbox, 9 outbox) need schema and code changes — significant breadth of change, though each individual change is mechanical
-- Migration of existing data is not provided — new columns are nullable, so existing rows have null `CausationId` and replay is unavailable for historical entries
+- Schema evolution ships in this work via BoxProvisioning (new migration version + live builder + drift test for the four catalog stores; provisioner for Spanner), broadening the change surface; migration of existing *data* is still not provided — new columns are nullable, so existing rows have null `CausationId` and replay is unavailable for historical entries
 - `SupportsCausationTracking()` is a permanent runtime schema check on both inbox and outbox — it protects users who upgrade Brighter but have not yet migrated their store schema. Pipeline validation uses it at startup so that misconfiguration (Replay enabled on an un-migrated schema) produces a clear error, not a silent runtime failure
 - The `Replay` action silently does nothing if the inbox/outbox don't support causation tracking at runtime (though pipeline validation should catch this at startup)
 

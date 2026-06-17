@@ -347,19 +347,30 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ---
 
-## Task 19: TEST + IMPLEMENT — Relational inbox stores implement `IAmACausationTrackingInbox` (MsSql, MySql, Postgres, Sqlite, Spanner)
+## Task 19 — Relational inbox `IAmACausationTrackingInbox` (split into structural schema + per-backend behavioral)
 
-- [ ] **TEST + IMPLEMENT: Relational inbox stores add CausationId column and implement IAmACausationTrackingInbox**
-  - **USE COMMAND**: `/test-first when relational inbox stores causation id should store and retrieve via base tests`
-  - Stores: MsSql, MySql, Postgres, Sqlite, Spanner
-  - Each store:
-    - Adds nullable `CausationId` column to schema (existing rows have null — no data migration)
-    - Reads `CausationId` from `RequestContext.Bag` in `Add()`/`AddAsync()` and stores it
-    - Implements `IAmACausationTrackingInbox` (`SupportsCausationTracking()`, `GetCausationId()`, `GetCausationIdAsync()`)
-    - `SupportsCausationTracking()` performs runtime schema check (column exists?)
-  - Tests: Each store's test project inherits from `CausationTrackingInboxBaseTests` (Task 18)
-  - **⛔ STOP HERE — WAIT FOR USER APPROVAL in IDE before implementing**
-  - Depends on: Task 18
+> **Why split**: the relational inbox schema change is **forced-atomic** — the cross-backend Spanner constant test (`SpannerVLatestDriftAgainstRelationalCatalogTests`) asserts `VLatestInbox` equals every relational inbox catalog's `.Count` (with a hard-coded PostgreSql carve-out), so all catalog bumps + the Spanner constant + the carve-out literal must move together in one commit. That structural work is Task **19a**. The behavioral interface work is genuinely per-backend and each backend gets its own `/test-first` cycle — Tasks **19b–19f**.
+
+### Task 19a: STRUCTURAL — BoxProvisioning schema evolution for ALL relational inbox stores (single atomic commit)
+
+This is a **structural change** verified by the *existing* drift/cross-backend tests going (and staying) green. No behavioral/tracking-interface code here — just schema.
+
+- [ ] **STRUCTURAL: add the `CausationId` column to every relational inbox schema via BoxProvisioning, atomically**
+  - **Catalog-based (MsSql, MySql, Postgres, Sqlite)**: in each `<Backend>InboxMigrationCatalog`, append a new migration version — idempotent `ALTER TABLE ADD CausationId <type> NULL` guarded by the catalog's existing column-existence guard; extend `s_vNAddedColumns` + `Cumulative()` so the version's `LogicalColumns` include `CausationId`; `SourceReference: "#2541"`. **Next version is per-backend, not uniform**: MsSql/MySql/Sqlite inbox are at V2 → add **V3**; **PostgreSql inbox is V1-only** (V1 already carries `ContextKey`) → add **V2**. Update the live `*InboxBuilder` (`SqlInboxBuilder`, `MySqlInboxBuilder`, `PostgreSqlInboxBuilder`, `SqliteInboxBuilder`) to emit the column. Update each backend's builder/migration drift parity test so builder columns == accumulated `LogicalColumns` (MsSql: `..._v2_migration_columns` test moves to V3).
+  - **Spanner**: add the column through `SpannerInboxProvisioner` + live `SpannerInboxBuilder`; move Spanner's builder/migration drift parity test.
+  - **Cross-backend constant (the atomic glue)**: bump `SpannerBoxMigrationRunner.VLatestInbox` 2 → 3, and in `SpannerVLatestDriftAgainstRelationalCatalogTests` update the PostgreSql carve-out literal `Assert.Equal(1, new PostgreSqlInboxMigrationCatalog()...Count)` → `Assert.Equal(2, ...)` (Postgres inbox count becomes 2; the other three become 3 and match `VLatestInbox`; Postgres stays a carve-out, not folded back).
+  - **Verification**: builds; all inbox builder/migration drift parity tests + `SpannerVLatestDriftAgainstRelationalCatalogTests` pass; relational schema tests run against a **real database container** (Brighter rule). Single commit.
+  - Depends on: — (standalone structural; the interface type from Task 5 is not needed for schema)
+
+### Tasks 19b–19f: TEST + IMPLEMENT — each relational inbox store implements `IAmACausationTrackingInbox`
+
+Each is its own test-first cycle against `CausationTrackingInboxBaseTests` (Task 18). Per store: read `CausationId` from `RequestContext.Bag` in `Add()`/`AddAsync()` and store it; implement `GetCausationId()`/`GetCausationIdAsync()`; `SupportsCausationTracking()` = runtime column-existence probe (true once the column from 19a is present). Tests hit a **real database container**, not a mock. Each **depends on: 19a, Task 18, Task 5**.
+
+- [ ] **19b — MsSql**: `/test-first when mssql inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
+- [ ] **19c — MySql**: `/test-first when mysql inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
+- [ ] **19d — Postgres**: `/test-first when postgres inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
+- [ ] **19e — Sqlite**: `/test-first when sqlite inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
+- [ ] **19f — Spanner**: `/test-first when spanner inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
 
 ---
 
@@ -368,6 +379,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 - [ ] **TEST + IMPLEMENT: NoSQL inbox stores add CausationId attribute and implement IAmACausationTrackingInbox**
   - **USE COMMAND**: `/test-first when nosql inbox stores causation id should store and retrieve via base tests`
   - Stores: DynamoDB, DynamoDB.V4, Firestore, MongoDb
+  - **No BoxProvisioning**: these stores are schemaless and outside BoxProvisioning — there is no DDL migration. The `CausationId` field is simply written on `Add` and read back; `SupportsCausationTracking()` returns `true`.
   - Each store:
     - Adds nullable `CausationId` attribute/field to schema (existing entries have null — no data migration)
     - Reads `CausationId` from `RequestContext.Bag` in `Add()`/`AddAsync()` and stores it
@@ -379,19 +391,36 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ---
 
-## Task 21: TEST + IMPLEMENT — Relational outbox stores implement `IAmACausationTrackingOutbox` (MsSql, MySql, PostgreSql, Sqlite, Spanner)
+## Task 21 — Relational outbox `IAmACausationTrackingOutbox` (split into structural schema + generator + per-backend behavioral)
 
-- [ ] **TEST + IMPLEMENT: Relational outbox stores add CausationId column and implement IAmACausationTrackingOutbox**
-  - **USE COMMAND**: `/test-first when relational outbox stores causation id should store and replay via base tests`
-  - Stores: MsSql, MySql, PostgreSql, Sqlite, Spanner
-  - Each store:
-    - Adds nullable `CausationId` column to schema, indexed for efficient replay queries
-    - Reads `CausationId` from `RequestContext.Bag` in `Add()`/`AddAsync()` and stores it
-    - Implements `IAmACausationTrackingOutbox` (`SupportsCausationTracking()`, `ReplayCausation()`, `ReplayCausationAsync()`)
-    - `SupportsCausationTracking()` performs runtime schema check (column exists?)
-  - Tests: Update Liquid templates in `tools/Paramore.Brighter.Test.Generator/` to generate causation tracking test cases from `CausationTrackingOutboxBaseTests`
-  - **⛔ STOP HERE — WAIT FOR USER APPROVAL in IDE before implementing**
-  - Depends on: Task 18
+> **Why split**: same forced-atomic constraint as Task 19 — the outbox half of `SpannerVLatestDriftAgainstRelationalCatalogTests` asserts `VLatestOutbox` equals every relational outbox catalog's `.Count` (all four, no carve-out), so all four V7→V8 bumps + the Spanner constant must move in one commit. Structural schema = Task **21a**; the Liquid generator update = Task **21b**; per-backend behavioral = Tasks **21c–21g**.
+
+### Task 21a: STRUCTURAL — BoxProvisioning schema evolution for ALL relational outbox stores (single atomic commit)
+
+Structural change verified by the *existing* drift/cross-backend tests staying green. No tracking-interface code here.
+
+- [ ] **STRUCTURAL: add the `CausationId` column + replay index to every relational outbox schema via BoxProvisioning, atomically**
+  - **Catalog-based (MsSql, MySql, PostgreSql, Sqlite)**: in each `<Backend>OutboxMigrationCatalog`, append migration **V8** (after the current V7 — uniform across all four) — idempotent `ALTER TABLE ADD CausationId <type> NULL` guarded by the catalog's existing column-existence guard; extend `s_v8AddedColumns` + `Cumulative()` so V8's `LogicalColumns` include `CausationId`; `SourceReference: "#2541"`. Add a **new** `CREATE INDEX` on `CausationId` (the outbox builders index no column today). Update the live `*OutboxBuilder` (`SqlOutboxBuilder`, `MySqlOutboxBuilder`, `PostgreSqlOutboxBuilder`, `SqliteOutboxBuilder`) to emit the column **and the index**. Update each backend's builder/migration drift parity test (MsSql: `..._v7_migration_columns` → V8). **Note**: the drift parity test compares columns only — assert the new index separately.
+  - **Spanner**: add column + replay index through `SpannerOutboxProvisioner` + live `SpannerOutboxBuilder`; move Spanner's builder/migration drift parity test.
+  - **Cross-backend constant (the atomic glue)**: bump `SpannerBoxMigrationRunner.VLatestOutbox` 7 → 8; `SpannerVLatestDriftAgainstRelationalCatalogTests` outbox assertions then pass for all four backends (no carve-out needed for outbox).
+  - **Verification**: builds; all outbox builder/migration drift parity tests + `SpannerVLatestDriftAgainstRelationalCatalogTests` pass; index asserted separately; relational schema tests run against a **real database container** (Brighter rule). Single commit.
+  - Depends on: — (standalone structural)
+
+### Task 21b: STRUCTURAL/TOOLING — extend the Liquid generator for causation-tracking outbox tests
+
+- [ ] **TOOLING: update Liquid templates in `tools/Paramore.Brighter.Test.Generator/` to generate causation-tracking outbox test cases from `CausationTrackingOutboxBaseTests`, then regenerate**
+  - Verification: generator runs; generated test files compile and reference the base test class.
+  - Depends on: Task 18 (`CausationTrackingOutboxBaseTests` must exist)
+
+### Tasks 21c–21g: TEST + IMPLEMENT — each relational outbox store implements `IAmACausationTrackingOutbox`
+
+Each is its own test-first cycle (tests generated via Task 21b from `CausationTrackingOutboxBaseTests`). Per store: read `CausationId` from `RequestContext.Bag` in `Add()`/`AddAsync()` and store it; implement `ReplayCausation()`/`ReplayCausationAsync()` (clear dispatched state by `CausationId`, using the 21a index); `SupportsCausationTracking()` = runtime column-existence probe. Tests hit a **real database container**. Each **depends on: 21a, 21b, Task 5**.
+
+- [ ] **21c — MsSql**: `/test-first when mssql outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
+- [ ] **21d — MySql**: `/test-first when mysql outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
+- [ ] **21e — PostgreSql**: `/test-first when postgres outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
+- [ ] **21f — Sqlite**: `/test-first when sqlite outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
+- [ ] **21g — Spanner**: `/test-first when spanner outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
 
 ---
 
@@ -400,6 +429,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 - [ ] **TEST + IMPLEMENT: NoSQL outbox stores add CausationId attribute and implement IAmACausationTrackingOutbox**
   - **USE COMMAND**: `/test-first when nosql outbox stores causation id should store and replay via base tests`
   - Stores: DynamoDB, DynamoDB.V4, Firestore, MongoDb
+  - **No BoxProvisioning**: these stores are schemaless and outside BoxProvisioning — there is no DDL migration. The `CausationId` field is written on `Add` and read back; add a secondary index on `CausationId` where the store supports one for efficient replay; `SupportsCausationTracking()` returns `true`.
   - Each store:
     - Adds nullable `CausationId` attribute/field to schema, indexed for efficient replay queries
     - Reads `CausationId` from `RequestContext.Bag` in `Add()`/`AddAsync()` and stores it
@@ -447,18 +477,29 @@ This is a **structural change** adding the new types needed before behavioral wo
 | 16 | Test + Implement | UseInboxHandler Throw/Warn/Add telemetry events (tidy improvement) | 1, 15 |
 | 17 | Test + Implement | DI registration of `IAmACausationTrackingOutbox` | 5, 6, 7 |
 | 18 | Test + Implement | Base test classes for persistent store causation tracking | 6, 7 |
-| 19 | Test + Implement | Relational inbox stores: `IAmACausationTrackingInbox` (MsSql, MySql, Postgres, Sqlite, Spanner) | 18 |
-| 20 | Test + Implement | NoSQL inbox stores: `IAmACausationTrackingInbox` (DynamoDB, DynamoDB.V4, Firestore, MongoDb) | 18 |
-| 21 | Test + Implement | Relational outbox stores: `IAmACausationTrackingOutbox` (MsSql, MySql, PostgreSql, Sqlite, Spanner) | 18 |
+| 19a | Structural | Relational inbox schema evolution via BoxProvisioning — ALL backends atomically (catalog versions: MsSql/MySql/Sqlite V3, Postgres V2; builders; Spanner provisioner + `VLatestInbox` 2→3 + carve-out; drift tests) | — |
+| 19b | Test + Implement | MsSql inbox implements `IAmACausationTrackingInbox` | 19a, 18, 5 |
+| 19c | Test + Implement | MySql inbox implements `IAmACausationTrackingInbox` | 19a, 18, 5 |
+| 19d | Test + Implement | Postgres inbox implements `IAmACausationTrackingInbox` | 19a, 18, 5 |
+| 19e | Test + Implement | Sqlite inbox implements `IAmACausationTrackingInbox` | 19a, 18, 5 |
+| 19f | Test + Implement | Spanner inbox implements `IAmACausationTrackingInbox` | 19a, 18, 5 |
+| 20 | Test + Implement | NoSQL inbox stores: `IAmACausationTrackingInbox`, schemaless / no BoxProvisioning (DynamoDB, DynamoDB.V4, Firestore, MongoDb) | 18 |
+| 21a | Structural | Relational outbox schema evolution via BoxProvisioning — ALL backends atomically (catalog V8 + index; builders; Spanner provisioner + `VLatestOutbox` 7→8; drift tests) | — |
+| 21b | Structural/Tooling | Extend Liquid generator for causation-tracking outbox tests | 18 |
+| 21c | Test + Implement | MsSql outbox implements `IAmACausationTrackingOutbox` | 21a, 21b, 5 |
+| 21d | Test + Implement | MySql outbox implements `IAmACausationTrackingOutbox` | 21a, 21b, 5 |
+| 21e | Test + Implement | PostgreSql outbox implements `IAmACausationTrackingOutbox` | 21a, 21b, 5 |
+| 21f | Test + Implement | Sqlite outbox implements `IAmACausationTrackingOutbox` | 21a, 21b, 5 |
+| 21g | Test + Implement | Spanner outbox implements `IAmACausationTrackingOutbox` | 21a, 21b, 5 |
 | 22 | Test + Implement | NoSQL outbox stores: `IAmACausationTrackingOutbox` (DynamoDB, DynamoDB.V4, Firestore, MongoDb) | 18 |
-| 23 | Verification | Build + run all core tests | 1–22 |
+| 23 | Verification | Build + run all core tests | all prior (1–22 incl. 19a–19f, 21a–21g) |
 
 ## FR Coverage
 
 | FR | Description | Task(s) |
 |----|-------------|---------|
 | FR1 | CausationId propagation via RequestContext.Bag | 5, 8, 9 |
-| FR2 | CausationId stored in inbox and outbox | 6, 7, 19, 20, 21, 22 |
+| FR2 | CausationId stored in inbox and outbox | 6, 7, 19a–19f, 20, 21a–21g, 22 |
 | FR3 | Replay on duplicate clears DispatchedAt | 10, 11 |
 | FR4 | Sweeper re-dispatch (existing, unchanged) | — (existing behavior; outbox state assertions in Tasks 10/11 verify messages are marked for re-dispatch) |
 | FR5 | CausationId distinct from JobId | 5 (separate constant/concept) |
@@ -480,5 +521,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 | Observability (Replay telemetry) | 15 |
 | Observability (Throw/Warn/Add telemetry — tidy improvement) | 16 |
 | DI registration | 17 |
-| Persistent store implementations | 19, 20, 21, 22 |
+| Persistent store implementations | 19b–19f, 20, 21c–21g, 22 |
+| Schema evolution via BoxProvisioning — catalog versions (outbox V8 uniform; inbox V3 for MsSql/MySql/Sqlite, V2 for Postgres), live builders + index, drift parity tests, and `SpannerBoxMigrationRunner.VLatest{Outbox,Inbox}` constant bumps + cross-backend constant test (atomic, structural) | 19a, 21a |
+| Liquid generator templates for causation-tracking outbox tests | 21b |
 | UseInboxHandler uses pipeline Context (prerequisite) | 1 |
