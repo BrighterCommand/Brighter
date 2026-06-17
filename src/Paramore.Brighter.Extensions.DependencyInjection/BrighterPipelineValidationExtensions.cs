@@ -44,8 +44,16 @@ public static class BrighterPipelineValidationExtensions
     /// Registers pipeline validation services. At startup, registered handler pipelines
     /// are evaluated against validation rules and errors prevent the host from starting.
     /// </summary>
+    /// <remarks>
+    /// Call this last in the Brighter builder chain. The validation-provider registrations and the
+    /// transformer-resolvability probe are snapshotted from the service collection at this point, so anything
+    /// registered after this call (e.g. a later <c>UseFluentValidation()</c> or <c>AutoFromAssemblies(...)</c>)
+    /// would not be seen and could produce a spurious warning.
+    /// </remarks>
     /// <param name="builder">The Brighter builder.</param>
     /// <param name="enabled">When false, the method is a no-op — no services are registered. Defaults to true.</param>
+    /// <param name="throwOnError">When true (the default), Error-severity findings throw and prevent the host
+    /// from starting; Warning-severity findings never block, regardless of this flag.</param>
     /// <returns>The builder, for fluent chaining.</returns>
     public static IBrighterBuilder ValidatePipelines(this IBrighterBuilder builder, bool enabled = true, bool throwOnError = true)
     {

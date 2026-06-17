@@ -219,7 +219,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 var probe = sp.GetService<IAmATransformerResolvabilityProbe>();
                 var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
                 if (probe is null || mapperRegistryBuilder is null)
-                    return new Specification<Subscription>(_ => Array.Empty<ValidationResult>());
+                    return new Specification<Subscription>(_ => []);
 
                 return ConsumerValidationRules.UnwrapTransformResolvable(
                     ServiceCollectionExtensions.MessageMapperRegistry(sp), probe);
