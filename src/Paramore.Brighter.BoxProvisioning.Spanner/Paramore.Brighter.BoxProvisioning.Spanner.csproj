@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Google Cloud Spanner box provisioning for Paramore.Brighter. Provides automatic creation and migration of inbox and outbox tables in Cloud Spanner at application startup.</Description>
+    <Authors>Ian Cooper</Authors>
+    <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Cloud Spanner;Google Cloud;GCP;Database;Outbox;Inbox;Provisioning;Migration;Command;Event;Command Processor;Messaging;Brighter</PackageTags>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning\Paramore.Brighter.BoxProvisioning.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Inbox.Spanner\Paramore.Brighter.Inbox.Spanner.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Outbox.Spanner\Paramore.Brighter.Outbox.Spanner.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Cloud.Spanner.Data"/>
+  </ItemGroup>
+
+</Project>

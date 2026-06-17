@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Amazon;
+using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
@@ -89,14 +90,10 @@ public class Program
                 };
 
                 //create the gateway
-                if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+                var serviceURL = Environment.GetEnvironmentVariable("AWS_SERVICE_URL") ?? string.Empty;
+                var credentials = ResolveCredentials(serviceURL);
+                if (credentials != null)
                 {
-                    // var serviceURL = "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
-                    // var region = string.IsNullOrWhiteSpace(serviceURL)
-                    //     ? RegionEndpoint.EUWest1
-                    //     : RegionEndpoint.USEast1;
-
-                    var serviceURL = string.Empty;
                     var region = RegionEndpoint.USEast1;
                     var awsConnection = new AWSMessagingGatewayConnection(credentials, region,
                         cfg =>
@@ -148,5 +145,21 @@ public class Program
             .Build();
 
         await host.RunAsync();
+    }
+
+    // When AWS_SERVICE_URL points at a local AWS emulator (Floci) we use a random
+    // 12-digit access key, which Floci interprets as the account ID for per-account
+    // namespace isolation — so this sample's resources stay separate from anything
+    // else running against the same emulator. Without AWS_SERVICE_URL we fall back
+    // to the default profile in the local credential chain.
+    private static AWSCredentials ResolveCredentials(string serviceURL)
+    {
+        if (!string.IsNullOrWhiteSpace(serviceURL))
+        {
+            var accountId = Random.Shared.NextInt64(100_000_000_000L, 999_999_999_999L + 1).ToString();
+            return new BasicAWSCredentials(accountId, "test");
+        }
+
+        return new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var creds) ? creds : null;
     }
 }

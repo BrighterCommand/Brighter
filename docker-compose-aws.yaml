@@ -1,0 +1,11 @@
+services:
+  floci:
+    image: floci/floci:1.5.19
+    ports:
+      - "4566:4566" # Floci AWS emulator (same port as Moto/LocalStack for compatibility)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s

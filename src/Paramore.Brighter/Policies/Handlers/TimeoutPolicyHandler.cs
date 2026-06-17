@@ -112,7 +112,7 @@ namespace Paramore.Brighter.Policies.Handlers
                 },
                 cancellationToken: ct,
                 creationOptions: TaskCreationOptions.LongRunning,
-                scheduler: TaskScheduler.Current
+                scheduler: TaskScheduler.Default
                 );
 
             var task = TimeoutAfter(task: timeoutTask, millisecondsTimeout: _milliseconds, cancellationTokenSource: cts);

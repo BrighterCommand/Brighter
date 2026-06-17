@@ -2,6 +2,299 @@
 
 ## Master
 
+### Box Schema Versioning and Migrations (spec 0027)
+
+Brighter's box-provisioning system now ships a versioned migration chain for the Outbox and Inbox tables. New deployments install at `V_latest` directly; deployments installed under spec 0023 (which only had a `V=1` history row) are recognised by the runner and advance to `V_latest` without re-running DDL — the existing `V=1` row is preserved verbatim and the V2..V_latest rows are appended. Deployments with pre-spec-0023 (legacy) tables are bootstrapped via column introspection, gated by a `HeaderBag`/`CommandBody` discriminator, then upgraded to `V_latest` under the existing per-backend migration lock.
+
+#### Source-breaking change: `IAmABoxMigration`
+
+The `IAmABoxMigration` interface (and the `BoxMigration` record) gain three new required members:
+
+* **`IReadOnlyCollection<string> LogicalColumns`** — the cumulative column set the table has after this migration applies. Used by drift detection (the build fails if a column lands on the builder DDL without a matching migration entry) and by version inference for legacy tables (the runner walks the `LogicalColumns` chain to determine which migration to bootstrap from).
+* **`string? SourceReference`** — the commit SHA (and PR number where available) that introduced the column. Required from V2 onwards; V1 stays `null`.
+* **`string? IdempotencyCheckSql`** — used **only by SQLite**, whose grammar lacks `ALTER TABLE ADD COLUMN IF NOT EXISTS`. The SQLite runner evaluates this scalar as an existence probe and skips `UpScript` when the probe returns `> 0` (still inserting the history row). MSSQL / PostgreSQL / MySQL bake the existence check into the `UpScript` itself and leave `IdempotencyCheckSql` `null`.
+
+External implementors of `IAmABoxMigration` will fail to compile until they add the new members. The change is source-breaking by design: `Paramore.Brighter` targets `netstandard2.0`, which does not support default interface members, so the spec-0023 pattern of adding required surface as a plain abstract member (e.g. `SchemaName`) is reused here. See ADR 0057 "Consequences → Negative" for the rationale.
+
+```csharp
+// Before
+public class MyMigration : IAmABoxMigration
+{
+    public int Version => 8;
+    public string Description => "Add MyColumn";
+    public string UpScript => "ALTER TABLE Outbox ADD COLUMN MyColumn TEXT NULL";
+}
+
+// After
+public class MyMigration : IAmABoxMigration
+{
+    public int Version => 8;
+    public string Description => "Add MyColumn";
+    public string UpScript => "ALTER TABLE Outbox ADD COLUMN MyColumn TEXT NULL";
+
+    // Cumulative column set after this migration applies. The drift test compares this
+    // to the live builder DDL — adding a column to the builder without listing it here
+    // (or vice versa) fails CI.
+    public IReadOnlyCollection<string> LogicalColumns { get; } =
+        new[] { /* V1..V7 columns */, "MyColumn" };
+
+    // V2+ migrations carry the commit SHA / PR number that introduced the column.
+    public string? SourceReference => "abcd1234 (PR #4xxx)";
+
+    // SQLite-only: existence probe so the runner can skip the ALTER if the column
+    // already lives on the table (legacy bootstrap or a half-applied chain).
+    // Leave null on MSSQL/PostgreSQL/MySQL — those backends use IF NOT EXISTS in UpScript.
+    public string? IdempotencyCheckSql =>
+        "SELECT COUNT(*) FROM pragma_table_info('Outbox') WHERE name = 'MyColumn'";
+}
+```
+
+#### Source-breaking change: `IAmARelationalDatabaseConfiguration.SchemaName`
+
+`IAmARelationalDatabaseConfiguration` gains a new required `string? SchemaName` member used by the box-provisioning runners (and the schema-qualified MSSQL advisory-lock resource — see "Behaviour notes" below). External implementors of the interface will fail to compile until they expose `SchemaName`. The shipped `RelationalDatabaseConfiguration` record in `Paramore.Brighter` already exposes the property and accepts `schemaName:` as an optional named argument, so call sites that use the shipped configuration record require no change.
+
+```csharp
+// Before — custom configuration class only needed to cover the message-payload mode
+public class MyDatabaseConfiguration : IAmARelationalDatabaseConfiguration
+{
+    public string ConnectionString { get; }
+    public string? OutBoxTableName { get; }
+    public string? InboxTableName { get; }
+    public bool BinaryMessagePayload { get; }
+}
+
+// After — must also expose SchemaName (defaulting to null preserves the V9 default of dbo/public)
+public class MyDatabaseConfiguration : IAmARelationalDatabaseConfiguration
+{
+    public string ConnectionString { get; }
+    public string? OutBoxTableName { get; }
+    public string? InboxTableName { get; }
+    public string? SchemaName { get; }
+    public bool BinaryMessagePayload { get; }
+}
+```
+
+#### Source-breaking change: `UseBoxProvisioning` overload consolidation
+
+The `BrighterBuilderBoxProvisioningExtensions.UseBoxProvisioning` extension previously exposed two overlapping ways to set the migration lock timeout: a `TimeSpan? migrationLockTimeout` parameter on the extension method, and `BoxProvisioningOptions.MigrationLockTimeout` assignable from the configure delegate. The dual surface was confusing and the parameter form did not allow backends to read the timeout late.
+
+The fix removes the parameter. Callers set the timeout exclusively through `BoxProvisioningOptions.MigrationLockTimeout` inside the configure delegate. Backend `AddXxxOutbox`/`AddXxxInbox` methods read the option lazily at registration time, so the order of statements inside the configure delegate does not matter. Existing callers that did not pass `migrationLockTimeout` (the typical case — all in-tree call sites and samples used the default) require no change.
+
+```csharp
+// Before
+builder.UseBoxProvisioning(opts => opts.AddMsSqlOutbox(config), TimeSpan.FromMinutes(2));
+
+// After — order inside the delegate is free
+builder.UseBoxProvisioning(opts =>
+{
+    opts.AddMsSqlOutbox(config);
+    opts.MigrationLockTimeout = TimeSpan.FromMinutes(2);
+});
+```
+
+#### Additive: per-backend advisory-lock abstraction
+
+The session-level migration-lock collaborator is now substitutable per backend, so tests and advanced integrators (custom connection-pool sharing, external lock-key derivation) can plug in their own implementation. Each runner gains two additive optional constructor parameters (the lock interface plus `Microsoft.Extensions.Logging.ILogger?`); existing two-arg construction continues to work unchanged. Lock-key derivation stays at the runner; the abstraction owns the lock SQL. See ADR 0057 §5b.
+
+* **PostgreSQL**: `IPostgreSqlAdvisoryLock` / `PostgreSqlAdvisoryLock` (in `Paramore.Brighter.BoxProvisioning.PostgreSql`). Owns `pg_try_advisory_lock` / `pg_advisory_unlock`. Runner logs a Warning when `pg_advisory_unlock` returns `false` at release time (previously discarded silently).
+* **MySQL**: `IMySqlAdvisoryLock` / `MySqlAdvisoryLock` (in `Paramore.Brighter.BoxProvisioning.MySql`). Owns `GET_LOCK` / `RELEASE_LOCK`. Release returns `bool?` (`true` released by us, `false` held by another, `null` did not exist); runner logs a Warning on any non-`true` outcome, naming the result code, table name, and lock key. Lock-key derivation continues to flow through the existing public `MySqlMigrationLockName.For` helper.
+* **MSSQL**: `IMsSqlAdvisoryLock` / `MsSqlAdvisoryLock` (in `Paramore.Brighter.BoxProvisioning.MsSql`). Owns the `sp_getapplock` call. Acquire-only — `@LockOwner = 'Transaction'` means the lock auto-releases on the surrounding transaction's commit or rollback, so the abstraction has no `ReleaseAsync`. Each documented `sp_getapplock` negative return code is now translated into a distinguishable exception type so an operator can react with the right strategy: `-1` (timeout) → `TimeoutException`, `-2` (cancelled) → `OperationCanceledException`, `-3` (deadlock victim) → **new** `MigrationLockDeadlockException`, `-999` (parameter validation / call error) → `ArgumentException`. Previously every `< 0` result was collapsed into a generic `TimeoutException`. The 255-character `@Resource` length guard moves into the abstraction's acquire path. Lock-resource derivation `BrighterMigration_{table}` continues to live at the runner.
+
+#### Behaviour notes
+
+* Spec-0023-era `__BrighterMigrationHistory` rows at `MigrationVersion = 1` are still valid. The runner's normal path resumes from `MAX(V)`, the `IsMigrationAppliedAsync` gate skips the V1 row, and V2..V_latest are applied as ALTERs against the existing table. The original V1 description is preserved verbatim.
+* `IAmABoxMigrationRunner.MigrateAsync` now takes a `BoxType boxType` argument so the runner can pick the correct discriminator (`HeaderBag` for outbox, `CommandBody` for inbox) when bootstrapping pre-spec-0023 tables. External callers must add the new argument on recompile.
+* Spanner remains a degenerate runner: fresh installs stamp `V_latest` and existing tables either no-op (`MAX(V) == V_latest`), bootstrap to `V_latest` via the discriminator gate (no history row yet), or throw `ConfigurationException` (`MAX(V) != V_latest`, manual recovery required). See ADR 0057 §6.
+* The MSSQL advisory-lock resource is `BrighterMigration_<schema>.<table>` (previously `BrighterMigration_<table>`). Two same-named tables in different schemas (e.g. `dbo.Outbox` and `billing.Outbox`) now acquire distinct `sp_getapplock` resources and migrate in parallel instead of serialising on a shared lock. The resource still stays well under the 255-character `@Resource` limit for any realistic `<schema>.<table>` pair.
+* The SQLite runner emits `PRAGMA journal_mode=WAL` on every migration call by default. WAL is database-file-wide and persistent, so a host application that has deliberately picked DELETE or TRUNCATE journal mode would have its choice silently overridden. Pass `enableWalMode: false` to `AddSqliteOutbox` / `AddSqliteInbox` (or to the `SqliteBoxMigrationRunner` constructor) to skip the pragma and leave the existing journal mode untouched.
+
+See [ADR 0057](docs/adr/0057-box-schema-versioning-and-migrations.md) and [spec 0027](specs/0027-box-schema-versioning-and-migrations/) for full details.
+
+### Box Provisioning RDD role-interface refactor (spec 0028)
+
+A fourth-pass review of PR #4039 surfaced static helper classes and free-standing runners across spec 0027's BoxProvisioning surface. Spec 0028 restructures that surface around Responsibility-Driven-Design role interfaces and a template-method runner base. The change is purely a structural refactor — no behaviour changes — but it is source-breaking for any external implementor of the affected types. The shipped Brighter call-sites and DI extensions absorb the cascade; existing `UseBoxProvisioning` configure-delegate users require no change. See [ADR 0058](docs/adr/0058-box-provisioning-rdd-role-interfaces.md) and [spec 0028](specs/0028-box-provisioning-rdd-role-interfaces/) for full details.
+
+#### Source-breaking change: detection helpers become instance classes (`{Backend}BoxDetectionHelper`)
+
+The static `{Backend}BoxDetectionHelpers` (plural) classes for all five backends become public instance classes `{Backend}BoxDetectionHelper` (singular) implementing the new role interfaces:
+
+* **Relational four** (MSSQL/PostgreSQL/MySQL/SQLite) implement `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` — adds `DetectCurrentVersionAsync` on top of the base interface.
+* **Spanner** implements the base interface `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction>` only — degenerate fresh-install model per ADR 0057 §6, no version inference. `SpannerBoxDetectionHelpers` was `internal`; the new `SpannerBoxDetectionHelper` is `public`.
+
+Method-signature changes on the new instance methods:
+
+* **MSSQL / PostgreSQL / MySQL**: `string schemaName` widens to `string? schemaName` (existing slot). Each impl substitutes the backend default when null (`"dbo"` / `"public"` / `connection.Database`). Positional argument lists at existing call-sites are unchanged.
+* **SQLite / Spanner**: gain a `string? schemaName` parameter inserted between `tableName` and `cancellationToken`. Existing positional call-sites that passed `(connection, tableName, cancellationToken, transaction)` must insert an explicit `null` and become `(connection, tableName, null, cancellationToken, transaction)`. Each impl ignores the parameter.
+* **All five backends**: `GetTableColumnsAsync` return type changes from `HashSet<string>` to `IReadOnlyCollection<string>` (looser; symmetric with `IAmABoxMigration.LogicalColumns` and netstandard2.0-compatible).
+
+The widened nullability + return-type looseness are licensed by NF1: the spec 0027 surface had not shipped at the time spec 0028 landed (same PR).
+
+```csharp
+// Before
+var exists = await MsSqlBoxDetectionHelpers.DoesTableExistAsync(
+    connection, "Outbox", "dbo", ct, transaction);
+
+// After
+var helper = new MsSqlBoxDetectionHelper();
+var exists = await helper.DoesTableExistAsync(
+    connection, "Outbox", "dbo", ct, transaction);
+// or null for schemaName — the helper substitutes "dbo":
+var exists = await helper.DoesTableExistAsync(
+    connection, "Outbox", null, ct, transaction);
+```
+
+#### Source-breaking change: migration catalogues become instance classes (`{Backend}{Box}MigrationCatalog`)
+
+The static `{Backend}{Box}Migrations` classes (eight total — MSSQL/PG/MySQL/SQLite × Outbox/Inbox) become public instance classes `{Backend}{Box}MigrationCatalog` implementing `IAmABoxMigrationCatalog`. Spanner is exempt per ADR 0057 §6 (no migration catalogue).
+
+```csharp
+// Before
+IReadOnlyList<IAmABoxMigration> migrations = MsSqlOutboxMigrations.All(config);
+
+// After
+IAmABoxMigrationCatalog catalog = new MsSqlOutboxMigrationCatalog();
+IReadOnlyList<IAmABoxMigration> migrations = catalog.All(config);
+// or receive the catalogue via DI (singleton lifetime registered by AddMsSqlOutbox).
+```
+
+#### Source-breaking change: payload-mode validators become instance classes (`{Backend}PayloadModeValidator`)
+
+The static `{Backend}PayloadModeValidator` classes for all five backends become public instance classes implementing `IAmABoxPayloadModeValidator<TConnection>` (single-generic, no `TTransaction`). Method-signature changes:
+
+* **MSSQL / PostgreSQL / MySQL**: `string schemaName` widens to `string?`. Existing positional call-sites are unchanged; each impl substitutes the backend default when null.
+* **SQLite / Spanner**: gain a `string? schemaName` parameter inserted between `tableName` and `columnName`. Existing positional call-sites that passed `(connection, tableName, columnName, binaryMessagePayload, cancellationToken)` must become `(connection, tableName, null, columnName, binaryMessagePayload, cancellationToken)`. Each impl ignores the parameter.
+
+#### Source-breaking change: provisioner constructor cascade
+
+All ten existing provisioner classes (`{Backend}{Box}Provisioner` × four relational backends × two box-types, plus the `SpannerOutboxProvisioner`/`SpannerInboxProvisioner` pair) gain three new typed constructor parameters reflecting the static→instance conversion:
+
+* `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` for the relational eight (provisioners call `DetectCurrentVersionAsync` during the bootstrap branch). Spanner's pair receives `IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction>` (base interface — no version-detection capability).
+* `IAmABoxMigrationCatalog` for the relational eight (Outbox provisioners receive the Outbox catalogue; Inbox provisioners receive the Inbox catalogue). Spanner's pair: omitted per ADR 0057 §6.
+* `IAmABoxPayloadModeValidator<TConnection>` for all ten.
+
+External code that constructs provisioners directly must supply the new parameters. Existing call-sites that wire provisioners via `UseBoxProvisioning(opts => opts.Add{Backend}Outbox(config))` are absorbed by the DI extensions — no change required.
+
+#### Source-breaking change: runner constructor cascade and template-method base
+
+The four relational migration runners (`MsSqlBoxMigrationRunner`, `PostgreSqlBoxMigrationRunner`, `MySqlBoxMigrationRunner`, `SqliteBoxMigrationRunner`) now derive from the new abstract base `SqlBoxMigrationRunner<TConnection, TTransaction>`. Each derived runner forwards new constructor parameters to the base:
+
+* `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` — the typed detection helper.
+* `IAmARelationalDatabaseConfiguration` — for `OpenConnectionAsync` to read `ConnectionString`, plus access to `OutBoxTableName`/`InBoxTableName`/payload-mode flags.
+* `TimeSpan lockTimeout` — per-runner-instance deployment knob, supplied by `Add{Backend}Outbox`/`Add{Backend}Inbox` from `BoxProvisioningOptions.MigrationLockTimeout`.
+* `ILogger? logger` — exposed to derived classes as `protected Logger { get; }` and forwarded into per-backend `IAmAProvisioningUnitOfWork<TTransaction>` construction.
+
+The base owns the `MigrateAsync` algorithm — open connection, create UoW, begin UoW (lock + transaction in backend-specific order), ensure history table, re-detect existence under the UoW (TOCTOU defence per ADR 0057 §3), dispatch on detection state (fresh / bootstrap / normal), commit, rollback-on-throw with `CancellationToken.None`, dispose via `await using`. Each derived runner implements only the irreducibly-backend-specific hooks: `OpenConnectionAsync`, `CreateUnitOfWorkAsync`, `LockResourceFor`, `EnsureHistoryTableAsync`, `RunFreshPathAsync`, `RunBootstrapPathAsync`, `RunNormalPathAsync`. The Spanner runner remains free-standing per ADR 0057 §6 (degenerate fresh-install-only).
+
+External code that constructs the relational runners directly must supply the new parameters. The harmonised UoW lifecycle / cancellation / disposal contract is described in ADR 0058 §B.3.
+
+#### Additive: new public types
+
+Spec 0028 introduces the following net-new public surface (all in `Paramore.Brighter.BoxProvisioning` unless noted):
+
+* **Role interfaces** (5): `IAmABoxMigrationDetectionHelper<TConnection, TTransaction>`, `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` (extends the base), `IAmABoxMigrationCatalog`, `IAmABoxPayloadModeValidator<TConnection>`, `IAmAProvisioningUnitOfWork<TTransaction>`.
+* **Abstract base** (1): `SqlBoxMigrationRunner<TConnection, TTransaction>` implementing `IAmABoxMigrationRunner`.
+* **Abstract base** (1, sub-phase A): `SqlBoxProvisioner<TConnection, TTransaction>` — abstract base class in `Paramore.Brighter.BoxProvisioning` for the eight relational provisioners (MSSQL/PG/MySQL/SQLite × Outbox/Inbox). Spanner's pair stays free-standing per ADR 0057 §6.
+* **Provisioning UoW implementations** (4 — one per relational backend, in each backend's package): `MsSqlProvisioningUnitOfWork`, `PostgreSqlProvisioningUnitOfWork`, `MySqlProvisioningUnitOfWork`, `SqliteProvisioningUnitOfWork`. Each encapsulates that backend's specific lock+transaction pairing and ordering.
+* **Detection-helper instance classes** (5): `MsSqlBoxDetectionHelper`, `PostgreSqlBoxDetectionHelper`, `MySqlBoxDetectionHelper`, `SqliteBoxDetectionHelper`, `SpannerBoxDetectionHelper`.
+* **Migration-catalogue instance classes** (8): `{MsSql,PostgreSql,MySql,Sqlite}{Outbox,Inbox}MigrationCatalog` (Spanner exempt).
+* **Payload-validator instance classes** (5): `{MsSql,PostgreSql,MySql,Sqlite,Spanner}PayloadModeValidator`.
+
+DI extensions in each `Add{Backend}{Box}` register the detection helper, catalogue, and payload validator as singletons (each role-impl is stateless after construction); existing call-site shape `UseBoxProvisioning(opts => opts.Add{Backend}Outbox(config))` is unchanged.
+
+### Multi-Tenancy Migration History Scope (spec 0029)
+
+The box migration-history table can now be placed **per tenant schema** instead of always landing in the backend default schema. The default behaviour is unchanged — existing deployments keep `__BrighterMigrationHistory` in `dbo` / `public` / the connection-bound database regardless of `SchemaName`. Set `BoxProvisioningOptions.MigrationHistoryScope = MigrationHistoryScope.PerSchema` to opt this deployment into per-schema placement on MSSQL and PostgreSQL. See [ADR 0060](docs/adr/0060-multi-tenancy-migration-history-scope.md) and [spec 0029](specs/0029-multi-tenancy-migrations/) for full details.
+
+```csharp
+services
+    .AddBrighter()
+    .UseBoxProvisioning(opts =>
+    {
+        opts.MigrationHistoryScope = MigrationHistoryScope.PerSchema;
+        opts.AddMsSqlOutbox(configuration);    // history lands in configuration.SchemaName
+        opts.AddPostgreSqlInbox(configuration);
+    });
+```
+
+#### Additive: new public types
+
+* **Enum**: `MigrationHistoryScope` in `Paramore.Brighter.BoxProvisioning` with values `Global` (default — today's behaviour) and `PerSchema`.
+* **Property**: `BoxProvisioningOptions.MigrationHistoryScope` (defaults to `MigrationHistoryScope.Global`).
+
+#### Source-breaking change: `IAmABoxMigrationDetectionHelper.DoesHistoryExistAsync` / `GetMaxVersionAsync` gain a `historySchema` parameter
+
+`IAmABoxMigrationDetectionHelper<TConnection, TTransaction>` gains a `string? historySchema` parameter on `DoesHistoryExistAsync` and `GetMaxVersionAsync` (placed after the existing `schemaName`). The derived `IAmAVersionDetectingMigrationHelper<TConnection, TTransaction>` interface file itself is unchanged — its implementors inherit the new signature through interface inheritance. `null` means "the backend default" — i.e. today's behaviour — so the bundled Brighter detection helpers and call-sites are byte-for-byte unchanged. External implementors of either interface must add the new parameter on recompile; passing `null` preserves existing semantics.
+
+```csharp
+// Before
+Task<bool> DoesHistoryExistAsync(
+    TConnection connection, string tableName, string? schemaName,
+    CancellationToken cancellationToken = default,
+    TTransaction? transaction = null);
+
+// After
+Task<bool> DoesHistoryExistAsync(
+    TConnection connection, string tableName, string? schemaName, string? historySchema,
+    CancellationToken cancellationToken = default,
+    TTransaction? transaction = null);
+```
+
+`DetectCurrentVersionAsync` is **unchanged** — it reads box-table columns, not history.
+
+#### Source-breaking change: runner constructor cascade gains an optional `scope` parameter
+
+The four relational runners (`MsSqlBoxMigrationRunner`, `PostgreSqlBoxMigrationRunner`, `MySqlBoxMigrationRunner`, `SqliteBoxMigrationRunner`) and the abstract base `SqlBoxMigrationRunner<TConnection, TTransaction>` gain a final `MigrationHistoryScope scope = MigrationHistoryScope.Global` constructor parameter. The default keeps existing positional call-sites compiling; external code that constructs the runners directly with named arguments past this position will need a small adjustment. `Add{Backend}Outbox`/`Add{Backend}Inbox` absorb the cascade and read `BoxProvisioningOptions.MigrationHistoryScope`; existing DI call-sites are unchanged.
+
+#### Source-breaking change: `EnsureHistoryTableAsync` hook gains a `tableName` parameter
+
+The `protected abstract Task EnsureHistoryTableAsync(...)` hook on `SqlBoxMigrationRunner<TConnection, TTransaction>` gains a `string tableName` parameter. The MSSQL and PostgreSQL hook implementations use it to filter the `Global → PerSchema` auto-seed to this tenant's rows; MySQL and SQLite accept and ignore it. External code that derives from `SqlBoxMigrationRunner<TConnection, TTransaction>` (rare — designed for the four shipped backends) must thread the new parameter through.
+
+#### Behaviour notes
+
+* **Backend support.** Only MSSQL and PostgreSQL honour `PerSchema` placement. MySQL (where schema == database), SQLite (no schema concept), and Spanner (degenerate fresh-install-only model per ADR 0057 §6) treat `PerSchema` as a no-op and keep history in their default location — no exception, so a single `BoxProvisioningOptions` can target a mixed backend set without per-backend branching. The placement decision is surfaced per run via an `Information` log of the form `Box migration history for {BoxTable} resolved to schema {HistorySchema} (scope {Scope})` (on no-op backends `HistorySchema` is the literal `<backend default>`).
+* **Global → PerSchema auto-seed.** After flipping a previously-`Global` MSSQL/PG deployment to `PerSchema`, the runner copies this tenant's prior history rows from the legacy default-schema table into the per-schema table under the same advisory lock and transaction as the CREATE — existing migrations are not re-applied. The seed copies all five columns (`MigrationVersion`, `SchemaName`, `BoxTableName`, `Description`, `AppliedAt`) filtered by `(SchemaName, BoxTableName)`, with a composite-primary-key `NOT EXISTS` guard so repeated flips are idempotent. The seed runs on **every** PerSchema provision (so the second box-type to flip — e.g. inbox after outbox — still gets seeded into the per-schema history table the first flip created); the NOT EXISTS guard makes steady-state runs a zero-row no-op. A distinct `Information` log records `Seeded {RowCount} legacy history row(s) for {BoxTable} from {LegacySchema} to {TargetSchema}` plus an OpenTelemetry `Activity` event `legacy_history_seeded` carrying the row count as the `brighter.box.migration.seed.rows` tag.
+* **Permission requirement (every run, not just the first flip).** Because the seed's `INSERT…SELECT` executes on every PerSchema provision, the runner needs `SELECT` on the legacy default-schema history table for the **lifetime of the PerSchema deployment**. Operators who grant `SELECT` only for the initial flip and then revoke it will hit a `ConfigurationException` on every subsequent provision run, with the inner provider exception attached.
+* **Reverse flip (`PerSchema → Global`) and legacy-row cleanup are out of scope.** The per-schema history table remains in the tenant's schema if a deployment is later switched back to `Global`; the legacy default-schema rows survive after a PerSchema flip. Both are harmless but storage-redundant; operators wanting to reclaim that storage must run their own ad-hoc DELETE / DROP.
+* **Misconfiguration.** Selecting `PerSchema` on a placement backend with a `null` `SchemaName` throws `ConfigurationException` at the entry to the runner. Per-tenant identifiers flow through `Identifiers.AssertSafe` before any DDL is emitted, so an injection-shaped `SchemaName` is rejected at the provisioner entry well before reaching the database.
+
+### Replace Primitive Obsession in Box Provisioning with Value Types (spec 0030)
+
+The box-provisioning contracts now use dedicated value types instead of bare `string`/`int`, following the `Id` template and [ADR 0019 "Avoid Primitive Obsession"](docs/adr/0019-avoid-primitive-obsession.md). See [ADR 0061](docs/adr/0061-box-provisioning-value-types.md) and [spec 0030](specs/0030-primitive_obsession/) for full details.
+
+#### Additive: new value types
+
+Six value types land in `Paramore.Brighter.BoxProvisioning`, each with bidirectional implicit conversions to/from its underlying primitive, so existing string/int call-sites continue to compile unchanged:
+
+* **`BoxTableName`**, **`MigrationDescription`**, **`SqlScript`**, **`SourceReference`** — wrap `string`.
+* **`SchemaName`** — wraps `string`; `null` models "not supplied" (e.g. SQLite has no schema).
+* **`MigrationVersion`** — wraps `int`, with arithmetic and `IComparable` ordering preserved through the implicit `int` conversion.
+
+The `IAmABoxMigration` / `BoxMigration` and `IAmABoxMigrationRunner` surfaces are retyped to these value types. Because the conversions are implicit and bidirectional, this is **source-compatible** for callers passing primitives; external implementors overriding members will see the value types in the new signatures.
+
+#### Source-nullability ripple: core implicit `operator string` widened to `operator string?`
+
+While applying the value-type pattern we corrected a latent null-safety bug in nine existing core value types — `Id`, `RoutingKey`, `CloudEventsType`, `PartitionKey`, `SubscriptionName`, `TraceContext.TraceParent`/`TraceState` (in `Paramore.Brighter`), and `ConsumerName`/`HostName` (in `Paramore.Brighter.ServiceActivator`). These are **reference-type** records/classes, and a user-defined conversion on a reference type is *not* null-lifted the way a `Nullable<T>` conversion is: `(string?)(T?)null` invoked `operator string` on a null receiver and threw a `NullReferenceException`. Each operator changed from `operator string(T t) => t.Value` to the null-safe `operator string?(T t) => t?.Value`, matching the long-standing `ChannelName` precedent.
+
+* **Binary-compatible.** `string` and `string?` are the same IL type, so already-compiled consumers are unaffected at runtime.
+* **Source ripple for downstream NRT consumers.** Because these operators now return `string?`, downstream projects with nullable reference types enabled will see `CS8600`/`CS8604` where the result feeds a non-nullable `string`, e.g.:
+
+  ```csharp
+  string topic = someRoutingKey;        // CS8600: converting string? to string
+  dict.Add(someId, value);              // CS8604: someId is now string?
+  ```
+
+  The fix is the same one applied throughout this PR across ~60 in-box assemblies: take the underlying value explicitly with `.Value` (which is non-nullable), or `?.Value ?? fallback` when the source is itself nullable:
+
+  ```csharp
+  string topic = someRoutingKey.Value;          // non-nullable source
+  dict.Add(someId.Value, value);
+  string reply = header.ReplyTo?.Value ?? "";   // nullable RoutingKey? source
+  ```
+
+  No call-site fix is needed unless your code both has NRT enabled and treats warnings as errors.
+
+> Note: `Tenant` (in `Paramore.Brighter.Transformers.JustSaying`) is a `readonly record struct`, not a reference type — its receiver can never be null, so its `operator string` is intentionally left non-nullable.
+
 ## Release 10.0.0
 
 With V10 we have made a number of significant changes to Brighter. There are breaking changes that you will need to be aware of. However, most of the changes required are straightforward to make. A summary of the most important changes:

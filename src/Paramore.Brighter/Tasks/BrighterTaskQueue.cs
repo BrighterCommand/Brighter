@@ -1,8 +1,8 @@
 #region Sources
 
-// This class is based on Stephen Cleary's AyncContext in https://github.com/StephenCleary/AsyncEx
-// The original code is licensed under the MIT License (MIT) <a href="https://github.com/StephenCleary/AsyncEx/blob/master/LICENSE>AyncEx license</a>
-// Modifies the original approach in Brighter which only provided a synchronization synchronizationHelper, not a scheduler, and thus would
+// This class is based on Stephen Cleary's AsyncContext in https://github.com/StephenCleary/AsyncEx
+// The original code is licensed under the MIT License (MIT) <a href="https://github.com/StephenCleary/AsyncEx/blob/master/LICENSE>AsyncEx license</a>
+// Modifies the original approach in Brighter which only provided a synchronization context, not a scheduler, and thus would
 // not run continuations on the same thread as the async operation if used with ConfigureAwait(false).
 // This is important for the ServiceActivator, as we want to ensure ordering on a single thread and not use the thread pool.
 
@@ -17,85 +17,91 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tasks;
 
 /// <summary>
-/// Represents a task queue that allows tasks to be added and consumed in a thread-safe manner.
+/// Thread-safe queue of tasks awaiting execution, paired with a flag indicating whether
+/// exceptions should be propagated back to the executor.
 /// </summary>
 internal sealed class BrighterTaskQueue : IDisposable
 {
-    private readonly BlockingCollection<Tuple<Task, bool>> _queue = new();
+    private readonly BlockingCollection<(Task Task, bool PropagateExceptions)> _queue = new();
 
     /// <summary>
-    /// Gets an enumerable that consumes and removes items from the queue.
+    /// Enumerates and removes items as they become available. Blocks until the queue is
+    /// completed for adding.
     /// </summary>
-    /// <returns>An enumerable that consumes and removes items from the queue.</returns>
-    public IEnumerable<Tuple<Task, bool>> GetConsumingEnumerable()
-    {
-        return _queue.GetConsumingEnumerable();
-    }
+    public IEnumerable<(Task Task, bool PropagateExceptions)> GetConsumingEnumerable() =>
+        _queue.GetConsumingEnumerable();
 
     /// <summary>
-    /// Gets an enumerable of the tasks currently scheduled in the queue.
+    /// A snapshot of tasks currently scheduled in the queue. Returns an empty enumerable if
+    /// the queue has already been disposed.
     /// </summary>
-    /// <returns>An enumerable of the scheduled tasks.</returns>
     internal IEnumerable<Task> GetScheduledTasks()
     {
-        foreach (var item in _queue)
-            yield return item.Item1;
+        try
+        {
+            // ToArray is thread-safe against concurrent Add/Take on BlockingCollection;
+            // enumerating the live queue directly via foreach is not.
+            return _queue.ToArray().Select(static item => item.Task);
+        }
+        catch (ObjectDisposedException)
+        {
+            return Array.Empty<Task>();
+        }
     }
 
     /// <summary>
     /// Attempts to add a task to the queue.
     /// </summary>
-    /// <param name="item">The task to be added.</param>
-    /// <param name="propagateExceptions">Indicates whether to propagate exceptions.</param>
-    /// <returns>True if the task was added successfully; otherwise, false.</returns>
+    /// <returns>
+    /// <c>true</c> if the task was added; <c>false</c> if the queue has been completed for
+    /// adding or already disposed.
+    /// </returns>
     public bool TryAdd(Task item, bool propagateExceptions)
     {
+#if DEBUG_CONTEXT
+        Debug.IndentLevel = 1;
+        Debug.WriteLine($"BrighterTaskQueue: Adding task {item.Id} to queue");
+        Debug.IndentLevel = 0;
+#endif
         try
         {
-#if DEBUG_CONTEXT
-            Debug.IndentLevel = 1;
-            Debug.WriteLine($"BrighterTaskQueue; Adding task: {item.Id} to queue");
-            Debug.IndentLevel = 0;
-#endif
-            
-            return _queue.TryAdd(Tuple.Create(item, propagateExceptions));
+            return _queue.TryAdd((item, propagateExceptions));
         }
-        catch (InvalidOperationException)
-        {
-#if DEBUG_CONTEXT
-            Debug.IndentLevel = 1;
-            Debug.WriteLine($"BrighterTaskQueue; TaskQueue is already marked as complete for adding. Failed to add task: {item.Id}");
-            Debug.IndentLevel = 0;
-#endif
-            
-            return false;
-        }
+        // ObjectDisposedException : InvalidOperationException - catch the derived type first.
+        // Owning context has been disposed; absorb so stray async continuations posting back
+        // after Run returns do not crash the caller.
+        catch (ObjectDisposedException) { return false; }
+        // Completed for adding - queue is still alive but no longer accepting.
+        catch (InvalidOperationException) { return false; }
     }
 
     /// <summary>
-    /// Marks the queue as not accepting any more additions.
+    /// Marks the queue as not accepting any further additions. Idempotent and safe to call
+    /// after <see cref="Dispose"/>.
     /// </summary>
     public void CompleteAdding()
     {
 #if DEBUG_CONTEXT
         Debug.IndentLevel = 1;
-        Debug.WriteLine($"BrighterTaskQueue; Complete adding to queue");
+        Debug.WriteLine("BrighterTaskQueue: Complete adding to queue");
         Debug.IndentLevel = 0;
 #endif
-        
-        _queue.CompleteAdding();
+        try
+        {
+            _queue.CompleteAdding();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Already disposed - nothing to do.
+        }
     }
 
-    /// <summary>
-    /// Disposes the task queue and releases all resources.
-    /// </summary>
-    public void Dispose()
-    {
-        _queue.Dispose();
-    }
+    /// <inheritdoc />
+    public void Dispose() => _queue.Dispose();
 }

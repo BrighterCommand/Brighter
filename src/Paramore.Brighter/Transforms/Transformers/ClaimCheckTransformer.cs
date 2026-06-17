@@ -110,25 +110,15 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
     /// <returns>The message, with 'luggage' swapped out if over the threshold</returns>
     public async Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken = default)
     {
-        if (System.Text.Encoding.Unicode.GetByteCount(message.Body.Value) < _thresholdInBytes)
+        // Compares actual stored byte count; see ADR 0057 for threshold semantics change
+        if (message.Body.Memory.Length < _thresholdInBytes)
         {
             return message;
         }
 
         await _storeAsync.EnsureStoreExistsAsync(cancellationToken);
-        
-        var body = message.Body.Value;
-        var stream = new MemoryStream();
-        var writer = new StreamWriter(stream);
-        await writer.WriteAsync(body);
-            
-#if NETSTANDARD
-            await writer.FlushAsync();
-#else
-        await writer.FlushAsync(cancellationToken);
-#endif
-        stream.Position = 0;
 
+        using var stream = new ReadOnlyMemoryStream(message.Body.Memory);
         var id = await _storeAsync.StoreAsync(stream, cancellationToken);
 
         message.Header.Bag[CLAIM_CHECK] = id;
@@ -154,16 +144,16 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
         
         await _storeAsync.EnsureStoreExistsAsync(cancellationToken);
             
+        using var luggageStream = await _storeAsync.RetrieveAsync(id!, cancellationToken);
+        using var output = new MemoryStream();
 #if NETSTANDARD
-            var luggage = await new StreamReader(await _storeAsync.RetrieveAsync(id!, cancellationToken))
-                .ReadToEndAsync();
+        await luggageStream.CopyToAsync(output);
 #else
-        var luggage = await new StreamReader(await _storeAsync.RetrieveAsync(id, cancellationToken))
-            .ReadToEndAsync(cancellationToken);
+        await luggageStream.CopyToAsync(output, cancellationToken);
 #endif
-            
-        var newBody = new MessageBody(luggage);
-        message.Body = newBody;
+        message.Body = new MessageBody(output.TryGetBuffer(out var buffer)
+            ? buffer.AsMemory()
+            : output.ToArray());
 
         if (_retainLuggage)
         {
@@ -186,18 +176,13 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
     /// <returns>The message, with 'luggage' swapped out if over the threshold</returns>
     public Message Wrap(Message message, Publication publication)
     {
-        if (System.Text.Encoding.Unicode.GetByteCount(message.Body.Value) < _thresholdInBytes)
+        // Compares actual stored byte count; see ADR 0057 for threshold semantics change
+        if (message.Body.Memory.Length < _thresholdInBytes)
         {
             return message;
         }
-        
-        var body = message.Body.Value;
-        var stream = new MemoryStream();
-        var writer = new StreamWriter(stream);
-        writer.Write(body);
-        writer.Flush();
-        stream.Position = 0;
 
+        using var stream = new ReadOnlyMemoryStream(message.Body.Memory);
         var id = _store.Store(stream);
 
         message.Header.Bag[CLAIM_CHECK] = id;
@@ -220,9 +205,12 @@ public class ClaimCheckTransformer : IAmAMessageTransform, IAmAMessageTransformA
             return message;
         }
         
-        var luggage = new StreamReader(_store.Retrieve(id!)).ReadToEnd();
-        var newBody = new MessageBody(luggage);
-        message.Body = newBody;
+        using var luggageStream = _store.Retrieve(id!);
+        using var output = new MemoryStream();
+        luggageStream.CopyTo(output);
+        message.Body = new MessageBody(output.TryGetBuffer(out var buffer)
+            ? buffer.AsMemory()
+            : output.ToArray());
 
         if (_retainLuggage)
         {

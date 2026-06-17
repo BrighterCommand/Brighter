@@ -293,7 +293,7 @@ internal static class Parser
     {
         var pubSubMessage = new PubsubMessage
         {
-            Data = ByteString.CopyFrom(message.Body.Bytes), OrderingKey = message.Header.PartitionKey
+            Data = ByteString.CopyFrom(message.Body.Memory.Span), OrderingKey = message.Header.PartitionKey
         };
 
         AddHeaders(pubSubMessage.Attributes, message);
@@ -302,8 +302,8 @@ internal static class Parser
 
     private static void AddHeaders(MapField<string, string> headers, Message message)
     {
-        headers.Add(HeaderNames.Id, message.Header.MessageId);
-        headers.Add(HeaderNames.Topic, message.Header.Topic);
+        headers.Add(HeaderNames.Id, message.Header.MessageId.Value);
+        headers.Add(HeaderNames.Topic, message.Header.Topic.Value);
         headers.Add(HeaderNames.HandledCount, message.Header.HandledCount.ToString());
         headers.Add(HeaderNames.MessageType, message.Header.MessageType.ToString());
         headers.Add(HeaderNames.SpecVersion, message.Header.SpecVersion);
@@ -314,12 +314,12 @@ internal static class Parser
 
         if (message.Header.Type != CloudEventsType.Empty)
         {
-            headers.Add(HeaderNames.Type, message.Header.Type);
+            headers.Add(HeaderNames.Type, message.Header.Type.Value);
         }
 
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
         {
-            headers.Add(HeaderNames.CorrelationId, message.Header.CorrelationId);
+            headers.Add(HeaderNames.CorrelationId, message.Header.CorrelationId.Value);
         }
 
         if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
@@ -349,7 +349,7 @@ internal static class Parser
 
         message.Header.Bag.Each(header =>
         {
-            if (!headers.ContainsKey(header.Key))
+            if (!headers.ContainsKey(header.Key) && !MessageHeader.IsLocalHeader(header.Key))
             {
                 headers.Add(header.Key, header.Value.ToString()!);
             }

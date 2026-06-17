@@ -13,7 +13,6 @@ using System.Collections.Generic;
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
 [Trait("Category", "AWS")]
-[Trait("Fragile", "CI")]
 public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
@@ -56,7 +55,7 @@ public class AWSValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         //Now change the subscription to validate, just check what we made
         subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
-            channelName: channel.Name,
+            channelName: new ChannelName(queueUrl),
             routingKey: routingKey,
             findQueueBy: QueueFindBy.Url,
             messagePumpType: MessagePumpType.Reactor,

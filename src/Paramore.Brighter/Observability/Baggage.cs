@@ -24,6 +24,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Paramore.Brighter.NJsonConverters;
 
 namespace Paramore.Brighter.Observability;
 
@@ -35,6 +36,8 @@ namespace Paramore.Brighter.Observability;
 /// Each entry consists of a key-value pair where the key identifies the vendor and the value contains user-defined request or workflow data.
 /// Note that baggage entries are not intended for telemetry data, but rather for user-defined metadata about a trace.
 /// </remarks>
+[System.Text.Json.Serialization.JsonConverter(typeof(BaggageConverter))]
+[Newtonsoft.Json.JsonConverter(typeof(NBaggageConverter))]
 public class Baggage : IEnumerable<KeyValuePair<string, string?>>
 {
     private readonly Dictionary<string, string> _entries = new();
@@ -110,7 +113,9 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
             if (keyValue.Length != 2)
                 throw new ArgumentException($"Invalid tracestate format: {pair}", nameof(baggage));
 
-            Add(keyValue[0], keyValue[1]);
+            // The W3C baggage spec (https://www.w3.org/TR/baggage/#definition) permits optional
+            // whitespace (OWS) around the ',' and '=' delimiters, so trim it before validating.
+            Add(keyValue[0].Trim(), keyValue[1].Trim());
         }
     }
 

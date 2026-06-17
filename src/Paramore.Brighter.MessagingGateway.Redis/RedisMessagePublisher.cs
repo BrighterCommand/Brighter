@@ -108,7 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private static void WriteCorrelationId(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.CORRELATION_ID, messageHeader.CorrelationId);
+            headers.Add(HeaderNames.CORRELATION_ID, messageHeader.CorrelationId.Value);
         }
         
         private static void WriteDataSchema(MessageHeader messageHeader, Dictionary<string, string> headers)
@@ -131,13 +131,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private static void WriteMessageBag(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            var flatBag = JsonSerializer.Serialize(messageHeader.Bag, JsonSerialisationOptions.Options);
+            var flatBag = JsonSerializer.Serialize(messageHeader.BagWithoutLocalHeaders(), JsonSerialisationOptions.Options);
             headers.Add(HeaderNames.BAG, flatBag);
         }
 
         private static void WriteMessageId(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.MESSAGE_ID, messageHeader.MessageId);
+            headers.Add(HeaderNames.MESSAGE_ID, messageHeader.MessageId.Value);
         }
         
         private static void WriteMessageType(MessageHeader messageHeader, Dictionary<string, string> headers)
@@ -147,7 +147,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private static void WriteReplyTo(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.REPLY_TO, messageHeader.ReplyTo ?? string.Empty);
+            headers.Add(HeaderNames.REPLY_TO, messageHeader.ReplyTo?.Value ?? string.Empty);
         }
         
         private static void WriteSource(MessageHeader messageHeader, Dictionary<string, string> headers)
@@ -157,7 +157,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private static void WriteTopic(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.TOPIC, messageHeader.Topic);
+            headers.Add(HeaderNames.TOPIC, messageHeader.Topic.Value);
         }
         
         private static void WriteSubject(MessageHeader messageHeader, Dictionary<string, string> headers)
@@ -191,7 +191,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private static void WriteType(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.CLOUD_EVENTS_TYPE, messageHeader.Type);
+            headers.Add(HeaderNames.CLOUD_EVENTS_TYPE, messageHeader.Type.Value);
         }
 
         public void Dispose()

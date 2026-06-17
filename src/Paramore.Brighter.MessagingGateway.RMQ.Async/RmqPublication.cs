@@ -5,9 +5,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
     public class RmqPublication : Publication
     {
         /// <summary>
-        /// How long should we wait on shutdown for the broker to finish confirming delivery of messages
+        /// How long should we wait on shutdown for the broker to finish confirming delivery of messages.
         /// If we shut down without confirmation then messages will not be marked as sent in the Outbox
-        /// Any sweeper will then resend.
+        /// and any sweeper will resend.
+        /// When non-zero, this value also bounds the wait for in-flight sends to complete on shutdown.
+        /// Use 0 to skip waiting for publisher confirmations; in-flight sends are still awaited with an
+        /// internal 5-second fallback to avoid aborting partially-sent messages (which would otherwise
+        /// be marked Dispatched in the Outbox and re-sent as duplicates), so disposal can block for up
+        /// to that fallback when sends are in flight.
         /// </summary>
         public int WaitForConfirmsTimeOutInMilliseconds { get; set; } = 500;
     }

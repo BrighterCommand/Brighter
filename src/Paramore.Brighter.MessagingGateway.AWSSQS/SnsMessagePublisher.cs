@@ -109,7 +109,7 @@ public class SnsMessagePublisher
         
         message.Header.Bag[HeaderNames.HandledCount] = message.Header.HandledCount.ToString(CultureInfo.InvariantCulture);
 
-        var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
+        var bagJson = JsonSerializer.Serialize(message.Header.BagWithoutLocalHeaders(), JsonSerialisationOptions.Options);
         messageAttributes[HeaderNames.Bag] = new MessageAttributeValue { StringValue = Convert.ToString(bagJson), DataType = "String" };
 
         return messageAttributes;
@@ -123,7 +123,7 @@ public class SnsMessagePublisher
             [HeaderNames.DataContentType] = contentType.ToString(),
             [HeaderNames.DataSchema] = message.Header.DataSchema?.ToString() ?? string.Empty,
             [HeaderNames.SpecVersion] = message.Header.SpecVersion,
-            [HeaderNames.Type] = message.Header.Type,
+            [HeaderNames.Type] = message.Header.Type.Value,
             [HeaderNames.Source] = message.Header.Source.ToString(),
             [HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339(),
             [HeaderNames.Baggage] = message.Header.Baggage.ToString()

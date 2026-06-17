@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Specification-pattern integration for Paramore.Brighter. Validates request inputs in the Brighter request pipeline before the business handler runs, via the [ValidateRequest] attribute and a ValidateRequestHandler that resolves an ISpecification&lt;TRequest&gt; from the container and evaluates it against the request.</Description>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Specification;Validation;Command Processor;Pipeline;Brighter</PackageTags>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
+  </ItemGroup>
+
+</Project>

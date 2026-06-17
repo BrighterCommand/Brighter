@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
 /// <summary>
@@ -51,11 +53,33 @@ public static class HeaderNames
     public const string TraceState = "tracestate";
     public const string TraceParent = "traceparent";
     public const string Baggage = "baggage";
-    
+
     /// <summary>
     /// Use this because we cannot set cloud events as individual headers, SNS/SQS can only have 10 headers in raw message delivery
-    /// and instead need a single header with all cloud events for example, 
+    /// and instead need a single header with all cloud events for example,
     /// </summary>
     public const string CloudEventHeaders = "cloudeventheaders";
 
+    /// <summary>
+    /// SNS/SQS MessageAttribute names that Brighter reads into typed
+    /// <see cref="MessageHeader"/> fields (or its own JSON-serialised bag). Inbound
+    /// attributes whose names are <em>not</em> in this set are surfaced into
+    /// <see cref="MessageHeader.Bag"/> under their raw name so interop with foreign
+    /// producers is preserved instead of silently discarding their metadata.
+    /// Comparison is ordinal — AWS message attribute names are case-sensitive.
+    /// </summary>
+    private static readonly HashSet<string> s_knownNames = new(System.StringComparer.Ordinal)
+    {
+        Id, Topic, ContentType, CorrelationId, HandledCount, MessageType, Timestamp,
+        ReplyTo, Subject, Bag, DeduplicationId, Type, SpecVersion, Source, Time,
+        DataContentType, DataSchema, DataRef, TraceState, TraceParent, Baggage,
+        CloudEventHeaders
+    };
+
+    /// <summary>
+    /// Returns <c>true</c> when <paramref name="name"/> is one of the SNS/SQS
+    /// MessageAttribute names Brighter consumes directly into a typed
+    /// <see cref="MessageHeader"/> field or its JSON-serialised bag.
+    /// </summary>
+    public static bool IsKnown(string name) => s_knownNames.Contains(name);
 }

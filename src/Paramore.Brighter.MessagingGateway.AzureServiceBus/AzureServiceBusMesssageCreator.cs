@@ -59,9 +59,13 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
             Log.NullMessageBodyReceived(s_logger, _topic, subscription.Name);
         }
 
-        var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? []);
+        var bodyMemory = azureServiceBusMessage.MessageBodyMemory;
 
-        Log.ReceivedMessage(s_logger, _topic, subscription.Name, messageBody);
+#if NETSTANDARD2_0
+        Log.ReceivedMessage(s_logger, _topic, subscription.Name, System.Text.Encoding.UTF8.GetString(bodyMemory.ToArray()));
+#else
+        Log.ReceivedMessage(s_logger, _topic, subscription.Name, System.Text.Encoding.UTF8.GetString(bodyMemory.Span));
+#endif
             
         //TODO: Switch these to use the option type HeaderResult<T> for consistency with the rest of the codebase.
         MessageType messageType = GetMessageType(azureServiceBusMessage);
@@ -84,7 +88,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
             
         var headers = new MessageHeader(
             messageId: azureServiceBusMessage.Id, 
-            topic: new RoutingKey(_topic), 
+            topic: new RoutingKey(_topic.Value),
             messageType: messageType, 
             source: source,
             type: type,
@@ -103,13 +107,14 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
         );
 
         headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
+        headers.Bag.Add(ASBConstants.SequenceNumberBagKey, azureServiceBusMessage.SequenceNumber);
             
         foreach (var property in azureServiceBusMessage.ApplicationProperties)
         {
             headers.Bag.Add(property.Key, property.Value);
         }
             
-        var message = new Message(headers, new MessageBody(messageBody));
+        var message = new Message(headers, new MessageBody(bodyMemory));
         return message;
     }
 

@@ -91,7 +91,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public int? BackoffMultiplier { get; set; }
         
         /// <summary>
-        /// How big can the pool get (default None)?
+        /// How big can the pool get (default None)? Per-gateway cap, not process-wide.
         /// </summary>
         public int? MaxPoolSize { get; set; }
         

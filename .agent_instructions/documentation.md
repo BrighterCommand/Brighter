@@ -62,6 +62,29 @@ Scan the ADR directory for existing ADRs to determine the next [Sequence Number]
 
 Use dash-case (aka kebab-case) for the [Title] of the ADR.
 
+## Writing tone for design documents
+
+This guidance applies to ADRs, requirements specs, design specs, and any other long-lived document under `docs/` or `specs/`.
+
+**Write for a future reader, not for the current conversation.** The audience is a contributor reading the document six months or two years from now to understand a design decision. They have no visibility into the chat that produced it.
+
+**Refer to requirements and design artifacts, not to the participants in the authoring conversation.** Concretely:
+
+- ❌ "at the user's direction" → ✅ "per requirement C3" or just state the decision
+- ❌ "the user's feedback was singular ('an abstract base class')" → ✅ "requirement F5 specifies a single abstract base"
+- ❌ "the user explicitly accepted this cost" → ✅ "the cost is accepted per requirement C1 (spec 0028 lands as PR review feedback, not greenfield work)"
+- ❌ "if the user wants the interface anyway during review, the re-introduction is mechanical" → ✅ remove — review-loop asides do not survive past the review
+- ❌ "Direct rendering from feedback item 5's framing" → ✅ "Aligns with requirement F4 (payload-mode validator role)"
+- ❌ "the spec 0027 PROMPT suggested otherwise" → ✅ replace with the actual technical reason; PROMPT.md is ephemeral working state
+
+**Do not quote conversational asides.** Phrases like *"Arguably it would have been better caught earlier"* or *"we could possibly use ..."* belong in chat transcripts and PR review threads, not in design documents that outlive them.
+
+**Do not reference ephemeral working state.** PROMPT.md, current spec phase ("we are in the requirements phase"), conversation transcripts, and unresolved review back-and-forth are all transient. Either fold the substance into the document, or omit it.
+
+**Trace decisions to durable artifacts.** Acceptable references include: requirement IDs (F1, NF2, C3), other ADRs, code locations, principles in `.agent_instructions/`, and external specifications. References to GitHub PRs and issues are acceptable as historical anchors but should not carry the design rationale — the rationale must live in the document itself.
+
+**The rule of thumb:** if removing the sentence would leave the future reader less informed about *the design*, keep it. If it would only leave them less informed about *who said what when*, remove it.
+
 ## Licensing
 
 - We add a license comment to every src file

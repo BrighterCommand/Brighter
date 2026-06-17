@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -12,7 +13,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
     public class PublishingToMultipleSubscribersTests
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
+        private readonly IDictionary<string, string> _receivedMessages = new ConcurrentDictionary<string, string>();
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 
@@ -34,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
+            PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 
         [Fact]

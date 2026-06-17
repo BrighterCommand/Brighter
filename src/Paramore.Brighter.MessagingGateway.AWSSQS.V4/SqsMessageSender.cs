@@ -127,7 +127,7 @@ public partial class SqsMessageSender
 
         message.Header.Bag[HeaderNames.HandledCount] = message.Header.HandledCount.ToString(CultureInfo.InvariantCulture);
 
-        var bagJson = System.Text.Json.JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
+        var bagJson = System.Text.Json.JsonSerializer.Serialize(message.Header.BagWithoutLocalHeaders(), JsonSerialisationOptions.Options);
         messageAttributes[HeaderNames.Bag] = new() { StringValue = bagJson, DataType = "String" };
         request.MessageAttributes = messageAttributes;
     }
@@ -141,7 +141,7 @@ public partial class SqsMessageSender
             [HeaderNames.DataContentType] = contentType.ToString(),
             [HeaderNames.DataSchema] = message.Header.DataSchema?.ToString() ?? string.Empty,
             [HeaderNames.SpecVersion] = message.Header.SpecVersion,
-            [HeaderNames.Type] = message.Header.Type,
+            [HeaderNames.Type] = message.Header.Type.Value,
             [HeaderNames.Source] = message.Header.Source.ToString(),
             [HeaderNames.Time] = message.Header.TimeStamp.ToRfc3339(),
             [HeaderNames.Baggage] = message.Header.Baggage.ToString()

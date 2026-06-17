@@ -342,5 +342,5 @@ tests/certs/
 RALPH_STOP
 ralph.log
 
-# Prompt files
+# AI agent session state
 PROMPT.md

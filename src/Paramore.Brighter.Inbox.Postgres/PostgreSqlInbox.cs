@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Data;
+using System.Linq;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Logging;
@@ -63,4 +64,15 @@ public class PostgreSqlInbox : RelationalDatabaseInbox
     {
         return new NpgsqlParameter { ParameterName = parameterName, NpgsqlDbType = DatabaseConfiguration.BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json,Value = value ?? DBNull.Value };
     }
+
+    /// <summary>
+    /// Lowercase-then-quote the configured inbox table name so reserved-keyword names
+    /// (Order, User, Group, …) parse cleanly and mixed-case configured values resolve to
+    /// the same physical table as PG's natural case-fold of the legacy unquoted form would
+    /// have produced.
+    /// </summary>
+    protected override string GenerateSqlText(string sqlFormat, params string[] orderedParams)
+        => string.Format(
+            sqlFormat,
+            orderedParams.Prepend(PgIdentifier.Quote(DatabaseConfiguration.InBoxTableName)).ToArray());
 }

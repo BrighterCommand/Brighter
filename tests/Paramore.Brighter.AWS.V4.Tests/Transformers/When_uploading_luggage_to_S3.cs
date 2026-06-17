@@ -16,6 +16,7 @@ using Policy = Polly.Policy;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
+[Trait("Category", "AWS")]
 public class S3LuggageUploadTests
 {
     private readonly IHttpClientFactory _httpClientFactory;
@@ -37,7 +38,7 @@ public class S3LuggageUploadTests
         var luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
         {
             HttpClientFactory = _httpClientFactory,
-            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemple(),
+            BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
             RetryPolicy = GetSimpleHandlerRetryPolicy()

@@ -1,5 +1,5 @@
 Brighter contributors (sorted alphabeticaly)
-============================================
+============================================l
 
 **[Vicenç García Altés](https://github.com/vgaltes)**
   * Various fixes 
@@ -35,6 +35,9 @@ Brighter contributors (sorted alphabeticaly)
 
 **[A Craven](https://github.com/acraven)**
   * Various fixes
+
+**[@MikeFreeman](https://github.com/MikeFreeman-Flagstone)**
+ * Archiver Fixes
   
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
@@ -128,8 +131,14 @@ Brighter contributors (sorted alphabeticaly)
   * SQL Outbox
   * Various fixes
 
+**[isakovich](https://github.com/isakovich)**
+  * Json Serializer Options fixes
+
 **[Tarun Pothulapati](https://github.com/Pothulapati)**
   * PostgreSQL Outbox
+
+**[Miguel Ramirez](https://github.com/xbizzybone)**
+  * Request validation handler with FluentValidation, DataAnnotations and Specification providers
 
 **[Ravriel](https://github.com/ravriel)**
  * RabbitMQ Fixes
@@ -148,7 +157,7 @@ Brighter contributors (sorted alphabeticaly)
 **[Sagar Sahay](https://github.com/sagarSahay)**  
  * New ASB Transport
 
-**[Tim Salva](https://github.com/jtsalva)
+**[Tim Salva](https://github.com/jtsalva)**
  * AWS fixes
  * Metrics
   
