@@ -63,7 +63,7 @@ public static class ProducerValidationRules
     /// <summary>
     /// Validates that every wrap transform the publication's resolved mapper declares can be resolved.
     /// A declared transform whose transformer type is not registered is a strong signal that its assembly
-    /// was not scanned (see issue #4159). Reports one <see cref="ValidationSeverity.Warning"/> per
+    /// was not scanned. Reports one <see cref="ValidationSeverity.Warning"/> per
     /// unresolvable transform, naming the request type, the transformer type, the topic, and prompting an
     /// <c>AutoFromAssemblies</c> check. Publications with a null <see cref="Publication.RequestType"/> — or
     /// whose request type resolves to no mapper — are skipped.

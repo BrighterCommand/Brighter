@@ -125,7 +125,7 @@ public static class ConsumerValidationRules
     /// <summary>
     /// Validates that every unwrap transform the subscription's resolved mapper declares can be resolved.
     /// A declared transform whose transformer type is not registered is a strong signal that its assembly
-    /// was not scanned (see issue #4159). Reports one <see cref="ValidationSeverity.Warning"/> per
+    /// was not scanned. Reports one <see cref="ValidationSeverity.Warning"/> per
     /// unresolvable transform, naming the request type, the transformer type, the subscription, and prompting an
     /// <c>AutoFromAssemblies</c> check. Subscriptions with a null <see cref="Subscription.RequestType"/> — or
     /// whose request type resolves to no mapper — are skipped.
