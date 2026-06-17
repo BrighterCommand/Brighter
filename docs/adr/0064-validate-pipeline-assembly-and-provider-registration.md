@@ -122,7 +122,7 @@ ValidationError(
   ValidationSeverity.Warning,
   $"Publication '{p.Topic}'",
   $"Request '{p.RequestType.Name}' declares wrap transform '{step.TransformType.Name}' on topic " +
-  $"'{p.Topic}', but that transformer is not registered. Is its assembly included in AutoFromAssemblies()?")
+  $"'{p.Topic}' — that transformer is not registered. Is its assembly included in AutoFromAssemblies()?")
 ```
 
 This satisfies FR-1 (contains request type, transformer type, `Topic`, `AutoFromAssemblies` prompt) and AC-1.
@@ -177,11 +177,11 @@ This satisfies FR-7, AC-6, and is provider-agnostic and detected via `GetHandler
 
 Verified: every provider registers via `new ServiceDescriptor(typeof(ValidateRequestHandler<>), typeof(ConcreteHandler<>), ServiceLifetime.Transient)` (FluentValidation, DataAnnotations, Specification builder extensions). So "provider registered" is computed once, at `ValidatePipelines()` registration time, from the `IServiceCollection`.
 
-Rather than thread two bare positional `bool`s — which `design_principles.md` flags as primitive obsession and which invite transposition since both are `bool` — we carry the pair as a tiny self-describing value object:
+Rather than thread two bare positional `bool`s — which `design_principles.md` flags as primitive obsession and which invite transposition since both are `bool` — we carry the pair as a tiny self-describing value record (a `record` class, matching the codebase's convention — the solution uses `record` value holders throughout and has no `record struct`):
 
 ```csharp
 // In Paramore.Brighter (core)
-public readonly record struct ValidationProviderRegistrations(bool Sync, bool Async);
+public record ValidationProviderRegistrations(bool Sync, bool Async);
 ```
 
 It is computed once and passed as a single argument:
@@ -198,7 +198,7 @@ var providers = new ValidationProviderRegistrations(
 
 #### A-producer (core)
 
-1. Extend the describe path for the **sync∪async union** (FR-5, C-5). Add an async-aware overload to the static `TransformPipelineBuilder.DescribeTransforms(MessageMapperRegistry, Type)` that also consults `ResolveAsyncMapperInfo` + `MapperMethodDiscovery.FindMapToMessageAsync`/`FindMapToRequestAsync` (both already exist, verified). This is the correct home: `DescribeTransforms` is already a static method on `TransformPipelineBuilder` taking the concrete `MessageMapperRegistry`, which implements both the sync and async registry interfaces and exposes both resolve methods — so the async describe needs nothing from the separate `TransformPipelineBuilderAsync` class (which has no `DescribeTransforms`). The rule unions the `WrapTransforms` from the sync- and async-resolved mapper descriptions, de-duplicated by `(TransformType, Step)` so a transform declared on both is reported once per entity (FR-12).
+1. Extend the describe path for the **sync∪async union** (FR-5, C-5). Add an async-aware overload to the static `TransformPipelineBuilder.DescribeTransforms(MessageMapperRegistry, Type)` that also consults `ResolveAsyncMapperInfo` + `MapperMethodDiscovery.FindMapToMessageAsync`/`FindMapToRequestAsync` (both already exist, verified). This is the correct home: `DescribeTransforms` is already a static method on `TransformPipelineBuilder` taking the concrete `MessageMapperRegistry`, which implements both the sync and async registry interfaces and exposes both resolve methods — so the async describe needs nothing from the separate `TransformPipelineBuilderAsync` class (which has no `DescribeTransforms`). The overload itself unions the `WrapTransforms`/`UnwrapTransforms` from the sync- and async-resolved mapper descriptions, de-duplicated by `(TransformType, Step)` so a transform declared on both is reported once per entity (FR-12); the (A) producer and consumer rules both consume this overload (passing `includeAsync: true`) and iterate the resulting transforms.
 2. Add `WrapTransformResolvable(mapperRegistry, probe)` to `ProducerValidationRules`.
 3. In `PipelineValidator.ValidateProducers`, the hard-coded producer spec array gains the new rule. Because the rule needs dependencies the current static list cannot supply, thread `MessageMapperRegistry?` and `IAmATransformerResolvabilityProbe?` into `PipelineValidator` (new optional ctor params) and append the (A) rule only when both are non-null — keeping the rule absent (and thus inert) for pure-CQRS/no-producer configurations and preserving existing behaviour when the new dependencies are not wired (NFR-2/-4).
 
@@ -208,7 +208,7 @@ var providers = new ValidationProviderRegistrations(
 
 #### B (core)
 
-`ValidationProviderRegistered(ValidationProviderRegistrations)` is added to `HandlerPipelineValidationRules` and appended to the spec array in `PipelineValidator.ValidateHandlerPipelines`. The `ValidationProviderRegistrations` value is computed in `ValidatePipelines()` from `builder.Services` and threaded into `PipelineValidator` (a new optional ctor param defaulting to `new ValidationProviderRegistrations(false, false)` — i.e. "no provider", so a configuration that never wires this stays inert). It consumes the existing `Describe()` output — zero new reflection.
+`ValidationProviderRegistered(ValidationProviderRegistrations)` is added to `HandlerPipelineValidationRules` and appended to the spec array in `PipelineValidator.ValidateHandlerPipelines`. The `ValidationProviderRegistrations` value is computed in `ValidatePipelines()` from `builder.Services` and threaded into `PipelineValidator` (a new optional ctor param `ValidationProviderRegistrations? providerRegistrations = null` — because the type is a `record` class, `null` cannot be expressed as a non-null constant default, so `null` is treated as "no provider" `(false, false)`, and a configuration that never wires this stays inert). It consumes the existing `Describe()` output — zero new reflection.
 
 #### Plumbing / threading (C-12)
 
