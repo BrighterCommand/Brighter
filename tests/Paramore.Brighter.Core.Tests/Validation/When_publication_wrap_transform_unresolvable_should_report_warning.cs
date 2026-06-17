@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.MessageMappers;
+using Paramore.Brighter.Transforms.Transformers;
 using Paramore.Brighter.Validation;
 using Xunit;
 
@@ -137,5 +138,26 @@ public class WrapTransformResolvableTests
         // Assert
         Assert.True(satisfied);
         Assert.Empty(results);
+    }
+
+    [Fact]
+    public void When_publication_has_resolvable_and_unresolvable_wrap_transforms_should_report_one_warning()
+    {
+        // Arrange — mapper declares two wrap transforms; the probe resolves one (MyDescribableTransform)
+        // but not the other (CompressPayloadTransformer)
+        var registry = RegistryWith<MyTwoWrapDescribableCommandMessageMapper>();
+        var probe = new StubTransformerResolvabilityProbe(t => t != typeof(CompressPayloadTransformer));
+        var spec = ProducerValidationRules.WrapTransformResolvable(registry, probe);
+        var publication = PublicationFor<MyDescribableCommand>("greeting");
+
+        // Act
+        var satisfied = spec.IsSatisfiedBy(publication);
+        var results = spec.Accept(new ValidationResultCollector<Publication>()).ToList();
+
+        // Assert — exactly one Warning, for the unresolvable transform only (resolvable one is not reported)
+        Assert.False(satisfied);
+        Assert.Single(results);
+        Assert.Contains(nameof(CompressPayloadTransformer), results[0].Error!.Message);
+        Assert.DoesNotContain(nameof(MyDescribableTransform), results[0].Error!.Message);
     }
 }
