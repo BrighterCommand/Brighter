@@ -79,7 +79,7 @@ public static class ProducerValidationRules
                 return [];
 
             var description = TransformPipelineBuilder.DescribeTransforms(
-                mapperRegistry, publication.RequestType);
+                mapperRegistry, publication.RequestType, includeAsync: true);
 
             if (description is null)
                 return [];
