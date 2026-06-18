@@ -23,11 +23,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.Handlers
 {
@@ -112,15 +114,20 @@ namespace Paramore.Brighter.Inbox.Handlers
                 {
                     Log.CommandHasBeenSeenReplayingOutbox(s_logger, command.Id.Value);
 
+                    var span = Context?.Span;
+
+                    string? causationId = null;
                     if (_inbox is IAmACausationTrackingInbox trackingInbox && _outbox is not null)
                     {
-                        var causationId = await trackingInbox
+                        causationId = await trackingInbox
                             .GetCausationIdAsync(command.Id.Value, _contextKey, requestContext, -1, cancellationToken)
                             .ConfigureAwait(ContinueOnCapturedContext);
                         if (causationId is not null)
                             await _outbox.ReplayCausationAsync(causationId, requestContext, cancellationToken: cancellationToken)
                                 .ConfigureAwait(ContinueOnCapturedContext);
                     }
+
+                    WriteReplayEvent(span, command, causationId);
 
                     return command;
                 }
@@ -135,6 +142,30 @@ namespace Paramore.Brighter.Inbox.Handlers
                 .ConfigureAwait(ContinueOnCapturedContext);
 
             return handledCommand;
+        }
+
+        /// <summary>
+        /// Writes a telemetry event to the pipeline span recording that a duplicate command triggered an outbox replay.
+        /// </summary>
+        /// <remarks>
+        /// The event is only written when there is a span to write to and the configured
+        /// <see cref="InstrumentationOptions"/> for the pipeline include <see cref="InstrumentationOptions.Brighter"/>.
+        /// </remarks>
+        /// <param name="span">The pipeline <see cref="Activity"/> captured before the replay, or <c>null</c> if there is no span.</param>
+        /// <param name="command">The duplicate command that triggered the replay.</param>
+        /// <param name="causationId">The causation id whose outbox messages were replayed, if one was found.</param>
+        private void WriteReplayEvent(Activity? span, T command, string? causationId)
+        {
+            if (span is null || Context is null || !Context.InstrumentationOptions.HasFlag(InstrumentationOptions.Brighter))
+                return;
+
+            var tags = new ActivityTagsCollection
+            {
+                { BrighterSemanticConventions.RequestId, command.Id.Value },
+                { BrighterSemanticConventions.CausationId, causationId }
+            };
+
+            span.AddEvent(new ActivityEvent("UseInboxHandler Duplicate Replay", DateTimeOffset.UtcNow, tags));
         }
 
         private static partial class Log

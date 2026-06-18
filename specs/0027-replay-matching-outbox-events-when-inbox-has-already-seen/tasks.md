@@ -279,7 +279,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ## Task 15: TEST + IMPLEMENT — UseInboxHandler adds Replay telemetry event to pipeline span
 
-- [ ] **TEST + IMPLEMENT: UseInboxHandler writes ActivityEvent to the pipeline span when Replay is triggered**
+- [x] **TEST + IMPLEMENT: UseInboxHandler writes ActivityEvent to the pipeline span when Replay is triggered**
   - **USE COMMAND**: `/test-first when inbox handler replays duplicate should add replay telemetry event to span`
   - Test location: `tests/Paramore.Brighter.Core.Tests/OnceOnly/`
   - Test file: `When_replaying_duplicate_should_add_replay_telemetry_event_to_span.cs`
