@@ -225,7 +225,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ## Task 12: TEST + IMPLEMENT — Sync UseInboxHandler handles Replay gracefully when no outbox configured (terminal step)
 
-- [ ] **TEST + IMPLEMENT: Sync UseInboxHandler with Replay configured but no outbox returns without error**
+- [x] **TEST + IMPLEMENT: Sync UseInboxHandler with Replay configured but no outbox returns without error**
   - **USE COMMAND**: `/test-first when sync inbox handler detects duplicate with replay but no outbox should return without error`
   - Test location: `tests/Paramore.Brighter.Core.Tests/OnceOnly/`
   - Test file: `When_handling_duplicate_with_replay_and_no_outbox_should_return_without_error.cs`
@@ -241,7 +241,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ## Task 13: TEST + IMPLEMENT — Async UseInboxHandlerAsync handles Replay gracefully when no outbox configured (terminal step)
 
-- [ ] **TEST + IMPLEMENT: Async UseInboxHandlerAsync with Replay configured but no outbox returns without error**
+- [x] **TEST + IMPLEMENT: Async UseInboxHandlerAsync with Replay configured but no outbox returns without error**
   - **USE COMMAND**: `/test-first when async inbox handler detects duplicate with replay but no outbox should return without error`
   - Test location: `tests/Paramore.Brighter.Core.Tests/OnceOnly/`
   - Test file: `When_handling_duplicate_async_with_replay_and_no_outbox_should_return_without_error.cs`
