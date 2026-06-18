@@ -12,11 +12,57 @@
 ## Status
 - [x] Requirements — approved (2026-04-16), updated 2026-04-17 (ConversationId → CausationId rename, AC-8 updated to all persistent stores)
 - [x] Design — ADR 0057 accepted, 5 rounds of review (all findings addressed)
-- [x] Tasks — approved (2026-04-17), 5 rounds of review (all findings addressed), 23 tasks
-- [ ] Implementation — not started
+- [x] Tasks — approved (2026-04-17), 5 rounds of review; amended 2026-06-17 (BoxProvisioning in-scope + relational store split). 34 tasks (was 23; Task 19→19a–19f, Task 21→21a–21g).
+- [~] Implementation — IN PROGRESS. **Tasks 1–16 DONE & committed** (+ STEP 0 tidy). Next: Task 17 (DI registration of IAmACausationTrackingOutbox).
 
-## Current position
-Tasks approved after 5 adversarial review rounds. Ready to begin implementation with `/spec:implement`, starting at Task 1.
+## How I'm running this (process notes for resume)
+- Using `/spec:implement`. Structural tasks (1–5, 19a, 21a, 21b) = no approval gate, verified by existing tests staying green, commit separately. TEST tasks (6+) = MANDATORY `/test-first` approval gate: write RED test, run it, STOP and ask user via AskUserQuestion before GREEN.
+- Each task: tick its checkbox in `specs/0027.../tasks.md` and commit code+test+tasks.md together. Commit trailer: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
+- Test result greps are noisy (CA1852/xUnit analyzer warnings) — filter with `grep -E "^(Passed!|Failed!)"` or `grep "<TestClass>\."`.
+- Tests run on BOTH net9.0 + net10.0 (multi-target). Core/InMemory tests need no containers.
+
+## Implementation progress
+Structural prereqs (2026-06-17):
+- ✅ **Task 1** `a7b743f85` — UseInboxHandler[Async] use pipeline `Context as RequestContext`; `protected InstrumentationOptions` on RequestHandler[Async]; removed duplicate `base.InitializeFromAttributeParams` in async.
+- ✅ **Task 2** `46a5f32e1` — `PipelineStepDescription.Attribute` init-property; populated at both Describe() sites.
+- ✅ **Task 3** `5df3caed9` — Describe() injects global inbox attrs via reflection-only `TryCreateGlobalInboxAttribute` (same guards as Build()); `BrighterPipelineValidationExtensions.ResolveInboxConfiguration` from `IAmConsumerOptions`.
+- ✅ **Task 4** `a6d624fe2` — `IAmAnOutbox? Outbox` on `IAmAnOutboxProducerMediator` (impl: `(IAmAnOutbox?)_outBox ?? _asyncOutbox`).
+- ✅ **Task 5** `6f4977511` — `OnceOnlyAction.Replay`; `RequestContextBagNames.CausationId="Brighter-CausationId"`; `BrighterSemanticConventions.CausationId="paramore.brighter.causation_id"`; `IAmACausationTrackingInbox` (Inbox/ folder, root ns); `IAmACausationTrackingOutbox` (root folder, root ns). Both root `Paramore.Brighter` namespace.
+
+Core behaviour (test-first, 2026-06-17/18):
+- ✅ **Task 6** `c532102bd` — InMemoryInbox implements IAmACausationTrackingInbox (InboxItem.CausationId; Add reads from Bag; GetCausationId[Async]; Supports=>true). Test: `InMemoryInboxCausationTrackingTests`.
+- ✅ **Task 7** `63c3b1f61` — InMemoryOutbox implements IAmACausationTrackingOutbox (OutboxEntry.CausationId; ReplayCausation[Async] resets TimeFlushed=MinValue for matching causation). Test: `InMemoryOutboxCausationTrackingTests`.
+- ✅ **Task 8** `9e91bd83b` — sync UseInboxHandler defaults Context.Bag[CausationId]=request.Id (preserving existing) before handling. Test: `UseInboxHandlerCausationTrackingTests` (drives Send w/ passed-in RequestContext to inspect Bag).
+- ✅ **Task 9** `36c479605` — async UseInboxHandlerAsync same. Test: `UseInboxHandlerAsyncCausationTrackingTests`.
+- ✅ **Task 10** `cd8a3d0d2` — sync Replay branch: UseInboxHandler gains optional `IAmACausationTrackingOutbox?` ctor param; on duplicate reads causation from tracking inbox, calls ReplayCausation, returns w/o re-handling. Log.CommandHasAlreadyBeenSeenReplayingOutbox. Test: `UseInboxHandlerReplayTests` + double `MyStoredCommandToReplayHandler`.
+- ✅ **Task 11** `ec349bfca` — async Replay branch (GetCausationIdAsync + ReplayCausationAsync). Test: `UseInboxHandlerAsyncReplayTests` + double `MyStoredCommandToReplayHandlerAsync`.
+- ✅ **Tasks 12 & 13** `c7e54b775` — characterization (green on first run): Replay w/ no outbox = graceful terminal step (no re-exec, no throw), sync+async. Tests: `UseInboxHandlerReplayWithNoOutboxTests`, `UseInboxHandlerAsyncReplayWithNoOutboxTests`.
+
+- ✅ **Task 15** `45d77ef11` — Replay telemetry ActivityEvent `"UseInboxHandler Duplicate Replay"` on `Context.Span`, tags `RequestId`+`CausationId`, gated on non-null span **and** `Context.InstrumentationOptions.HasFlag(Brighter)`. Sync+async (`WriteReplayEvent` helper in each; async captures `span = Context?.Span` BEFORE the awaits because `RequestContext.Span` is thread-affine). **DESIGN CHANGE (user-steered, supersedes the ctor-param/Task-1B-protected-prop plan)**: `InstrumentationOptions` was always `All` on the handler itself (wrong source) — the configured value lives in `CommandProcessor._instrumentationOptions` and is what created the span. So added `InstrumentationOptions` as a first-class property (default `All`) on **`IRequestContext` + `RequestContext`** (peer to `Span`/`FeatureSwitches`/`ResiliencePipeline`), set in `CommandProcessor.InitRequestContext` from `_instrumentationOptions`, carried in `CreateCopy()`. Handlers now read `Context.InstrumentationOptions` like they read `Context.Span` — no ctor param. ⚠️ **Task 1B's `protected InstrumentationOptions` on `RequestHandler<T>` is now redundant for this purpose** (reflects the handler's own ctor value, not the configured one) — left in place; possible follow-up tidy. Test: `UseInboxHandlerReplayTelemetryTests` (4 facts: sync event, async event, Brighter-flag-off → no event, null-span → no event + replay still happens). Core.Tests 807/807 (7 skipped) net9.0; new test 4/4 net9+net10.
+
+- ✅ **Task 14** `b9ca1adbe` — pipeline validation rejects Replay without causation tracking. `HandlerPipelineValidationRules.ReplayRequiresCausationTracking(IAmAnInbox?, IAmAnOutbox?)` (collapsed spec; private `OnceOnlyActionOf(RequestHandlerAttribute?)` switch over UseInbox(Async)Attribute; finds Replay across Before+AfterSteps then evaluates inbox then outbox; Error=role-not-impl, Warning=Supports()=false or no-outbox). Wired into `PipelineValidator` (new optional `IAmAnInbox? inbox`/`IAmAnOutbox? outbox` ctor params → specs array) and `BrighterPipelineValidationExtensions.ValidatePipelines` (inbox=`ResolveInboxConfiguration(sp)?.Inbox`, outbox=`sp.GetService<IAmAnOutboxProducerMediator>()?.Outbox`). Test: `ReplayCausationTrackingValidationTests` (7 facts, file-scoped Tracking/NonTracking In/Outbox doubles). Core Validation 86/86 both TFMs.
+
+## Current position — FRESH SESSION: resume at Task 18
+
+### DONE 2026-06-18
+- ✅ **Task 17** `7ec5ecfb9` — DI registration of `IAmACausationTrackingOutbox`. Registered under the role interface (same singleton) in BOTH `AddProducers` paths in `ServiceCollectionExtensions`: eager path conditionally (`if (outbox is IAmACausationTrackingOutbox)`); deferred path via factory `sp => (sp.GetRequiredService<IAmAnOutbox>() as IAmACausationTrackingOutbox)!` (null for non-tracking outbox). Inbox needs no reg (handler pattern-matches). Test `CausationTrackingOutboxRegistrationTests` (3 facts) builds the DI via `ServiceCollectionBrighterBuilder` directly — NOT `services.AddBrighter()` (auto-scan hits a duplicate-mapper conflict between `MyDescribableCommand` doubles in the Core.Tests assembly). Negative case uses `SpyOutbox`+`SpyTransactionProvider` (SpyTransaction type). Core.Tests OnceOnly 38/38 both TFMs; Extensions.Tests 99/99 net9.
+
+### DONE earlier 2026-06-18
+- ✅ **STEP 0 tidy** `9e2ec8d2a` — removed redundant Task-1B `protected InstrumentationOptions` props from `RequestHandler<T>`/`RequestHandlerAsync<T>` (+ XML docs). Primary-ctor `instrumentationOptions` param STAYS (still used for `BrighterTracer.WriteHandlerEvent`). Behaviour-preserving. Core.Tests 807/807.
+- ✅ **Task 16** `7365def9c` — UseInboxHandler[Async] add Throw/Warn/Add telemetry ActivityEvents (`"UseInboxHandler Duplicate Throw"`/`"...Duplicate Warn"`/`"UseInboxHandler Add"`). New `WriteInboxEvent(span, request, eventName)` helper in each handler, RequestId tag only, same `Context?.Span` + `Context.InstrumentationOptions.HasFlag(Brighter)` gate as `WriteReplayEvent`. Throw event written BEFORE the throw; async Add captures span before awaits (thread-affine). Test: `UseInboxHandlerTelemetryTests` (8 facts). Core.Tests 815/815 net9+net10 (net9 had one unrelated flaky failure on first multi-target run; clean on isolated re-run).
+
+### NEXT — Task 18 (base test classes for persistent-store causation tracking)
+**Task 18** is TEST + IMPLEMENT (`/test-first when persistent inbox stores causation id should match base test expectations`). Create abstract base test classes `CausationTrackingInboxBaseTests` + `CausationTrackingOutboxBaseTests` in `tests/Paramore.Brighter.Base.Test/`, validated against InMemoryInbox/InMemoryOutbox first. Persistent-store test projects later inherit these. See tasks.md Task 18 for full detail. ⛔ approval gate after RED.
+
+## Remaining (Task 15 onward)
+- Task 15: UseInboxHandler Replay telemetry ActivityEvent on Context.Span (gated InstrumentationOptions.Brighter via protected prop from Task 1B); `BrighterSemanticConventions.CausationId` tag. Test name `When_replaying_duplicate_should_add_replay_telemetry_event_to_span`.
+- Task 16: Throw/Warn/Add telemetry events (tidy; commit separately).
+- Task 17: DI registration of IAmACausationTrackingOutbox in ServiceCollectionExtensions (`if (outbox is IAmACausationTrackingOutbox) services.AddSingleton(...)`). Note inbox does NOT need separate reg (handler pattern-matches `_inbox is IAmACausationTrackingInbox`).
+- Task 18: base test classes `CausationTrackingInboxBaseTests`/`CausationTrackingOutboxBaseTests` in `tests/Paramore.Brighter.Base.Test`, validated vs InMemory first.
+- Tasks 19a/21a: forced-atomic relational SCHEMA via BoxProvisioning (catalog bumps + builders + Spanner VLatest constants + drift tests). Need DB containers. See "IN scope" section below for exact versions.
+- Tasks 19b–f / 21c–g: per-backend interface impls (need DB containers). 21b = Liquid generator.
+- Tasks 20/22: NoSQL (DynamoDB/DynamoDB.V4/Firestore/MongoDb), schemaless, Supports()=>true.
+- Task 23: build + full core test run.
 
 ### Task review history
 - Round 1: 3 findings ≥60 (75: missing async terminal step, 72: monolithic persistent store tasks, 62: telemetry covers too many behaviors) — all addressed
@@ -25,7 +71,7 @@ Tasks approved after 5 adversarial review rounds. Ready to begin implementation 
 - Round 4: 1 finding ≥60 (75: Spanner misclassified as NoSQL) — addressed by moving to relational tasks
 - Round 5: PASS — 0 findings ≥60
 
-## Task overview (23 tasks)
+## Task overview (34 tasks after 2026-06-17 split)
 
 ### Structural prerequisites (Tasks 1-5)
 1. UseInboxHandler uses pipeline's `this.Context` + expose `InstrumentationOptions` as protected property on `RequestHandler<T>`
@@ -51,11 +97,15 @@ Tasks approved after 5 adversarial review rounds. Ready to begin implementation 
 17. DI registration of `IAmACausationTrackingOutbox`
 18. Base test classes for persistent store causation tracking
 
-### Persistent stores (Tasks 19-22, test-first)
-19. Relational inbox stores: MsSql, MySql, Postgres, Sqlite, Spanner
-20. NoSQL inbox stores: DynamoDB, DynamoDB.V4, Firestore, MongoDb
-21. Relational outbox stores: MsSql, MySql, PostgreSql, Sqlite, Spanner
-22. NoSQL outbox stores: DynamoDB, DynamoDB.V4, Firestore, MongoDb
+### Persistent stores (Tasks 19-22 — relational ones SPLIT 2026-06-17)
+- **19a** STRUCTURAL (atomic, 1 commit): relational inbox schema via BoxProvisioning — all catalogs (MsSql/MySql/Sqlite V3, Postgres V2) + builders + Spanner provisioner + `VLatestInbox` 2→3 + carve-out literal 1→2 + drift tests.
+- **19b–19f** test-first per backend: MsSql, MySql, Postgres, Sqlite, Spanner implement `IAmACausationTrackingInbox` (depends 19a+18+5).
+- **20** NoSQL inbox (schemaless, no BoxProvisioning): DynamoDB, DynamoDB.V4, Firestore, MongoDb.
+- **21a** STRUCTURAL (atomic, 1 commit): relational outbox schema via BoxProvisioning — all catalogs V8 + index + builders + Spanner provisioner + `VLatestOutbox` 7→8 + drift tests.
+- **21b** TOOLING: extend Liquid generator for causation-tracking outbox tests (depends 18).
+- **21c–21g** test-first per backend: MsSql, MySql, PostgreSql, Sqlite, Spanner implement `IAmACausationTrackingOutbox` (depends 21a+21b+5).
+- **22** NoSQL outbox (schemaless): DynamoDB, DynamoDB.V4, Firestore, MongoDb.
+- **Why split**: relational schema is forced-atomic (`SpannerVLatestDriftAgainstRelationalCatalogTests` asserts `VLatest*` == every relational catalog count), so all catalog bumps must land together → one structural task; behavioral interface work is genuinely per-backend → separate `/test-first` cycles.
 
 ### Verification (Task 23)
 23. Build + run all core tests
@@ -79,7 +129,7 @@ Tasks approved after 5 adversarial review rounds. Ready to begin implementation 
 ### Persistent store strategy
 - All 18 Brighter-maintained stores (9 inbox, 9 outbox) get CausationId support
 - Schema migration is opt-in — users only need to migrate if they use Replay
-- Separate migration PR lands on master first, merges into this branch
+- Schema migration ships IN this spec via BoxProvisioning (was "separate PR" — superseded 2026-06-17; see "IN scope" section below)
 - `SupportsCausationTracking()` is a permanent runtime schema check (not transitional)
 
 ### Structural prerequisites (tidy-first)
@@ -100,10 +150,25 @@ Tasks approved after 5 adversarial review rounds. Ready to begin implementation 
 - Inbox persistent store tests derived manually from base classes
 
 ### Out of scope
-- Schema migrations for persistent stores (separate PR, lands first)
 - Saga/workflow orchestration
 - Immediate send replay (sweeper only)
-- Migration tooling for existing data (columns nullable, existing rows have null CausationId)
+- Data backfill for existing rows (columns nullable, existing rows have null CausationId)
+
+### IN scope (decision 2026-06-17) — Schema evolution via BoxProvisioning
+Schema migration for the new CausationId column is NOW IN THIS SPEC/PR (was "separate PR"). Delivered via BoxProvisioning:
+- **Catalog-based relational (MsSql, MySql, PostgreSql, Sqlite), inbox+outbox**: append a new migration version to `<Backend>{Inbox,Outbox}MigrationCatalog` — idempotent `ALTER TABLE ADD CausationId ... NULL` + extend `s_vNAddedColumns`/`Cumulative()`; update live `*{Inbox,Outbox}Builder` DDL (+ NEW index on outbox CausationId); move the backend's builder/migration **drift parity test** (columns only — index NOT covered).
+  - **Per-backend versions (verified — NOT uniform for inbox!)**: outbox **V8** (all four, V7→V8). Inbox: MsSql/MySql/Sqlite **V3** (V2→V3); **PostgreSql inbox is V1-only → V2**. Postgres inbox V1 already carries ContextKey.
+- **Spanner (provisioner-based, no catalog), inbox+outbox**: add column via `Spanner{Inbox,Outbox}Provisioner` + live `Spanner{Inbox,Outbox}Builder`; move Spanner drift test. **CRITICAL: bump `SpannerBoxMigrationRunner.VLatestOutbox` 7→8 and `VLatestInbox` 2→3**, and keep `When_spanner_v_latest_constants_are_compared_to_relational_catalogs...` (in `Paramore.Brighter.Gcp.Tests`) green — re-derive its Postgres carve-out (Postgres inbox count → 2, others → 3). Spanner `SupportsCausationTracking()` = live column-existence probe.
+- **NoSQL (DynamoDB, DynamoDB.V4, Firestore, MongoDb)**: schemaless, NOT BoxProvisioning — field just written/read; `SupportsCausationTracking()` returns true.
+- **Sequencing**: catalog version + builder DDL + (Spanner) VLatest constant land in ONE commit so drift tests never go red between commits.
+- Captured in requirements.md (Constraints + AC9 + Perf NFR), ADR 0057 §"Schema Evolution via BoxProvisioning", tasks.md Tasks 19a–19f / 21a–21g (split — see Task overview above).
+
+### Re-review status (2026-06-17, BoxProvisioning change)
+Ran `/spec:review` on all 3 phases (focused on BoxProvisioning edits) → `review-{requirements,design,tasks}.md`:
+- **requirements: NEEDS WORK** (2≥60: AC9 index gap 72, AC9 named-test brittleness 64) — **FIXED** (AC9 reworded w/ index + outcome; Perf NFR index made definite).
+- **design/ADR: PASS** (0≥60). Sub-threshold Spanner `SupportsCausationTracking()` semantics 52 — **FIXED**. NOTE: design reviewer wrongly claimed "Postgres inbox at V2"; tasks reviewer + main agent corrected to V1-only.
+- **tasks: NEEDS WORK** (3≥60: Spanner VLatest constants 88, Postgres-V1 inbox 85, single-commit sequencing 64) — **ALL FIXED** in Tasks 19/21 + coverage row. Sub-threshold granularity 58 / coverage 50 also addressed.
+- All fixes applied; consider a quick confirmatory re-review before `/spec:implement`, then `/spec:approve` is NOT needed (phases already approved — these were informational re-reviews).
 
 ## Design notes for implementation
 - Brighter uses `DateTimeOffset` over `DateTime` in APIs
@@ -113,7 +178,10 @@ Tasks approved after 5 adversarial review rounds. Ready to begin implementation 
 
 ## Files modified
 - `docs/adr/0057-replay-outbox-on-inbox-duplicate.md` — the ADR
-- `specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/` — requirements.md, README.md, tasks.md, review-tasks.md, .issue-number, .adr-list, .requirements-approved, .design-approved, .tasks-approved
+- `specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/` — requirements.md, README.md, tasks.md, review-requirements.md, review-design.md, review-tasks.md, .issue-number, .adr-list, .requirements-approved, .design-approved, .tasks-approved
+
+## Last commit
+- `45d77ef11` feat(spec-0027): UseInboxHandler adds Replay telemetry event to pipeline span (Task 15). Tasks 1–15 done & committed; nothing pushed. PROMPT.md is gitignored scratch (not committed).
 
 ## Next step
-Begin implementation with `/spec:implement`, starting at Task 1 (structural: UseInboxHandler uses pipeline Context + expose InstrumentationOptions).
+Fresh session: **STEP 0 first** — tidy out the redundant Task-1B protected `InstrumentationOptions` props on `RequestHandler<T>`/`RequestHandlerAsync<T>` (separate structural commit; see "Current position → STEP 0"). **Then STEP 1** — resume `/spec:implement` at **Task 16** (Throw/Warn/Add telemetry events). Design pivot to remember: telemetry gating reads `Context.InstrumentationOptions` (new first-class property on IRequestContext/RequestContext), NOT a handler ctor param / the Task-1B protected prop.
