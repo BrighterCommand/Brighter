@@ -11,13 +11,13 @@
 ## Status
 
 - [x] Requirements (`/spec:requirements`)
-- [ ] Design (`/spec:design`)
-- [ ] Tasks (`/spec:tasks`)
-- [ ] Implementation (`/spec:implement`, interactive TDD via `/test-first`)
-- [ ] PR (gated on maintainer greenlight on #4192)
+- [x] Design (`/spec:design`)
+- [x] Tasks (`/spec:tasks`)
+- [x] Implementation (`/spec:implement`, interactive TDD via `/test-first`)
+- [ ] PR (open: #4194)
 
 ## Notes
 
 - Interactive TDD chosen over Ralph: small, subtle change where per-test human review earns its keep.
-- No ADR — internal cache-key bugfix (precedent: #4061, #4100/#4101 carried code + test, no ADR).
-- PR held until a maintainer signals openness on #4192; spec + tests authored in parallel meanwhile.
+- ADR 0064 (`docs/adr/0064-pipeline-cache-type-key.md`) records the decision to key the mementos by runtime `Type`.
+- Maintainer greenlit #4192; PR raised as #4194.
