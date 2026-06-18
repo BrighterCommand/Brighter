@@ -199,7 +199,7 @@ namespace Paramore.Brighter
         private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType();
-            return s_wrapTransformsMemento.GetOrAdd(key, s => FindMapToMessage(messageMapper)
+            return s_wrapTransformsMemento.GetOrAdd(key, _ => FindMapToMessage(messageMapper)
                 .GetOtherWrapsInPipeline()
                 .OrderByDescending(attribute => attribute.Step));
         }
@@ -207,7 +207,7 @@ namespace Paramore.Brighter
         private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType();
-            return s_unWrapTransformsMemento.GetOrAdd(key, s => FindMapToRequest(messageMapper)
+            return s_unWrapTransformsMemento.GetOrAdd(key, _ => FindMapToRequest(messageMapper)
                 .GetOtherUnwrapsInPipeline()
                 .OrderByDescending(attribute => attribute.Step));
         }
