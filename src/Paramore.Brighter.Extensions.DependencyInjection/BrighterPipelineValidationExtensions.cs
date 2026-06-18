@@ -79,6 +79,9 @@ public static class BrighterPipelineValidationExtensions
             var consumerSpecs = sp.GetServices<ISpecification<Subscription>>();
             var consumerSpecList = consumerSpecs.Any() ? consumerSpecs : null;
 
+            var inbox = ResolveInboxConfiguration(sp)?.Inbox;
+            var outbox = sp.GetService<IAmAnOutboxProducerMediator>()?.Outbox;
+            
             var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
             var mapperRegistry = mapperRegistryBuilder != null
                 ? ServiceCollectionExtensions.MessageMapperRegistry(sp)
@@ -86,7 +89,7 @@ public static class BrighterPipelineValidationExtensions
             var transformerProbe = sp.GetService<IAmATransformerResolvabilityProbe>();
 
             return new PipelineValidator(
-                pipelineBuilder, publications, subscriptions, consumerSpecList,
+                pipelineBuilder, publications, subscriptions, consumerSpecList, inbox, outbox,
                 providerRegistrations, mapperRegistry, transformerProbe);
         });
 

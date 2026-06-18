@@ -36,6 +36,8 @@ namespace Paramore.Brighter.Validation;
 /// <param name="publications">Optional publications to validate against producer rules.</param>
 /// <param name="subscriptions">Optional subscriptions to validate against consumer rules.</param>
 /// <param name="consumerSpecs">Optional consumer validation specifications.</param>
+/// <param name="inbox">Optional inbox the runtime pipeline uses; passed to rules that check causation tracking.</param>
+/// <param name="outbox">Optional outbox the runtime pipeline uses; passed to rules that check causation tracking.</param>
 /// <param name="providerRegistrations">Optional validation-provider registrations. When supplied, the
 /// validation-provider check runs over handler pipelines; null (the default) leaves it inert.</param>
 /// <param name="mapperRegistry">Optional mapper registry used to describe a publication's transforms.
@@ -47,6 +49,9 @@ public class PipelineValidator(
     IEnumerable<Publication>? publications = null,
     IEnumerable<Subscription>? subscriptions = null,
     IEnumerable<ISpecification<Subscription>>? consumerSpecs = null,
+    IAmAnInbox? inbox = null,
+    IAmAnOutbox? outbox = null,
+    IEnumerable<ISpecification<Subscription>>? consumerSpecs = null,
     ValidationProviderRegistrations? providerRegistrations = null,
     MessageMapperRegistry? mapperRegistry = null,
     IAmATransformerResolvabilityProbe? transformerProbe = null) : IAmAPipelineValidator
@@ -55,6 +60,8 @@ public class PipelineValidator(
     private readonly IEnumerable<Publication>? _publications = publications;
     private readonly IEnumerable<Subscription>? _subscriptions = subscriptions;
     private readonly IEnumerable<ISpecification<Subscription>>? _consumerSpecs = consumerSpecs;
+    private readonly IAmAnInbox? _inbox = inbox;
+    private readonly IAmAnOutbox? _outbox = outbox;
     private readonly ValidationProviderRegistrations? _providerRegistrations = providerRegistrations;
     private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistry;
     private readonly IAmATransformerResolvabilityProbe? _transformerProbe = transformerProbe;
@@ -81,7 +88,8 @@ public class PipelineValidator(
         {
             HandlerPipelineValidationRules.HandlerTypeVisibility(),
             HandlerPipelineValidationRules.BackstopAttributeOrdering(),
-            HandlerPipelineValidationRules.AttributeAsyncConsistency()
+            HandlerPipelineValidationRules.AttributeAsyncConsistency(),
+            HandlerPipelineValidationRules.ReplayRequiresCausationTracking(_inbox, _outbox)
         };
 
         if (_providerRegistrations is not null)

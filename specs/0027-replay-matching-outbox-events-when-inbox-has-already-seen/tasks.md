@@ -255,9 +255,9 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ---
 
-## Task 14: TEST + IMPLEMENT — Pipeline validation rejects Replay without causation-tracking support
+## Task 14: TEST + IMPLEMENT — Pipeline validation rejects Replay without causation-tracking support ✅
 
-- [ ] **TEST + IMPLEMENT: Pipeline validation detects OnceOnlyAction.Replay without causation-tracking inbox or outbox**
+- [x] **TEST + IMPLEMENT: Pipeline validation detects OnceOnlyAction.Replay without causation-tracking inbox or outbox**
   - **USE COMMAND**: `/test-first when pipeline has replay configured without causation tracking should report validation error`
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/`
   - Test file: `When_replay_configured_without_causation_tracking_should_report_error.cs`

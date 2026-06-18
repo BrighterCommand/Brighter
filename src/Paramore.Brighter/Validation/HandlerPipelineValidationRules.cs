@@ -23,7 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using Paramore.Brighter.Inbox;
+using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.RequestValidation.Handlers;
 
 namespace Paramore.Brighter.Validation;
@@ -116,6 +119,87 @@ public static class HandlerPipelineValidationRules
                 return [];
             });
         });
+
+    /// <summary>
+    /// Validates that a pipeline configuring <see cref="OnceOnlyAction.Replay"/> on a <c>UseInbox</c> step has
+    /// the causation-tracking support Replay needs. On a duplicate, Replay reads the causation id of the original
+    /// handling from the inbox and resets the dispatched state of that causation's outbox messages so the sweeper
+    /// resends them; both stores must therefore track causation.
+    /// </summary>
+    /// <param name="inbox">The inbox the runtime pipeline uses, captured via closure; null when none is configured.</param>
+    /// <param name="outbox">The outbox the runtime pipeline uses, captured via closure; null when none is configured.</param>
+    /// <returns>
+    /// A collapsed specification that yields, for each pipeline configuring Replay: an Error when the inbox or
+    /// outbox does not implement the causation-tracking role; a Warning when the role is implemented but the live
+    /// store schema does not support causation tracking, or when no outbox is configured (Replay is then a graceful
+    /// terminal step). Non-Replay pipelines yield no findings.
+    /// </returns>
+    public static ISpecification<HandlerPipelineDescription> ReplayRequiresCausationTracking(
+        IAmAnInbox? inbox, IAmAnOutbox? outbox)
+        => new Specification<HandlerPipelineDescription>(d =>
+        {
+            var configuresReplay = d.BeforeSteps.Concat(d.AfterSteps)
+                .Any(step => OnceOnlyActionOf(step.Attribute) == OnceOnlyAction.Replay);
+
+            if (!configuresReplay) return [];
+
+            var source = $"Handler '{d.HandlerType.Name}'";
+            var findings = new List<ValidationResult>();
+
+            if (inbox is not IAmACausationTrackingInbox trackingInbox)
+            {
+                findings.Add(ValidationResult.Fail(new ValidationError(
+                    ValidationSeverity.Error,
+                    source,
+                    $"OnceOnlyAction.Replay requires a causation-tracking inbox, but the configured inbox " +
+                    $"'{inbox?.GetType().Name ?? "(none)"}' does not implement IAmACausationTrackingInbox — " +
+                    "Replay cannot find the causation id of the original handling")));
+            }
+            else if (!trackingInbox.SupportsCausationTracking())
+            {
+                findings.Add(ValidationResult.Fail(new ValidationError(
+                    ValidationSeverity.Warning,
+                    source,
+                    "OnceOnlyAction.Replay requires causation tracking, but the inbox store schema does not " +
+                    "support it — migrate the inbox schema to add the CausationId column for Replay to work")));
+            }
+
+            if (outbox is null)
+            {
+                findings.Add(ValidationResult.Fail(new ValidationError(
+                    ValidationSeverity.Warning,
+                    source,
+                    "OnceOnlyAction.Replay has no outbox to replay — on a duplicate the handler is skipped and " +
+                    "no messages are resent (Replay is a graceful terminal step without an outbox)")));
+            }
+            else if (outbox is not IAmACausationTrackingOutbox trackingOutbox)
+            {
+                findings.Add(ValidationResult.Fail(new ValidationError(
+                    ValidationSeverity.Error,
+                    source,
+                    $"OnceOnlyAction.Replay requires a causation-tracking outbox, but the configured outbox " +
+                    $"'{outbox.GetType().Name}' does not implement IAmACausationTrackingOutbox — " +
+                    "Replay cannot reset the dispatched state of the original messages")));
+            }
+            else if (!trackingOutbox.SupportsCausationTracking())
+            {
+                findings.Add(ValidationResult.Fail(new ValidationError(
+                    ValidationSeverity.Warning,
+                    source,
+                    "OnceOnlyAction.Replay requires causation tracking, but the outbox store schema does not " +
+                    "support it — migrate the outbox schema to add the CausationId column for Replay to work")));
+            }
+
+            return findings;
+        });
+
+    private static OnceOnlyAction? OnceOnlyActionOf(RequestHandlerAttribute? attribute)
+        => attribute switch
+        {
+            UseInboxAttribute sync => sync.OnceOnlyAction,
+            UseInboxAsyncAttribute async => async.OnceOnlyAction,
+            _ => null
+        };
 
     /// <summary>
     /// Validates that a handler declaring a validation pipeline step has a validation provider registered.
