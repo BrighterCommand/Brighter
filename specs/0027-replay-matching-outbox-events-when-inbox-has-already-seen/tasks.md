@@ -297,7 +297,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ## Task 16: TEST + IMPLEMENT — UseInboxHandler adds telemetry events for Throw, Warn, and Add paths (tidy improvement)
 
-- [ ] **TEST + IMPLEMENT: UseInboxHandler writes ActivityEvents for existing Throw, Warn, and Add paths**
+- [x] **TEST + IMPLEMENT: UseInboxHandler writes ActivityEvents for existing Throw, Warn, and Add paths**
   - **USE COMMAND**: `/test-first when inbox handler handles command should add telemetry events for all paths`
   - Test location: `tests/Paramore.Brighter.Core.Tests/OnceOnly/`
   - Test file: `When_inbox_handler_handles_command_should_add_telemetry_events.cs`

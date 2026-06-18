@@ -97,12 +97,14 @@ namespace Paramore.Brighter.Inbox.Handlers
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
                     Log.CommandHasAlreadyBeenSeenAsDebug(s_logger, request.Id.Value);
+                    WriteInboxEvent(Context?.Span, request, "UseInboxHandler Duplicate Throw");
                     throw new OnceOnlyException($"A command with id {request.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
                     Log.CommandHasAlreadyBeenSeenAsWarning(s_logger, request.Id.Value);
+                    WriteInboxEvent(Context?.Span, request, "UseInboxHandler Duplicate Warn");
                     return request;
                 }
 
@@ -132,6 +134,8 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             _inbox.Add(request, _contextKey, requestContext);
 
+            WriteInboxEvent(Context?.Span, request, "UseInboxHandler Add");
+
             return handledCommand;
         }
 
@@ -157,6 +161,29 @@ namespace Paramore.Brighter.Inbox.Handlers
             };
 
             span.AddEvent(new ActivityEvent("UseInboxHandler Duplicate Replay", DateTimeOffset.UtcNow, tags));
+        }
+
+        /// <summary>
+        /// Writes a telemetry event to the pipeline span recording the outcome of handling a command (Add, Throw, or Warn).
+        /// </summary>
+        /// <remarks>
+        /// The event is only written when there is a span to write to and the configured
+        /// <see cref="InstrumentationOptions"/> for the pipeline include <see cref="InstrumentationOptions.Brighter"/>.
+        /// </remarks>
+        /// <param name="span">The pipeline <see cref="Activity"/>, or <c>null</c> if there is no span.</param>
+        /// <param name="request">The request being handled.</param>
+        /// <param name="eventName">The name of the telemetry event to write.</param>
+        private void WriteInboxEvent(Activity? span, T request, string eventName)
+        {
+            if (span is null || Context is null || !Context.InstrumentationOptions.HasFlag(InstrumentationOptions.Brighter))
+                return;
+
+            var tags = new ActivityTagsCollection
+            {
+                { BrighterSemanticConventions.RequestId, request.Id.Value }
+            };
+
+            span.AddEvent(new ActivityEvent(eventName, DateTimeOffset.UtcNow, tags));
         }
 
         private static partial class Log
