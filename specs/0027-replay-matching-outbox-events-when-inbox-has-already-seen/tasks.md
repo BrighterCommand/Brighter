@@ -316,7 +316,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ## Task 17: TEST + IMPLEMENT — DI registration of `IAmACausationTrackingOutbox`
 
-- [ ] **TEST + IMPLEMENT: ServiceCollection registers IAmACausationTrackingOutbox when outbox supports it**
+- [x] **TEST + IMPLEMENT: ServiceCollection registers IAmACausationTrackingOutbox when outbox supports it**
   - **USE COMMAND**: `/test-first when registering outbox that supports causation tracking should register under role interface`
   - Test location: `tests/Paramore.Brighter.Core.Tests/OnceOnly/`
   - Test file: `When_registering_outbox_with_causation_tracking_should_register_role_interface.cs`

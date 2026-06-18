@@ -327,7 +327,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                         new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
                 brighterBuilder.Services.Add(asyncOutboxdescriptor);
             }
-            
+
+            //if the outbox supports causation tracking, register it under that role interface too (same instance)
+            if (outbox is IAmACausationTrackingOutbox)
+            {
+                brighterBuilder.Services.Add(
+                    new ServiceDescriptor(typeof(IAmACausationTrackingOutbox), _ => outbox, ServiceLifetime.Singleton));
+            }
+
             // If no distributed locking service is added, then add the in memory variant
             var distributedLock = busConfiguration.DistributedLock ?? new InMemoryLock();
             brighterBuilder.Services.AddSingleton(distributedLock);
@@ -445,6 +452,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
                 return outbox;
             }, ServiceLifetime.Singleton));
+
+            //if the outbox supports causation tracking, resolve it under that role interface too (same instance);
+            //returns null for an outbox that does not implement the role
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmACausationTrackingOutbox),
+                sp => (sp.GetRequiredService<IAmAnOutbox>() as IAmACausationTrackingOutbox)!,
+                ServiceLifetime.Singleton));
 
             brighterBuilder.Services.AddSingleton<IDistributedLock>(sp =>
             {
