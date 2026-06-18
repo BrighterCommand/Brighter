@@ -25,7 +25,7 @@ Re-key the six process-global static mementos in the three pipeline builders fro
 
 ### Task 1 — Handler builder: disambiguate handler decorator caches by runtime Type (sync + async)
 
-- [ ] **TEST + IMPLEMENT: `PipelineBuilder<TRequest>` resolves each same-simple-name handler's own decorators by runtime Type, for both the sync and async pipelines, independent of build order**
+- [x] **TEST + IMPLEMENT: `PipelineBuilder<TRequest>` resolves each same-simple-name handler's own decorators by runtime Type, for both the sync and async pipelines, independent of build order**
   - **USE COMMAND**: `/test-first PipelineBuilder caches pre/post handler attributes keyed by the handler's runtime Type, so two handlers sharing a simple class name in different namespaces (both registered for the same request type) each build with their own declared decorators regardless of which was built first, for both BuildPipeline (sync) and BuildAsyncPipeline (async); and a single handler built twice leaves exactly one cache entry keyed by typeof(that handler) with an equivalent decorator sequence`
   - Test location: `"tests/Paramore.Brighter.Core.Tests/CommandProcessors/Pipeline/"`
   - Test file: `When_Building_A_Pipeline_Disambiguates_Handlers_By_Type.cs`
@@ -42,7 +42,7 @@ Re-key the six process-global static mementos in the three pipeline builders fro
 
 ### Task 2 — Update the existing white-box cache-key test for the `Type` key (mandatory; same atomic change as Task 1)
 
-- [ ] **REGRESSION VERIFICATION (not /test-first) — retype the existing white-box memento-key helper so it compiles and asserts `Type` keys**
+- [x] **REGRESSION VERIFICATION (not /test-first) — retype the existing white-box memento-key helper so it compiles and asserts `Type` keys**
   - This change is forced by, and must land together with, Task 1's `PipelineBuilder` retype. `Cast<string>()` over `Type` keys is **not** a compile error — it throws `InvalidCastException` at runtime — so re-typing the helper is mandatory.
   - File: `tests/Paramore.Brighter.Core.Tests/CommandProcessors/Pipeline/When_Building_A_Pipeline_Post_Attributes_Are_Cached.cs` (ADR step 4).
   - Edits:
@@ -54,7 +54,7 @@ Re-key the six process-global static mementos in the three pipeline builders fro
 
 ### Task 3 — Sync transform builder: disambiguate wrap/unwrap caches by runtime Type
 
-- [ ] **TEST + IMPLEMENT: `TransformPipelineBuilder` resolves each same-simple-name mapper's own wrap and unwrap transforms by runtime Type, independent of build order**
+- [x] **TEST + IMPLEMENT: `TransformPipelineBuilder` resolves each same-simple-name mapper's own wrap and unwrap transforms by runtime Type, independent of build order**
   - **USE COMMAND**: `/test-first TransformPipelineBuilder caches wrap and unwrap transform attributes keyed by the mapper's runtime Type, so two message mappers sharing a simple class name in different namespaces (both registered for the same request type) each build with their own declared wrap/unwrap transforms regardless of build order; and a single mapper built twice leaves exactly one entry per transform cache keyed by typeof(that mapper) with an equivalent transform sequence`
   - Test location: `"tests/Paramore.Brighter.Core.Tests/MessageSerialisation/"`
   - Test file: `When_Building_A_Transform_Pipeline_Disambiguates_Mappers_By_Type.cs`
@@ -70,7 +70,7 @@ Re-key the six process-global static mementos in the three pipeline builders fro
 
 ### Task 4 — Async transform builder: disambiguate wrap/unwrap caches by runtime Type
 
-- [ ] **TEST + IMPLEMENT: `TransformPipelineBuilderAsync` resolves each same-simple-name mapper's own wrap and unwrap transforms by runtime Type, independent of build order**
+- [x] **TEST + IMPLEMENT: `TransformPipelineBuilderAsync` resolves each same-simple-name mapper's own wrap and unwrap transforms by runtime Type, independent of build order**
   - **USE COMMAND**: `/test-first TransformPipelineBuilderAsync caches wrap and unwrap transform attributes keyed by the async mapper's runtime Type, so two async message mappers sharing a simple class name in different namespaces (both registered for the same request type) each build with their own declared wrap/unwrap transforms regardless of build order; and a single mapper built twice post-warmup is served from the single retained cache entry keyed by typeof(that mapper) with an equivalent transform sequence`
   - Test location: `"tests/Paramore.Brighter.Core.Tests/MessageSerialisation/"`
   - Test file: `When_Building_An_Async_Transform_Pipeline_Disambiguates_Mappers_By_Type.cs`
@@ -86,7 +86,7 @@ Re-key the six process-global static mementos in the three pipeline builders fro
 
 ### Task 5 — Global-inbox `UseInbox` immunity (regression guard)
 
-- [ ] **REGRESSION VERIFICATION (not /test-first) — `UseInbox` is built per runtime type after the cache read and never flows through the decorator cache**
+- [x] **REGRESSION VERIFICATION (not /test-first) — `UseInbox` is built per runtime type after the cache read and never flows through the decorator cache**
   - This is a preservation check, expected to PASS without any new production code: pre-fix, `UseInbox` is already constructed from `implicitHandler.GetType()` *after* the cache read in `AddGlobalInboxAttributes`/`AddGlobalInboxAttributesAsync` (`PipelineBuilder.cs:350-389`), so "each handler gets its own `UseInbox`" holds even with the simple-name bug present. It is therefore **not** RED-able and must not be a `/test-first` cycle.
   - Add one clearly-labelled regression-guard `[Fact]` (or rely on the existing global-inbox suite — see "what to run"): with global inbox enabled via `InboxConfiguration` and two same-simple-name handlers registered for `T`, build each pipeline in either order; assert each handler's built pipeline (via `PipelineTracer` → `DescribePath` → `ToString()`) contains a `UseInbox` step constructed against its own runtime type. **For the immunity assertion, inspect the cached _values_, not the keys**: the memento is keyed by handler `Type`, so `UseInbox` can never be a key — a key check would be vacuously true. Assert that the cached attribute sequence `s_preAttributesMemento[typeof(handler)]` (and post) contains **no** `UseInboxAttribute`/`UseInboxAsyncAttribute` (it is pushed onto the local `preAttributes` by `AddGlobalInboxAttributes` *after* the cache `TryAdd`, never into the cached value), while the built pipeline still carries its own `UseInbox` (AC-7, FR-6, C-2).
   - Test location (if adding the guard): `"tests/Paramore.Brighter.Core.Tests/CommandProcessors/Pipeline/"`; file: `When_Building_A_Pipeline_With_Global_Inbox_Each_Handler_Gets_Its_Own_UseInbox.cs`.
@@ -95,7 +95,7 @@ Re-key the six process-global static mementos in the three pipeline builders fro
 
 ### Task 6 — Preservation of `Describe` / `DescribeTransforms` / `ClearPipelineCache` and public API (regression guard)
 
-- [ ] **REGRESSION VERIFICATION (not /test-first) — diagnostic + cache-clear behaviour and public surface unchanged**
+- [x] **REGRESSION VERIFICATION (not /test-first) — diagnostic + cache-clear behaviour and public surface unchanged**
   - Preservation check, expected to PASS with no new production code: `Describe`/`DescribeTransforms` do not read the cache, and `ClearPipelineCache` semantics are untouched, so the existing suite must pass unmodified (AC-8, AC-9, FR-7).
   - What to run / pass condition:
     - Existing `Describe`/`DescribeTransforms` tests pass unmodified — including `tests/Paramore.Brighter.Core.Tests/Validation/When_transform_builder_describes_should_return_mapper_and_transforms.cs` (described content equivalence: same step types, order, steps, timings).
@@ -105,7 +105,7 @@ Re-key the six process-global static mementos in the three pipeline builders fro
 
 ### Task 7 — Final verification: both TFMs, Release warnings-as-errors, no public-API change
 
-- [ ] **REGRESSION VERIFICATION (not /test-first) — full build + Core suite green on net9.0 and net10.0, no public-API drift**
+- [x] **REGRESSION VERIFICATION (not /test-first) — full build + Core suite green on net9.0 and net10.0, no public-API drift**
   - What to run / pass conditions:
     - `dotnet test tests/Paramore.Brighter.Core.Tests` on **both** `net9.0` and `net10.0` — all green (the fix must pass on both TFMs).
     - `dotnet build --configuration Release /p:NetCoreBuild=true` — succeeds with warnings-as-errors (this confirms no new warnings from the retype).
