@@ -333,7 +333,7 @@ This is a **structural change** adding the new types needed before behavioral wo
 
 ## Task 18: Base test classes for causation tracking in Paramore.Brighter.Base.Test
 
-- [ ] **TEST + IMPLEMENT: Base test classes define causation tracking scenarios for persistent store tests**
+- [x] **TEST + IMPLEMENT: Base test classes define causation tracking scenarios for persistent store tests**
   - **USE COMMAND**: `/test-first when persistent inbox stores causation id should match base test expectations`
   - Test location: `tests/Paramore.Brighter.Base.Test/`
   - Test should define base test classes:
