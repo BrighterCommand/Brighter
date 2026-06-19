@@ -13,6 +13,15 @@
     <RabbitMQClientV6>6.8.1</RabbitMQClientV6>
   </PropertyGroup>
   <ItemGroup>
+    <!-- GHSA-2m69-gcr7-jv3q: SQLitePCLRaw.lib.e_sqlite3 2.1.11 is the latest published version - no patched
+         release exists and the package family is legacy (renamed to SourceGear.sqlite3). It is pulled
+         transitively via Microsoft.Data.Sqlite. Not exploitable here - Brighter uses SQLite only for local
+         inbox/outbox/locking stores, not for parsing untrusted database files or SQL. NU1900-series audit
+         warnings are not NoWarn-suppressible, so this is the supported mechanism. The security/snyk CI check
+         still independently flags new advisories. Remove when a patched native package ships. -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.3" />
     <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.4.3" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />

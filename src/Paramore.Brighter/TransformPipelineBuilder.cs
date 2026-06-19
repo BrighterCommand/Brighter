@@ -54,11 +54,11 @@ namespace Paramore.Brighter
         private readonly InstrumentationOptions _instrumentationOptions;
 
         //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
-            new ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>>();
+        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
+            new ConcurrentDictionary<Type, IOrderedEnumerable<WrapWithAttribute>>();
 
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento =
-            new ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>>();
+        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento =
+            new ConcurrentDictionary<Type, IOrderedEnumerable<UnwrapWithAttribute>>();
 
         /// <summary>
         /// Creates an instance of a transform pipeline builder.
@@ -278,7 +278,7 @@ namespace Paramore.Brighter
 
         private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
-            var key = messageMapper.GetType().Name;
+            var key = messageMapper.GetType();
             if (!s_wrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<WrapWithAttribute>? transformAttributes))
             {
                 transformAttributes = FindMapToMessage(messageMapper)
@@ -293,7 +293,7 @@ namespace Paramore.Brighter
 
         private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
-            var key = messageMapper.GetType().Name;
+            var key = messageMapper.GetType();
             if (!s_unWrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<UnwrapWithAttribute>? transformAttributes))
             {
                 transformAttributes = FindMapToRequest(messageMapper)
