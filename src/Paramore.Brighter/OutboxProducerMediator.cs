@@ -204,7 +204,7 @@ namespace Paramore.Brighter
             
             if (batchId != null)
             {
-                _outboxBatches[batchId].Add(message);
+                GetBatchOrThrow(batchId).Add(message);
                 return;
             }
 
@@ -247,7 +247,7 @@ namespace Paramore.Brighter
             if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
             if (batchId != null)
             {
-                _outboxBatches[batchId].Add(message);
+                GetBatchOrThrow(batchId).Add(message);
                 return;
             }
 
@@ -529,7 +529,11 @@ namespace Paramore.Brighter
         public string StartBatchAddToOutbox()
         {
             var batchId = Uuid.NewAsString();
-            _outboxBatches.Add(batchId, new List<TMessage>());
+            while (!_outboxBatches.TryAdd(batchId, new List<TMessage>()))
+            {
+                batchId = Uuid.NewAsString();
+            }
+
             return batchId;
         }
 
@@ -538,14 +542,16 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
+            var batch = GetBatchOrThrow(batchId);
+
+            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, batch, requestContext.Span,
                 transactionProvider != null, false, _instrumentationOptions);
 
             if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
             
             var written = ExecuteWithResiliencePipeline(() =>
                 {
-                    _outBox.Add(_outboxBatches[batchId], requestContext, _outboxTimeout, transactionProvider);
+                    _outBox.Add(batch, requestContext, _outboxTimeout, transactionProvider);
                 },
                 requestContext
             );
@@ -567,7 +573,9 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
+            var batch = GetBatchOrThrow(batchId);
+
+            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, batch, requestContext.Span,
                 transactionProvider != null, true, _instrumentationOptions);
 
             if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
@@ -575,7 +583,7 @@ namespace Paramore.Brighter
             var written = await ExecuteWithResiliencePipelineAsync(
                 async _ =>
                 {
-                    await _asyncOutbox.AddAsync(_outboxBatches[batchId], requestContext, _outboxTimeout,
+                    await _asyncOutbox.AddAsync(batch, requestContext, _outboxTimeout,
                         transactionProvider, cancellationToken);
                 },
                 requestContext,
@@ -585,7 +593,14 @@ namespace Paramore.Brighter
             if (!written)
                 throw new ChannelFailureException($"Could not write batch {batchId} to the outbox");
 
-            _outboxBatches.Remove(batchId);
+            _outboxBatches.TryRemove(batchId, out _);
+        }
+
+        private List<TMessage> GetBatchOrThrow(string batchId)
+        {
+            if (_outboxBatches.TryGetValue(batchId, out var batch)) return batch;
+
+            throw new ArgumentException($"Batch id {batchId} is not active", nameof(batchId));
         }
 
         /// <summary>
