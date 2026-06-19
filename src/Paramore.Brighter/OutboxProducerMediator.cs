@@ -61,7 +61,7 @@ namespace Paramore.Brighter
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly IAmAPublicationFinder _publicationFinder;
         private readonly IAmAnOutboxCircuitBreaker? _outboxCircuitBreaker;
-        private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
+        private readonly ConcurrentDictionary<string, List<TMessage>> _outboxBatches = new();
 
         private static readonly SemaphoreSlim s_backgroundClearSemaphoreToken = new(1, 1);
 
