@@ -376,7 +376,7 @@ Each is its own test-first cycle against `CausationTrackingInboxBaseTests` (Task
 
 ## Task 20: TEST + IMPLEMENT — NoSQL inbox stores implement `IAmACausationTrackingInbox` (DynamoDB, DynamoDB.V4, Firestore, MongoDb)
 
-- [ ] **TEST + IMPLEMENT: NoSQL inbox stores add CausationId attribute and implement IAmACausationTrackingInbox**
+- [x] **TEST + IMPLEMENT: NoSQL inbox stores add CausationId attribute and implement IAmACausationTrackingInbox**
   - **USE COMMAND**: `/test-first when nosql inbox stores causation id should store and retrieve via base tests`
   - Stores: DynamoDB, DynamoDB.V4, Firestore, MongoDb
   - **No BoxProvisioning**: these stores are schemaless and outside BoxProvisioning — there is no DDL migration. The `CausationId` field is simply written on `Add` and read back; `SupportsCausationTracking()` returns `true`.
