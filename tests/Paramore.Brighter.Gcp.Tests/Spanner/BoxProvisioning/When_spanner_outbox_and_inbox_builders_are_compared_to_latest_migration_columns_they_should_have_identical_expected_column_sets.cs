@@ -92,10 +92,9 @@ public class SpannerInboxBuilderDriftTests
     [Fact]
     public void When_spanner_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
-        // Arrange — Spanner inbox is fresh-install-only at V2-equivalent: the builder ships
-        // CommandId + CommandType + CommandBody + Timestamp + ContextKey, which matches the
-        // MySQL inbox V2 LogicalColumns (V1 + ContextKey). PostgreSQL inbox would also work
-        // (its V1-only ContextKey-inclusive shape is the same five columns), but MySQL is the
+        // Arrange — Spanner inbox is fresh-install-only at V3-equivalent: the builder ships
+        // CommandId + CommandType + CommandBody + Timestamp + ContextKey + CausationId, which
+        // matches the MySQL inbox V3 LogicalColumns (V1 + ContextKey + CausationId). MySQL is the
         // canonical V_latest reference for the four-backend invariant.
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(

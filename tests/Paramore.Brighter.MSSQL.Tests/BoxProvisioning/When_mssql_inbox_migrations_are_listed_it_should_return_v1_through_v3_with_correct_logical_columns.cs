@@ -36,8 +36,10 @@ public class MsSqlInboxMigrationsTests
 
     private static readonly string[] s_v2Added = ["ContextKey"];
 
+    private static readonly string[] s_v3Added = ["CausationId"];
+
     [Fact]
-    public void When_mssql_inbox_migrations_are_listed_it_should_return_v1_through_v2_with_correct_logical_columns()
+    public void When_mssql_inbox_migrations_are_listed_it_should_return_v1_through_v3_with_correct_logical_columns()
     {
         //Arrange — derive each version's expected LogicalColumns by accumulating the
         //per-version additions from the archaeology (spec README inbox table).
@@ -49,15 +51,15 @@ public class MsSqlInboxMigrationsTests
         //Act
         var migrations = new MsSqlInboxMigrationCatalog().All(config);
 
-        //Assert — exactly two migrations numbered 1..2 in order
-        Assert.Equal(2, migrations.Count);
+        //Assert — exactly three migrations numbered 1..3 in order
+        Assert.Equal(3, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
         //Assert — LogicalColumns at each version matches the cumulative archaeology
-        for (var v = 1; v <= 2; v++)
+        for (var v = 1; v <= 3; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
@@ -69,11 +71,15 @@ public class MsSqlInboxMigrationsTests
         }
 
         //Assert — V1 has no single source commit so SourceReference is null;
-        //V2 carries the archaeology pointer for the ContextKey addition (787c31c52, Oct 2018).
+        //V2 carries the archaeology pointer for the ContextKey addition (787c31c52, Oct 2018);
+        //V3 carries the issue pointer for the CausationId addition (#2541).
         Assert.Null(migrations[0].SourceReference);
         Assert.False(
             string.IsNullOrWhiteSpace(migrations[1].SourceReference),
             "V2 must have a non-empty SourceReference (archaeology pointer for ContextKey addition)");
+        Assert.False(
+            string.IsNullOrWhiteSpace(migrations[2].SourceReference),
+            "V3 must have a non-empty SourceReference (issue pointer for CausationId addition)");
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()
@@ -83,6 +89,8 @@ public class MsSqlInboxMigrationsTests
         byVersion[1] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
 
         cumulative.UnionWith(s_v2Added); byVersion[2] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
+
+        cumulative.UnionWith(s_v3Added); byVersion[3] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
 
         return byVersion;
     }

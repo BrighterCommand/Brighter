@@ -24,54 +24,54 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Data.Sqlite;
-using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Paramore.Brighter.Sqlite.Tests.BoxProvisioning.Legacy;
+using MySqlConnector;
+using Paramore.Brighter.BoxProvisioning.MySql;
+using Paramore.Brighter.MySQL.Tests.BoxProvisioning.Legacy;
 using Xunit;
 
-namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
+namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class InboxV1ToV2UpgradeTests : IAsyncLifetime
+public class MySqlInboxV1ToV3UpgradeTests : IAsyncLifetime
 {
     private const string MarkerCommandId = "marker-command-must-survive";
 
-    private static readonly string[] s_v2ExpectedColumns =
+    private static readonly string[] s_v3ExpectedColumns =
     [
-        "CommandId", "CommandType", "CommandBody", "Timestamp", "ContextKey"
+        "CommandId", "CommandType", "CommandBody", "Timestamp", "ContextKey", "CausationId"
     ];
 
-    private readonly string _connectionString = Configuration.ConnectionString;
+    private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_inbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task When_sqlite_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v2()
+    public async Task When_mysql_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v3()
     {
         //Arrange — seed a V1 inbox (no ContextKey, no history) plus a marker command row.
-        SqliteInboxLegacySeeder.SeedAtV1(_connectionString, _tableName);
+        MySqlInboxLegacySeeder.SeedAtV1(_connectionString, _tableName);
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _tableName);
-        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
-        var provisioner = new SqliteInboxProvisioner(
-            new SqliteBoxDetectionHelper(),
-            new SqliteInboxMigrationCatalog(),
-            new SqlitePayloadModeValidator(),
+        var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var provisioner = new MySqlInboxProvisioner(
+            new MySqlBoxDetectionHelper(),
+            new MySqlInboxMigrationCatalog(),
+            new MySqlPayloadModeValidator(),
             config,
             runner);
 
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — the table now has the V2 column set (ContextKey ALTER applied).
+        //Assert — the table now has the V3 column set (ContextKey + CausationId ALTERs applied)
         var actualColumns = await GetTableColumns();
-        foreach (var expected in s_v2ExpectedColumns)
+        foreach (var expected in s_v3ExpectedColumns)
         {
             Assert.Contains(expected, actualColumns);
         }
 
-        //Assert — history rows: one synthetic at V1 + one applied at V2.
+        //Assert — history rows: one synthetic at V1 + one applied at V2 + one applied at V3
         var rowsByVersion = await GetHistoryRowsByVersion();
-        Assert.Equal(ExpectedMigrationVersions.InboxLatest, rowsByVersion.Count);
+        Assert.Equal(3, rowsByVersion.Count);
 
         var syntheticDescription = Assert.Contains(1, rowsByVersion);
         Assert.StartsWith("bootstrap: detected at V1", syntheticDescription);
@@ -82,31 +82,40 @@ public class InboxV1ToV2UpgradeTests : IAsyncLifetime
             $"V2 should be an applied migration row, not a synthetic bootstrap row " +
             $"(description was: '{appliedDescription}')");
 
-        //Assert — the seeded marker row survived with NULL ContextKey on the new column.
+        var appliedV3Description = Assert.Contains(3, rowsByVersion);
+        Assert.False(
+            appliedV3Description.StartsWith("bootstrap:", StringComparison.Ordinal),
+            $"V3 should be an applied migration row, not a synthetic bootstrap row " +
+            $"(description was: '{appliedV3Description}')");
+
+        //Assert — the seeded marker row survived with NULL ContextKey on the new column
         Assert.True(await MarkerRowExistsWithNullContextKey());
     }
 
     private async Task SeedMarkerRow()
     {
-        await using var connection = new SqliteConnection(_connectionString);
+        using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText =
-            $"INSERT INTO [{_tableName}] ([CommandId]) VALUES (@CommandId)";
+            $"INSERT INTO `{_tableName}` (`CommandId`, `CommandType`, `CommandBody`, `Timestamp`) " +
+            "VALUES (@CommandId, 'TestCommand', '{}', NOW(4))";
         command.Parameters.AddWithValue("@CommandId", MarkerCommandId);
         await command.ExecuteNonQueryAsync();
     }
 
     private async Task<HashSet<string>> GetTableColumns()
     {
-        await using var connection = new SqliteConnection(_connectionString);
+        using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT name FROM pragma_table_info(@TableName)";
+        using var command = connection.CreateCommand();
+        command.CommandText = @"
+SELECT COLUMN_NAME FROM information_schema.columns
+WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @TableName";
         command.Parameters.AddWithValue("@TableName", _tableName);
 
         var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        await using var reader = await command.ExecuteReaderAsync();
+        using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
             columns.Add(reader.GetString(0));
@@ -116,25 +125,25 @@ public class InboxV1ToV2UpgradeTests : IAsyncLifetime
 
     private async Task<Dictionary<int, string>> GetHistoryRowsByVersion()
     {
-        await using var connection = new SqliteConnection(_connectionString);
+        using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText = @"
-SELECT [MigrationVersion], [Description] FROM [__BrighterMigrationHistory]
-WHERE [BoxTableName] = @BoxTableName
-ORDER BY [MigrationVersion]";
+SELECT `MigrationVersion`, `Description` FROM `__BrighterMigrationHistory`
+WHERE `BoxTableName` = @BoxTableName
+ORDER BY `MigrationVersion`";
         command.Parameters.AddWithValue("@BoxTableName", _tableName);
 
         var rows = new Dictionary<int, string>();
         try
         {
-            await using var reader = await command.ExecuteReaderAsync();
+            using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
                 rows[reader.GetInt32(0)] = reader.GetString(1);
             }
         }
-        catch (SqliteException)
+        catch (MySqlException ex) when (ex.ErrorCode == MySqlErrorCode.NoSuchTable)
         {
             // history table absent — no rows to return
         }
@@ -143,14 +152,14 @@ ORDER BY [MigrationVersion]";
 
     private async Task<bool> MarkerRowExistsWithNullContextKey()
     {
-        await using var connection = new SqliteConnection(_connectionString);
+        using var connection = new MySqlConnection(_connectionString);
         await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText = $@"
-SELECT COUNT(1) FROM [{_tableName}]
-WHERE [CommandId] = @CommandId AND [ContextKey] IS NULL";
+SELECT COUNT(1) FROM `{_tableName}`
+WHERE `CommandId` = @CommandId AND `ContextKey` IS NULL";
         command.Parameters.AddWithValue("@CommandId", MarkerCommandId);
-        return Convert.ToInt64(await command.ExecuteScalarAsync()) == 1L;
+        return (long)(await command.ExecuteScalarAsync())! == 1L;
     }
 
     public Task InitializeAsync() => Task.CompletedTask;
@@ -159,19 +168,19 @@ WHERE [CommandId] = @CommandId AND [ContextKey] IS NULL";
     {
         try
         {
-            await using var connection = new SqliteConnection(_connectionString);
+            using var connection = new MySqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            await using var dropTable = connection.CreateCommand();
-            dropTable.CommandText = $"DROP TABLE IF EXISTS [{_tableName}]";
+            using var dropTable = connection.CreateCommand();
+            dropTable.CommandText = $"DROP TABLE IF EXISTS `{_tableName}`";
             await dropTable.ExecuteNonQueryAsync();
 
-            await using var deleteHistory = connection.CreateCommand();
+            using var deleteHistory = connection.CreateCommand();
             deleteHistory.CommandText =
-                "DELETE FROM [__BrighterMigrationHistory] WHERE [BoxTableName] = @BoxTableName";
+                "DELETE FROM `__BrighterMigrationHistory` WHERE `BoxTableName` = @BoxTableName";
             deleteHistory.Parameters.AddWithValue("@BoxTableName", _tableName);
             try { await deleteHistory.ExecuteNonQueryAsync(); }
-            catch (SqliteException) { /* history table may not exist */ }
+            catch (MySqlException) { /* history table may not exist */ }
         }
         catch
         {

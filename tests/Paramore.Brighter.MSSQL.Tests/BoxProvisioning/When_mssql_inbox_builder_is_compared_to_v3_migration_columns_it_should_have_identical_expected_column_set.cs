@@ -37,7 +37,7 @@ public class MsSqlInboxBuilderDriftTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void When_mssql_inbox_builder_is_compared_to_v2_migration_columns_it_should_have_identical_expected_column_set(
+    public void When_mssql_inbox_builder_is_compared_to_v3_migration_columns_it_should_have_identical_expected_column_set(
         bool hasBinaryMessagePayload)
     {
         //Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config

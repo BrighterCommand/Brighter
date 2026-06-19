@@ -31,11 +31,11 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlInboxV1ToV2UpgradeTests : IAsyncLifetime
+public class MsSqlInboxV1ToV3UpgradeTests : IAsyncLifetime
 {
-    private static readonly string[] s_v2ExpectedColumns =
+    private static readonly string[] s_v3ExpectedColumns =
     [
-        "Id", "CommandId", "CommandType", "CommandBody", "Timestamp", "ContextKey"
+        "Id", "CommandId", "CommandType", "CommandBody", "Timestamp", "ContextKey", "CausationId"
     ];
 
     private const string MarkerCommandId = "marker-command-must-survive";
@@ -44,7 +44,7 @@ public class MsSqlInboxV1ToV2UpgradeTests : IAsyncLifetime
     private readonly string _tableName = $"test_inbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task When_mssql_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v2()
+    public async Task When_mssql_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v3()
     {
         //Arrange — seed a V1 inbox (no ContextKey, no history) plus a marker command row.
         Configuration.EnsureDatabaseExists(_connectionString);
@@ -63,16 +63,16 @@ public class MsSqlInboxV1ToV2UpgradeTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — the table now has the V2 column set (ContextKey ALTER applied)
+        //Assert — the table now has the V3 column set (ContextKey + CausationId ALTERs applied)
         var actualColumns = GetTableColumns();
-        foreach (var expected in s_v2ExpectedColumns)
+        foreach (var expected in s_v3ExpectedColumns)
         {
             Assert.Contains(expected, actualColumns);
         }
 
-        //Assert — history rows: one synthetic at V1 + one applied at V2
+        //Assert — history rows: one synthetic at V1 + one applied at V2 + one applied at V3
         var rowsByVersion = GetHistoryRowsByVersion();
-        Assert.Equal(2, rowsByVersion.Count);
+        Assert.Equal(3, rowsByVersion.Count);
 
         var syntheticDescription = Assert.Contains(1, rowsByVersion);
         Assert.StartsWith("bootstrap: detected at V1", syntheticDescription);
@@ -82,6 +82,12 @@ public class MsSqlInboxV1ToV2UpgradeTests : IAsyncLifetime
             appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
             $"V2 should be an applied migration row, not a synthetic bootstrap row " +
             $"(description was: '{appliedDescription}')");
+
+        var appliedV3Description = Assert.Contains(3, rowsByVersion);
+        Assert.False(
+            appliedV3Description.StartsWith("bootstrap:", StringComparison.Ordinal),
+            $"V3 should be an applied migration row, not a synthetic bootstrap row " +
+            $"(description was: '{appliedV3Description}')");
 
         //Assert — the seeded marker row survived with NULL ContextKey on the new column
         Assert.True(MarkerRowExistsWithNullContextKey());

@@ -38,8 +38,10 @@ public class SqliteInboxMigrationsTests
 
     private static readonly string[] s_v2Added = ["ContextKey"];
 
+    private static readonly string[] s_v3Added = ["CausationId"];
+
     [Fact]
-    public void When_sqlite_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_idempotency_check_sql_for_contextkey()
+    public void When_sqlite_inbox_migrations_are_listed_it_should_return_v1_through_v3_with_idempotency_check_sql_for_contextkey_and_causationid()
     {
         //Arrange — derive each version's expected LogicalColumns by accumulating the
         //per-version additions from the archaeology (spec README inbox table). SQLite inbox
@@ -54,15 +56,15 @@ public class SqliteInboxMigrationsTests
         //Act
         var migrations = new SqliteInboxMigrationCatalog().All(config);
 
-        //Assert — exactly two migrations numbered 1..2 in order.
-        Assert.Equal(2, migrations.Count);
+        //Assert — exactly three migrations numbered 1..3 in order.
+        Assert.Equal(3, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
         //Assert — LogicalColumns at each version matches the cumulative archaeology.
-        for (var v = 1; v <= 2; v++)
+        for (var v = 1; v <= 3; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
@@ -101,11 +103,32 @@ public class SqliteInboxMigrationsTests
         Assert.DoesNotContain("information_schema", v2Script, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("COL_LENGTH", v2Script, StringComparison.OrdinalIgnoreCase);
 
+        //Assert — V3 IdempotencyCheckSql probes pragma_table_info for CausationId, mirroring V2.
+        var v3Check = migrations[2].IdempotencyCheckSql;
+        Assert.False(
+            string.IsNullOrWhiteSpace(v3Check),
+            "V3 must have a non-empty IdempotencyCheckSql per ADR §6");
+        Assert.Contains("SELECT COUNT(*)", v3Check, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"pragma_table_info('{TableName}')", v3Check, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("name='CausationId'", v3Check, StringComparison.OrdinalIgnoreCase);
+
+        //Assert — V3 UpScript is a plain ALTER TABLE ADD COLUMN for CausationId, mirroring V2.
+        var v3Script = migrations[2].UpScript;
+        Assert.Contains($"ALTER TABLE [{TableName}]", v3Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ADD COLUMN", v3Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[CausationId]", v3Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("pragma_table_info", v3Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("IF NOT EXISTS", v3Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("PREPARE", v3Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("information_schema", v3Script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("COL_LENGTH", v3Script, StringComparison.OrdinalIgnoreCase);
+
         //Assert — V1 has no single source commit so SourceReference is null;
         //V2 carries the archaeology pointer for the ContextKey addition (787c31c52, Oct 2018,
-        //same commit as MSSQL/MySQL inbox V2).
+        //same commit as MSSQL/MySQL inbox V2); V3 carries the issue pointer for CausationId (#2541).
         Assert.Null(migrations[0].SourceReference);
         Assert.Equal("787c31c52", migrations[1].SourceReference);
+        Assert.Equal("#2541", migrations[2].SourceReference);
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()
@@ -115,6 +138,8 @@ public class SqliteInboxMigrationsTests
         byVersion[1] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
 
         cumulative.UnionWith(s_v2Added); byVersion[2] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
+
+        cumulative.UnionWith(s_v3Added); byVersion[3] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
 
         return byVersion;
     }

@@ -115,9 +115,11 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     //   VLatestInbox === new MsSqlInboxMigrationCatalog().All(...).Count
     //                === new MySqlInboxMigrationCatalog().All(...).Count
     //                === new SqliteInboxMigrationCatalog().All(...).Count
-    //                  (PostgreSQL inbox is V1-only by design — ADR 0057 §E, the PG inbox was
-    //                   born post-ContextKey-era so its V1 already includes the column the
-    //                   other three add at V2; the cross-backend test excludes it.)
+    //                  (PostgreSQL inbox is one version behind the other three — ADR 0057 §E,
+    //                   the PG inbox was born post-ContextKey-era so its V1 already includes the
+    //                   column the other three add at V2. Spec 0027 (#2541) adds CausationId to
+    //                   every relational inbox, advancing MsSql/MySql/Sqlite V2→V3 and PG V1→V2,
+    //                   so PG stays exactly one behind and the cross-backend test carves it out.)
     // Spanner has no V_k chain (ADR 0057 §6 — fresh-install-only), so the latest version is
     // effectively a stamp on a freshly-built table. When a relational backend advances to
     // V8/V3 etc., bump these values so Spanner's history row keeps the same V_latest as
@@ -134,7 +136,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     // `const` the old value would persist in downstream IL until every consumer also rebuilt,
     // letting an out-of-date V_latest silently flow through a partial-rebuild deployment.
     public static readonly int VLatestOutbox = 7;
-    public static readonly int VLatestInbox = 2;
+    public static readonly int VLatestInbox = 3;
 
     private const string BootstrapDescription =
         "bootstrap: spanner-assumed-current (no known legacy installations, A-2)";

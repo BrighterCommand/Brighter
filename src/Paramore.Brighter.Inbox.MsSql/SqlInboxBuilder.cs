@@ -39,6 +39,7 @@ namespace Paramore.Brighter.Inbox.MsSql
                 [CommandBody] [NVARCHAR](MAX) NULL ,
                 [Timestamp] [DATETIME] NULL ,
                 [ContextKey] [NVARCHAR](256) NULL,
+                [CausationId] [NVARCHAR](256) NULL,
                 PRIMARY KEY ( [Id] )
             );
             """;
@@ -53,6 +54,7 @@ namespace Paramore.Brighter.Inbox.MsSql
                 [CommandBody] [VARBINARY](MAX) NULL ,
                 [Timestamp] [DATETIME] NULL ,
                 [ContextKey] [NVARCHAR](256) NULL,
+                [CausationId] [NVARCHAR](256) NULL,
                 PRIMARY KEY ( [Id] )
             );
             """;

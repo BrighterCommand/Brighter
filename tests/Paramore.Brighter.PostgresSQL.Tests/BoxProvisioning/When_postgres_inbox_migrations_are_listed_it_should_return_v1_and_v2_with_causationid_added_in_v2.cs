@@ -34,33 +34,51 @@ public class PostgreSqlInboxMigrationsTests
     private static readonly string[] s_v1Columns =
         ["commandid", "commandtype", "commandbody", "timestamp", "contextkey"];
 
+    private static readonly string[] s_v2Columns =
+        ["commandid", "commandtype", "commandbody", "timestamp", "contextkey", "causationid"];
+
     [Fact]
-    public void When_postgres_inbox_migrations_are_listed_it_should_return_only_v1_with_contextkey_and_composite_pk_as_baseline()
+    public void When_postgres_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_causationid_added_in_v2()
     {
-        //Arrange — Postgres inbox is V1-only by design (born with ContextKey + composite PK
-        //in PR #1401, Feb 2021). No pre-ContextKey Postgres inbox ever shipped (ADR
-        //"Alternatives → E"); so V1's LogicalColumns include contextkey.
+        //Arrange — Postgres inbox was born with ContextKey + composite PK in PR #1401 (Feb 2021),
+        //so its V1 baseline already includes contextkey (no pre-ContextKey Postgres inbox ever
+        //shipped — ADR "Alternatives → E"). Spec 0027 (#2541) adds a V2 that introduces
+        //causationid via ADD COLUMN IF NOT EXISTS — so the catalog now lists V1 + V2.
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Host=ignored;Database=ignored;Username=ignored;Password=ignored",
             inboxTableName: tableName);
 
         var expectedV1 = new HashSet<string>(s_v1Columns, StringComparer.Ordinal);
+        var expectedV2 = new HashSet<string>(s_v2Columns, StringComparer.Ordinal);
 
         //Act
         var migrations = new PostgreSqlInboxMigrationCatalog().All(config);
 
-        //Assert — exactly one migration, version 1, no SourceReference (no archaeology pointer
-        //for V1 baseline — same convention as outbox V1).
-        Assert.Single(migrations);
+        //Assert — exactly two migrations numbered 1..2 in order.
+        Assert.Equal(2, migrations.Count);
         Assert.Equal(1, migrations[0].Version.Value);
+        Assert.Equal(2, migrations[1].Version.Value);
+
+        //Assert — V1 has no SourceReference (baseline); V2 carries the issue pointer (#2541).
         Assert.Null(migrations[0].SourceReference);
+        Assert.Equal("#2541", migrations[1].SourceReference);
 
         //Assert — V1 LogicalColumns are lowercase (ADR §1) and contextkey is part of V1.
         Assert.True(
             expectedV1.SetEquals(migrations[0].LogicalColumns),
             $"V1 LogicalColumns mismatch — expected: [{string.Join(", ", expectedV1)}], " +
             $"got: [{string.Join(", ", migrations[0].LogicalColumns)}]");
+
+        //Assert — V2 LogicalColumns are V1 + causationid (lowercase per ADR §1).
+        Assert.True(
+            expectedV2.SetEquals(migrations[1].LogicalColumns),
+            $"V2 LogicalColumns mismatch — expected: [{string.Join(", ", expectedV2)}], " +
+            $"got: [{string.Join(", ", migrations[1].LogicalColumns)}]");
+
+        //Assert — V2 UpScript is an idempotent ADD COLUMN IF NOT EXISTS for causationid.
+        Assert.Contains("ADD COLUMN IF NOT EXISTS", migrations[1].UpScript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("causationid", migrations[1].UpScript, StringComparison.OrdinalIgnoreCase);
 
         //Assert — V1 UpScript is the literal historical Postgres inbox DDL (Spec 0027 R1),
         //not the live builder DDL. The fresh-install fast path takes its DDL from
