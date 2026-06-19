@@ -29,6 +29,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.RequestValidation.Handlers;
 using Paramore.Brighter.Validation;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection;
@@ -43,14 +44,29 @@ public static class BrighterPipelineValidationExtensions
     /// Registers pipeline validation services. At startup, registered handler pipelines
     /// are evaluated against validation rules and errors prevent the host from starting.
     /// </summary>
+    /// <remarks>
+    /// Call this last in the Brighter builder chain. The validation-provider registrations and the
+    /// transformer-resolvability probe are snapshotted from the service collection at this point, so anything
+    /// registered after this call (e.g. a later <c>UseFluentValidation()</c> or <c>AutoFromAssemblies(...)</c>)
+    /// would not be seen and could produce a spurious warning.
+    /// </remarks>
     /// <param name="builder">The Brighter builder.</param>
     /// <param name="enabled">When false, the method is a no-op — no services are registered. Defaults to true.</param>
+    /// <param name="throwOnError">When true (the default), Error-severity findings throw and prevent the host
+    /// from starting; Warning-severity findings never block, regardless of this flag.</param>
     /// <returns>The builder, for fluent chaining.</returns>
     public static IBrighterBuilder ValidatePipelines(this IBrighterBuilder builder, bool enabled = true, bool throwOnError = true)
     {
         if (!enabled) return builder;
 
         builder.Services.Configure<BrighterPipelineValidationOptions>(o => o.ThrowOnError = throwOnError);
+
+        var providerRegistrations = new ValidationProviderRegistrations(
+            Sync: builder.Services.Any(d => d.ServiceType == typeof(ValidateRequestHandler<>)),
+            Async: builder.Services.Any(d => d.ServiceType == typeof(ValidateRequestHandlerAsync<>)));
+
+        builder.Services.TryAddSingleton<IAmATransformerResolvabilityProbe>(
+            new ServiceCollectionTransformerResolvabilityProbe(builder.Services));
 
         builder.Services.TryAddSingleton<IAmAPipelineValidator>(sp =>
         {
@@ -63,7 +79,15 @@ public static class BrighterPipelineValidationExtensions
             var consumerSpecs = sp.GetServices<ISpecification<Subscription>>();
             var consumerSpecList = consumerSpecs.Any() ? consumerSpecs : null;
 
-            return new PipelineValidator(pipelineBuilder, publications, subscriptions, consumerSpecList);
+            var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
+            var mapperRegistry = mapperRegistryBuilder != null
+                ? ServiceCollectionExtensions.MessageMapperRegistry(sp)
+                : null;
+            var transformerProbe = sp.GetService<IAmATransformerResolvabilityProbe>();
+
+            return new PipelineValidator(
+                pipelineBuilder, publications, subscriptions, consumerSpecList,
+                providerRegistrations, mapperRegistry, transformerProbe);
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterValidationHostedService>();

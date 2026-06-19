@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using Paramore.Brighter.Validation;
 
 namespace Paramore.Brighter.ServiceActivator.Validation;
 
@@ -120,6 +121,42 @@ public static class ConsumerValidationRules
                 $"Subscription '{s.Name}'",
                 $"RequestType '{s.RequestType!.Name}' implements neither ICommand nor IEvent " +
                 "— consider implementing one of these marker interfaces"));
+
+    /// <summary>
+    /// Validates that every unwrap transform the subscription's resolved mapper declares can be resolved.
+    /// A declared transform whose transformer type is not registered is a strong signal that its assembly
+    /// was not scanned. Reports one <see cref="ValidationSeverity.Warning"/> per
+    /// unresolvable transform, naming the request type, the transformer type, the subscription, and prompting an
+    /// <c>AutoFromAssemblies</c> check. Subscriptions with a null <see cref="Subscription.RequestType"/>, whose
+    /// request type resolves to no mapper, or whose request type resolves to the default mapper (whose transforms
+    /// are Brighter built-ins and out of scope) are skipped.
+    /// </summary>
+    /// <param name="mapperRegistry">The mapper registry used to describe the subscription's transforms.</param>
+    /// <param name="probe">Answers whether a declared transformer type is resolvable, without instantiating it.</param>
+    /// <returns>A specification that reports a Warning per unresolvable unwrap transform.</returns>
+    public static ISpecification<Subscription> UnwrapTransformResolvable(
+        MessageMapperRegistry mapperRegistry, IAmATransformerResolvabilityProbe probe)
+        => new Specification<Subscription>(subscription =>
+        {
+            if (subscription.RequestType is null)
+                return [];
+
+            var description = TransformPipelineBuilder.DescribeTransforms(
+                mapperRegistry, subscription.RequestType, includeAsync: true);
+
+            if (description is null || description.IsDefaultMapper)
+                return [];
+
+            return description.UnwrapTransforms
+                .Where(step => !probe.Resolves(step.TransformType))
+                .Select(step => ValidationResult.Fail(new ValidationError(
+                    ValidationSeverity.Warning,
+                    $"Subscription '{subscription.Name}'",
+                    $"Request '{subscription.RequestType.Name}' declares unwrap transform '{step.TransformType.Name}' " +
+                    $"on subscription '{subscription.Name}' — that transformer is not registered. " +
+                    "Is its assembly included in AutoFromAssemblies()?")))
+                .ToList();
+        });
 
     /// <summary>
     /// Checks whether <paramref name="handlerType"/> derives from <c>RequestHandlerAsync&lt;&gt;</c>.
