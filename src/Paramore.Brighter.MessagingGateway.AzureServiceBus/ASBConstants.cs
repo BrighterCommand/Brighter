@@ -24,7 +24,7 @@
         public const string TraceParent = "cloudevents:traceparent";
         public const string TraceState = "cloudevents:tracestate";
 
-        public static readonly string[] ReservedHeaders = [LockTokenHeaderBagKey, MessageTypeHeaderBagKey, HandledCountHeaderBagKey, ReplyToHeaderBagKey, SessionIdKey
+        public static readonly string[] ReservedHeaders = [LockTokenHeaderBagKey, SequenceNumberBagKey, MessageTypeHeaderBagKey, HandledCountHeaderBagKey, ReplyToHeaderBagKey, SessionIdKey
         ];
     }
 }
