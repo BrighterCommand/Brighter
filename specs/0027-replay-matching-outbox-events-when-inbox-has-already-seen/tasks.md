@@ -369,7 +369,7 @@ Each is its own test-first cycle against `CausationTrackingInboxBaseTests` (Task
 - [x] **19b — MsSql**: `/test-first when mssql inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
 - [x] **19c — MySql**: `/test-first when mysql inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
 - [x] **19d — Postgres**: `/test-first when postgres inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
-- [ ] **19e — Sqlite**: `/test-first when sqlite inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
+- [x] **19e — Sqlite**: `/test-first when sqlite inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
 - [ ] **19f — Spanner**: `/test-first when spanner inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
 
 ---
