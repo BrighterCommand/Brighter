@@ -77,8 +77,36 @@ public class ValidatePipelinesWithConsumersTests
         // Act — resolve consumer validation specs
         var specs = provider.GetServices<ISpecification<Subscription>>().ToList();
 
-        // Assert — AddConsumers should register 3 consumer validation specs
-        Assert.Equal(3, specs.Count);
+        // Assert — AddConsumers should register 4 consumer validation specs
+        Assert.Equal(4, specs.Count);
+    }
+
+    [Fact]
+    public void When_add_consumers_without_validate_pipelines_the_unwrap_transform_spec_is_inert()
+    {
+        // Arrange — AddConsumers WITHOUT ValidatePipelines: the transformer-resolvability probe is never
+        // registered, so the unwrap-transform spec must be inert (yield nothing) and must not throw when
+        // resolved and evaluated.
+        var services = new ServiceCollection();
+        services.AddConsumers();
+        var provider = services.BuildServiceProvider();
+
+        var specs = provider.GetServices<ISpecification<Subscription>>().ToList();
+        var subscription = new Subscription<UnhandledEvent>(
+            new SubscriptionName("sub"),
+            new ChannelName("ch"),
+            new RoutingKey("rk"),
+            messagePumpType: MessagePumpType.Proactor);
+
+        // Act — evaluating every consumer spec (incl. the inert unwrap-transform spec) must not throw
+        var findings = specs
+            .Where(spec => !spec.IsSatisfiedBy(subscription))
+            .SelectMany(spec => spec.Accept(new ValidationResultCollector<Subscription>()).Where(r => !r.Success))
+            .ToList();
+
+        // Assert — no unwrap-transform finding is produced (the spec is inert without a probe); only the
+        // pre-existing "no handler registered" Error appears
+        Assert.DoesNotContain(findings, r => r.Error!.Message.Contains("unwrap transform"));
     }
 
     private class UnhandledEvent : Event
