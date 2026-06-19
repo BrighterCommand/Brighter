@@ -366,7 +366,7 @@ This is a **structural change** verified by the *existing* drift/cross-backend t
 
 Each is its own test-first cycle against `CausationTrackingInboxBaseTests` (Task 18). Per store: read `CausationId` from `RequestContext.Bag` in `Add()`/`AddAsync()` and store it; implement `GetCausationId()`/`GetCausationIdAsync()`; `SupportsCausationTracking()` = runtime column-existence probe (true once the column from 19a is present). Tests hit a **real database container**, not a mock. Each **depends on: 19a, Task 18, Task 5**.
 
-- [ ] **19b — MsSql**: `/test-first when mssql inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
+- [x] **19b — MsSql**: `/test-first when mssql inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
 - [ ] **19c — MySql**: `/test-first when mysql inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
 - [ ] **19d — Postgres**: `/test-first when postgres inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**
 - [ ] **19e — Sqlite**: `/test-first when sqlite inbox tracks causation id should store and retrieve via base tests` — **⛔ STOP for approval before implementing**

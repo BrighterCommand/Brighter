@@ -45,11 +45,14 @@ namespace Paramore.Brighter
         IRelationalDatabaseInboxQueries queries,
         ILogger logger,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-        : IAmAnInboxSync, IAmAnInboxAsync
+        : IAmAnInboxSync, IAmAnInboxAsync, IAmACausationTrackingInbox
     {
         protected IAmARelationalDatabaseConfiguration DatabaseConfiguration { get; } = configuration;
 
         protected IAmARelationalDbConnectionProvider ConnectionProvider { get; } = connectionProvider;
+
+        // Non-null only when the backend's query set supports causation tracking; gates the IAmACausationTrackingInbox behaviour.
+        private IRelationalDatabaseInboxCausationQueries? CausationQueries => queries as IRelationalDatabaseInboxCausationQueries;
 
         /// <inheritdoc/>
         public bool ContinueOnCapturedContext { get; set; }
@@ -76,6 +79,10 @@ namespace Paramore.Brighter
             try
             {
                 var parameters = CreateAddParameters(command, contextKey);
+                if (CausationQueries is not null)
+                {
+                    parameters = [.. parameters, CreateSqlParameter("@CausationId", ReadCausationId(requestContext))];
+                }
                 WriteToStore(
                     connection => CreateAddCommand(connection, timeoutInMilliseconds, parameters),
                     () =>
@@ -171,6 +178,10 @@ namespace Paramore.Brighter
             try
             {
                 var parameters = CreateAddParameters(command, contextKey);
+                if (CausationQueries is not null)
+                {
+                    parameters = [.. parameters, CreateSqlParameter("@CausationId", ReadCausationId(requestContext))];
+                }
                 await WriteToStoreAsync(
                     connection => CreateAddCommand(connection, timeoutInMilliseconds, parameters),
                     () =>
@@ -249,6 +260,70 @@ namespace Paramore.Brighter
             {
                 Tracer?.EndSpan(span);
             }
+        }
+
+        /// <inheritdoc />
+        public bool SupportsCausationTracking()
+        {
+            if (CausationQueries is null)
+            {
+                return false;
+            }
+
+            return ReadFromStore(
+                connection => CreateCommand(connection, GenerateSqlText(CausationQueries.CausationColumnExistsCommand), -1),
+                MapBoolFunction,
+                string.Empty);
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+        {
+            if (CausationQueries is null)
+            {
+                return false;
+            }
+
+            return await ReadFromStoreAsync(
+                connection => CreateCommand(connection, GenerateSqlText(CausationQueries.CausationColumnExistsCommand), -1),
+                MapBoolFunctionAsync,
+                string.Empty,
+                cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+        }
+
+        /// <inheritdoc />
+        public string? GetCausationId(string id, string contextKey, RequestContext? requestContext,
+            int timeoutInMilliseconds = -1)
+        {
+            if (CausationQueries is null)
+            {
+                return null;
+            }
+
+            var parameters = CreateGetParameters(id, contextKey);
+            return ReadFromStore(
+                connection => CreateCommand(connection, GenerateSqlText(CausationQueries.GetCausationIdCommand),
+                    timeoutInMilliseconds, parameters),
+                MapCausationId,
+                id);
+        }
+
+        /// <inheritdoc />
+        public async Task<string?> GetCausationIdAsync(string id, string contextKey, RequestContext? requestContext,
+            int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
+        {
+            if (CausationQueries is null)
+            {
+                return null;
+            }
+
+            var parameters = CreateGetParameters(id, contextKey);
+            return await ReadFromStoreAsync(
+                connection => CreateCommand(connection, GenerateSqlText(CausationQueries.GetCausationIdCommand),
+                    timeoutInMilliseconds, parameters),
+                MapCausationIdAsync,
+                id,
+                cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         protected abstract bool IsExceptionUniqueOrDuplicateIssue(Exception ex);
@@ -395,7 +470,7 @@ namespace Paramore.Brighter
         }
 
         private DbCommand CreateAddCommand(DbConnection connection, int inboxTimeout, IDbDataParameter[] parameters)
-            => CreateCommand(connection, GenerateSqlText(queries.AddCommand), inboxTimeout, parameters);
+            => CreateCommand(connection, GenerateSqlText(CausationQueries?.AddCausationCommand ?? queries.AddCommand), inboxTimeout, parameters);
 
         private DbCommand CreateExistsCommand(DbConnection connection, int inboxTimeout, IDbDataParameter[] parameters)
             => CreateCommand(connection, GenerateSqlText(queries.ExistsCommand), inboxTimeout, parameters);
@@ -560,6 +635,69 @@ namespace Paramore.Brighter
             }
         }
 #endif
+
+        private string? MapCausationId(DbDataReader dr, string commandId)
+        {
+            try
+            {
+                if (dr.Read())
+                {
+                    return dr.IsDBNull(0) ? null : dr.GetString(0);
+                }
+
+                return null;
+            }
+            finally
+            {
+                dr.Close();
+            }
+        }
+
+#if NETSTANDARD
+        private async Task<string?> MapCausationIdAsync(DbDataReader dr, string commandId,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (await dr.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                {
+                    return dr.IsDBNull(0) ? null : dr.GetString(0);
+                }
+
+                return null;
+            }
+            finally
+            {
+                dr.Close();
+            }
+        }
+#else
+        private async Task<string?> MapCausationIdAsync(DbDataReader dr, string commandId,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (await dr.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                {
+                    return await dr.IsDBNullAsync(0, cancellationToken).ConfigureAwait(ContinueOnCapturedContext)
+                        ? null
+                        : dr.GetString(0);
+                }
+
+                return null;
+            }
+            finally
+            {
+                await dr.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
+            }
+        }
+#endif
+
+        // Reads the causation id from the request context bag, if present
+        private static string? ReadCausationId(RequestContext? requestContext)
+            => requestContext?.Bag.TryGetValue(RequestContextBagNames.CausationId, out var value) == true
+                ? value as string
+                : null;
 
         private static string ExtractSqlOperationName(string queryText)
         {
