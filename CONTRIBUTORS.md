@@ -83,7 +83,10 @@ Brighter contributors (sorted alphabeticaly)
 **[Tom Longhurst](https://github.com/thomhurst)**
  * DI improvements
  * Open Telemetry additions
-  
+
+**[Bálint Mórász](https://github.com/morbalint)**
+  * Various fixes
+
 **[James Morcom](https://github.com/mrmorcs)**
   * Documentation fixes
   
