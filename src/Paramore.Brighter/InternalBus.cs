@@ -51,7 +51,7 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
         
         ValidateMillisecondsTimeout(timeout.Value);
         
-        var topic = new RoutingKey(message.Header.Topic);
+        var topic = message.Header.Topic;
 
         var blockingCollection = _messages.GetOrAdd(topic, _ => boundedCapacity > 0
             ? new BlockingCollection<Message>(boundedCapacity)

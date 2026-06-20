@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_sqlite_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v2 : IAsyncLifetime
+public class InboxV1ToV2UpgradeTests : IAsyncLifetime
 {
     private const string MarkerCommandId = "marker-command-must-survive";
 
@@ -44,7 +44,7 @@ public class When_sqlite_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_
     private readonly string _tableName = $"test_inbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_add_contextkey_synthetic_v1_and_applied_v2_history()
+    public async Task When_sqlite_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v2()
     {
         //Arrange — seed a V1 inbox (no ContextKey, no history) plus a marker command row.
         SqliteInboxLegacySeeder.SeedAtV1(_connectionString, _tableName);

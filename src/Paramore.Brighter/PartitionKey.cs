@@ -30,7 +30,7 @@ namespace Paramore.Brighter
         /// Implicitly converts a PartitionKey to its string representation.
         /// </summary>
         /// <param name="key">The PartitionKey to convert</param>
-        public static implicit operator string(PartitionKey key) => key.Value;
+        public static implicit operator string?(PartitionKey key) => key?.Value;
 
         /// <summary>
         /// Implicitly converts a string to a PartitionKey.

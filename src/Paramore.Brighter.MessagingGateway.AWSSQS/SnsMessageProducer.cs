@@ -179,7 +179,7 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
         }
 
         BrighterTracer.WriteProducerEvent(Span, "aws_sns", message, _options);
-        Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
+        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
 
         await ConfirmTopicExistsAsync(message.Header.Topic, cancellationToken);
 
@@ -195,7 +195,7 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
             throw new InvalidOperationException(
                 $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
 
-        Log.PublishedMessage(s_logger, message.Header.Topic, message.Id, messageId);
+        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, messageId);
     }
 
     private static partial class Log

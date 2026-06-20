@@ -88,7 +88,7 @@ public partial class AzureServiceBusMesssageCreator(AzureServiceBusSubscription 
             
         var headers = new MessageHeader(
             messageId: azureServiceBusMessage.Id, 
-            topic: new RoutingKey(_topic), 
+            topic: new RoutingKey(_topic.Value),
             messageType: messageType, 
             source: source,
             type: type,

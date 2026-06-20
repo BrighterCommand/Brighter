@@ -524,7 +524,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         CancellationToken cancellationToken = default)
     {
         var topicValidationStrategy = GetTopicValidationStrategy(findTopicBy, sqsType);
-        var (exists, topicArn) = await topicValidationStrategy.ValidateAsync(topic, cancellationToken);
+        var (exists, topicArn) = await topicValidationStrategy.ValidateAsync(topic.Value, cancellationToken);
 
         if (exists)
         {

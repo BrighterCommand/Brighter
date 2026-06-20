@@ -63,7 +63,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                { "db.operation.parameter.command.id", command.Id },
+                { "db.operation.parameter.command.id", command.Id.Value },
                 { "db.operation.name", ExtractSqlOperationName(queries.AddCommand) },
                 { "db.query.text", queries.AddCommand }
             };
@@ -158,7 +158,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>
             {
-                { "db.operation.parameter.command.id", command.Id },
+                { "db.operation.parameter.command.id", command.Id.Value },
                 { "db.operation.name", ExtractSqlOperationName(queries.AddCommand) },
                 { "db.query.text", queries.AddCommand }
             };

@@ -32,13 +32,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_migration_is_cancelled_mid_flight_it_should_release_get_lock : IAsyncLifetime
+public class MySqlMigrationCancellationTests : IAsyncLifetime
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_invoke_rollback_with_cancellation_token_none_and_release_get_lock_when_caller_cancels_mid_flight()
+    public async Task When_mysql_migration_is_cancelled_mid_flight_it_should_release_get_lock()
     {
         //Arrange — the cancelling runner's RunFreshPathAsync override blocks on Task.Delay so
         // the caller's cancellation hits AFTER BeginAsync has acquired the connection-scoped

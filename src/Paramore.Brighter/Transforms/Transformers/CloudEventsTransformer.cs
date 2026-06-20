@@ -285,7 +285,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                 Id = message.Id,
                 SpecVersion = message.Header.SpecVersion,
                 Source = message.Header.Source,
-                Type = message.Header.Type,
+                Type = message.Header.Type?.Value ?? string.Empty,
                 DataContentType = contentType,
                 DataSchema = message.Header.DataSchema,
                 Subject = message.Header.Subject,

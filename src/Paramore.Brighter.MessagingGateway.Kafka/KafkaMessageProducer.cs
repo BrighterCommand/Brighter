@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Action taken when a message is published, following receipt of a confirmation from the broker
         /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
         /// </summary>
-        public event Action<bool, string>? OnMessagePublished;
+        public event Action<PublishConfirmationResult>? OnMessagePublished;
       
         /// <summary>
         /// The publication configuration for this producer
@@ -255,9 +255,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             try
             {
+                //Capture the publish span context synchronously, before any closure runs, so the
+                //confirmation can be linked back to the original publish even on the synthetic path.
+                var publishContext = Activity.Current?.Context;
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
-                Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic, message.Body.Value);
-                _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers));
+                Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
+                _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers, message.Header.Topic, publishContext));
             }
             catch (ProduceException<string, string> pe)
             {
@@ -278,7 +281,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (KafkaException kafkaException)
             {
-                Log.KafkaExceptionError(s_logger, kafkaException, Topic ?? RoutingKey.Empty);
+                Log.KafkaExceptionError(s_logger, kafkaException, Topic?.Value ?? RoutingKey.Empty.Value);
 
                 if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
                     throw;
@@ -328,10 +331,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
               
              try
              {
+                 //Capture the publish span context synchronously, before any closure runs, so the
+                 //confirmation can be linked back to the original publish even on the synthetic path.
+                 var publishContext = Activity.Current?.Context;
                  BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Kafka, message, _instrumentation);
-                 Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic, message.Body.Value);
-                 await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers), cancellationToken);
-            
+                 Log.SendingMessageToKafka(s_logger, _producerConfig.BootstrapServers, message.Header.Topic.Value, message.Body.Value);
+                 await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers, message.Header.Topic, publishContext), cancellationToken);
+
              }
              catch (ProduceException<string, string> pe)
              {
@@ -361,26 +367,66 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
         
-        private void PublishResults(PersistenceStatus status, Headers headers)
+        private void PublishResults(PersistenceStatus status, Headers headers, RoutingKey topic, ActivityContext? publishContext)
         {
             if (status == PersistenceStatus.Persisted)
             {
+                // A Persisted report is always a success: the broker accepted the message. The id is
+                // expected (Brighter stamps MESSAGE_ID on every publish), but if it is ever missing we
+                // must NOT fall through to the failure path — doing so would trip the circuit breaker
+                // for a topic whose own delivery report says the message was persisted. Degrade to
+                // Id.Empty instead so the outcome still reflects the persisted status.
+                var persistedId = Id.Empty;
                 if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[]? messageIdBytes))
                 {
                     var val = messageIdBytes.FromByteArray();
                     if (!string.IsNullOrEmpty(val))
-                    {
-                        Task.Run(
-                            () => OnMessagePublished?.Invoke(true, val)
-                        );
-                        return;
-                    }
+                        persistedId = new Id(val);
                 }
+
+                // Should not happen on the current path (MESSAGE_ID is always stamped). Log it so the
+                // degraded state is diagnosable: MarkDispatched(Id.Empty) matches no Outbox row, so the
+                // message stays un-dispatched and the Sweeper re-delivers it rather than being marked sent.
+                if (Id.IsNullOrEmpty(persistedId))
+                    Log.PersistedReportMissingId(s_logger, topic.Value);
+
+                RaisePublishConfirmation(new PublishConfirmationResult(true, persistedId, topic, publishContext));
+                return;
             }
-            
-            Task.Run(
-                () =>OnMessagePublished?.Invoke(false, string.Empty)
-            );
+
+            //Not persisted (or no id on the persisted path): raise a failure confirmation carrying
+            //the message id read from the report-level headers (the synthetic NotPersisted result
+            //adds MESSAGE_ID there), falling back to Id.Empty when it is absent. The wire topic and
+            //the captured publish context come from the send call, since the synthetic NotPersisted
+            //delivery report never sets .Topic and has no active publish activity of its own.
+            var failureId = Id.Empty;
+            if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[]? failureIdBytes))
+            {
+                var val = failureIdBytes.FromByteArray();
+                if (!string.IsNullOrEmpty(val))
+                    failureId = new Id(val);
+            }
+
+            RaisePublishConfirmation(new PublishConfirmationResult(false, failureId, topic, publishContext));
+        }
+
+        private void RaisePublishConfirmation(PublishConfirmationResult result)
+        {
+            // Raise on a worker thread so we never block Confluent's delivery-report handler. Wrap the
+            // invoke so a faulting subscriber is logged rather than left as an unobserved Task exception
+            // (which can escalate via TaskScheduler.UnobservedTaskException). Brighter's own mediator
+            // callback is already self-contained; this guards any other subscriber and the broker thread.
+            Task.Run(() =>
+            {
+                try
+                {
+                    OnMessagePublished?.Invoke(result);
+                }
+                catch (Exception ex)
+                {
+                    Log.PublishConfirmationRaiseFault(s_logger, ex);
+                }
+            });
         }
 
         private static partial class Log
@@ -396,6 +442,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             [LoggerMessage(LogLevel.Error, "Error sending message to Kafka servers {Servers} because {ErrorMessage} ")]
             public static partial void ErrorSendingMessageToKafka(ILogger logger, Exception exception, string servers, string errorMessage);
+
+            [LoggerMessage(LogLevel.Warning, "A publish-confirmation subscriber threw while handling a Kafka delivery report; the fault was contained")]
+            public static partial void PublishConfirmationRaiseFault(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "Kafka reported topic {Topic} as persisted but the delivery report carried no message id; confirmation degraded to an empty id so the message stays un-dispatched for Sweeper retry")]
+            public static partial void PersistedReportMissingId(ILogger logger, string topic);
             
             [LoggerMessage(LogLevel.Error, "KafkaMessageProducer: There was an error sending to topic {Topic})")]
             public static partial void KafkaExceptionError(ILogger logger, Exception exception, string topic);

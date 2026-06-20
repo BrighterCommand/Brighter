@@ -148,14 +148,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
   
             var redisMessage = CreateRedisMessage(message);
 
-            Log.PublishingMessage(s_logger, message.Header.Topic, message.Id.ToString(), message.Body.Value);
+            Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value);
             //increment a counter to get the next message id
             var nextMsgId = IncrementMessageCounter(client);
             //store the message, against that id
             StoreMessage(client, redisMessage, nextMsgId);
             //If there are subscriber queues, push the message to the subscriber queues
             var pushedTo = PushToQueues(client, nextMsgId);
-            Log.PublishedMessage(s_logger, message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
+            Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
         }
 
         /// <summary>
@@ -197,14 +197,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
             var redisMessage = CreateRedisMessage(message);
 
-            Log.PublishingMessage(s_logger, message.Header.Topic, message.Id.ToString(), message.Body.Value);
+            Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value);
             //increment a counter to get the next message id
             var nextMsgId = await IncrementMessageCounterAsync(client, cancellationToken);
             //store the message, against that id
             await StoreMessageAsync(client, redisMessage, nextMsgId);
             //If there are subscriber queues, push the message to the subscriber queues
             var pushedTo = await PushToQueuesAsync(client, nextMsgId, cancellationToken);
-            Log.PublishedMessage(s_logger, message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
+            Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
         }
 
         private HashSet<string> PushToQueues(IRedisClient client, long nextMsgId)

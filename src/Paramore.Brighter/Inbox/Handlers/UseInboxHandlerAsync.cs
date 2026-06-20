@@ -86,26 +86,26 @@ namespace Paramore.Brighter.Inbox.Handlers
             
             if (_onceOnly)
             {
-                Log.CheckingIfCommandHasBeenSeen(s_logger, command.Id);
+                Log.CheckingIfCommandHasBeenSeen(s_logger, command.Id.Value);
                 //TODO: We should not use an infinite timeout here - how to configure
-                var exists = 
-                    await _inbox.ExistsAsync<T>(command.Id, _contextKey, requestContext, -1, cancellationToken)
+                var exists =
+                    await _inbox.ExistsAsync<T>(command.Id.Value, _contextKey, requestContext, -1, cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
-                
+
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
-                    Log.CommandHasBeenSeen(s_logger, command.Id);
+                    Log.CommandHasBeenSeen(s_logger, command.Id.Value);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
-                    Log.CommandHasBeenSeenWarning(s_logger, command.Id);
+                    Log.CommandHasBeenSeenWarning(s_logger, command.Id.Value);
                     return command;
                 }
             }
-            
-            Log.WritingCommandToInbox(s_logger, command.Id);
+
+            Log.WritingCommandToInbox(s_logger, command.Id.Value);
 
             T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 

@@ -36,7 +36,7 @@ public class CommandItem<T> where T : class, IRequest
         var type = typeof(T).Name;
             
         Time = $"{TimeStamp.Ticks}";
-        CommandId = command.Id;
+        CommandId = command.Id.Value;
         CommandType = typeof(T).Name;
         CommandBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
         ContextKey = contextKey;

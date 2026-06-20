@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_runner_fresh_path_acquires_advisory_lock_it_should_re_check_table_existence_before_creating : IAsyncLifetime
+public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
 {
     private const string MarkerMessageId = "marker-row-must-survive";
 
@@ -40,14 +40,14 @@ public class When_postgres_runner_fresh_path_acquires_advisory_lock_it_should_re
     private readonly RelationalDatabaseConfiguration _config;
     private readonly PostgreSqlBoxMigrationRunner _runner;
 
-    public When_postgres_runner_fresh_path_acquires_advisory_lock_it_should_re_check_table_existence_before_creating()
+    public PostgreSqlRunnerFreshPathRecheckTests()
     {
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         _runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
     }
 
     [Fact]
-    public async Task Should_re_check_table_existence_under_lock_and_fall_through_to_bootstrap()
+    public async Task When_postgres_runner_fresh_path_acquires_advisory_lock_it_should_re_check_table_existence_before_creating()
     {
         //Arrange — simulate the TOCTOU race: another instance created the V_latest-shape outbox
         //table after detection ran but before this runner acquires the migration lock. We seed

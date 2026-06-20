@@ -42,7 +42,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="parent"></param>
         /// <returns></returns>
-        public static implicit operator string(TraceParent parent) => parent.Value;
+        public static implicit operator string?(TraceParent parent) => parent?.Value;
         
         /// <summary>
         /// Converts a string to a TraceParent instance.
@@ -105,7 +105,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="state"></param>
         /// <returns></returns>
-        public static implicit operator string(TraceState state) => state.Value;
+        public static implicit operator string?(TraceState state) => state?.Value;
         
         /// <summary>
         /// Converts a string to a TraceState instance.

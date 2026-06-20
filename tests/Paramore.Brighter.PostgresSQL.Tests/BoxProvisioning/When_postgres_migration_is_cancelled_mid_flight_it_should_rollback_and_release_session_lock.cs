@@ -32,13 +32,13 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_migration_is_cancelled_mid_flight_it_should_rollback_and_release_session_lock : IAsyncLifetime
+public class PostgreSqlMigrationCancellationTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_invoke_rollback_with_cancellation_token_none_and_release_advisory_lock_when_caller_cancels_mid_flight()
+    public async Task When_postgres_migration_is_cancelled_mid_flight_it_should_rollback_and_release_session_lock()
     {
         //Arrange — fresh database; the cancelling runner's RunFreshPathAsync override blocks on
         // Task.Delay so the caller's cancellation hits AFTER BeginAsync has acquired the

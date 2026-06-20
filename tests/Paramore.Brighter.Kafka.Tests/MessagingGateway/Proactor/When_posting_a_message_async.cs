@@ -90,9 +90,9 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
         bool messagePublished = false;
         var producerAsync = _producerRegistry.LookupAsyncBy(routingKey);
         var producerConfirm = producerAsync as ISupportPublishConfirmation;
-        producerConfirm.OnMessagePublished += delegate(bool success, string id)
+        producerConfirm.OnMessagePublished += delegate(PublishConfirmationResult result)
         {
-            if (success) messagePublished = true;
+            if (result.Success) messagePublished = true;
         };
         await producerAsync.SendAsync(message);
         

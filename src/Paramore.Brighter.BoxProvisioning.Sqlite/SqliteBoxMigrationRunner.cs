@@ -282,23 +282,23 @@ CREATE TABLE IF NOT EXISTS [{MIGRATION_HISTORY_TABLE}] (
         // Per ADR §6: if IdempotencyCheckSql is non-null, evaluate it under the lock-bearing
         // transaction. A non-zero scalar means the migration's effect is already present —
         // skip UpScript but still record history so MAX(V) advances.
-        if (!string.IsNullOrEmpty(migration.IdempotencyCheckSql))
+        if (!string.IsNullOrEmpty(migration.IdempotencyCheckSql?.Value))
         {
             var alreadyApplied = await ScalarIsPositiveAsync(
                 connection, transaction, migration.IdempotencyCheckSql!, cancellationToken);
             if (!alreadyApplied)
             {
-                await ExecuteUpScriptAsync(connection, transaction, migration.UpScript, cancellationToken);
+                await ExecuteUpScriptAsync(connection, transaction, migration.UpScript.Value, cancellationToken);
             }
         }
         else
         {
-            await ExecuteUpScriptAsync(connection, transaction, migration.UpScript, cancellationToken);
+            await ExecuteUpScriptAsync(connection, transaction, migration.UpScript.Value, cancellationToken);
         }
 
         await InsertHistoryRowAsync(
             connection, transaction, tableName,
-            migration.Version, migration.Description, cancellationToken);
+            migration.Version, migration.Description.Value, cancellationToken);
     }
 
     private static async Task<bool> ScalarIsPositiveAsync(
