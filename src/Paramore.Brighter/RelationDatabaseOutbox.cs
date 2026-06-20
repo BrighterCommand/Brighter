@@ -21,7 +21,7 @@ namespace Paramore.Brighter
         IRelationDatabaseOutboxQueries queries,
         ILogger logger,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-        : IAmAnOutboxSync<Message, DbTransaction>, IAmAnOutboxAsync<Message, DbTransaction>
+        : IAmAnOutboxSync<Message, DbTransaction>, IAmAnOutboxAsync<Message, DbTransaction>, IAmACausationTrackingOutbox
     {
 
         protected IAmARelationalDatabaseConfiguration DatabaseConfiguration { get; } = configuration;
@@ -29,6 +29,9 @@ namespace Paramore.Brighter
         protected IAmARelationalDbConnectionProvider ConnectionProvider { get; } = connectionProvider;
 
         protected IRelationDatabaseOutboxQueries Queries => queries;
+
+        // Non-null only when the backend's query set supports causation tracking; gates the IAmACausationTrackingOutbox behaviour.
+        private IRelationalDatabaseOutboxCausationQueries? CausationQueries => queries as IRelationalDatabaseOutboxCausationQueries;
 
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
@@ -76,6 +79,11 @@ namespace Paramore.Brighter
             try
             {
                 var parameters = InitAddDbParameters(message);
+                if (CausationQueries is not null)
+                {
+                    parameters = [.. parameters, CreateSqlParameter("@CausationId", ReadCausationId(requestContext))];
+                }
+
                 WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters), () =>
                 {
                     logger.LogWarning(
@@ -161,6 +169,11 @@ namespace Paramore.Brighter
             try
             {
                 var parameters = InitAddDbParameters(message);
+                if (CausationQueries is not null)
+                {
+                    parameters = [.. parameters, CreateSqlParameter("@CausationId", ReadCausationId(requestContext))];
+                }
+
                 return WriteToStoreAsync(transactionProvider,
                     connection => InitAddDbCommand(connection, parameters), () =>
                     {
@@ -966,6 +979,82 @@ namespace Paramore.Brighter
                 .Count();
         }
 
+        /// <inheritdoc />
+        public bool SupportsCausationTracking()
+        {
+            if (CausationQueries is null)
+            {
+                return false;
+            }
+
+            return ReadFromStore(
+                connection => CreateCommand(connection, GenerateSqlText(CausationQueries.CausationColumnExistsCommand), -1),
+                MapBoolFunction);
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+        {
+            if (CausationQueries is null)
+            {
+                return false;
+            }
+
+            return await ReadFromStoreAsync(
+                connection => CreateCommand(connection, GenerateSqlText(CausationQueries.CausationColumnExistsCommand), -1),
+                dr => MapBoolFunctionAsync(dr, cancellationToken),
+                cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+        }
+
+        /// <inheritdoc />
+        public void ReplayCausation(string causationId, RequestContext? requestContext,
+            Dictionary<string, object>? args = null)
+        {
+            if (CausationQueries is null)
+            {
+                return;
+            }
+
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.MarkDispatched, DatabaseConfiguration.OutBoxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                WriteToStore(null, connection => InitReplayCausationCommand(connection, causationId), null);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task ReplayCausationAsync(string causationId, RequestContext? requestContext,
+            Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        {
+            if (CausationQueries is null)
+            {
+                return;
+            }
+
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.MarkDispatched, DatabaseConfiguration.OutBoxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                await WriteToStoreAsync(null, connection => InitReplayCausationCommand(connection, causationId), null,
+                    cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
         protected virtual void WriteToStore(
             IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
@@ -1187,7 +1276,11 @@ namespace Paramore.Brighter
             DbConnection connection,
             IDbDataParameter[] parameters
         )
-            => CreateCommand(connection, GenerateSqlText(queries.AddCommand), 0, parameters);
+            => CreateCommand(connection, GenerateSqlText(CausationQueries?.AddCausationCommand ?? queries.AddCommand), 0, parameters);
+
+        private DbCommand InitReplayCausationCommand(DbConnection connection, string causationId)
+            => CreateCommand(connection, GenerateSqlText(CausationQueries!.ReplayCausationCommand), 0,
+                CreateSqlParameter("@CausationId", causationId));
 
         private DbCommand InitBulkAddDbCommand(List<Message> messages, DbConnection connection)
         {
@@ -1388,6 +1481,53 @@ namespace Paramore.Brighter
 
             return outstandingMessages;
         }
+
+        // Returns true when the probe query returns at least one row (the CausationId column exists).
+        protected virtual bool MapBoolFunction(DbDataReader dr)
+        {
+            try
+            {
+                return dr.HasRows;
+            }
+            finally
+            {
+                dr.Close();
+            }
+        }
+
+#if NETSTANDARD
+        // Async counterpart of MapBoolFunction.
+        protected virtual Task<bool> MapBoolFunctionAsync(DbDataReader dr, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return Task.FromResult(dr.HasRows);
+            }
+            finally
+            {
+                dr.Close();
+            }
+        }
+#else
+        // Async counterpart of MapBoolFunction.
+        protected virtual async Task<bool> MapBoolFunctionAsync(DbDataReader dr, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return dr.HasRows;
+            }
+            finally
+            {
+                await dr.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
+            }
+        }
+#endif
+
+        // Reads the causation id from the request context bag, if present.
+        private static string? ReadCausationId(RequestContext? requestContext)
+            => requestContext?.Bag.TryGetValue(RequestContextBagNames.CausationId, out var value) == true
+                ? value as string
+                : null;
 
         protected virtual (string inClause, IDbDataParameter[] parameters) GenerateInClauseAndAddParameters(
             List<string> messageIds)

@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.Outbox.MsSql
 {
-    public class MsSqlQueries : IRelationDatabaseOutboxQueries
+    public class MsSqlQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCausationQueries
     {
         public string PagedDispatchedCommand { get; } = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY [Timestamp] DESC) AS NUMBER, * FROM {0} WHERE [Dispatched] IS NOT NULL AND [Dispatched] < @DispatchedSince) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY [Timestamp] DESC";
         public string PagedReadCommand { get; } = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY [Timestamp] DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
@@ -24,5 +24,15 @@
         public string GetMessagesCommand { get; } = "SELECT * FROM {0} WHERE [MessageId] IN ( {1} )";
         public string DeleteMessagesCommand { get; } = "DELETE FROM {0} WHERE [MessageId] IN ( {1} )";
         public string GetNumberOfOutstandingMessagesCommand { get; } = "SELECT COUNT(1) FROM {0} WHERE [Dispatched] IS NULL";
+
+        public string AddCausationCommand { get; } =
+            "INSERT INTO {0} ([MessageId],[MessageType],[Topic],[Timestamp],[CorrelationId]," +
+            "[ReplyTo],[ContentType],[PartitionKey],[HeaderBag],[Body]," +
+            "[Source],[Type],[DataSchema],[Subject],[TraceParent],[TraceState],[Baggage], [WorkflowId], [JobId], [CausationId]) " +
+            "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId," +
+            "@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body," +
+            "@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId, @JobId, @CausationId)";
+        public string ReplayCausationCommand { get; } = "UPDATE {0} SET [Dispatched] = NULL WHERE [CausationId] = @CausationId";
+        public string CausationColumnExistsCommand { get; } = "SELECT 1 FROM sys.columns WHERE [object_id]=OBJECT_ID('{0}') AND [name]='CausationId'";
     }
 }
