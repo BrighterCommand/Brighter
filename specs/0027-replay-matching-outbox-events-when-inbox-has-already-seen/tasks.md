@@ -417,7 +417,7 @@ Structural change verified by the *existing* drift/cross-backend tests staying g
 Each is its own test-first cycle (tests generated via Task 21b from `CausationTrackingOutboxBaseTests`). Per store: read `CausationId` from `RequestContext.Bag` in `Add()`/`AddAsync()` and store it; implement `ReplayCausation()`/`ReplayCausationAsync()` (clear dispatched state by `CausationId`, using the 21a index); `SupportsCausationTracking()` = runtime column-existence probe. Tests hit a **real database container**. Each **depends on: 21a, 21b, Task 5**.
 
 - [x] **21c — MsSql**: `/test-first when mssql outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
-- [ ] **21d — MySql**: `/test-first when mysql outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
+- [x] **21d — MySql**: `/test-first when mysql outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
 - [ ] **21e — PostgreSql**: `/test-first when postgres outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
 - [ ] **21f — Sqlite**: `/test-first when sqlite outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
 - [ ] **21g — Spanner**: `/test-first when spanner outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
