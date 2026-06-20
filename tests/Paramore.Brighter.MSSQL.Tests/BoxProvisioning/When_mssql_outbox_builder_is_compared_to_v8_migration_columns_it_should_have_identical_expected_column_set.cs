@@ -37,7 +37,7 @@ public class MsSqlOutboxBuilderDriftTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void When_mssql_outbox_builder_is_compared_to_v7_migration_columns_it_should_have_identical_expected_column_set(
+    public void When_mssql_outbox_builder_is_compared_to_v8_migration_columns_it_should_have_identical_expected_column_set(
         bool hasBinaryMessagePayload)
     {
         //Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config
@@ -92,6 +92,23 @@ public class MsSqlOutboxBuilderDriftTests
         Assert.Equal(1, v1.Version.Value);
         Assert.DoesNotContain("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("HeaderBag", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void When_mssql_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
+        bool hasBinaryMessagePayload)
+    {
+        //The drift test above compares columns only; the new CausationId replay index (Spec 0027,
+        //#2541) is asserted separately here per AC9. The builder appends a CREATE INDEX after the
+        //CREATE TABLE so a fresh install lands the same index a V8 migration upgrade does.
+        const string tableName = "outbox_test";
+        var ddl = SqlOutboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
+
+        Assert.Contains("CREATE INDEX", ddl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"idx_{tableName}_CausationId", ddl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[CausationId]", ddl, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

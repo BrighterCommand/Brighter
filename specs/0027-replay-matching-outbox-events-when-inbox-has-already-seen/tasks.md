@@ -399,7 +399,7 @@ Each is its own test-first cycle against `CausationTrackingInboxBaseTests` (Task
 
 Structural change verified by the *existing* drift/cross-backend tests staying green. No tracking-interface code here.
 
-- [ ] **STRUCTURAL: add the `CausationId` column + replay index to every relational outbox schema via BoxProvisioning, atomically**
+- [x] **STRUCTURAL: add the `CausationId` column + replay index to every relational outbox schema via BoxProvisioning, atomically**
   - **Catalog-based (MsSql, MySql, PostgreSql, Sqlite)**: in each `<Backend>OutboxMigrationCatalog`, append migration **V8** (after the current V7 — uniform across all four) — idempotent `ALTER TABLE ADD CausationId <type> NULL` guarded by the catalog's existing column-existence guard; extend `s_v8AddedColumns` + `Cumulative()` so V8's `LogicalColumns` include `CausationId`; `SourceReference: "#2541"`. Add a **new** `CREATE INDEX` on `CausationId` (the outbox builders index no column today). Update the live `*OutboxBuilder` (`SqlOutboxBuilder`, `MySqlOutboxBuilder`, `PostgreSqlOutboxBuilder`, `SqliteOutboxBuilder`) to emit the column **and the index**. Update each backend's builder/migration drift parity test (MsSql: `..._v7_migration_columns` → V8). **Note**: the drift parity test compares columns only — assert the new index separately.
   - **Spanner**: add column + replay index through `SpannerOutboxProvisioner` + live `SpannerOutboxBuilder`; move Spanner's builder/migration drift parity test.
   - **Cross-backend constant (the atomic glue)**: bump `SpannerBoxMigrationRunner.VLatestOutbox` 7 → 8; `SpannerVLatestDriftAgainstRelationalCatalogTests` outbox assertions then pass for all four backends (no carve-out needed for outbox).

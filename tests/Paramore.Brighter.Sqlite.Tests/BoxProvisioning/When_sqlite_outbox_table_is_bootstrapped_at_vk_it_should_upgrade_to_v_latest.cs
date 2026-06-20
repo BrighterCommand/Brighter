@@ -35,12 +35,12 @@ public class OutboxVkToLatestUpgradeTests : IAsyncLifetime
 {
     private const string MarkerMessageId = "marker-row-must-survive";
 
-    private static readonly string[] s_v7ExpectedColumns =
+    private static readonly string[] s_vLatestExpectedColumns =
     [
         "MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body",
         "Dispatched", "CorrelationId", "ReplyTo", "ContentType", "PartitionKey",
         "Source", "Type", "DataSchema", "Subject", "TraceParent", "TraceState", "Baggage",
-        "WorkflowId", "JobId", "DataRef", "SpecVersion"
+        "WorkflowId", "JobId", "DataRef", "SpecVersion", "CausationId"
     ];
 
     private readonly string _connectionString = Configuration.ConnectionString;
@@ -70,14 +70,14 @@ public class OutboxVkToLatestUpgradeTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — the table now has the full V7 column set (V_{k+1}..V7 ALTERs applied).
+        //Assert — the table now has the full V_latest column set (V_{k+1}..V_latest ALTERs applied).
         var actualColumns = await GetTableColumns();
-        foreach (var expected in s_v7ExpectedColumns)
+        foreach (var expected in s_vLatestExpectedColumns)
         {
             Assert.Contains(expected, actualColumns);
         }
 
-        //Assert — history rows: one synthetic at V_k + one applied per V_{k+1}..V7.
+        //Assert — history rows: one synthetic at V_k + one applied per V_{k+1}..V_latest.
         var rowsByVersion = await GetHistoryRowsByVersion();
         Assert.Equal(ExpectedMigrationVersions.OutboxLatest - k + 1, rowsByVersion.Count);
 

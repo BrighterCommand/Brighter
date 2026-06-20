@@ -72,8 +72,8 @@ public class SpannerOutboxBuilderDriftTests
             SpannerOutboxBuilder.GetDDL(tableName, binaryMessagePayload),
             QuoteStyle.Spanner);
 
-        // Act — MySQL outbox V7 LogicalColumns is the canonical V_latest set (the four relational
-        // outbox catalogs agree at V7 per Item #8's drift test).
+        // Act — MySQL outbox V8 LogicalColumns is the canonical V_latest set (the four relational
+        // outbox catalogs agree at V8 per Item #8's drift test).
         var migrations = new MySqlOutboxMigrationCatalog().All(config);
         var migrationColumns = new HashSet<string>(
             migrations[migrations.Count - 1].LogicalColumns,
@@ -84,6 +84,21 @@ public class SpannerOutboxBuilderDriftTests
             builderColumns.SetEquals(migrationColumns),
             $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
             $"V_latest LogicalColumns: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+    }
+
+    [Fact]
+    public void When_spanner_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index()
+    {
+        // The drift test above compares columns only; the new CausationId replay index (Spec 0027,
+        // #2541) is asserted separately here per AC9. Spanner has no inline secondary index, so the
+        // index is a standalone CREATE INDEX IF NOT EXISTS executed alongside the table on fresh
+        // install (SpannerBoxMigrationRunner batches both via CreateDdlCommand).
+        const string tableName = "outbox_test";
+        var indexDdl = SpannerOutboxBuilder.GetCausationIndexDDL(tableName);
+
+        Assert.Contains("CREATE INDEX IF NOT EXISTS", indexDdl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"idx_{tableName}_CausationId", indexDdl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("`CausationId`", indexDdl, StringComparison.OrdinalIgnoreCase);
     }
 }
 

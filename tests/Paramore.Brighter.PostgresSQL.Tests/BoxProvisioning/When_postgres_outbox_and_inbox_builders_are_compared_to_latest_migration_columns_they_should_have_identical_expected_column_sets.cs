@@ -123,6 +123,23 @@ public class PostgreSqlOutboxBuilderDriftTests
 
         Assert.Equal(expected, actual);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void When_postgres_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
+        bool binaryMessagePayload)
+    {
+        //The drift test above compares columns only; the new causationid replay index (Spec 0027,
+        //#2541) is asserted separately here per AC9. The builder appends a CREATE INDEX IF NOT
+        //EXISTS after the CREATE TABLE so a fresh install lands the same index a V8 migration does.
+        const string tableName = "outbox_test";
+        var ddl = PostgreSqlOutboxBuilder.GetDDL(tableName, binaryMessagePayload);
+
+        Assert.Contains("CREATE INDEX IF NOT EXISTS", ddl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"idx_{tableName}_causationid", ddl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("(causationid)", ddl, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public class PostgreSqlInboxBuilderDriftTests

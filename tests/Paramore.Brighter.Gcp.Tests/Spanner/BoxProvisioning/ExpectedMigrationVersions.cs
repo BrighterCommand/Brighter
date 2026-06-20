@@ -8,6 +8,6 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 /// </summary>
 internal static class ExpectedMigrationVersions
 {
-    public const int OutboxLatest = 7;
+    public const int OutboxLatest = 8;
     public const int InboxLatest = 3;
 }

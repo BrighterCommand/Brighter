@@ -135,7 +135,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     // this assembly pick up a new V_latest after a recompile of *this* assembly alone. With
     // `const` the old value would persist in downstream IL until every consumer also rebuilt,
     // letting an out-of-date V_latest silently flow through a partial-rebuild deployment.
-    public static readonly int VLatestOutbox = 7;
+    public static readonly int VLatestOutbox = 8;
     public static readonly int VLatestInbox = 3;
 
     private const string BootstrapDescription =
@@ -237,10 +237,17 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             connection, tableName, vLatest, $"fresh install at V{vLatest}", cancellationToken);
     }
 
-    private string BuildBoxDdl(BoxType boxType, string tableName) => boxType switch
+    // Returns the fresh-install DDL statements for the box. The outbox carries a second
+    // statement — the CausationId replay index (Spec 0027, #2541) — which Spanner cannot express
+    // inline in the CREATE TABLE, so it is batched alongside the table create.
+    private string[] BuildBoxDdl(BoxType boxType, string tableName) => boxType switch
     {
-        BoxType.Outbox => SpannerOutboxBuilder.GetDDL(tableName, _configuration.BinaryMessagePayload),
-        BoxType.Inbox => SpannerInboxBuilder.GetDDL(tableName),
+        BoxType.Outbox =>
+        [
+            SpannerOutboxBuilder.GetDDL(tableName, _configuration.BinaryMessagePayload),
+            SpannerOutboxBuilder.GetCausationIndexDDL(tableName)
+        ],
+        BoxType.Inbox => [SpannerInboxBuilder.GetDDL(tableName)],
         _ => throw new ArgumentOutOfRangeException(nameof(boxType), boxType, "Unsupported box type")
     };
 
@@ -310,12 +317,14 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     // on every replica, not as a flake. The combined catch keeps the original AlreadyExists
     // arm strict and adds a FailedPrecondition arm scoped to CREATE TABLE IF NOT EXISTS DDL.
     private async Task ExecuteCreateTableIfNotExistsSafeAsync(
-        SpannerConnection connection, string ddl,
+        SpannerConnection connection, string[] ddlStatements,
         CancellationToken cancellationToken)
     {
         try
         {
-            var command = connection.CreateDdlCommand(ddl);
+            // CreateDdlCommand batches the CREATE TABLE IF NOT EXISTS with any trailing
+            // statements (e.g. the outbox CausationId index) so they apply together.
+            var command = connection.CreateDdlCommand(ddlStatements[0], ddlStatements[1..]);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists)

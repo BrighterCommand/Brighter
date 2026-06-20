@@ -13,6 +13,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// </remarks>
 internal static class ExpectedMigrationVersions
 {
-    public const int OutboxLatest = 7;
+    public const int OutboxLatest = 8;
     public const int InboxLatest = 2;
 }

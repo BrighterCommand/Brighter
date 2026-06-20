@@ -43,9 +43,10 @@ public class MsSqlOutboxMigrationsTests
 
     private static readonly string[] s_v6Added = ["WorkflowId", "JobId"];
     private static readonly string[] s_v7Added = ["DataRef", "SpecVersion"];
+    private static readonly string[] s_v8Added = ["CausationId"];
 
     [Fact]
-    public void When_mssql_outbox_migrations_are_listed_it_should_return_v1_through_v7_with_correct_logical_columns()
+    public void When_mssql_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_correct_logical_columns()
     {
         //Arrange — derive each version's expected LogicalColumns by accumulating the
         //per-version additions from the archaeology (spec README outbox table).
@@ -57,15 +58,15 @@ public class MsSqlOutboxMigrationsTests
         //Act
         var migrations = new MsSqlOutboxMigrationCatalog().All(config);
 
-        //Assert — exactly seven migrations numbered 1..7 in order
-        Assert.Equal(7, migrations.Count);
+        //Assert — exactly eight migrations numbered 1..8 in order
+        Assert.Equal(8, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
         //Assert — LogicalColumns at each version matches the cumulative archaeology
-        for (var v = 1; v <= 7; v++)
+        for (var v = 1; v <= 8; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
@@ -76,10 +77,10 @@ public class MsSqlOutboxMigrationsTests
                 $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
         }
 
-        //Assert — V2..V7 each carry a non-null SourceReference (archaeology pointer);
+        //Assert — V2..V8 each carry a non-null SourceReference (archaeology pointer);
         //V1 has no single source commit so SourceReference is null.
         Assert.Null(migrations[0].SourceReference);
-        for (var v = 2; v <= 7; v++)
+        for (var v = 2; v <= 8; v++)
         {
             Assert.False(
                 string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
@@ -99,6 +100,7 @@ public class MsSqlOutboxMigrationsTests
         cumulative.UnionWith(s_v5Added); byVersion[5] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
         cumulative.UnionWith(s_v6Added); byVersion[6] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
         cumulative.UnionWith(s_v7Added); byVersion[7] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
+        cumulative.UnionWith(s_v8Added); byVersion[8] = new HashSet<string>(cumulative, StringComparer.OrdinalIgnoreCase);
 
         return byVersion;
     }

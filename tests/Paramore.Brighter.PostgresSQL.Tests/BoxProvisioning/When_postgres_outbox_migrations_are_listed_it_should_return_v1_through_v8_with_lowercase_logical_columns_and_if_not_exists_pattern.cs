@@ -46,9 +46,10 @@ public class PostgreSqlOutboxMigrationsTests
 
     private static readonly string[] s_v6Added = ["workflowid", "jobid"];
     private static readonly string[] s_v7Added = ["dataref", "specversion"];
+    private static readonly string[] s_v8Added = ["causationid"];
 
     [Fact]
-    public void When_postgres_outbox_migrations_are_listed_it_should_return_v1_through_v7_with_lowercase_logical_columns_and_if_not_exists_pattern()
+    public void When_postgres_outbox_migrations_are_listed_it_should_return_v1_through_v8_with_lowercase_logical_columns_and_if_not_exists_pattern()
     {
         //Arrange — derive each version's expected (lowercase) LogicalColumns by accumulating
         //per-version additions from the archaeology (spec README outbox table).
@@ -60,15 +61,15 @@ public class PostgreSqlOutboxMigrationsTests
         //Act
         var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
-        //Assert — exactly seven migrations numbered 1..7 in order.
-        Assert.Equal(7, migrations.Count);
+        //Assert — exactly eight migrations numbered 1..8 in order.
+        Assert.Equal(8, migrations.Count);
         for (var i = 0; i < migrations.Count; i++)
         {
             Assert.Equal(i + 1, migrations[i].Version.Value);
         }
 
         //Assert — LogicalColumns at each version match the cumulative archaeology, all lowercase.
-        for (var v = 1; v <= 7; v++)
+        for (var v = 1; v <= 8; v++)
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
@@ -79,9 +80,9 @@ public class PostgreSqlOutboxMigrationsTests
                 $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.Ordinal))}]");
         }
 
-        //Assert — V2..V7 UpScripts use the Postgres-native idempotent ADD COLUMN IF NOT EXISTS
+        //Assert — V2..V8 UpScripts use the Postgres-native idempotent ADD COLUMN IF NOT EXISTS
         //pattern (ADR §5). Case-insensitive contains check tolerates whitespace and casing.
-        for (var v = 2; v <= 7; v++)
+        for (var v = 2; v <= 8; v++)
         {
             var script = migrations[v - 1].UpScript;
             Assert.Contains(
@@ -90,9 +91,9 @@ public class PostgreSqlOutboxMigrationsTests
                 StringComparison.OrdinalIgnoreCase);
         }
 
-        //Assert — V1 has no single source commit; V2..V7 each carry archaeology pointers.
+        //Assert — V1 has no single source commit; V2..V8 each carry archaeology pointers.
         Assert.Null(migrations[0].SourceReference);
-        for (var v = 2; v <= 7; v++)
+        for (var v = 2; v <= 8; v++)
         {
             Assert.False(
                 string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
@@ -117,6 +118,7 @@ public class PostgreSqlOutboxMigrationsTests
         cumulative.UnionWith(s_v5Added); byVersion[5] = new HashSet<string>(cumulative, StringComparer.Ordinal);
         cumulative.UnionWith(s_v6Added); byVersion[6] = new HashSet<string>(cumulative, StringComparer.Ordinal);
         cumulative.UnionWith(s_v7Added); byVersion[7] = new HashSet<string>(cumulative, StringComparer.Ordinal);
+        cumulative.UnionWith(s_v8Added); byVersion[8] = new HashSet<string>(cumulative, StringComparer.Ordinal);
 
         return byVersion;
     }

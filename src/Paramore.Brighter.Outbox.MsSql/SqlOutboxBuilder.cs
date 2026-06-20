@@ -57,6 +57,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 [TraceState] NVARCHAR(255) NULL,
                 [Baggage] NVARCHAR(MAX) NULL,
                 [DataRef] NVARCHAR(255) NULL,
+                [CausationId] NVARCHAR(255) NULL,
                 [SpecVersion] NVARCHAR(255) NULL
                 PRIMARY KEY ( [Id] )
             );
@@ -88,6 +89,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 [TraceState] NVARCHAR(255) NULL,
                 [Baggage] NVARCHAR(MAX) NULL,
                 [DataRef] NVARCHAR(255) NULL,
+                [CausationId] NVARCHAR(255) NULL,
                 [SpecVersion] NVARCHAR(255) NULL
                 PRIMARY KEY ( [Id] )
             );
@@ -126,7 +128,12 @@ namespace Paramore.Brighter.Outbox.MsSql
             var qualifiedTable = schemaName is null
                 ? outboxTableName
                 : $"[{schemaName}].[{outboxTableName}]";
-            return string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, qualifiedTable);
+            var ddl = string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, qualifiedTable);
+            // Replay index (Spec 0027, #2541) on CausationId — emitted as a separate statement
+            // after the CREATE TABLE in the same fresh-install batch. None of the outbox builders
+            // indexed any column before this.
+            return ddl + Environment.NewLine +
+                $"CREATE INDEX [idx_{outboxTableName}_CausationId] ON {qualifiedTable} ([CausationId]);";
         }
 
         /// <summary>

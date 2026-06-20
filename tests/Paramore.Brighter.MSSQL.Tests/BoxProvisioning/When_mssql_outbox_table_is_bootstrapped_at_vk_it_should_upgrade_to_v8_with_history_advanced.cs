@@ -31,14 +31,14 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlOutboxVkToV7UpgradeTests : IAsyncLifetime
+public class MsSqlOutboxVkToV8UpgradeTests : IAsyncLifetime
 {
-    private static readonly string[] s_v7ExpectedColumns =
+    private static readonly string[] s_v8ExpectedColumns =
     [
         "Id", "MessageId", "Topic", "MessageType", "Timestamp", "HeaderBag", "Body",
         "Dispatched", "CorrelationId", "ReplyTo", "ContentType", "PartitionKey",
         "Source", "Type", "DataSchema", "Subject", "TraceParent", "TraceState", "Baggage",
-        "WorkflowId", "JobId", "DataRef", "SpecVersion"
+        "WorkflowId", "JobId", "DataRef", "SpecVersion", "CausationId"
     ];
 
     private readonly string _connectionString = Configuration.DefaultConnectingString;
@@ -49,7 +49,7 @@ public class MsSqlOutboxVkToV7UpgradeTests : IAsyncLifetime
     [InlineData(3)]
     [InlineData(5)]
     [InlineData(7)]
-    public async Task When_mssql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v7_with_history_advanced(int k)
+    public async Task When_mssql_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v8_with_history_advanced(int k)
     {
         //Arrange — seed an outbox at V_k (no history row) and a marker row to prove preservation.
         Configuration.EnsureDatabaseExists(_connectionString);
@@ -68,21 +68,21 @@ public class MsSqlOutboxVkToV7UpgradeTests : IAsyncLifetime
         //Act
         await provisioner.ProvisionAsync();
 
-        //Assert — the table now has the full V7 column set (V_{k+1}..V7 ALTERs applied)
+        //Assert — the table now has the full V8 column set (V_{k+1}..V8 ALTERs applied)
         var actualColumns = GetTableColumns();
-        foreach (var expected in s_v7ExpectedColumns)
+        foreach (var expected in s_v8ExpectedColumns)
         {
             Assert.Contains(expected, actualColumns);
         }
 
-        //Assert — history rows: one synthetic at V_k + one applied per V_{k+1}..V7
+        //Assert — history rows: one synthetic at V_k + one applied per V_{k+1}..V8
         var rowsByVersion = GetHistoryRowsByVersion();
-        Assert.Equal(7 - k + 1, rowsByVersion.Count);
+        Assert.Equal(8 - k + 1, rowsByVersion.Count);
 
         var syntheticDescription = Assert.Contains(k, rowsByVersion);
         Assert.StartsWith($"bootstrap: detected at V{k}", syntheticDescription);
 
-        for (var v = k + 1; v <= 7; v++)
+        for (var v = k + 1; v <= 8; v++)
         {
             var appliedDescription = Assert.Contains(v, rowsByVersion);
             Assert.False(
