@@ -13,7 +13,8 @@ tools/Paramore.Brighter.Test.Generator/
 ├── Templates/
 │   ├── Outbox/
 │   │   ├── Sync/       ← Liquid templates for sync outbox tests
-│   │   └── Async/      ← Liquid templates for async outbox tests
+│   │   ├── Async/      ← Liquid templates for async outbox tests
+│   │   └── Causation/  ← Liquid template for causation-tracking outbox tests (subclass of CausationTrackingOutboxBaseTests)
 │   ├── MessageFactory.cs.liquid
 │   └── DefaultMessageFactory.cs.liquid
 ├── Generators/
@@ -30,7 +31,8 @@ tests/Paramore.Brighter.*.Tests/
 └── Outbox/
     └── [Prefix]/Generated/      ← Output directory (do not hand-edit)
         ├── Sync/*.cs
-        └── Async/*.cs
+        ├── Async/*.cs
+        └── Causation/*.cs
 ```
 
 ## Templates

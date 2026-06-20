@@ -408,7 +408,7 @@ Structural change verified by the *existing* drift/cross-backend tests staying g
 
 ### Task 21b: STRUCTURAL/TOOLING — extend the Liquid generator for causation-tracking outbox tests
 
-- [ ] **TOOLING: update Liquid templates in `tools/Paramore.Brighter.Test.Generator/` to generate causation-tracking outbox test cases from `CausationTrackingOutboxBaseTests`, then regenerate**
+- [x] **TOOLING: update Liquid templates in `tools/Paramore.Brighter.Test.Generator/` to generate causation-tracking outbox test cases from `CausationTrackingOutboxBaseTests`, then regenerate**
   - Verification: generator runs; generated test files compile and reference the base test class.
   - Depends on: Task 18 (`CausationTrackingOutboxBaseTests` must exist)
 
