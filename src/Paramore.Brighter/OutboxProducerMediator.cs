@@ -558,6 +558,8 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write batch {batchId} to the outbox");
+
+            _outboxBatches.TryRemove(batchId, out _);
         }
 
         /// <summary>
