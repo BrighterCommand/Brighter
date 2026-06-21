@@ -419,7 +419,7 @@ Each is its own test-first cycle (tests generated via Task 21b from `CausationTr
 - [x] **21c — MsSql**: `/test-first when mssql outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
 - [x] **21d — MySql**: `/test-first when mysql outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
 - [x] **21e — PostgreSql**: `/test-first when postgres outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
-- [ ] **21f — Sqlite**: `/test-first when sqlite outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
+- [x] **21f — Sqlite**: `/test-first when sqlite outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
 - [ ] **21g — Spanner**: `/test-first when spanner outbox tracks causation id should store and replay via base tests` — **⛔ STOP for approval before implementing**
 
 ---
