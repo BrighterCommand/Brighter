@@ -94,8 +94,22 @@ public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IA
         => ex is SpannerException se && se.RpcException.StatusCode == StatusCode.AlreadyExists;
 
     /// <inheritdoc />
-    protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value) 
-        => new SpannerParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
+    protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
+    {
+        if (parameterName == "@CausationId")
+        {
+            // CausationId is a STRING(256) column and may be null; Spanner requires an explicit
+            // SpannerDbType when the value is DBNull, so set it rather than relying on inference.
+            return new SpannerParameter
+            {
+                ParameterName = parameterName,
+                SpannerDbType = SpannerDbType.String,
+                Value = value ?? DBNull.Value
+            };
+        }
+
+        return new SpannerParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
+    }
 
     /// <inheritdoc />
     protected override IDbDataParameter CreateSqlParameter(string parameterName, DbType dbType, object? value)
