@@ -443,7 +443,7 @@ Each is its own test-first cycle (tests generated via Task 21b from `CausationTr
 
 ## Task 23: Build verification
 
-- [ ] **Build and run all core tests**
+- [x] **Build and run all core tests**
   - Run `dotnet build src/Paramore.Brighter/Paramore.Brighter.csproj` — must compile
   - Run `dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj` — all tests pass
   - Verify existing OnceOnly tests pass (no regressions):
