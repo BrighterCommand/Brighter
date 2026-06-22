@@ -426,7 +426,7 @@ Each is its own test-first cycle (tests generated via Task 21b from `CausationTr
 
 ## Task 22: TEST + IMPLEMENT — NoSQL outbox stores implement `IAmACausationTrackingOutbox` (DynamoDB, DynamoDB.V4, Firestore, MongoDb)
 
-- [ ] **TEST + IMPLEMENT: NoSQL outbox stores add CausationId attribute and implement IAmACausationTrackingOutbox**
+- [x] **TEST + IMPLEMENT: NoSQL outbox stores add CausationId attribute and implement IAmACausationTrackingOutbox**
   - **USE COMMAND**: `/test-first when nosql outbox stores causation id should store and replay via base tests`
   - Stores: DynamoDB, DynamoDB.V4, Firestore, MongoDb
   - **No BoxProvisioning**: these stores are schemaless and outside BoxProvisioning — there is no DDL migration. The `CausationId` field is written on `Add` and read back; add a secondary index on `CausationId` where the store supports one for efficient replay; `SupportsCausationTracking()` returns `true`.
