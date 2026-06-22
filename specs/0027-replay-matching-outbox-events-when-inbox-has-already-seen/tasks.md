@@ -492,11 +492,11 @@ Each provisions a pre-feature table via that backend's `*LegacySeeder` and repea
 
 > **Backward-compat fix (AC11).** `DynamoDbOutbox.SupportsCausationTracking() => true` is dishonest: `ReplayCausationAsync` queries the `Causation` GSI (`IndexName = _configuration.CausationIndexName`), which an existing table does not have. Validation passes, then runtime replay throws *"table does not have the specified index"*. Writes are unaffected (sparse-index no-op), so only the guard needs fixing.
 
-- [ ] **TEST (RED): a DynamoDB outbox table without the `Causation` GSI reports `SupportsCausationTracking()` == false and validation rejects Replay**
+- [x] **TEST (RED): a DynamoDB outbox table without the `Causation` GSI reports `SupportsCausationTracking()` == false and validation rejects Replay**
   - `/test-first when a dynamodb outbox table lacks the causation index it does not claim causation support` — **⛔ STOP for approval before implementing**
   - Provision the outbox table **without** the `Causation` GSI → `SupportsCausationTracking()`/`…Async()` return `false`; a Replay-configured pipeline fails `ValidatePipelines`. Provision **with** the GSI → returns `true`. Assert normal `Add` works in both cases (no break without the GSI). DynamoDB-local container.
   - Cover both `Paramore.Brighter.Outbox.DynamoDB` and `…DynamoDB.V4`.
-- [ ] **IMPLEMENT: `DescribeTable` check for the `Causation` GSI, memoized**
+- [x] **IMPLEMENT: `DescribeTable` check for the `Causation` GSI, memoized**
   - Change `SupportsCausationTracking[Async]()` to a `DescribeTableAsync` that checks the `Causation` GSI (`_configuration.CausationIndexName`) is in the table's `GlobalSecondaryIndexes`; memoize per instance. Sync wraps async per the store's existing pattern.
   - **Do not** change the NoSQL *inboxes* or MongoDb/Firestore — they remain `=> true` (no GSI needed; the inbox queries the table's own keys, Mongo/Firestore are schemaless).
   - Depends on: 22.

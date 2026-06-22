@@ -547,12 +547,38 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 .GetResult();
         }
 
-        /// <inheritdoc />
-        public bool SupportsCausationTracking() => true;
+        /// <summary>
+        /// Memoized result of the live probe for the <c>Causation</c> Global Secondary Index. Null until
+        /// the first probe; a concurrent race is harmless (both observers see the same table state).
+        /// </summary>
+        private bool? _causationIndexExists;
 
         /// <inheritdoc />
-        public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(true);
+        public bool SupportsCausationTracking()
+            => SupportsCausationTrackingAsync()
+                .ConfigureAwait(ContinueOnCapturedContext)
+                .GetAwaiter()
+                .GetResult();
+
+        /// <inheritdoc />
+        public async Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+        {
+            if (_causationIndexExists is { } cached)
+                return cached;
+
+            // ReplayCausationAsync queries the Causation GSI; a table provisioned before the Replay
+            // feature does not have it. Probe the live table so the capability is reported honestly
+            // (AC11) rather than statically claiming support and failing at replay time.
+            var describeResponse = await _client
+                .DescribeTableAsync(new DescribeTableRequest { TableName = _configuration.TableName }, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+
+            var exists = describeResponse.Table.GlobalSecondaryIndexes
+                .Any(gsi => gsi.IndexName == _configuration.CausationIndexName);
+
+            _causationIndexExists = exists;
+            return exists;
+        }
 
         /// <inheritdoc />
         public void ReplayCausation(string causationId, RequestContext? requestContext, Dictionary<string, object>? args = null)
