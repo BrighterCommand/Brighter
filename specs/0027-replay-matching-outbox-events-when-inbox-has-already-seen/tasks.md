@@ -514,12 +514,13 @@ Each provisions a pre-feature table via that backend's `*LegacySeeder` and repea
 
 ## Task 27: Build + regression verification (backward-compat hardening)
 
-- [ ] **Re-run build + full suites after Tasks 24–26**
+- [x] **Re-run build + full suites after Tasks 24–26**
   - `Paramore.Brighter.Core.Tests` green both TFMs.
   - Per-backend relational inbox/outbox store + BoxProvisioning suites green (real containers): MsSql, MySql, Postgres, Sqlite, Spanner.
   - DynamoDB / DynamoDB.V4 outbox + inbox suites green; MongoDb suites green; Firestore compile-verify.
   - New backward-compat tests from 24–26 green; no regressions.
   - Depends on: 24a–24e, 25, 26.
+  - **VERIFIED 2026-06-22 (touched-suite scope — user-chosen).** The only production code changed by Tasks 24–26 is the DynamoDB outbox GSI probe (T25); T24b–e are test-only and T26 added no code. **Core.Tests 818/818 (7 skipped) net9.0 + net10.0.** DynamoDB full outbox 32/32 + V4 full outbox 32/32 (net9) — covers the T25 change; existing Causation generated tests 3/3 each. DynamoDB inbox causation 4/4; MongoDb causation 7/7 (net9). The 5 legacy-schema characterization classes each verified green at their commit (7/7 each, both TFMs except MySql net9-only; T25 5/5 both TFMs ×2 projects). Firestore compile-verified. Pre-existing OUT-OF-SCOPE flakes untouched: #4161 (MSSQL DateTimeOffset BST), #4162 (Spanner suite-parallelism).
 
 ---
 
