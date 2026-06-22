@@ -469,12 +469,12 @@ Each is its own test-first cycle (tests generated via Task 21b from `CausationTr
 
 ### Task 24a: TEST + IMPLEMENT — Sqlite drives the shared memoized-gate fix (inbox + outbox)
 
-- [ ] **TEST (RED): Sqlite inbox & outbox on a pre-feature schema (no `CausationId` column) still deposit and retrieve with the new code**
+- [x] **TEST (RED): Sqlite inbox & outbox on a pre-feature schema (no `CausationId` column) still deposit and retrieve with the new code**
   - `/test-first when a sqlite inbox and outbox on a schema without the causation column still add and retrieve` — **⛔ STOP for approval before implementing**
   - Provision via `Sqlite{Inbox,Outbox}LegacySeeder` at a pre-CausationId version (NOT the current builder). Exercise outbox `Add` → `OutstandingMessages`/`Get` and inbox `Add` → `Exists`/`Get`; assert success (no SQL error).
   - Assert `SupportsCausationTracking()` returns `false` against that schema, and a Replay-configured pipeline is rejected by `ValidatePipelines` with a descriptive error (locks the opt-in guard end-to-end).
   - **Regression guard (column present):** also assert that against a CURRENT-builder table (column present) the store still writes/reads `CausationId` — so flipping the gate does not silently stop tracking on a migrated schema.
-- [ ] **IMPLEMENT: gate the write on a memoized column-existence check (shared base classes)**
+- [x] **IMPLEMENT: gate the write on a memoized column-existence check (shared base classes)**
   - In `RelationDatabaseOutbox` and `RelationalDatabaseInbox`, replace the `CausationQueries is not null` gate on the `Add`/`AddAsync` path with a one-shot **memoized** result of the column-existence probe (the same probe behind `SupportsCausationTracking[Async]()`). Column present → `AddCausationCommand` + `@CausationId`; absent → existing `AddCommand`, nothing extra written.
   - Memoize per store instance in a private `bool?` field, populated lazily by the first probe on EITHER the sync or async path and read by both (sync `Add` uses the sync probe, async the async probe; both write/read the same field), so there is no probe per deposit. **Concurrency:** concurrent first probes are harmless (idempotent, same result) — no lock needed. **No invalidation:** a store constructed before provisioning caches "absent"; mid-process migration needs a restart (acceptable — mandatory upgrade is V11).
   - Keep `ReplayCausation[Async]`/`GetCausationId[Async]` no-op/return-null when unsupported. Validation continues to call `SupportsCausationTracking()`. Bulk-add path is unchanged (deliberately never causation-tracked).
