@@ -164,6 +164,43 @@ public class ReplayCausationTrackingValidationTests
     }
 
     [Fact]
+    public void When_replay_configured_on_an_after_step_without_causation_tracking_should_report_error()
+    {
+        // Arrange — the UseInbox Replay step is placed in the After timing, not Before. The rule
+        // inspects both Before and After steps, so it must still detect Replay and flag the non-tracking inbox.
+        var description = ReplayPipeline(OnceOnlyAction.Replay, HandlerTiming.After);
+        var inbox = new NonTrackingInbox();
+        var outbox = new TrackingOutbox(supportsCausationTracking: true);
+
+        // Act
+        var results = Evaluate(
+            HandlerPipelineValidationRules.ReplayRequiresCausationTracking(inbox, outbox),
+            description);
+
+        // Assert
+        var finding = Assert.Single(results);
+        Assert.Equal(ValidationSeverity.Error, finding.Severity);
+    }
+
+    [Fact]
+    public void When_warn_action_configured_without_causation_tracking_should_report_no_findings()
+    {
+        // Arrange — Warn action; like Throw, causation tracking is irrelevant, so a non-tracking
+        // inbox/outbox must produce no findings.
+        var description = ReplayPipeline(OnceOnlyAction.Warn);
+        var inbox = new NonTrackingInbox();
+        var outbox = new NonTrackingOutbox();
+
+        // Act
+        var results = Evaluate(
+            HandlerPipelineValidationRules.ReplayRequiresCausationTracking(inbox, outbox),
+            description);
+
+        // Assert
+        Assert.Empty(results);
+    }
+
+    [Fact]
     public void When_replay_configured_and_inbox_support_probe_throws_should_report_warning_not_propagate()
     {
         // Arrange — the inbox tracks causation but its live-schema probe throws (e.g. the store is
@@ -200,26 +237,28 @@ public class ReplayCausationTrackingValidationTests
         Assert.Equal(ValidationSeverity.Warning, finding.Severity);
     }
 
-    private static HandlerPipelineDescription ReplayPipeline(OnceOnlyAction onceOnlyAction)
-        => new(
+    private static HandlerPipelineDescription ReplayPipeline(
+        OnceOnlyAction onceOnlyAction, HandlerTiming timing = HandlerTiming.Before)
+    {
+        var step = new PipelineStepDescription(
+            typeof(UseInboxAttribute),
+            typeof(UseInboxHandler<>),
+            Step: 0,
+            timing)
+        {
+            Attribute = new UseInboxAttribute(
+                step: 0,
+                onceOnly: true,
+                onceOnlyAction: onceOnlyAction)
+        };
+
+        return new(
             requestType: typeof(MyCommand),
             handlerType: typeof(MyCommandHandler),
             isAsync: false,
-            beforeSteps:
-            [
-                new PipelineStepDescription(
-                    typeof(UseInboxAttribute),
-                    typeof(UseInboxHandler<>),
-                    Step: 0,
-                    HandlerTiming.Before)
-                {
-                    Attribute = new UseInboxAttribute(
-                        step: 0,
-                        onceOnly: true,
-                        onceOnlyAction: onceOnlyAction)
-                }
-            ],
-            afterSteps: []);
+            beforeSteps: timing == HandlerTiming.Before ? [step] : [],
+            afterSteps: timing == HandlerTiming.After ? [step] : []);
+    }
 
     private static IReadOnlyList<ValidationError> Evaluate(
         ISpecification<HandlerPipelineDescription> spec,
