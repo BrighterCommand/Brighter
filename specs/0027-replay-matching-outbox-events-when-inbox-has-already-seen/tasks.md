@@ -483,7 +483,7 @@ Each is its own test-first cycle (tests generated via Task 21b from `CausationTr
 
 Each provisions a pre-feature table via that backend's `*LegacySeeder` and repeats 24a's assertions (old-schema deposit/retrieve succeeds · `SupportsCausationTracking()==false` · Replay-validation rejected · column-present regression guard) for inbox + outbox. Green on first run once 24a's base-class fix is in — **no new production code**.
 
-- [ ] **24b — MsSql** (`MsSql{Inbox,Outbox}LegacySeeder`; host port 11433 azure-sql-edge)
+- [x] **24b — MsSql** (`MsSql{Inbox,Outbox}LegacySeeder`; host port 11433 azure-sql-edge)
 - [ ] **24c — MySql** (`MySql{Inbox,Outbox}LegacySeeder`)
 - [ ] **24d — Postgres** (`Postgres{Inbox,Outbox}LegacySeeder`)
 - [ ] **24e — Spanner** — ⚠️ **no Spanner legacy seeder exists yet.** First build `Spanner{Inbox,Outbox}LegacySeeder` helpers (parallel to the four catalog seeders) emitting a pre-CausationId table via raw DDL (Spanner has no migration catalog). Embed `EmulatorDetection` in the conn string and run **per-store** (Text and Binary in separate invocations) per the #4162 emulator parallelism constraint.
