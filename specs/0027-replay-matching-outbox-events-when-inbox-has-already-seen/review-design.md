@@ -1,44 +1,38 @@
-# Review: design — 0027-replay-matching-outbox-events-when-inbox-has-already-seen (ADR 0057)
+# Review: design — replay-matching-outbox-events-when-inbox-has-already-seen
 
-**Date**: 2026-06-17
+**Date**: 2026-06-22
 **Threshold**: 60
 **Verdict**: PASS
 
-This phase is already approved; findings are informational (BoxProvisioning re-review). Every concrete codebase reference in the new "Schema Evolution via BoxProvisioning" subsection was verified against the actual code, **with one correction noted below** (the inbox-version claim is wrong for PostgreSQL). The findings below are sub-threshold completeness/coherence observations.
+No findings at or above threshold 60. Consider addressing lower-scored items.
 
-> **Cross-review correction (added by main agent)**: This reviewer asserted "Inbox catalogs at V2 — confirmed for MsSql, MySql, Postgres, Sqlite." That is **wrong for PostgreSQL**, whose inbox catalog is V1-only (its V1 already carries `ContextKey`). The tasks reviewer caught this and the main agent verified it directly (`PostgreSqlInboxMigrationCatalog.cs` has a single `Version: 1`). The ADR text "the MsSql/MySql/Postgres/Sqlite inbox catalogs at V2" must be corrected. See review-tasks.md finding #2.
+This phase is already approved — findings below are informational (confirmatory review of the 2026-06-22 backward-compatibility amendments). None warrant re-opening the phase. The amendments are well-grounded: every file/class/member reference checked exists and matches the codebase, and the amended sections are internally consistent with each other and with the new ACs.
+
+## Verification summary (all confirmed against code)
+
+- **Relational write-path gate**: `RelationDatabaseOutbox.cs:82-85` and `RelationalDatabaseInbox.cs:82-85` currently gate the causation INSERT on `CausationQueries is not null` (a `queries as IRelationalDatabase…CausationQueries`). `InitAddDbCommand`/`CreateAddCommand` select `CausationQueries?.AddCausationCommand ?? queries.AddCommand` (outbox:1279, inbox:473), so the SQL switches purely on the static cast, not column existence — the ADR's stated problem is real.
+- **No memoization today**: `SupportsCausationTracking[Async]()` (outbox:983-1007, inbox:266-292) runs `CausationColumnExistsCommand` on every call with no cached field. The ADR's "memoized probe, shared with Add" is a not-yet-implemented fix, consistent with the ADR being amended to *specify* the fix.
+- **DynamoDB outbox**: `SupportsCausationTracking() => true` (DynamoDB:551, V4:564); `ReplayCausationAsync` uses `IndexName = _configuration.CausationIndexName` (DynamoDB:583, V4:596); `_client` is `IAmazonDynamoDB`; `DynamoDbConfiguration.CausationIndexName` exists, default `"Causation"` (both V11 and V4). A `DescribeTable` check is feasible with the available client/config.
+- **DynamoDB inbox**: `GetCausationIdAsync` queries `KeyIdContextExpression` (Id+ContextKey, the table's own keys) with **no** `IndexName` (DynamoDbInbox.cs:274-294), so `=> true` (line 257) is honest — confirms the outbox-vs-inbox asymmetry.
+- **MongoDb / Firestore**: outbox and inbox all `=> true` unconditionally — matches the rewritten NoSQL paragraph.
+- **Bulk-add deliberately not causation-tracked**: the `Add(IEnumerable<Message>)` overloads have no causation branch; the new write-path gate only touches the single-message path — no interaction hazard.
 
 ## Findings
 
-### 1. `SupportsCausationTracking()` runtime-check story is coherent for catalog stores but underspecified for Spanner (Score: 52)
+### 1. Write-path gate subsection does not state who owns the memoized field or how sync/async share it (Score: 45)
+The "Write-path gate" subsection says the gate is "memoized once per store instance" but does not specify the storage shape (`bool?` vs `Lazy<bool>`) nor how the sync `Add` and async `AddAsync` paths coherently share one memo when the probe has distinct sync/async variants. Two developers could implement differently. Since Tasks 1–23 are already implemented, likely resolved in code — informational.
+**Evidence**: ADR "memoized once per store instance (a one-shot lazy check…)" — no field/seam named, unlike the rest of the ADR.
+**Recommendation**: One sentence naming the intended seam (e.g. "a private `bool?` populated lazily by the first probe on either path"). Optional.
 
-The subsection says for catalog stores `SupportsCausationTracking()` "reflects whether the `CausationId`-adding migration version has been applied to the live schema." For NoSQL it returns `true`. But the Spanner paragraph never states what `SupportsCausationTracking()` returns or how it is computed — Spanner has no versioned migration catalog, so the catalog-version check cannot apply. The Negative consequence and validation section both lean on this method as the un-migrated-user gate.
+### 2. Concurrency hazard of the first-probe race is unacknowledged (Score: 42)
+The ADR acknowledges the construct-before-provisioning memo edge case but not the thread-race where two threads run the first probe concurrently. Benign (probe is idempotent, same result), so low severity.
+**Evidence**: ADR covers staleness but not concurrency; no mention in Consequences.
+**Recommendation**: Half-sentence: "concurrent first probes are harmless (idempotent, same result)."
 
-**Evidence**: ADR §Schema Evolution scopes the version-check claim to catalog stores; the Spanner paragraph omits the runtime-check semantics. `SpannerOutboxProvisioner`/`SpannerInboxProvisioner` exist with no catalog.
-
-**Recommendation**: Add one sentence to the Spanner paragraph stating how `SupportsCausationTracking()` is evaluated for Spanner (e.g., a live column-existence probe).
-
----
-
-### 2. "AddColumn helper" reference is slightly imprecise (Score: 30)
-
-Catalogs use `AddColumns` (plural) for the migration `UpScript`s; `AddColumn` (singular) is the internal primitive. The ADR body correctly cites the *guard* (`IF COL_LENGTH(...) IS NULL`) rather than a helper name, so the ADR is fine — nit only.
-
-**Evidence**: `MsSqlOutboxMigrationCatalog.cs:204` `AddColumns(...)`, `:207` `AddColumn(...)`.
-
-**Recommendation**: None required for the ADR.
-
----
-
-### 3. New outbox-builder index claim is prospective, not an existing pattern (Score: 35)
-
-The subsection says "The outbox builders additionally create an index on `CausationId`," phrased as if extending existing behavior. None of the four catalog outbox builders currently create any index, so "additionally" could mislead. Also: the drift parity tests assert column sets, not indexes, so index parity is **not** covered by the cited drift gate.
-
-**Evidence**: `grep -i index` is empty in all four `*OutboxBuilder.cs`.
-
-**Recommendation**: Clarify the index is a newly introduced statement, and note index parity is unverified by the drift test.
-
----
+### 3. ADR does not state the memo is never invalidated beyond a parenthetical (Score: 38)
+The construct-before-provisioning case is handled by "provisioning is expected at startup," but the ADR does not explicitly say the per-instance memo is never invalidated — a long-lived singleton that memoized "absent" never re-probes if migrated under it at runtime. Reader must infer "no invalidation."
+**Evidence**: ADR parenthetical only.
+**Recommendation**: State explicitly that the memo is never invalidated and mid-process migration requires a restart (acceptable given V11 is the mandatory point). Optional.
 
 ## Summary
 
@@ -46,10 +40,10 @@ The subsection says "The outbox builders additionally create an index on `Causat
 |-------------|-------|
 | 90-100 (Critical) | 0 |
 | 70-89 (High) | 0 |
-| 50-69 (Medium) | 1 |
-| 0-49 (Low) | 2 |
+| 50-69 (Medium) | 0 |
+| 0-49 (Low) | 3 |
 
 **Total findings**: 3
 **Findings at or above threshold (60)**: 0
 
-**Grounding verification (all PASS except the PostgreSQL inbox-version claim corrected above)**: catalog classes, outbox-catalogs-at-V7, idempotent guard, `LogicalColumns`/`Cumulative()`/`s_vNAddedColumns`, live builders, drift parity tests, Spanner provisioners (no catalog), and the absence of NoSQL BoxProvisioning assemblies were all confirmed in the codebase. No residual "separate PR" language remains.
+The amendments correctly satisfy new **AC10** (no forced upgrade) and **AC11** (honest capability reporting). The strengthened "Non-breaking change" NFR aligns with the ADR's new subsection. No internal contradiction remains. The three low-scored items are precision nits on the memoization design, all below threshold and likely already settled in the implemented code.

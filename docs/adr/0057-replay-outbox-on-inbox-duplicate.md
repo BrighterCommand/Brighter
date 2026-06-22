@@ -228,10 +228,20 @@ All Brighter-maintained persistent inbox and outbox implementations add `Causati
 
 Each persistent store:
 1. Adds a nullable `CausationId` column/attribute to its schema (existing rows have null — no data migration needed)
-2. Reads `CausationId` from `RequestContext.Bag` in its `Add` method and stores it
+2. Reads `CausationId` from `RequestContext.Bag` in its `Add` method and stores it **only when the live schema actually supports it** (see "Write-path gate" below) — so new Brighter code running against an old, un-migrated schema keeps depositing normally
 3. Implements `IAmACausationTrackingInbox` or `IAmACausationTrackingOutbox` as appropriate
 4. Indexes `CausationId` in the outbox for efficient replay queries
-5. Returns `true` from `SupportsCausationTracking()` once the schema supports it
+5. Returns `true` from `SupportsCausationTracking()` only once the live schema *actually* supports replay — the `CausationId` column exists and, for stores that need a secondary index to replay (the DynamoDB outbox GSI), that index exists too
+
+#### Write-path gate (backward compatibility)
+
+Implementing `IAmACausationTrackingInbox`/`IAmACausationTrackingOutbox` is a *static* property of the store driver. For the relational stores every backend's `*Queries` class implements the optional `IRelationalDatabase{Inbox,Outbox}CausationQueries` companion, so `queries as IRelationalDatabase…CausationQueries` is **always** non-null. That static capability must **not** decide whether `Add` writes the `CausationId` column: a store whose live table predates the migration has no such column, and an `INSERT` naming it fails on *every* deposit. That would force every upgrading user to migrate even if they never use Replay — breaking the opt-in contract.
+
+Therefore the `Add` path is gated on **actual column existence**, taken from the same runtime probe that backs `SupportsCausationTracking()` and **memoized once per store instance** (a one-shot lazy check, *not* a probe per deposit). When the probe reports the column present, `Add` emits the causation-aware INSERT (`AddCausationCommand`, with `@CausationId`); when absent, it falls back to the existing `AddCommand` and writes nothing extra. Net effect: byte-for-byte identical deposit behaviour to the pre-feature library against an un-migrated schema, and full causation tracking once the schema is migrated — with no per-deposit probe cost.
+
+The seam is a single private `bool?` field per store instance, populated lazily by the first probe on *either* the sync or async path and read by both. Concurrent first deposits may race the probe, which is harmless (the probe is idempotent and returns the same value). The memo is never invalidated: a store instance constructed *before* provisioning runs in the same process caches "absent", so a mid-process migration requires a restart — acceptable because provisioning is expected at startup before stores handle traffic, and a mandatory upgrade is reserved for V11.
+
+Users who adopt BoxProvisioning are auto-upgraded and need no separate opt-in flag — running provisioning *is* the opt-in. This is reserved for V11 as the point at which the schema upgrade becomes mandatory.
 
 ### Schema Evolution via BoxProvisioning
 
@@ -247,9 +257,12 @@ The `CausationId` column is added to the relational store schemas through BoxPro
 
 **Provisioner-based relational store — Spanner (inbox and outbox).** Spanner has BoxProvisioning support but no versioned migration catalog; it provisions through `SpannerOutboxProvisioner` / `SpannerInboxProvisioner`. `CausationId` is added through those provisioners and the live `SpannerOutboxBuilder` / `SpannerInboxBuilder`. **Crucially, Spanner mirrors the relational chains via two hard-coded constants in `SpannerBoxMigrationRunner` — `VLatestOutbox` (currently 7) and `VLatestInbox` (currently 2) — guarded by a cross-backend test (`When_spanner_v_latest_constants_are_compared_to_relational_catalogs_they_should_match_every_backend`).** Bumping any relational catalog forces a matching bump of these constants: `VLatestOutbox` → 8, `VLatestInbox` → 3 (to match the MsSql/MySql/Sqlite inbox count). Because PostgreSql inbox stays one version behind the other three, that cross-backend test carries a deliberate PostgreSql carve-out whose expected count must be re-derived (it becomes 2, not the others' 3). Spanner's builder/migration drift parity test moves with the builder change as well. For Spanner, `SupportsCausationTracking()` is evaluated as a live column-existence probe (there is no migration-version to inspect).
 
-**NoSQL stores — DynamoDB, DynamoDB.V4, Firestore, MongoDb.** These are schemaless and outside BoxProvisioning. No DDL migration is required: the `CausationId` attribute/field is simply written on `Add` and read back. `SupportsCausationTracking()` returns `true` for these stores (the attribute model always supports the field); the outbox stores add a secondary index on `CausationId` where the store supports one for efficient replay.
+**NoSQL stores — DynamoDB, DynamoDB.V4, Firestore, MongoDb.** These are schemaless and outside BoxProvisioning. No DDL migration is required: the `CausationId` attribute/field is simply written on `Add` and read back, so normal deposits never break against an existing store. `SupportsCausationTracking()` splits into two cases, though:
 
-In all cases `SupportsCausationTracking()` remains a runtime check: for catalog stores it reflects whether the `CausationId`-adding migration version has been applied to the live schema, so a user who upgrades Brighter but has not run provisioning gets a clear startup validation finding rather than a runtime failure.
+- **MongoDb, Firestore, and all NoSQL *inboxes*** return `true` unconditionally. They are truly schemaless: writing the field needs no migration, and replay/lookup by field value needs no secondary index for *correctness* (Firestore auto-indexes single fields; MongoDb scans). The DynamoDB inbox `GetCausationId` queries the table's own primary keys, so it needs no new index either.
+- **DynamoDB / DynamoDB.V4 *outbox*** is the exception. `ReplayCausation` queries a dedicated `Causation` Global Secondary Index (`DynamoDbConfiguration.CausationIndexName`) for efficiency — and an existing table does **not** have that GSI. Returning `true` unconditionally would let pipeline validation pass and then fail at runtime with *"table does not have the specified index"*. So the DynamoDB outbox `SupportsCausationTracking()` performs a live `DescribeTable` check that the `Causation` GSI is present (memoized per store instance). Writing the `CausationId` attribute to a table without the GSI is a harmless sparse-index no-op, so normal deposits are unaffected; only replay needs the GSI, and the runtime check makes pipeline validation honest about it.
+
+In all cases `SupportsCausationTracking()` remains a runtime check: for catalog stores it reflects whether the `CausationId`-adding migration version has been applied to the live schema, so a user who upgrades Brighter but has not run provisioning gets a clear startup validation finding rather than a runtime failure. The **same** memoized runtime check also gates the `Add` write path (see "Write-path gate"), so an upgraded-but-un-migrated store keeps depositing normally instead of failing on a missing column or index.
 
 #### Test Strategy
 
@@ -503,7 +516,7 @@ This approach works because:
 - The outbox instance is captured by the specification's closure, keeping `PipelineValidator` generic — it does not need to know about replay semantics
 - The rule is composable and independently testable, consistent with the Specification pattern established in ADR 0053
 
-The `SupportsCausationTracking()` method is a permanent runtime schema check. It allows users to upgrade Brighter without being forced to migrate their store schema — the feature is only available once the schema supports it. The schema migration itself ships in this work via BoxProvisioning (see "Schema Evolution via BoxProvisioning"); users opt in by running provisioning when they adopt `OnceOnlyAction.Replay`.
+The `SupportsCausationTracking()` method is a permanent runtime schema check. It allows users to upgrade Brighter without being forced to migrate their store schema — the feature is only available once the schema supports it, and (via the memoized "Write-path gate") deposits keep working unchanged until then. The feature is only *required* to be migrated at V11. The schema migration itself ships in this work via BoxProvisioning (see "Schema Evolution via BoxProvisioning"); users opt in by running provisioning when they adopt `OnceOnlyAction.Replay`.
 
 ### Observability
 

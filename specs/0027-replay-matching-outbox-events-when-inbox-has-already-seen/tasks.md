@@ -455,6 +455,73 @@ Each is its own test-first cycle (tests generated via Task 21b from `CausationTr
 
 ---
 
+# Backward-compatibility hardening (Tasks 24–27)
+
+> Added 2026-06-22 after review. Tasks 1–23 made every relational `*Queries` class implement the optional causation interface, which means the base `Add` path *always* switches to the causation-aware INSERT and the DynamoDB outbox *always* claims causation support. Both defeat the opt-in / no-forced-upgrade contract (requirements AC10/AC11, ADR "Write-path gate"). These tasks close the gaps and add the confidence tests. Current store suites are green because every test provisions a *fresh* table with the new builder — none exercise "new code, old schema", so the gap is invisible to the existing suite.
+
+## Task 24: Relational `Add` gates `CausationId` write on actual column existence (memoized probe), not the static interface
+
+> **Backward-compat fix (AC10).** `RelationDatabaseOutbox`/`RelationalDatabaseInbox` currently switch every `Add`/`AddAsync` to `AddCausationCommand` whenever `queries as IRelationalDatabase*CausationQueries` is non-null — and after Tasks 19c–19f / 21c–21g that is *always* non-null (confirmed: outbox `Add` :82/:172, inbox :82/:181; `InitAddDbCommand` :1279 `CausationQueries?.AddCausationCommand ?? queries.AddCommand`). So the new code emits an INSERT naming `CausationId` against tables that may not have the column, breaking every deposit for users who upgrade Brighter without migrating. The interface is a static driver capability and must not gate the write.
+>
+> **Shape (mirrors the 19b→19c–f seam pattern).** The production fix is a SINGLE shared change in the two base classes, so **Task 24a** drives it test-first with the cheapest backend (Sqlite, no container); **Tasks 24b–24e** are per-backend characterization tests that confirm the shared fix on each remaining backend (green on first run once 24a lands). This restores the per-backend `/test-first` rhythm of Tasks 19/21 instead of one monolithic 10-surface gate.
+> **Pre-feature provisioning.** The live builders always emit `CausationId` now (e.g. `SqlOutboxBuilder.GetDDL` — no suppression overload), so an old-schema table can only be produced via the existing `*LegacySeeder` test helpers (`tests/.../BoxProvisioning/Legacy/`, e.g. `MySqlOutboxLegacySeeder.SeedAtV(version, …)`). **Test-infra dependency: those seeders — and a NEW Spanner one (24e).**
+> **Depends on: 19b–19f, 21c–21g, 14, and the `*LegacySeeder` test infrastructure.**
+
+### Task 24a: TEST + IMPLEMENT — Sqlite drives the shared memoized-gate fix (inbox + outbox)
+
+- [ ] **TEST (RED): Sqlite inbox & outbox on a pre-feature schema (no `CausationId` column) still deposit and retrieve with the new code**
+  - `/test-first when a sqlite inbox and outbox on a schema without the causation column still add and retrieve` — **⛔ STOP for approval before implementing**
+  - Provision via `Sqlite{Inbox,Outbox}LegacySeeder` at a pre-CausationId version (NOT the current builder). Exercise outbox `Add` → `OutstandingMessages`/`Get` and inbox `Add` → `Exists`/`Get`; assert success (no SQL error).
+  - Assert `SupportsCausationTracking()` returns `false` against that schema, and a Replay-configured pipeline is rejected by `ValidatePipelines` with a descriptive error (locks the opt-in guard end-to-end).
+  - **Regression guard (column present):** also assert that against a CURRENT-builder table (column present) the store still writes/reads `CausationId` — so flipping the gate does not silently stop tracking on a migrated schema.
+- [ ] **IMPLEMENT: gate the write on a memoized column-existence check (shared base classes)**
+  - In `RelationDatabaseOutbox` and `RelationalDatabaseInbox`, replace the `CausationQueries is not null` gate on the `Add`/`AddAsync` path with a one-shot **memoized** result of the column-existence probe (the same probe behind `SupportsCausationTracking[Async]()`). Column present → `AddCausationCommand` + `@CausationId`; absent → existing `AddCommand`, nothing extra written.
+  - Memoize per store instance in a private `bool?` field, populated lazily by the first probe on EITHER the sync or async path and read by both (sync `Add` uses the sync probe, async the async probe; both write/read the same field), so there is no probe per deposit. **Concurrency:** concurrent first probes are harmless (idempotent, same result) — no lock needed. **No invalidation:** a store constructed before provisioning caches "absent"; mid-process migration needs a restart (acceptable — mandatory upgrade is V11).
+  - Keep `ReplayCausation[Async]`/`GetCausationId[Async]` no-op/return-null when unsupported. Validation continues to call `SupportsCausationTracking()`. Bulk-add path is unchanged (deliberately never causation-tracked).
+
+### Tasks 24b–24e: TEST (characterization) — confirm the shared fix per backend (real DB containers)
+
+Each provisions a pre-feature table via that backend's `*LegacySeeder` and repeats 24a's assertions (old-schema deposit/retrieve succeeds · `SupportsCausationTracking()==false` · Replay-validation rejected · column-present regression guard) for inbox + outbox. Green on first run once 24a's base-class fix is in — **no new production code**.
+
+- [ ] **24b — MsSql** (`MsSql{Inbox,Outbox}LegacySeeder`; host port 11433 azure-sql-edge)
+- [ ] **24c — MySql** (`MySql{Inbox,Outbox}LegacySeeder`)
+- [ ] **24d — Postgres** (`Postgres{Inbox,Outbox}LegacySeeder`)
+- [ ] **24e — Spanner** — ⚠️ **no Spanner legacy seeder exists yet.** First build `Spanner{Inbox,Outbox}LegacySeeder` helpers (parallel to the four catalog seeders) emitting a pre-CausationId table via raw DDL (Spanner has no migration catalog). Embed `EmulatorDetection` in the conn string and run **per-store** (Text and Binary in separate invocations) per the #4162 emulator parallelism constraint.
+
+## Task 25: TEST + IMPLEMENT — DynamoDB outbox `SupportsCausationTracking()` honestly probes the `Causation` GSI
+
+> **Backward-compat fix (AC11).** `DynamoDbOutbox.SupportsCausationTracking() => true` is dishonest: `ReplayCausationAsync` queries the `Causation` GSI (`IndexName = _configuration.CausationIndexName`), which an existing table does not have. Validation passes, then runtime replay throws *"table does not have the specified index"*. Writes are unaffected (sparse-index no-op), so only the guard needs fixing.
+
+- [ ] **TEST (RED): a DynamoDB outbox table without the `Causation` GSI reports `SupportsCausationTracking()` == false and validation rejects Replay**
+  - `/test-first when a dynamodb outbox table lacks the causation index it does not claim causation support` — **⛔ STOP for approval before implementing**
+  - Provision the outbox table **without** the `Causation` GSI → `SupportsCausationTracking()`/`…Async()` return `false`; a Replay-configured pipeline fails `ValidatePipelines`. Provision **with** the GSI → returns `true`. Assert normal `Add` works in both cases (no break without the GSI). DynamoDB-local container.
+  - Cover both `Paramore.Brighter.Outbox.DynamoDB` and `…DynamoDB.V4`.
+- [ ] **IMPLEMENT: `DescribeTable` check for the `Causation` GSI, memoized**
+  - Change `SupportsCausationTracking[Async]()` to a `DescribeTableAsync` that checks the `Causation` GSI (`_configuration.CausationIndexName`) is in the table's `GlobalSecondaryIndexes`; memoize per instance. Sync wraps async per the store's existing pattern.
+  - **Do not** change the NoSQL *inboxes* or MongoDb/Firestore — they remain `=> true` (no GSI needed; the inbox queries the table's own keys, Mongo/Firestore are schemaless).
+  - Depends on: 22.
+
+## Task 26: TEST — Backward-compatibility confidence tests for schemaless NoSQL stores (MongoDb, Firestore, DynamoDB inbox)
+
+> Confidence-only — no production change expected (these stores are genuinely schemaless). Locks the contract that an existing store needs no migration.
+
+- [ ] **TEST: an existing/empty NoSQL store + new code adds, retrieves, and replays end-to-end with no migration**
+  - MongoDb + Firestore **outbox**: against a fresh collection, `Add` then `ReplayCausation` clears dispatch state and the message becomes outstanding again — no index/setup step. MongoDb container; Firestore compile-verify + GCP CI (no local emulator).
+  - DynamoDB / MongoDb / Firestore **inbox**: `Add` then `GetCausationId` returns the stored value against a table/collection with no extra index.
+  - `SupportsCausationTracking()` returns `true` for all of these.
+  - Depends on: 20, 22.
+
+## Task 27: Build + regression verification (backward-compat hardening)
+
+- [ ] **Re-run build + full suites after Tasks 24–26**
+  - `Paramore.Brighter.Core.Tests` green both TFMs.
+  - Per-backend relational inbox/outbox store + BoxProvisioning suites green (real containers): MsSql, MySql, Postgres, Sqlite, Spanner.
+  - DynamoDB / DynamoDB.V4 outbox + inbox suites green; MongoDb suites green; Firestore compile-verify.
+  - New backward-compat tests from 24–26 green; no regressions.
+  - Depends on: 24a–24e, 25, 26.
+
+---
+
 ## Task Summary
 
 | # | Type | Description | Depends On |
@@ -493,6 +560,11 @@ Each is its own test-first cycle (tests generated via Task 21b from `CausationTr
 | 21g | Test + Implement | Spanner outbox implements `IAmACausationTrackingOutbox` | 21a, 21b, 5 |
 | 22 | Test + Implement | NoSQL outbox stores: `IAmACausationTrackingOutbox` (DynamoDB, DynamoDB.V4, Firestore, MongoDb) | 18 |
 | 23 | Verification | Build + run all core tests | all prior (1–22 incl. 19a–19f, 21a–21g) |
+| 24a | Test + Implement | Sqlite drives the shared memoized column-existence gate in both base classes (AC10 — no forced upgrade) | 19b–19f, 21c–21g, 14, `*LegacySeeder` infra |
+| 24b–24e | Test (characterization) | MsSql/MySql/Postgres/Spanner confirm the shared gate on a pre-feature schema (24e builds the missing `Spanner{Inbox,Outbox}LegacySeeder`) | 24a, `*LegacySeeder` infra |
+| 25 | Test + Implement | DynamoDB outbox `SupportsCausationTracking()` honestly `DescribeTable`-probes the `Causation` GSI (AC11) | 22 |
+| 26 | Test | Backward-compat confidence tests for schemaless NoSQL (MongoDb, Firestore, DynamoDB inbox) | 20, 22 |
+| 27 | Verification | Build + regression verification after backward-compat hardening | 24a–24e, 25, 26 |
 
 ## FR Coverage
 
@@ -524,4 +596,7 @@ Each is its own test-first cycle (tests generated via Task 21b from `CausationTr
 | Persistent store implementations | 19b–19f, 20, 21c–21g, 22 |
 | Schema evolution via BoxProvisioning — catalog versions (outbox V8 uniform; inbox V3 for MsSql/MySql/Sqlite, V2 for Postgres), live builders + index, drift parity tests, and `SpannerBoxMigrationRunner.VLatest{Outbox,Inbox}` constant bumps + cross-backend constant test (atomic, structural) | 19a, 21a |
 | Liquid generator templates for causation-tracking outbox tests | 21b |
+| Write-path gate — `Add` writes `CausationId` only when the live schema supports it (memoized probe), no forced upgrade | 24a |
+| Honest capability reporting — relational column probe + DynamoDB outbox GSI `DescribeTable` probe | 24a, 25 |
+| Backward-compatibility confidence tests (relational old-schema, DynamoDB no-GSI, schemaless NoSQL) | 24a–24e, 25, 26 |
 | UseInboxHandler uses pipeline Context (prerequisite) | 1 |
