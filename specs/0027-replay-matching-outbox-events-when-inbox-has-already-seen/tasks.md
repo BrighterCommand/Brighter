@@ -505,11 +505,12 @@ Each provisions a pre-feature table via that backend's `*LegacySeeder` and repea
 
 > Confidence-only — no production change expected (these stores are genuinely schemaless). Locks the contract that an existing store needs no migration.
 
-- [ ] **TEST: an existing/empty NoSQL store + new code adds, retrieves, and replays end-to-end with no migration**
+- [x] **TEST: an existing/empty NoSQL store + new code adds, retrieves, and replays end-to-end with no migration**
   - MongoDb + Firestore **outbox**: against a fresh collection, `Add` then `ReplayCausation` clears dispatch state and the message becomes outstanding again — no index/setup step. MongoDb container; Firestore compile-verify + GCP CI (no local emulator).
   - DynamoDB / MongoDb / Firestore **inbox**: `Add` then `GetCausationId` returns the stored value against a table/collection with no extra index.
   - `SupportsCausationTracking()` returns `true` for all of these.
   - Depends on: 20, 22.
+  - **SATISFIED BY EXISTING COVERAGE (no new tests — Change Scope).** The Task 20 (NoSQL inbox `CausationTrackingInboxBaseTests` subclasses) and Task 22 (NoSQL outbox `CausationTrackingOutboxBaseTests` generated subclasses) tests already exercise exactly this contract against schemaless stores provisioned by the standard provider with **zero causation-specific index/setup**: `CausationTrackingOutboxBaseTests` does Add→MarkDispatched→ReplayCausation→outstanding-again (sync + async) + `SupportsCausationTracking()==true`; the inbox base does Add→`GetCausationId`→value + `Supports==true`. Confidence evidence re-run 2026-06-22: **MongoDb 7/7** (3 outbox-replay + 4 inbox) net9.0; **DynamoDB inbox 4/4** net9.0. Firestore is compile-verified locally + exercised by GCP CI against real Firestore (no local emulator). Writing dedicated duplicates would add no behavioral coverage.
 
 ## Task 27: Build + regression verification (backward-compat hardening)
 
