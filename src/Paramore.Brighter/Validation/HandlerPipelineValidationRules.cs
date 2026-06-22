@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using Paramore.Brighter.RequestValidation.Handlers;
 
 namespace Paramore.Brighter.Validation;
 
@@ -116,4 +117,34 @@ public static class HandlerPipelineValidationRules
             });
         });
 
+    /// <summary>
+    /// Validates that a handler declaring a validation pipeline step has a validation provider registered.
+    /// A step whose handler type is the open generic <see cref="ValidateRequestHandler{TRequest}"/> (sync) or
+    /// <see cref="ValidateRequestHandlerAsync{TRequest}"/> (async) is backed only when the matching flag in
+    /// <paramref name="registrations"/> is set; otherwise the abstract handler cannot be resolved when the
+    /// request flows through the pipeline. Reports one
+    /// <see cref="ValidationSeverity.Warning"/> per unbacked validation step, naming the request/handler and the
+    /// three provider registration calls. Detection is provider-agnostic — it keys off the step's handler type
+    /// (the attribute's <c>GetHandlerType()</c> target), not the concrete attribute type.
+    /// </summary>
+    /// <param name="registrations">Whether the sync and/or async validation provider is registered.</param>
+    /// <returns>A collapsed specification that yields a Warning per validation step with no matching provider.</returns>
+    public static ISpecification<HandlerPipelineDescription> ValidationProviderRegistered(ValidationProviderRegistrations registrations)
+        => new Specification<HandlerPipelineDescription>(d =>
+            d.BeforeSteps.Concat(d.AfterSteps)
+                .Where(step => IsUnbackedValidationStep(step.HandlerType, registrations))
+                .Select(_ => ValidationResult.Fail(new ValidationError(
+                    ValidationSeverity.Warning,
+                    $"Handler '{d.HandlerType.Name}'",
+                    $"Request '{d.RequestType.Name}' declares a validation step but no validation provider is " +
+                    "registered. Call UseFluentValidation(), UseDataAnnotations(), or UseSpecification().")))
+                .ToList());
+
+    /// <summary>
+    /// Returns true when <paramref name="stepHandlerType"/> is a validation handler open generic
+    /// whose matching provider flag in <paramref name="registrations"/> is not set.
+    /// </summary>
+    private static bool IsUnbackedValidationStep(Type stepHandlerType, ValidationProviderRegistrations registrations)
+        => (stepHandlerType == typeof(ValidateRequestHandler<>) && !registrations.Sync)
+           || (stepHandlerType == typeof(ValidateRequestHandlerAsync<>) && !registrations.Async);
 }

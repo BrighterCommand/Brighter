@@ -134,7 +134,7 @@ memory-leak-quick:
   needs: [build]
   services:
     rabbitmq:
-      image: brightercommand/rabbitmq:3.13-management-delay
+      image: brightercommand/rabbitmq:4.2-management-delay
 ```
 - Runs in parallel with other test jobs (postgres, mysql, etc.)
 - Fails fast if memory leaks detected
@@ -276,7 +276,7 @@ var baseline = dotMemory.Check();
 dotnet test --filter "Category=MemoryLeak&Speed=Quick"
 
 # Requires RabbitMQ (via Docker)
-docker run -d -p 5672:5672 brightercommand/rabbitmq:3.13-management-delay
+docker run -d -p 5672:5672 brightercommand/rabbitmq:4.2-management-delay
 ```
 
 **Without dotMemory Unit:**
