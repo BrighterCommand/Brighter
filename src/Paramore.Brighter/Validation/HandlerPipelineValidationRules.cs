@@ -155,7 +155,7 @@ public static class HandlerPipelineValidationRules
                     $"'{inbox?.GetType().Name ?? "(none)"}' does not implement IAmACausationTrackingInbox — " +
                     "Replay cannot find the causation id of the original handling")));
             }
-            else if (!trackingInbox.SupportsCausationTracking())
+            else if (SupportsCausationTrackingSafely(trackingInbox.SupportsCausationTracking, "inbox", source, findings) == false)
             {
                 findings.Add(ValidationResult.Fail(new ValidationError(
                     ValidationSeverity.Warning,
@@ -181,7 +181,7 @@ public static class HandlerPipelineValidationRules
                     $"'{outbox.GetType().Name}' does not implement IAmACausationTrackingOutbox — " +
                     "Replay cannot reset the dispatched state of the original messages")));
             }
-            else if (!trackingOutbox.SupportsCausationTracking())
+            else if (SupportsCausationTrackingSafely(trackingOutbox.SupportsCausationTracking, "outbox", source, findings) == false)
             {
                 findings.Add(ValidationResult.Fail(new ValidationError(
                     ValidationSeverity.Warning,
@@ -200,6 +200,40 @@ public static class HandlerPipelineValidationRules
             UseInboxAsyncAttribute async => async.OnceOnlyAction,
             _ => null
         };
+
+    /// <summary>
+    /// Invokes a store's <c>SupportsCausationTracking()</c> schema probe without letting an
+    /// infrastructure failure (unreachable store, missing permission) escape pipeline validation
+    /// and crash host startup. A probe that throws is treated as "capability unknown" and reported
+    /// as a Warning rather than propagating.
+    /// </summary>
+    /// <param name="probe">The store's live-schema capability probe.</param>
+    /// <param name="store">The store role being probed (<c>"inbox"</c> or <c>"outbox"</c>), used in the message.</param>
+    /// <param name="source">The validation source (handler) the finding is attributed to.</param>
+    /// <param name="findings">The findings list a probe-failure Warning is appended to.</param>
+    /// <returns>
+    /// <c>true</c> or <c>false</c> for the probed capability, or <c>null</c> when the probe itself failed —
+    /// in which case a Warning has already been added to <paramref name="findings"/> and the caller should
+    /// not add a further "schema does not support" finding.
+    /// </returns>
+    private static bool? SupportsCausationTrackingSafely(
+        Func<bool> probe, string store, string source, List<ValidationResult> findings)
+    {
+        try
+        {
+            return probe();
+        }
+        catch (Exception ex)
+        {
+            findings.Add(ValidationResult.Fail(new ValidationError(
+                ValidationSeverity.Warning,
+                source,
+                $"OnceOnlyAction.Replay could not verify causation-tracking support on the {store} store — " +
+                $"the schema capability probe failed ({ex.GetType().Name}: {ex.Message}). Ensure the store is " +
+                "reachable and its schema is migrated before relying on Replay")));
+            return null;
+        }
+    }
 
     /// <summary>
     /// Validates that a handler declaring a validation pipeline step has a validation provider registered.

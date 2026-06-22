@@ -163,6 +163,43 @@ public class ReplayCausationTrackingValidationTests
         Assert.Empty(results);
     }
 
+    [Fact]
+    public void When_replay_configured_and_inbox_support_probe_throws_should_report_warning_not_propagate()
+    {
+        // Arrange — the inbox tracks causation but its live-schema probe throws (e.g. the store is
+        // unreachable at startup). Validation must degrade to a Warning, not let the exception escape.
+        var description = ReplayPipeline(OnceOnlyAction.Replay);
+        var inbox = new TrackingInbox(throwOnProbe: true);
+        var outbox = new TrackingOutbox(supportsCausationTracking: true);
+
+        // Act
+        var results = Evaluate(
+            HandlerPipelineValidationRules.ReplayRequiresCausationTracking(inbox, outbox),
+            description);
+
+        // Assert
+        var finding = Assert.Single(results);
+        Assert.Equal(ValidationSeverity.Warning, finding.Severity);
+    }
+
+    [Fact]
+    public void When_replay_configured_and_outbox_support_probe_throws_should_report_warning_not_propagate()
+    {
+        // Arrange — the outbox tracks causation but its live-schema probe throws (unreachable store).
+        var description = ReplayPipeline(OnceOnlyAction.Replay);
+        var inbox = new TrackingInbox(supportsCausationTracking: true);
+        var outbox = new TrackingOutbox(throwOnProbe: true);
+
+        // Act
+        var results = Evaluate(
+            HandlerPipelineValidationRules.ReplayRequiresCausationTracking(inbox, outbox),
+            description);
+
+        // Assert
+        var finding = Assert.Single(results);
+        Assert.Equal(ValidationSeverity.Warning, finding.Severity);
+    }
+
     private static HandlerPipelineDescription ReplayPipeline(OnceOnlyAction onceOnlyAction)
         => new(
             requestType: typeof(MyCommand),
@@ -202,15 +239,28 @@ internal sealed class NonTrackingInbox : IAmAnInbox
     public IAmABrighterTracer Tracer { set { } }
 }
 
-internal sealed class TrackingInbox(bool supportsCausationTracking)
-    : IAmAnInbox, IAmACausationTrackingInbox
+internal sealed class TrackingInbox : IAmAnInbox, IAmACausationTrackingInbox
 {
+    private readonly bool _supportsCausationTracking;
+    private readonly bool _throwOnProbe;
+
+    public TrackingInbox(bool supportsCausationTracking = false, bool throwOnProbe = false)
+    {
+        _supportsCausationTracking = supportsCausationTracking;
+        _throwOnProbe = throwOnProbe;
+    }
+
     public IAmABrighterTracer Tracer { set { } }
 
-    public bool SupportsCausationTracking() => supportsCausationTracking;
+    public bool SupportsCausationTracking()
+        => _throwOnProbe
+            ? throw new System.InvalidOperationException("inbox store unreachable")
+            : _supportsCausationTracking;
 
     public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
-        => Task.FromResult(supportsCausationTracking);
+        => _throwOnProbe
+            ? throw new System.InvalidOperationException("inbox store unreachable")
+            : Task.FromResult(_supportsCausationTracking);
 
     public string? GetCausationId(string id, string contextKey,
         RequestContext? requestContext, int timeoutInMilliseconds = -1)
@@ -227,15 +277,28 @@ internal sealed class NonTrackingOutbox : IAmAnOutbox
     public IAmABrighterTracer? Tracer { set { } }
 }
 
-internal sealed class TrackingOutbox(bool supportsCausationTracking)
-    : IAmAnOutbox, IAmACausationTrackingOutbox
+internal sealed class TrackingOutbox : IAmAnOutbox, IAmACausationTrackingOutbox
 {
+    private readonly bool _supportsCausationTracking;
+    private readonly bool _throwOnProbe;
+
+    public TrackingOutbox(bool supportsCausationTracking = false, bool throwOnProbe = false)
+    {
+        _supportsCausationTracking = supportsCausationTracking;
+        _throwOnProbe = throwOnProbe;
+    }
+
     public IAmABrighterTracer? Tracer { set { } }
 
-    public bool SupportsCausationTracking() => supportsCausationTracking;
+    public bool SupportsCausationTracking()
+        => _throwOnProbe
+            ? throw new System.InvalidOperationException("outbox store unreachable")
+            : _supportsCausationTracking;
 
     public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
-        => Task.FromResult(supportsCausationTracking);
+        => _throwOnProbe
+            ? throw new System.InvalidOperationException("outbox store unreachable")
+            : Task.FromResult(_supportsCausationTracking);
 
     public void ReplayCausation(string causationId, RequestContext? requestContext,
         Dictionary<string, object>? args = null)
