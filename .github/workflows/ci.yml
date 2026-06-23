@@ -47,7 +47,7 @@ jobs:
             9.0.x
             10.0.x
       - run: dotnet --info
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/cache@v5
@@ -94,7 +94,7 @@ jobs:
     needs: [build]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -112,7 +112,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -130,7 +130,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -148,7 +148,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -180,7 +180,7 @@ jobs:
           --health-retries 10             
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -205,7 +205,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -224,7 +224,7 @@ jobs:
 
     services:
       rabbitmq:
-        image: brightercommand/rabbitmq:3.13-management-delay
+        image: brightercommand/rabbitmq:4.2-management-delay
         ports:
         - 5672:5672 
         # needed because the rabbitmq container does not provide a healthcheck
@@ -235,7 +235,7 @@ jobs:
           --health-retries 10
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -312,7 +312,7 @@ jobs:
           exit 1
         fi
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Setup dotnet
       uses: actions/setup-dotnet@v5
       with:
@@ -343,7 +343,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -369,7 +369,7 @@ jobs:
           ACCEPT_EULA: Y
           MSSQL_SA_PASSWORD: Password123!
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -397,7 +397,7 @@ jobs:
         options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=10
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -428,7 +428,7 @@ jobs:
           - 8000:8000
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -462,7 +462,7 @@ jobs:
           --health-start-period 5s
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Required to fetch the Git tags
           filter: tree:0
@@ -498,7 +498,7 @@ jobs:
       AWS_DEFAULT_OUTPUT: json    
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -532,7 +532,7 @@ jobs:
       AWS_DEFAULT_OUTPUT: json
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -558,7 +558,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -580,7 +580,7 @@ jobs:
     env:
       BrighterTestsASBConnectionString: ${{ secrets.BRIGHTERTESTS_ASB_CONNECTION_STRING }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -612,7 +612,7 @@ jobs:
           --health-timeout 10s
           --health-retries 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -632,7 +632,7 @@ jobs:
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with: 
           fetch-depth: 0 # Required to fetch the Git tags
           filter: tree:0
@@ -701,7 +701,7 @@ jobs:
 #          AUTO_CREATE_TOPIC_ENABLE: "true"  # Auto-create topics
 #          
 #    steps:
-#      - uses: actions/checkout@v6
+#      - uses: actions/checkout@v7
 #        with:
 #          fetch-depth: 0 # Required to fetch the Git tags
 #          filter: tree:0

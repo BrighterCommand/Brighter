@@ -54,11 +54,11 @@ namespace Paramore.Brighter
         private readonly InstrumentationOptions _instrumentationOptions;
 
         //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
-            new ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>>();
+        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
+            new ConcurrentDictionary<Type, IOrderedEnumerable<WrapWithAttribute>>();
 
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento =
-            new ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>>();
+        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento =
+            new ConcurrentDictionary<Type, IOrderedEnumerable<UnwrapWithAttribute>>();
 
         /// <summary>
         /// Creates an instance of a transform pipeline builder.
@@ -198,16 +198,16 @@ namespace Paramore.Brighter
 
         private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
         {
-            var key = messageMapper.GetType().Name;
-            return s_wrapTransformsMemento.GetOrAdd(key, s => FindMapToMessage(messageMapper)
+            var key = messageMapper.GetType();
+            return s_wrapTransformsMemento.GetOrAdd(key, _ => FindMapToMessage(messageMapper)
                 .GetOtherWrapsInPipeline()
                 .OrderByDescending(attribute => attribute.Step));
         }
 
         private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
         {
-            var key = messageMapper.GetType().Name;
-            return s_unWrapTransformsMemento.GetOrAdd(key, s => FindMapToRequest(messageMapper)
+            var key = messageMapper.GetType();
+            return s_unWrapTransformsMemento.GetOrAdd(key, _ => FindMapToRequest(messageMapper)
                 .GetOtherUnwrapsInPipeline()
                 .OrderByDescending(attribute => attribute.Step));
         }
