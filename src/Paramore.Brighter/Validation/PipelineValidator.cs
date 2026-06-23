@@ -51,7 +51,6 @@ public class PipelineValidator(
     IEnumerable<ISpecification<Subscription>>? consumerSpecs = null,
     IAmAnInbox? inbox = null,
     IAmAnOutbox? outbox = null,
-    IEnumerable<ISpecification<Subscription>>? consumerSpecs = null,
     ValidationProviderRegistrations? providerRegistrations = null,
     MessageMapperRegistry? mapperRegistry = null,
     IAmATransformerResolvabilityProbe? transformerProbe = null) : IAmAPipelineValidator
