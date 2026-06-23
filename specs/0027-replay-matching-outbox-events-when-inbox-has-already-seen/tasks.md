@@ -66,7 +66,7 @@ This is a **tidy-first structural change** — ensuring `PipelineBuilder.Describ
 
 ---
 
-## Task 4: Structural — Expose `Outbox` from `IAmAnOutboxProducerMediator`
+## Task 4: Structural — Expose `Outbox` from `IAmAnOutboxProducerMediator` ✅
 
 This is a **tidy-first structural change** — adding a read-only `IAmAnOutbox? Outbox` property so pipeline validation can access the outbox instance.
 
