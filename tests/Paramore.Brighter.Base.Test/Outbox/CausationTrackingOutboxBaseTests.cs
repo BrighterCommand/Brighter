@@ -143,6 +143,78 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
     }
 
     [Fact]
+    public void When_replaying_causation_for_messages_deposited_in_bulk_should_clear_dispatch_state()
+    {
+        // Arrange — deposit the CausationA messages through the bulk Add(IEnumerable) overload
+        var contextA = ContextWithCausation(CausationA);
+        var contextB = ContextWithCausation(CausationB);
+        var firstWithA = CreateMessage();
+        var secondWithA = CreateMessage();
+        var messageWithB = CreateMessage();
+
+        Outbox.Add(new[] { firstWithA, secondWithA }, contextA);
+        Outbox.Add(new[] { messageWithB }, contextB);
+
+        var dispatchedAt = DateTimeOffset.UtcNow;
+        Outbox.MarkDispatched(firstWithA.Id, contextA, dispatchedAt);
+        Outbox.MarkDispatched(secondWithA.Id, contextA, dispatchedAt);
+        Outbox.MarkDispatched(messageWithB.Id, contextB, dispatchedAt);
+
+        // all three start dispatched, so none are outstanding
+        var outstandingBefore = Outbox.OutstandingMessages(TimeSpan.Zero, contextA).Select(m => m.Id).ToArray();
+        Assert.DoesNotContain(firstWithA.Id, outstandingBefore);
+        Assert.DoesNotContain(secondWithA.Id, outstandingBefore);
+
+        // Act
+        TrackingOutbox.ReplayCausation(CausationA, contextA);
+
+        // Assert — the two bulk-deposited CausationA messages are outstanding again
+        var outstanding = Outbox.OutstandingMessages(TimeSpan.Zero, contextA).Select(m => m.Id).ToArray();
+        Assert.Contains(firstWithA.Id, outstanding);
+        Assert.Contains(secondWithA.Id, outstanding);
+
+        // Assert — the CausationB message is untouched and still dispatched
+        Assert.DoesNotContain(messageWithB.Id, outstanding);
+    }
+
+    [Fact]
+    public async Task When_replaying_causation_for_messages_deposited_in_bulk_should_clear_dispatch_state_async()
+    {
+        // Arrange — deposit the CausationA messages through the bulk AddAsync(IEnumerable) overload
+        var contextA = ContextWithCausation(CausationA);
+        var contextB = ContextWithCausation(CausationB);
+        var firstWithA = CreateMessage();
+        var secondWithA = CreateMessage();
+        var messageWithB = CreateMessage();
+
+        await OutboxAsync.AddAsync(new[] { firstWithA, secondWithA }, contextA);
+        await OutboxAsync.AddAsync(new[] { messageWithB }, contextB);
+
+        var dispatchedAt = DateTimeOffset.UtcNow;
+        await OutboxAsync.MarkDispatchedAsync(firstWithA.Id, contextA, dispatchedAt);
+        await OutboxAsync.MarkDispatchedAsync(secondWithA.Id, contextA, dispatchedAt);
+        await OutboxAsync.MarkDispatchedAsync(messageWithB.Id, contextB, dispatchedAt);
+
+        // all three start dispatched, so none are outstanding
+        var outstandingBefore =
+            (await OutboxAsync.OutstandingMessagesAsync(TimeSpan.Zero, contextA)).Select(m => m.Id).ToArray();
+        Assert.DoesNotContain(firstWithA.Id, outstandingBefore);
+        Assert.DoesNotContain(secondWithA.Id, outstandingBefore);
+
+        // Act
+        await TrackingOutbox.ReplayCausationAsync(CausationA, contextA);
+
+        // Assert — the two bulk-deposited CausationA messages are outstanding again
+        var outstanding =
+            (await OutboxAsync.OutstandingMessagesAsync(TimeSpan.Zero, contextA)).Select(m => m.Id).ToArray();
+        Assert.Contains(firstWithA.Id, outstanding);
+        Assert.Contains(secondWithA.Id, outstanding);
+
+        // Assert — the CausationB message is untouched and still dispatched
+        Assert.DoesNotContain(messageWithB.Id, outstanding);
+    }
+
+    [Fact]
     public void When_asking_outbox_if_it_supports_causation_tracking_should_be_true()
     {
         // Act

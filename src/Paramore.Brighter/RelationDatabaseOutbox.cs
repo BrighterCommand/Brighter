@@ -136,8 +136,13 @@ namespace Paramore.Brighter
 
             try
             {
+                // Gate the bulk write on the same memoized probe as the single Add so a batch deposited under
+                // [UseInbox] persists its CausationId; an un-migrated table keeps the plain bulk insert (AC10).
+                var includeCausation = CausationColumnExists();
+                var causationId = includeCausation ? ReadCausationId(requestContext) : null;
+
                 WriteToStore(transactionProvider,
-                    connection => InitBulkAddDbCommand(messages.ToList(), connection),
+                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeCausation, causationId),
                     () => logger.LogWarning("Outbox: At least one message already exists in the outbox"));
             }
             finally
@@ -207,7 +212,7 @@ namespace Paramore.Brighter
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task"/>.</returns>
-        public Task AddAsync(
+        public async Task AddAsync(
             IEnumerable<Message> messages,
             RequestContext? requestContext,
             int outBoxTimeout = -1,
@@ -228,10 +233,16 @@ namespace Paramore.Brighter
 
             try
             {
-                return WriteToStoreAsync(transactionProvider,
-                    connection => InitBulkAddDbCommand(messages.ToList(), connection),
+                // Gate the bulk write on the same memoized probe as the single AddAsync so a batch deposited under
+                // [UseInbox] persists its CausationId; an un-migrated table keeps the plain bulk insert (AC10).
+                var includeCausation = await CausationColumnExistsAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+                var causationId = includeCausation ? ReadCausationId(requestContext) : null;
+
+                await WriteToStoreAsync(transactionProvider,
+                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeCausation, causationId),
                     () => logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"),
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
             finally
             {
@@ -1308,10 +1319,12 @@ namespace Paramore.Brighter
             => CreateCommand(connection, GenerateSqlText(CausationQueries!.ReplayCausationCommand), 0,
                 CreateSqlParameter("@CausationId", causationId));
 
-        private DbCommand InitBulkAddDbCommand(List<Message> messages, DbConnection connection)
+        private DbCommand InitBulkAddDbCommand(List<Message> messages, DbConnection connection, bool includeCausation,
+            string? causationId)
         {
-            var insertClause = GenerateBulkInsert(messages);
-            return CreateCommand(connection, GenerateSqlText(queries.BulkAddCommand, insertClause.insertClause), 0,
+            var insertClause = GenerateBulkInsert(messages, includeCausation, causationId);
+            var addCommand = includeCausation ? CausationQueries!.BulkAddCausationCommand : queries.BulkAddCommand;
+            return CreateCommand(connection, GenerateSqlText(addCommand, insertClause.insertClause), 0,
                 insertClause.parameters);
         }
 
@@ -1569,7 +1582,8 @@ namespace Paramore.Brighter
             return (string.Join(",", paramNames), parameters);
         }
 
-        protected virtual (string insertClause, IDbDataParameter[] parameters) GenerateBulkInsert(List<Message> messages)
+        protected virtual (string insertClause, IDbDataParameter[] parameters) GenerateBulkInsert(
+            List<Message> messages, bool includeCausation = false, string? causationId = null)
         {
             var messageParams = new List<string>();
             var parameters = new List<IDbDataParameter>();
@@ -1577,13 +1591,22 @@ namespace Paramore.Brighter
             for (int i = 0; i < messages.Count; i++)
             {
                 // include all columns in the same order as the CREATE TABLE DDL:
-                messageParams.Add(
+                var rowColumns =
                     $"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, " +
                     $"@p{i}_ReplyTo, @p{i}_ContentType, @p{i}_PartitionKey, @p{i}_HeaderBag, @p{i}_Body, " +
-                    $"@p{i}_Source, @p{i}_Type, @p{i}_DataSchema, @p{i}_Subject, @p{i}_TraceParent, @p{i}_TraceState, " +  
-                    $"@p{i}_Baggage, @p{i}_WorkflowId, @p{i}_JobId)");
+                    $"@p{i}_Source, @p{i}_Type, @p{i}_DataSchema, @p{i}_Subject, @p{i}_TraceParent, @p{i}_TraceState, " +
+                    $"@p{i}_Baggage, @p{i}_WorkflowId, @p{i}_JobId";
+
+                // The bulk causation insert appends a trailing CausationId column; bind one per-row parameter so each
+                // batched message carries the same causation id as the single Add path would.
+                rowColumns += includeCausation ? $", @p{i}_CausationId)" : ")";
+                messageParams.Add(rowColumns);
 
                 parameters.AddRange(InitAddDbParameters(messages[i], i));
+                if (includeCausation)
+                {
+                    parameters.Add(CreateSqlParameter($"@p{i}_CausationId", causationId));
+                }
             }
 
             return (string.Join(",", messageParams), parameters.ToArray());

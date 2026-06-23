@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
     public class UseInboxHandlerReplayTelemetryTests
     {
         private const string ReplayEventName = "UseInboxHandler Duplicate Replay";
+        private const string ReplaySkippedEventName = "UseInboxHandler Duplicate Replay Skipped";
         private const string CausationId = "original-causation-id";
         private const string ContextKey = "UseInboxHandlerReplayTelemetryTests";
 
@@ -108,6 +109,33 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             var tags = replayEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
             Assert.Equal(_command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
             Assert.Equal(CausationId, tags[BrighterSemanticConventions.CausationId]);
+        }
+
+        [Fact]
+        public void When_replaying_duplicate_with_no_causation_id_should_add_distinct_skipped_event()
+        {
+            //Arrange — a command that has been seen but has NO causation id stored against it
+            var inbox = new InMemoryInbox(_timeProvider);
+            var outbox = new InMemoryOutbox(_timeProvider) { Tracer = new BrighterTracer() };
+            var command = new MyCommand { Value = "No Causation" };
+            inbox.Add(command, ContextKey, new RequestContext());
+
+            using var span = new Activity("pipeline").Start();
+            var handler = new UseInboxHandler<MyCommand>(inbox, outbox);
+            handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Replay);
+            handler.Context = new RequestContext { Span = span };
+
+            //Act
+            handler.Handle(command);
+
+            //Assert — nothing was replayed, so the event is the distinct "skipped" event, not the replay event
+            Assert.DoesNotContain(span.Events, e => e.Name == ReplayEventName);
+            var skippedEvent = span.Events.SingleOrDefault(e => e.Name == ReplaySkippedEventName);
+            Assert.Equal(ReplaySkippedEventName, skippedEvent.Name);
+
+            //Assert — the event still carries the request id for correlation
+            var tags = skippedEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
+            Assert.Equal(command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
         }
 
         [Fact]

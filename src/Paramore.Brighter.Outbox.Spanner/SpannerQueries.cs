@@ -55,6 +55,13 @@ public class SpannerQueries : IRelationDatabaseOutboxQueries, IRelationalDatabas
             "@Source, @Type, @DataSchema, @Subject, @TraceParent, @TraceState, @Baggage, @WorkflowId, @JobId, @CausationId)";
 
     /// <inheritdoc />
+    public string BulkAddCausationCommand =>
+        "INSERT INTO `{0}` " +
+        "(`MessageId`,`MessageType`,`Topic`,`Timestamp`,`CorrelationId`,`ReplyTo`,`ContentType`,`PartitionKey`,`HeaderBag`,`Body`" +
+        ",`Source`,`Type`,`DataSchema`,`Subject`,`TraceParent`,`TraceState`,`Baggage`, `WorkflowId`, `JobId`, `CausationId`) " +
+        "VALUES {1}";
+
+    /// <inheritdoc />
     public string ReplayCausationCommand => "UPDATE `{0}` SET `Dispatched` = NULL WHERE `CausationId` = @CausationId";
 
     /// <inheritdoc />

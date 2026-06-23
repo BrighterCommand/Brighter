@@ -160,7 +160,13 @@ namespace Paramore.Brighter.Inbox.Handlers
                 { BrighterSemanticConventions.CausationId, causationId }
             };
 
-            span.AddEvent(new ActivityEvent("UseInboxHandler Duplicate Replay", DateTimeOffset.UtcNow, tags));
+            // Distinguish "replayed a causation's messages" from "nothing replayed because no causation id was found",
+            // so operators don't read the event as a successful replay when the outbox was never asked to resend.
+            var eventName = causationId is null
+                ? "UseInboxHandler Duplicate Replay Skipped"
+                : "UseInboxHandler Duplicate Replay";
+
+            span.AddEvent(new ActivityEvent(eventName, DateTimeOffset.UtcNow, tags));
         }
 
         /// <summary>

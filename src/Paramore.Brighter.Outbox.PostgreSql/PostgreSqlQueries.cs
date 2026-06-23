@@ -32,6 +32,11 @@
             ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\",\"causationid\") " +
             "VALUES (@MessageId,@MessageType,@Topic,@Timestamp,@CorrelationId,@ReplyTo,@ContentType,@PartitionKey,@HeaderBag,@Body" +
             ",@Source,@Type,@DataSchema,@Subject,@TraceParent,@TraceState,@Baggage, @WorkflowId,@JobId,@CausationId)";
+        public string BulkAddCausationCommand { get; } =
+            "INSERT INTO {0} " +
+            "(\"messageid\",\"messagetype\",\"topic\",\"timestamp\",\"correlationid\",\"replyto\",\"contenttype\",\"partitionkey\",\"headerbag\",\"body\"" +
+            ",\"source\",\"type\",\"dataschema\",\"subject\",\"traceparent\",\"tracestate\",\"baggage\", \"workflowid\",\"jobid\",\"causationid\") " +
+            "VALUES {1}";
         public string ReplayCausationCommand { get; } = "UPDATE {0} SET \"dispatched\" = NULL WHERE \"causationid\" = @CausationId";
         public string CausationColumnExistsCommand { get; } = "SELECT 1 FROM pg_attribute WHERE attrelid = to_regclass('{0}') AND attname = 'causationid' AND NOT attisdropped";
     }

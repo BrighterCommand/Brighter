@@ -44,6 +44,13 @@ namespace Paramore.Brighter
         string AddCausationCommand { get; }
 
         /// <summary>
+        /// A bulk <c>INSERT</c> that also writes the <c>CausationId</c> column for every row (in addition to the columns
+        /// written by <see cref="IRelationDatabaseOutboxQueries.BulkAddCommand"/>). Takes a leading <c>{0}</c> table-name
+        /// placeholder and a trailing <c>{1}</c> placeholder for the generated per-row <c>VALUES</c> tuples.
+        /// </summary>
+        string BulkAddCausationCommand { get; }
+
+        /// <summary>
         /// An <c>UPDATE</c> that clears the dispatched state of every message stored under a given <c>CausationId</c>,
         /// so the sweeper resends them. Takes a leading <c>{0}</c> table-name placeholder.
         /// </summary>
