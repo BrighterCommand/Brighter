@@ -86,6 +86,13 @@ public class MsSqlOutboxMigrationsTests
                 string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
                 $"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
+
+        //Assert — V8 (Spec 0027, #2541) adds the CausationId column AND its replay index. Its UpScript
+        //carries the EXEC-wrapped CREATE INDEX on CausationId — the "index asserted separately" check for AC9.
+        var v8Script = migrations[7].UpScript;
+        Assert.Contains("[CausationId]", v8Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CREATE INDEX", v8Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("idx_outbox_test_CausationId", v8Script, StringComparison.OrdinalIgnoreCase);
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

@@ -104,6 +104,14 @@ public class PostgreSqlOutboxMigrationsTests
         //(distinct from the MSSQL V4 commit 1cdc04b60 / #2560 because Postgres lagged the
         //payload widening / binary-variant work). This pins archaeology accuracy.
         Assert.Equal("cff67fd5e / #3464", migrations[3].SourceReference);
+
+        //Assert — V8 (Spec 0027, #2541) adds the causationid column AND its replay index. Its UpScript
+        //carries Postgres's native CREATE INDEX IF NOT EXISTS on the lowercase-folded idx_<table>_causationid
+        //— the AC9 "index asserted separately" check.
+        var v8Script = migrations[7].UpScript;
+        Assert.Contains("causationid", v8Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CREATE INDEX IF NOT EXISTS", v8Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("idx_outbox_test_causationid", v8Script, StringComparison.OrdinalIgnoreCase);
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

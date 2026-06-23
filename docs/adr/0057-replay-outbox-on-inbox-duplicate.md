@@ -530,10 +530,10 @@ All events are guarded by `Context?.Span != null` and gated on `InstrumentationO
 
 | Path | Event Name | Tags |
 |------|-----------|------|
-| First handling (no duplicate) | `"UseInboxHandler Add"` | `request.id`, `context_key` |
-| Duplicate + Throw | `"UseInboxHandler Duplicate Throw"` | `request.id`, `context_key` |
-| Duplicate + Warn | `"UseInboxHandler Duplicate Warn"` | `request.id`, `context_key` |
-| Duplicate + Replay | `"UseInboxHandler Duplicate Replay"` | `request.id`, `context_key`, `causation_id` |
+| First handling (no duplicate) | `"UseInboxHandler Add"` | `request.id` |
+| Duplicate + Throw | `"UseInboxHandler Duplicate Throw"` | `request.id` |
+| Duplicate + Warn | `"UseInboxHandler Duplicate Warn"` | `request.id` |
+| Duplicate + Replay | `"UseInboxHandler Duplicate Replay"` | `request.id`, `causation_id` |
 
 The Replay event includes the `CausationId` using a new `BrighterSemanticConventions.CausationId` constant (`"paramore.brighter.causation_id"`) — distinct from the existing `ConversationId` constant which carries the `CorrelationId` for request-reply patterns.
 

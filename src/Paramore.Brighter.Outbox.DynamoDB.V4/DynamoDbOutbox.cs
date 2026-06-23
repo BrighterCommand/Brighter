@@ -586,8 +586,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
                 .DescribeTableAsync(new DescribeTableRequest { TableName = _configuration.TableName }, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
 
-            var exists = describeResponse.Table.GlobalSecondaryIndexes
-                .Any(gsi => gsi.IndexName == _configuration.CausationIndexName);
+            // Null-guard GlobalSecondaryIndexes: it is an empty list under the SDK default
+            // (AWSConfigs.InitializeCollections = true), but an app that disables that default gets
+            // null for a table with no GSIs — treat that as "index absent" rather than NRE.
+            var exists = describeResponse.Table.GlobalSecondaryIndexes?
+                .Any(gsi => gsi.IndexName == _configuration.CausationIndexName) ?? false;
 
             _causationIndexExists = exists;
             return exists;

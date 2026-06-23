@@ -109,6 +109,14 @@ public class MySqlOutboxMigrationsTests
         {
             Assert.Null(migrations[v - 1].IdempotencyCheckSql);
         }
+
+        //Assert — V8 (Spec 0027, #2541) adds the CausationId column AND its replay index. Its UpScript
+        //carries a CREATE INDEX on the table-scoped idx_CausationId (MySQL lacks CREATE INDEX IF NOT
+        //EXISTS, so the index is emitted via the same prepared-statement probe) — the AC9 index check.
+        var v8Script = migrations[7].UpScript;
+        Assert.Contains("CausationId", v8Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CREATE INDEX", v8Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("idx_CausationId", v8Script, StringComparison.OrdinalIgnoreCase);
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()
