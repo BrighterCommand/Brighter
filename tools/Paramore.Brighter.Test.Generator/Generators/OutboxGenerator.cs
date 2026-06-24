@@ -71,7 +71,6 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                 }
 
                 outboxConfiguration.Prefix = $".{prefix}";
-                    ;
                 await GenerateAsync(
                     configuration,
                     Path.Combine("Outbox", prefix, "Generated", "Sync"),

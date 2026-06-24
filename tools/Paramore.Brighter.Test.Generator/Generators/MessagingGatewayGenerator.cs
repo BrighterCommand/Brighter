@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 /// and conditionally skipping tests for unsupported gateway features.
 /// </summary>
 /// <param name="logger">The logger instance used for diagnostic output during generation.</param>
-public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
+public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger)
     : BaseGenerator(logger)
 {
     /// <summary>
@@ -71,7 +71,7 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
         {
             foreach (var (key, messagingGatewayConfiguration) in configuration.MessagingGateways)
             {
-                logger.LogInformation("Generating messaging gateway test for {OutboxName}", key);
+                logger.LogInformation("Generating messaging gateway test for {GatewayName}", key);
                 var prefix = messagingGatewayConfiguration.Prefix;
                 if (string.IsNullOrEmpty(prefix))
                 {
@@ -125,11 +125,6 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
         }
 
         if (!configuration.HasSupportToDelayedMessages && fileName.Contains("with_delay"))
-        {
-            return true;
-        }
-
-        if (!configuration.HasSupportToPartitionKey && fileName.Contains("partition_key"))
         {
             return true;
         }

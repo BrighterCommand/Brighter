@@ -9,7 +9,6 @@
     "HasSupportToPublishConfirmation": false,
     "HasSupportToDeadLetterQueue": true,
     "HasSupportToDelayedMessages": false,
-    "HasSupportToPartitionKey": false,
     "HasSupportToValidateBrokerExistence": false,
     "HasSupportToRequeue": true,
     "HasSupportToValidateInfrastructure": false

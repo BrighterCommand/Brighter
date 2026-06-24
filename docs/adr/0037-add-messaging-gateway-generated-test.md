@@ -71,10 +71,10 @@ Added templates for messaging gateway tests:
 
 ### 5. Integration into Build Process
 
-Updated `Program.cs` to call `MessageGatewayGenerator` alongside existing generators:
+Updated `Program.cs` to call `MessagingGatewayGenerator` alongside existing generators:
 
 ```csharp
-await new MessageGatewayGenerator(factory.CreateLogger<MessageGatewayGenerator>()).GenerateAsync(configuration);
+await new MessagingGatewayGenerator(factory.CreateLogger<MessagingGatewayGenerator>()).GenerateAsync(configuration);
 ```
 
 ### 6. Example Generated Test Structure

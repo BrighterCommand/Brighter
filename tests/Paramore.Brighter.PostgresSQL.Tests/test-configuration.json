@@ -23,7 +23,6 @@
     "HasSupportToPublishConfirmation": false,
     "HasSupportToDeadLetterQueue": false,
     "HasSupportToDelayedMessages": false,
-    "HasSupportToPartitionKey": false,
     "HasSupportToRequeue": true
   }
 }

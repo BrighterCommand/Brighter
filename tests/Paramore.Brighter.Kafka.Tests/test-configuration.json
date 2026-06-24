@@ -11,7 +11,6 @@
       "HasSupportToPublishConfirmation": true,
       "HasSupportToDeadLetterQueue": false,
       "HasSupportToDelayedMessages": false,
-      "HasSupportToPartitionKey": false,
       "HasSupportToValidateBrokerExistence": false,
       "HasSupportToRequeue": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
@@ -26,7 +25,6 @@
       "HasSupportToPublishConfirmation": true,
       "HasSupportToDeadLetterQueue": false,
       "HasSupportToDelayedMessages": false,
-      "HasSupportToPartitionKey": true,
       "HasSupportToValidateBrokerExistence": false,
       "HasSupportToRequeue": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000

@@ -279,7 +279,6 @@ Feature flags control which test templates are generated. When a flag is `false`
 |---|---|---|---|
 | `HasSupportToPublishConfirmation` | `false` | `confirming_posting` | Transport doesn't support publisher confirms |
 | `HasSupportToDelayedMessages` | `false` | `delayed_message`, `with_delay` | No delayed/scheduled message support |
-| `HasSupportToPartitionKey` | `false` | `partition_key` | Transport doesn't support partition keys |
 | `HasSupportToDeadLetterQueue` | `false` | `dead_letter_queue` | No dead letter queue support |
 | `HasSupportToValidateBrokerExistence` | `false` | `no_broker_created` | Transport can't validate broker existence |
 | `HasSupportToRequeue` | `false` | `requeuing` | Transport doesn't support message requeue |

@@ -92,8 +92,8 @@ try
 
     await new SharedGenerator(factory.CreateLogger<SharedGenerator>()).GenerateAsync(configuration);
     await new OutboxGenerator(factory.CreateLogger<OutboxGenerator>()).GenerateAsync(configuration);
-    await new MessageGatewayGenerator(
-        factory.CreateLogger<MessageGatewayGenerator>()
+    await new MessagingGatewayGenerator(
+        factory.CreateLogger<MessagingGatewayGenerator>()
     ).GenerateAsync(configuration);
 
     return 0;

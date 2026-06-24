@@ -91,11 +91,6 @@ public class MessagingGatewayConfiguration
     public bool HasSupportToDelayedMessages { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the messaging gateway supports partition keys for message routing.
-    /// </summary>
-    public bool HasSupportToPartitionKey { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether the messaging gateway supports dead letter queues.
     /// </summary>
     public bool HasSupportToDeadLetterQueue { get; set; }

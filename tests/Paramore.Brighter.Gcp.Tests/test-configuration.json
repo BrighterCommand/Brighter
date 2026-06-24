@@ -10,7 +10,6 @@
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
-      "HasSupportToPartitionKey": false,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 5000
@@ -25,7 +24,6 @@
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
-      "HasSupportToPartitionKey": true,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 5000
@@ -39,7 +37,6 @@
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
-      "HasSupportToPartitionKey": false,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 5000
@@ -54,7 +51,6 @@
       "HasSupportToPublishConfirmation": false,
       "HasSupportToDeadLetterQueue": true,
       "HasSupportToDelayedMessages": false,
-      "HasSupportToPartitionKey": true,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 5000
