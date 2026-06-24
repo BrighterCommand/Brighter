@@ -453,8 +453,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return outbox;
             }, ServiceLifetime.Singleton));
 
-            //if the outbox supports causation tracking, resolve it under that role interface too (same instance);
-            //returns null for an outbox that does not implement the role
+            //Resolve the outbox under the causation-tracking role interface too (same instance). Unlike the
+            //eager AddProducers overload — which knows the concrete outbox and can register this conditionally
+            //(see above) — this overload defers outbox creation to a factory, so the outbox type is unknown at
+            //registration time and we cannot omit the descriptor for a non-tracking outbox. The factory
+            //therefore returns null when the outbox does not implement the role; the only consumer
+            //(UseInboxHandler) takes it as an optional ctor arg resolved via GetService, so a null is expected.
+            //Note: because the descriptor IS registered here, GetRequiredService<IAmACausationTrackingOutbox>()
+            //returns null (rather than throwing) for a non-tracking outbox — use GetService and null-check.
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmACausationTrackingOutbox),
                 sp => (sp.GetRequiredService<IAmAnOutbox>() as IAmACausationTrackingOutbox)!,
                 ServiceLifetime.Singleton));

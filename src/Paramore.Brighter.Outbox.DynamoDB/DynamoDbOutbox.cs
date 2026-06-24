@@ -550,6 +550,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// Memoized result of the live probe for the <c>Causation</c> Global Secondary Index. Null until
         /// the first probe; a concurrent race is harmless (both observers see the same table state).
+        /// Access is deliberately not synchronised: a stale-null read on a weak memory model just triggers
+        /// one extra idempotent probe that resolves to the same value, so the cached answer never changes
+        /// once written. (<c>volatile</c> is not applicable to a nullable value type, hence this note.)
         /// </summary>
         private bool? _causationIndexExists;
 

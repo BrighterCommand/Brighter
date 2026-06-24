@@ -38,6 +38,9 @@ namespace Paramore.Brighter
         // the interface, so it must NOT gate the write — an un-migrated table lacks the column and a
         // causation-aware INSERT would fail (AC10). Populated by the first probe on either the sync or
         // async path and read by both; concurrent first probes are harmless (idempotent, same result).
+        // Access is deliberately not synchronised: a stale-null read on a weak memory model just triggers
+        // one extra idempotent probe, and both probes resolve to the same value, so the cached answer never
+        // changes once written. (`volatile` is not applicable to a nullable value type, hence this note.)
         // Never invalidated: a store constructed before provisioning caches "absent", so a mid-process
         // migration requires a restart.
         private bool? _causationColumnExists;
