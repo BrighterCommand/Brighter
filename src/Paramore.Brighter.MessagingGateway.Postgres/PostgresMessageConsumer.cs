@@ -394,7 +394,7 @@ public partial class PostgresMessageConsumer(
             using var command = connection.CreateCommand();
             if (timeOut != null && timeOut.Value != TimeSpan.Zero)
             {
-                command.CommandTimeout = Convert.ToInt32(timeOut.Value.Seconds);
+                command.CommandTimeout = Convert.ToInt32(timeOut.Value.TotalSeconds);
             }
 
             command.CommandText = $"""

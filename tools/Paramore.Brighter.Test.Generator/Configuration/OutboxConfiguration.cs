@@ -65,5 +65,8 @@ public class OutboxConfiguration
     /// </summary>
     public string? Category { get; set; }
 
+    /// <summary>
+    /// Gets or sets the xUnit collection name to apply to generated test classes.
+    /// </summary>
     public string? CollectionName { get; set; }
 }

@@ -145,7 +145,7 @@ public class SnsFifoMessageGatewayProvider
         return producer;
     }
 
-    public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
+    public Task<IAmAMessageProducerAsync> CreateProducerAsync(
         SnsPublication publication,
         CancellationToken cancellationToken = default)
     {
@@ -157,7 +157,7 @@ public class SnsFifoMessageGatewayProvider
         }
 
         var producer = new SnsMessageProducer(connection, publication);
-        return producer;
+        return Task.FromResult<IAmAMessageProducerAsync>(producer);
     }
 
     public async Task<Message> GetMessageFromDeadLetterQueueAsync(

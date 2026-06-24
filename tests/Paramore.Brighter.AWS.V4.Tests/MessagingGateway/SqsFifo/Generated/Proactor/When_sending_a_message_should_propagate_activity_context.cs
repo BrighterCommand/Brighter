@@ -51,13 +51,13 @@ public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLife
         var builder = Sdk.CreateTracerProviderBuilder();
         var exportedActivities = new List<Activity>();
 
-        var tracerProvider = builder
+        using var tracerProvider = builder
             .AddSource("Paramore.Brighter.Tests", "Paramore.Brighter")
             .ConfigureResource(r => r.AddService("message-producer-tracer"))
             .AddInMemoryExporter(exportedActivities)
             .Build();
 
-        var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessageProducerTests");
+        using var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessageProducerTests");
         parentActivity!.TraceStateString = "brighter=00f067aa0ba902b7,congo=t61rcWkgMzE";
 
         Baggage.SetBaggage("key", "value");
@@ -83,7 +83,6 @@ public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLife
         // Act
         await _producer.SendAsync(message);
 
-        parentActivity.Stop();
         tracerProvider.ForceFlush();
 
         // Assert

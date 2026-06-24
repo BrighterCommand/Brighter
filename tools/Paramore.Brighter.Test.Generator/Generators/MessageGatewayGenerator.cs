@@ -50,13 +50,6 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
     {
         if (configuration.MessagingGateway != null)
         {
-            await GenerateAsync(
-                configuration,
-                "MessagingGateway",
-                "MessagingGateway",
-                configuration.MessagingGateway
-            );
-
             var prefix = configuration.MessagingGateway.Prefix;
             await GenerateAsync(
                 configuration,
@@ -78,7 +71,7 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
         {
             foreach (var (key, messagingGatewayConfiguration) in configuration.MessagingGateways)
             {
-                logger.LogInformation("Generating outbox test for {OutboxName}", key);
+                logger.LogInformation("Generating messaging gateway test for {OutboxName}", key);
                 var prefix = messagingGatewayConfiguration.Prefix;
                 if (string.IsNullOrEmpty(prefix))
                 {
@@ -86,14 +79,6 @@ public class MessageGatewayGenerator(ILogger<MessageGatewayGenerator> logger)
                 }
 
                 messagingGatewayConfiguration.Prefix = $".{prefix}";
-
-                await GenerateAsync(
-                    configuration,
-                    Path.Combine("MessagingGateway", prefix),
-                    "MessagingGateway",
-                    messagingGatewayConfiguration,
-                    filename => SkipTest(messagingGatewayConfiguration, filename)
-                );
 
                 await GenerateAsync(
                     configuration,
