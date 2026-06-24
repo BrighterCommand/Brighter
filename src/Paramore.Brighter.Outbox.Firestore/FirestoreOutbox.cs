@@ -154,9 +154,10 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
 
         try
         {
+            var causationId = ReadCausationId(requestContext);
             var writes = messages.Select(message => new Write
             {
-                Update = ToDocument(message), 
+                Update = ToDocument(message, causationId),
                 CurrentDocument = new Precondition { Exists = false }
             });
 
@@ -547,9 +548,10 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
         
         try
         {
+            var causationId = ReadCausationId(requestContext);
             var writes = messages.Select(message => new Write
             {
-                Update = ToDocument(message),
+                Update = ToDocument(message, causationId),
                 CurrentDocument = new Precondition { Exists = false }
             });
 

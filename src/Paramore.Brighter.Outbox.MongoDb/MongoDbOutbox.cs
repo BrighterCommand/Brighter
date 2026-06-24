@@ -249,7 +249,11 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             options: Configuration.InstrumentationOptions);
         try
         {
-            var messageItems = messages.Select(message => new OutboxMessage(message, ExpireAfterSeconds));
+            var causationId = ReadCausationId(requestContext);
+            var messageItems = messages.Select(message => new OutboxMessage(message, ExpireAfterSeconds)
+            {
+                CausationId = causationId
+            });
             if (transactionProvider != null)
             {
                 var session = await transactionProvider.GetTransactionAsync(cancellationToken)
@@ -696,7 +700,11 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             options: Configuration.InstrumentationOptions);
         try
         {
-            var messageItems = messages.Select(message => new OutboxMessage(message, ExpireAfterSeconds));
+            var causationId = ReadCausationId(requestContext);
+            var messageItems = messages.Select(message => new OutboxMessage(message, ExpireAfterSeconds)
+            {
+                CausationId = causationId
+            });
             if (transactionProvider != null)
             {
                 var session = transactionProvider.GetTransaction();

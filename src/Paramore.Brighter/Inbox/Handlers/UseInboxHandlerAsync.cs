@@ -85,9 +85,13 @@ namespace Paramore.Brighter.Inbox.Handlers
             if (_contextKey is null)
                 throw new ArgumentException("ContextKey must be set before Handling");
 
-            var requestContext = Context as RequestContext;
+            // Prefer the shared pipeline context so the causation id we stamp below flows to the outbox Add.
+            // A custom IAmARequestContextFactory may supply a context that is not a RequestContext; in that
+            // case fall back to a fresh context carrying Activity.Current — matching the pre-feature behaviour
+            // for the Throw/Warn/Add inbox paths (causation tracking then degrades to a no-op for Replay).
+            var requestContext = Context as RequestContext ?? new RequestContext { Span = Activity.Current };
 
-            if (requestContext is not null && !requestContext.Bag.ContainsKey(RequestContextBagNames.CausationId))
+            if (!requestContext.Bag.ContainsKey(RequestContextBagNames.CausationId))
                 requestContext.Bag[RequestContextBagNames.CausationId] = command.Id.Value;
 
             if (_onceOnly)
