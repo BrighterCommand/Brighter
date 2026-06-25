@@ -188,7 +188,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
             tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
-            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            tags.Add(BrighterSemanticConventions.MessageHeaders, message.HeaderJson);
             tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
             tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
         }
@@ -289,7 +289,7 @@ public class BrighterTracer : IAmABrighterTracer
             span.AddTag(BrighterSemanticConventions.MessageId, message.Id.Value);
             span.AddTag(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
             span.AddTag(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
-            span.AddTag(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            span.AddTag(BrighterSemanticConventions.MessageHeaders, message.HeaderJson);
             span.AddTag(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
         }
 

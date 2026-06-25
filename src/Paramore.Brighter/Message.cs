@@ -24,7 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Net.Mime;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter
 {
@@ -63,7 +65,24 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The header.</value>
         public MessageHeader Header { get; init; }
-        
+
+        private string? _headerJson;
+
+        /// <summary>
+        /// The <see cref="Header"/> serialized to JSON, computed once and cached for the lifetime of this
+        /// <see cref="Message"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// Used by observability (<see cref="Observability.BrighterTracer"/>) to tag the receive and process
+        /// spans with the message headers without re-running the reflection-driven serialization of
+        /// <see cref="MessageHeader"/> for each span — for a serviceable message both spans are tagged, so an
+        /// uncached implementation serialized the header twice per message in the pump hot path (issue #4089).
+        /// The value is a snapshot taken on first access; subsequent mutations to <see cref="Header"/> are not
+        /// reflected. This is intentional: within a single pump receive/process cycle both spans share one
+        /// serialized header. Internal because it exists solely to back observability, not as message state.
+        /// </remarks>
+        internal string HeaderJson => _headerJson ??= JsonSerializer.Serialize(Header, JsonSerialisationOptions.Options);
+
         /// <summary>
         /// Gets the body.
         /// </summary>
