@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net.Mime;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.Extensions;
@@ -59,11 +60,17 @@ public class AzureServiceBusMessagePublisher
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
         if (!string.IsNullOrEmpty(message.Header.ReplyTo!))
             azureServiceBusMessage.ReplyTo = message.Header.ReplyTo?.Value;
-        if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
-            azureServiceBusMessage.SessionId = value.ToString();
+        //Brighter's JSON serialization camelCases bag keys (JsonNamingPolicy.CamelCase), so a key
+        //written as "SessionId" returns as "sessionId" after a round-trip (e.g. via an Outbox).
+        //Resolve the SessionId regardless of casing.
+        var sessionId = message.Header.Bag
+            .FirstOrDefault(h => string.Equals(h.Key, ASBConstants.SessionIdKey, StringComparison.OrdinalIgnoreCase))
+            .Value;
+        if (sessionId is not null)
+            azureServiceBusMessage.SessionId = sessionId.ToString();
 
         foreach (var header in message.Header.Bag.Where(h =>
-                     !ASBConstants.ReservedHeaders.Contains(h.Key)
+                     !ASBConstants.ReservedHeaders.Contains(h.Key, StringComparer.OrdinalIgnoreCase)
                      && !MessageHeader.IsLocalHeader(h.Key)))
         {
             azureServiceBusMessage.ApplicationProperties[header.Key] = header.Value;
