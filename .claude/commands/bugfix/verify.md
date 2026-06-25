@@ -51,8 +51,11 @@ Root cause: {confirmed root cause, 1–2 lines}
 
 Fixes #{issue-number}
 
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+Co-Authored-By: Claude <noreply@anthropic.com>
 ```
+
+(Use the actual session model in the `Co-Authored-By` trailer if your environment specifies one;
+the line above is a stable placeholder so the template doesn't misattribute as models change.)
 
 If structural cleanup was done via `/tidy-first`, there will already be a separate `refactor:`
 commit — keep them distinct.

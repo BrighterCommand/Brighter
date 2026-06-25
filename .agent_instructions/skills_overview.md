@@ -27,7 +27,7 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 | `/bugfix:fix` | Minimal fix scoped to the confirmed cause | `/bugfix:fix` |
 | `/bugfix:verify` | Run suite; capture root cause + `Fixes #N` | `/bugfix:verify` |
 | `/bugfix:status` | Show all bugs and their phase | `/bugfix:status` |
-| `/bugfix:switch` | Switch the active bug | `/bugfix:switch <slug>` |
+| `/bugfix:switch` | Switch the active bug | `/bugfix:switch <NNNN-slug>` |
 
 ### Specification Workflow Skills
 
@@ -93,30 +93,28 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 ## Decision Tree: Which Skill Should I Use?
 
 ```
-                    Need to document decision?
+                    Need to document a decision?
                               │
-                    ┌─────────┴─────────┐
-                   YES                 NO
-                    │                   │
-                 /adr                   ↓
-                                  Fixing a bug?
-                                       │
-                            ┌──────────┴──────────┐
-                          YES                    NO
-                            │                     │
-                  Root cause proven?         Adding behavior?
-                            │                     │
-                    ┌───────┴───────┐    ┌────────┴────────┐
-                  NO              YES   YES               NO
-                    │               │     │                │
-              /bugfix:triage  /test-first │          Just refactoring?
-              (Confirm gate)              │                │
-                                  Code needs cleanup?   /tidy-first
-                                          │
-                                  ┌───────┴───────┐
-                                YES              NO
-                                  │               │
-                            /tidy-first     /test-first
+                  ┌───────────┴───────────┐
+                 YES                      NO
+                  │                        │
+                /adr                 Fixing a bug?
+                                           │
+                          ┌────────────────┴────────────────┐
+                        YES                                 NO
+                          │                                  │
+                 Root cause proven?                  Adding behavior?
+                          │                                  │
+                ┌─────────┴─────────┐              ┌─────────┴─────────┐
+               NO                  YES            YES                  NO
+                │                   │              │                    │
+         /bugfix:triage       /test-first    Code needs           Just refactoring
+         (Confirm gate)                       cleanup?            → /tidy-first
+                                                  │
+                                        ┌─────────┴─────────┐
+                                      YES                  NO
+                                        │                   │
+                                  /tidy-first         /test-first
 ```
 
 ## Enforcement of Brighter Practices

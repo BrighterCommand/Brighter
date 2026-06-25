@@ -32,6 +32,9 @@ Infer the phase for each bug from its `bugfix.md` + marker (lightweight — only
 - **Fixed** — Fix section names changed files
 - **Verified** — Status line reads `Verified`
 
+A section still holding its `_(left blank — filled by …)_` placeholder counts as **empty** — it is
+not a real entry, so do not treat it as reaching that phase.
+
 ### Step 3: Present the Report
 
 ```
