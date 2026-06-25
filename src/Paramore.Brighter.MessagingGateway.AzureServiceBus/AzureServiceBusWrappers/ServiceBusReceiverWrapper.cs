@@ -145,10 +145,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         // Azure Service Bus rejects dead-letter reason/description values longer than 4096 characters
         // with an ArgumentOutOfRangeException, so clamp them to the limit.
-        private const int MAX_DEAD_LETTER_FIELD_LENGTH = 4096;
+        private const int MaxDeadLetterFieldLength = 4096;
 
         private static string Truncate(string value)
-            => value.Length > MAX_DEAD_LETTER_FIELD_LENGTH ? value.Substring(0, MAX_DEAD_LETTER_FIELD_LENGTH) : value;
+            => value.Length > MaxDeadLetterFieldLength ? value.Substring(0, MaxDeadLetterFieldLength) : value;
 
         private static partial class Log
         {
