@@ -72,12 +72,22 @@ public class MsSqlOutbox : RelationDatabaseOutbox
     /// <inheritdoc />
     protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
     {
+        if (value is DateTimeOffset dateTimeOffset)
+        {
+            return new SqlParameter { ParameterName = parameterName, Value = dateTimeOffset.ToUniversalTime().DateTime };
+        }
+        
         return new SqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
     }
 
     /// <inheritdoc />
     protected override IDbDataParameter CreateSqlParameter(string parameterName, DbType dbType, object? value)
     {
+        if (value is DateTimeOffset dateTimeOffset)
+        {
+            return new SqlParameter { ParameterName = parameterName, Value = dateTimeOffset.ToUniversalTime().DateTime, DbType = DbType.DateTime };
+        }
+        
         return new SqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value, DbType = dbType };
     }
     
@@ -108,5 +118,18 @@ public class MsSqlOutbox : RelationDatabaseOutbox
         parameters[0] = new SqlParameter { ParameterName = "PageNumber", Value = pageNumber };
         parameters[1] = new SqlParameter { ParameterName = "PageSize", Value = pageSize };
         return parameters;
-    } 
+    }
+
+    protected override DateTimeOffset GetTimeStamp(DbDataReader dr)
+    {
+        var sql = (SqlDataReader)dr;
+        if (!TryGetOrdinal(sql, TimestampColumnName, out var ordinal) || dr.IsDBNull(ordinal))
+        {
+            return DateTimeOffset.UtcNow;
+        }
+
+        
+        var dateTime = sql.GetDateTime(ordinal);
+        return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+    }
 }
