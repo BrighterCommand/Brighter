@@ -15,6 +15,19 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 | `/test-first` | TDD with mandatory approval | `/test-first <behavior description>` |
 | `/tidy-first` | Separate refactoring from features | `/tidy-first <change description>` |
 | `/adr` | Create Architecture Decision Record | `/adr <title>` |
+| `/bugfix:*` | Diagnosis-first bug workflow (Confirm gate) | `/bugfix:triage [issue \| description]` |
+
+### Bugfix Workflow Skills
+
+| Skill | Purpose | Usage |
+|-------|---------|-------|
+| `/bugfix:triage` | Restate symptom, locate code, form hypothesis | `/bugfix:triage [issue-number \| description]` |
+| `/bugfix:confirm` | ✋ Prove the root cause before any fix | `/bugfix:confirm` |
+| `/bugfix:test` | Failing regression test (via `/test-first`) | `/bugfix:test` |
+| `/bugfix:fix` | Minimal fix scoped to the confirmed cause | `/bugfix:fix` |
+| `/bugfix:verify` | Run suite; capture root cause + `Fixes #N` | `/bugfix:verify` |
+| `/bugfix:status` | Show all bugs and their phase | `/bugfix:status` |
+| `/bugfix:switch` | Switch the active bug | `/bugfix:switch <NNNN-slug>` |
 
 ### Specification Workflow Skills
 
@@ -38,6 +51,12 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 │                    CLAUDE CODE SKILLS                          │
 │                    Quick Reference                              │
 └────────────────────────────────────────────────────────────────┘
+
+🐞 BUGFIX (DIAGNOSIS-FIRST)
+   /bugfix:triage → :confirm → :test → :fix → :verify
+   • Triage → ✋Confirm gate → Test-first → Fix → Verify
+   • Proves the root cause BEFORE writing a fix
+   • Example: /bugfix:triage 4054
 
 🧪 TEST-DRIVEN DEVELOPMENT
    /test-first <behavior>
@@ -74,24 +93,28 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 ## Decision Tree: Which Skill Should I Use?
 
 ```
-                    Need to document decision?
+                    Need to document a decision?
                               │
-                    ┌─────────┴─────────┐
-                   YES                 NO
-                    │                   │
-                 /adr                   ↓
-                                Adding behavior?
-                                       │
-                            ┌──────────┴──────────┐
-                          YES                    NO
-                            │                     │
-                            ↓                     ↓
-                  Code needs cleanup?      Just refactoring?
-                            │                     │
-                    ┌───────┴───────┐            │
-                  YES              NO             │
-                    │               │             │
-              /tidy-first     /test-first   /tidy-first
+                  ┌───────────┴───────────┐
+                 YES                      NO
+                  │                        │
+                /adr                 Fixing a bug?
+                                           │
+                          ┌────────────────┴────────────────┐
+                        YES                                 NO
+                          │                                  │
+                 Root cause proven?                  Adding behavior?
+                          │                                  │
+                ┌─────────┴─────────┐              ┌─────────┴─────────┐
+               NO                  YES            YES                  NO
+                │                   │              │                    │
+         /bugfix:triage       /test-first    Code needs           Just refactoring
+         (Confirm gate)                       cleanup?            → /tidy-first
+                                                  │
+                                        ┌─────────┴─────────┐
+                                      YES                  NO
+                                        │                   │
+                                  /tidy-first         /test-first
 ```
 
 ## Enforcement of Brighter Practices
@@ -133,6 +156,25 @@ Each skill enforces specific practices from `.agent_instructions/`:
 **Reference**: [code_style.md](code_style.md) lines 74-83
 
 ## Common Workflows
+
+### Workflow 0: Fix a Bug (Diagnosis-First)
+
+```bash
+# 1. Triage — restate symptom, locate code, form hypothesis (suggested fix is UNVERIFIED)
+/bugfix:triage 4054
+
+# 2. ✋ Confirm — prove the root cause BEFORE any fix (may widen the scope)
+/bugfix:confirm
+
+# 3. ✋ Test-first — failing regression test (delegates to /test-first)
+/bugfix:test
+
+# 4. Fix — minimal change to green, scoped to the confirmed cause
+/bugfix:fix
+
+# 5. Verify — run the suite; commit captures root cause + Fixes #4054
+/bugfix:verify
+```
 
 ### Workflow 1: Add New Feature (Clean Code)
 
