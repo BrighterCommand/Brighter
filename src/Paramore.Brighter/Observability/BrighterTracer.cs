@@ -207,16 +207,27 @@ public class BrighterTracer : IAmABrighterTracer
 
         if (activity == null)
             return Activity.Current;
-        
-        activity.TraceStateString = traceState;
-        
-        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-            message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);
-        OpenTelemetry.Baggage.SetBaggage(message.Header.Baggage);
-        
-        Activity.Current = activity;
 
-        return activity;
+        try
+        {
+            activity.TraceStateString = traceState;
+
+            if (!string.IsNullOrEmpty(message.Header.CorrelationId))
+                message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);
+            OpenTelemetry.Baggage.SetBaggage(message.Header.Baggage);
+
+            Activity.Current = activity;
+
+            return activity;
+        }
+        catch (Exception ex)
+        {
+            //the activity has already been started; if enriching it throws the caller never receives it and so
+            //cannot end it via its try/finally, so we must end it here to avoid leaking a started activity
+            activity.SetStatus(ActivityStatusCode.Error, ex.Message);
+            EndSpan(activity);
+            throw;
+        }
     }
 
     /// <summary>
