@@ -887,7 +887,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
                 Configuration.DatabaseName,
-                BoxDbOperation.MarkDispatched,
+                BoxDbOperation.Replay,
                 CollectionConfiguration.Name),
             requestContext?.Span,
             options: Configuration.InstrumentationOptions);

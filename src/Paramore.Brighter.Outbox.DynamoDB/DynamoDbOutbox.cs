@@ -600,7 +600,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             var span = Tracer?.CreateDbSpan(
-                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.MarkDispatched, _configuration.TableName),
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Replay, _configuration.TableName),
                 requestContext?.Span,
                 options: _instrumentationOptions);
 

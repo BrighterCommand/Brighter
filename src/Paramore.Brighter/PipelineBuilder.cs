@@ -116,7 +116,9 @@ namespace Paramore.Brighter
                 var handlerMethod = HandlerMethodDiscovery.FindHandlerMethod(handlerType, requestType);
                 var isAsync = HandlerMethodDiscovery.IsAsyncHandler(handlerType);
 
-                var beforeAttributes = handlerMethod.GetOtherHandlersInPipeline()
+                var otherHandlers = handlerMethod.GetOtherHandlersInPipeline().ToList();
+
+                var beforeAttributes = otherHandlers
                     .Where(a => a.Timing == HandlerTiming.Before)
                     .ToList();
 
@@ -130,7 +132,7 @@ namespace Paramore.Brighter
                     .ToList()
                     .AsReadOnly();
 
-                var afterSteps = handlerMethod.GetOtherHandlersInPipeline()
+                var afterSteps = otherHandlers
                     .Where(a => a.Timing == HandlerTiming.After)
                     .OrderByDescending(a => a.Step)
                     .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing) { Attribute = a })

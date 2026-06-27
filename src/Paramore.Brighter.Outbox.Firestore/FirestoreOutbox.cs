@@ -870,7 +870,7 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
-            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.MarkDispatched, _outboxCollection.Name),
+            new BoxSpanInfo(DbSystem.Firestore, _configuration.Database, BoxDbOperation.Replay, _outboxCollection.Name),
             requestContext?.Span,
             options: _configuration.Instrumentation);
 

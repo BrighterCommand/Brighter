@@ -717,7 +717,7 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null)
         {
             var span = Tracer?.CreateDbSpan(
-                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.MarkDispatched, InMemoryAttributes.DbTable),
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.Replay, InMemoryAttributes.DbTable),
                 requestContext?.Span,
                 options: _instrumentationOptions
             );

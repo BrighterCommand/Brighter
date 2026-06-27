@@ -91,12 +91,13 @@ namespace Paramore.Brighter
             try
             {
                 var parameters = InitAddDbParameters(message);
-                if (CausationColumnExists())
+                var includeCausation = CausationColumnExists();
+                if (includeCausation)
                 {
                     parameters = [.. parameters, CreateSqlParameter("@CausationId", ReadCausationId(requestContext))];
                 }
 
-                WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters), () =>
+                WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters, includeCausation), () =>
                 {
                     logger.LogWarning(
                         "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
@@ -186,13 +187,15 @@ namespace Paramore.Brighter
             try
             {
                 var parameters = InitAddDbParameters(message);
-                if (await CausationColumnExistsAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                var includeCausation = await CausationColumnExistsAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+                if (includeCausation)
                 {
                     parameters = [.. parameters, CreateSqlParameter("@CausationId", ReadCausationId(requestContext))];
                 }
 
                 await WriteToStoreAsync(transactionProvider,
-                    connection => InitAddDbCommand(connection, parameters), () =>
+                    connection => InitAddDbCommand(connection, parameters, includeCausation), () =>
                     {
                         logger.LogWarning(
                             "A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
@@ -1052,7 +1055,7 @@ namespace Paramore.Brighter
             }
 
             var span = Tracer?.CreateDbSpan(
-                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.MarkDispatched, DatabaseConfiguration.OutBoxTableName),
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.Replay, DatabaseConfiguration.OutBoxTableName),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -1076,7 +1079,7 @@ namespace Paramore.Brighter
             }
 
             var span = Tracer?.CreateDbSpan(
-                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.MarkDispatched, DatabaseConfiguration.OutBoxTableName),
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.Replay, DatabaseConfiguration.OutBoxTableName),
                 requestContext?.Span,
                 options: instrumentationOptions);
 
@@ -1310,12 +1313,13 @@ namespace Paramore.Brighter
 
         private DbCommand InitAddDbCommand(
             DbConnection connection,
-            IDbDataParameter[] parameters
+            IDbDataParameter[] parameters,
+            bool includeCausation
         )
-            // The caller has already populated the memoized probe via CausationColumnExists[Async](),
-            // so this reads the cached result without a further round-trip; absent column → plain AddCommand.
+            // The caller threads in the result of its own CausationColumnExists[Async]() probe, so the
+            // SQL choice and the parameter list are decided from a single read; absent column → plain AddCommand.
             => CreateCommand(connection,
-                GenerateSqlText(_causationColumnExists == true ? CausationQueries!.AddCausationCommand : queries.AddCommand),
+                GenerateSqlText(includeCausation ? CausationQueries!.AddCausationCommand : queries.AddCommand),
                 0, parameters);
 
         private DbCommand InitReplayCausationCommand(DbConnection connection, string causationId)
