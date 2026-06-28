@@ -32,14 +32,14 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
-public class CreateSpanThrowsAfterStartingObservabilityTests : IDisposable
+public class CreateProcessSpanBaggageDecoupledObservabilityTests : IDisposable
 {
     private readonly ICollection<Activity> _exportedActivities = new List<Activity>();
     private readonly TracerProvider _traceProvider;
     private readonly BrighterTracer _tracer = new();
     private readonly RoutingKey _routingKey = new("MyTopic");
 
-    public CreateSpanThrowsAfterStartingObservabilityTests()
+    public CreateProcessSpanBaggageDecoupledObservabilityTests()
     {
         _traceProvider = Sdk.CreateTracerProviderBuilder()
             .AddSource("Paramore.Brighter")
@@ -49,23 +49,28 @@ public class CreateSpanThrowsAfterStartingObservabilityTests : IDisposable
     }
 
     [Fact]
-    public void When_create_span_throws_after_starting_close_the_span()
+    public void When_creating_a_process_span_baggage_propagation_is_decoupled()
     {
-        //Arrange - a correlation id whose value is rejected by Baggage validation makes CreateSpan throw
-        //at the baggage step, which runs AFTER the consumer activity has already been started
+        //Arrange - a correlation id whose value is rejected by Baggage validation. Baggage propagation is no longer done
+        //inside CreateSpan (it moved to PropagateConsumerContext, called once per message by the pump), so creating the
+        //process span must NOT touch baggage and therefore must NOT throw - the started activity can never leak this way.
         var message = new Message(
             new MessageHeader(Id.Random(), _routingKey, MessageType.MT_EVENT, correlationId: new Id("bad=value")),
             new MessageBody("{}"));
 
         //Act
-        Assert.Throws<ArgumentException>(() =>
-            _tracer.CreateSpan(MessagePumpSpanOperation.Process, message, MessagingSystem.InternalBus));
+        var processSpan = _tracer.CreateSpan(MessagePumpSpanOperation.Process, message, MessagingSystem.InternalBus);
 
+        //Assert - the process span was created normally and, once ended, is exported (not leaked)
+        Assert.NotNull(processSpan);
+        _tracer.EndSpan(processSpan);
         _traceProvider.ForceFlush();
-
-        //Assert - the activity was started before the throw, so it must be ended and exported, not leaked
         Assert.Contains(_exportedActivities, a =>
             a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Process.ToSpanName()}");
+
+        //the malformed correlation id is rejected only when baggage is actually propagated - now the responsibility of
+        //PropagateConsumerContext - so that is the single place the validation surfaces
+        Assert.Throws<ArgumentException>(() => _tracer.PropagateConsumerContext(message));
     }
 
     public void Dispose()

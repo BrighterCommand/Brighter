@@ -45,12 +45,16 @@ public interface IAmABrighterTracer : IDisposable
     /// <param name="message">What is the <see cref="Message"/> that we received; if they have a traceparentid we will use that as a parent for this trace</param>
     /// <param name="messagingSystem">What is the messaging system that we are receiving a message from</param>
     /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
+    /// <param name="serializedHeader">The header serialized once by <see cref="EnrichReceiveSpan"/> for the receive span,
+    /// threaded in so the process span reuses it instead of serializing the header a second time per message (issue #4089);
+    /// when null (no preceding receive span) the header is serialized here</param>
     /// <returns></returns>
     Activity? CreateSpan(
         MessagePumpSpanOperation operation,
         Message message,
         MessagingSystem messagingSystem,
-        InstrumentationOptions options = InstrumentationOptions.All
+        InstrumentationOptions options = InstrumentationOptions.All,
+        string? serializedHeader = null
     );
 
     /// <summary>
@@ -69,15 +73,26 @@ public interface IAmABrighterTracer : IDisposable
 
     /// <summary>
     /// Enriches a receive span (created via <see cref="CreateReceiveSpan"/>) with tags derived from a received message,
-    /// and propagates the producer's tracestate and baggage onto the consumer side.
+    /// and propagates the producer's tracestate onto the receive span.
     /// </summary>
     /// <param name="span">The receive span to enrich; no-op if null</param>
     /// <param name="message">The <see cref="Message"/> that was received</param>
     /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
-    void EnrichReceiveSpan(
+    /// <returns>The header serialized once for this message (so it can be threaded into <see cref="CreateSpan(MessagePumpSpanOperation,Message,MessagingSystem,InstrumentationOptions,string)"/>
+    /// and not serialized again), or null if there was no span to enrich or messaging instrumentation is disabled</returns>
+    string? EnrichReceiveSpan(
         Activity? span,
         Message message,
         InstrumentationOptions options = InstrumentationOptions.All);
+
+    /// <summary>
+    /// Propagates the producer's baggage onto the consumer side for a received message: lifts the message's
+    /// <see cref="MessageHeader.CorrelationId"/> into its <see cref="MessageHeader.Baggage"/> and sets it as the ambient
+    /// OpenTelemetry baggage for the current execution context. Called once per received message by the pump so the
+    /// propagation runs exactly once, independent of how many spans (receive, process) are created.
+    /// </summary>
+    /// <param name="message">The <see cref="Message"/> that was received</param>
+    void PropagateConsumerContext(Message message);
 
     /// <summary>
     /// Create a span for a request in CommandProcessor
