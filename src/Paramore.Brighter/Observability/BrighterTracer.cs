@@ -324,6 +324,9 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="message">The <see cref="Message"/> that was received</param>
     public void PropagateConsumerContext(Message message)
     {
+        //the pump calls this before its own null-message check, so guard against a broker that returned no message
+        if (message is null) return;
+
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
             message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);
         OpenTelemetry.Baggage.SetBaggage(message.Header.Baggage);
