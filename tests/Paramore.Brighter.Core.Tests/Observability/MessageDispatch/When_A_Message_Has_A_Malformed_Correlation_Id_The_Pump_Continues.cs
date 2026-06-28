@@ -85,8 +85,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)
             };
 
-            //a serviceable message whose correlation id is rejected by W3C Baggage validation: propagating it as baggage
-            //throws, but observability must never tear down the pump - the message should still be dispatched
+            //"bad=value" is rejected by W3C Baggage validation, so propagating it as baggage throws
             var message = new Message(
                 new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT, correlationId: new Id("bad=value")),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
@@ -100,10 +99,10 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
         [Fact]
         public void When_a_message_has_a_malformed_correlation_id_the_pump_continues()
         {
-            //Act - a malformed correlation id makes baggage propagation throw; the pump must not propagate that out
+            //Act
             var exception = Record.Exception(() => _messagePump.Run());
 
-            //Assert - the pump ran to its QUIT message without tearing down, and the poisoned message was still dispatched
+            //Assert - the pump reached its QUIT message and still dispatched the poisoned message
             Assert.Null(exception);
             Assert.True(_receivedMessages.ContainsKey(nameof(MyEventHandler)));
             Assert.Equal(MessagePumpStatus.MP_STOPPED, _messagePump.Status);

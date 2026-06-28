@@ -112,7 +112,7 @@ namespace Paramore.Brighter.ServiceActivator
                     // receive span covers only the broker call so its Duration reflects broker latency, not dispatch
                     Activity? receiveSpan = null;
                     Message? message = null;
-                    // the header is serialized once for the receive span and reused by the process span (issue #4089)
+                    // serialized once on the receive span and reused by the process span
                     string? headerJson = null;
                     try
                     {
@@ -121,7 +121,6 @@ namespace Paramore.Brighter.ServiceActivator
                             receiveSpan = Tracer?.CreateReceiveSpan(Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
                             message = Channel.Receive(TimeOut);
                             headerJson = Tracer?.EnrichReceiveSpan(receiveSpan, message, InstrumentationOptions);
-                            // propagate consumer baggage once per message, independent of how many spans we create
                             Tracer?.PropagateConsumerContext(message);
                         }
                         catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)

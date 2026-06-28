@@ -189,8 +189,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
             tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
-            //reuse the header serialized once for the receive span (issue #4089); when this span is created without a
-            //preceding receive span (none threaded in) we serialize the as-received header here instead
+            //reuse the header the receive span already serialized; serialize here only when there was no receive span
             tags.Add(BrighterSemanticConventions.MessageHeaders,
                 serializedHeader ?? JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
             tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
@@ -214,9 +213,6 @@ public class BrighterTracer : IAmABrighterTracer
 
         try
         {
-            //baggage propagation (correlationId, SetBaggage) is no longer done here: it is a consumer-context concern,
-            //done once per message by the pump via PropagateConsumerContext, not per span. TraceStateString is
-            //per-activity so it stays here.
             activity.TraceStateString = traceState;
 
             Activity.Current = activity;
@@ -225,8 +221,7 @@ public class BrighterTracer : IAmABrighterTracer
         }
         catch (Exception ex)
         {
-            //the activity has already been started; if enriching it throws the caller never receives it and so
-            //cannot end it via its try/finally, so we must end it here to avoid leaking a started activity
+            //the activity is already started; end it here so a throw during enrichment cannot leak it past the caller
             activity.SetStatus(ActivityStatusCode.Error, ex.Message);
             EndSpan(activity);
             throw;
@@ -305,8 +300,7 @@ public class BrighterTracer : IAmABrighterTracer
             span.AddTag(BrighterSemanticConventions.MessageId, message.Id.Value);
             span.AddTag(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
             span.AddTag(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
-            //serialize the as-received header once; the caller threads this string into CreateSpan(Process, ...) so the
-            //process span reuses it rather than serializing the header a second time per message (issue #4089)
+            //returned so the process span can reuse it instead of serializing the header again
             serializedHeader = JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options);
             span.AddTag(BrighterSemanticConventions.MessageHeaders, serializedHeader);
             span.AddTag(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
@@ -315,9 +309,7 @@ public class BrighterTracer : IAmABrighterTracer
         if (options.HasFlag(InstrumentationOptions.RequestBody))
             span.AddTag(BrighterSemanticConventions.MessageBody, message.Body.Value);
 
-        // Propagate the producer's tracestate onto the receive span. Done here (not in CreateReceiveSpan) because this value
-        // comes from the message and isn't known until the broker call returns. TraceStateString is per-activity; consumer
-        // baggage propagation is a separate, once-per-message concern handled by PropagateConsumerContext.
+        // not set in CreateReceiveSpan because the tracestate comes from the message, unknown until the broker call returns
         if (!string.IsNullOrEmpty(message.Header.TraceState?.Value))
             span.TraceStateString = message.Header.TraceState!.Value;
 
@@ -327,8 +319,7 @@ public class BrighterTracer : IAmABrighterTracer
     /// <summary>
     /// Propagates the producer's baggage onto the consumer side for a received message: lifts the message's
     /// <see cref="MessageHeader.CorrelationId"/> into its <see cref="MessageHeader.Baggage"/> and sets it as the ambient
-    /// OpenTelemetry baggage for the current execution context. Called once per received message by the pump — independent
-    /// of how many spans (receive, process) are created — so the propagation runs exactly once rather than per span.
+    /// OpenTelemetry baggage for the current execution context. Called once per received message by the pump.
     /// </summary>
     /// <param name="message">The <see cref="Message"/> that was received</param>
     public void PropagateConsumerContext(Message message)

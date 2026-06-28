@@ -103,7 +103,6 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)
             };
 
-            //a single serviceable message (MT_EVENT) is the steady-state hot path the perf regression affects
             _message = new Message(
                 new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT, replyTo: new RoutingKey("io.paramorebrighter.myevent")),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
@@ -122,7 +121,6 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             _traceProvider.ForceFlush();
 
             // Assert
-            //a serviceable message produces both a receive span (broker-call timing) and a process span (dispatch timing)
             var receiveSpan = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}"
                 && a.TagObjects.Any(to => to is { Value: not null, Key: BrighterSemanticConventions.MessageType } && Enum.Parse<MessageType>(to.Value.ToString() ?? string.Empty) == MessageType.MT_EVENT));
@@ -133,17 +131,13 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 && a.TagObjects.Any(to => to is { Value: not null, Key: BrighterSemanticConventions.MessageType } && Enum.Parse<MessageType>(to.Value.ToString() ?? string.Empty) == MessageType.MT_EVENT));
             Assert.NotNull(processSpan);
 
-            //both spans must still carry the serialized header with the correct value (diagnostic contract preserved)
             var expectedHeaderJson = JsonSerializer.Serialize(_message.Header, JsonSerialisationOptions.Options);
             var receiveHeaderJson = receiveSpan!.TagObjects.Single(to => to.Key == BrighterSemanticConventions.MessageHeaders).Value;
             var processHeaderJson = processSpan!.TagObjects.Single(to => to.Key == BrighterSemanticConventions.MessageHeaders).Value;
             Assert.Equal(expectedHeaderJson, receiveHeaderJson);
             Assert.Equal(expectedHeaderJson, processHeaderJson);
 
-            //the header must be serialized only ONCE per serviceable message: both spans share the SAME string instance.
-            //Today the receive span (EnrichReceiveSpan) and the process span (CreateSpan) each call
-            //JsonSerializer.Serialize(message.Header, ...) independently, producing two distinct (never-interned)
-            //string instances - so this reference-equality assertion fails until the serialization is computed once and reused.
+            //both spans share one serialized header (Assert.Same: a never-interned string, so equal references prove reuse)
             Assert.Same(receiveHeaderJson, processHeaderJson);
         }
     }

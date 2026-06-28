@@ -103,8 +103,6 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)
             };
 
-            //a serviceable message carrying a correlation id - the value the reviewer noted could be dropped from the
-            //process span when it diverged from the receive span (issue #4089 review, point 1)
             _message = new Message(
                 new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT, correlationId: new Id(CorrelationId),
                     replyTo: new RoutingKey("io.paramorebrighter.myevent")),
@@ -137,17 +135,14 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             var receiveHeaderJson = (string?)receiveSpan!.TagObjects.Single(to => to.Key == BrighterSemanticConventions.MessageHeaders).Value;
             var processHeaderJson = (string?)processSpan!.TagObjects.Single(to => to.Key == BrighterSemanticConventions.MessageHeaders).Value;
 
-            //the correlation id is conveyed by the serialized header (as the top-level CorrelationId field) so it is NOT
-            //lost from either span; it also rides on the dedicated ConversationId tag below
+            //the correlation id is carried in the serialized header as the top-level CorrelationId field
             Assert.Contains(CorrelationId, receiveHeaderJson);
             Assert.Contains(CorrelationId, processHeaderJson);
 
-            //both spans must carry the IDENTICAL serialized header (the as-received header), serialized exactly once and
-            //shared - so the process span never diverges from the receive span (issue #4089 review, point 1)
+            //both spans share one serialized header (Assert.Same: a never-interned string, so equal references prove reuse)
             Assert.Equal(receiveHeaderJson, processHeaderJson);
             Assert.Same(receiveHeaderJson, processHeaderJson);
 
-            //the correlation id is also exposed as the dedicated conversation id tag on both spans
             Assert.Equal(CorrelationId, receiveSpan.TagObjects.Single(to => to.Key == BrighterSemanticConventions.ConversationId).Value);
             Assert.Equal(CorrelationId, processSpan.TagObjects.Single(to => to.Key == BrighterSemanticConventions.ConversationId).Value);
         }

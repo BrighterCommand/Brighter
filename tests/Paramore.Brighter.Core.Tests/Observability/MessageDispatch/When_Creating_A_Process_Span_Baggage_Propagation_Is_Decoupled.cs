@@ -51,9 +51,7 @@ public class CreateProcessSpanBaggageDecoupledObservabilityTests : IDisposable
     [Fact]
     public void When_creating_a_process_span_baggage_propagation_is_decoupled()
     {
-        //Arrange - a correlation id whose value is rejected by Baggage validation. Baggage propagation is no longer done
-        //inside CreateSpan (it moved to PropagateConsumerContext, called once per message by the pump), so creating the
-        //process span must NOT touch baggage and therefore must NOT throw - the started activity can never leak this way.
+        //"bad=value" is rejected by Baggage validation; CreateSpan no longer propagates baggage, so it must not throw
         var message = new Message(
             new MessageHeader(Id.Random(), _routingKey, MessageType.MT_EVENT, correlationId: new Id("bad=value")),
             new MessageBody("{}"));
@@ -61,15 +59,14 @@ public class CreateProcessSpanBaggageDecoupledObservabilityTests : IDisposable
         //Act
         var processSpan = _tracer.CreateSpan(MessagePumpSpanOperation.Process, message, MessagingSystem.InternalBus);
 
-        //Assert - the process span was created normally and, once ended, is exported (not leaked)
+        //Assert
         Assert.NotNull(processSpan);
         _tracer.EndSpan(processSpan);
         _traceProvider.ForceFlush();
         Assert.Contains(_exportedActivities, a =>
             a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Process.ToSpanName()}");
 
-        //the malformed correlation id is rejected only when baggage is actually propagated - now the responsibility of
-        //PropagateConsumerContext - so that is the single place the validation surfaces
+        //baggage propagation is the single place the malformed value is now rejected
         Assert.Throws<ArgumentException>(() => _tracer.PropagateConsumerContext(message));
     }
 
