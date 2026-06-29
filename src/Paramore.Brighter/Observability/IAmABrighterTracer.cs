@@ -87,7 +87,8 @@ public interface IAmABrighterTracer : IDisposable
     /// <summary>
     /// Propagates the producer's baggage onto the consumer side for a received message: lifts the message's
     /// <see cref="MessageHeader.CorrelationId"/> into its <see cref="MessageHeader.Baggage"/> and sets it as the ambient
-    /// OpenTelemetry baggage for the current execution context. Called once per received message by the pump.
+    /// OpenTelemetry baggage for the current execution context. Called by the pump for a received message, gated on a
+    /// receive span existing (sampled in, instrumentation enabled), mirroring the historic span-scoped propagation.
     /// </summary>
     /// <param name="message">The <see cref="Message"/> that was received</param>
     void PropagateConsumerContext(Message message);

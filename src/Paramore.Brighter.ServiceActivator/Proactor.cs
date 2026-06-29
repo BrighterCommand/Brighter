@@ -162,7 +162,10 @@ namespace Paramore.Brighter.ServiceActivator
                             receiveSpan = Tracer?.CreateReceiveSpan(Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
                             message = await Channel.ReceiveAsync(TimeOut);
                             headerJson = Tracer?.EnrichReceiveSpan(receiveSpan, message, InstrumentationOptions);
-                            Tracer?.PropagateConsumerContext(message);
+                            // only propagate consumer context when we have a receive span: baggage propagation was
+                            // historically gated on the span existing (sampled in, instrumentation enabled), so keep it so
+                            if (receiveSpan is not null)
+                                Tracer?.PropagateConsumerContext(message);
                         }
                         catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
                         {
