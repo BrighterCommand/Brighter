@@ -55,6 +55,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 [TraceState] TEXT NULL,
                 [Baggage] TEXT NULL,
                 [DataRef] TEXT NULL,
+                [CausationId] TEXT NULL,
                 [SpecVersion] TEXT NULL
             );
             """;
@@ -84,6 +85,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 [TraceState] TEXT NULL,
                 [Baggage] TEXT NULL,
                 [DataRef] TEXT NULL,
+                [CausationId] TEXT NULL,
                 [SpecVersion] TEXT NULL
             );
             """;
@@ -99,7 +101,12 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <returns>The required DDL</returns>
         public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false)
         {
-            return hasBinaryMessagePayload ? string.Format(BinaryOutboxDdl, outboxTableName) : string.Format(TextOutboxDDL, outboxTableName);
+            var ddl = hasBinaryMessagePayload ? string.Format(BinaryOutboxDdl, outboxTableName) : string.Format(TextOutboxDDL, outboxTableName);
+            // Replay index (Spec 0027, #2541) on CausationId — emitted as a separate idempotent
+            // statement after the CREATE TABLE IF NOT EXISTS. None of the outbox builders
+            // indexed any column before this.
+            return ddl + "\n" +
+                $"CREATE INDEX IF NOT EXISTS [idx_{outboxTableName}_CausationId] ON [{outboxTableName}] ([CausationId]);";
         }
 
         /// <summary>

@@ -40,7 +40,8 @@ public static class DynamoDbOutboxTable
                         ["Outstanding"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
                         ["OutstandingAllTopics"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
                         ["Delivered"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                        ["DeliveredAllTopics"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10}
+                        ["DeliveredAllTopics"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                        ["Causation"] = new() {ReadCapacityUnits = 10, WriteCapacityUnits = 10}
                     }));
 
             tableName = request.TableName;

@@ -72,8 +72,8 @@ public class SpannerOutboxBuilderDriftTests
             SpannerOutboxBuilder.GetDDL(tableName, binaryMessagePayload),
             QuoteStyle.Spanner);
 
-        // Act — MySQL outbox V7 LogicalColumns is the canonical V_latest set (the four relational
-        // outbox catalogs agree at V7 per Item #8's drift test).
+        // Act — MySQL outbox V8 LogicalColumns is the canonical V_latest set (the four relational
+        // outbox catalogs agree at V8 per Item #8's drift test).
         var migrations = new MySqlOutboxMigrationCatalog().All(config);
         var migrationColumns = new HashSet<string>(
             migrations[migrations.Count - 1].LogicalColumns,
@@ -85,6 +85,21 @@ public class SpannerOutboxBuilderDriftTests
             $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
             $"V_latest LogicalColumns: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
     }
+
+    [Fact]
+    public void When_spanner_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index()
+    {
+        // The drift test above compares columns only; the new CausationId replay index (Spec 0027,
+        // #2541) is asserted separately here per AC9. Spanner has no inline secondary index, so the
+        // index is a standalone CREATE INDEX IF NOT EXISTS executed alongside the table on fresh
+        // install (SpannerBoxMigrationRunner batches both via CreateDdlCommand).
+        const string tableName = "outbox_test";
+        var indexDdl = SpannerOutboxBuilder.GetCausationIndexDDL(tableName);
+
+        Assert.Contains("CREATE INDEX IF NOT EXISTS", indexDdl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"idx_{tableName}_CausationId", indexDdl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("`CausationId`", indexDdl, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public class SpannerInboxBuilderDriftTests
@@ -92,10 +107,9 @@ public class SpannerInboxBuilderDriftTests
     [Fact]
     public void When_spanner_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
-        // Arrange — Spanner inbox is fresh-install-only at V2-equivalent: the builder ships
-        // CommandId + CommandType + CommandBody + Timestamp + ContextKey, which matches the
-        // MySQL inbox V2 LogicalColumns (V1 + ContextKey). PostgreSQL inbox would also work
-        // (its V1-only ContextKey-inclusive shape is the same five columns), but MySQL is the
+        // Arrange — Spanner inbox is fresh-install-only at V3-equivalent: the builder ships
+        // CommandId + CommandType + CommandBody + Timestamp + ContextKey + CausationId, which
+        // matches the MySQL inbox V3 LogicalColumns (V1 + ContextKey + CausationId). MySQL is the
         // canonical V_latest reference for the four-backend invariant.
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(

@@ -21,7 +21,7 @@ namespace Paramore.Brighter
         IRelationDatabaseOutboxQueries queries,
         ILogger logger,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-        : IAmAnOutboxSync<Message, DbTransaction>, IAmAnOutboxAsync<Message, DbTransaction>
+        : IAmAnOutboxSync<Message, DbTransaction>, IAmAnOutboxAsync<Message, DbTransaction>, IAmACausationTrackingOutbox
     {
 
         protected IAmARelationalDatabaseConfiguration DatabaseConfiguration { get; } = configuration;
@@ -29,6 +29,21 @@ namespace Paramore.Brighter
         protected IAmARelationalDbConnectionProvider ConnectionProvider { get; } = connectionProvider;
 
         protected IRelationDatabaseOutboxQueries Queries => queries;
+
+        // Non-null only when the backend's query set supports causation tracking; gates the IAmACausationTrackingOutbox behaviour.
+        private IRelationalDatabaseOutboxCausationQueries? CausationQueries => queries as IRelationalDatabaseOutboxCausationQueries;
+
+        // Lazily-probed, memoized result of whether the live table actually has the CausationId column.
+        // The driver capability (CausationQueries) is static and always present once a backend implements
+        // the interface, so it must NOT gate the write — an un-migrated table lacks the column and a
+        // causation-aware INSERT would fail (AC10). Populated by the first probe on either the sync or
+        // async path and read by both; concurrent first probes are harmless (idempotent, same result).
+        // Access is deliberately not synchronised: a stale-null read on a weak memory model just triggers
+        // one extra idempotent probe, and both probes resolve to the same value, so the cached answer never
+        // changes once written. (`volatile` is not applicable to a nullable value type, hence this note.)
+        // Never invalidated: a store constructed before provisioning caches "absent", so a mid-process
+        // migration requires a restart.
+        private bool? _causationColumnExists;
 
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
@@ -76,7 +91,13 @@ namespace Paramore.Brighter
             try
             {
                 var parameters = InitAddDbParameters(message);
-                WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters), () =>
+                var includeCausation = CausationColumnExists();
+                if (includeCausation)
+                {
+                    parameters = [.. parameters, CreateSqlParameter("@CausationId", ReadCausationId(requestContext))];
+                }
+
+                WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters, includeCausation), () =>
                 {
                     logger.LogWarning(
                         "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
@@ -119,8 +140,13 @@ namespace Paramore.Brighter
 
             try
             {
+                // Gate the bulk write on the same memoized probe as the single Add so a batch deposited under
+                // [UseInbox] persists its CausationId; an un-migrated table keeps the plain bulk insert (AC10).
+                var includeCausation = CausationColumnExists();
+                var causationId = includeCausation ? ReadCausationId(requestContext) : null;
+
                 WriteToStore(transactionProvider,
-                    connection => InitBulkAddDbCommand(messages.ToList(), connection),
+                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeCausation, causationId),
                     () => logger.LogWarning("Outbox: At least one message already exists in the outbox"));
             }
             finally
@@ -138,7 +164,7 @@ namespace Paramore.Brighter
         /// <param name="transactionProvider">Connection Provider to use for this call</param>
         /// <param name="cancellationToken">Cancellation Token</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public Task AddAsync(
+        public async Task AddAsync(
             Message message,
             RequestContext requestContext,
             int outBoxTimeout = -1,
@@ -151,7 +177,7 @@ namespace Paramore.Brighter
                 { "db.operation.name", ExtractSqlOperationName(queries.AddCommand) },
                 { "db.query.text", queries.AddCommand }
             };
-            
+
             var span = Tracer?.CreateDbSpan(
                 new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.Add, DatabaseConfiguration.OutBoxTableName,
                     dbAttributes: dbAttributes),
@@ -161,14 +187,21 @@ namespace Paramore.Brighter
             try
             {
                 var parameters = InitAddDbParameters(message);
-                return WriteToStoreAsync(transactionProvider,
-                    connection => InitAddDbCommand(connection, parameters), () =>
+                var includeCausation = await CausationColumnExistsAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+                if (includeCausation)
+                {
+                    parameters = [.. parameters, CreateSqlParameter("@CausationId", ReadCausationId(requestContext))];
+                }
+
+                await WriteToStoreAsync(transactionProvider,
+                    connection => InitAddDbCommand(connection, parameters, includeCausation), () =>
                     {
                         logger.LogWarning(
                             "A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                             message.Id);
                     },
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
             finally
             {
@@ -185,7 +218,7 @@ namespace Paramore.Brighter
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task"/>.</returns>
-        public Task AddAsync(
+        public async Task AddAsync(
             IEnumerable<Message> messages,
             RequestContext? requestContext,
             int outBoxTimeout = -1,
@@ -206,10 +239,16 @@ namespace Paramore.Brighter
 
             try
             {
-                return WriteToStoreAsync(transactionProvider,
-                    connection => InitBulkAddDbCommand(messages.ToList(), connection),
+                // Gate the bulk write on the same memoized probe as the single AddAsync so a batch deposited under
+                // [UseInbox] persists its CausationId; an un-migrated table keeps the plain bulk insert (AC10).
+                var includeCausation = await CausationColumnExistsAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
+                var causationId = includeCausation ? ReadCausationId(requestContext) : null;
+
+                await WriteToStoreAsync(transactionProvider,
+                    connection => InitBulkAddDbCommand(messages.ToList(), connection, includeCausation, causationId),
                     () => logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"),
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
             finally
             {
@@ -966,6 +1005,95 @@ namespace Paramore.Brighter
                 .Count();
         }
 
+        /// <inheritdoc />
+        public bool SupportsCausationTracking() => CausationColumnExists();
+
+        /// <inheritdoc />
+        public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+            => CausationColumnExistsAsync(cancellationToken);
+
+        // Memoized live-schema probe shared by SupportsCausationTracking[Async] and the Add gate.
+        private bool CausationColumnExists()
+        {
+            if (CausationQueries is null)
+            {
+                return false;
+            }
+
+            return _causationColumnExists ??= ReadFromStore(
+                connection => CreateCommand(connection, GenerateSqlText(CausationQueries.CausationColumnExistsCommand), -1),
+                MapBoolFunction);
+        }
+
+        private async Task<bool> CausationColumnExistsAsync(CancellationToken cancellationToken)
+        {
+            if (CausationQueries is null)
+            {
+                return false;
+            }
+
+            if (_causationColumnExists is { } cached)
+            {
+                return cached;
+            }
+
+            var exists = await ReadFromStoreAsync(
+                connection => CreateCommand(connection, GenerateSqlText(CausationQueries.CausationColumnExistsCommand), -1),
+                dr => MapBoolFunctionAsync(dr, cancellationToken),
+                cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            _causationColumnExists = exists;
+            return exists;
+        }
+
+        /// <inheritdoc />
+        public void ReplayCausation(string causationId, RequestContext? requestContext,
+            Dictionary<string, object>? args = null)
+        {
+            if (CausationQueries is null)
+            {
+                return;
+            }
+
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.Replay, DatabaseConfiguration.OutBoxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                WriteToStore(null, connection => InitReplayCausationCommand(connection, causationId), null);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task ReplayCausationAsync(string causationId, RequestContext? requestContext,
+            Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        {
+            if (CausationQueries is null)
+            {
+                return;
+            }
+
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(dbSystem, DatabaseConfiguration.DatabaseName, BoxDbOperation.Replay, DatabaseConfiguration.OutBoxTableName),
+                requestContext?.Span,
+                options: instrumentationOptions);
+
+            try
+            {
+                await WriteToStoreAsync(null, connection => InitReplayCausationCommand(connection, causationId), null,
+                    cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
         protected virtual void WriteToStore(
             IAmABoxTransactionProvider<DbTransaction>? transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
@@ -1185,14 +1313,25 @@ namespace Paramore.Brighter
 
         private DbCommand InitAddDbCommand(
             DbConnection connection,
-            IDbDataParameter[] parameters
+            IDbDataParameter[] parameters,
+            bool includeCausation
         )
-            => CreateCommand(connection, GenerateSqlText(queries.AddCommand), 0, parameters);
+            // The caller threads in the result of its own CausationColumnExists[Async]() probe, so the
+            // SQL choice and the parameter list are decided from a single read; absent column → plain AddCommand.
+            => CreateCommand(connection,
+                GenerateSqlText(includeCausation ? CausationQueries!.AddCausationCommand : queries.AddCommand),
+                0, parameters);
 
-        private DbCommand InitBulkAddDbCommand(List<Message> messages, DbConnection connection)
+        private DbCommand InitReplayCausationCommand(DbConnection connection, string causationId)
+            => CreateCommand(connection, GenerateSqlText(CausationQueries!.ReplayCausationCommand), 0,
+                CreateSqlParameter("@CausationId", causationId));
+
+        private DbCommand InitBulkAddDbCommand(List<Message> messages, DbConnection connection, bool includeCausation,
+            string? causationId)
         {
-            var insertClause = GenerateBulkInsert(messages);
-            return CreateCommand(connection, GenerateSqlText(queries.BulkAddCommand, insertClause.insertClause), 0,
+            var insertClause = GenerateBulkInsert(messages, includeCausation, causationId);
+            var addCommand = includeCausation ? CausationQueries!.BulkAddCausationCommand : queries.BulkAddCommand;
+            return CreateCommand(connection, GenerateSqlText(addCommand, insertClause.insertClause), 0,
                 insertClause.parameters);
         }
 
@@ -1389,6 +1528,53 @@ namespace Paramore.Brighter
             return outstandingMessages;
         }
 
+        // Returns true when the probe query returns at least one row (the CausationId column exists).
+        protected virtual bool MapBoolFunction(DbDataReader dr)
+        {
+            try
+            {
+                return dr.HasRows;
+            }
+            finally
+            {
+                dr.Close();
+            }
+        }
+
+#if NETSTANDARD
+        // Async counterpart of MapBoolFunction.
+        protected virtual Task<bool> MapBoolFunctionAsync(DbDataReader dr, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return Task.FromResult(dr.HasRows);
+            }
+            finally
+            {
+                dr.Close();
+            }
+        }
+#else
+        // Async counterpart of MapBoolFunction.
+        protected virtual async Task<bool> MapBoolFunctionAsync(DbDataReader dr, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return dr.HasRows;
+            }
+            finally
+            {
+                await dr.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
+            }
+        }
+#endif
+
+        // Reads the causation id from the request context bag, if present.
+        private static string? ReadCausationId(RequestContext? requestContext)
+            => requestContext?.Bag.TryGetValue(RequestContextBagNames.CausationId, out var value) == true
+                ? value as string
+                : null;
+
         protected virtual (string inClause, IDbDataParameter[] parameters) GenerateInClauseAndAddParameters(
             List<string> messageIds)
         {
@@ -1403,7 +1589,8 @@ namespace Paramore.Brighter
             return (string.Join(",", paramNames), parameters);
         }
 
-        protected virtual (string insertClause, IDbDataParameter[] parameters) GenerateBulkInsert(List<Message> messages)
+        protected virtual (string insertClause, IDbDataParameter[] parameters) GenerateBulkInsert(
+            List<Message> messages, bool includeCausation = false, string? causationId = null)
         {
             var messageParams = new List<string>();
             var parameters = new List<IDbDataParameter>();
@@ -1411,13 +1598,22 @@ namespace Paramore.Brighter
             for (int i = 0; i < messages.Count; i++)
             {
                 // include all columns in the same order as the CREATE TABLE DDL:
-                messageParams.Add(
+                var rowColumns =
                     $"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, " +
                     $"@p{i}_ReplyTo, @p{i}_ContentType, @p{i}_PartitionKey, @p{i}_HeaderBag, @p{i}_Body, " +
-                    $"@p{i}_Source, @p{i}_Type, @p{i}_DataSchema, @p{i}_Subject, @p{i}_TraceParent, @p{i}_TraceState, " +  
-                    $"@p{i}_Baggage, @p{i}_WorkflowId, @p{i}_JobId)");
+                    $"@p{i}_Source, @p{i}_Type, @p{i}_DataSchema, @p{i}_Subject, @p{i}_TraceParent, @p{i}_TraceState, " +
+                    $"@p{i}_Baggage, @p{i}_WorkflowId, @p{i}_JobId";
+
+                // The bulk causation insert appends a trailing CausationId column; bind one per-row parameter so each
+                // batched message carries the same causation id as the single Add path would.
+                rowColumns += includeCausation ? $", @p{i}_CausationId)" : ")";
+                messageParams.Add(rowColumns);
 
                 parameters.AddRange(InitAddDbParameters(messages[i], i));
+                if (includeCausation)
+                {
+                    parameters.Add(CreateSqlParameter($"@p{i}_CausationId", causationId));
+                }
             }
 
             return (string.Join(",", messageParams), parameters.ToArray());

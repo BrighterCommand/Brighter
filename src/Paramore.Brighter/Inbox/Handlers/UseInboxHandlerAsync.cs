@@ -29,6 +29,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.Handlers
 {
@@ -46,6 +47,7 @@ namespace Paramore.Brighter.Inbox.Handlers
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<UseInboxHandlerAsync<T>>();
 
         private readonly IAmAnInboxAsync _inbox;
+        private readonly IAmACausationTrackingOutbox? _outbox;
         private bool _onceOnly;
         private string? _contextKey;
         private OnceOnlyAction _onceOnlyAction;
@@ -54,9 +56,12 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// Initializes a new instance of the <see cref="UseInboxHandlerAsync{T}" /> class.
         /// </summary>
         /// <param name="inbox">The store for commands that pass into the system</param>
-        public UseInboxHandlerAsync(IAmAnInboxAsync inbox)
+        /// <param name="outbox">An optional causation-tracking outbox, used to replay messages when a duplicate is
+        /// seen and <see cref="OnceOnlyAction.Replay"/> is configured. Resolved from DI when registered.</param>
+        public UseInboxHandlerAsync(IAmAnInboxAsync inbox, IAmACausationTrackingOutbox? outbox = null)
         {
             _inbox = inbox;
+            _outbox = outbox;
         }
         
         
@@ -65,9 +70,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             _onceOnly = (bool?) initializerList[0] ?? false;
             _contextKey = (string?)initializerList[1];
             _onceOnlyAction = (OnceOnlyAction?)initializerList[2] ?? OnceOnlyAction.Throw;
-            
-            base.InitializeFromAttributeParams(initializerList);
-            
+
             base.InitializeFromAttributeParams(initializerList);
         }
 
@@ -82,8 +85,15 @@ namespace Paramore.Brighter.Inbox.Handlers
             if (_contextKey is null)
                 throw new ArgumentException("ContextKey must be set before Handling");
 
-            var requestContext = InitRequestContext();
-            
+            // Prefer the shared pipeline context so the causation id we stamp below flows to the outbox Add.
+            // A custom IAmARequestContextFactory may supply a context that is not a RequestContext; in that
+            // case fall back to a fresh context carrying Activity.Current — matching the pre-feature behaviour
+            // for the Throw/Warn/Add inbox paths (causation tracking then degrades to a no-op for Replay).
+            var requestContext = Context as RequestContext ?? new RequestContext { Span = Activity.Current };
+
+            if (!requestContext.Bag.ContainsKey(RequestContextBagNames.CausationId))
+                requestContext.Bag[RequestContextBagNames.CausationId] = command.Id.Value;
+
             if (_onceOnly)
             {
                 Log.CheckingIfCommandHasBeenSeen(s_logger, command.Id.Value);
@@ -95,17 +105,44 @@ namespace Paramore.Brighter.Inbox.Handlers
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
                     Log.CommandHasBeenSeen(s_logger, command.Id.Value);
+                    WriteInboxEvent(Context?.Span, command, "UseInboxHandler Duplicate Throw");
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
                     Log.CommandHasBeenSeenWarning(s_logger, command.Id.Value);
+                    WriteInboxEvent(Context?.Span, command, "UseInboxHandler Duplicate Warn");
+                    return command;
+                }
+
+                if (exists && _onceOnlyAction is OnceOnlyAction.Replay)
+                {
+                    Log.CommandHasBeenSeenReplayingOutbox(s_logger, command.Id.Value);
+
+                    var span = Context?.Span;
+
+                    string? causationId = null;
+                    if (_inbox is IAmACausationTrackingInbox trackingInbox && _outbox is not null)
+                    {
+                        causationId = await trackingInbox
+                            .GetCausationIdAsync(command.Id.Value, _contextKey, requestContext, -1, cancellationToken)
+                            .ConfigureAwait(ContinueOnCapturedContext);
+                        if (causationId is not null)
+                            await _outbox.ReplayCausationAsync(causationId, requestContext, cancellationToken: cancellationToken)
+                                .ConfigureAwait(ContinueOnCapturedContext);
+                    }
+
+                    WriteReplayEvent(span, command, causationId);
+
                     return command;
                 }
             }
 
             Log.WritingCommandToInbox(s_logger, command.Id.Value);
+
+            //Capture the span before awaits because RequestContext.Span is thread-affine
+            var addSpan = Context?.Span;
 
             T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
@@ -113,17 +150,64 @@ namespace Paramore.Brighter.Inbox.Handlers
             await _inbox.AddAsync(command, _contextKey, requestContext, -1, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
 
+            WriteInboxEvent(addSpan, command, "UseInboxHandler Add");
+
             return handledCommand;
         }
 
-        private RequestContext InitRequestContext()
+        /// <summary>
+        /// Writes a telemetry event to the pipeline span recording that a duplicate command triggered an outbox replay.
+        /// </summary>
+        /// <remarks>
+        /// The event is only written when there is a span to write to and the configured
+        /// <see cref="InstrumentationOptions"/> for the pipeline include <see cref="InstrumentationOptions.Brighter"/>.
+        /// </remarks>
+        /// <param name="span">The pipeline <see cref="Activity"/> captured before the replay, or <c>null</c> if there is no span.</param>
+        /// <param name="command">The duplicate command that triggered the replay.</param>
+        /// <param name="causationId">The causation id whose outbox messages were replayed, if one was found.</param>
+        private void WriteReplayEvent(Activity? span, T command, string? causationId)
         {
-            return new RequestContext()
+            if (span is null || Context is null || !Context.InstrumentationOptions.HasFlag(InstrumentationOptions.Brighter))
+                return;
+
+            var tags = new ActivityTagsCollection
             {
-                Span = Activity.Current
+                { BrighterSemanticConventions.RequestId, command.Id.Value },
+                { BrighterSemanticConventions.CausationId, causationId }
             };
+
+            // Distinguish "replayed a causation's messages" from "nothing replayed because no causation id was found",
+            // so operators don't read the event as a successful replay when the outbox was never asked to resend.
+            var eventName = causationId is null
+                ? "UseInboxHandler Duplicate Replay Skipped"
+                : "UseInboxHandler Duplicate Replay";
+
+            span.AddEvent(new ActivityEvent(eventName, DateTimeOffset.UtcNow, tags));
         }
-        
+
+        /// <summary>
+        /// Writes a telemetry event to the pipeline span recording the outcome of handling a command (Add, Throw, or Warn).
+        /// </summary>
+        /// <remarks>
+        /// The event is only written when there is a span to write to and the configured
+        /// <see cref="InstrumentationOptions"/> for the pipeline include <see cref="InstrumentationOptions.Brighter"/>.
+        /// </remarks>
+        /// <param name="span">The pipeline <see cref="Activity"/>, or <c>null</c> if there is no span.</param>
+        /// <param name="command">The command being handled.</param>
+        /// <param name="eventName">The name of the telemetry event to write.</param>
+        private void WriteInboxEvent(Activity? span, T command, string eventName)
+        {
+            if (span is null || Context is null || !Context.InstrumentationOptions.HasFlag(InstrumentationOptions.Brighter))
+                return;
+
+            var tags = new ActivityTagsCollection
+            {
+                { BrighterSemanticConventions.RequestId, command.Id.Value }
+            };
+
+            span.AddEvent(new ActivityEvent(eventName, DateTimeOffset.UtcNow, tags));
+        }
+
         private static partial class Log
         {
             [LoggerMessage(LogLevel.Debug, "Checking if command {Id} has already been seen")]
@@ -134,6 +218,9 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             [LoggerMessage(LogLevel.Warning, "Command {Id} has already been seen")]
             public static partial void CommandHasBeenSeenWarning(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Debug, "Command {Id} has already been seen; replaying its outbox messages")]
+            public static partial void CommandHasBeenSeenReplayingOutbox(ILogger logger, string id);
 
             [LoggerMessage(LogLevel.Debug, "Writing command {Id} to the Inbox")]
             public static partial void WritingCommandToInbox(ILogger logger, string id);

@@ -111,6 +111,12 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>true if defined</returns>
         bool HasOutbox();
+
+        /// <summary>
+        /// The underlying outbox instance, exposed so pipeline validation can inspect it (for example to
+        /// check whether it supports causation tracking). Null if no outbox is configured.
+        /// </summary>
+        IAmAnOutbox? Outbox { get; }
     }
     
     /// <summary>

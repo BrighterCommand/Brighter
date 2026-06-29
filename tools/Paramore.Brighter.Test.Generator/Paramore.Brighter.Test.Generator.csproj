@@ -28,6 +28,10 @@
     <None Update="Templates\Outbox\Async\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+
+    <None Update="Templates\Outbox\Causation\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

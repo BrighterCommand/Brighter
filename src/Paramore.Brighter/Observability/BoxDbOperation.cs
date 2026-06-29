@@ -36,5 +36,6 @@ public enum BoxDbOperation
     MarkDispatched,          //Mark one or more messages as dispatched
     OutStandingMessages,     //Retrieve a set of messages that are still outstanding
     OutStandingMessageCount, //Count how many outstanding messages are in the outbox
-    Exists                   //Check whether a message exists in the inbox
+    Exists,                  //Check whether a message exists in the inbox
+    Replay                   //Clear the dispatched state of messages so they are resent (replay on inbox duplicate)
 }

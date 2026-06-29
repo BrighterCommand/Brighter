@@ -49,9 +49,15 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                 configuration.Outbox,
                 filename => SkipTest(configuration.Outbox, filename));
 
-            await GenerateAsync(configuration, 
+            await GenerateAsync(configuration,
                 Path.Combine("Outbox", prefix, "Generated", "Async"),
                 Path.Combine("Outbox", "Async"),
+                configuration.Outbox,
+                filename => SkipTest(configuration.Outbox, filename));
+
+            await GenerateAsync(configuration,
+                Path.Combine("Outbox", prefix, "Generated", "Causation"),
+                Path.Combine("Outbox", "Causation"),
                 configuration.Outbox,
                 filename => SkipTest(configuration.Outbox, filename));
         }
@@ -80,9 +86,15 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                     outboxConfiguration,
                     filename => SkipTest(outboxConfiguration, filename));
                 
-                await GenerateAsync(configuration, 
+                await GenerateAsync(configuration,
                     Path.Combine("Outbox", prefix, "Generated", "Async"),
                     Path.Combine("Outbox", "Async"),
+                    outboxConfiguration,
+                    filename => SkipTest(outboxConfiguration, filename));
+
+                await GenerateAsync(configuration,
+                    Path.Combine("Outbox", prefix, "Generated", "Causation"),
+                    Path.Combine("Outbox", "Causation"),
                     outboxConfiguration,
                     filename => SkipTest(outboxConfiguration, filename));
             }

@@ -46,7 +46,8 @@ namespace Paramore.Brighter.BoxProvisioning.Sqlite;
 /// SQLite outbox V1 is one of three relational outboxes whose first-shipped state matches
 /// the "logical pre-V2 baseline" (alongside MSSQL and MySQL). The PostgreSQL outbox is the
 /// lone exception — see the born-past-V1 note in <see cref="PostgreSqlOutboxMigrationCatalog"/>.
-/// The accumulated <c>LogicalColumns</c> across V1..V7 equals the live builder's column set
+/// V8 adds <c>CausationId</c> (Spec 0027, #2541) plus a replay index on it.
+/// The accumulated <c>LogicalColumns</c> across V1..V8 equals the live builder's column set
 /// — verified by the drift test in <c>tests/Paramore.Brighter.Sqlite.Tests/BoxProvisioning</c>.
 /// </para>
 /// </remarks>
@@ -84,6 +85,7 @@ public class SqliteOutboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v6AddedColumns = ["WorkflowId", "JobId"];
     private static readonly string[] s_v7AddedColumns = ["DataRef", "SpecVersion"];
+    private static readonly string[] s_v8AddedColumns = ["CausationId"];
 
     /// <inheritdoc />
     public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
@@ -98,7 +100,7 @@ public class SqliteOutboxMigrationCatalog : IAmABoxMigrationCatalog
     /// Returns all migrations for the SQLite outbox, ordered by version.
     /// </summary>
     /// <param name="configuration">The relational database configuration.</param>
-    /// <returns>An ordered list of migrations from V1 to V7.</returns>
+    /// <returns>An ordered list of migrations from V1 to V8.</returns>
     public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
     {
         var table = configuration.OutBoxTableName;
@@ -161,7 +163,15 @@ public class SqliteOutboxMigrationCatalog : IAmABoxMigrationCatalog
                 UpScript: AddColumns(table, "DataRef", "SpecVersion"),
                 LogicalColumns: Cumulative(7),
                 SourceReference: "d67dac947 / #3790",
-                IdempotencyCheckSql: ColumnExistsCheck(table, "DataRef"))
+                IdempotencyCheckSql: ColumnExistsCheck(table, "DataRef")),
+
+            new BoxMigration(
+                Version: 8,
+                Description: "Add CausationId column and replay index",
+                UpScript: AddColumns(table, "CausationId") + Environment.NewLine + AddCausationIndex(table),
+                LogicalColumns: Cumulative(8),
+                SourceReference: "#2541",
+                IdempotencyCheckSql: ColumnExistsCheck(table, "CausationId"))
         ];
     }
 
@@ -175,6 +185,7 @@ public class SqliteOutboxMigrationCatalog : IAmABoxMigrationCatalog
         if (upToVersion >= 5) { set.UnionWith(s_v5AddedColumns); }
         if (upToVersion >= 6) { set.UnionWith(s_v6AddedColumns); }
         if (upToVersion >= 7) { set.UnionWith(s_v7AddedColumns); }
+        if (upToVersion >= 8) { set.UnionWith(s_v8AddedColumns); }
         return set;
     }
 
@@ -183,6 +194,13 @@ public class SqliteOutboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static string AddColumn(string table, string column) =>
         $"ALTER TABLE [{table}] ADD COLUMN [{column}] TEXT NULL;";
+
+    // Idempotent replay index (Spec 0027, #2541) on CausationId via SQLite's native
+    // CREATE INDEX IF NOT EXISTS. The V8 UpScript is gated as a whole by the column
+    // IdempotencyCheckSql, so on chain replay the index statement is skipped alongside the
+    // ALTER (the index was created on the first, column-adding pass).
+    private static string AddCausationIndex(string table) =>
+        $"CREATE INDEX IF NOT EXISTS [idx_{table}_CausationId] ON [{table}] ([CausationId]);";
 
     private static string ColumnExistsCheck(string table, string column) =>
         $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='{column}';";

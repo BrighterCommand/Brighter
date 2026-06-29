@@ -58,6 +58,12 @@ namespace Paramore.Brighter
         /// The message to be dispatched
         /// </summary>
         public Message Message { get; } = message;
+
+        /// <summary>
+        /// The causation id linking this outbox entry to the inbox entry whose handling produced it. Null when
+        /// no causation id was supplied. Used to replay the messages of a causation on inbox duplicate detection.
+        /// </summary>
+        public string? CausationId { get; set; }
     }
 
 
@@ -74,7 +80,7 @@ namespace Paramore.Brighter
     /// </para>
     /// </summary>
 #pragma warning disable CS0618
-    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
+    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>, IAmACausationTrackingOutbox
 #pragma warning restore CS0618
     {
         private readonly TimeProvider _timeProvider;
@@ -139,7 +145,11 @@ namespace Paramore.Brighter
                 if (!Requests.ContainsKey(message.Id.Value))
                 {
                     if (!Requests.TryAdd(message.Id.Value,
-                            new OutboxEntry(message) { WriteTime = _timeProvider.GetUtcNow() }))
+                            new OutboxEntry(message)
+                            {
+                                WriteTime = _timeProvider.GetUtcNow(),
+                                CausationId = ReadCausationId(requestContext)
+                            }))
                     {
                         throw new Exception($"Could not add message with Id: {message.Id} to outbox");
                     }
@@ -691,8 +701,63 @@ namespace Paramore.Brighter
             }
             finally
             {
-                Tracer?.EndSpan(span);    
+                Tracer?.EndSpan(span);
             }
         }
+
+        /// <inheritdoc />
+        public bool SupportsCausationTracking() => true;
+
+        /// <inheritdoc />
+        public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+
+        /// <inheritdoc />
+        public void ReplayCausation(string causationId, RequestContext? requestContext,
+            Dictionary<string, object>? args = null)
+        {
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Brighter, InMemoryAttributes.OutboxDbName, BoxDbOperation.Replay, InMemoryAttributes.DbTable),
+                requestContext?.Span,
+                options: _instrumentationOptions
+            );
+
+            try
+            {
+                foreach (var entry in Requests.Values.Where(entry => entry.CausationId == causationId))
+                {
+                    entry.TimeFlushed = DateTimeOffset.MinValue;
+                }
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public Task ReplayCausationAsync(string causationId, RequestContext? requestContext,
+            Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        {
+            // Note: Don't create a span here - we call the sync method behind the scenes
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                tcs.SetCanceled();
+                return tcs.Task;
+            }
+
+            ReplayCausation(causationId, requestContext, args);
+
+            tcs.SetResult(new object());
+            return tcs.Task;
+        }
+
+        // Reads the causation id from the request context bag, if present
+        private static string? ReadCausationId(RequestContext? requestContext)
+            => requestContext?.Bag.TryGetValue(RequestContextBagNames.CausationId, out var value) == true
+                ? value as string
+                : null;
     }
 }
