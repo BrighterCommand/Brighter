@@ -85,9 +85,8 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
    /spec:approve <phase>         → Approve phase
 
 🔄 RALPH LOOP (UNATTENDED)
-   /spec:ralph-tasks              → Generate ralph tasks
-   /spec:ralph-implement [count]  → Unattended TDD
-   scripts/ralph.sh [n] [max]     → Run the loop
+   /spec:ralph-tasks              → Generate ralph tasks (standalone, from approved design)
+   /spec:ralph-implement [count]  → Unattended self-driving loop (opus + auto mode)
 ```
 
 ## Decision Tree: Which Skill Should I Use?
@@ -238,19 +237,19 @@ Each skill enforces specific practices from `.agent_instructions/`:
 ### Workflow 5: Ralph Loop (Unattended)
 
 ```bash
-# 1. Complete spec workflow up to approved tasks (Workflows 3 steps 1-4)
+# 1. Complete spec workflow up to an APPROVED DESIGN (no tasks step needed for this path)
 
-# 2. Generate ralph-tasks from approved tasks
+# 2. Generate ralph-tasks directly from the approved design
 /spec:ralph-tasks
 
 # 3. Review ralph-tasks.md in your IDE
 
-# 4. Run the unattended loop
-./scripts/ralph.sh              # 1 task/run, 50 max iterations
-./scripts/ralph.sh 2 20 10      # 2 tasks/run, 20 max, 10s cooldown
+# 4. Switch to opus + enable auto mode, then run the self-driving loop
+/model opus
+/spec:ralph-implement          # choose the bound: tasks / turns / budget
 
 # 5. Stop if needed
-touch RALPH_STOP
+touch RALPH_STOP               # unattended kill-switch (or press Esc for a pending wake-up)
 
 # 6. Review results
 git log --oneline
