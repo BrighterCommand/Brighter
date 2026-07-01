@@ -34,10 +34,11 @@ using System.Linq;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Sync;
 
+[Trait("Category", "Sqlite")]
 public class WhenAddingAMessageItShouldBeStoredWithAllProperties : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenAddingAMessageItShouldBeStoredWithAllProperties()
@@ -45,7 +46,7 @@ public class WhenAddingAMessageItShouldBeStoredWithAllProperties : IDisposable
         _outboxProvider = new SqliteBinaryOutboxProvider();
         _outboxProvider.CreateStore();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     [Fact]
@@ -53,7 +54,7 @@ public class WhenAddingAMessageItShouldBeStoredWithAllProperties : IDisposable
     {
         // Arrange
         var context = new RequestContext();
-        var message = _messageFactory.Create();
+        var message = _messageBuilder.Build();
 
         _createdMessages.Add(message);
         

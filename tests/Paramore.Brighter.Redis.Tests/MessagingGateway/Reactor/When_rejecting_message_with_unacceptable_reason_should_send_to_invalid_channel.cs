@@ -96,10 +96,10 @@ public class RedisMessageConsumerUnacceptableInvalidChannelTests : IDisposable
     public void Dispose()
     {
         _consumer.Purge();
-        _consumer.Dispose();
         _dlqConsumer.Purge();
-        _dlqConsumer.Dispose();
         _invalidConsumer.Purge();
+        _consumer.Dispose();
+        _dlqConsumer.Dispose();
         _invalidConsumer.Dispose();
         _messageProducer.Dispose();
     }

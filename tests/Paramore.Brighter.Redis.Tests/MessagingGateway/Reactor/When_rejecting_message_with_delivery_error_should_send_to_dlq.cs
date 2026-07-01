@@ -96,8 +96,8 @@ public class RedisMessageConsumerDeliveryErrorDlqTests : IDisposable
     public void Dispose()
     {
         _consumer.Purge();
-        _consumer.Dispose();
         _dlqConsumer.Purge();
+        _consumer.Dispose();
         _dlqConsumer.Dispose();
         _messageProducer.Dispose();
     }
