@@ -7,7 +7,7 @@ argument-hint: (no arguments — operates on the active bug)
 ## Context
 
 Current bug: !`cat bugfixes/.current-bug 2>/dev/null || echo "No active bug"`
-Confirm gate: !`test -f bugfixes/$(cat bugfixes/.current-bug 2>/dev/null)/.confirm-approved && echo "✓ approved" || echo "✗ NOT approved — run /bugfix:confirm first"`
+Confirm gate (the active bug above must appear in this list): !`ls -1 bugfixes/*/.confirm-approved 2>/dev/null || echo "(none confirmed yet — run /bugfix:confirm first)"`
 
 ## Your Task
 
