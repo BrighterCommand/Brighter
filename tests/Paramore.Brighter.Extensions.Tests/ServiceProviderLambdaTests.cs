@@ -25,9 +25,11 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Xunit;
 
@@ -162,5 +164,34 @@ public class ServiceProviderLambdaTests
 
         // Assert
         Assert.Equal(ServiceLifetime.Transient, options.HandlerLifetime);
+    }
+
+    [Fact]
+    public void AddProducers_ResolvesTracerFromInterfaceRegistration()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var tracer = new BrighterTracer();
+        var outbox = new InMemoryOutbox(TimeProvider.System);
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>());
+
+        services.AddSingleton<IAmABrighterTracer>(tracer);
+
+        services.AddBrighter()
+            .AddProducers(options =>
+            {
+                options.ProducerRegistry = producerRegistry;
+                options.Outbox = outbox;
+            });
+
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        _ = provider.GetRequiredService<IAmAnOutboxProducerMediator>();
+
+        // Assert
+        var tracerProperty = typeof(InMemoryOutbox).GetProperty("Tracer", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        Assert.NotNull(tracerProperty);
+        Assert.Same(tracer, tracerProperty!.GetValue(outbox));
     }
 }
