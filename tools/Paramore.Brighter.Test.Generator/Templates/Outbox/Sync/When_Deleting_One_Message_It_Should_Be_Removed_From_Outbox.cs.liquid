@@ -38,15 +38,12 @@ namespace {{ Namespace }}.Outbox{{ Prefix }}.Sync;
 public class WhenDeletingOneMessageItShouldBeRemovedFromOutbox : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
     private List<Message> _createdMessages = [];
 
     public WhenDeletingOneMessageItShouldBeRemovedFromOutbox()
     {
         _outboxProvider = new {{ OutboxProvider }}();
         _outboxProvider.CreateStore();
-
-        _messageFactory = new {{ MessageFactory }}();
     }
 
     [Fact]
@@ -54,9 +51,9 @@ public class WhenDeletingOneMessageItShouldBeRemovedFromOutbox : IDisposable
     {
         // Arrange
         var context = new RequestContext();
-        var firstMessage = _messageFactory.Create();
-        var secondMessage = _messageFactory.Create();
-        var thirdMessage = _messageFactory.Create();
+        var firstMessage = new {{ MessageBuilder }}().Build();
+        var secondMessage = new {{ MessageBuilder }}().Build();
+        var thirdMessage = new {{ MessageBuilder }}().Build();
 
         _createdMessages.Add(firstMessage);
         _createdMessages.Add(secondMessage);

@@ -48,7 +48,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     private readonly int _batchSize;
     protected IServiceBusReceiverWrapper? ServiceBusReceiver;
     protected readonly AzureServiceBusSubscriptionConfiguration SubscriptionConfiguration;
-    private readonly AzureServiceBusMesssageCreator _azureServiceBusMesssageCreator;
+    private readonly AzureServiceBusMessageCreator _azureServiceBusMesssageCreator;
 
     /// <summary>
     /// Constructor for the Azure Service Bus Consumer
@@ -70,7 +70,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
         _messageProducer = messageProducer;
         AdministrationClientWrapper = administrationClientWrapper;
-        _azureServiceBusMesssageCreator = new AzureServiceBusMesssageCreator(subscription);
+        _azureServiceBusMesssageCreator = new AzureServiceBusMessageCreator(subscription);
     }
         
     /// <summary>

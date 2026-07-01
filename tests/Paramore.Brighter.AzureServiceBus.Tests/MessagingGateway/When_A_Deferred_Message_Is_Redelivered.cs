@@ -19,7 +19,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 [Trait("Category", "ASB")]
 public class When_A_Deferred_Message_Is_Redelivered
 {
-    private readonly AzureServiceBusMesssageCreator _creator;
+    private readonly AzureServiceBusMessageCreator _creator;
 
     public When_A_Deferred_Message_Is_Redelivered()
     {
@@ -29,7 +29,7 @@ public class When_A_Deferred_Message_Is_Redelivered
             routingKey: new RoutingKey("test-topic"),
             messagePumpType: MessagePumpType.Reactor);
 
-        _creator = new AzureServiceBusMesssageCreator(subscription);
+        _creator = new AzureServiceBusMessageCreator(subscription);
     }
 
     [Fact]

@@ -38,15 +38,12 @@ namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerBinary.Sync;
 public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessages : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
     private List<Message> _createdMessages = [];
 
     public WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessages()
     {
         _outboxProvider = new SpannerBinaryOutboxProvider();
         _outboxProvider.CreateStore();
-
-        _messageFactory = new DefaultMessageFactory();
     }
 
     [Fact]
@@ -54,9 +51,9 @@ public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessages : ID
     {
         // Arrange
         var context = new RequestContext();
-        var earliest = _messageFactory.Create();
-        var dispatched = _messageFactory.Create();
-        var undispatched = _messageFactory.Create();
+        var earliest = new DefaultMessageBuilder().Build();
+        var dispatched = new DefaultMessageBuilder().Build();
+        var undispatched = new DefaultMessageBuilder().Build();
 
         _createdMessages.Add(earliest);
         _createdMessages.Add(dispatched);
