@@ -7,7 +7,7 @@ argument-hint: (no arguments — operates on the active bug)
 ## Context
 
 Current bug: !`cat bugfixes/.current-bug 2>/dev/null || echo "No active bug"`
-Issue: !`cat bugfixes/$(cat bugfixes/.current-bug 2>/dev/null)/.issue-number 2>/dev/null || echo "none"`
+Issue (the active bug's number is read in Step 1): !`ls -1 bugfixes/*/.issue-number 2>/dev/null || echo "none"`
 
 ## Your Task
 
