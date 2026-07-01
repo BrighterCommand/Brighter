@@ -311,7 +311,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
             if(ServiceBusReceiver == null)
                 await GetMessageReceiverProviderAsync();
 
-            await ServiceBusReceiver!.DeadLetterAsync(lockToken);
+            await ServiceBusReceiver!.DeadLetterAsync(lockToken, reasonString, description);
             if (SubscriptionConfiguration.RequireSession)
                 if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
         }
