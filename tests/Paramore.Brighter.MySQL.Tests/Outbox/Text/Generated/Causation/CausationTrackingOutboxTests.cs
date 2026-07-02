@@ -32,6 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.Outbox.Text.Causation;
 
+[Trait("Category", "MySQL")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly MySQLTextOutboxProvider _outboxProvider = new();

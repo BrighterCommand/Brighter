@@ -32,6 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.Outbox.Causation;
 
+[Trait("Category", "DynamoDB")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<Amazon.DynamoDBv2.Model.TransactWriteItemsRequest>
 {
     private readonly Paramore.Brighter.DynamoDB.V4.Tests.Outbox.DynamoDBOutboxProvider _outboxProvider = new();

@@ -32,6 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text.Causation;
 
+[Trait("Category", "MSSQL")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly MSSQLTextOutboxProvider _outboxProvider = new();

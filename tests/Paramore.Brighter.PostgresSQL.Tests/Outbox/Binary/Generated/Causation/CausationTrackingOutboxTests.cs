@@ -32,6 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Causation;
 
+[Trait("Category", "PostgresSql")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly PostgresBinaryOutboxProvider _outboxProvider = new();

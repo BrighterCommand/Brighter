@@ -32,6 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Causation;
 
+[Trait("Category", "Sqlite")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly SqliteBinaryOutboxProvider _outboxProvider = new();
