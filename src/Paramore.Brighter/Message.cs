@@ -63,7 +63,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The header.</value>
         public MessageHeader Header { get; init; }
-        
+
         /// <summary>
         /// Gets the body.
         /// </summary>

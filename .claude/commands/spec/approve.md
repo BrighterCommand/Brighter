@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Read, Write, Edit, Glob
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Read, Write, Edit, Glob, AskUserQuestion
 description: Approve a specification phase
 argument-hint: requirements|design [adr-number]|tasks
 ---
@@ -48,10 +48,26 @@ Parse $ARGUMENTS to extract phase and optional ADR number:
 
 5. Create approval marker: `touch specs/{current-spec}/.design-approved`
 6. Show user which ADRs were approved
-7. Inform user about next steps:
-   - If more ADRs needed: Run `/spec:design [another-focus-area]`
-   - If all ADRs complete: Proceed to `/spec:tasks` to create implementation task list
-   - Reminder: Commit approved ADRs to git
+7. Remind the user to commit the approved ADRs to git.
+8. **Choose the implementation path (the certainty fork).** If more ADRs are still
+   needed, tell the user to run `/spec:design [another-focus-area]` first and stop here.
+   Otherwise the design is complete and there are **two** ways to break the work down — use
+   `AskUserQuestion` to let the user pick:
+
+   - **Attended — review each test** (`/spec:tasks` → `/spec:approve tasks` →
+     `/spec:implement`): generates `tasks.md`, then a strict Red → **user approval** → Green
+     → Refactor loop in the main agent on **sonnet**. Use this when the work is uncertain and
+     each test should be reviewed in the IDE before implementation.
+   - **Unattended — review in batches** (`/spec:ralph-tasks` → `/spec:ralph-implement`):
+     generates `ralph-tasks.md` directly from this approved design (no `tasks.md` step, no
+     per-test approval gates), then a self-driving loop on **opus** (auto mode) that delegates
+     each task to a **sonnet** sub-agent. Use this when the work is well-understood and can be
+     reviewed after a batch of tasks rather than at every test.
+
+   This is "choose by certainty": some work warrants reviewing every test; other work can be
+   reviewed at the end of a batch. Present both, let the user choose, and point them at the
+   first command of the path they pick. Do **not** run that command yourself — just direct
+   them to it.
 
 ### For "tasks" Phase
 

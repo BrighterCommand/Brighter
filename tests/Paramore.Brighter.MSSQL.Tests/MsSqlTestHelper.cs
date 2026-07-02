@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MSSQL.Tests
             new(_sqlSettings.TestsBrighterConnectionString, queueStoreTable: _tableName);
 
 
-        public MsSqlTestHelper(bool binaryMessagePayload = false)
+        public MsSqlTestHelper(bool binaryMessagePayload = false, string? tableName = null)
         {
             _binaryMessagePayload = binaryMessagePayload;
             var builder = new ConfigurationBuilder().AddEnvironmentVariables();
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.MSSQL.Tests
             _sqlSettings = new SqlSettings();
             configuration.GetSection("Sql").Bind(_sqlSettings);
 
-            _tableName = $"test_{Guid.NewGuid()}";
+            _tableName = tableName ?? $"test_{Guid.NewGuid()}";
 
             _connectionProvider = new MsSqlConnectionProvider(new RelationalDatabaseConfiguration(_sqlSettings.TestsBrighterConnectionString));
             

@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>$(BrighterToolTargetFrameworks)</TargetFramework>
+    <TargetFrameworks>$(BrighterToolTargetFrameworks)</TargetFrameworks>
+    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -30,6 +31,14 @@
     </None>
 
     <None Update="Templates\Outbox\Causation\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+
+    <None Update="Templates\MessagingGateway\Proactor\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+
+    <None Update="Templates\MessagingGateway\Reactor\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

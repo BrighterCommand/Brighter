@@ -51,6 +51,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // `CreatedID` column, but Spanner's PRIMARY KEY clause lives OUTSIDE the column body (Spanner
 // declares the PK after the closing paren) so the column set is the logical model exactly.
 
+[Trait("Category", "Spanner")]
 public class SpannerOutboxBuilderDriftTests
 {
     [Theory]
@@ -102,6 +103,7 @@ public class SpannerOutboxBuilderDriftTests
     }
 }
 
+[Trait("Category", "Spanner")]
 public class SpannerInboxBuilderDriftTests
 {
     [Fact]

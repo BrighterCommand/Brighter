@@ -42,6 +42,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // freshly-installed table actually carries V8's schema. Detection-by-history would then report
 // "needs migration V8" forever on Spanner installs.
 
+[Trait("Category", "Spanner")]
 public class SpannerVLatestDriftAgainstRelationalCatalogTests
 {
     // Catalog .All(cfg) does not touch the database — it only emits SQL strings keyed off the
