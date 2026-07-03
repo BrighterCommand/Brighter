@@ -42,6 +42,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // required because the rejection happens at MigrateAsync's entry, before SpannerConnection
 // is opened. Connection string is "Data Source=ignored;".
 
+[Trait("Category", "Spanner")]
 public class SpannerRunnerUnsafeIdentifierTests
 {
     [Theory]

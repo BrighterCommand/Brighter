@@ -3,6 +3,8 @@
   "Outbox": {
     "Transaction": "global::MongoDB.Driver.IClientSessionHandle",
     "OutboxProvider": "Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider",
-    "SupportsTransactions": false
+    "SupportsTransactions": false,
+    "Category": "MongoDB",
+    "CollectionName": "MongoDbOutbox"
   }
 }

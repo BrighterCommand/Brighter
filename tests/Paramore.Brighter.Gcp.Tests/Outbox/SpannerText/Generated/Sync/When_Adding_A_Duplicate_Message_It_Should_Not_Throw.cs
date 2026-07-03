@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Sync;
 public class WhenAddingADuplicateMessageItShouldNotThrow : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenAddingADuplicateMessageItShouldNotThrow()
@@ -46,7 +46,7 @@ public class WhenAddingADuplicateMessageItShouldNotThrow : IDisposable
         _outboxProvider = new SpannerTextOutboxProvider();
         _outboxProvider.CreateStore();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class WhenAddingADuplicateMessageItShouldNotThrow : IDisposable
     {
         // Arrange
         var context = new RequestContext();
-        var message = _messageFactory.Create();
+        var message = _messageBuilder.Build();
 
         _createdMessages.Add(message);
         

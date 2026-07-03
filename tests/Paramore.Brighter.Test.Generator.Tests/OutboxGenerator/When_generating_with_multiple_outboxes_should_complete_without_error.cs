@@ -16,7 +16,7 @@ public class WhenGeneratingWithMultipleOutboxesShouldCompleteWithoutError : IDis
     {
         _testDirectory = Path.Combine(Path.GetTempPath(), $"OutboxGeneratorTests_{Guid.NewGuid()}");
         Directory.CreateDirectory(_testDirectory);
-        
+
         var factory = LoggerFactory.Create(builder => builder.AddConsole());
         _logger = factory.CreateLogger<Generators.OutboxGenerator>();
     }
@@ -29,14 +29,14 @@ public class WhenGeneratingWithMultipleOutboxesShouldCompleteWithoutError : IDis
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,
-            MessageFactory = "TestMessageFactory",
+            MessageBuilder = "TestMessageBuilder",
             Outbox = new OutboxConfiguration
             {
                 Prefix = "SqlServer",
                 Transaction = "SqlTransaction",
                 OutboxProvider = "MsSqlOutbox",
-                SupportsTransactions = true
-            }
+                SupportsTransactions = true,
+            },
         };
         var generator = new Generators.OutboxGenerator(_logger);
 

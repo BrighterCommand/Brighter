@@ -16,11 +16,11 @@ public class WhenGeneratingWithOutboxWithoutTransactionSupportShouldComplete : I
     {
         _testDirectory = Path.Combine(Path.GetTempPath(), $"OutboxGeneratorTests_{Guid.NewGuid()}");
         Directory.CreateDirectory(_testDirectory);
-        
+
         var factory = LoggerFactory.Create(builder => builder.AddConsole());
         _logger = factory.CreateLogger<Generators.OutboxGenerator>();
     }
-    
+
     [Fact]
     public async Task When_generating_with_outbox_without_transaction_support_should_complete()
     {
@@ -29,20 +29,20 @@ public class WhenGeneratingWithOutboxWithoutTransactionSupportShouldComplete : I
         {
             Namespace = "MyApp.Tests",
             DestinationFolder = _testDirectory,
-            MessageFactory = "TestMessageFactory",
+            MessageBuilder = "TestMessageBuilder",
             Outbox = new OutboxConfiguration
             {
                 Prefix = "DynamoDb",
                 OutboxProvider = "DynamoDbOutbox",
-                SupportsTransactions = false
-            }
+                SupportsTransactions = false,
+            },
         };
         var generator = new Generators.OutboxGenerator(_logger);
 
         // Act & Assert - should not throw
         await generator.GenerateAsync(configuration);
     }
-    
+
     public void Dispose()
     {
         if (Directory.Exists(_testDirectory))

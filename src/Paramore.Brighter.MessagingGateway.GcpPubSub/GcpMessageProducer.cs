@@ -54,11 +54,11 @@ public class GcpMessageProducer(
     {
         if (delay == null || delay == TimeSpan.Zero)
         {
-            // Convert the Brighter message to a Google Pub/Sub message
-            var pubSubMessage = Parser.ToPubSubMessage(message);
-
             // Write instrumentation event for the producer
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message, instrumentation);
+            
+            // Convert the Brighter message to a Google Pub/Sub message
+            var pubSubMessage = Parser.ToPubSubMessage(message);
 
             // Publish the message to Google Cloud Pub/Sub
             await client.PublishAsync(pubSubMessage);

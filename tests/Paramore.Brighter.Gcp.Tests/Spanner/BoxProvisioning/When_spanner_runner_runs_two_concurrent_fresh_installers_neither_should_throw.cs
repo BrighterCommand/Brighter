@@ -30,6 +30,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
+[Trait("Category", "Spanner")]
 [Collection("SpannerBoxProvisioning")]
 [Trait("Category", "Spanner")]
 public class SpannerConcurrentFreshInstallTests : IAsyncLifetime

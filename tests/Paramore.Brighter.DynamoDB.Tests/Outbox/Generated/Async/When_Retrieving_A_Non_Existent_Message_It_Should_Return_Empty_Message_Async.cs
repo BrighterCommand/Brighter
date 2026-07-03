@@ -10,17 +10,19 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox.Async;
 
+[Trait("Category", "DynamoDB")]
+[Collection("DynamoDBOutbox")]
 public class WhenRetrievingANonExistentMessageItShouldReturnEmptyMessageAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenRetrievingANonExistentMessageItShouldReturnEmptyMessageAsync()
     {
         _outboxProvider = new Paramore.Brighter.DynamoDB.Tests.Outbox.DynamoDBOutboxProvider();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     public async Task InitializeAsync()
