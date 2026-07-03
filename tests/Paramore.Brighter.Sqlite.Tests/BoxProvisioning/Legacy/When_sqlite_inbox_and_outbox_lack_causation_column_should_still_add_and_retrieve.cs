@@ -87,6 +87,27 @@ public sealed class SqliteLegacySchemaCausationCompatibilityTests : IDisposable
     }
 
     [Fact]
+    public void When_sqlite_inbox_lacks_causation_column_should_return_null_causation_id()
+    {
+        // Arrange — a pre-feature inbox table (V2: no CausationId), with a command already stored.
+        // A Replay duplicate calls GetCausationId on this store; the read path must degrade gracefully
+        // (return null) rather than SELECT the absent [CausationId] column and throw (AC10).
+        var tableName = NewTableName();
+        SqliteInboxLegacySeeder.SeedAtV2(_connectionString, tableName);
+        var inbox = (IAmACausationTrackingInbox)InboxFor(tableName);
+        var contextKey = Uuid.NewAsString();
+        var command = new MyCommand { Value = Uuid.NewAsString() };
+        var context = ContextWithCausation(CausationId);
+        ((IAmAnInboxSync)inbox).Add(command, contextKey, context);
+
+        // Act
+        var causationId = inbox.GetCausationId(command.Id, contextKey, context);
+
+        // Assert
+        Assert.Null(causationId);
+    }
+
+    [Fact]
     public void When_sqlite_outbox_lacks_causation_column_should_not_support_causation_tracking()
     {
         // Arrange

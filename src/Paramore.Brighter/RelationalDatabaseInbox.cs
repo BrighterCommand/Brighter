@@ -320,14 +320,17 @@ namespace Paramore.Brighter
         public string? GetCausationId(string id, string contextKey, RequestContext? requestContext,
             int timeoutInMilliseconds = -1)
         {
-            if (CausationQueries is null)
+            // Gate the read on the same live-schema probe as the write path: a backend may implement the
+            // causation query interface while its table has not been migrated (the CausationId column is
+            // absent). Selecting the missing column would throw; degrade to null instead (AC10).
+            if (!CausationColumnExists())
             {
                 return null;
             }
 
             var parameters = CreateGetParameters(id, contextKey);
             return ReadFromStore(
-                connection => CreateCommand(connection, GenerateSqlText(CausationQueries.GetCausationIdCommand),
+                connection => CreateCommand(connection, GenerateSqlText(CausationQueries!.GetCausationIdCommand),
                     timeoutInMilliseconds, parameters),
                 MapCausationId,
                 id);
@@ -337,14 +340,17 @@ namespace Paramore.Brighter
         public async Task<string?> GetCausationIdAsync(string id, string contextKey, RequestContext? requestContext,
             int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
         {
-            if (CausationQueries is null)
+            // Gate the read on the same live-schema probe as the write path: a backend may implement the
+            // causation query interface while its table has not been migrated (the CausationId column is
+            // absent). Selecting the missing column would throw; degrade to null instead (AC10).
+            if (!await CausationColumnExistsAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
             {
                 return null;
             }
 
             var parameters = CreateGetParameters(id, contextKey);
             return await ReadFromStoreAsync(
-                connection => CreateCommand(connection, GenerateSqlText(CausationQueries.GetCausationIdCommand),
+                connection => CreateCommand(connection, GenerateSqlText(CausationQueries!.GetCausationIdCommand),
                     timeoutInMilliseconds, parameters),
                 MapCausationIdAsync,
                 id,
