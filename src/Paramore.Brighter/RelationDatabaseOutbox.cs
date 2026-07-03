@@ -94,7 +94,7 @@ namespace Paramore.Brighter
                 var includeCausation = CausationColumnExists();
                 if (includeCausation)
                 {
-                    parameters = [.. parameters, CreateSqlParameter("@CausationId", ReadCausationId(requestContext))];
+                    parameters = [.. parameters, CreateSqlParameter("@CausationId", DbType.String, ReadCausationId(requestContext))];
                 }
 
                 WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters, includeCausation), () =>
@@ -191,7 +191,7 @@ namespace Paramore.Brighter
                     .ConfigureAwait(ContinueOnCapturedContext);
                 if (includeCausation)
                 {
-                    parameters = [.. parameters, CreateSqlParameter("@CausationId", ReadCausationId(requestContext))];
+                    parameters = [.. parameters, CreateSqlParameter("@CausationId", DbType.String, ReadCausationId(requestContext))];
                 }
 
                 await WriteToStoreAsync(transactionProvider,
@@ -1324,7 +1324,7 @@ namespace Paramore.Brighter
 
         private DbCommand InitReplayCausationCommand(DbConnection connection, string causationId)
             => CreateCommand(connection, GenerateSqlText(CausationQueries!.ReplayCausationCommand), 0,
-                CreateSqlParameter("@CausationId", causationId));
+                CreateSqlParameter("@CausationId", DbType.String, causationId));
 
         private DbCommand InitBulkAddDbCommand(List<Message> messages, DbConnection connection, bool includeCausation,
             string? causationId)
@@ -1612,7 +1612,7 @@ namespace Paramore.Brighter
                 parameters.AddRange(InitAddDbParameters(messages[i], i));
                 if (includeCausation)
                 {
-                    parameters.Add(CreateSqlParameter($"@p{i}_CausationId", causationId));
+                    parameters.Add(CreateSqlParameter($"@p{i}_CausationId", DbType.String, causationId));
                 }
             }
 
