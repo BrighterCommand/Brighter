@@ -8,8 +8,10 @@ namespace Paramore.Brighter.JsonConverters
     /// <summary>
     /// Global Configuration for the Json Serializer
     /// We provide custom type converters, particularly around serializing objects so that they appear as types not JsonElement
-    /// The camelCase property will convert a key, such as a header bag key, to camelCase if you use UpperCase and so if you expect
-    /// an UpperCase property you will find that it is now a camelCase one. It is best to use camelCase names for this reason
+    /// The <see cref="JsonSerializerOptions.PropertyNamingPolicy"/> (camelCase) applies to C# property names only.
+    /// Dictionary keys — such as <see cref="MessageHeader.Bag"/> keys — are serialized verbatim by
+    /// <see cref="Serialization.DictionaryStringObjectJsonConverter"/>, so a key written as "SessionId" is read back
+    /// as "SessionId".
     /// </summary>
     public static class JsonSerialisationOptions
     {
