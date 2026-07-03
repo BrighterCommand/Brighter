@@ -30,8 +30,15 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public string OutstandingAllTopicsIndexName { get; set; }
 
         /// <summary>
-        /// The name of the global secondary index over the causation id, used to replay a causation's messages
+        /// The name of the global secondary index over the causation id, used to replay a causation's messages.
         /// </summary>
+        /// <remarks>
+        /// Leave this at the default <c>"Causation"</c>. The matching GSI hash key is declared on
+        /// <see cref="MessageItem.CausationId"/> via <c>[DynamoDBGlobalSecondaryIndexHashKey(indexName: "Causation")]</c>,
+        /// whose argument must be a compile-time constant and so cannot read this value. Overriding this name (as with
+        /// the Outstanding/Delivered index names) does not re-point the annotation, so the probe/query would target a
+        /// GSI the table model never declares and replay would silently fail to find any messages.
+        /// </remarks>
         public string CausationIndexName { get; set; }
 
         /// <summary>

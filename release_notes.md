@@ -299,6 +299,30 @@ While applying the value-type pattern we corrected a latent null-safety bug in n
 
 When an inbox detects a duplicate request, Brighter can now optionally **replay** the outbox messages that were produced under that request's causation, rather than silently dropping the duplicate. The feature is opt-in (`OnceOnlyAction.Replay` on the inbox attribute) and non-breaking: it requires a causation-tracking inbox and outbox (`IAmACausationTrackingInbox` / `IAmACausationTrackingOutbox`), and the relational stores gate the causation-aware write on a memoized column probe so un-migrated schemas keep depositing unchanged. Startup pipeline validation fails fast if a `Replay` pipeline is configured without causation tracking. See [ADR 0057](docs/adr/0057-replay-outbox-on-inbox-duplicate.md) and [spec 0027](specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/) for full details.
 
+#### Usage requirement: thread your `RequestContext` through `Post` / `DepositPost`
+
+Replay links a duplicate back to its original outbox messages through the **causation id**. `[UseInbox]` stamps that id into the pipeline's `RequestContext.Bag`, and the outbox `Add` reads it back from the bag — **but only if the handler that deposits the outbox message passes its own `Context` down**. If a handler calls the idiomatic `_commandProcessor.Post(evt)` (or `DepositPost`) *without* a request context, `CommandProcessor` creates a fresh context, the causation id is lost, the message is stored with a `null` `CausationId`, and a later `Replay` finds nothing to replay — a **silent no-op** with no error.
+
+To use Replay, every handler that produces outbox messages must forward its handler `Context`:
+
+```csharp
+// ❌ Silent no-op under Replay — fresh context, causation id lost
+public override MyCommand Handle(MyCommand command)
+{
+    _commandProcessor.Post(new DownstreamEvent(...));
+    return base.Handle(command);
+}
+
+// ✅ Threads the causation id so Replay can match
+public override MyCommand Handle(MyCommand command)
+{
+    _commandProcessor.Post(new DownstreamEvent(...), Context);
+    return base.Handle(command);
+}
+```
+
+This applies to the async equivalents (`PostAsync` / `DepositPostAsync`) as well.
+
 #### Source-breaking change: `IRequestContext.InstrumentationOptions`
 
 `IRequestContext` gains a new required `InstrumentationOptions InstrumentationOptions { get; set; }` member. It carries the instrumentation options configured for the pipeline that created the context, so middleware handlers can gate their own telemetry (for example on `InstrumentationOptions.Brighter`) without taking a dependency on how the processor was configured. `Paramore.Brighter` targets `netstandard2.0`, which does not support default interface members, so — as with the spec-0027/0029 box-provisioning interface additions — this is exposed as a plain abstract member.

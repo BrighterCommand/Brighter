@@ -263,7 +263,8 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <inheritdoc />
         public string? GetCausationId(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1)
         {
-            // Note: Don't add a span here as we call GetCausationIdAsync
+            // Note: this sync entry point delegates to GetCausationIdAsync, so any instrumentation belongs
+            // on the async path (a single code path) rather than being duplicated here. Neither adds a span today.
             return GetCausationIdAsync(id, contextKey, requestContext, timeoutInMilliseconds, default)
                 .ConfigureAwait(ContinueOnCapturedContext)
                 .GetAwaiter()
