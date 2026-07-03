@@ -26,4 +26,24 @@ public class BagKeyRoundTripTests
         Assert.True(roundTripped!.ContainsKey(key), $"expected the bag key '{key}' to survive verbatim");
         Assert.Equal("a-value", roundTripped[key]);
     }
+
+    [Fact]
+    public void When_Round_Tripping_A_Message_Header_A_Pascal_Case_Bag_Key_Is_Readable()
+    {
+        //guards the real user-facing path: the Bag as wired into MessageHeader serialization,
+        //not just a bare dictionary through the converter
+        var header = new MessageHeader(
+            messageId: Id.Random(),
+            topic: new RoutingKey("Test.Topic"),
+            messageType: MessageType.MT_EVENT);
+        header.Bag["SessionId"] = "order-42";
+
+        var json = JsonSerializer.Serialize(header, JsonSerialisationOptions.Options);
+        var roundTripped = JsonSerializer.Deserialize<MessageHeader>(json, JsonSerialisationOptions.Options);
+
+        Assert.NotNull(roundTripped);
+        Assert.True(roundTripped!.Bag.TryGetValue("SessionId", out var sessionId),
+            "expected the PascalCase bag key 'SessionId' to be readable after a MessageHeader round-trip");
+        Assert.Equal("order-42", sessionId);
+    }
 }
