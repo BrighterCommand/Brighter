@@ -108,6 +108,25 @@ public sealed class SqliteLegacySchemaCausationCompatibilityTests : IDisposable
     }
 
     [Fact]
+    public void When_sqlite_outbox_lacks_causation_column_should_not_throw_on_replay_causation()
+    {
+        // Arrange — a pre-feature outbox table (V7: no CausationId). In the mixed-migration state the
+        // inbox is migrated (returns a real causation id) but the outbox is NOT, so the handler hands
+        // ReplayCausation a non-null id. Replay must gate on the live CausationColumnExists() probe and
+        // no-op, rather than issue UPDATE ... WHERE CausationId = @id against the absent column (AC10).
+        var tableName = NewTableName();
+        SqliteOutboxLegacySeeder.SeedAtV(7, _connectionString, tableName);
+        var outbox = (IAmACausationTrackingOutbox)OutboxFor(tableName);
+        var context = ContextWithCausation(CausationId);
+
+        // Act — replay against the un-migrated outbox
+        var exception = Record.Exception(() => outbox.ReplayCausation(CausationId, context));
+
+        // Assert — degrades gracefully (no invalid-column SQL error)
+        Assert.Null(exception);
+    }
+
+    [Fact]
     public void When_sqlite_outbox_lacks_causation_column_should_not_support_causation_tracking()
     {
         // Arrange

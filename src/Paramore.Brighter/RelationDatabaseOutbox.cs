@@ -1049,7 +1049,11 @@ namespace Paramore.Brighter
         public void ReplayCausation(string causationId, RequestContext? requestContext,
             Dictionary<string, object>? args = null)
         {
-            if (CausationQueries is null)
+            // Gate on the live schema probe, not just the static query interface: every backend implements
+            // IRelationalDatabaseOutboxCausationQueries even when its table is un-migrated. In the mixed
+            // state (inbox migrated, outbox not) the handler still hands us a real causation id, so we must
+            // no-op here rather than UPDATE ... WHERE CausationId = @id against the absent column (AC10).
+            if (CausationQueries is null || !CausationColumnExists())
             {
                 return;
             }
@@ -1073,7 +1077,12 @@ namespace Paramore.Brighter
         public async Task ReplayCausationAsync(string causationId, RequestContext? requestContext,
             Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
-            if (CausationQueries is null)
+            // Gate on the live schema probe, not just the static query interface: every backend implements
+            // IRelationalDatabaseOutboxCausationQueries even when its table is un-migrated. In the mixed
+            // state (inbox migrated, outbox not) the handler still hands us a real causation id, so we must
+            // no-op here rather than UPDATE ... WHERE CausationId = @id against the absent column (AC10).
+            if (CausationQueries is null
+                || !await CausationColumnExistsAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
             {
                 return;
             }
