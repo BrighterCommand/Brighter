@@ -131,9 +131,16 @@ namespace Paramore.Brighter.Outbox.MsSql
             var ddl = string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, qualifiedTable);
             // Replay index (Spec 0027, #2541) on CausationId — emitted as a separate statement
             // after the CREATE TABLE in the same fresh-install batch. None of the outbox builders
-            // indexed any column before this.
+            // indexed any column before this. Guarded on sys.indexes (matching the V8 migration and
+            // the Sqlite/Postgres/Spanner builders' IF NOT EXISTS) so re-running the DDL is idempotent;
+            // the CREATE INDEX is EXEC-wrapped so it compiles at run time rather than batch-parse time.
+            var indexObjectId = schemaName is null
+                ? $"OBJECT_ID(N'[{outboxTableName}]')"
+                : $"OBJECT_ID(N'[{schemaName}].[{outboxTableName}]')";
             return ddl + Environment.NewLine +
-                $"CREATE INDEX [idx_{outboxTableName}_CausationId] ON {qualifiedTable} ([CausationId]);";
+                $"IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = N'idx_{outboxTableName}_CausationId' " +
+                $"AND [object_id] = {indexObjectId}){Environment.NewLine}" +
+                $"    EXEC('CREATE INDEX [idx_{outboxTableName}_CausationId] ON {qualifiedTable} ([CausationId]);');";
         }
 
         /// <summary>
