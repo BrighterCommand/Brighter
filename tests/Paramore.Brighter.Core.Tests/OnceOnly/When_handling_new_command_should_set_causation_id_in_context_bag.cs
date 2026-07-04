@@ -80,5 +80,26 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
                 .GetCausationId(_command.Id, _contextKey, requestContext);
             Assert.Equal(_command.Id.Value, storedCausationId);
         }
+
+        [Fact]
+        public void When_handling_new_command_with_a_causation_id_already_in_context_should_preserve_it()
+        {
+            //Arrange — a parent handler earlier in the pipeline has already stamped a causation id into the
+            //shared context bag (this is the causation-chaining/linking semantic the feature is named for)
+            const string parentCausationId = "parent-causation-id";
+            var requestContext = new RequestContext();
+            requestContext.Bag[RequestContextBagNames.CausationId] = parentCausationId;
+
+            //Act
+            _commandProcessor.Send(_command, requestContext);
+
+            //Assert — the handler must NOT overwrite the inherited causation id with the command's own id
+            Assert.Equal(parentCausationId, requestContext.Bag[RequestContextBagNames.CausationId]);
+
+            //Assert — the inbox entry is linked to the parent causation, not the command id
+            var storedCausationId = ((IAmACausationTrackingInbox)_inbox)
+                .GetCausationId(_command.Id, _contextKey, requestContext);
+            Assert.Equal(parentCausationId, storedCausationId);
+        }
     }
 }
