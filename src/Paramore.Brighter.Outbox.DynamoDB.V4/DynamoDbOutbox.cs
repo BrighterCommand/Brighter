@@ -656,8 +656,18 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
                             ConditionExpression = "attribute_exists(MessageId)"
                         };
 
-                        await _client.UpdateItemAsync(updateItemRequest, cancellationToken)
-                            .ConfigureAwait(ContinueOnCapturedContext);
+                        try
+                        {
+                            await _client.UpdateItemAsync(updateItemRequest, cancellationToken)
+                                .ConfigureAwait(ContinueOnCapturedContext);
+                        }
+                        catch (ConditionalCheckFailedException)
+                        {
+                            // The Causation GSI is eventually consistent, so it can list a MessageId whose base
+                            // item was swept / TTL-deleted / concurrently deleted since the index last updated.
+                            // Skip the vanished item and keep re-dispatching the rest of the causation rather than
+                            // let the exception unwind the pagination loop (mirrors MarkDispatchedAsync).
+                        }
                     }
 
                     lastEvaluatedKey = queryResponse.LastEvaluatedKey is { Count: > 0 }
