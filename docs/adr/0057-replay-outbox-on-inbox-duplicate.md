@@ -617,6 +617,7 @@ When the outbox does not implement `IAmACausationTrackingOutbox`, no registratio
 - Schema evolution ships in this work via BoxProvisioning (new migration version + live builder + drift test for the four catalog stores; provisioner for Spanner), broadening the change surface; migration of existing *data* is still not provided — new columns are nullable, so existing rows have null `CausationId` and replay is unavailable for historical entries
 - `SupportsCausationTracking()` is a permanent runtime schema check on both inbox and outbox — it protects users who upgrade Brighter but have not yet migrated their store schema. Pipeline validation uses it at startup so that misconfiguration (Replay enabled on an un-migrated schema) produces a clear error, not a silent runtime failure
 - The `Replay` action silently does nothing if the inbox/outbox don't support causation tracking at runtime (though pipeline validation should catch this at startup)
+- `IRequestContext` gains a new `InstrumentationOptions` member. Because there is no default interface implementation, this is a source- and binary-breaking change for any external type that implements `IRequestContext` directly (the in-box `RequestContext` already provides it). It should ship in a minor-version bump; documented on the interface member itself
 
 ### Risks and Mitigations
 

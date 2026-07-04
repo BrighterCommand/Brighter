@@ -60,6 +60,13 @@ namespace Paramore.Brighter
         /// A statement that returns a row when the <c>CausationId</c> column exists on the outbox table, used as the
         /// runtime schema-support probe. Takes a leading <c>{0}</c> table-name placeholder.
         /// </summary>
+        /// <remarks>
+        /// The backend probes (MsSql <c>OBJECT_ID</c>, Postgres <c>to_regclass</c>, MySql <c>information_schema.
+        /// table_name</c>) resolve the table against the connection's default schema/database, so a box table in a
+        /// non-default schema can be reported as "column absent" even when it is present — silently degrading to no
+        /// causation tracking. This mirrors the existing unqualified <c>FROM {0}</c> runtime queries (it is a shared
+        /// limitation of the box SQL, not specific to this probe) rather than a regression.
+        /// </remarks>
         string CausationColumnExistsCommand { get; }
     }
 }

@@ -261,6 +261,10 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             => Task.FromResult(true);
 
         /// <inheritdoc />
+        /// <remarks>
+        /// <paramref name="timeoutInMilliseconds"/> is accepted for interface compatibility but ignored, as DynamoDB
+        /// handles timeout and retries itself (consistent with the other methods on this store).
+        /// </remarks>
         public string? GetCausationId(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1)
         {
             // Note: this sync entry point delegates to GetCausationIdAsync, so any instrumentation belongs
@@ -272,6 +276,10 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// <paramref name="timeoutInMilliseconds"/> is accepted for interface compatibility but ignored, as DynamoDB
+        /// handles timeout and retries itself (consistent with the other methods on this store).
+        /// </remarks>
         public async Task<string?> GetCausationIdAsync(string id, string contextKey, RequestContext? requestContext,
             int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
         {
