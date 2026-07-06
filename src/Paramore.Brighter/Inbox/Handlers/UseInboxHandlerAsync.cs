@@ -46,6 +46,10 @@ namespace Paramore.Brighter.Inbox.Handlers
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<UseInboxHandlerAsync<T>>();
 
+        // Set once, process-wide, the first time a custom IRequestContext disables Replay, to keep the warning
+        // out of the hot path. A benign race may let it log a couple of extra times under concurrent first-hits.
+        private static bool s_warnedAboutCustomContext;
+
         private readonly IAmAnInboxAsync _inbox;
         private readonly IAmACausationTrackingOutbox? _outbox;
         private bool _onceOnly;
@@ -89,10 +93,28 @@ namespace Paramore.Brighter.Inbox.Handlers
             // A custom IAmARequestContextFactory may supply a context that is not a RequestContext; in that
             // case fall back to a fresh context carrying Activity.Current — matching the pre-feature behaviour
             // for the Throw/Warn/Add inbox paths (causation tracking then degrades to a no-op for Replay).
-            var requestContext = Context as RequestContext ?? new RequestContext { Span = Activity.Current };
+            var requestContext = Context as RequestContext;
+            if (requestContext is null)
+            {
+                // Silent replay degradation is a PITA to diagnose, so warn (once) when a custom context means
+                // Replay cannot flow the causation id to the outbox and will therefore be a no-op.
+                if (_onceOnlyAction is OnceOnlyAction.Replay && !s_warnedAboutCustomContext)
+                {
+                    s_warnedAboutCustomContext = true;
+                    Log.CustomContextDisablesReplay(s_logger);
+                }
+
+                requestContext = new RequestContext { Span = Activity.Current };
+            }
 
             if (!requestContext.Bag.ContainsKey(RequestContextBagNames.CausationId))
                 requestContext.Bag[RequestContextBagNames.CausationId] = command.Id.Value;
+
+            // Capture the span once, before the first await. RequestContext.Span is thread-affine (it keys on the
+            // current managed thread id), so with ContinueOnCapturedContext == false the continuation typically
+            // resumes on a different thread-pool thread where Context?.Span would return null and the telemetry
+            // events would be silently dropped. Reuse this captured value on every path (Throw/Warn/Replay/Add).
+            var span = Context?.Span;
 
             if (_onceOnly)
             {
@@ -105,22 +127,20 @@ namespace Paramore.Brighter.Inbox.Handlers
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
                     Log.CommandHasBeenSeen(s_logger, command.Id.Value);
-                    WriteInboxEvent(Context?.Span, command, "UseInboxHandler Duplicate Throw");
+                    WriteInboxEvent(span, command, "UseInboxHandler Duplicate Throw");
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
                     Log.CommandHasBeenSeenWarning(s_logger, command.Id.Value);
-                    WriteInboxEvent(Context?.Span, command, "UseInboxHandler Duplicate Warn");
+                    WriteInboxEvent(span, command, "UseInboxHandler Duplicate Warn");
                     return command;
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Replay)
                 {
                     Log.CommandHasBeenSeenReplayingOutbox(s_logger, command.Id.Value);
-
-                    var span = Context?.Span;
 
                     string? causationId = null;
                     if (_inbox is IAmACausationTrackingInbox trackingInbox && _outbox is not null)
@@ -141,16 +161,13 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             Log.WritingCommandToInbox(s_logger, command.Id.Value);
 
-            //Capture the span before awaits because RequestContext.Span is thread-affine
-            var addSpan = Context?.Span;
-
             T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             //TODO: We should not use an infinite timeout here - how to configure
             await _inbox.AddAsync(command, _contextKey, requestContext, -1, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
 
-            WriteInboxEvent(addSpan, command, "UseInboxHandler Add");
+            WriteInboxEvent(span, command, "UseInboxHandler Add");
 
             return handledCommand;
         }
@@ -224,6 +241,9 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             [LoggerMessage(LogLevel.Debug, "Writing command {Id} to the Inbox")]
             public static partial void WritingCommandToInbox(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Warning, "A custom IRequestContext (not a RequestContext) was supplied; the causation id cannot flow to downstream handlers, so OnceOnlyAction.Replay will be a no-op")]
+            public static partial void CustomContextDisablesReplay(ILogger logger);
         }
     }
 }

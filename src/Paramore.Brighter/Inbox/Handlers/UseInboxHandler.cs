@@ -45,6 +45,10 @@ namespace Paramore.Brighter.Inbox.Handlers
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<UseInboxHandler<T>>();
 
+        // Set once, process-wide, the first time a custom IRequestContext disables Replay, to keep the warning
+        // out of the hot path. A benign race may let it log a couple of extra times under concurrent first-hits.
+        private static bool s_warnedAboutCustomContext;
+
         private readonly IAmAnInboxSync _inbox;
         private readonly IAmACausationTrackingOutbox? _outbox;
         private bool _onceOnly;
@@ -87,10 +91,25 @@ namespace Paramore.Brighter.Inbox.Handlers
             // A custom IAmARequestContextFactory may supply a context that is not a RequestContext; in that
             // case fall back to a fresh context carrying Activity.Current — matching the pre-feature behaviour
             // for the Throw/Warn/Add inbox paths (causation tracking then degrades to a no-op for Replay).
-            var requestContext = Context as RequestContext ?? new RequestContext { Span = Activity.Current };
+            var requestContext = Context as RequestContext;
+            if (requestContext is null)
+            {
+                // Silent replay degradation is a PITA to diagnose, so warn (once) when a custom context means
+                // Replay cannot flow the causation id to the outbox and will therefore be a no-op.
+                if (_onceOnlyAction is OnceOnlyAction.Replay && !s_warnedAboutCustomContext)
+                {
+                    s_warnedAboutCustomContext = true;
+                    Log.CustomContextDisablesReplay(s_logger);
+                }
+
+                requestContext = new RequestContext { Span = Activity.Current };
+            }
 
             if (!requestContext.Bag.ContainsKey(RequestContextBagNames.CausationId))
                 requestContext.Bag[RequestContextBagNames.CausationId] = request.Id.Value;
+
+            // Capture the span once and reuse it on every path, keeping telemetry consistent with the async handler.
+            var span = Context?.Span;
 
             if (_onceOnly)
             {
@@ -101,22 +120,20 @@ namespace Paramore.Brighter.Inbox.Handlers
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
                     Log.CommandHasAlreadyBeenSeenAsDebug(s_logger, request.Id.Value);
-                    WriteInboxEvent(Context?.Span, request, "UseInboxHandler Duplicate Throw");
+                    WriteInboxEvent(span, request, "UseInboxHandler Duplicate Throw");
                     throw new OnceOnlyException($"A command with id {request.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
                     Log.CommandHasAlreadyBeenSeenAsWarning(s_logger, request.Id.Value);
-                    WriteInboxEvent(Context?.Span, request, "UseInboxHandler Duplicate Warn");
+                    WriteInboxEvent(span, request, "UseInboxHandler Duplicate Warn");
                     return request;
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Replay)
                 {
                     Log.CommandHasAlreadyBeenSeenReplayingOutbox(s_logger, request.Id.Value);
-
-                    var span = Context?.Span;
 
                     string? causationId = null;
                     if (_inbox is IAmACausationTrackingInbox trackingInbox && _outbox is not null)
@@ -138,7 +155,7 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             _inbox.Add(request, _contextKey, requestContext);
 
-            WriteInboxEvent(Context?.Span, request, "UseInboxHandler Add");
+            WriteInboxEvent(span, request, "UseInboxHandler Add");
 
             return handledCommand;
         }
@@ -212,6 +229,9 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             [LoggerMessage(LogLevel.Debug, "Writing command {Id} to the Inbox")]
             public static partial void WritingCommandToTheInbox(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Warning, "A custom IRequestContext (not a RequestContext) was supplied; the causation id cannot flow to downstream handlers, so OnceOnlyAction.Replay will be a no-op")]
+            public static partial void CustomContextDisablesReplay(ILogger logger);
         }
     }
 }

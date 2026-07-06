@@ -47,6 +47,10 @@ The `UseInboxHandler` is responsible for generating the Causation Id and placing
 
 Both the inbox `Add` and outbox `Add` operations read the Causation Id from `RequestContext.Bag` and store it.
 
+**Default Causation Id and the multiple-subscriber case**: the default Causation Id is the command's `Id`. `RequestContext.Bag` is per-pipeline, so each handler invocation stamps its own inbox entry and its own outbox messages with this value — the "scoped to a single handler invocation" framing above holds *per pipeline*. However, because the default *value* is the command `Id`, if the **same** message id is handled by more than one `[UseInbox]` handler (e.g. an event delivered to multiple subscribers, each with its own context key), those invocations all share Causation Id `= command.Id`. `ReplayCausation` matches on the value alone (`WHERE CausationId = @CausationId`), so a replay triggered by one of those handlers resends the outbox messages of **all** of them.
+
+This is the intended behaviour: on a duplicate we want to replay **all** downstream effects so the system reaches the same state as the original call, and can drive a whole workflow forward until it reaches the point that failed. In practice `UseInbox` is applied to a **Command**, which has a single handler, rather than to an **Event**, which may have many — so although every matching handler's messages would be replayed, they most commonly originate from a single handler. Callers who genuinely need per-invocation isolation across handlers that share a command id can set a unique Causation Id in the Bag themselves before the inbox handler runs.
+
 ### New OnceOnlyAction: Replay
 
 A new enum value is added to `OnceOnlyAction`:
@@ -526,7 +530,7 @@ The CommandProcessor creates a span via `BrighterTracer.CreateSpan()` and stores
 
 #### Events added to the pipeline span
 
-All events are guarded by `Context?.Span != null` and gated on `InstrumentationOptions.Brighter`:
+All events are guarded by `Context?.Span != null` and gated on `InstrumentationOptions.Brighter`. Note that `RequestContext.Span` is **thread-affine** (its getter keys on `Thread.CurrentThread.ManagedThreadId`). In the async handler, with `ContinueOnCapturedContext == false`, the continuation after an `await` typically resumes on a different thread-pool thread where `Context?.Span` would return `null` and the event would be silently dropped. To avoid this, the span is captured **once, before the first await**, and that captured value is reused on every path (Throw/Warn/Replay/Add). The sync handler captures it once too, for parity.
 
 | Path | Event Name | Tags |
 |------|-----------|------|
@@ -617,6 +621,7 @@ When the outbox does not implement `IAmACausationTrackingOutbox`, no registratio
 - Schema evolution ships in this work via BoxProvisioning (new migration version + live builder + drift test for the four catalog stores; provisioner for Spanner), broadening the change surface; migration of existing *data* is still not provided — new columns are nullable, so existing rows have null `CausationId` and replay is unavailable for historical entries
 - `SupportsCausationTracking()` is a permanent runtime schema check on both inbox and outbox — it protects users who upgrade Brighter but have not yet migrated their store schema. Pipeline validation uses it at startup so that misconfiguration (Replay enabled on an un-migrated schema) produces a clear error, not a silent runtime failure
 - The `Replay` action silently does nothing if the inbox/outbox don't support causation tracking at runtime (though pipeline validation should catch this at startup)
+- If a custom `IAmARequestContextFactory` supplies an `IRequestContext` that is **not** the in-box `RequestContext`, the handler cannot stamp the Causation Id onto the shared pipeline context (it falls back to a throwaway `RequestContext`), so downstream handlers never see it and `Replay` degrades to a no-op. Because silent degradation is hard to diagnose, the handler now emits a one-time `Warning` log (`CustomContextDisablesReplay`) the first time this fallback is hit while `OnceOnlyAction.Replay` is configured
 - `IRequestContext` gains a new `InstrumentationOptions` member. Because there is no default interface implementation, this is a source- and binary-breaking change for any external type that implements `IRequestContext` directly (the in-box `RequestContext` already provides it). It should ship in a minor-version bump; documented on the interface member itself
 
 ### Risks and Mitigations
