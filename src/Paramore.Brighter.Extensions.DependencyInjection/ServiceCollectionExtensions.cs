@@ -919,8 +919,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         private static IAmABrighterTracer? Tracer(IServiceProvider serviceProvider)
         {
-            return serviceProvider.GetService<BrighterTracer>();
+            return serviceProvider.GetService<IAmABrighterTracer>();
         }
+        
         private static IAmAnOutboxCircuitBreaker? OutboxCircuitBreaker(IServiceProvider serviceProvider)
         {
             return serviceProvider.GetService<IAmAnOutboxCircuitBreaker>();
