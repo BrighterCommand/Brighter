@@ -862,6 +862,10 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     /// <inheritdoc />
     public void ReplayCausation(string causationId, RequestContext? requestContext, Dictionary<string, object>? args = null)
     {
+        // Sync-over-async: the Firestore SDK is async-only, so the sync IAmACausationTrackingOutbox entry
+        // point (used by the sync UseInboxHandler) must run the async path on a pumped context. This matches
+        // the sync-over-async convention already used throughout this class. BrighterAsyncContext.Run pumps
+        // a single-threaded context to avoid the classic sync-over-async deadlock.
         BrighterAsyncContext.Run(() => ReplayCausationAsync(causationId, requestContext, args));
     }
 

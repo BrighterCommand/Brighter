@@ -98,6 +98,23 @@ public sealed class DynamoDbOutboxCausationIndexProbeTests : IDisposable
     }
 
     [Fact]
+    public void When_replaying_against_a_table_without_the_causation_index_should_not_throw()
+    {
+        // Arrange — a pre-feature outbox table WITHOUT the Causation GSI, holding a deposited message.
+        // Models the "inbox migrated, outbox not yet" (AC10) mixed state that reaches ReplayCausation at runtime.
+        var tableName = CreateOutboxTable(withCausationIndex: false);
+        var outbox = OutboxFor(tableName);
+        var context = ContextWithCausation(CausationId);
+        outbox.Add(CreateMessage(), context);
+
+        // Act / Assert — replay must degrade to a no-op (mirroring the relational path) rather than query the
+        // absent GSI and throw a ValidationException that would unwind the handler pipeline on every duplicate.
+        Assert.Null(Xunit.Record.Exception(() => outbox.ReplayCausation(CausationId, context)));
+        Assert.Null(Xunit.Record.Exception(() =>
+            outbox.ReplayCausationAsync(CausationId, context).GetAwaiter().GetResult()));
+    }
+
+    [Fact]
     public void When_a_dynamodb_outbox_table_has_the_causation_index_should_claim_causation_support()
     {
         // Arrange — a current outbox table WITH the Causation GSI
