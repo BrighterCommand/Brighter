@@ -860,17 +860,17 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
         => Task.FromResult(true);
 
     /// <inheritdoc />
-    public void ReplayCausation(string causationId, RequestContext? requestContext, Dictionary<string, object>? args = null)
+    public bool ReplayCausation(string causationId, RequestContext? requestContext, Dictionary<string, object>? args = null)
     {
         // Sync-over-async: the Firestore SDK is async-only, so the sync IAmACausationTrackingOutbox entry
         // point (used by the sync UseInboxHandler) must run the async path on a pumped context. This matches
         // the sync-over-async convention already used throughout this class. BrighterAsyncContext.Run pumps
         // a single-threaded context to avoid the classic sync-over-async deadlock.
-        BrighterAsyncContext.Run(() => ReplayCausationAsync(causationId, requestContext, args));
+        return BrighterAsyncContext.Run(() => ReplayCausationAsync(causationId, requestContext, args));
     }
 
     /// <inheritdoc />
-    public async Task ReplayCausationAsync(string causationId, RequestContext? requestContext,
+    public async Task<bool> ReplayCausationAsync(string causationId, RequestContext? requestContext,
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
@@ -929,8 +929,10 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                 }
             }
 
+            // The Firestore store always supports causation tracking, so the replay is always "performed"
+            // even when no messages matched the causation.
             if (writes.Count == 0)
-                return;
+                return true;
 
             var commit = new CommitRequest { Database = _configuration.DatabasePath };
             commit.Writes.AddRange(writes);
@@ -938,6 +940,8 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
             await client
                 .CommitAsync(commit, CallSettings.FromCancellationToken(cancellationToken))
                 .ConfigureAwait(ContinueOnCapturedContext);
+
+            return true;
         }
         finally
         {

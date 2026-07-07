@@ -136,14 +136,15 @@ namespace Paramore.Brighter.Inbox.Handlers
                     Log.CommandHasAlreadyBeenSeenReplayingOutbox(s_logger, request.Id.Value);
 
                     string? causationId = null;
+                    var replayed = false;
                     if (_inbox is IAmACausationTrackingInbox trackingInbox && _outbox is not null)
                     {
                         causationId = trackingInbox.GetCausationId(request.Id.Value, _contextKey, requestContext);
                         if (causationId is not null)
-                            _outbox.ReplayCausation(causationId, requestContext);
+                            replayed = _outbox.ReplayCausation(causationId, requestContext);
                     }
 
-                    WriteReplayEvent(span, request, causationId);
+                    WriteReplayEvent(span, request, causationId, replayed);
 
                     return request;
                 }
@@ -170,7 +171,9 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// <param name="span">The pipeline <see cref="Activity"/> captured before the replay, or <c>null</c> if there is no span.</param>
         /// <param name="request">The duplicate request that triggered the replay.</param>
         /// <param name="causationId">The causation id whose outbox messages were replayed, if one was found.</param>
-        private void WriteReplayEvent(Activity? span, T request, string? causationId)
+        /// <param name="replayed"><c>true</c> if the outbox actually performed the replay; <c>false</c> if it was a
+        /// no-op (no causation id found, or the outbox schema does not support causation tracking).</param>
+        private void WriteReplayEvent(Activity? span, T request, string? causationId, bool replayed)
         {
             if (span is null || Context is null || !Context.InstrumentationOptions.HasFlag(InstrumentationOptions.Brighter))
                 return;
@@ -181,9 +184,11 @@ namespace Paramore.Brighter.Inbox.Handlers
                 { BrighterSemanticConventions.CausationId, causationId }
             };
 
-            // Distinguish "replayed a causation's messages" from "nothing replayed because no causation id was found",
-            // so operators don't read the event as a successful replay when the outbox was never asked to resend.
-            var eventName = causationId is null
+            // Distinguish "replayed a causation's messages" from "nothing replayed". Nothing is replayed when no
+            // causation id was found, or when the outbox no-ops because its live schema lacks causation tracking
+            // (the "inbox migrated, outbox not" mixed state). Either way the event records a skip, so operators
+            // don't read it as a successful replay when the outbox was never asked to (or could not) resend.
+            var eventName = causationId is null || !replayed
                 ? "UseInboxHandler Duplicate Replay Skipped"
                 : "UseInboxHandler Duplicate Replay";
 

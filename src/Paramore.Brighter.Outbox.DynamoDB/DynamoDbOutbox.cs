@@ -587,28 +587,29 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         }
 
         /// <inheritdoc />
-        public void ReplayCausation(string causationId, RequestContext? requestContext, Dictionary<string, object>? args = null)
+        public bool ReplayCausation(string causationId, RequestContext? requestContext, Dictionary<string, object>? args = null)
         {
             // Sync-over-async: the DynamoDB SDK is async-only, so the sync IAmACausationTrackingOutbox
             // entry point (used by the sync UseInboxHandler) must block on the async path. This matches
             // the sync-over-async convention already used throughout this class (e.g. OutstandingMessages,
             // SupportsCausationTracking). Callers on a sync pipeline carry the usual deadlock caveat.
-            ReplayCausationAsync(causationId, requestContext, args)
+            return ReplayCausationAsync(causationId, requestContext, args)
                 .ConfigureAwait(ContinueOnCapturedContext)
                 .GetAwaiter()
                 .GetResult();
         }
 
         /// <inheritdoc />
-        public async Task ReplayCausationAsync(string causationId, RequestContext? requestContext,
+        public async Task<bool> ReplayCausationAsync(string causationId, RequestContext? requestContext,
             Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             // Mirror the relational no-op for the "inbox migrated, outbox not yet" mixed state (AC10): a table
             // provisioned before the Replay feature has no Causation GSI, so querying that index would throw a
             // ValidationException that unwinds the handler pipeline on every duplicate. Degrade to a no-op
-            // instead. SupportsCausationTrackingAsync probes and memoizes live index existence.
+            // instead. SupportsCausationTrackingAsync probes and memoizes live index existence. Return false so
+            // the caller does not report a successful replay for this no-op.
             if (!await SupportsCausationTrackingAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
-                return;
+                return false;
 
             var span = Tracer?.CreateDbSpan(
                 new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Replay, _configuration.TableName),
@@ -672,6 +673,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                         ? queryResponse.LastEvaluatedKey
                         : null;
                 } while (lastEvaluatedKey != null);
+
+                return true;
             }
             finally
             {

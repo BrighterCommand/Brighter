@@ -109,9 +109,13 @@ public sealed class DynamoDbOutboxCausationIndexProbeTests : IDisposable
 
         // Act / Assert — replay must degrade to a no-op (mirroring the relational path) rather than query the
         // absent GSI and throw a ValidationException that would unwind the handler pipeline on every duplicate.
-        Assert.Null(Xunit.Record.Exception(() => outbox.ReplayCausation(CausationId, context)));
+        // The no-op reports false so the handler does not record a successful replay in telemetry.
+        bool syncReplayed = true, asyncReplayed = true;
+        Assert.Null(Xunit.Record.Exception(() => syncReplayed = outbox.ReplayCausation(CausationId, context)));
         Assert.Null(Xunit.Record.Exception(() =>
-            outbox.ReplayCausationAsync(CausationId, context).GetAwaiter().GetResult()));
+            asyncReplayed = outbox.ReplayCausationAsync(CausationId, context).GetAwaiter().GetResult()));
+        Assert.False(syncReplayed);
+        Assert.False(asyncReplayed);
     }
 
     [Fact]

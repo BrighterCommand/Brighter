@@ -1046,16 +1046,17 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc />
-        public void ReplayCausation(string causationId, RequestContext? requestContext,
+        public bool ReplayCausation(string causationId, RequestContext? requestContext,
             Dictionary<string, object>? args = null)
         {
             // Gate on the live schema probe, not just the static query interface: every backend implements
             // IRelationalDatabaseOutboxCausationQueries even when its table is un-migrated. In the mixed
             // state (inbox migrated, outbox not) the handler still hands us a real causation id, so we must
             // no-op here rather than UPDATE ... WHERE CausationId = @id against the absent column (AC10).
+            // Return false so the caller does not report a successful replay for this no-op.
             if (CausationQueries is null || !CausationColumnExists())
             {
-                return;
+                return false;
             }
 
             var span = Tracer?.CreateDbSpan(
@@ -1066,6 +1067,7 @@ namespace Paramore.Brighter
             try
             {
                 WriteToStore(null, connection => InitReplayCausationCommand(connection, causationId), null);
+                return true;
             }
             finally
             {
@@ -1074,17 +1076,18 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc />
-        public async Task ReplayCausationAsync(string causationId, RequestContext? requestContext,
+        public async Task<bool> ReplayCausationAsync(string causationId, RequestContext? requestContext,
             Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             // Gate on the live schema probe, not just the static query interface: every backend implements
             // IRelationalDatabaseOutboxCausationQueries even when its table is un-migrated. In the mixed
             // state (inbox migrated, outbox not) the handler still hands us a real causation id, so we must
             // no-op here rather than UPDATE ... WHERE CausationId = @id against the absent column (AC10).
+            // Return false so the caller does not report a successful replay for this no-op.
             if (CausationQueries is null
                 || !await CausationColumnExistsAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
             {
-                return;
+                return false;
             }
 
             var span = Tracer?.CreateDbSpan(
@@ -1096,6 +1099,7 @@ namespace Paramore.Brighter
             {
                 await WriteToStoreAsync(null, connection => InitReplayCausationCommand(connection, causationId), null,
                     cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                return true;
             }
             finally
             {

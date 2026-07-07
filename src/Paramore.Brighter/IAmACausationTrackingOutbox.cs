@@ -62,7 +62,12 @@ namespace Paramore.Brighter
         /// <param name="causationId">The causation id whose messages should be replayed.</param>
         /// <param name="requestContext">The context for this request; used to access the Span.</param>
         /// <param name="args">Optional bag of arguments required by some outbox implementations.</param>
-        void ReplayCausation(string causationId, RequestContext? requestContext,
+        /// <returns>
+        /// <c>true</c> if the replay was performed; <c>false</c> if it was a no-op because the live store schema
+        /// does not support causation tracking (the "inbox migrated, outbox not" mixed state). Callers use this to
+        /// avoid reporting a successful replay when nothing was actually resent.
+        /// </returns>
+        bool ReplayCausation(string causationId, RequestContext? requestContext,
             Dictionary<string, object>? args = null);
 
         /// <summary>
@@ -72,7 +77,11 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context for this request; used to access the Span.</param>
         /// <param name="args">Optional bag of arguments required by some outbox implementations.</param>
         /// <param name="cancellationToken">Allows the caller to cancel the operation.</param>
-        Task ReplayCausationAsync(string causationId, RequestContext? requestContext,
+        /// <returns>
+        /// <c>true</c> if the replay was performed; <c>false</c> if it was a no-op because the live store schema
+        /// does not support causation tracking. See <see cref="ReplayCausation"/>.
+        /// </returns>
+        Task<bool> ReplayCausationAsync(string causationId, RequestContext? requestContext,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default);
     }

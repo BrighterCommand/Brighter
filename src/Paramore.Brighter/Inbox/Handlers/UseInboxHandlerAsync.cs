@@ -143,17 +143,18 @@ namespace Paramore.Brighter.Inbox.Handlers
                     Log.CommandHasBeenSeenReplayingOutbox(s_logger, command.Id.Value);
 
                     string? causationId = null;
+                    var replayed = false;
                     if (_inbox is IAmACausationTrackingInbox trackingInbox && _outbox is not null)
                     {
                         causationId = await trackingInbox
                             .GetCausationIdAsync(command.Id.Value, _contextKey, requestContext, -1, cancellationToken)
                             .ConfigureAwait(ContinueOnCapturedContext);
                         if (causationId is not null)
-                            await _outbox.ReplayCausationAsync(causationId, requestContext, cancellationToken: cancellationToken)
+                            replayed = await _outbox.ReplayCausationAsync(causationId, requestContext, cancellationToken: cancellationToken)
                                 .ConfigureAwait(ContinueOnCapturedContext);
                     }
 
-                    WriteReplayEvent(span, command, causationId);
+                    WriteReplayEvent(span, command, causationId, replayed);
 
                     return command;
                 }
@@ -182,7 +183,9 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// <param name="span">The pipeline <see cref="Activity"/> captured before the replay, or <c>null</c> if there is no span.</param>
         /// <param name="command">The duplicate command that triggered the replay.</param>
         /// <param name="causationId">The causation id whose outbox messages were replayed, if one was found.</param>
-        private void WriteReplayEvent(Activity? span, T command, string? causationId)
+        /// <param name="replayed"><c>true</c> if the outbox actually performed the replay; <c>false</c> if it was a
+        /// no-op (no causation id found, or the outbox schema does not support causation tracking).</param>
+        private void WriteReplayEvent(Activity? span, T command, string? causationId, bool replayed)
         {
             if (span is null || Context is null || !Context.InstrumentationOptions.HasFlag(InstrumentationOptions.Brighter))
                 return;
@@ -193,9 +196,11 @@ namespace Paramore.Brighter.Inbox.Handlers
                 { BrighterSemanticConventions.CausationId, causationId }
             };
 
-            // Distinguish "replayed a causation's messages" from "nothing replayed because no causation id was found",
-            // so operators don't read the event as a successful replay when the outbox was never asked to resend.
-            var eventName = causationId is null
+            // Distinguish "replayed a causation's messages" from "nothing replayed". Nothing is replayed when no
+            // causation id was found, or when the outbox no-ops because its live schema lacks causation tracking
+            // (the "inbox migrated, outbox not" mixed state). Either way the event records a skip, so operators
+            // don't read it as a successful replay when the outbox was never asked to (or could not) resend.
+            var eventName = causationId is null || !replayed
                 ? "UseInboxHandler Duplicate Replay Skipped"
                 : "UseInboxHandler Duplicate Replay";
 

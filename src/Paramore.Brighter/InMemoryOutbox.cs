@@ -713,7 +713,7 @@ namespace Paramore.Brighter
             => Task.FromResult(true);
 
         /// <inheritdoc />
-        public void ReplayCausation(string causationId, RequestContext? requestContext,
+        public bool ReplayCausation(string causationId, RequestContext? requestContext,
             Dictionary<string, object>? args = null)
         {
             var span = Tracer?.CreateDbSpan(
@@ -728,6 +728,9 @@ namespace Paramore.Brighter
                 {
                     entry.TimeFlushed = DateTimeOffset.MinValue;
                 }
+
+                // The in-memory store always supports causation tracking, so the replay is always performed.
+                return true;
             }
             finally
             {
@@ -736,11 +739,11 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc />
-        public Task ReplayCausationAsync(string causationId, RequestContext? requestContext,
+        public Task<bool> ReplayCausationAsync(string causationId, RequestContext? requestContext,
             Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             // Note: Don't create a span here - we call the sync method behind the scenes
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             if (cancellationToken.IsCancellationRequested)
             {
@@ -748,9 +751,9 @@ namespace Paramore.Brighter
                 return tcs.Task;
             }
 
-            ReplayCausation(causationId, requestContext, args);
+            var replayed = ReplayCausation(causationId, requestContext, args);
 
-            tcs.SetResult(new object());
+            tcs.SetResult(replayed);
             return tcs.Task;
         }
 

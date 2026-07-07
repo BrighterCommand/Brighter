@@ -23,8 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -139,6 +141,51 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         }
 
         [Fact]
+        public void When_replaying_duplicate_but_outbox_could_not_replay_should_add_distinct_skipped_event()
+        {
+            //Arrange — a seen command WITH a causation id, but the outbox cannot replay it because its live
+            //schema does not support causation tracking (the "inbox migrated, outbox not" mixed state).
+            using var span = new Activity("pipeline").Start();
+            var handler = new UseInboxHandler<MyCommand>(_inbox, new MixedMigrationOutbox());
+            handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Replay);
+            handler.Context = new RequestContext { Span = span };
+
+            //Act
+            handler.Handle(_command);
+
+            //Assert — nothing was actually replayed, so the event is the "skipped" event, not the replay event
+            Assert.DoesNotContain(span.Events, e => e.Name == ReplayEventName);
+            var skippedEvent = span.Events.SingleOrDefault(e => e.Name == ReplaySkippedEventName);
+            Assert.Equal(ReplaySkippedEventName, skippedEvent.Name);
+
+            //Assert — the event still carries the request id for correlation
+            var tags = skippedEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
+            Assert.Equal(_command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
+        }
+
+        [Fact]
+        public async Task When_replaying_duplicate_async_but_outbox_could_not_replay_should_add_distinct_skipped_event()
+        {
+            //Arrange — a seen command WITH a causation id, but the outbox cannot replay it (mixed-migration state)
+            using var span = new Activity("pipeline").Start();
+            var handler = new UseInboxHandlerAsync<MyCommand>(_inbox, new MixedMigrationOutbox());
+            handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Replay);
+            handler.Context = new RequestContext { Span = span };
+
+            //Act
+            await handler.HandleAsync(_command);
+
+            //Assert — nothing was actually replayed, so the event is the "skipped" event, not the replay event
+            Assert.DoesNotContain(span.Events, e => e.Name == ReplayEventName);
+            var skippedEvent = span.Events.SingleOrDefault(e => e.Name == ReplaySkippedEventName);
+            Assert.Equal(ReplaySkippedEventName, skippedEvent.Name);
+
+            //Assert — the event still carries the request id for correlation
+            var tags = skippedEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
+            Assert.Equal(_command.Id.Value, tags[BrighterSemanticConventions.RequestId]);
+        }
+
+        [Fact]
         public void When_replaying_duplicate_without_brighter_instrumentation_should_not_add_replay_event()
         {
             //Arrange — a context whose instrumentation does not include the Brighter flag
@@ -172,6 +219,25 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             //Assert — the matching causation's message is outstanding again (replay still happened)
             var outstanding = _outbox.OutstandingMessages(TimeSpan.Zero, context);
             Assert.Single(outstanding);
+        }
+
+        // A causation-tracking outbox whose live schema does NOT support causation tracking, so ReplayCausation
+        // is a no-op and reports false. Simulates the "inbox migrated, outbox not" mixed-migration state where
+        // the handler is handed a real causation id but the outbox resends nothing.
+        private sealed class MixedMigrationOutbox : IAmACausationTrackingOutbox
+        {
+            public bool SupportsCausationTracking() => false;
+
+            public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+                => Task.FromResult(false);
+
+            public bool ReplayCausation(string causationId, RequestContext? requestContext,
+                Dictionary<string, object>? args = null)
+                => false;
+
+            public Task<bool> ReplayCausationAsync(string causationId, RequestContext? requestContext,
+                Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+                => Task.FromResult(false);
         }
     }
 }

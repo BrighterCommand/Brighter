@@ -339,12 +339,14 @@ internal sealed class TrackingOutbox : IAmAnOutbox, IAmACausationTrackingOutbox
             ? throw new System.InvalidOperationException("outbox store unreachable")
             : Task.FromResult(_supportsCausationTracking);
 
-    public void ReplayCausation(string causationId, RequestContext? requestContext,
+    // Mirror the real stores: a no-op when the live schema does not support causation tracking, and the
+    // outcome is reported back so the handler can distinguish a real replay from a mixed-migration no-op.
+    public bool ReplayCausation(string causationId, RequestContext? requestContext,
         Dictionary<string, object>? args = null)
-    { }
+        => _supportsCausationTracking;
 
-    public Task ReplayCausationAsync(string causationId, RequestContext? requestContext,
+    public Task<bool> ReplayCausationAsync(string causationId, RequestContext? requestContext,
         Dictionary<string, object>? args = null,
         CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+        => Task.FromResult(_supportsCausationTracking);
 }

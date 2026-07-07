@@ -857,7 +857,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         => Task.FromResult(true);
 
     /// <inheritdoc />
-    public void ReplayCausation(string causationId, RequestContext? requestContext,
+    public bool ReplayCausation(string causationId, RequestContext? requestContext,
         Dictionary<string, object>? args = null)
     {
         var span = Tracer?.CreateDbSpan(
@@ -873,6 +873,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             var filter = Builders<OutboxMessage>.Filter.Eq(x => x.CausationId, causationId);
             var update = Builders<OutboxMessage>.Update.Set(x => x.Dispatched, (DateTimeOffset?)null);
             Collection.UpdateMany(filter, update);
+
+            // The MongoDB store always supports causation tracking, so the replay is always performed.
+            return true;
         }
         finally
         {
@@ -881,7 +884,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     }
 
     /// <inheritdoc />
-    public async Task ReplayCausationAsync(string causationId, RequestContext? requestContext,
+    public async Task<bool> ReplayCausationAsync(string causationId, RequestContext? requestContext,
         Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
     {
         var span = Tracer?.CreateDbSpan(
@@ -898,6 +901,9 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             var update = Builders<OutboxMessage>.Update.Set(x => x.Dispatched, (DateTimeOffset?)null);
             await Collection.UpdateManyAsync(filter, update, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
+
+            // The MongoDB store always supports causation tracking, so the replay is always performed.
+            return true;
         }
         finally
         {
