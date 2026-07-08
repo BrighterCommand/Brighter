@@ -48,7 +48,9 @@ namespace Paramore.Brighter.Inbox.Handlers
 
         // Set once, process-wide, the first time a custom IRequestContext disables Replay, to keep the warning
         // out of the hot path. A benign race may let it log a couple of extra times under concurrent first-hits.
-        private static bool s_warnedAboutCustomContext;
+        // 0 = not yet warned, 1 = warned; an int rather than a bool because Interlocked.CompareExchange has no
+        // bool overload.
+        private static int s_warnedAboutCustomContext;
 
         private readonly IAmAnInboxSync _inbox;
         private readonly IAmACausationTrackingOutbox? _outbox;
