@@ -776,9 +776,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public void HandleError(Error error)
         {
-            _hasFatalError = error.IsFatal;
+            // Latch: once librdkafka reports a fatal error the consumer is unrecoverable. Errors arrive
+            // in bursts, so we must never clear the latch when a later non-fatal error follows a fatal one.
+            if (error.IsFatal)
+                _hasFatalError = true;
 
-            if (_hasFatalError)
+            // Log against the error we actually received, independent of the latch, so a non-fatal error
+            // that arrives after a fatal one is still logged as non-fatal.
+            if (error.IsFatal)
                 Log.FatalError(s_logger, error.Code, error.Reason, true);
             else
                 Log.NonFatalError(s_logger, error.Code, error.Reason, false);
