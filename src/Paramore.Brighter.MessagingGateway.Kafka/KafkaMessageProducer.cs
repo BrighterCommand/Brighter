@@ -173,20 +173,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public void Init()
         {
             _producer = new ProducerBuilder<string, byte[]>(_producerConfig)
-                .SetErrorHandler((_, error) =>
-                {
-                    _hasFatalProducerError = error.IsFatal;
-                    
-                    if (_hasFatalProducerError) 
-                        Log.FatalProducerError(s_logger, error.Code, error.Reason, true);
-                    else
-                        Log.NonFatalProducerError(s_logger, error.Code, error.Reason, false);
-                    
-                })
+                .SetErrorHandler((_, error) => HandleError(error))
                 .Build();
             _publisher = new KafkaMessagePublisher(_producer, _headerBuilder);
 
             EnsureTopic();
+        }
+
+        /// <summary>
+        /// Handles an error raised by the underlying Kafka producer. Extracted from the
+        /// <c>SetErrorHandler</c> callback so the behaviour is reachable from tests. Not intended to be
+        /// called directly outside of the error-callback wiring.
+        /// </summary>
+        public void HandleError(Error error)
+        {
+            _hasFatalProducerError = error.IsFatal;
+
+            if (_hasFatalProducerError)
+                Log.FatalProducerError(s_logger, error.Code, error.Reason, true);
+            else
+                Log.NonFatalProducerError(s_logger, error.Code, error.Reason, false);
         }
         
         /// <summary>

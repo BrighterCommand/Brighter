@@ -250,15 +250,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     
                     _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
-                .SetErrorHandler((_, error) =>
-                {
-                    _hasFatalError = error.IsFatal;
-                    
-                    if (_hasFatalError ) 
-                        Log.FatalError(s_logger, error.Code, error.Reason, true);
-                    else
-                        Log.NonFatalError(s_logger, error.Code, error.Reason, false);
-                })
+                .SetErrorHandler((_, error) => HandleError(error))
                 .Build();
 
             Log.SubscribingToTopic(s_logger, Topic);
@@ -777,6 +769,21 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return true;
         }
         
+        /// <summary>
+        /// Handles an error raised by the underlying Kafka consumer. Extracted from the
+        /// <c>SetErrorHandler</c> callback so the behaviour is reachable from tests. Not intended to be
+        /// called directly outside of the error-callback wiring.
+        /// </summary>
+        public void HandleError(Error error)
+        {
+            _hasFatalError = error.IsFatal;
+
+            if (_hasFatalError)
+                Log.FatalError(s_logger, error.Code, error.Reason, true);
+            else
+                Log.NonFatalError(s_logger, error.Code, error.Reason, false);
+        }
+
         private void CheckHasPartitions()
         {
             if (_partitions.Count <= 0)
