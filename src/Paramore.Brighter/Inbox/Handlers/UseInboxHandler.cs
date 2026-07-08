@@ -90,22 +90,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             if (_contextKey is null)
                 throw new ArgumentException("ContextKey must be set before Handling");
 
-            // Prefer the shared pipeline context so the causation id we stamp below flows to the outbox Add.
-            // A custom IAmARequestContextFactory may supply a context that is not a RequestContext; in that
-            // case fall back to a fresh context carrying Activity.Current — matching the pre-feature behaviour
-            // for the Throw/Warn/Add inbox paths (causation tracking then degrades to a no-op for Replay).
-            var requestContext = Context as RequestContext;
-            if (requestContext is null)
-            {
-                // Silent replay degradation is a PITA to diagnose, so warn (once) when a custom context means
-                // Replay cannot flow the causation id to the outbox and will therefore be a no-op.
-                if (_onceOnlyAction is OnceOnlyAction.Replay && Interlocked.CompareExchange(ref s_warnedAboutCustomContext, 1, 0) == 0)
-                {
-                    Log.CustomContextDisablesReplay(s_logger);
-                }
-
-                requestContext = new RequestContext { Span = Activity.Current };
-            }
+            var requestContext = ResolveRequestContext();
 
             if (!requestContext.Bag.ContainsKey(RequestContextBagNames.CausationId))
                 requestContext.Bag[RequestContextBagNames.CausationId] = request.Id.Value;
@@ -115,40 +100,30 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             if (_onceOnly)
             {
-                 Log.CheckingIfCommandHasAlreadyBeenSeen(s_logger, request.Id.Value);
+                Log.CheckingIfCommandHasAlreadyBeenSeen(s_logger, request.Id.Value);
 
-                 var exists = _inbox.Exists<T>(request.Id.Value, _contextKey, requestContext);
-
-                if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
+                if (_inbox.Exists<T>(request.Id.Value, _contextKey, requestContext))
                 {
-                    Log.CommandHasAlreadyBeenSeenAsDebug(s_logger, request.Id.Value);
-                    WriteInboxEvent(span, request, "UseInboxHandler Duplicate Throw");
-                    throw new OnceOnlyException($"A command with id {request.Id} has already been handled");
-                }
-
-                if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
-                {
-                    Log.CommandHasAlreadyBeenSeenAsWarning(s_logger, request.Id.Value);
-                    WriteInboxEvent(span, request, "UseInboxHandler Duplicate Warn");
-                    return request;
-                }
-
-                if (exists && _onceOnlyAction is OnceOnlyAction.Replay)
-                {
-                    Log.CommandHasAlreadyBeenSeenReplayingOutbox(s_logger, request.Id.Value);
-
-                    string? causationId = null;
-                    var replayed = false;
-                    if (_inbox is IAmACausationTrackingInbox trackingInbox && _outbox is not null)
+                    // A duplicate always short-circuits (throw or return request); an unrecognised action
+                    // falls through to normal handling, preserving the pre-refactor sequence-of-ifs behaviour.
+                    switch (_onceOnlyAction)
                     {
-                        causationId = trackingInbox.GetCausationId(request.Id.Value, _contextKey, requestContext);
-                        if (causationId is not null)
-                            replayed = _outbox.ReplayCausation(causationId, requestContext);
+                        case OnceOnlyAction.Throw:
+                            Log.CommandHasAlreadyBeenSeenAsDebug(s_logger, request.Id.Value);
+                            WriteInboxEvent(span, request, "UseInboxHandler Duplicate Throw");
+                            throw new OnceOnlyException($"A command with id {request.Id} has already been handled");
+
+                        case OnceOnlyAction.Warn:
+                            Log.CommandHasAlreadyBeenSeenAsWarning(s_logger, request.Id.Value);
+                            WriteInboxEvent(span, request, "UseInboxHandler Duplicate Warn");
+                            return request;
+
+                        case OnceOnlyAction.Replay:
+                            Log.CommandHasAlreadyBeenSeenReplayingOutbox(s_logger, request.Id.Value);
+                            var (causationId, replayed) = ReplayCausation(request, requestContext);
+                            WriteReplayEvent(span, request, causationId, replayed);
+                            return request;
                     }
-
-                    WriteReplayEvent(span, request, causationId, replayed);
-
-                    return request;
                 }
             }
 
@@ -161,6 +136,55 @@ namespace Paramore.Brighter.Inbox.Handlers
             WriteInboxEvent(span, request, "UseInboxHandler Add");
 
             return handledCommand;
+        }
+
+        /// <summary>
+        /// Resolves the <see cref="RequestContext"/> to use for this pipeline step.
+        /// </summary>
+        /// <remarks>
+        /// Prefer the shared pipeline context so the causation id we stamp flows to the outbox Add. A custom
+        /// <see cref="IAmARequestContextFactory"/> may supply a context that is not a <see cref="RequestContext"/>;
+        /// in that case fall back to a fresh context carrying <see cref="Activity.Current"/> — matching the
+        /// pre-feature behaviour for the Throw/Warn/Add inbox paths (causation tracking then degrades to a no-op
+        /// for Replay).
+        /// </remarks>
+        private RequestContext ResolveRequestContext()
+        {
+            if (Context is RequestContext requestContext)
+                return requestContext;
+
+            // Silent replay degradation is a PITA to diagnose, so warn (once) when a custom context means
+            // Replay cannot flow the causation id to the outbox and will therefore be a no-op.
+            if (_onceOnlyAction is OnceOnlyAction.Replay && Interlocked.CompareExchange(ref s_warnedAboutCustomContext, 1, 0) == 0)
+            {
+                Log.CustomContextDisablesReplay(s_logger);
+            }
+
+            return new RequestContext { Span = Activity.Current };
+        }
+
+        /// <summary>
+        /// Replays the outbox messages produced under the original handling of a now-duplicate command.
+        /// </summary>
+        /// <remarks>
+        /// Replay is a no-op unless the inbox tracks causation and a causation-tracking outbox is registered,
+        /// so both a missing causation id and an outbox whose live schema lacks causation tracking are reported
+        /// as "nothing replayed".
+        /// </remarks>
+        /// <param name="request">The duplicate request that triggered the replay.</param>
+        /// <param name="requestContext">The resolved pipeline context carrying the causation id.</param>
+        /// <returns>The causation id whose messages were replayed (or <c>null</c> if none was found), and whether
+        /// the outbox actually performed the replay.</returns>
+        private (string? causationId, bool replayed) ReplayCausation(T request, RequestContext requestContext)
+        {
+            if (_inbox is not IAmACausationTrackingInbox trackingInbox || _outbox is null)
+                return (null, false);
+
+            var causationId = trackingInbox.GetCausationId(request.Id.Value, _contextKey!, requestContext);
+            if (causationId is null)
+                return (null, false);
+
+            return (causationId, _outbox.ReplayCausation(causationId, requestContext));
         }
 
         /// <summary>
