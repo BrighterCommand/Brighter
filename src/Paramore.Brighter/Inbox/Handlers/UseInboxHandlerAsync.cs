@@ -98,9 +98,9 @@ namespace Paramore.Brighter.Inbox.Handlers
             {
                 // Silent replay degradation is a PITA to diagnose, so warn (once) when a custom context means
                 // Replay cannot flow the causation id to the outbox and will therefore be a no-op.
-                if (_onceOnlyAction is OnceOnlyAction.Replay && !s_warnedAboutCustomContext)
+                if (_onceOnlyAction is OnceOnlyAction.Replay &&
+                    Interlocked.CompareExchange(ref s_warnedAboutCustomContext, 1, 0) == 0)
                 {
-                    s_warnedAboutCustomContext = true;
                     Log.CustomContextDisablesReplay(s_logger);
                 }
 
