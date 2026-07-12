@@ -2,7 +2,9 @@
 
 Date: 2026-06-04 (amended 2026-07-12: registration artefact reshaped from generated imperative
 method bodies to a `RegistrationCatalog` data type — see Alternative 5 for the original shape and
-why it was superseded)
+why it was superseded. Further amended same day: the zero-config `AddFromThisAssembly()` sugar is
+dropped in favour of a synthesised default holder (Alternative 7), and registration groups plus
+opt-in builder extensions are designed as Phase 2.)
 
 ## Status
 
@@ -108,6 +110,10 @@ public sealed class RegistrationCatalog
     public void AddHandler(Type handlerType, Type? requestType, bool isAsync); // requestType null ⇒ open generic
     public void AddMapper(Type mapperType, Type requestType, bool isAsync);
     public void AddTransform(Type transformType);
+
+    // Composition-time subsetting. v1 ships this minimal pair; further combinators are additive.
+    public RegistrationCatalog Matching(Func<Type, bool> predicate);
+    public RegistrationCatalog Without(params Type[] types);
 }
 ```
 
@@ -122,6 +128,10 @@ public sealed class RegistrationCatalog
   than the message-receipt-time failure that scanning produces.
 - Being data, a catalog is inspectable: a team can unit-test "our catalog contains a mapper for
   `OrderPlaced`" without building a container.
+- `Without` gives a host composition-time exclusion of a single handler without touching domain
+  source — the deployment-side complement to the source-side
+  `[ExcludeFromBrighterRegistration]`. `Matching` is the general escape hatch that makes named
+  groups (Phase 2) a convenience rather than a capability.
 
 ### Layer 1 — `AddRegistrations` (DI package)
 
@@ -145,6 +155,18 @@ It applies catalogs through the existing public surface:
 - **Transforms** via the off-interface `BrighterBuilderExtensions.Transforms(...)` extension
   (added in this change so transform registration is symmetric with handlers/mappers **without**
   a binary-breaking addition to `IBrighterBuilder`).
+
+**Applying registrations is a set union, not an append.** Registering the identical entry —
+same `(requestType, handlerType, isAsync)` — twice is a no-op, at two levels: `AddRegistrations`
+de-duplicates across the catalogs passed in one call (trivial, since catalogs are data), and the
+DI registries treat an exact-duplicate `Add` as idempotent so that *chained* calls union too.
+This was found by prototype, not foresight: a handler that legitimately belongs to two
+overlapping subsets (e.g. in both a namespace-scoped and a pattern-scoped group under Phase 2)
+was registered twice by `.AddBillingRegistrations().AddUrgentRegistrations()` and produced
+"More than one handler was found" — at *dispatch* time, exactly the class of runtime surprise
+this feature exists to remove. Set semantics match the caller's evident intent ("register the
+union of these subsets"). Note this only collapses *exact* duplicates; two *different* handler
+types for the same command still fail at dispatch as they do today, which remains correct.
 
 ### Layer 2 — declaration forms (the generator)
 
@@ -173,18 +195,67 @@ A plain `partial class` declaration compiles at C# 2-level `partial` support, so
 in netstandard2.0 / net48 libraries at their default LangVersion (7.3) — unlike the superseded
 extended-partial-method form, which required C# 9.
 
-**Auto registration (the zero-config, single-project form).** The package ships a `build/` props
-file setting the `BrighterAutoRegistration` MSBuild property. When true — and only for a
-**direct** `PackageReference`, because the props file is in `build/` not `buildTransitive/` — the
-generator synthesises an `internal static class BrighterAssemblyRegistrations` exposing the same
-generated `Catalog` plus an `AddFromThisAssembly(this IBrighterBuilder)` sugar whose body is one
-`AddRegistrations(Catalog)` call. This form is emitted only when the DI package is referenced
-(the sugar's parameter type must resolve) and is suppressed — with info diagnostic `BRGEN007` —
-when the compilation also declares a `[BrighterRegistrations]` holder, so the two forms cannot
-double-register the same types. Override per-project with
+**Auto registration (the zero-config form).** The package ships a `build/` props file setting the
+`BrighterAutoRegistration` MSBuild property. When true — and only for a **direct**
+`PackageReference`, because the props file is in `build/` not `buildTransitive/` — the generator
+behaves *as if the compilation had declared*
+`[BrighterRegistrations] internal static partial class BrighterRegistrations;` in the project's
+root namespace. The zero-config composition line is therefore the same single verb as every other
+form:
+
+```csharp
+services.AddBrighter().AddRegistrations(BrighterRegistrations.Catalog);
+```
+
+No sugar method is generated (see Alternative 7 for the dropped `AddFromThisAssembly()` and why).
+This unifies the generator to **one output shape** — the auto path is a synthesised default
+holder, nothing more — and the API to one registration verb. The auto holder is suppressed, with
+info diagnostic `BRGEN007`, when the compilation also declares its own `[BrighterRegistrations]`
+holder, so the two cannot double-register the same types. Override per-project with
 `<BrighterAutoRegistration>false</BrighterAutoRegistration>`.
 
 `[ExcludeFromBrighterRegistration]` opts a single type out of discovery under either form.
+
+### Phase 2 (designed now, delivered in a follow-up PR): registration groups and builder sugar
+
+These are settled design, deliberately excluded from the first PR so the review that introduces
+the core public type stays small. Both are purely additive over the catalog data model.
+
+**Named registration groups.** `[RegistrationGroup]` on the holder declares a named, pre-filtered
+sub-catalog scooped by convention:
+
+```csharp
+[BrighterRegistrations]
+[RegistrationGroup("Billing", InNamespace = "Orders.Domain.Billing")]
+[RegistrationGroup("Urgent", TypeNamePattern = "^Urgent")]
+public static partial class OrdersRegistrations;
+```
+
+The generator evaluates each convention **at build time** against the discovered types and emits
+the group as an additional static catalog property (`OrdersRegistrations.Billing`,
+`OrdersRegistrations.Urgent`) — plain pre-filtered data; no regex ever runs at runtime. An
+invalid pattern or a group matching zero types is a build-time diagnostic. Groups add naming and
+build-time checking, not capability: the identical subset is available at composition time via
+`Catalog.Matching(...)` (verified with a throwaway two-project prototype), which is what makes
+deferring them safe. Groups **may overlap** — a type can match both a namespace convention and a
+pattern convention — and composing overlapping groups is safe because Layer 1 applies
+registrations with set semantics.
+
+**Opt-in generated builder extensions.** `[BrighterRegistrations(GenerateBuilderExtensions =
+true)]` additionally emits one-line fluent extensions — `AddOrdersRegistrations()` for the whole
+holder and `Add{GroupName}Registrations()` per group — each with the body
+`=> builder.AddRegistrations(<catalog>)`:
+
+- Method naming is mechanical (`Add` + user-chosen name + `Registrations`) because holders and
+  groups already carry human-chosen names. This deliberately avoids the regex method-renaming
+  machinery NServiceBus needed (`RegistrationMethodNamePatterns`), which exists only because
+  their generated method names are derived from *type* names.
+- The extension's parameter type is `IBrighterBuilder`, so **opting in couples the declaring
+  assembly to the DI package** (and its `Microsoft.Extensions.DependencyInjection`/Polly graph).
+  That is the documented trade; the default (off) preserves the core-only posture. Setting the
+  flag without referencing the DI package is a build-error diagnostic.
+- A host that wants fluent sugar *without* coupling its domain assembly can hand-write the same
+  one-liner around `AddRegistrations` in the composition root.
 
 ### Roles and responsibilities
 
@@ -195,7 +266,7 @@ semantic-model object crossing a pipeline boundary:
 |---|---|---|
 | Information holder | `RegistrationCatalog` (`Paramore.Brighter`) | *Knowing* an assembly's handler/mapper/transform registrations as inert, inspectable data. |
 | Service provider | `BrighterBuilderExtensions.AddRegistrations` (`…Extensions.DependencyInjection`) | *Doing* the application of catalogs to the builder: non-generic registry adds, the open-generic path, the default-mapper guarantee. |
-| Interfacer / information holder | `MarkerSymbols` (generator) | *Knowing* the Brighter framework interface symbols (`IHandleRequests<>`, `IHandleRequestsAsync<>`, `IAmAMessageMapper<>`, `IAmAMessageMapperAsync<>`, `IAmAMessageTransform`, `IAmAMessageTransformAsync`) in a given compilation, and whether Brighter (and the DI package, for the auto sugar) is referenced at all. |
+| Interfacer / information holder | `MarkerSymbols` (generator) | *Knowing* the Brighter framework interface symbols (`IHandleRequests<>`, `IHandleRequestsAsync<>`, `IAmAMessageMapper<>`, `IAmAMessageMapperAsync<>`, `IAmAMessageTransform`, `IAmAMessageTransformAsync`) in a given compilation, and whether Brighter is referenced at all (and, for Phase 2's builder extensions, the DI package). |
 | Service provider | `SemanticModelReader` (generator) | *Deciding* how a declaration is classified — projecting Roslyn symbols into Roslyn-free, value-equatable records (holder candidates, `DiscoveredEntry`, `DiagnosticInfo`). |
 | Information holder | `Model/*` (generator) | *Knowing* the discovered registrations as pure, equatable data the incremental cache can compare by value. |
 | Service provider | `RegistrationWriter` (generator) | *Doing* the text generation — turning a `RegistrationModel` into the catalog-construction source. Holds no Roslyn references, so it is unit-testable without a `Compilation`. |
@@ -227,6 +298,10 @@ and may legitimately be records. A type is reachable when it (and any containing
 - **Fits layered solutions.** A domain assembly describes its registrations with no dependency
   beyond core `Paramore.Brighter`; the host composes any number of catalogs with one
   `AddRegistrations` call. No name collisions, no DI/Polly reference in domain projects.
+- **One registration verb.** Single-project, multi-project, subsets, and (Phase 2) group sugar
+  all bottom out in `AddRegistrations(...)`; extracting handlers from a host into a library never
+  changes the shape of the composition line. There is no second generated API to document, and no
+  vocabulary overlap with the runtime-scanning `*FromAssemblies` family.
 - **Generated code is inert data.** The fragile parts — the open-generic registry cast, the
   default-mapper rule, lifetime decisions — live in `AddRegistrations`, versioned and patchable
   with Brighter itself, rather than frozen into consumer assemblies at their compile time.
@@ -406,6 +481,27 @@ Define `IBrighterRegistrar` in core (generic `Handler<TReq, TImpl>()`, `Mapper(.
   interface is breaking for implementers (including test doubles).
 - Its one advantage — generic instantiations baked at compile time — is unnecessary, since the
   registries already expose a non-generic `Add(Type, Type)` surface that is trimming/AOT-safe.
+
+### Alternative 7: Zero-config sugar method (`AddFromThisAssembly()` / `AddGeneratedRegistrations()`)
+
+Keep a generated extension method as the zero-config entry point (as the superseded design did
+with `internal static BrighterAssemblyRegistrations.AddFromThisAssembly(this IBrighterBuilder)`),
+possibly under a better name.
+
+**Rejected because**:
+- The name `AddFromThisAssembly` is doubly wrong at the call site: "this" is deictic (the reader
+  cannot tell it means "the assembly that generated the method" rather than "the assembly calling
+  it"), and "From…Assembly" is the vocabulary of the runtime scanning family
+  (`AutoFromAssemblies`, `HandlersFromAssemblies`) — it makes the compile-time mechanism sound
+  like the thing it replaces, undermining the "two paths to understand" mitigation.
+- A better name (`AddGeneratedRegistrations()`) fixes the wording but not the structure: it still
+  leaves two registration verbs and a second generated output shape to maintain and document.
+  Synthesising a default *holder* instead unifies the generator to one output shape and every
+  composition line to `AddRegistrations(...)`.
+- The cost — losing IntelliSense discoverability of the zero-config call on `builder.` — is
+  accepted: the feature is opted into via a package reference, so the package README is the
+  discovery surface, and Phase 2's `GenerateBuilderExtensions` offers deliberate, named fluent
+  sugar where teams want it.
 
 ## References
 
