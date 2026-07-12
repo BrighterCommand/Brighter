@@ -136,9 +136,9 @@ namespace Paramore.Brighter
                 ClearExpiredMessages();
                 EnforceCapacityLimit();
 
-                if (!Requests.ContainsKey(message.Id))
+                if (!Requests.ContainsKey(message.Id.Value))
                 {
-                    if (!Requests.TryAdd(message.Id,
+                    if (!Requests.TryAdd(message.Id.Value,
                             new OutboxEntry(message) { WriteTime = _timeProvider.GetUtcNow() }))
                     {
                         throw new Exception($"Could not add message with Id: {message.Id} to outbox");
@@ -244,7 +244,7 @@ namespace Paramore.Brighter
         /// <param name="args"></param>
         public void Delete(Id[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
         {
-            foreach (string messageId in messageIds)
+            foreach (var messageId in messageIds)
             {
                 Delete(messageId);
             }
@@ -355,7 +355,7 @@ namespace Paramore.Brighter
 
             try
             {
-                return Requests.TryGetValue(messageId, out OutboxEntry? entry) ? entry.Message : new Message();
+                return Requests.TryGetValue(messageId.Value, out OutboxEntry? entry) ? entry.Message : new Message();
             }
             finally
             {
@@ -378,7 +378,7 @@ namespace Paramore.Brighter
             try
             {
                 return messageIds
-                    .Select(id => Requests.TryGetValue(id, out OutboxEntry? entry) ? entry.Message : null)
+                    .Select(id => Requests.TryGetValue(id.Value, out OutboxEntry? entry) ? entry.Message : null)
                     .Where(msg => msg != null)
                     .Select(msg => msg!);
             }
@@ -514,7 +514,7 @@ namespace Paramore.Brighter
 
             try
             {
-                if (Requests.TryGetValue(id, out OutboxEntry? entry))
+                if (Requests.TryGetValue(id.Value, out OutboxEntry? entry))
                 {
                     entry.TimeFlushed = dispatchedAt ?? _timeProvider.GetUtcNow();
                 }
@@ -687,7 +687,7 @@ namespace Paramore.Brighter
 
             try
             {
-                Requests.TryRemove(messageId, out _);
+                Requests.TryRemove(messageId.Value, out _);
             }
             finally
             {

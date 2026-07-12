@@ -42,7 +42,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 //
 // This test pre-creates a non-default MySQL database (the MySQL analogue of a schema),
 // configures SchemaName to that database name, and asserts the table lands there.
-public class When_mysql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema : IAsyncLifetime
+public class MySqlOutboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private readonly string _baseConnectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -73,7 +73,7 @@ public class When_mysql_outbox_provisioner_runs_on_fresh_database_with_non_defau
     }
 
     [Fact]
-    public async Task Should_create_outbox_in_configured_schema_and_no_op_on_second_run()
+    public async Task When_mysql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
         //Arrange
         await DropAnyExistingTableAsync(_tableName, _nonDefaultDatabase);

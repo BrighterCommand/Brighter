@@ -8,12 +8,12 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_inbox_provisioner_detects_payload_mode_mismatch_it_should_throw : IAsyncLifetime
+public class MsSqlInboxPayloadModeMismatchTests : IAsyncLifetime
 {
     private readonly string _connectionString;
     private readonly string _tableName;
 
-    public When_mssql_inbox_provisioner_detects_payload_mode_mismatch_it_should_throw()
+    public MsSqlInboxPayloadModeMismatchTests()
     {
         var builder = new ConfigurationBuilder().AddEnvironmentVariables();
         var configuration = builder.Build();
@@ -24,7 +24,7 @@ public class When_mssql_inbox_provisioner_detects_payload_mode_mismatch_it_shoul
     }
 
     [Fact]
-    public async Task Should_throw_configuration_exception()
+    public async Task When_mssql_inbox_provisioner_detects_payload_mode_mismatch_it_should_throw()
     {
         //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);

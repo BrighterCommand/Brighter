@@ -50,7 +50,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.command.id", command.Id}
+            {"db.operation.parameter.command.id", command.Id.Value}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -63,7 +63,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
 
         try
         {
-            var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
+            var message = new InboxMessage(command, command.Id.Value, contextKey, Configuration.TimeProvider.GetUtcNow(),
                 ExpireAfterSeconds);
             await Collection.InsertOneAsync(message, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
@@ -159,7 +159,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.command.id", command.Id}
+            {"db.operation.parameter.command.id", command.Id.Value}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -172,7 +172,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
 
         try
         {
-            var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
+            var message = new InboxMessage(command, command.Id.Value, contextKey, Configuration.TimeProvider.GetUtcNow(),
                 ExpireAfterSeconds);
             Collection.InsertOne(message);
         }

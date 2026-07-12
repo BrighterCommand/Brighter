@@ -12,13 +12,13 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_sqlite_box_provisioning_uses_connection_name_for_outbox_it_should_resolve_from_configuration : IAsyncLifetime
+public class OutboxConnectionNameResolutionTests : IAsyncLifetime
 {
     private readonly string _dbPath;
     private readonly string _connectionString;
     private readonly string _tableName;
 
-    public When_sqlite_box_provisioning_uses_connection_name_for_outbox_it_should_resolve_from_configuration()
+    public OutboxConnectionNameResolutionTests()
     {
         _dbPath = Path.Combine(Path.GetTempPath(), $"brighter_test_{Guid.NewGuid():N}.db");
         _connectionString = $"Data Source={_dbPath}";
@@ -26,7 +26,7 @@ public class When_sqlite_box_provisioning_uses_connection_name_for_outbox_it_sho
     }
 
     [Fact]
-    public async Task Should_resolve_connection_string_and_provision()
+    public async Task When_sqlite_box_provisioning_uses_connection_name_for_outbox_it_should_resolve_from_configuration()
     {
         //Arrange
         var configData = new Dictionary<string, string?>

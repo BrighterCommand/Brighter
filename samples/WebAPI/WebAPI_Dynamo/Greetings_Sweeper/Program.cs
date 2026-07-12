@@ -6,6 +6,7 @@ using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.DynamoDB;
+using Paramore.Brighter.Outbox.Hosting;
 using TransportMaker;
 
 JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
@@ -34,7 +35,15 @@ builder.Services.AddBrighter(options =>
     configure.MaxOutStandingMessages = 5;
     configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
     configure.OutBoxBag = new Dictionary<string, object> { { "Topic", "GreetingMade" } };
-});
+})
+.UseOutboxSweeper(
+    options =>
+    {
+        options.TimerInterval = 3;
+        options.MinimumMessageAge = TimeSpan.FromSeconds(1);
+        options.BatchSize = 10;
+        options.UseBulk = false;
+    });
 
 WebApplication app = builder.Build();
 

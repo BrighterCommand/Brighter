@@ -157,8 +157,8 @@ public class MySqlPreLockNegativeVersionClampTests
         public BoxTableState? CapturedTableState { get; private set; }
 
         public Task MigrateAsync(
-            string tableName,
-            string? schemaName,
+            BoxTableName tableName,
+            SchemaName? schemaName,
             BoxType boxType,
             BoxTableState tableState,
             CancellationToken cancellationToken = default)

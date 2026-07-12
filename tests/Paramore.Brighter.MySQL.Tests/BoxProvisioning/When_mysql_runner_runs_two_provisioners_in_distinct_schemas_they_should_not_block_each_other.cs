@@ -32,7 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_runner_runs_two_provisioners_in_distinct_schemas_they_should_not_block_each_other : IAsyncLifetime
+public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
 {
     private const string DefaultDatabase = "BrighterTests";
     private const string MasterConnectionString = "Server=localhost;Uid=root;Pwd=root";
@@ -41,7 +41,7 @@ public class When_mysql_runner_runs_two_provisioners_in_distinct_schemas_they_sh
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_not_block_each_other()
+    public async Task When_mysql_runner_runs_two_provisioners_in_distinct_schemas_they_should_not_block_each_other()
     {
         //Arrange — two provisioners share a table name but bind to distinct MySQL databases
         //("schemas" in MySQL parlance). Provisioner A's advisory lock is wrapped with a holding

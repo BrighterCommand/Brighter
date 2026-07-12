@@ -48,7 +48,7 @@ public class AzureSchedulerFiredMapper : IAmAMessageMapper<FireAzureScheduler>
         return new Message
         {
             Header =
-                new MessageHeader(request.Id, publication.Topic!, MessageType.MT_EVENT,
+                new MessageHeader(request.Id, publication.Topic!, MessageType.MT_COMMAND,
                     subject: nameof(FireAzureScheduler)),
             Body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options))
         };

@@ -76,7 +76,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         var dbAttributes = new Dictionary<string, string>
         {
-            ["db.operation.parameter.command.id"] = command.Id,
+            ["db.operation.parameter.command.id"] = command.Id.Value,
             ["db.operation.parameter.command.context_key"] = contextKey,
         };
         
@@ -282,7 +282,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         var dbAttributes = new Dictionary<string, string>
         {
-            ["db.operation.parameter.command.id"] = command.Id,
+            ["db.operation.parameter.command.id"] = command.Id.Value,
             ["db.operation.parameter.command.context_key"] = contextKey,
         };
         

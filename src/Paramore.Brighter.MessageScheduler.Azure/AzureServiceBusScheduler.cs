@@ -35,7 +35,7 @@ public class AzureServiceBusScheduler(
             ConvertToServiceBusMessage(new Message
             {
                 Header =
-                    new MessageHeader(message.Id, schedulerTopic, MessageType.MT_EVENT,
+                    new MessageHeader(message.Id, schedulerTopic, MessageType.MT_COMMAND,
                         subject: nameof(FireAzureScheduler)),
                 Body = new MessageBody(JsonSerializer.Serialize(
                     new FireAzureScheduler { Id = message.Id, Async = true, Message = message },
@@ -71,7 +71,7 @@ public class AzureServiceBusScheduler(
             ConvertToServiceBusMessage(new Message
             {
                 Header =
-                    new MessageHeader(id, schedulerTopic, MessageType.MT_EVENT,
+                    new MessageHeader(id, schedulerTopic, MessageType.MT_COMMAND,
                         subject: nameof(FireAzureScheduler)),
                 Body = new MessageBody(JsonSerializer.Serialize(
                     new FireAzureScheduler
@@ -181,7 +181,7 @@ public class AzureServiceBusScheduler(
             ConvertToServiceBusMessage(new Message
             {
                 Header =
-                    new MessageHeader(message.Id, schedulerTopic, MessageType.MT_EVENT,
+                    new MessageHeader(message.Id, schedulerTopic, MessageType.MT_COMMAND,
                         subject: nameof(FireAzureScheduler)),
                 Body = new MessageBody(JsonSerializer.Serialize(
                     new FireAzureScheduler { Id = message.Id, Async = true, Message = message },
@@ -216,7 +216,7 @@ public class AzureServiceBusScheduler(
             ConvertToServiceBusMessage(new Message
             {
                 Header =
-                    new MessageHeader(id, schedulerTopic, MessageType.MT_EVENT,
+                    new MessageHeader(id, schedulerTopic, MessageType.MT_COMMAND,
                         subject: nameof(FireAzureScheduler)),
                 Body = new MessageBody(JsonSerializer.Serialize(
                     new FireAzureScheduler

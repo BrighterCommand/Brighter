@@ -48,6 +48,7 @@ Claude Code skills automate common workflows and enforce mandatory engineering p
 - `/test-first <behavior>` - TDD workflow with mandatory approval before implementation ([docs](.claude/commands/tdd/README.md))
 - `/tidy-first <change>` - Separate structural (refactoring) from behavioral (feature) changes ([docs](.claude/commands/refactor/README.md))
 - `/adr <title>` - Create Architecture Decision Records ([docs](.claude/commands/adr/README.md))
+- `/bugfix:*` - Lightweight diagnosis-first bug workflow: Triage → Confirm (✋ gate) → Test-first → Fix → Verify. Use for a bug whose root cause is not yet proven, or that arrived with a suggested fix you should verify first ([docs](.claude/commands/bugfix/README.md))
 
 ### Specification Workflow Skills
 

@@ -257,6 +257,44 @@ The `protected abstract Task EnsureHistoryTableAsync(...)` hook on `SqlBoxMigrat
 * **Reverse flip (`PerSchema → Global`) and legacy-row cleanup are out of scope.** The per-schema history table remains in the tenant's schema if a deployment is later switched back to `Global`; the legacy default-schema rows survive after a PerSchema flip. Both are harmless but storage-redundant; operators wanting to reclaim that storage must run their own ad-hoc DELETE / DROP.
 * **Misconfiguration.** Selecting `PerSchema` on a placement backend with a `null` `SchemaName` throws `ConfigurationException` at the entry to the runner. Per-tenant identifiers flow through `Identifiers.AssertSafe` before any DDL is emitted, so an injection-shaped `SchemaName` is rejected at the provisioner entry well before reaching the database.
 
+### Replace Primitive Obsession in Box Provisioning with Value Types (spec 0030)
+
+The box-provisioning contracts now use dedicated value types instead of bare `string`/`int`, following the `Id` template and [ADR 0019 "Avoid Primitive Obsession"](docs/adr/0019-avoid-primitive-obsession.md). See [ADR 0061](docs/adr/0061-box-provisioning-value-types.md) and [spec 0030](specs/0030-primitive_obsession/) for full details.
+
+#### Additive: new value types
+
+Six value types land in `Paramore.Brighter.BoxProvisioning`, each with bidirectional implicit conversions to/from its underlying primitive, so existing string/int call-sites continue to compile unchanged:
+
+* **`BoxTableName`**, **`MigrationDescription`**, **`SqlScript`**, **`SourceReference`** — wrap `string`.
+* **`SchemaName`** — wraps `string`; `null` models "not supplied" (e.g. SQLite has no schema).
+* **`MigrationVersion`** — wraps `int`, with arithmetic and `IComparable` ordering preserved through the implicit `int` conversion.
+
+The `IAmABoxMigration` / `BoxMigration` and `IAmABoxMigrationRunner` surfaces are retyped to these value types. Because the conversions are implicit and bidirectional, this is **source-compatible** for callers passing primitives; external implementors overriding members will see the value types in the new signatures.
+
+#### Source-nullability ripple: core implicit `operator string` widened to `operator string?`
+
+While applying the value-type pattern we corrected a latent null-safety bug in nine existing core value types — `Id`, `RoutingKey`, `CloudEventsType`, `PartitionKey`, `SubscriptionName`, `TraceContext.TraceParent`/`TraceState` (in `Paramore.Brighter`), and `ConsumerName`/`HostName` (in `Paramore.Brighter.ServiceActivator`). These are **reference-type** records/classes, and a user-defined conversion on a reference type is *not* null-lifted the way a `Nullable<T>` conversion is: `(string?)(T?)null` invoked `operator string` on a null receiver and threw a `NullReferenceException`. Each operator changed from `operator string(T t) => t.Value` to the null-safe `operator string?(T t) => t?.Value`, matching the long-standing `ChannelName` precedent.
+
+* **Binary-compatible.** `string` and `string?` are the same IL type, so already-compiled consumers are unaffected at runtime.
+* **Source ripple for downstream NRT consumers.** Because these operators now return `string?`, downstream projects with nullable reference types enabled will see `CS8600`/`CS8604` where the result feeds a non-nullable `string`, e.g.:
+
+  ```csharp
+  string topic = someRoutingKey;        // CS8600: converting string? to string
+  dict.Add(someId, value);              // CS8604: someId is now string?
+  ```
+
+  The fix is the same one applied throughout this PR across ~60 in-box assemblies: take the underlying value explicitly with `.Value` (which is non-nullable), or `?.Value ?? fallback` when the source is itself nullable:
+
+  ```csharp
+  string topic = someRoutingKey.Value;          // non-nullable source
+  dict.Add(someId.Value, value);
+  string reply = header.ReplyTo?.Value ?? "";   // nullable RoutingKey? source
+  ```
+
+  No call-site fix is needed unless your code both has NRT enabled and treats warnings as errors.
+
+> Note: `Tenant` (in `Paramore.Brighter.Transformers.JustSaying`) is a `readonly record struct`, not a reference type — its receiver can never be null, so its `operator string` is intentionally left non-nullable.
+
 ## Release 10.0.0
 
 With V10 we have made a number of significant changes to Brighter. There are breaking changes that you will need to be aware of. However, most of the changes required are straightforward to make. A summary of the most important changes:

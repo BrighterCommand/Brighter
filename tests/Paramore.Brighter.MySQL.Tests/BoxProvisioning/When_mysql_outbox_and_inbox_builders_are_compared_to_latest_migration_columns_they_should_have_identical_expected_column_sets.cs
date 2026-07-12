@@ -89,7 +89,7 @@ public class MySqlOutboxBuilderDriftTests
         var migrations = new MySqlOutboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
-        Assert.Equal(1, v1.Version);
+        Assert.Equal(1, v1.Version.Value);
         Assert.DoesNotContain("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("HeaderBag", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }
@@ -164,7 +164,7 @@ public class MySqlInboxBuilderDriftTests
         var migrations = new MySqlInboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
-        Assert.Equal(1, v1.Version);
+        Assert.Equal(1, v1.Version.Value);
         Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }

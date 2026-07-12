@@ -93,7 +93,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
                 type: type.Result,
                 timeStamp: timeStamp.Result,
                 correlationId: correlationId.Success ? correlationId.Result : Id.Empty,
-                replyTo: replyTo.Result is not null ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
+                replyTo: replyTo.Result is not null ? new RoutingKey(replyTo.Result.Value) : RoutingKey.Empty,
                 contentType: bodyType!,
                 handledCount: handledCount.Result,
                 dataSchema: dataSchema.Result,

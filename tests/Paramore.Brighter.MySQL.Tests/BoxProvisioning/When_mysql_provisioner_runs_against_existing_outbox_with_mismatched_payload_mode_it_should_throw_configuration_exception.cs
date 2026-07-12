@@ -30,13 +30,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_provisioner_runs_against_existing_outbox_with_mismatched_payload_mode_it_should_throw_configuration_exception : IAsyncLifetime
+public class MySqlOutboxPayloadModeMismatchTests : IAsyncLifetime
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_throw_when_existing_outbox_body_is_text_and_provisioner_is_configured_for_binary()
+    public async Task When_existing_outbox_body_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
         //Arrange — text-mode outbox already exists; configure provisioner for binary.
         await CreateTable(MySqlOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: false));
@@ -58,7 +58,7 @@ public class When_mysql_provisioner_runs_against_existing_outbox_with_mismatched
     }
 
     [Fact]
-    public async Task Should_throw_when_existing_outbox_body_is_binary_and_provisioner_is_configured_for_text()
+    public async Task When_existing_outbox_body_is_binary_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
         //Arrange — binary (BLOB) outbox already exists; configure provisioner for text.
         await CreateTable(MySqlOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: true));

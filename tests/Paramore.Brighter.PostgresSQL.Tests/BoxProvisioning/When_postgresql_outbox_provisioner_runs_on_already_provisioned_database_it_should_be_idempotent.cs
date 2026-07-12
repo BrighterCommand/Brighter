@@ -6,13 +6,13 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgresql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent : IAsyncLifetime
+public class PostgreSqlOutboxProvisionerIdempotencyTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName;
     private readonly PostgreSqlOutboxProvisioner _provisioner;
 
-    public When_postgresql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent()
+    public PostgreSqlOutboxProvisionerIdempotencyTests()
     {
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
@@ -29,7 +29,7 @@ public class When_postgresql_outbox_provisioner_runs_on_already_provisioned_data
     }
 
     [Fact]
-    public async Task Should_be_idempotent()
+    public async Task When_postgresql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent()
     {
         //Arrange
         new PostgresSqlTestHelper().SetupDatabase();

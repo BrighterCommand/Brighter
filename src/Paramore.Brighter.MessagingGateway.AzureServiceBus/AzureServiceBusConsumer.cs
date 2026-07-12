@@ -48,7 +48,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     private readonly int _batchSize;
     protected IServiceBusReceiverWrapper? ServiceBusReceiver;
     protected readonly AzureServiceBusSubscriptionConfiguration SubscriptionConfiguration;
-    private readonly AzureServiceBusMesssageCreator _azureServiceBusMesssageCreator;
+    private readonly AzureServiceBusMessageCreator _azureServiceBusMesssageCreator;
 
     /// <summary>
     /// Constructor for the Azure Service Bus Consumer
@@ -65,12 +65,12 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     )
     {
         Subscription = subscription;
-        Topic = subscription.RoutingKey;
+        Topic = subscription.RoutingKey.Value;
         _batchSize = subscription.BufferSize;
         SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
         _messageProducer = messageProducer;
         AdministrationClientWrapper = administrationClientWrapper;
-        _azureServiceBusMesssageCreator = new AzureServiceBusMesssageCreator(subscription);
+        _azureServiceBusMesssageCreator = new AzureServiceBusMessageCreator(subscription);
     }
         
     /// <summary>
@@ -108,7 +108,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
             if (string.IsNullOrEmpty(lockToken))
                 throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-            Log.AcknowledgingMessage(Logger, message.Id, lockToken);
+            Log.AcknowledgingMessage(Logger, message.Id.Value, lockToken);
                 
             if(ServiceBusReceiver == null)
                 await GetMessageReceiverProviderAsync();
@@ -121,24 +121,24 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         catch (AggregateException ex)
         {
             if (ex.InnerException is ServiceBusException asbException)
-                HandleAsbException(asbException, message.Id);
+                HandleAsbException(asbException, message.Id.Value);
             else
             {
-                Log.ErrorCompletingPeekLock(Logger, ex, message.Id);
+                Log.ErrorCompletingPeekLock(Logger, ex, message.Id.Value);
                 throw;
             }
         }
         catch (ServiceBusException ex)
         {
-            HandleAsbException(ex, message.Id);
+            HandleAsbException(ex, message.Id.Value);
         }
         catch (Exception ex)
         {
-            Log.ErrorCompletingPeekLock(Logger, ex, message.Id);
+            Log.ErrorCompletingPeekLock(Logger, ex, message.Id.Value);
             throw;
         }
     }
-        
+
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
@@ -259,7 +259,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         catch (AggregateException ex)
         {
             if (ex.InnerException is ServiceBusException asbException)
-                HandleAsbException(asbException, message.Id);
+                HandleAsbException(asbException, message.Id.Value);
             else
             {
                 Logger.LogError(ex, "Error abandoning message with id {Id}", message.Id);
@@ -268,7 +268,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         }
         catch (ServiceBusException ex)
         {
-            HandleAsbException(ex, message.Id);
+            HandleAsbException(ex, message.Id.Value);
         }
         catch (Exception ex)
         {
@@ -306,7 +306,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
             var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
             var description = reason is null ? "unknown" : reason.Description ?? "unknown";
             
-            Log.DeadLetteringMessage(Logger, message.Id, lockToken, reasonString, description);
+            Log.DeadLetteringMessage(Logger, message.Id.Value, lockToken, reasonString, description);
 
             if(ServiceBusReceiver == null)
                 await GetMessageReceiverProviderAsync();
@@ -317,7 +317,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         }
         catch (Exception ex)
         {
-            Log.ErrorDeadLetteringMessage(Logger, ex, message.Id);
+            Log.ErrorDeadLetteringMessage(Logger, ex, message.Id.Value);
             throw;
         }
 
@@ -344,7 +344,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         var topic = message.Header.Topic;
         delay ??= TimeSpan.Zero;
 
-        Log.RequeuingMessage(Logger, topic, message.Id);
+        Log.RequeuingMessage(Logger, topic, message.Id.Value);
 
         var messageProducerAsync = _messageProducer as IAmAMessageProducerAsync;
             

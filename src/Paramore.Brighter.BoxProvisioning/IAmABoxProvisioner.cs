@@ -40,7 +40,7 @@ public interface IAmABoxProvisioner
     /// reading the log can disambiguate concurrent provisioning steps when multiple
     /// boxes of the same <see cref="BoxType"/> are registered.
     /// </summary>
-    string BoxTableName { get; }
+    BoxTableName BoxTableName { get; }
 
     /// <summary>
     /// Provision the box table: create if it doesn't exist, then apply any

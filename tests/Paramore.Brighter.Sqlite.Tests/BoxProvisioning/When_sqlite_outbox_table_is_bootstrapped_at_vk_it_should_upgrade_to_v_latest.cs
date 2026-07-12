@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_sqlite_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v_latest : IAsyncLifetime
+public class OutboxVkToLatestUpgradeTests : IAsyncLifetime
 {
     private const string MarkerMessageId = "marker-row-must-survive";
 
@@ -51,7 +51,7 @@ public class When_sqlite_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to
     [InlineData(3)]
     [InlineData(5)]
     [InlineData(7)]
-    public async Task Should_upgrade_to_v_latest_with_synthetic_v_k_plus_applied_rows(int k)
+    public async Task When_sqlite_outbox_table_is_bootstrapped_at_vk_it_should_upgrade_to_v_latest(int k)
     {
         //Arrange — seed an outbox at V_k (no history row) and a marker row to prove
         //preservation across the bootstrap path.

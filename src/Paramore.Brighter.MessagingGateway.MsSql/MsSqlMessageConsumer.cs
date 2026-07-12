@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -149,7 +149,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
                 if (reason != null)
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
 
                 return true;
             }
@@ -168,7 +168,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDlq(s_logger, message.Id);
+                        Log.FallingBackToDlq(s_logger, message.Id.Value);
 
                     if (routingKey == _invalidMessageRoutingKey)
                         producer = _invalidMessageProducer?.Value;
@@ -179,11 +179,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 if (producer != null)
                 {
                     producer.Send(message);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
@@ -191,7 +191,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 // DLQ send failed — the message was already atomically deleted from the source
                 // queue on Receive, so we cannot requeue it. Log and return true to prevent the
                 // message pump from retrying endlessly.
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
                 return true;
             }
 
@@ -213,7 +213,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
                 if (reason != null)
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
 
                 return true;
             }
@@ -232,7 +232,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDlq(s_logger, message.Id);
+                        Log.FallingBackToDlq(s_logger, message.Id.Value);
 
                     if (routingKey == _invalidMessageRoutingKey)
                         producer = _invalidMessageProducer?.Value;
@@ -243,11 +243,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 if (producer != null)
                 {
                     await producer.SendAsync(message, cancellationToken);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
@@ -255,7 +255,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 // DLQ send failed — the message was already atomically deleted from the source
                 // queue on ReceiveAsync, so we cannot requeue it. Log and return true to prevent
                 // the message pump from retrying endlessly.
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
                 return true;
             }
 
@@ -273,7 +273,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             delay ??= TimeSpan.Zero;
 
             var topic = message.Header.Topic;
-            Log.RequeuingMessage(s_logger, topic, message.Id.ToString());
+            Log.RequeuingMessage(s_logger, topic.Value, message.Id.ToString());
+
+            if (!message.Header.Bag.ContainsKey(Message.OriginalMessageIdHeaderName))
+            {
+                message.Header.Bag[Message.OriginalMessageIdHeaderName] = message.Header.MessageId.ToString();
+            }
 
             if (delay > TimeSpan.Zero)
             {
@@ -298,7 +303,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             delay ??= TimeSpan.Zero;
 
             var topic = message.Header.Topic;
-            Log.RequeuingMessage(s_logger, topic, message.Id.ToString());
+            Log.RequeuingMessage(s_logger, topic.Value, message.Id.ToString());
+
+            if (!message.Header.Bag.ContainsKey(Message.OriginalMessageIdHeaderName))
+            {
+                message.Header.Bag[Message.OriginalMessageIdHeaderName] = message.Header.MessageId.ToString();
+            }
 
             if (delay > TimeSpan.Zero)
             {
@@ -307,7 +317,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 return true;
             }
 
-            await _sqlMessageQueue.SendAsync(message, topic, null, cancellationToken: cancellationToken);
+            await _sqlMessageQueue.SendAsync(message, topic.Value, null, cancellationToken: cancellationToken);
             return true;
         }
 

@@ -55,8 +55,8 @@ public interface IAmABoxMigrationRunner
     /// See <see cref="BoxTableState"/> for the per-field disposition.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task MigrateAsync(
-        string tableName,
-        string? schemaName,
+        BoxTableName tableName,
+        SchemaName? schemaName,
         BoxType boxType,
         BoxTableState tableState,
         CancellationToken cancellationToken = default);

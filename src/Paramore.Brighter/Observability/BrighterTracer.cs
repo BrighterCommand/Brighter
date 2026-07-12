@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Observability;
 /// </summary>
 public class BrighterTracer : IAmABrighterTracer
 {
+    private const string PreviousActivityCustomPropertyName = "Paramore.Brighter.PreviousActivity";
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -142,7 +143,8 @@ public class BrighterTracer : IAmABrighterTracer
  
 
     /// <summary>
-    /// Create a span when we consume a message from a queue or stream
+    /// Create a span when we consume a message from a queue or stream. If the message has no propagated
+    /// trace context, the span is created as a root span instead of inheriting the long-running pump span.
     /// </summary>
     /// <param name="operation">How did we obtain the message. InstrumentationOptions.Receive => pull; InstrumentationOptions.Process => push</param>
     /// <param name="message">What is the <see cref="Message"/> that we received; if they have a traceparentid we will use that as a parent for this trace</param>
@@ -153,13 +155,13 @@ public class BrighterTracer : IAmABrighterTracer
        MessagePumpSpanOperation operation,
        Message message,
        MessagingSystem messagingSystem,
-       InstrumentationOptions options = InstrumentationOptions.All
+       InstrumentationOptions options = InstrumentationOptions.All,
+       string? serializedHeader = null
     )
     {
         var spanName = $"{message.Header.Topic} {operation.ToSpanName()}";
         var kind = ActivityKind.Consumer;
         var parentId = message.Header.TraceParent?.Value;
-        var baggage = message.Header.Baggage.ToString();
         var traceState = message.Header.TraceState?.Value;
         var now = _timeProvider.GetUtcNow();
         
@@ -187,7 +189,9 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
             tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
-            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            //reuse the header the receive span already serialized; serialize here only when there was no receive span
+            tags.Add(BrighterSemanticConventions.MessageHeaders,
+                serializedHeader ?? JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
             tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
             tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
         }
@@ -197,31 +201,37 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
         }
         
-        var activity = ActivitySource.StartActivity(
-            name: spanName,
-            kind: kind,
-            parentId: parentId,
-            tags: tags,
-            startTime: now);
+        var activity = StartConsumerActivity(
+            spanName,
+            kind,
+            parentId,
+            tags,
+            now);
 
         if (activity == null)
             return Activity.Current;
-        
-        activity.TraceStateString = traceState;
-        
-        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-            message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);
-        OpenTelemetry.Baggage.SetBaggage(message.Header.Baggage);
-        
-        Activity.Current = activity;
 
-        return activity;
+        try
+        {
+            activity.TraceStateString = traceState;
+
+            Activity.Current = activity;
+
+            return activity;
+        }
+        catch (Exception ex)
+        {
+            //the activity is already started; end it here so a throw during enrichment cannot leak it past the caller
+            activity.SetStatus(ActivityStatusCode.Error, ex.Message);
+            EndSpan(activity);
+            throw;
+        }
     }
 
     /// <summary>
-    /// Creates a receive span before the broker call so that the span's <see cref="Activity.Duration"/> reflects only
-    /// broker latency. Tags derived from the received <see cref="Message"/> are added later via
-    /// <see cref="EnrichReceiveSpan"/>.
+    /// Creates a root receive span before the broker call so that the span's <see cref="Activity.Duration"/> reflects
+    /// only broker latency without inheriting the long-running pump span. Tags derived from the received
+    /// <see cref="Message"/> are added later via <see cref="EnrichReceiveSpan"/>.
     /// </summary>
     /// <param name="topic">The <see cref="RoutingKey"/> we are receiving from</param>
     /// <param name="messagingSystem">The <see cref="MessagingSystem"/> we are receiving from</param>
@@ -245,11 +255,11 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
         }
 
-        var activity = ActivitySource.StartActivity(
-            name: $"{topic} {operation.ToSpanName()}",
-            kind: ActivityKind.Consumer,
-            tags: tags,
-            startTime: _timeProvider.GetUtcNow());
+        var activity = StartRootActivity(
+            $"{topic} {operation.ToSpanName()}",
+            ActivityKind.Consumer,
+            tags,
+            _timeProvider.GetUtcNow());
 
         if (activity is not null)
             Activity.Current = activity;
@@ -264,12 +274,12 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="span">The receive span to enrich; no-op if null</param>
     /// <param name="message">The <see cref="Message"/> that was received</param>
     /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
-    public void EnrichReceiveSpan(
+    public string? EnrichReceiveSpan(
         Activity? span,
         Message message,
         InstrumentationOptions options = InstrumentationOptions.All)
     {
-        if (span is null) return;
+        if (span is null) return null;
 
         if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
@@ -282,24 +292,41 @@ public class BrighterTracer : IAmABrighterTracer
             span.AddTag(BrighterSemanticConventions.CeSubject, message.Header.Subject);
         }
 
+        string? serializedHeader = null;
+
         if (options.HasFlag(InstrumentationOptions.Messaging))
         {
             span.AddTag(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
             span.AddTag(BrighterSemanticConventions.MessageId, message.Id.Value);
             span.AddTag(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
             span.AddTag(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
-            span.AddTag(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            //returned so the process span can reuse it instead of serializing the header again
+            serializedHeader = JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options);
+            span.AddTag(BrighterSemanticConventions.MessageHeaders, serializedHeader);
             span.AddTag(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
         }
 
         if (options.HasFlag(InstrumentationOptions.RequestBody))
             span.AddTag(BrighterSemanticConventions.MessageBody, message.Body.Value);
 
-        // Propagate the producer's tracestate and baggage onto the consumer side. Done here (not in CreateReceiveSpan) because
-        // these values come from the message and aren't known until the broker call returns. Mirrors what CreateSpan(Process, ...)
-        // already does for serviceable messages — needed here so MT_UNACCEPTABLE rejections still carry the producer trace context.
+        // not set in CreateReceiveSpan because the tracestate comes from the message, unknown until the broker call returns
         if (!string.IsNullOrEmpty(message.Header.TraceState?.Value))
             span.TraceStateString = message.Header.TraceState!.Value;
+
+        return serializedHeader;
+    }
+
+    /// <summary>
+    /// Propagates the producer's baggage onto the consumer side for a received message: lifts the message's
+    /// <see cref="MessageHeader.CorrelationId"/> into its <see cref="MessageHeader.Baggage"/> and sets it as the ambient
+    /// OpenTelemetry baggage for the current execution context. Called by the pump for a received message, gated on a
+    /// receive span existing (sampled in, instrumentation enabled), mirroring the historic span-scoped propagation.
+    /// </summary>
+    /// <param name="message">The <see cref="Message"/> that was received</param>
+    public void PropagateConsumerContext(Message message)
+    {
+        //the pump calls this before its own null-message check, so guard against a broker that returned no message
+        if (message is null) return;
 
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
             message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);
@@ -703,16 +730,103 @@ public class BrighterTracer : IAmABrighterTracer
     }
 
     /// <summary>
+    /// Create a standalone span that represents a broker confirmation (ack/nack) of a previously produced message.
+    /// The span links back to the original publish span (via <paramref name="links"/>) rather than nesting under it,
+    /// so the publish span is never reopened or mutated. The new span becomes <see cref="Activity.Current"/> so that
+    /// work performed inside the confirmation callback (such as the success-branch <c>MarkDispatched</c> database span)
+    /// nests beneath it.
+    /// </summary>
+    /// <remarks>
+    /// This method clears <see cref="Activity.Current"/> to force the confirmation span to be a true root and does
+    /// NOT restore the prior ambient activity. It is therefore only safe to call from a context whose ambient activity
+    /// is owned and disposed by the caller (such as a confirmation callback running on a broker/threadpool thread).
+    /// Calling it inline on a thread that owns a meaningful ambient span would silently lose that
+    /// <see cref="Activity.Current"/>.
+    /// </remarks>
+    /// <param name="messageId">The id of the message the broker confirmed; <see cref="Id.Empty"/> records an "unknown" marker</param>
+    /// <param name="topic">The wire topic the message was published to, recorded as the messaging destination</param>
+    /// <param name="success">True if the broker confirmed persistence; false records the failure as an error outcome</param>
+    /// <param name="links">Links to the original publish span, if its context was captured at send time; null when absent</param>
+    /// <param name="options">How deep should the instrumentation go?</param>
+    /// <returns>The confirmation span, which also becomes <see cref="Activity.Current"/>, or null if the source has no listeners</returns>
+    public Activity? CreateConfirmationSpan(
+        Id messageId,
+        RoutingKey? topic,
+        bool success,
+        ActivityLink[]? links = null,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        const string operation = "settle";
+        var spanName = $"{topic} {operation}";
+        var kind = ActivityKind.Producer;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = GetNewTagsCollection(options);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+            tags.Add(BrighterSemanticConventions.MessagingOperationType, operation);
+
+        if (options.HasFlag(InstrumentationOptions.Messaging))
+        {
+            tags.Add(BrighterSemanticConventions.MessageId, Id.IsNullOrEmpty(messageId) ? "unknown" : messageId.Value);
+            if (topic is not null)
+                tags.Add(BrighterSemanticConventions.MessagingDestination, topic.Value);
+        }
+
+        //An ack/nack failure is the outcome this span exists to surface, so we always record it regardless of depth
+        if (!success)
+            tags.Add(BrighterSemanticConventions.ErrorType, "delivery_failed");
+
+        // The confirmation span must LINK to the publish span, never NEST under it (or any other
+        // ambient span). Passing parentId: null is NOT sufficient: with both the string-parentId
+        // and the ActivityContext overloads, StartActivity falls back to Activity.Current as the
+        // parent whenever it is set (e.g. the InMemory async path flows the publish span into the
+        // callback via ExecutionContext). The only reliable way to force a root is to clear the
+        // ambient activity for the duration of the call. We do not restore it: this method
+        // deliberately makes the confirmation span the new Activity.Current below, so the
+        // success-branch MarkDispatched span nests under the confirmation span.
+        //
+        // We capture no "previous" activity to restore on EndSpan, and that is safe: because the span
+        // is a forced root (Parent == null), disposing it while it is Current makes the runtime revert
+        // Activity.Current to that null parent — so Current self-clears rather than dangling at the
+        // disposed span. Even setting that aside, a disposed confirmation activity cannot leak into
+        // unrelated work: every producer raises the callback on a pooled (Task.Run) or dedicated
+        // ack/nack thread whose ExecutionContext — and thus the AsyncLocal-backed Activity.Current —
+        // is reset before the thread is reused, and the next confirmation re-clears Current here first.
+        Activity.Current = null;
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: null,
+            tags: tags,
+            links: links,
+            startTime: now);
+
+        if (activity is not null && !success)
+            activity.SetStatus(ActivityStatusCode.Error);
+
+        Activity.Current = activity;
+
+        return activity;
+    }
+
+    /// <summary>
     /// Ends a span by correctly setting its status and then disposing of it
     /// </summary>
     /// <param name="span">The span to end</param>
     public void EndSpan(Activity? span)
     {
         if (span is null) return;
+        var previousActivity = span.GetCustomProperty(PreviousActivityCustomPropertyName) as Activity;
+        var shouldRestorePreviousActivity = previousActivity is not null && Activity.Current == span;
+
         if (span.Status == ActivityStatusCode.Unset)
             span.SetStatus(ActivityStatusCode.Ok);
         span.SetEndTime(_timeProvider.GetUtcNow().UtcDateTime);
         span.Dispose();
+
+        if (shouldRestorePreviousActivity)
+            Activity.Current = previousActivity;
     }
 
     /// <summary>
@@ -958,6 +1072,76 @@ public class BrighterTracer : IAmABrighterTracer
         PropogateTraceString(parentActivity, activity);
         PropogateBaggage(parentActivity, activity);
     }
+
+    private Activity? StartConsumerActivity(
+        string spanName,
+        ActivityKind kind,
+        string? parentId,
+        ActivityTagsCollection tags,
+        DateTimeOffset startTime)
+    {
+        if (!string.IsNullOrEmpty(parentId))
+        {
+            // The span is a child of the producer's trace, but the message pump that drove this consume
+            // is not its temporal parent, so associate the pump with a link rather than parent/child.
+            return ActivitySource.StartActivity(
+                name: spanName,
+                kind: kind,
+                parentId: parentId,
+                tags: tags,
+                links: GetMessagePumpLinks(Activity.Current),
+                startTime: startTime);
+        }
+
+        return StartRootActivity(spanName, kind, tags, startTime);
+    }
+
+    private Activity? StartRootActivity(
+        string spanName,
+        ActivityKind kind,
+        ActivityTagsCollection tags,
+        DateTimeOffset startTime)
+    {
+        var current = Activity.Current;
+        Activity? activity;
+
+        try
+        {
+            // ActivitySource treats a null parentId as "use Activity.Current", so suppress the ambient span to create a root.
+            Activity.Current = null;
+            // Link the suppressed ambient span (the message pump) so the root span stays associated with it.
+            activity = ActivitySource.StartActivity(
+                name: spanName,
+                kind: kind,
+                parentId: null,
+                tags: tags,
+                links: GetMessagePumpLinks(current),
+                startTime: startTime);
+        }
+        finally
+        {
+            Activity.Current = current;
+        }
+
+        if (current is not null && activity is not null)
+            activity.SetCustomProperty(PreviousActivityCustomPropertyName, current);
+
+        return activity;
+    }
+
+    /// <summary>
+    /// Builds the set of links used to associate a consumer span with the ambient message pump span.
+    /// </summary>
+    /// <remarks>
+    /// The message pump drives each consume/process iteration but is not its temporal parent, so the
+    /// relationship is expressed as an <see cref="ActivityLink"/> (per the OTel messaging semantic
+    /// conventions) rather than parent/child. This keeps the spans' durations measurable independently
+    /// while still correlating them. Returns <c>null</c> when no pump span is active.
+    /// </remarks>
+    /// <param name="messagePump">The ambient message pump <see cref="Activity"/>, if any.</param>
+    /// <returns>A single-element link collection to the pump's context, or <c>null</c> when none is active.</returns>
+    private static IEnumerable<ActivityLink>? GetMessagePumpLinks(Activity? messagePump)
+        => messagePump is not null ? new[] { new ActivityLink(messagePump.Context) } : null;
     
     private static void PropogateTraceString(Activity? parentActivity, Activity? activity)
     {

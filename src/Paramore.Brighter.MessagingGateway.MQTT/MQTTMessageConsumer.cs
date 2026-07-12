@@ -234,14 +234,14 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             try
             {
                 producer.Send(message);
-                Log.MessageSentToRejectionChannel(s_logger, message.Id, routingKey.Value);
+                Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, routingKey.Value);
             }
             catch (Exception ex)
             {
                 // DLQ send failed — MQTT fire-and-forget model means the source message
                 // only exists in memory and cannot be requeued. Return true to prevent
                 // requeue loops (per ADR 0034).
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, routingKey.Value);
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, routingKey.Value);
                 return true;
             }
 
@@ -263,14 +263,14 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             try
             {
                 await producer.SendAsync(message, cancellationToken);
-                Log.MessageSentToRejectionChannel(s_logger, message.Id, routingKey.Value);
+                Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, routingKey.Value);
             }
             catch (Exception ex)
             {
                 // DLQ send failed — MQTT fire-and-forget model means the source message
                 // only exists in memory and cannot be requeued. Return true to prevent
                 // requeue loops (per ADR 0034).
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, routingKey.Value);
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, routingKey.Value);
                 return true;
             }
 
@@ -281,7 +281,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         {
             if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id);
+                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value);
                 return (null, null);
             }
 
@@ -290,11 +290,11 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             var (routingKey, hasProducer, isFallingBackToDlq) = DetermineRejectionRoute(reason);
 
             if (isFallingBackToDlq)
-                Log.FallingBackToDlq(s_logger, message.Id);
+                Log.FallingBackToDlq(s_logger, message.Id.Value);
 
             if (!hasProducer)
             {
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id);
+                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value);
                 return (null, null);
             }
 

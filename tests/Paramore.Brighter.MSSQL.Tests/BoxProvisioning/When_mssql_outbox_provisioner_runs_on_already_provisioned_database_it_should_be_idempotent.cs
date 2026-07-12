@@ -7,13 +7,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent : IAsyncLifetime
+public class MsSqlOutboxProvisionerIdempotencyTests : IAsyncLifetime
 {
     private readonly string _connectionString;
     private readonly string _tableName;
     private readonly MsSqlOutboxProvisioner _provisioner;
 
-    public When_mssql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent()
+    public MsSqlOutboxProvisionerIdempotencyTests()
     {
         var builder = new ConfigurationBuilder().AddEnvironmentVariables();
         var configuration = builder.Build();
@@ -35,7 +35,7 @@ public class When_mssql_outbox_provisioner_runs_on_already_provisioned_database_
     }
 
     [Fact]
-    public async Task Should_be_idempotent()
+    public async Task When_mssql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent()
     {
         //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);

@@ -141,8 +141,8 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
 
     /// <inheritdoc />
     public async Task MigrateAsync(
-        string tableName,
-        string? schemaName,
+        BoxTableName tableName,
+        SchemaName? schemaName,
         BoxType boxType,
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
@@ -150,7 +150,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         // Defence in depth (ADR 0057 §1, spec 0027 PR #4039 review #46-3 #4): Spanner has no
         // *Migrations.All(...) factory, so this is the only place to reject unsafe identifiers
         // before they reach BuildBoxDdl / BootstrapExistingTableAsync's information_schema probe.
-        Identifiers.AssertSafe(tableName, nameof(tableName));
+        Identifiers.AssertSafe(tableName.Value, nameof(tableName));
 
         _ = schemaName; // Spanner does not use schemas; the configuration's database is implicit.
 
@@ -158,7 +158,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         // skips the advisory-lock / re-detection orchestration, but the operator-facing span
         // still carries the same tag + child-event vocabulary so a multi-backend startup trace
         // reads consistently).
-        using var activity = StartMigrationActivity(tableName, schemaName, boxType);
+        using var activity = StartMigrationActivity(tableName.Value, schemaName?.Value, boxType);
 
         using var connection = SpannerConnectionHelper.CreateConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
@@ -174,19 +174,19 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             {
                 activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "fresh");
                 activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventFreshInstall));
-                await FreshInstallAsync(connection, tableName, boxType, vLatest, cancellationToken);
+                await FreshInstallAsync(connection, tableName.Value, boxType, vLatest, cancellationToken);
             }
             else if (!tableState.HistoryExists)
             {
                 activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "bootstrap");
                 activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventBootstrap));
-                await BootstrapExistingTableAsync(connection, tableName, boxType, vLatest, cancellationToken);
+                await BootstrapExistingTableAsync(connection, tableName.Value, boxType, vLatest, cancellationToken);
             }
             else
             {
                 activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "normal");
                 activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventNormalUpdate));
-                VerifyAtLatestVersionOrThrow(tableName, vLatest, tableState.CurrentVersion);
+                VerifyAtLatestVersionOrThrow(tableName.Value, vLatest, tableState.CurrentVersion);
             }
             activity?.SetStatus(ActivityStatusCode.Ok);
         }

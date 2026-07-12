@@ -1,0 +1,1 @@
+Passed!  - Failed:     0, Passed:   160, Skipped:     0, Total:   160, Duration: 11 s - Paramore.Brighter.MySQL.Tests.dll (net9.0)

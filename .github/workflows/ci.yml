@@ -47,10 +47,10 @@ jobs:
             9.0.x
             10.0.x
       - run: dotnet --info
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
@@ -60,9 +60,9 @@ jobs:
         run: dotnet build --configuration Release
       - name: Core Tests
         run: |
-          dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --logger GitHubActions --no-restore --no-build --verbosity d
-          dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build --verbosity d
-          dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build --verbosity d
+          dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --logger GitHubActions --no-restore --no-build
+          dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build
+          dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build
 
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v7
@@ -94,7 +94,7 @@ jobs:
     needs: [build]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -104,7 +104,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n  
+        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
   hangfire:
     runs-on: ubuntu-latest
@@ -112,7 +112,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -130,7 +130,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -148,7 +148,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -180,7 +180,7 @@ jobs:
           --health-retries 10             
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -205,7 +205,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -217,7 +217,35 @@ jobs:
       - name: MQTT Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Category=MQTT&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
-  rabbitmq-ci:
+  rabbitmq-async-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [build]
+
+    services:
+      rabbitmq:
+        image: brightercommand/rabbitmq:4.2-management-delay
+        ports:
+        - 5672:5672 
+        # needed because the rabbitmq container does not provide a healthcheck
+        options: >-
+          --health-cmd "rabbitmqctl node_health_check"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+      - name: RMQ Async Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+
+  rabbitmq-sync-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [build]
@@ -235,17 +263,13 @@ jobs:
           --health-retries 10
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             9.0.x
             10.0.x
-      - name: Install dependencies
-        run: dotnet restore
-      - name: RMQ Async Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
       - name: RMQ Sync Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI&Requires!=Docker-mTLS" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
@@ -278,8 +302,8 @@ jobs:
           KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
           KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
           KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-          KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
-          KAFKA_DELETE_TOPIC_ENABLE: "false"
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+          KAFKA_DELETE_TOPIC_ENABLE: "true"
       schema-registry:
         image: confluentinc/cp-schema-registry:latest
         ports:
@@ -312,7 +336,7 @@ jobs:
           exit 1
         fi
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Setup dotnet
       uses: actions/setup-dotnet@v5
       with:
@@ -343,7 +367,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -369,7 +393,7 @@ jobs:
           ACCEPT_EULA: Y
           MSSQL_SA_PASSWORD: Password123!
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -397,7 +421,7 @@ jobs:
         options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=10
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -428,7 +452,7 @@ jobs:
           - 8000:8000
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -441,14 +465,12 @@ jobs:
         run: |
           dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
           dotnet test ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
-
   aws-mock-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: build
     env:
       AWS_SERVICE_URL: http://localhost:4566
-
     services:
       floci:
         image: floci/floci:1.5.19
@@ -462,7 +484,7 @@ jobs:
           --health-start-period 5s
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Required to fetch the Git tags
           filter: tree:0
@@ -473,7 +495,7 @@ jobs:
           dotnet-version: |
             9.0.x
             10.0.x
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
@@ -498,7 +520,7 @@ jobs:
       AWS_DEFAULT_OUTPUT: json    
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -532,7 +554,7 @@ jobs:
       AWS_DEFAULT_OUTPUT: json
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -558,7 +580,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet 
         uses: actions/setup-dotnet@v5
         with:
@@ -580,7 +602,7 @@ jobs:
     env:
       BrighterTestsASBConnectionString: ${{ secrets.BRIGHTERTESTS_ASB_CONNECTION_STRING }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -612,7 +634,7 @@ jobs:
           --health-timeout 10s
           --health-retries 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
         with:
@@ -626,13 +648,13 @@ jobs:
     
   gcp-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     needs: [build]
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with: 
           fetch-depth: 0 # Required to fetch the Git tags
           filter: tree:0
@@ -652,14 +674,13 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
-            9.0.x
             10.0.x
             
       - name: Install dependencies
         run: dotnet restore
         
       - name: GCP Tests
-        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj --filter "Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n --blame-hang-timeout 15min --framework net10.0
         
 #  TODO: Rafael Andrade is working on how to run RocketMQ on GHA
 #  rocketmq-ci:
@@ -701,7 +722,7 @@ jobs:
 #          AUTO_CREATE_TOPIC_ENABLE: "true"  # Auto-create topics
 #          
 #    steps:
-#      - uses: actions/checkout@v6
+#      - uses: actions/checkout@v7
 #        with:
 #          fetch-depth: 0 # Required to fetch the Git tags
 #          filter: tree:0

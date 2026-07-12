@@ -1,0 +1,25 @@
+  Stack Trace:
+     at Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Sync.WhenAddingAMessageItShouldBeStoredWithAllProperties.When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties() in /Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/tests/Paramore.Brighter.MSSQL.Tests/Outbox/Binary/Generated/Sync/When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties.cs:line 72
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:13.97]     Paramore.Brighter.MSSQL.Tests.Outbox.Text.Async.WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommitAsync.When_Adding_A_Message_Within_Transaction_It_Should_Be_Stored_After_Commit_Async [FAIL]
+  Failed Paramore.Brighter.MSSQL.Tests.Outbox.Text.Async.WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommitAsync.When_Adding_A_Message_Within_Transaction_It_Should_Be_Stored_After_Commit_Async [11 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 2026-06-09T09:01:20.8916580+00:00
+Actual:   2026-06-09T09:01:20.8900000+01:00 (difference 01:00:00.0016580 is larger than 00:00:01)
+  Stack Trace:
+     at Paramore.Brighter.MSSQL.Tests.Outbox.Text.Async.WhenAddingAMessageWithinTransactionItShouldBeStoredAfterCommitAsync.When_Adding_A_Message_Within_Transaction_It_Should_Be_Stored_After_Commit_Async() in /Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/tests/Paramore.Brighter.MSSQL.Tests/Outbox/Text/Generated/Async/When_Adding_A_Message_Within_Transaction_It_Should_Be_Stored_After_Commit_Async.cs:line 62
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:14.31]     Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Sync.WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessage.When_Retrieving_A_Message_By_Id_It_Should_Return_The_Correct_Message [FAIL]
+  Failed Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Sync.WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessage.When_Retrieving_A_Message_By_Id_It_Should_Return_The_Correct_Message [27 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 2026-06-09T09:01:21.2130000+01:00
+Actual:   2026-06-09T09:01:21.2145240+00:00 (difference 01:00:00.0015240 is larger than 00:00:01)
+  Stack Trace:
+     at Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Sync.WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessage.When_Retrieving_A_Message_By_Id_It_Should_Return_The_Correct_Message() in /Users/ian_hammond_cooper/CSharpProjects/github/BrighterCommand/Brighter/tests/Paramore.Brighter.MSSQL.Tests/Outbox/Binary/Generated/Sync/When_Retrieving_A_Message_By_Id_It_Should_Return_The_Correct_Message.cs:line 79
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:    13, Passed:   185, Skipped:     0, Total:   198, Duration: 14 s - Paramore.Brighter.MSSQL.Tests.dll (net9.0)

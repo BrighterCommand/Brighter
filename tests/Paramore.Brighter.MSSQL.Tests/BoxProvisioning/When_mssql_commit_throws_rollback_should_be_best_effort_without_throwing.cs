@@ -35,13 +35,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_commit_throws_rollback_should_be_best_effort_without_throwing : IAsyncLifetime
+public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_propagate_commit_exception_unwrapped_and_log_warning_after_best_effort_rollback()
+    public async Task When_mssql_commit_throws_rollback_should_be_best_effort_without_throwing()
     {
         //Arrange — wire a runner whose UoW spy first commits the inner real SqlTransaction
         // (transitioning it to "completed" — indistinguishable from the post-failed-commit

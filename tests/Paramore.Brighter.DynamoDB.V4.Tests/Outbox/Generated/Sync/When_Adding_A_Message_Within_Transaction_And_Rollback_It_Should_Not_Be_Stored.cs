@@ -34,10 +34,11 @@ using System.Linq;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.Outbox.Sync;
 
+[Trait("Category", "DynamoDB")]
 public class WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStored : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStored()
@@ -45,7 +46,7 @@ public class WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStored :
         _outboxProvider = new Paramore.Brighter.DynamoDB.V4.Tests.Outbox.DynamoDBOutboxProvider();
         _outboxProvider.CreateStore();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     [Fact]
@@ -58,7 +59,7 @@ public class WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStored :
         _ = transaction.GetTransaction();
 
         var context = new RequestContext();
-        var message = _messageFactory.Create();
+        var message = _messageBuilder.Build();
 
         _createdMessages.Add(message);
 
