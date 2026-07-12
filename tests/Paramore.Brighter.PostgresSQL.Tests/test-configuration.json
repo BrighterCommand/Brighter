@@ -1,5 +1,31 @@
 {
   "Namespace": "Paramore.Brighter.PostgresSQL.Tests",
+  "Inboxes": {
+    "Text": {
+      "InboxProvider": "PostgresTextInboxProvider",
+      "InboxProviderAsync": "PostgresTextInboxProvider",
+      "Category": "PostgresSql",
+      "CollectionName": "PostgresTextInbox"
+    },
+    "Binary": {
+      "InboxProvider": "PostgresBinaryInboxProvider",
+      "InboxProviderAsync": "PostgresBinaryInboxProvider",
+      "Category": "PostgresSql",
+      "CollectionName": "PostgresBinaryInbox"
+    },
+    "Json": {
+      "InboxProvider": "PostgresJsonInboxProvider",
+      "InboxProviderAsync": "PostgresJsonInboxProvider",
+      "Category": "PostgresSql",
+      "CollectionName": "PostgresJsonInbox"
+    },
+    "Jsonb": {
+      "InboxProvider": "PostgresJsonbInboxProvider",
+      "InboxProviderAsync": "PostgresJsonbInboxProvider",
+      "Category": "PostgresSql",
+      "CollectionName": "PostgresJsonbInbox"
+    }
+  },
   "Outboxes": {
     "Text": {
       "Transaction": "System.Data.Common.DbTransaction",
