@@ -78,7 +78,7 @@ public partial class OracleLockingProvider(OracleConnectionProvider connectionPr
                 return null;
             }
 
-            var requestLock = await RequestLock(connection, lockHandler, 10);
+            var requestLock = await RequestLock(connection, lockHandler, 1);
             if (requestLock > 1)
             {
                 Log.LockNotGranted(_logger, resource, requestLock);
@@ -94,7 +94,7 @@ public partial class OracleLockingProvider(OracleConnectionProvider connectionPr
             Log.LockAcquisitionFailed(_logger, e, resource);
             if (!string.IsNullOrEmpty(lockHandler))
             {
-                await RequestLock(connection, lockHandler, 10);
+                await ReleaseLockHandlerAsync(connection, lockHandler!);
             }
 #if NETFRAMEWORK
             connection.Close();
@@ -122,7 +122,7 @@ public partial class OracleLockingProvider(OracleConnectionProvider connectionPr
             return;
         }
 
-        await ReleaseLock(connection, lockId);
+        await ReleaseLockHandlerAsync(connection, lockId);
         Log.LockReleased(_logger, resource, lockId);
 
 #if NETFRAMEWORK
@@ -162,7 +162,7 @@ public partial class OracleLockingProvider(OracleConnectionProvider connectionPr
     {
         const string plsql = """
                              BEGIN 
-                                 DBMS_LOCK.ALLOCATE_UNIQUE(:lockname, :lockhandle); 
+                                 DBMS_LOCK.ALLOCATE_UNIQUE(:name, :handle); 
                              END;
                              """;
 
@@ -172,13 +172,20 @@ public partial class OracleLockingProvider(OracleConnectionProvider connectionPr
         await using var cmd = new OracleCommand(plsql, conn);
 #endif
 
-        var handleParam = new OracleParameter("lockhandle", OracleDbType.Varchar2, 128, ParameterDirection.Output);
+        var handle = new OracleParameter("handle", OracleDbType.Varchar2, 128)
+        {
+            Direction = ParameterDirection.Output
+        };
 
-        cmd.Parameters.Add("lockname", OracleDbType.Varchar2, lockName, ParameterDirection.Input);
-        cmd.Parameters.Add(handleParam);
+        cmd.Parameters.Add(new OracleParameter("name", OracleDbType.Varchar2)
+        {
+            Value = lockName,
+            Direction = ParameterDirection.Input
+        });
+        cmd.Parameters.Add(handle);
         await cmd.ExecuteNonQueryAsync();
 
-        return handleParam.Value?.ToString();
+        return handle.Value?.ToString();
     }
 
 
@@ -206,7 +213,7 @@ public partial class OracleLockingProvider(OracleConnectionProvider connectionPr
         return Convert.ToInt32(resultParam.Value?.ToString());
     }
 
-    private static async Task ReleaseLock(OracleConnection conn, string lockHandle)
+    private static async Task ReleaseLockHandlerAsync(OracleConnection conn, string lockHandle)
     {
         const string plsql = """
                              BEGIN 

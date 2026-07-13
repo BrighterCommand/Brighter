@@ -9,6 +9,8 @@ services:
     image: gvenzl/oracle-free:slim
     ports:
       - "1521:1521"
+    volumes:
+      - ./docker/oracle-init:/container-entrypoint-initdb.d
     environment:
       ORACLE_RANDOM_PASSWORD: true
       APP_USER: brighter

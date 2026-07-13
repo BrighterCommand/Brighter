@@ -440,6 +440,39 @@ jobs:
       - name: MySQL Tests
         run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
+  oracle-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    needs: [build]
+
+    services:
+      oracle:
+        image: gvenzl/oracle-free:latest
+        ports:
+          - 1521:1521
+        env:
+          ORACLE_PASSWORD: oracle
+          APP_USER: brighter
+          APP_USER_PASSWORD: BrighterTests1!
+        options: >-
+          --health-cmd healthcheck.sh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+      - name: Grant DBMS_LOCK to brighter user
+        run: docker exec -i "${{ job.services.oracle.id }}" sqlplus -s "/ as sysdba" @/dev/stdin < docker/oracle-init/01-grants.sql
+      - name: Oracle Tests
+        run: dotnet test ./tests/Paramore.Brighter.Oracle.Tests/Paramore.Brighter.Oracle.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+
   dynamo-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 8

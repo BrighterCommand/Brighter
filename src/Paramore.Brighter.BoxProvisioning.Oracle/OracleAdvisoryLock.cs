@@ -57,35 +57,25 @@ public class OracleAdvisoryLock : IOracleAdvisoryLock
         TimeSpan timeout, CancellationToken cancellationToken)
     {
         if (timeout < TimeSpan.Zero)
+        {
             throw new ArgumentOutOfRangeException(nameof(timeout), timeout,
                 "Migration lock timeout must be non-negative.");
+        }
 
-        var timeoutSeconds = (int)timeout.TotalSeconds;
-        var lockHandle = await AllocateHandleAsync(connection, lockKey, cancellationToken);
+        var timeoutSeconds = (int)Math.Ceiling(timeout.TotalSeconds);
+        var lockHandle = await AllocateLockHandleAsync(connection, lockKey, cancellationToken);
+        if (string.IsNullOrEmpty(lockHandle))
+        {
+            throw new OracleAdvisoryLockException($"DBMS_LOCK.ALLOCATE_UNIQUE returned an empty handle for '{lockKey}'.");
+        }
 
-#if NETFRAMEWORK
-        using var cmd = connection.CreateCommand();
-#else
-        await using var cmd = connection.CreateCommand();
-#endif
-        cmd.BindByName = true;
-        cmd.CommandText = """
-                          BEGIN 
-                            :Result := DBMS_LOCK.REQUEST(:LockHandle, DBMS_LOCK.X_MODE, :Timeout, FALSE); 
-                          END;
-                          """;
-
-        var resultParam = new OracleParameter("Result", OracleDbType.Int32, ParameterDirection.Output);
-        cmd.Parameters.Add(resultParam);
-        cmd.Parameters.Add(new OracleParameter("LockHandle", OracleDbType.Varchar2, ParameterDirection.Input) { Value = lockHandle });
-        cmd.Parameters.Add(new OracleParameter("Timeout", OracleDbType.Int32) { Value = timeoutSeconds, Direction = ParameterDirection.Input });
-
-        await cmd.ExecuteNonQueryAsync(cancellationToken);
-        var result = Convert.ToInt32(resultParam.Value!.ToString());
+        var result = await RequestLockAsync(connection, lockHandle!, timeoutSeconds, cancellationToken);
 
         switch (result)
         {
-            case 0: return;
+            case 0:
+            case 4:
+                return;
             case 1: throw new TimeoutException(
                 $"Could not acquire migration lock '{lockKey}' within {timeoutSeconds}s.");
             case 2: throw new OracleAdvisoryLockException(
@@ -100,56 +90,105 @@ public class OracleAdvisoryLock : IOracleAdvisoryLock
         OracleConnection connection, string lockKey,
         CancellationToken cancellationToken)
     {
-        string lockHandle;
         try
         {
-            lockHandle = await AllocateHandleAsync(connection, lockKey, cancellationToken);
+            var lockHandle = await AllocateLockHandleAsync(connection, lockKey, cancellationToken);
+            if (string.IsNullOrEmpty(lockHandle))
+            {
+                return null;
+            }
+            
+            var result = await ReleaseLockByHandleAsync(connection, lockHandle!, cancellationToken);
+            return result == 0;
         }
         catch
         {
             return null;
         }
-
-#if NETFRAMEWORK
-        using var cmd = connection.CreateCommand();
-#else
-        await using var cmd = connection.CreateCommand();
-#endif
-
-        cmd.BindByName = true;
-        cmd.CommandText = "BEGIN :Result := DBMS_LOCK.RELEASE(:LockHandle); END;";
-
-        var resultParam = new OracleParameter("Result", OracleDbType.Int32)
-            { Direction = ParameterDirection.Output };
-        cmd.Parameters.Add(resultParam);
-        cmd.Parameters.Add(new OracleParameter("LockHandle", OracleDbType.Varchar2)
-            { Value = lockHandle, Direction = ParameterDirection.Input });
-
-        await cmd.ExecuteNonQueryAsync(cancellationToken);
-        return Convert.ToInt32(resultParam.Value.ToString()) == 0;
     }
 
-    private static async Task<string> AllocateHandleAsync(
+    private static async Task<string?> AllocateLockHandleAsync(
         OracleConnection connection, string lockKey,
         CancellationToken cancellationToken)
     {
+        const string plsql = """
+                             BEGIN
+                                 DBMS_LOCK.ALLOCATE_UNIQUE(:name, :handle);
+                             END;
+                             """;
+
 #if NETFRAMEWORK
-        using var cmd = connection.CreateCommand();
+        using var cmd = new OracleCommand(plsql, connection);
 #else
-        await using var cmd = connection.CreateCommand();
+        await using var cmd = new OracleCommand(plsql, connection);
 #endif
 
-        cmd.BindByName = true;
-        cmd.CommandText =
-            "BEGIN DBMS_LOCK.ALLOCATE_UNIQUE(:LockName, :LockHandle); END;";
+        var handleParam = new OracleParameter("handle", OracleDbType.Varchar2, 128)
+        {
+            Direction = ParameterDirection.Output
+        };
 
-        cmd.Parameters.Add(new OracleParameter("LockName", OracleDbType.Varchar2)
-            { Value = lockKey, Direction = ParameterDirection.Input });
-        var handleParam = new OracleParameter("LockHandle", OracleDbType.Varchar2, 128)
-            { Direction = ParameterDirection.Output };
+        cmd.Parameters.Add(
+            new OracleParameter("name", OracleDbType.Varchar2)
+            {
+                Value = lockKey,
+                Direction = ParameterDirection.Input
+            });
         cmd.Parameters.Add(handleParam);
 
         await cmd.ExecuteNonQueryAsync(cancellationToken);
-        return handleParam.Value.ToString()!;
+        return handleParam.Value?.ToString();
+    }
+
+    private static async Task<int> RequestLockAsync(
+        OracleConnection connection,
+        string lockHandle,
+        int timeoutSeconds,
+        CancellationToken cancellationToken)
+    {
+        const string plsql = """
+                             BEGIN
+                                 :result := DBMS_LOCK.REQUEST(:lockhandle, 6, :timeout, FALSE);
+                             END;
+                             """;
+
+#if NETFRAMEWORK
+        using var cmd = new OracleCommand(plsql, connection);
+#else
+        await using var cmd = new OracleCommand(plsql, connection);
+#endif
+
+        var resultParam = new OracleParameter("result", OracleDbType.Int32, ParameterDirection.Output);
+        cmd.Parameters.Add(resultParam);
+        cmd.Parameters.Add("lockhandle", OracleDbType.Varchar2, lockHandle, ParameterDirection.Input);
+        cmd.Parameters.Add("timeout", OracleDbType.Int32, timeoutSeconds, ParameterDirection.Input);
+
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
+        return Convert.ToInt32(resultParam.Value?.ToString());
+    }
+
+    private static async Task<int> ReleaseLockByHandleAsync(
+        OracleConnection connection,
+        string lockHandle,
+        CancellationToken cancellationToken)
+    {
+        const string plsql = """
+                             BEGIN
+                                 :result := DBMS_LOCK.RELEASE(:lockhandle);
+                             END;
+                             """;
+
+#if NETFRAMEWORK
+        using var cmd = new OracleCommand(plsql, connection);
+#else
+        await using var cmd = new OracleCommand(plsql, connection);
+#endif
+
+        var resultParam = new OracleParameter("result", OracleDbType.Int32, ParameterDirection.Output);
+        cmd.Parameters.Add(resultParam);
+        cmd.Parameters.Add("lockhandle", OracleDbType.Varchar2, lockHandle, ParameterDirection.Input);
+
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
+        return Convert.ToInt32(resultParam.Value?.ToString());
     }
 }

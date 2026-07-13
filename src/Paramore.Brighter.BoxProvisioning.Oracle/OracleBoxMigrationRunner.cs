@@ -42,7 +42,7 @@ namespace Paramore.Brighter.BoxProvisioning.Oracle;
 /// </remarks>
 public class OracleBoxMigrationRunner : SqlBoxMigrationRunner<OracleConnection, OracleTransaction>
 {
-    private const string MIGRATION_HISTORY_TABLE = "__BRIGHTERMIGRATIONHISTORY";
+    private const string MIGRATION_HISTORY_TABLE = "BRIGHTER_MIGRATION_HISTORY";
     private readonly IOracleAdvisoryLock _advisoryLock;
 
     /// <summary>
@@ -116,28 +116,30 @@ public class OracleBoxMigrationRunner : SqlBoxMigrationRunner<OracleConnection, 
         _ = schemaName;
         _ = tableName;
 
-        const string ddl = @"
-CREATE TABLE __BRIGHTERMIGRATIONHISTORY (
-    MigrationVersion NUMBER(10) NOT NULL,
-    SchemaName VARCHAR2(256) NOT NULL,
-    BoxTableName VARCHAR2(256) NOT NULL,
-    Description NVARCHAR2(512) NOT NULL,
-    AppliedAt TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
-    CONSTRAINT PK_BrighterMigrationHistory PRIMARY KEY (SchemaName, BoxTableName, MigrationVersion)
-)";
+        const string ddl = """
+                           CREATE TABLE BRIGHTER_MIGRATION_HISTORY (
+                               MigrationVersion NUMBER(10) NOT NULL,
+                               SchemaName VARCHAR2(256) NOT NULL,
+                               BoxTableName VARCHAR2(256) NOT NULL,
+                               Description NVARCHAR2(512) NOT NULL,
+                               AppliedAt TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+                               CONSTRAINT PK_BrighterMigrationHistory PRIMARY KEY (SchemaName, BoxTableName, MigrationVersion)
+                           )
+                           """;
 
         var escapedDdl = ddl.Replace("'", "''");
 
         using var command = (OracleCommand)connection.CreateCommand();
-        command.CommandText = $@"
-BEGIN
-  EXECUTE IMMEDIATE '{escapedDdl}';
-EXCEPTION
-  WHEN OTHERS THEN
-    IF SQLCODE != -955 THEN
-      RAISE;
-    END IF;
-END;";
+        command.CommandText = $"""
+                               BEGIN
+                                 EXECUTE IMMEDIATE '{escapedDdl}';
+                               EXCEPTION
+                                 WHEN OTHERS THEN
+                                   IF SQLCODE != -955 THEN
+                                     RAISE;
+                                   END IF;
+                               END;
+                               """;
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -237,9 +239,10 @@ END;";
     {
         using var command = (OracleCommand)connection.CreateCommand();
         command.BindByName = true;
-        command.CommandText = @"
-INSERT INTO __BRIGHTERMIGRATIONHISTORY (MigrationVersion, SchemaName, BoxTableName, Description)
-VALUES (:Version, :SchemaName, :BoxTableName, :Description)";
+        command.CommandText = """
+                              INSERT INTO BRIGHTER_MIGRATION_HISTORY (MigrationVersion, SchemaName, BoxTableName, Description)
+                              VALUES (:Version, :SchemaName, :BoxTableName, :Description)
+                              """;
         command.Parameters.Add(new OracleParameter("Version", version));
         command.Parameters.Add(new OracleParameter("SchemaName", schemaName));
         command.Parameters.Add(new OracleParameter("BoxTableName", tableName));
