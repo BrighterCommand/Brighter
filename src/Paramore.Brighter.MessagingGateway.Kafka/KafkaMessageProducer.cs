@@ -173,20 +173,31 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public void Init()
         {
             _producer = new ProducerBuilder<string, byte[]>(_producerConfig)
-                .SetErrorHandler((_, error) =>
-                {
-                    _hasFatalProducerError = error.IsFatal;
-                    
-                    if (_hasFatalProducerError) 
-                        Log.FatalProducerError(s_logger, error.Code, error.Reason, true);
-                    else
-                        Log.NonFatalProducerError(s_logger, error.Code, error.Reason, false);
-                    
-                })
+                .SetErrorHandler((_, error) => HandleError(error))
                 .Build();
             _publisher = new KafkaMessagePublisher(_producer, _headerBuilder);
 
             EnsureTopic();
+        }
+
+        /// <summary>
+        /// Handles an error raised by the underlying Kafka producer. Extracted from the
+        /// <c>SetErrorHandler</c> callback so the behaviour is reachable from tests. Not intended to be
+        /// called directly outside of the error-callback wiring.
+        /// </summary>
+        public void HandleError(Error error)
+        {
+            // Latch: once librdkafka reports a fatal error the producer is unrecoverable. Errors arrive
+            // in bursts, so we must never clear the latch when a later non-fatal error follows a fatal one.
+            if (error.IsFatal)
+                _hasFatalProducerError = true;
+
+            // Log against the error we actually received, independent of the latch, so a non-fatal error
+            // that arrives after a fatal one is still logged as non-fatal.
+            if (error.IsFatal)
+                Log.FatalProducerError(s_logger, error.Code, error.Reason, true);
+            else
+                Log.NonFatalProducerError(s_logger, error.Code, error.Reason, false);
         }
         
         /// <summary>
