@@ -13,6 +13,10 @@ public class FakeServiceBusReceiverWrapper : IServiceBusReceiverWrapper
     public Exception DeadLetterException = null;
     public Exception CompleteException = null;
     public Exception ReceiveException = null;
+
+    public bool DeadLettered { get; private set; }
+    public string? DeadLetterReason { get; private set; }
+    public string? DeadLetterDescription { get; private set; }
     
     public Task<IEnumerable<IBrokeredMessageWrapper>> ReceiveAsync(int batchSize, TimeSpan serverWaitTime)
     {
@@ -51,6 +55,18 @@ public class FakeServiceBusReceiverWrapper : IServiceBusReceiverWrapper
         if (DeadLetterException != null)
             throw DeadLetterException;
 
+        DeadLettered = true;
+        return Task.CompletedTask;
+    }
+
+    public Task DeadLetterAsync(string lockToken, string reason, string? description)
+    {
+        if (DeadLetterException != null)
+            throw DeadLetterException;
+
+        DeadLettered = true;
+        DeadLetterReason = reason;
+        DeadLetterDescription = description;
         return Task.CompletedTask;
     }
 
