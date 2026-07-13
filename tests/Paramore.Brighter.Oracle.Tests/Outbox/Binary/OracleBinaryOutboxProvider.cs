@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Oracle.ManagedDataAccess.Client;
-using Paramore.Brighter.Oracle;
 using Paramore.Brighter.Oracle.Tests.Outbox.Binary.Async;
 using Paramore.Brighter.Oracle.Tests.Outbox.Binary.Sync;
 using Paramore.Brighter.Outbox.Oracle;

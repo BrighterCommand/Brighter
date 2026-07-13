@@ -30,7 +30,6 @@ THE SOFTWARE. */
 using Xunit;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Paramore.Brighter.Oracle.Tests.Outbox.Text.Sync;
 

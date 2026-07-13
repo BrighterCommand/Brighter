@@ -27,6 +27,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.Oracle\Paramore.Brighter.Inbox.Oracle.csproj" />
+      <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.Oracle\Paramore.Brighter.Locking.Oracle.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.Oracle\Paramore.Brighter.Outbox.Oracle.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Oracle\Paramore.Brighter.Oracle.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.Oracle\Paramore.Brighter.BoxProvisioning.Oracle.csproj" />

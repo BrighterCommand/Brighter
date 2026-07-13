@@ -30,7 +30,6 @@ THE SOFTWARE. */
 using Xunit;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Oracle.Tests.Outbox.Binary.Async;

@@ -29,9 +29,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Net.Mime;
-using System.Text;
-
-using Paramore.Brighter;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Oracle.Tests;
