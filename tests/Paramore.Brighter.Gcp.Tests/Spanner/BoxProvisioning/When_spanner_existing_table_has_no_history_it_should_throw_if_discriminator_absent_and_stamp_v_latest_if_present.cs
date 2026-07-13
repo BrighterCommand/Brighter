@@ -32,6 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
+[Trait("Category", "Spanner")]
 [Collection("SpannerBoxProvisioning")]
 [Trait("Category", "Spanner")]
 public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
@@ -154,6 +155,7 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @Version",
     }
 }
 
+[Trait("Category", "Spanner")]
 [Collection("SpannerBoxProvisioning")]
 [Trait("Category", "Spanner")]
 public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime

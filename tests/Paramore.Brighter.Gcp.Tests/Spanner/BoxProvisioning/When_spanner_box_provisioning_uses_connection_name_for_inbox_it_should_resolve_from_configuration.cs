@@ -12,6 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
+[Trait("Category", "Spanner")]
 [Collection("SpannerBoxProvisioning")]
 [Trait("Category", "Spanner")]
 public class When_spanner_box_provisioning_uses_connection_name_for_inbox_it_should_resolve_from_configuration : IAsyncLifetime

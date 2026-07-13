@@ -10,17 +10,19 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text.Async;
 
+[Trait("Category", "MSSQL")]
+[Collection("MSSQLTextOutbox")]
 public class WhenAddingAMessageItShouldBeStoredWithAllPropertiesAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenAddingAMessageItShouldBeStoredWithAllPropertiesAsync()
     {
         _outboxProvider = new MSSQLTextOutboxProvider();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     public async Task InitializeAsync()
@@ -38,7 +40,7 @@ public class WhenAddingAMessageItShouldBeStoredWithAllPropertiesAsync : IAsyncLi
     {
         // Arrange
         var context = new RequestContext();
-        var message = _messageFactory.Create();
+        var message = _messageBuilder.Build();
 
         _createdMessages.Add(message);
         

@@ -10,17 +10,19 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text.Async;
 
+[Trait("Category", "MSSQL")]
+[Collection("MSSQLTextOutbox")]
 public class WhenRetrievingANonExistentMessageItShouldReturnEmptyMessageAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenRetrievingANonExistentMessageItShouldReturnEmptyMessageAsync()
     {
         _outboxProvider = new MSSQLTextOutboxProvider();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     public async Task InitializeAsync()

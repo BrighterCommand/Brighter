@@ -53,18 +53,21 @@ namespace Paramore.Brighter.Serialization
 
             foreach (var entry in dictionary)
             {
+                //Bag keys are arbitrary user-defined identifiers, not C# property names, so they must
+                //round-trip verbatim. We deliberately do NOT apply PropertyNamingPolicy here: doing so
+                //rewrote keys such as "SessionId" to "sessionId", silently breaking consumers that look
+                //the key up by its original name (see #4151 / #4054).
                 var propertyName = entry.Key;
-                var convertedPropName = options.PropertyNamingPolicy?.ConvertName(propertyName) ?? propertyName;
 
                 if (entry.Value != null)
                 {
-                    writer.WritePropertyName(convertedPropName);
+                    writer.WritePropertyName(propertyName);
                     var valueConverter = new ObjectToInferredTypesConverter();
                     valueConverter.Write(writer, entry.Value, options);
                 }
                 else
                 {
-                    writer.WriteNull(convertedPropName);
+                    writer.WriteNull(propertyName);
                 }
             }
 

@@ -22,8 +22,8 @@
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
   </ItemGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.3" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.4.3" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.4.6" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.IdentityManagement" Version="[3.7.500.5, 4)" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="[3.7.400, 4)" />

@@ -1,25 +1,44 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(ls:*), Bash(echo:*), Bash(dotnet:*), Bash(git:*), Read, Write, Edit, Glob, Grep, Agent
-description: Unattended TDD implementation from ralph-tasks (no approval gates)
-argument-hint: [count=1]
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(ls:*), Bash(echo:*), Bash(dotnet:*), Bash(git:*), Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, ScheduleWakeup
+description: Unattended TDD implementation from ralph-tasks (auto mode + self-driving loop)
+argument-hint: [count]
 ---
 
 ## Context
 
 Current spec directory: specs/
 
-**Workflow**: Unattended TDD implementation - no human approval gates.
+**Workflow**: Unattended TDD implementation — no per-test approval gates. A self-driving loop
+processes ralph tasks one after another until a user-chosen bound, a STOP signal, or all tasks
+are done.
 
 **TDD Cycle**: 🔴 Red → 🟢 Green → 🔵 Refactor (no approval step)
 
-**AskUserQuestion is deliberately excluded** - this command runs unattended.
+**Runtime model — Opus orchestrator + auto mode (advisory).** This command is designed to run
+**unattended**:
 
-**Sub-agent**: Each task's Red→Green→Refactor cycle is delegated to a sub-agent
-(`subagent_type: "general-purpose"`, **`model: "sonnet"`** — implementation work). The
+- **Run it on Opus.** The orchestrator (this main agent) should be on **opus** — it is the
+  required model for **auto mode**, and the policy for the unattended path. If the session is
+  not on opus, advise the user to switch (`/model opus`) before a real unattended run.
+- **Enable auto mode.** Auto mode is a *permission mode* configured outside this command
+  (Claude Code settings, or `CLAUDE_CODE_ENABLE_AUTO_MODE` on cloud providers; Opus-gated). It
+  lets the loop run without per-action permission prompts. This command **cannot** toggle it.
+  **Advise, then proceed**: if it looks like auto mode is off (you are hitting permission
+  prompts), warn the user that the loop will pause for approvals and is not truly unattended —
+  but still run. Do not hard-block.
+
+**AskUserQuestion — setup only.** This command may use `AskUserQuestion` **only** in the
+up-front setup (Step 0): the auto-mode/Opus advisory and choosing the run bound. Once the loop
+starts it is fully unattended — **never** prompt the user mid-loop.
+
+**Sub-agent (cost control): Sonnet.** Each task's Red→Green→Refactor cycle is delegated to a
+sub-agent (`subagent_type: "general-purpose"`, **`model: "sonnet"`**). The orchestrator stays
+on opus for cheap bookkeeping; the expensive per-task implementation churn runs on the cheaper
+**sonnet** sub-agent and in its own context, keeping it out of the loop's opus context. The
 sub-agent writes the test + implementation files and RETURNS a structured result. The MAIN
-agent owns everything that must stay sequential and authoritative: the STOP-file check,
-task selection, the run count, marking the checkbox, **the git commit**, and the summary.
-The sub-agent NEVER commits, NEVER pushes, and NEVER edits `ralph-tasks.md`/`tasks.md`. See
+agent owns everything that must stay sequential and authoritative: the STOP-file check, task
+selection, the run count, marking the checkbox, **the git commit**, and the summary. The
+sub-agent NEVER commits, NEVER pushes, and NEVER edits `ralph-tasks.md`/`tasks.md`. See
 `.claude/commands/spec/README.md` → "Sub-agents & model policy".
 
 Tasks are processed **strictly sequentially** — they are dependency-ordered and each gets
@@ -27,7 +46,29 @@ its own commit. Do not parallelise.
 
 ## Your Task
 
-Parse count from $ARGUMENTS (default: 1 if not provided or empty).
+### Step 0: Advise Runtime, Then Ask the Run Bound
+
+This runs **once**, before the loop starts.
+
+1. **Runtime advisory.** Confirm the orchestrator is on **opus** and that **auto mode** is
+   expected for an unattended run. If the session is not on opus, advise `/model opus`. If
+   auto mode appears off, warn that the loop will pause for permission prompts. Advise — do not
+   block.
+
+2. **Choose the bound.** The loop needs a stopping bound. If a numeric `count` was passed in
+   `$ARGUMENTS`, take that as the **tasks** bound and skip the prompt. Otherwise use
+   `AskUserQuestion` to ask the user which bound to use and its value:
+
+   - **Tasks** — stop after **N tasks complete** this run (a task "completes" on `GREEN` or
+     `ALREADY_COMPLETE`; `FAILED` does not count). This is the `count` argument.
+   - **Turns** — stop after **N loop iterations** attempted, regardless of outcome (so a run
+     of failures still terminates). Use when you want to cap effort, not completions.
+   - **Budget** — stop when roughly **N output tokens** have been consumed by the run. Use the
+     turn's token budget (a `+Nk`-style directive) when one is set; otherwise approximate and
+     stop once the loop has clearly consumed the requested budget.
+
+   Record the chosen bound type and value. Default if the user gives nothing and no `count`
+   was passed: **Tasks = 1**.
 
 ### Step 1: Check STOP File
 
@@ -45,8 +86,10 @@ Then STOP immediately. Do not proceed.
 ### Step 2: Gather Context
 
 1. Read `specs/.current-spec` to determine the active specification directory
-2. Verify `.tasks-approved` exists in that directory
-3. Read `specs/{current-spec}/ralph-tasks.md` to see ralph task list
+2. Verify `.design-approved` exists in that directory (the unattended path runs from the
+   approved design — there is **no** `.tasks-approved` prerequisite)
+3. Verify `specs/{current-spec}/ralph-tasks.md` exists (run `/spec:ralph-tasks` first if not)
+   and read it to see the ralph task list
 4. Read `specs/{current-spec}/.adr-list` to see all ADRs
 
 The main agent does **not** read the ADR bodies here — that is deliberate. Its role in this
@@ -216,16 +259,31 @@ Read the sub-agent's returned result and act on its `STATUS`:
    discard.
 4. Count it toward the run count and proceed to the next task — do NOT get stuck.
 
-### Step 6: Check Continuation
+### Step 6: Check Continuation (self-driving loop)
 
-Before starting the next task, check ALL of these:
+This is the loop. After each task, check ALL of these stop conditions — if **any** holds, go
+to Step 7 and stop; otherwise continue the loop:
 
-1. **STOP file**: If `RALPH_STOP` exists at repo root → stop
-2. **Count limit**: If completed tasks this run >= count from $ARGUMENTS → stop
-3. **All done**: If no more `- [ ]` tasks remain → stop
+1. **STOP file**: If `RALPH_STOP` exists at repo root → stop. This is the unattended
+   kill-switch: the user can `touch RALPH_STOP` from another terminal at any time.
+2. **Bound reached** (the bound chosen in Step 0):
+   - **Tasks**: completed tasks this run (GREEN + ALREADY_COMPLETE) ≥ N → stop
+   - **Turns**: iterations attempted this run (including FAILED) ≥ N → stop
+   - **Budget**: output tokens consumed this run have reached ~N → stop
+3. **All done**: If no more `- [ ]` tasks remain in `ralph-tasks.md` → stop
 
-If none of these conditions are met, return to **Step 3** for the next task (a fresh
-sub-agent, fresh context).
+If none hold, **continue to the next task**: return to **Step 3** with a **fresh sub-agent**
+(fresh context). Drive this yourself — do not wait for the user.
+
+**Self-pacing across context windows.** For a long run that would outgrow a single context
+window, use `ScheduleWakeup` to re-enter the loop later (carry the same bound and the run
+counters in the wake-up prompt) — this is the in-session equivalent of the old bash runner.
+For a routine short run, just loop inline. Either way, the loop is unattended once Step 0 is
+done.
+
+**Interactive cancel.** Independent of `RALPH_STOP`, the user can press **Esc** while a
+self-paced wake-up is pending to cancel the loop. Both mechanisms stop it: `RALPH_STOP` for a
+fully unattended kill, Esc for an at-the-keyboard cancel.
 
 ### Step 7: Print Summary
 
@@ -233,22 +291,24 @@ sub-agent, fresh context).
 
 ```
 === RALPH SUMMARY ===
+Bound: tasks=N | turns=N | budget=N
+Iterations this run: I
 Tasks completed this run: N
 Total tasks complete: X/Y
 Tasks remaining: Z
-Status: COMPLETED | COUNT_REACHED | STOPPED | ALL_DONE
+Status: BOUND_REACHED | STOPPED | ALL_DONE
 === END RALPH ===
 ```
 
 Status meanings:
-- `COMPLETED`: Finished all tasks requested by count
-- `COUNT_REACHED`: Completed the requested number of tasks, more remain
-- `STOPPED`: Halted due to RALPH_STOP file
+- `BOUND_REACHED`: Hit the chosen bound (tasks / turns / budget); more tasks may remain
+- `STOPPED`: Halted due to `RALPH_STOP` file (or user Esc)
 - `ALL_DONE`: No more tasks in ralph-tasks.md
 
 ## Important Reminders
 
-- **NEVER use AskUserQuestion** - this runs unattended
+- **AskUserQuestion is for Step 0 setup only** — never prompt the user once the loop is running
+- **Run on opus with auto mode** for a true unattended run; the per-task sub-agent stays sonnet
 - **NEVER push to remote** - the human decides when to push
 - **NEVER modify tasks.md** - only modify ralph-tasks.md
 - **Always commit after each task** - each task gets its own commit, and the MAIN agent (not
