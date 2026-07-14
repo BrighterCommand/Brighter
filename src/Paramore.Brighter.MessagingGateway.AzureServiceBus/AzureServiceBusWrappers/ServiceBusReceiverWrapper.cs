@@ -103,6 +103,22 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         }
 
         /// <summary>
+        /// Deadletters the message, recording the reason and description in the broker's native
+        /// dead-letter fields.
+        /// </summary>
+        /// <param name="lockToken">The lock token of the message to deadletter.</param>
+        /// <param name="reason">The reason the message was dead-lettered. Truncated to 4096 characters as required by Azure Service Bus.</param>
+        /// <param name="description">A fuller description of the dead-lettering. Truncated to 4096 characters as required by Azure Service Bus.</param>
+        /// <returns>A task that represents the asynchronous deadletter operation.</returns>
+        public Task DeadLetterAsync(string lockToken, string reason, string? description)
+        {
+            return _messageReceiver.DeadLetterMessageAsync(
+                CreateMessageShiv(lockToken),
+                Truncate(reason),
+                description is null ? null : Truncate(description));
+        }
+
+        /// <summary>
         /// Abandons the message, releasing the lock so it is available for redelivery.
         /// </summary>
         /// <param name="lockToken">The lock token of the message to abandon.</param>
@@ -126,6 +142,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         {
             return ServiceBusModelFactory.ServiceBusReceivedMessage(lockTokenGuid: Guid.Parse(lockToken));
         }
+
+        // Azure Service Bus rejects dead-letter reason/description values longer than 4096 characters
+        // with an ArgumentOutOfRangeException, so clamp them to the limit.
+        private const int MaxDeadLetterFieldLength = 4096;
+
+        private static string Truncate(string value)
+            => value.Length > MaxDeadLetterFieldLength ? value.Substring(0, MaxDeadLetterFieldLength) : value;
 
         private static partial class Log
         {
