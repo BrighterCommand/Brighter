@@ -25,6 +25,7 @@
       "HasSupportToDeadLetterQueue": false,
       "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": false,
+      "HasSupportToValidateInfrastructure": false,
       "HasSupportToRequeue": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
     },
