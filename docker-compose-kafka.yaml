@@ -1,6 +1,6 @@
 services:
   kafka:
-    image: confluentinc/cp-enterprise-kafka:latest
+    image: apache/kafka:latest 
     hostname: kafka
     container_name: kafka
     ports:

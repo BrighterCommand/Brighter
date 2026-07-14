@@ -284,7 +284,7 @@ jobs:
 
     services:
       kafka:
-        image: confluentinc/cp-enterprise-kafka:latest
+        image: apache/kafka:latest
         ports:
           - 9092:9092
         env:
