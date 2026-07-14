@@ -32,14 +32,14 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
-using Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Reactor;
+using Paramore.Brighter.Kafka.Tests.MessagingGateway.Consumer.Proactor;
+using Paramore.Brighter.Kafka.Tests.MessagingGateway.Consumer.Reactor;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-public class KafkaMessageGatewayProvider
+public class KafkaConsumerMessageGatewayProvider
     : IAmAMessageGatewayProactorProvider,
         IAmAMessageGatewayReactorProvider
 {
@@ -196,7 +196,10 @@ public class KafkaMessageGatewayProvider
             replicationFactor: 1,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: makeChannel
-        );
+        )
+        {
+            GroupProtocol = GroupProtocol.Consumer
+        };
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)

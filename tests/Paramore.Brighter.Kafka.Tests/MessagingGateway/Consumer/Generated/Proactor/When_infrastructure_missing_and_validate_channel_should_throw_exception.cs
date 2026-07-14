@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Consumer.Proactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]
-public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
+public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -24,14 +24,14 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
     private IAmAMessageProducerAsync? _producer;
     private IAmAChannelAsync? _channel;
 
-    public WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync()
+    public WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsync()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
+        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaConsumerMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
     }
 
     [Fact]
-    public async Task When_infrastructure_missing_and_assume_channel_should_throw_exception_async()
+    public async Task When_infrastructure_missing_and_validate_channel_should_throw_exception_async()
     {
         try
         {
@@ -39,7 +39,7 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowExceptionAsync
             _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey(), OnMissingChannel.Assume);
             _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
                 _messageGatewayProvider.GetOrCreateChannelName(),
-                OnMissingChannel.Assume);
+                OnMissingChannel.Validate);
 
             _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
             _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);

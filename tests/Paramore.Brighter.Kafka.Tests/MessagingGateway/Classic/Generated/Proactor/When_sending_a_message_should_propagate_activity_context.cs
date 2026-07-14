@@ -4,20 +4,20 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
+using System.Threading.Tasks;
 
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Classic.Proactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]
-public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
+public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLifetime
 {
-    private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
+    private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
 
     private List<Message> _sentMessages = [];
@@ -25,22 +25,27 @@ public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
     private Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription? _subscription;
     private Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication? _publication;
 
-    private IAmAMessageProducerSync? _producer;
-    private IAmAChannelSync? _channel;
+    private IAmAMessageProducerAsync? _producer;
+    private IAmAChannelAsync? _channel;
 
-    public WhenSendingAMessageShouldPropagateActivityContext()
+    public WhenSendingAMessageShouldPropagateActivityContextAsync()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
+        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaClassicMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
     }
 
-    public void Dispose()
+    public Task InitializeAsync()
     {
-        _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
     [Fact]
-    public void When_sending_a_message_should_propagate_activity_context()
+    public async Task When_sending_a_message_should_propagate_activity_context_async()
     {
         // Arrange
         var builder = Sdk.CreateTracerProviderBuilder();
@@ -63,8 +68,8 @@ public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
             _messageGatewayProvider.GetOrCreateChannelName(),
             OnMissingChannel.Create);
 
-        _producer = _messageGatewayProvider.CreateProducer(_publication);
-        _channel = _messageGatewayProvider.CreateChannel(_subscription);
+        _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
+        _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
         _producer.Span = parentActivity;
 
         var message = _messageBuilder
@@ -76,7 +81,7 @@ public class WhenSendingAMessageShouldPropagateActivityContext : IDisposable
         _sentMessages.Add(message);
 
         // Act
-        _producer.Send(message);
+        await _producer.SendAsync(message);
 
         tracerProvider.ForceFlush();
 

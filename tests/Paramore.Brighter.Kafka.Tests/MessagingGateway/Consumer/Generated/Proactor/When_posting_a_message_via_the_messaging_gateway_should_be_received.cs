@@ -3,17 +3,17 @@
 // </auto-generated>
 using System;
 using System.Collections.Generic;
-using System.Threading;
+using System.Threading.Tasks;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Consumer.Proactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]
-public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDisposable
+public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IAsyncLifetime
 {
-    private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
+    private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
     private readonly IAmAMessageAssertion _messageAssertion;
 
@@ -22,23 +22,28 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
     private Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription? _subscription;
     private Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication? _publication;
 
-    private IAmAMessageProducerSync? _producer;
-    private IAmAChannelSync? _channel;
+    private IAmAMessageProducerAsync? _producer;
+    private IAmAChannelAsync? _channel;
 
-    public WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived()
+    public WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
+        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaConsumerMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
         _messageAssertion = new KafkaMessageAssertion();
     }
 
-    public void Dispose()
+    public Task InitializeAsync()
     {
-        _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
     [Fact]
-    public void When_posting_a_message_via_the_messaging_gateway_should_be_received()
+    public async Task When_posting_a_message_via_the_messaging_gateway_should_be_received_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -46,16 +51,16 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceived : IDispos
             _messageGatewayProvider.GetOrCreateChannelName(),
             OnMissingChannel.Create);
 
-        _producer = _messageGatewayProvider.CreateProducer(_publication);
-        _channel = _messageGatewayProvider.CreateChannel(_subscription);
+        _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
+        _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
         var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
 
         // Act
-        _producer.Send(message);
+        await _producer.SendAsync(message);
 
-        var received = _channel.Receive(TimeSpan.FromMilliseconds(15000));
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
 
         // Assert
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);

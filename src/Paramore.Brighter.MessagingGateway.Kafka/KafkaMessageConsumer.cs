@@ -108,6 +108,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="invalidMessageRoutingKey">If we support an invalid message topic what is the <see cref="RoutingKey"/></param>
         /// <param name="scheduler">Optional scheduler for delayed requeue operations. When provided, the lazily-created
         /// requeue producer will use this scheduler for delayed sends.</param>
+        /// <param name="groupProtocol">The Kafka group protocol to use for group coordination. Defaults to <see cref="Confluent.Kafka.GroupProtocol.Classic"/>.</param>
+        /// <param name="groupRemoteAssignor">The broker-side assignor when using <see cref="Confluent.Kafka.GroupProtocol.Consumer"/>. Optional.</param>
+        /// <param name="groupInstanceId">Static membership identifier for the consumer instance. Optional.</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -121,7 +124,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? sweepUncommittedOffsetsInterval = null,
             TimeSpan? readCommittedOffsetsTimeout = null,
             int numPartitions = 1,
-            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
+            PartitionAssignmentStrategy? partitionAssignmentStrategy = null,
             short replicationFactor = 1,
             TimeSpan? topicFindTimeout = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
@@ -129,8 +132,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null,
             TimeProvider? timeProvider = null,
-            IAmAMessageScheduler? scheduler = null
-            )
+            IAmAMessageScheduler? scheduler = null,
+            GroupProtocol groupProtocol = GroupProtocol.Classic,
+            string? groupRemoteAssignor = null,
+            string? groupInstanceId = null)
         {
             if (groupId is null)
                 throw new ConfigurationException("You must set a GroupId for the consumer");
@@ -177,7 +182,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             };
             
             // We repeat properties because copying them from the ClientConfig modifies the ClientConfig in place 
-            _consumerConfig = new ConsumerConfig()
+            _consumerConfig = new ConsumerConfig
             {
                 BootstrapServers = string.Join(",", configuration.BootStrapServers), 
                 ClientId = configuration.Name,
@@ -190,7 +195,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SslCaLocation = configuration.SslCaLocation,
                 GroupId = groupId,
                 AutoOffsetReset = offsetDefault,
-                SessionTimeoutMs = Convert.ToInt32(sessionTimeout.Value.TotalMilliseconds),
                 MaxPollIntervalMs = Convert.ToInt32(maxPollInterval.Value.TotalMilliseconds),
                 EnablePartitionEof = true,
                 AllowAutoCreateTopics = false, //We will do this explicit always so as to allow us to set parameters for the topic
@@ -198,9 +202,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 //We commit the last offset for acknowledged requests when a batch of records has been processed. 
                 EnableAutoOffsetStore = false,
                 EnableAutoCommit = false,
-                // https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/
-                PartitionAssignmentStrategy = partitionAssignmentStrategy,
             };
+
+            if (groupProtocol == GroupProtocol.Classic)
+            {
+                // https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/
+                _consumerConfig.PartitionAssignmentStrategy = partitionAssignmentStrategy;
+                _consumerConfig.SessionTimeoutMs = Convert.ToInt32(sessionTimeout.Value.TotalMilliseconds);
+            }
+            else if(groupProtocol == GroupProtocol.Consumer)
+            {
+                _consumerConfig.GroupProtocol = groupProtocol;
+                _consumerConfig.GroupRemoteAssignor = groupRemoteAssignor;
+                _consumerConfig.GroupInstanceId = groupInstanceId;
+            }
             
             if (configHook != null)
                 configHook(_consumerConfig);
@@ -432,10 +447,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
        /// <summary>
        /// Purges the specified queue name.
        /// </summary>
-       /// <remarks>
-       /// There is no 'queue' to purge in Kafka, so we treat this as moving past to the offset to tne end of any assigned partitions,
-       /// thus skipping over anything that exists at that point.
-       /// </remarks>
+        /// <remarks>
+        /// There is no 'queue' to purge in Kafka, so we treat this as moving the offset to the end of any assigned partitions,
+        /// thus skipping over anything that exists at that point.
+        /// </remarks>
         public void Purge()
         {
             if (!_consumer.Assignment.Any())
@@ -451,7 +466,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Purges the specified queue name.
         /// </summary>
         /// <remarks>
-        /// There is no 'queue' to purge in Kafka, so we treat this as moving past to the offset to tne end of any assigned partitions,
+        /// There is no 'queue' to purge in Kafka, so we treat this as moving the offset to the end of any assigned partitions,
         /// thus skipping over anything that exists at that point.
         /// As the Confluent library does not support async, this is sync over async and would block the main performer thread
         /// so we use a new thread pool thread to run this and await that. This could lead to thread pool exhaustion but Purge is rarely used
@@ -551,7 +566,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
         /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message.
         /// Kafka does not support an async consumer, and probably never will. See <a href="https://github.com/confluentinc/confluent-kafka-dotnet/issues/487">Confluent Kafka</a>
-        /// As a result we use TimeSpan.Zero to run the recieve loop, which will stop it blocking
+        /// As a result we use TimeSpan.Zero to run the receive loop, which avoids blocking.
         /// </remarks>
         /// <param name="timeOut">The timeout for receiving a message. For async always treated as zero</param>
         /// <param name="cancellationToken">The cancellation token - not used as this is async over sync</param>
@@ -582,10 +597,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         /// <summary>
-        /// Rejects the specified message. 
+        /// Rejects the specified message.
         /// </summary>
         /// <remarks>
-        /// This is just a commit of the offset to move past the record without processing it
+        /// Routes rejected messages to the invalid message channel or dead letter channel, based on
+        /// <paramref name="reason"/> and channel availability, then acknowledges the consumed offset.
+        /// If no rejection channel is configured, this falls back to acknowledging the message.
         /// </remarks>
         /// <param name="message">The message.</param>
         /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
@@ -652,6 +669,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <remarks>
         /// Routes rejected messages to dead letter queue or invalid message channel based on rejection reason.
         /// Enriches message with metadata and acknowledges after sending to error channel (or on failure).
+        /// If no rejection channel is configured, this falls back to acknowledging the message.
         /// </remarks>
         /// <param name="message">The message.</param>
         /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>

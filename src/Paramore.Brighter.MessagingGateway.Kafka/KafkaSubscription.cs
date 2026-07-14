@@ -117,6 +117,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// How long to wait when asking for topic metadata
         /// </summary>
         public TimeSpan TopicFindTimeout { get; set; } = TimeSpan.FromMilliseconds(5000);
+
+        /// <summary>
+        /// Which Kafka group coordination protocol to use.
+        /// Use <see cref="Confluent.Kafka.GroupProtocol.Classic"/> for the classic consumer group protocol,
+        /// or <see cref="Confluent.Kafka.GroupProtocol.Consumer"/> for the newer consumer protocol.
+        /// </summary>
+        public GroupProtocol GroupProtocol { get; set; } = GroupProtocol.Classic;
+
+        /// <summary>
+        /// The server-side assignor to use when <see cref="GroupProtocol"/> is
+        /// <see cref="Confluent.Kafka.GroupProtocol.Consumer"/>.
+        /// Ignored when using the classic protocol.
+        /// </summary>
+        public string? GroupRemoteAssignor { get; set; }
+
+        /// <summary>
+        /// A static consumer instance identifier.
+        /// Set this to enable static membership and reduce rebalances for restarting consumers.
+        /// </summary>
+        public string? GroupInstanceId { get; set; }
         
         /// <summary>
         /// The time provider used to create timers for sweeping uncommitted offsets
@@ -142,6 +162,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The delay the delivery of a requeue message. </param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="unacceptableMessageLimitWindow">The time window used when evaluating <paramref name="unacceptableMessageLimit"/>.</param>
         /// <param name="offsetDefault">Where should we begin processing if we cannot find a stored offset</param>
         /// <param name="commitBatchSize">How often should we commit offsets?</param>
         /// <param name="sessionTimeout">What is the heartbeat interval for this consumer, after which Kafka will assume dead and rebalance the consumer group; defaults to 10000ms</param>
@@ -159,7 +180,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created. Used to set properties that Brighter does not expose</param>
         /// <param name="deadLetterRoutingKey">The routing key for the dead letter channel. Optional.</param>
         /// <param name="invalidMessageRoutingKey">The routing key for the invalid message channel. Optional.</param>
-        /// ///
         public KafkaSubscription(
             SubscriptionName subscriptionName,
             ChannelName channelName,
@@ -226,6 +246,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The delay the delivery of a requeue message. 0 is no delay. Defaults to 0</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="unacceptableMessageLimitWindow">The time window used when evaluating <paramref name="unacceptableMessageLimit"/>.</param>
         /// <param name="offsetDefault">Where should we begin processing if we cannot find a stored offset</param>
         /// <param name="commitBatchSize">How often should we commit offsets?</param>
         /// <param name="sessionTimeout">What is the heartbeat interval for this consumer, after which Kafka will assume dead and rebalance the consumer group; defaults to 10000ms</param>

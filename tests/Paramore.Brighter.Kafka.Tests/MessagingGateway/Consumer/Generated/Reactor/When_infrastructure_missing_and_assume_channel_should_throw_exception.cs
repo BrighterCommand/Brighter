@@ -3,17 +3,17 @@
 // </auto-generated>
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Threading;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Consumer.Reactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]
-public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsync
+public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException 
 {
-    private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
+    private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
 
     private List<Message> _sentMessages = [];
@@ -21,17 +21,17 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsyn
     private Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription? _subscription;
     private Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication? _publication;
 
-    private IAmAMessageProducerAsync? _producer;
-    private IAmAChannelAsync? _channel;
+    private IAmAMessageProducerSync? _producer;
+    private IAmAChannelSync? _channel;
 
-    public WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsync()
+    public WhenInfrastructureMissingAndAssumeChannelShouldThrowException()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
+        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaConsumerMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
     }
 
     [Fact]
-    public async Task When_infrastructure_missing_and_validate_channel_should_throw_exception_async()
+    public void When_infrastructure_missing_and_assume_channel_should_throw_exception()
     {
         try
         {
@@ -39,19 +39,19 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsyn
             _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey(), OnMissingChannel.Assume);
             _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
                 _messageGatewayProvider.GetOrCreateChannelName(),
-                OnMissingChannel.Validate);
+                OnMissingChannel.Assume);
 
-            _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
-            _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
+            _producer = _messageGatewayProvider.CreateProducer(_publication);
+            _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
             var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
             _sentMessages.Add(message);
 
             // Act
-            await _producer.SendAsync(message);
+            _producer.Send(message);
 
             // Assert
-            await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
+            _channel.Receive(TimeSpan.FromMilliseconds(15000));
             Assert.Fail("We are expected to throw an exception");
         }
         catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)

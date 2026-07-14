@@ -5,19 +5,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
-
-using Paramore.Brighter.Extensions;
+using System.Threading.Tasks;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Reactor;
+using Paramore.Brighter.Extensions;
+
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Classic.Proactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]
-public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages : IDisposable
+public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync : IAsyncLifetime
 {
-    private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
+    private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
     private readonly IAmAMessageAssertion _messageAssertion;
 
@@ -26,23 +26,28 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
     private Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription? _subscription;
     private Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication? _publication;
 
-    private IAmAMessageProducerSync? _producer;
-    private IAmAChannelSync? _channel;
+    private IAmAMessageProducerAsync? _producer;
+    private IAmAChannelAsync? _channel;
 
-    public WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages()
+    public WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessagesAsync()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
+        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaClassicMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
         _messageAssertion = new KafkaMessageAssertion();
     }
 
-    public void Dispose()
+    public Task InitializeAsync()
     {
-        _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
     [Fact]
-    public void When_a_message_consumer_reads_multiple_messages_should_receive_all_messages()
+    public async Task When_a_message_consumer_reads_multiple_messages_should_receive_all_messages_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -50,8 +55,8 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
             _messageGatewayProvider.GetOrCreateChannelName(),
             OnMissingChannel.Create);
 
-        _producer = _messageGatewayProvider.CreateProducer(_publication);
-        _channel = _messageGatewayProvider.CreateChannel(_subscription);
+        _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
+        _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
         _sentMessages =
         [
@@ -62,12 +67,14 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
         ];
 
         // Act
-        _sentMessages.Each(message => _producer.Send(message));
+        await _sentMessages.EachAsync(async message => await _producer.SendAsync(message));
+
+        
 
         // Assert
         for (var i = 0; i < _sentMessages.Count; i++)
         {
-            var received = _channel.Receive(TimeSpan.FromMilliseconds(15000));
+            var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(15000));
 
             Assert.NotEqual(MessageType.MT_NONE,  received.Header.MessageType);
 
@@ -76,7 +83,9 @@ public class WhenAMessageConsumerReadsMultipleMessagesShouldReceiveAllMessages :
 
             _messageAssertion.Assert(expectedMessage, received);
 
-            _channel.Acknowledge(received);
+            await _channel.AcknowledgeAsync(received);
+
+            
         }
     }
 }
