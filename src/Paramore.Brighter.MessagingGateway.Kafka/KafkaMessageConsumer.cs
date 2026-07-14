@@ -124,7 +124,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? sweepUncommittedOffsetsInterval = null,
             TimeSpan? readCommittedOffsetsTimeout = null,
             int numPartitions = 1,
-            PartitionAssignmentStrategy? partitionAssignmentStrategy = null,
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
             short replicationFactor = 1,
             TimeSpan? topicFindTimeout = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
@@ -210,7 +210,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 _consumerConfig.PartitionAssignmentStrategy = partitionAssignmentStrategy;
                 _consumerConfig.SessionTimeoutMs = Convert.ToInt32(sessionTimeout.Value.TotalMilliseconds);
             }
-            else if(groupProtocol == GroupProtocol.Consumer)
+            else if (groupProtocol == GroupProtocol.Consumer)
             {
                 _consumerConfig.GroupProtocol = groupProtocol;
                 _consumerConfig.GroupRemoteAssignor = groupRemoteAssignor;
