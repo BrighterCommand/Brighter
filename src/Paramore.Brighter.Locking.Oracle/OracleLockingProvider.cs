@@ -79,7 +79,7 @@ public partial class OracleLockingProvider(OracleConnectionProvider connectionPr
             }
 
             var requestLock = await RequestLock(connection, lockHandler, 1);
-            if (requestLock > 1)
+            if (requestLock > 0)
             {
                 Log.LockNotGranted(_logger, resource, requestLock);
                 return null;
