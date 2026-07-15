@@ -153,4 +153,16 @@ inventing an ad-hoc tag (keeps the vocabulary from sprawling).
 
 `docs/adr/index.md` is a table generated *from* the frontmatter (id, title, status, tags, summary).
 It is a derived cache for single-file reads — it must never be hand-edited; regenerate it from
-frontmatter so it cannot drift.
+frontmatter so it cannot drift. The generated file carries a `DO NOT EDIT` banner.
+
+**Regenerate** it after adding an ADR or changing any frontmatter (status, tags, summary, title).
+This is the single canonical command — `/adr` and `/spec:approve` call it, and you can run it by
+hand:
+
+```bash
+awk -f .claude/commands/adr/generate_adr_index.awk docs/adr/[0-9]*.md > docs/adr/index.md
+```
+
+The generator reads **only** the frontmatter block of each ADR (like `read_adr_metadata`), keys rows
+off `id`, and orders by filename. It is deterministic: rerunning it with no ADR changes produces no
+diff, so a dirty `index.md` after regeneration means an ADR's frontmatter actually changed.

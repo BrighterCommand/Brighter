@@ -82,6 +82,11 @@ retired decisions are not offered as live prior art. Keep the returned candidate
 `status` + `summary`) — you feed them to the drafting sub-agent in Step 6 so it can cite or
 distinguish them, and you flag any that this ADR would supersede.
 
+`read_adr_metadata` is the query interface over the same frontmatter that `docs/adr/index.md`
+tabulates — a ranked, retired-filtered, capped view for exactly this discovery step. Prefer it over
+reading `index.md`, which is an un-ranked full-corpus table meant for human browsing, not for loading
+into design context.
+
 If no prior art is found, note that and proceed.
 
 ### Step 5: Gather Inputs for the Sub-Agent
@@ -284,13 +289,23 @@ After the sub-agent returns:
    write_adr_metadata docs/adr/{old-id}.md supersede --by {NNNN}-{focus-area}
    ```
 
-4. **Update tracking**: `echo "{NNNN}-{focus-area}.md" >> specs/{current-spec}/.adr-list`
+4. **Regenerate the ADR index** so `docs/adr/index.md` reflects the new ADR (and any supersession).
+   This is the single canonical command (documented in
+   [`.agent_instructions/adr_frontmatter.md`](../../../.agent_instructions/adr_frontmatter.md)):
+
+   ```bash
+   awk -f .claude/commands/adr/generate_adr_index.awk docs/adr/[0-9]*.md > docs/adr/index.md
+   ```
+
+   `docs/adr/index.md` is a regenerable cache — never hand-edit it; always regenerate from frontmatter.
+
+5. **Update tracking**: `echo "{NNNN}-{focus-area}.md" >> specs/{current-spec}/.adr-list`
 
 ### Step 8: Next Steps
 
 1. Remind user to:
    - Review and complete the ADR with technical details
-   - Commit the ADR: `git add docs/adr/{NNNN}-{focus-area}.md && git commit -m "docs: add ADR for {focus-area}"`
+   - Commit the ADR and regenerated index: `git add docs/adr/{NNNN}-{focus-area}.md docs/adr/index.md && git commit -m "docs: add ADR for {focus-area}"`
    - The first ADR should typically be the first commit on the feature branch
    - Can create/update draft PR with ADR for early feedback
 2. Multiple ADRs:

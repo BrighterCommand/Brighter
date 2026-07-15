@@ -18,13 +18,22 @@ Create a new Architecture Decision Record in the `docs/adr/` directory following
 
 ### Step 1: Determine Next ADR Number
 
-Find the highest numbered ADR file in `docs/adr/` and calculate the next sequence number.
+Find the highest numbered ADR file in `docs/adr/` and take the next sequence number.
 
 ```bash
 ls -1 docs/adr/*.md | grep -E '^docs/adr/[0-9]+' | sed 's/docs\/adr\/\([0-9]*\).*/\1/' | sort -n | tail -1
 ```
 
-The next ADR number should be the highest number + 1, formatted as a 4-digit number with leading zeros (e.g., `0037`).
+The next ADR number is the highest number + 1, formatted as a 4-digit number with leading zeros
+(e.g., `0037`).
+
+**The number is a non-unique ordering hint, not the ADR's identity.** Numbers were historically
+allocated `max+1` per branch without locking, so parallel branches collided — several numbers are
+shared by more than one ADR, and we do **not** renumber. The **identity is the `id`/slug = the
+filename stem** (`0037-kafka-message-serialization`), which is unique; all tooling keys off that.
+So: take `max+1`, but if a concurrent branch later lands the same number, that collision is
+**acceptable and not a defect** — do not renumber to "fix" it. See *Identity and numbering* in
+[`.agent_instructions/adr_frontmatter.md`](../../../.agent_instructions/adr_frontmatter.md).
 
 ### Step 2: Check for Linked Specification
 
@@ -193,7 +202,19 @@ taxonomy, valid date, all seven keys, frontmatter status matches body). If this 
 prior one you found in Step 4, also mark that older ADR:
 `write_adr_metadata docs/adr/[old-id].md supersede --by [NNNN]-[title]`.
 
-### Step 6: Update Spec ADR List (if applicable)
+### Step 6: Regenerate the ADR index
+
+The new frontmatter (and any supersession from Step 5) must be reflected in the derived
+`docs/adr/index.md`. Regenerate it — this is the single canonical command (documented in
+[`.agent_instructions/adr_frontmatter.md`](../../../.agent_instructions/adr_frontmatter.md)):
+
+```bash
+awk -f .claude/commands/adr/generate_adr_index.awk docs/adr/[0-9]*.md > docs/adr/index.md
+```
+
+`docs/adr/index.md` is a regenerable cache — never hand-edit it; always regenerate from frontmatter.
+
+### Step 7: Update Spec ADR List (if applicable)
 
 If linked to a spec, append this ADR to the spec's ADR list:
 
@@ -201,7 +222,7 @@ If linked to a spec, append this ADR to the spec's ADR list:
 echo "docs/adr/[NNNN]-[title].md" >> specs/[spec-name]/.adr-list
 ```
 
-### Step 7: Inform the User
+### Step 8: Inform the User
 
 Tell the user:
 1. The ADR file path and number
@@ -212,7 +233,7 @@ Tell the user:
    - Use `/spec:approve design [NNNN]` when approved (changes status to "Accepted")
 
 
-### Step 8: Review against the Design Principles
+### Step 9: Review against the Design Principles
 
 Read the ADR:
 
@@ -225,7 +246,7 @@ Read the ADR:
 - A class can implement one or more roles. If it implements multiple roles, they should be related.
 - Provide feedback and suggest improvements
 
-### Step 9. Suggest next steps:
+### Step 10. Suggest next steps:
 
 Ask the user for the next step:
 
