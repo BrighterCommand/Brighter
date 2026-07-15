@@ -1,3 +1,18 @@
+---
+id: 0055-kafka-nack-seek-to-offset
+title: "Kafka Nack Seeks to Offset for Redelivery"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-03-23
+summary: "Fixes `KafkaMessageConsumer.Nack` from a no-op to calling `_consumer.Seek(topicPartitionOffset)` to rewind the consumer position to the nacked message's offset, fulfilling the `IAmAMessageConsumerSync.Nack` contract that nacked messages are genuinely redelivered."
+tags:
+  - "kafka"
+  - "transports"
+  - "messaging"
+  - "error-handling"
+---
+
 # 55. Kafka Nack Seeks to Offset for Redelivery
 
 Date: 2026-03-23

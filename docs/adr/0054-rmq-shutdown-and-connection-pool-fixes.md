@@ -1,3 +1,18 @@
+---
+id: 0054-rmq-shutdown-and-connection-pool-fixes
+title: "Fix RMQ Shutdown Deadlock and Connection Pool Race Condition"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-03-11
+summary: "Fixes a sync-over-async shutdown deadlock in the RabbitMQ Proactor by adding `IAsyncDisposable` to `IAmAChannelAsync` and awaiting `DisposeAsync()` on MT_QUIT, and resolves a connection pool race condition where stale `ConnectionShutdown` handlers could dispose active connections via `ReferenceEquals` guards and `ConfigureAwait(false)`."
+tags:
+  - "rabbitmq"
+  - "transports"
+  - "async"
+  - "concurrency"
+---
+
 # 54. Fix RMQ Shutdown Deadlock and Connection Pool Race Condition
 
 Date: 2026-03-11

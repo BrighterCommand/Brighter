@@ -1,3 +1,18 @@
+---
+id: 0062-pg-advisory-lock-sha256
+title: "PostgreSQL Box-Provisioning Advisory Lock — SHA-256 64-bit Key Derivation"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-06-09
+summary: "Switches PostgreSqlAdvisoryLock from PostgreSQL's two-int4 hashtext-based advisory-lock overloads to single-argument bigint overloads, deriving a 64-bit key in C# via SHA-256 over a namespace-prefixed lockKey string, reducing the birthday-bound collision probability from approximately 1-in-2^32 to 1-in-2^64."
+tags:
+  - "locking"
+  - "postgres"
+  - "provisioning"
+  - "migration"
+---
+
 # 0062. PostgreSQL Box-Provisioning Advisory Lock — SHA-256 64-bit Key Derivation
 
 Date: 2026-06-09

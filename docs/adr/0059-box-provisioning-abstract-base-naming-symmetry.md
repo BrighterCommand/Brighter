@@ -1,3 +1,18 @@
+---
+id: 0059-box-provisioning-abstract-base-naming-symmetry
+title: "Naming symmetry for BoxProvisioning abstract bases — rename `RelationalBoxMigrationRunnerBase` → `SqlBoxMigrationRunner`"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-05-13
+summary: "Renames `RelationalBoxMigrationRunnerBase<TConnection, TTransaction>` to `SqlBoxMigrationRunner<TConnection, TTransaction>` so it is symmetric with the sibling `SqlBoxProvisioner` abstract base introduced in ADR 0058 §B.5, applying the `Sql*` prefix (which precisely names the `DbConnection` ADO.NET constraint) and dropping the `*Base` suffix. This is a pure Tidy First rename with no behavioral change, closing the documented naming asymmetry before PR #4039 merges so no source break is incurred by adopters."
+tags:
+  - "box"
+  - "provisioning"
+  - "architecture"
+  - "meta"
+---
+
 # 59. Naming symmetry for BoxProvisioning abstract bases — rename `RelationalBoxMigrationRunnerBase` → `SqlBoxMigrationRunner`
 
 Date: 2026-05-13

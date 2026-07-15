@@ -1,3 +1,18 @@
+---
+id: 0024-scheduling-requests-and-messages
+title: "Scheduling Requests and Messages"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2025-01-20
+summary: "Adds scheduling support to Brighter via new IAmAMessageScheduler and IAmARequestScheduler interfaces, extending IAmACommandProcessor with delay overloads and providing pluggable scheduler implementations including in-memory, Hangfire, Quartz, AWS Scheduler, and Azure Service Bus."
+tags:
+  - "scheduling"
+  - "messaging"
+  - "aws"
+  - "api-design"
+---
+
 # 24. Scheduling Requests and Messages
 
 Date: 2025-01-20

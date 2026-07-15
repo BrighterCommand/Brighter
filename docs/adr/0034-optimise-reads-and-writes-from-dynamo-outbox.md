@@ -1,3 +1,18 @@
+---
+id: 0034-optimise-reads-and-writes-from-dynamo-outbox
+title: "Optimise reads/writes from/to Dynamo outbox"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2025-09-03
+summary: "Optimises DynamoDB outbox performance by introducing new all-topics GSIs for parallel scanning, adding sharding to the Delivered index, using bulk get/write operations, and replacing full outstanding-message loads with a count-only scan."
+tags:
+  - "outbox"
+  - "dynamo"
+  - "performance"
+  - "aws"
+---
+
 # 34. Optimise reads/writes from/to Dynamo outbox
 
 Date: 2025-09-03
