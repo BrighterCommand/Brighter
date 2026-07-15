@@ -1,10 +1,25 @@
+---
+id: 0006-blocking-and-non-blocking-retries
+title: "Blocking and Non-Blocking Retry"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2024-01-01
+summary: "Brighter supports both blocking retries via Polly policies (UsePolicy attribute) and non-blocking retries via DeferMessageAction for transient failures, with broker re-queuing and a dead-letter channel threshold; non-transient failures should be logged and the message acknowledged."
+tags:
+  - "retry"
+  - "resilience"
+  - "dead-letter-queue"
+  - "error-handling"
+---
+
 # 6 Blocking and Non-Blocking Retry
 
 Date: 2024-01-01
 
 ## Status
 
-Modified
+Accepted
 
 ## Context
 

@@ -1,3 +1,17 @@
+---
+id: 0056-timed-outbox-archiver-sync-fallback
+title: "TimedOutboxArchiver Sync Fallback"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-04-15
+summary: "Adds `HasAsyncOutbox()` and `HasOutbox()` methods to `OutboxArchiver` following the naming convention of `OutboxProducerMediator`, then updates `TimedOutboxArchiver.Archive` to prefer the async path, fall back to sync via `Task.Run`, and log a warning when neither outbox is configured. This fixes issue #3670 where `TimedOutboxArchiver` unconditionally called `ArchiveAsync` and threw `ArgumentException` when only a sync outbox was registered."
+tags:
+  - "outbox"
+  - "archive"
+  - "async"
+---
+
 # 56. TimedOutboxArchiver Sync Fallback
 
 Date: 2026-04-15

@@ -1,3 +1,17 @@
+---
+id: 0037-add-messaging-gateway-generated-test
+title: "Add Messaging Gateway Generated Tests"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-01-29
+summary: "Extends the test generator tool to support messaging gateway tests via Liquid templates and a MessagingGatewayConfiguration, enabling consistent test coverage across RabbitMQ, AWS SNS/SQS, Azure Service Bus, and other gateway implementations with minimal per-gateway code."
+tags:
+  - "testing"
+  - "test-generation"
+  - "messaging"
+---
+
 # 37. Add Messaging Gateway Generated Tests
 
 Date: 2026-01-29

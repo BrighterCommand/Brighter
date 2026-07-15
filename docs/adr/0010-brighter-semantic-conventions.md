@@ -1,3 +1,18 @@
+---
+id: 0010-brighter-semantic-conventions
+title: "Brighter OpenTelemetry Semantic Conventions"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2024-04-29
+summary: "Defines Brighter's OpenTelemetry semantic conventions for span naming, attributes, and context propagation for both Command Processor operations (send, publish, deposit, clear) and Dispatcher Performer (consumer) spans."
+tags:
+  - "observability"
+  - "otel"
+  - "tracing"
+  - "messaging"
+---
+
 # 10. Brighter OpenTelemetry Semantic Conventions 
 
 Date: 2024-04-29

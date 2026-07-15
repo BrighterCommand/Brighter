@@ -1,3 +1,16 @@
+---
+id: 0019-avoid-primitive-obsession
+title: "Avoid Primitive Obsession"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2024-07-21
+summary: "Public and internal interfaces must use domain-typed value objects (e.g. RoutingKey, ChannelName) rather than bare primitives; record structs are preferred for new value objects to reduce allocation cost and eliminate parameter-ordering errors."
+tags:
+  - "api-design"
+  - "architecture"
+---
+
 # 19. Avoid Primitive Obsession
 
 Date: 2024-07-21

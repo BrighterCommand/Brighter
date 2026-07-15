@@ -1,3 +1,17 @@
+---
+id: 0009-expose-request-context
+title: "Expose Request Context"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2024-04-28
+summary: "Adds an optional RequestContext parameter to CommandProcessor transmission methods so callers can supply their own context instead of relying on the factory, enabling the Dispatcher to originate a shared context that flows through the translation and handler pipelines."
+tags:
+  - "request-context"
+  - "pipeline"
+  - "messaging"
+---
+
 # 9. Expose Request Context 
 
 Date: 2024-04-28

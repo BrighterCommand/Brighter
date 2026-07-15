@@ -1,3 +1,18 @@
+---
+id: 0057-in-memory-box-abstract-expiry
+title: "Make InMemoryBox Abstract with Subclass-Specific Expiry Strategies"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-05-05
+summary: "Makes `InMemoryBox<T>` abstract with subclass-defined `RemoveExpiredMessages` and `Compact` hooks so `InMemoryOutbox` only evicts dispatched messages (preventing silent loss of undispatched messages) while `InMemoryInbox` retains its existing write-time TTL eviction. Adds an `EntryLimit = -1` option to disable compaction and exposes default outbox configuration via a new `InMemoryBoxConfiguration` record on `ProducersConfiguration`."
+tags:
+  - "outbox"
+  - "inbox"
+  - "memory"
+  - "configuration"
+---
+
 # 57. Make InMemoryBox Abstract with Subclass-Specific Expiry Strategies
 
 Date: 2026-05-05

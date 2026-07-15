@@ -1,3 +1,17 @@
+---
+id: 0040-add-the-specification-pattern
+title: "Add the Specification Pattern"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2024-11-09
+summary: "Adds a custom implementation of the Specification Pattern to Brighter for use in mediator workflow branching conditions and the Agreement Dispatcher, inspired by Huddle Engineering's implementation but simplified with modern C# lambda expressions."
+tags:
+  - "specification-pattern"
+  - "mediator"
+  - "architecture"
+---
+
 # 40. Add the Specification Pattern
 
 Date: 2024-11-09

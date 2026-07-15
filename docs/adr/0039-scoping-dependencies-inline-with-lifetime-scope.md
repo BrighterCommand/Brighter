@@ -1,3 +1,18 @@
+---
+id: 0039-scoping-dependencies-inline-with-lifetime-scope
+title: "Scoping dependencies inline with lifetime scope"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2025-01-03
+summary: "Decides to create a new lifetime scope per registered subscriber when invoking Publish rather than wrapping the entire CommandProcessor in a single scope, eliminating the need for a CommandProcessorProvider and ensuring handlers don't unexpectedly share scoped dependencies."
+tags:
+  - "di"
+  - "lifetime"
+  - "pipeline"
+  - "publish"
+---
+
 # 39. Scoping dependencies inline with lifetime scope
 
 Date: 2025-01-03
