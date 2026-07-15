@@ -56,10 +56,10 @@ and tag taxonomy live in [`.agent_instructions/adr_frontmatter.md`](../../.agent
 
 ### Status vocabulary
 
-We use the Nygard vocabulary `Proposed` / `Accepted` / `Deprecated` / `Superceded`. The frontmatter
+We use the Nygard vocabulary `Proposed` / `Accepted` / `Deprecated` / `Superseded`. The frontmatter
 `status` mirrors the body `## Status`. An ADR starts `Proposed`, becomes `Accepted` on approval, is
-set `Superceded` when a *specific* later ADR replaces it, and `Deprecated` when it is retired without
-a named replacement. Readers looking for prior art skip `Deprecated` and `Superceded` ADRs by default.
+set `Superseded` when a *specific* later ADR replaces it, and `Deprecated` when it is retired without
+a named replacement. Readers looking for prior art skip `Deprecated` and `Superseded` ADRs by default.
 Backfilling this metadata onto the existing corpus also normalizes the historically inconsistent
 `## Status` prose (values such as `Adopted`, `Modified`, `Proposal`, `Retired`) to these canonical
 values.
@@ -125,7 +125,7 @@ the metadata next to the decision it describes, and the index is derived from it
 
 **Use a `Draft` / `Approved` status vocabulary** (as first sketched in the originating issue).
 Rejected in favour of keeping Nygard's `Proposed` / `Accepted`, which the existing ADRs and the
-approval workflow already use, extended only with `Superceded`.
+approval workflow already use, extended only with `Superseded`.
 
 ## References
 

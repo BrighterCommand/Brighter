@@ -46,7 +46,7 @@ Date: 2026-06-18
 |-----------|----------|-----------------|-------|
 | `id`      | yes      | string          | **Stable identity = the filename stem** (name without `.md`), e.g. `0043-rabbitmq-mutual-tls`. This is the unique key; see *Identity and numbering* below. |
 | `title`   | yes      | string (quoted) | The ADR title. Use the H1 title text (without the leading `N.` number). |
-| `status`  | yes      | enum            | One of `Proposed`, `Accepted`, `Deprecated`, `Superceded`. Mirrors the body `## Status`. See *Status* below. |
+| `status`  | yes      | enum            | One of `Proposed`, `Accepted`, `Deprecated`, `Superseded`. Mirrors the body `## Status`. See *Status* below. |
 | `author`  | yes      | list of strings | Always list form, even for one author: `- "Name"`. Backfill default is `- "Brighter Team"` where no author is recorded. |
 | `created` | yes      | date (ISO 8601) | `YYYY-MM-DD`. For existing ADRs use the body `Date:` line. |
 | `summary` | yes      | string (quoted) | One or two sentences describing the decision. This is what an agent reads to decide whether to open the full ADR — make it specific about *what was decided*, not just the topic. |
@@ -79,10 +79,10 @@ Canonical values (Nygard vocabulary):
   both the frontmatter `status` and the body `## Status`.
 - **Deprecated** — no longer in force, but *not* replaced by a specific ADR (the decision was
   retired/abandoned). Use this when there is no superseding ADR to point at.
-- **Superceded** — replaced by a *specific* later ADR. When a new ADR supersedes an older one, set
-  the older ADR's `status` to `Superceded` and add a `Superseded by` reference to the superseding ADR.
+- **Superseded** — replaced by a *specific* later ADR. When a new ADR supersedes an older one, set
+  the older ADR's `status` to `Superseded` and add a `Superseded by` reference to the superseding ADR.
 
-`read_adr_metadata` skips both `Deprecated` and `Superceded` ADRs by default when surfacing prior art.
+`read_adr_metadata` skips both `Deprecated` and `Superseded` ADRs by default when surfacing prior art.
 
 ### Backfill status normalization
 
@@ -94,7 +94,7 @@ The legacy ADR bodies use inconsistent status prose. Backfill normalizes to the 
 | `Accepted`, `Adopted`, `Approved`, `Modified`, `Accepted. Amended …`| `Accepted`         |
 | `Proposed`, `Proposal`, `Draft`, `Proposed (Draft PR …)`            | `Proposed`         |
 | `Retired`                                                           | `Deprecated`       |
-| An ADR explicitly replaced by a *specific* later ADR                | `Superceded`       |
+| An ADR explicitly replaced by a *specific* later ADR                | `Superseded`       |
 
 Normalization rules:
 - Where a status line carries extra information (e.g. `Accepted. Amended 2026-02-17 to add Transport
@@ -103,7 +103,7 @@ Normalization rules:
 - **Partial** supersession (a later ADR supersedes only a *section* of an older one, e.g. ADR 0057
   supersedes `0053 §7`) does **not** change the older ADR's status — it stays `Accepted`; note the
   partial supersession in prose instead.
-- Do **not** guess. Only assign `Superceded` when a specific replacing ADR exists; only assign
+- Do **not** guess. Only assign `Superseded` when a specific replacing ADR exists; only assign
   `Deprecated` for a genuinely retired decision. Flag anything unclear for human confirmation.
 
 ## Tag taxonomy (controlled vocabulary)
@@ -145,9 +145,9 @@ inventing an ad-hoc tag (keeps the vocabulary from sprawling).
 
 - **`read_adr_metadata`** — extracts frontmatter blocks cheaply and returns matching ADRs
   (`id` + `title` + `summary` + path) filtered by tag/status. Suggested from `/spec:design` to find
-  prior art before drafting a new ADR. Skips `Superceded` by default.
+  prior art before drafting a new ADR. Skips `Superseded` by default.
 - **`write_adr_metadata`** — adds or updates a file's frontmatter and enforces the status rules
-  (new = `Proposed`; supersession sets the old ADR to `Superceded`). Idempotent.
+  (new = `Proposed`; supersession sets the old ADR to `Superseded`). Idempotent.
 
 ## Derived index
 
