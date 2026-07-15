@@ -200,7 +200,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 EnableAutoCommit = false,
             };
 
-            groupProtocol ??= new ClassicGroupProtocol { SessionTimeoutMs = sessionTimeout };
+            groupProtocol ??= new ClassicGroupProtocol
+            {
+                SessionTimeoutMs = sessionTimeout,
+                PartitionAssignmentStrategy =  partitionAssignmentStrategy
+            };
+            
             groupProtocol.Apply(_consumerConfig);
             
             if (configHook != null)

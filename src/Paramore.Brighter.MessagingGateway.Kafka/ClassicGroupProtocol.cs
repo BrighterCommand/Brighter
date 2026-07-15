@@ -41,10 +41,20 @@ public class ClassicGroupProtocol : IGroupProtocol
     /// <value>A <see cref="TimeSpan"/> representing the heartbeat interval, or <see langword="null"/> to use Kafka defaults.</value>
     public TimeSpan? HeartbeatInterval { get; set; }
 
+    /// <summary>
+    /// Gets or sets the partition assignment strategy used by consumers in the group.
+    /// </summary>
+    /// <value>
+    /// A <see cref="Confluent.Kafka.PartitionAssignmentStrategy"/> that controls how partitions are distributed across consumers.
+    /// Defaults to <see cref="Confluent.Kafka.PartitionAssignmentStrategy.RoundRobin"/>.
+    /// </value>
+    public PartitionAssignmentStrategy PartitionAssignmentStrategy { get; set; } = PartitionAssignmentStrategy.RoundRobin;
+
     /// <inheritdoc />
     public void Apply(ConsumerConfig config)
     {
         config.GroupProtocol = GroupProtocol.Classic;
+        config.PartitionAssignmentStrategy = PartitionAssignmentStrategy;
         if(SessionTimeoutMs.HasValue)
         {
             config.SessionTimeoutMs = Convert.ToInt32(SessionTimeoutMs.Value.TotalMilliseconds);
