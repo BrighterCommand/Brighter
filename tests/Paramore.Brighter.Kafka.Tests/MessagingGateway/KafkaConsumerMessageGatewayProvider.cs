@@ -198,7 +198,7 @@ public class KafkaConsumerMessageGatewayProvider
             makeChannels: makeChannel
         )
         {
-            GroupProtocol = GroupProtocol.Consumer
+            GroupProtocol = new ConsumerGroupProtocol()
         };
     }
 

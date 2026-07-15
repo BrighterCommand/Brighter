@@ -108,9 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="invalidMessageRoutingKey">If we support an invalid message topic what is the <see cref="RoutingKey"/></param>
         /// <param name="scheduler">Optional scheduler for delayed requeue operations. When provided, the lazily-created
         /// requeue producer will use this scheduler for delayed sends.</param>
-        /// <param name="groupProtocol">The Kafka group protocol to use for group coordination. Defaults to <see cref="Confluent.Kafka.GroupProtocol.Classic"/>.</param>
-        /// <param name="groupRemoteAssignor">The broker-side assignor when using <see cref="Confluent.Kafka.GroupProtocol.Consumer"/>. Optional.</param>
-        /// <param name="groupInstanceId">Static membership identifier for the consumer instance. Optional.</param>
+        /// <param name="groupProtocol">The <see cref="IGroupProtocol"/> used to apply Kafka group coordination settings. Defaults to <see cref="ClassicGroupProtocol"/> with <paramref name="sessionTimeout"/> when <see langword="null"/>.</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -133,9 +131,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             RoutingKey? invalidMessageRoutingKey = null,
             TimeProvider? timeProvider = null,
             IAmAMessageScheduler? scheduler = null,
-            GroupProtocol groupProtocol = GroupProtocol.Classic,
-            string? groupRemoteAssignor = null,
-            string? groupInstanceId = null)
+            IGroupProtocol? groupProtocol = null)
         {
             if (groupId is null)
                 throw new ConfigurationException("You must set a GroupId for the consumer");
@@ -204,18 +200,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 EnableAutoCommit = false,
             };
 
-            if (groupProtocol == GroupProtocol.Classic)
-            {
-                // https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/
-                _consumerConfig.PartitionAssignmentStrategy = partitionAssignmentStrategy;
-                _consumerConfig.SessionTimeoutMs = Convert.ToInt32(sessionTimeout.Value.TotalMilliseconds);
-            }
-            else if (groupProtocol == GroupProtocol.Consumer)
-            {
-                _consumerConfig.GroupProtocol = groupProtocol;
-                _consumerConfig.GroupRemoteAssignor = groupRemoteAssignor;
-                _consumerConfig.GroupInstanceId = groupInstanceId;
-            }
+            groupProtocol ??= new ClassicGroupProtocol { SessionTimeoutMs = sessionTimeout };
+            groupProtocol.Apply(_consumerConfig);
             
             if (configHook != null)
                 configHook(_consumerConfig);
@@ -836,7 +822,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Mainly used diagnostically in tests - how many offsets do we have now?
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The number of uncommitted offsets currently stored in memory as an <see cref="int"/>.</returns>
         public int StoredOffsets()
         {
             return _offsetStorage.Count;

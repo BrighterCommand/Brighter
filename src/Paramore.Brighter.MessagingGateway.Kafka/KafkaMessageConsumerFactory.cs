@@ -103,9 +103,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 invalidMessageRoutingKey: invalidMessageRoutingKey,
                 timeProvider: kafkaSubscription.TimeProvider,
                 scheduler: _scheduler,
-                groupProtocol: kafkaSubscription.GroupProtocol,
-                groupRemoteAssignor: kafkaSubscription.GroupRemoteAssignor,
-                groupInstanceId: kafkaSubscription.GroupInstanceId);
+                groupProtocol: kafkaSubscription.GroupProtocol);
         }
 
         public IAmAMessageConsumerAsync CreateAsync(Subscription subscription) => (IAmAMessageConsumerAsync)Create(subscription);

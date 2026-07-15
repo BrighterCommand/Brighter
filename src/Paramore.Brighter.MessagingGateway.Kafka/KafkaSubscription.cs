@@ -27,6 +27,9 @@ using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
+    /// <summary>
+    /// Represents subscription settings for a Kafka-backed Brighter channel.
+    /// </summary>
     public class KafkaSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
     {
         /// <summary>
@@ -119,25 +122,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public TimeSpan TopicFindTimeout { get; set; } = TimeSpan.FromMilliseconds(5000);
 
         /// <summary>
-        /// Which Kafka group coordination protocol to use.
-        /// Use <see cref="Confluent.Kafka.GroupProtocol.Classic"/> for the classic consumer group protocol,
-        /// or <see cref="Confluent.Kafka.GroupProtocol.Consumer"/> for the newer consumer protocol.
+        /// Gets or sets the group protocol configuration applied when creating the Kafka consumer.
         /// </summary>
-        public GroupProtocol GroupProtocol { get; set; } = GroupProtocol.Classic;
+        /// <value>An <see cref="IGroupProtocol"/> implementation, or <see langword="null"/> to use the default classic protocol behavior.</value>
+        public IGroupProtocol? GroupProtocol { get; set; }
 
-        /// <summary>
-        /// The server-side assignor to use when <see cref="GroupProtocol"/> is
-        /// <see cref="Confluent.Kafka.GroupProtocol.Consumer"/>.
-        /// Ignored when using the classic protocol.
-        /// </summary>
-        public string? GroupRemoteAssignor { get; set; }
-
-        /// <summary>
-        /// A static consumer instance identifier.
-        /// Set this to enable static membership and reduce rebalances for restarting consumers.
-        /// </summary>
-        public string? GroupInstanceId { get; set; }
-        
         /// <summary>
         /// The time provider used to create timers for sweeping uncommitted offsets
         /// Defaults to TimeProvider.System
@@ -230,6 +219,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
     }
 
+    /// <summary>
+    /// Represents subscription settings for Kafka messages mapped to a specific request type.
+    /// </summary>
+    /// <typeparam name="T">The <see cref="IRequest"/> type consumed by this subscription.</typeparam>
     public class KafkaSubscription<T> : KafkaSubscription where T : IRequest
     {
         /// <summary>
