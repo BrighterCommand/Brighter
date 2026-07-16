@@ -30,9 +30,17 @@ dotnet test tests/Paramore.Brighter.Gcp.Tests -f net9.0 --filter "FullyQualified
 
 (Use `--filter "FullyQualifiedName~BoxProvisioning"` for just the BoxProvisioning subset.)
 
-> **VPN / port conflict?** If host port `9010` is already bound (e.g. by a VPN tunnel), use
-> `docker-compose-spanner.local.yaml` instead, which remaps gRPC to host port `9110`. Set
-> `SPANNER_EMULATOR_HOST=localhost:9110` accordingly. It provisions the emulator the same way.
+> **VPN / port conflict?** If host port `9010` is already bound (e.g. by a VPN tunnel), remap the
+> published ports with `SPANNER_GRPC_PORT` / `SPANNER_REST_PORT` and point the tests at the new gRPC
+> port:
+>
+> ```bash
+> SPANNER_GRPC_PORT=9110 docker compose -f docker-compose-spanner.yaml up -d --wait
+> export SPANNER_EMULATOR_HOST=localhost:9110
+> ```
+>
+> Both default to the standard ports when unset. The `spanner-init` sidecar is unaffected either way —
+> it reaches the emulator over the Compose network at `spanner:9020`, not via a published host port.
 
 ## Starting the emulator outside of Compose
 
