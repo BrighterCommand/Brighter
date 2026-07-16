@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -21,24 +21,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-namespace Paramore.Brighter.Observability;
+using System;
+using NATS.Client.JetStream.Models;
+
+namespace Paramore.Brighter.MessagingGateway.NATS;
 
 /// <summary>
-/// The messaging system used to send a message
+/// Subscription configuration for the NATS messaging gateway.
 /// </summary>
-public enum MessagingSystem
+public class NatsSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
 {
-    ActiveMQ = 0,
-    AWSSQS,
-    EventGrid,
-    EventHubs,
-    InternalBus,
-    JMS,
-    Kafka,
-    Nats,
-    PubSub,
-    RabbitMQ,
-    RocketMQ,
-    ServiceBus
 }
+
 

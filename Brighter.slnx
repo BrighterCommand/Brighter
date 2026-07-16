@@ -290,6 +290,7 @@
   <Project Path="src/Paramore.Brighter.MessagingGateway.GcpPubSub/Paramore.Brighter.MessagingGateway.GcpPubSub.csproj" />
   <Project Path="src/Paramore.Brighter.MessagingGateway.Kafka/Paramore.Brighter.MessagingGateway.Kafka.csproj" />
   <Project Path="src/Paramore.Brighter.MessagingGateway.MQTT/Paramore.Brighter.MessagingGateway.MQTT.csproj" />
+  <Project Path="src/Paramore.Brighter.MessagingGateway.NATS/Paramore.Brighter.MessagingGateway.NATS.csproj" />
   <Project Path="src/Paramore.Brighter.MessagingGateway.MsSql/Paramore.Brighter.MessagingGateway.MsSql.csproj" />
   <Project Path="src/Paramore.Brighter.MessagingGateway.Postgres/Paramore.Brighter.MessagingGateway.Postgres.csproj" />
   <Project Path="src/Paramore.Brighter.MessagingGateway.Redis/Paramore.Brighter.MessagingGateway.Redis.csproj" />
