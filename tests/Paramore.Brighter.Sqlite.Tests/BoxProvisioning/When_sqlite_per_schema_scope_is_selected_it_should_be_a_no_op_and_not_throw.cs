@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -38,12 +37,12 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 // Global), and the D3 "PerSchema + null SchemaName" guard MUST NOT fire (it only fires on
 // placement backends). These characterization tests pin that no-op for both a non-null
 // SchemaName (which SQLite accepts and ignores) and a null SchemaName.
-public class SqlitePerSchemaNoOpTests : IAsyncLifetime
+public class SqlitePerSchemaNoOpTests
 {
     private readonly string _connectionString = Configuration.ConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_per_schema_is_selected_with_a_non_null_schema_it_should_be_a_no_op_and_not_throw()
     {
         //Arrange — PerSchema scope + a non-null SchemaName. SQLite ignores schema names entirely.
@@ -54,15 +53,15 @@ public class SqlitePerSchemaNoOpTests : IAsyncLifetime
         var provisioner = BuildProvisioner(config);
 
         //Act
-        var exception = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert — no throw and history is in the single database file (no placement change).
-        Assert.Null(exception);
-        Assert.Equal(1, await TableCountAsync(_tableName));
-        Assert.Equal(1, await HistoryRowCountAsync());
+        await Assert.That(exception).IsNull();
+        await Assert.That(await TableCountAsync(_tableName)).IsEqualTo(1);
+        await Assert.That(await HistoryRowCountAsync()).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_per_schema_is_selected_with_a_null_schema_it_should_be_a_no_op_and_not_throw()
     {
         //Arrange — PerSchema scope + a null SchemaName. On a placement backend this would trip the
@@ -74,12 +73,12 @@ public class SqlitePerSchemaNoOpTests : IAsyncLifetime
         var provisioner = BuildProvisioner(config);
 
         //Act
-        var exception = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert — no ConfigurationException (D3 guard is gated off for SQLite).
-        Assert.Null(exception);
-        Assert.Equal(1, await TableCountAsync(_tableName));
-        Assert.Equal(1, await HistoryRowCountAsync());
+        await Assert.That(exception).IsNull();
+        await Assert.That(await TableCountAsync(_tableName)).IsEqualTo(1);
+        await Assert.That(await HistoryRowCountAsync()).IsEqualTo(1);
     }
 
     private SqliteOutboxProvisioner BuildProvisioner(RelationalDatabaseConfiguration config)
@@ -117,8 +116,10 @@ SELECT COUNT(1) FROM [__BrighterMigrationHistory] WHERE [BoxTableName] = @BoxTab
         return Convert.ToInt64(await command.ExecuteScalarAsync());
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

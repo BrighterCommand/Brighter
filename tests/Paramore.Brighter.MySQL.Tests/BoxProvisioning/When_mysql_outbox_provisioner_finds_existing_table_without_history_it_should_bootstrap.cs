@@ -3,11 +3,10 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.Outbox.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlOutboxProvisionerBootstrapTests : IAsyncLifetime
+public class MySqlOutboxProvisionerBootstrapTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName;
@@ -29,7 +28,7 @@ public class MySqlOutboxProvisionerBootstrapTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mysql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
     {
         // Arrange — create outbox table directly (simulating pre-migration install)
@@ -55,11 +54,13 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

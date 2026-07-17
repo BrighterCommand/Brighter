@@ -32,7 +32,7 @@ using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Metrics;
 
@@ -58,8 +58,8 @@ public class SendSpanMetricsTests : IDisposable
         _parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("SendSpanMetricsTests")!;
     }
 
-    [Fact]
-    public void When_ending_a_send_span_should_still_record_a_client_operation()
+    [Test]
+    public async Task When_ending_a_send_span_should_still_record_a_client_operation()
     {
         //arrange
         var sendSpan = _tracer.CreateSpan(
@@ -73,7 +73,7 @@ public class SendSpanMetricsTests : IDisposable
         _processor.OnEnd(sendSpan);
 
         //assert
-        Assert.Equal(1, _messagingMeter.RecordClientOperationCallCount);
+        await Assert.That(_messagingMeter.RecordClientOperationCallCount).IsEqualTo(1);
     }
 
     public void Dispose()

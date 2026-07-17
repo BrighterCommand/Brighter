@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -38,8 +38,8 @@ public class SqliteInboxMigrationsTests
 
     private static readonly string[] s_v2Added = ["ContextKey"];
 
-    [Fact]
-    public void When_sqlite_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_idempotency_check_sql_for_contextkey()
+    [Test]
+    public async Task When_sqlite_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_idempotency_check_sql_for_contextkey()
     {
         //Arrange — derive each version's expected LogicalColumns by accumulating the
         //per-version additions from the archaeology (spec README inbox table). SQLite inbox
@@ -55,10 +55,10 @@ public class SqliteInboxMigrationsTests
         var migrations = new SqliteInboxMigrationCatalog().All(config);
 
         //Assert — exactly two migrations numbered 1..2 in order.
-        Assert.Equal(2, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(2);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         //Assert — LogicalColumns at each version matches the cumulative archaeology.
@@ -66,46 +66,40 @@ public class SqliteInboxMigrationsTests
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
         //Assert — V1 IdempotencyCheckSql is null (V1 is the full CREATE TABLE; its own
         //CREATE TABLE IF NOT EXISTS provides idempotency).
-        Assert.Null(migrations[0].IdempotencyCheckSql);
+        await Assert.That(migrations[0].IdempotencyCheckSql).IsNull();
 
         //Assert — V2 IdempotencyCheckSql probes pragma_table_info for ContextKey per
         //ADR §6. Runner (Task 4.4) evaluates this scalar before UpScript and skips the
         //ALTER (still stamping history) when the column is already present.
-        var v2Check = migrations[1].IdempotencyCheckSql;
-        Assert.False(
-            string.IsNullOrWhiteSpace(v2Check),
-            "V2 must have a non-empty IdempotencyCheckSql per ADR §6");
-        Assert.Contains("SELECT COUNT(*)", v2Check, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains($"pragma_table_info('{TableName}')", v2Check, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("name='ContextKey'", v2Check, StringComparison.OrdinalIgnoreCase);
+        var v2Check = migrations[1].IdempotencyCheckSql?.Value;
+        await Assert.That(string.IsNullOrWhiteSpace(v2Check)).IsFalse().Because("V2 must have a non-empty IdempotencyCheckSql per ADR §6");
+        await Assert.That(v2Check).Contains("SELECT COUNT(*)");
+        await Assert.That(v2Check).Contains($"pragma_table_info('{TableName}')");
+        await Assert.That(v2Check).Contains("name='ContextKey'");
 
         //Assert — V2 UpScript is a plain ALTER TABLE ADD COLUMN with no embedded existence
         //guard (unlike MSSQL's IF COL_LENGTH, Postgres's IF NOT EXISTS, or MySQL's
         //information_schema + prepared-statement pattern).
-        var v2Script = migrations[1].UpScript;
-        Assert.Contains($"ALTER TABLE [{TableName}]", v2Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("ADD COLUMN", v2Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("[ContextKey]", v2Script, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("pragma_table_info", v2Script, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("IF NOT EXISTS", v2Script, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("PREPARE", v2Script, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("information_schema", v2Script, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("COL_LENGTH", v2Script, StringComparison.OrdinalIgnoreCase);
+        var v2Script = migrations[1].UpScript.Value;
+        await Assert.That(v2Script).Contains($"ALTER TABLE [{TableName}]");
+        await Assert.That(v2Script).Contains("ADD COLUMN");
+        await Assert.That(v2Script).Contains("[ContextKey]");
+        await Assert.That(v2Script).DoesNotContain("pragma_table_info");
+        await Assert.That(v2Script).DoesNotContain("IF NOT EXISTS");
+        await Assert.That(v2Script).DoesNotContain("PREPARE");
+        await Assert.That(v2Script).DoesNotContain("information_schema");
+        await Assert.That(v2Script).DoesNotContain("COL_LENGTH");
 
         //Assert — V1 has no single source commit so SourceReference is null;
         //V2 carries the archaeology pointer for the ContextKey addition (787c31c52, Oct 2018,
         //same commit as MSSQL/MySQL inbox V2).
-        Assert.Null(migrations[0].SourceReference);
-        Assert.Equal("787c31c52", migrations[1].SourceReference);
+        await Assert.That(migrations[0].SourceReference).IsNull();
+        await Assert.That(migrations[1].SourceReference).IsEqualTo("787c31c52");
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

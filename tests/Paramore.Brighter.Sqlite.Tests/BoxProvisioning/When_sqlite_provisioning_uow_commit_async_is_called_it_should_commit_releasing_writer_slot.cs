@@ -30,11 +30,10 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
+public class ProvisioningUnitOfWorkCommitTests
 {
     // Per ADR 0058 §B.1: SQLite's BEGIN IMMEDIATE transaction IS the lock — there is no
     // separate advisory-lock primitive to release. CommitAsync therefore only needs to commit
@@ -51,7 +50,6 @@ public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
     // stub returned Task.CompletedTask) would leave the transaction active and the second
     // Commit() would succeed silently — so this single assertion fails for the stub and passes
     // only when CommitAsync actually committed.
-
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_uow_commit_{Guid.NewGuid():N}.db");
 
@@ -64,8 +62,10 @@ public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         _connection = new SqliteConnection(_connectionString);
     }
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         await _connection.DisposeAsync();
@@ -80,7 +80,7 @@ public class ProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_provisioning_uow_commit_async_is_called_it_should_commit_releasing_writer_slot()
     {
         // Arrange — SqliteProvisioningUnitOfWork ctor takes only (SqliteConnection, ILogger).

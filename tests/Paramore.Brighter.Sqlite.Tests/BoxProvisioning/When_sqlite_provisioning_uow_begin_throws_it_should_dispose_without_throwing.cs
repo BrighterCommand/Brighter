@@ -29,7 +29,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -50,7 +49,7 @@ public class ProvisioningUnitOfWorkBeginThrowsTests
     // called when the connection is open." depending on driver version) before any state is
     // captured by the UoW.
     //
-    // The whole `await using` block is wrapped in Record.ExceptionAsync. Because `await using`
+    // The whole `await using` block is wrapped in TestExceptionRecorder.CaptureAsync. Because `await using`
     // is sugar for try/finally and C# replaces (not suppresses) the original exception when
     // the finally throws, a clean DisposeAsync surfaces the original InvalidOperationException
     // — and a throwing DisposeAsync would surface a different type. The single
@@ -62,8 +61,7 @@ public class ProvisioningUnitOfWorkBeginThrowsTests
     // return default;`) already satisfies the contract because BeginTransaction throws before
     // _transaction is assigned. This test exists to prevent a future "be helpful and
     // unconditionally clean up" mutation from regressing the partial-init contract.
-
-    [Fact]
+    [Test]
     public async Task When_sqlite_provisioning_uow_begin_throws_it_should_dispose_without_throwing()
     {
         // Arrange — closed connection. SqliteConnection.BeginTransaction throws
@@ -71,7 +69,7 @@ public class ProvisioningUnitOfWorkBeginThrowsTests
         await using var closedConnection = new SqliteConnection("Data Source=:memory:");
 
         // Act — capture whatever exception ultimately surfaces from the `await using` scope.
-        var thrown = await Record.ExceptionAsync(async () =>
+        var thrown = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             await using var uow = new SqliteProvisioningUnitOfWork(closedConnection, NullLogger.Instance);
             await uow.BeginAsync(
@@ -82,6 +80,6 @@ public class ProvisioningUnitOfWorkBeginThrowsTests
 
         // Assert — the surfaced exception is the BeginAsync InvalidOperationException;
         // DisposeAsync did not throw (otherwise its exception would have replaced the IOE).
-        Assert.IsType<InvalidOperationException>(thrown);
+        await Assert.That(thrown).IsTypeOf<InvalidOperationException>();
     }
 }

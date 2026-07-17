@@ -27,7 +27,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -43,7 +42,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class SqlBoxProvisionerEffectiveSchemaNameTests
 {
-    [Fact]
+    [Test]
     public async Task When_effective_schema_name_is_default_it_should_pass_configured_schema_to_detection_and_validator_and_runner()
     {
         //Arrange — derivation with NO override: inherits the default `_configuration.SchemaName`.
@@ -65,15 +64,15 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
 
         //Assert — every detection/validator call observes the configured "dbo"; both runner calls
         //also observe "dbo" (the runner call propagates `_configuration.SchemaName` directly).
-        Assert.Equal(new string?[] { "dbo", "dbo" }, detection.DoesTableExistSchemas);
-        Assert.Equal(new string?[] { "dbo", "dbo" }, detection.DoesHistoryExistSchemas);
-        Assert.Equal(new string?[] { "dbo" }, detection.DetectCurrentVersionSchemas);
-        Assert.Equal(new string?[] { "dbo" }, detection.GetMaxVersionSchemas);
-        Assert.Equal(new string?[] { "dbo", "dbo" }, payloadValidator.ValidateSchemas);
-        Assert.Equal(new string?[] { "dbo", "dbo" }, migrationRunner.MigrateSchemas);
+        await Assert.That(detection.DoesTableExistSchemas).IsEqualTo(new string?[] { "dbo", "dbo" });
+        await Assert.That(detection.DoesHistoryExistSchemas).IsEqualTo(new string?[] { "dbo", "dbo" });
+        await Assert.That(detection.DetectCurrentVersionSchemas).IsEqualTo(new string?[] { "dbo" });
+        await Assert.That(detection.GetMaxVersionSchemas).IsEqualTo(new string?[] { "dbo" });
+        await Assert.That(payloadValidator.ValidateSchemas).IsEqualTo(new string?[] { "dbo", "dbo" });
+        await Assert.That(migrationRunner.MigrateSchemas).IsEqualTo(new string?[] { "dbo", "dbo" });
     }
 
-    [Fact]
+    [Test]
     public async Task When_effective_schema_name_is_overridden_to_null_it_should_pass_null_to_detection_and_validator_but_configured_schema_to_runner()
     {
         //Arrange — derivation overrides `EffectiveSchemaName` to null (the SQLite shape).
@@ -94,12 +93,12 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         //Assert — every detection/validator call observes null (the override); the runner call
         //still observes the configured "dbo" — only detection/validation routes through
         //EffectiveSchemaName, per ADR §B.5 line 611-612.
-        Assert.Equal(new string?[] { null, null }, detection.DoesTableExistSchemas);
-        Assert.Equal(new string?[] { null, null }, detection.DoesHistoryExistSchemas);
-        Assert.Equal(new string?[] { null }, detection.DetectCurrentVersionSchemas);
-        Assert.Equal(new string?[] { null }, detection.GetMaxVersionSchemas);
-        Assert.Equal(new string?[] { null, null }, payloadValidator.ValidateSchemas);
-        Assert.Equal(new string?[] { "dbo", "dbo" }, migrationRunner.MigrateSchemas);
+        await Assert.That(detection.DoesTableExistSchemas).IsEqualTo(new string?[] { null, null });
+        await Assert.That(detection.DoesHistoryExistSchemas).IsEqualTo(new string?[] { null, null });
+        await Assert.That(detection.DetectCurrentVersionSchemas).IsEqualTo(new string?[] { null });
+        await Assert.That(detection.GetMaxVersionSchemas).IsEqualTo(new string?[] { null });
+        await Assert.That(payloadValidator.ValidateSchemas).IsEqualTo(new string?[] { null, null });
+        await Assert.That(migrationRunner.MigrateSchemas).IsEqualTo(new string?[] { "dbo", "dbo" });
     }
 
     /// <summary>

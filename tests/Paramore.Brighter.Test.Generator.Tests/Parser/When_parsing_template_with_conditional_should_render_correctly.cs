@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.Parser;
 
@@ -19,7 +18,7 @@ public class WhenParsingTemplateWithConditionalShouldRenderCorrectly : IDisposab
         _outputPath = Path.Combine(_testDirectory, "output.txt");
     }
 
-    [Fact]
+    [Test]
     public async Task When_parsing_template_with_conditional_should_render_correctly()
     {
         // Arrange
@@ -34,7 +33,7 @@ public class WhenParsingTemplateWithConditionalShouldRenderCorrectly : IDisposab
 
         // Assert
         var result = await File.ReadAllTextAsync(_outputPath);
-        Assert.Equal("Active", result);
+        await Assert.That(result).IsEqualTo("Active");
     }
 
     public void Dispose()

@@ -27,17 +27,16 @@ using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.Outbox.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
+public class PostgreSqlPayloadModeMismatchTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _outboxTableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly string _inboxTableName = $"test_inbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_existing_outbox_body_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
         //Arrange — text-mode outbox already exists; configure provisioner for binary.
@@ -57,10 +56,10 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
-    [Fact]
+    [Test]
     public async Task When_existing_outbox_body_is_bytea_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
         //Arrange — binary (bytea) outbox already exists; configure provisioner for text.
@@ -80,10 +79,10 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
-    [Fact]
+    [Test]
     public async Task When_existing_inbox_commandbody_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
         //Arrange — text-mode inbox already exists; configure provisioner for binary.
@@ -103,10 +102,10 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
-    [Fact]
+    [Test]
     public async Task When_existing_inbox_commandbody_is_bytea_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
         //Arrange — binary (bytea) inbox already exists; configure provisioner for text.
@@ -126,7 +125,7 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
     private async Task CreateTable(string ddl)
@@ -138,8 +137,10 @@ public class PostgreSqlPayloadModeMismatchTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

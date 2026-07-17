@@ -27,13 +27,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.Specification.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.Specification.Tests;
 
 public class UseSpecificationAsyncRegistrationTests
 {
-    [Fact]
+    [Test]
     public async Task When_use_specification_is_registered_async_should_validate_through_the_pipeline()
     {
         //Arrange
@@ -49,6 +48,6 @@ public class UseSpecificationAsyncRegistrationTests
         var exception = await Assert.ThrowsAsync<RequestValidationException>(() => commandProcessor.SendAsync(invalidRequest));
 
         //Assert
-        Assert.NotEmpty(exception.Errors);
+        await Assert.That(exception.Errors).IsNotEmpty();
     }
 }

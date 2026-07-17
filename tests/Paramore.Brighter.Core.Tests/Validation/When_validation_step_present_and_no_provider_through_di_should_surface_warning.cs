@@ -26,14 +26,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class ValidatePipelinesProviderRegistrationTests
 {
-    [Fact]
-    public void When_validation_step_present_and_no_provider_through_di_should_surface_warning()
+    [Test]
+    public async Task When_validation_step_present_and_no_provider_through_di_should_surface_warning()
     {
         // Arrange — a handler whose pipeline declares a validation step ([ValidateRequest]) but no
         // validation provider is registered; ValidatePipelines must compute the (false,false)
@@ -53,11 +53,11 @@ public class ValidatePipelinesProviderRegistrationTests
         var result = validator.Validate();
 
         // Assert — a (B) Warning surfaces naming the request and the three provider calls; warnings never block
-        Assert.True(result.IsValid);
-        Assert.Contains(result.Warnings, w =>
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings.Any(w =>
             w.Message.Contains(nameof(MyValidatedCommand))
             && w.Message.Contains("UseFluentValidation")
             && w.Message.Contains("UseDataAnnotations")
-            && w.Message.Contains("UseSpecification"));
+            && w.Message.Contains("UseSpecification"))).IsTrue();
     }
 }

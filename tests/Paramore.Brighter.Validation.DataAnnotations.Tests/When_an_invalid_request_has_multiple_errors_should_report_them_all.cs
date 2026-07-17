@@ -25,14 +25,14 @@ THE SOFTWARE. */
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.DataAnnotations.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.DataAnnotations.Tests;
 
 public class MultipleValidationErrorsTests
 {
-    [Fact]
-    public void When_an_invalid_request_has_multiple_errors_should_report_them_all()
+    [Test]
+    public async Task When_an_invalid_request_has_multiple_errors_should_report_them_all()
     {
         //Arrange
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
@@ -43,7 +43,7 @@ public class MultipleValidationErrorsTests
         var exception = Assert.Throws<RequestValidationException>(() => handler.Handle(invalidRequest));
 
         //Assert
-        Assert.Contains(exception.Errors, error => error.PropertyName == nameof(RegisterUser.Name));
-        Assert.Contains(exception.Errors, error => error.PropertyName == nameof(RegisterUser.Email));
+        await Assert.That((exception.Errors).Any(error => error.PropertyName == nameof(RegisterUser.Name))).IsTrue();
+        await Assert.That((exception.Errors).Any(error => error.PropertyName == nameof(RegisterUser.Email))).IsTrue();
     }
 }

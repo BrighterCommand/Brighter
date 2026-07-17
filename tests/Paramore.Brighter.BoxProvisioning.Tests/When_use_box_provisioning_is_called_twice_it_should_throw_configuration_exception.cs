@@ -29,7 +29,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Polly.Registry;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -46,8 +46,8 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class UseBoxProvisioningIdempotencyTests
 {
-    [Fact]
-    public void When_called_twice_on_the_same_builder_it_should_throw_configuration_exception()
+    [Test]
+    public async Task When_called_twice_on_the_same_builder_it_should_throw_configuration_exception()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -55,24 +55,40 @@ public class UseBoxProvisioningIdempotencyTests
         builder.UseBoxProvisioning(_ => { });
 
         //Act
-        var thrown = Record.Exception(() => builder.UseBoxProvisioning(_ => { }));
+        Exception? thrown = null;
+        try
+        {
+            builder.UseBoxProvisioning(_ => { });
+        }
+        catch (Exception e)
+        {
+            thrown = e;
+        }
 
         //Assert
-        Assert.IsType<ConfigurationException>(thrown);
+        await Assert.That(thrown).IsTypeOf<ConfigurationException>();
     }
 
-    [Fact]
-    public void When_called_once_on_a_fresh_builder_it_should_not_throw()
+    [Test]
+    public async Task When_called_once_on_a_fresh_builder_it_should_not_throw()
     {
         //Arrange
         var services = new ServiceCollection();
         var builder = new StubBrighterBuilder(services);
 
         //Act
-        var thrown = Record.Exception(() => builder.UseBoxProvisioning(_ => { }));
+        Exception? thrown = null;
+        try
+        {
+            builder.UseBoxProvisioning(_ => { });
+        }
+        catch (Exception e)
+        {
+            thrown = e;
+        }
 
         //Assert
-        Assert.Null(thrown);
+        await Assert.That(thrown).IsNull();
     }
 
     /// <summary>
@@ -83,8 +99,8 @@ public class UseBoxProvisioningIdempotencyTests
     /// successfully, so a throwing configure leaves the service collection in the same
     /// state as the never-invoked case.
     /// </summary>
-    [Fact]
-    public void When_first_call_configure_throws_then_retry_with_succeeding_configure_it_should_not_throw()
+    [Test]
+    public async Task When_first_call_configure_throws_then_retry_with_succeeding_configure_it_should_not_throw()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -92,16 +108,32 @@ public class UseBoxProvisioningIdempotencyTests
 
         //First call — configure throws. The "already invoked" guard must not be tripped by
         //this attempt because the configure delegate failed before any registrations ran.
-        var firstThrown = Record.Exception(() => builder.UseBoxProvisioning(_ => throw new InvalidOperationException("configure-side failure")));
-        Assert.IsType<InvalidOperationException>(firstThrown);
+        Exception? firstThrown = null;
+        try
+        {
+            builder.UseBoxProvisioning(_ => throw new InvalidOperationException("configure-side failure"));
+        }
+        catch (Exception e)
+        {
+            firstThrown = e;
+        }
+        await Assert.That(firstThrown).IsTypeOf<InvalidOperationException>();
 
         //Act — retry with a successful configure delegate.
-        var retryThrown = Record.Exception(() => builder.UseBoxProvisioning(_ => { }));
+        Exception? retryThrown = null;
+        try
+        {
+            builder.UseBoxProvisioning(_ => { });
+        }
+        catch (Exception e)
+        {
+            retryThrown = e;
+        }
 
         //Assert — retry succeeds. RED with marker-registered-before-configure: retry
         //would see the leaked marker and throw the ConfigurationException "already invoked"
         //message even though the first invocation never completed.
-        Assert.Null(retryThrown);
+        await Assert.That(retryThrown).IsNull();
     }
 
     /// <summary>
@@ -115,8 +147,8 @@ public class UseBoxProvisioningIdempotencyTests
     /// the marker in the collection and the operator's natural retry hit the "already invoked"
     /// guard with a misleading message.
     /// </summary>
-    [Fact]
-    public void When_first_call_registration_throws_then_retry_with_succeeding_configure_it_should_not_throw()
+    [Test]
+    public async Task When_first_call_registration_throws_then_retry_with_succeeding_configure_it_should_not_throw()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -124,17 +156,33 @@ public class UseBoxProvisioningIdempotencyTests
 
         //First call — configure succeeds but a queued registration callback throws while the
         //foreach is applying them. Represents an NRE-throwing AddXOutbox extension.
-        var firstThrown = Record.Exception(() => builder.UseBoxProvisioning(o =>
-            o.Add(_ => throw new InvalidOperationException("registration-side failure"))));
-        Assert.IsType<InvalidOperationException>(firstThrown);
+        Exception? firstThrown = null;
+        try
+        {
+            builder.UseBoxProvisioning(o =>
+            o.Add(_ => throw new InvalidOperationException("registration-side failure")));
+        }
+        catch (Exception e)
+        {
+            firstThrown = e;
+        }
+        await Assert.That(firstThrown).IsTypeOf<InvalidOperationException>();
 
         //Act — retry with a successful configure delegate (no throwing registrations).
-        var retryThrown = Record.Exception(() => builder.UseBoxProvisioning(_ => { }));
+        Exception? retryThrown = null;
+        try
+        {
+            builder.UseBoxProvisioning(_ => { });
+        }
+        catch (Exception e)
+        {
+            retryThrown = e;
+        }
 
         //Assert — retry succeeds. RED with marker-registered-between-configure-and-foreach:
         //retry would see the leaked marker and throw the ConfigurationException "already
         //invoked" message even though the first invocation never completed its registrations.
-        Assert.Null(retryThrown);
+        await Assert.That(retryThrown).IsNull();
     }
 
     /// <summary>

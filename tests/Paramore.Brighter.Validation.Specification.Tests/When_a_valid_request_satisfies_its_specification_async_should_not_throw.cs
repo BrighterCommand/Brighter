@@ -25,13 +25,12 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.Specification.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.Specification.Tests;
 
 public class ValidSpecificationAsyncValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_a_valid_request_satisfies_its_specification_async_should_not_throw()
     {
         //Arrange
@@ -41,9 +40,9 @@ public class ValidSpecificationAsyncValidationTests
         var validRequest = new PlaceOrder { Sku = "SKU-1", Quantity = 5 };
 
         //Act
-        var exception = await Record.ExceptionAsync(() => handler.HandleAsync(validRequest));
+        var exception = await TestExceptionRecorder.CaptureAsync(() => handler.HandleAsync(validRequest));
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

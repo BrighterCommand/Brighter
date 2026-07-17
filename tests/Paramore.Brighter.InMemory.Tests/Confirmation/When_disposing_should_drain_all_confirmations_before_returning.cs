@@ -26,13 +26,12 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Confirmation;
 
 public class GracefulDrainOnDisposeTests
 {
-    [Fact]
+    [Test]
     public async Task When_disposing_should_drain_all_confirmations_before_returning()
     {
         // Arrange — a gate keeps every confirmation callback outstanding after the pump
@@ -79,7 +78,7 @@ public class GracefulDrainOnDisposeTests
         // With the two-stage drain, DisposeAsync blocked until the releaser fired and all
         // callbacks incremented the counter → count == messageCount → GREEN.
         var snapshot = Volatile.Read(ref confirmationCount);
-        Assert.Equal(messageCount, snapshot);
+        await Assert.That(snapshot).IsEqualTo(messageCount);
 
         await releaser; // cleanup — ensure the background task has exited
     }

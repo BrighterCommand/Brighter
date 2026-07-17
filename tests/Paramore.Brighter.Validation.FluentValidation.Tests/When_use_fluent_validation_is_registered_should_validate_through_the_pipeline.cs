@@ -26,15 +26,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
-using Xunit;
 using global::FluentValidation;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests
 {
     public class UseFluentValidationRegistrationTests
     {
-        [Fact]
-        public void When_use_fluent_validation_is_registered_should_validate_through_the_pipeline()
+        [Test]
+        public async Task When_use_fluent_validation_is_registered_should_validate_through_the_pipeline()
         {
             //Arrange
             var services = new ServiceCollection();
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
             var exception = Assert.Throws<RequestValidationException>(() => commandProcessor.Send(invalidRequest));
 
             //Assert
-            Assert.NotEmpty(exception.Errors);
+            await Assert.That(exception.Errors).IsNotEmpty();
         }
     }
 }

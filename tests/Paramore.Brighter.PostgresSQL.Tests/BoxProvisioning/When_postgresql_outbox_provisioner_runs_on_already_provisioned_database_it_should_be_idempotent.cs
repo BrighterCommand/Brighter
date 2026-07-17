@@ -2,11 +2,10 @@ using System;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlOutboxProvisionerIdempotencyTests : IAsyncLifetime
+public class PostgreSqlOutboxProvisionerIdempotencyTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName;
@@ -28,7 +27,7 @@ public class PostgreSqlOutboxProvisionerIdempotencyTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgresql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent()
     {
         //Arrange
@@ -49,11 +48,13 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public' AND ""Migra
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

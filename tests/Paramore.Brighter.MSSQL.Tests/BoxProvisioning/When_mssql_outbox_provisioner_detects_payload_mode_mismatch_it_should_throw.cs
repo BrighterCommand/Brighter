@@ -4,11 +4,10 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlOutboxPayloadModeMismatchTests : IAsyncLifetime
+public class MsSqlOutboxPayloadModeMismatchTests
 {
     private readonly string _connectionString;
     private readonly string _tableName;
@@ -23,7 +22,7 @@ public class MsSqlOutboxPayloadModeMismatchTests : IAsyncLifetime
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_outbox_provisioner_detects_payload_mode_mismatch_it_should_throw()
     {
         //Arrange
@@ -47,14 +46,15 @@ public class MsSqlOutboxPayloadModeMismatchTests : IAsyncLifetime
             runner);
 
         //Act & Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(
-            () => provisioner.ProvisionAsync());
+        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

@@ -27,18 +27,17 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class Spec0023EraHistoryTransitionTests : IAsyncLifetime
+public class Spec0023EraHistoryTransitionTests
 {
     private const string Spec0023EraDescription = "spec 0023 fresh install";
 
     private readonly string _connectionString = Configuration.ConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_table_has_spec_0023_era_history_at_v1_it_should_transition_cleanly_to_v_latest()
     {
         //Arrange — V7-shaped outbox via the live builder DDL + spec-0023-era history at V1.
@@ -67,26 +66,21 @@ public class Spec0023EraHistoryTransitionTests : IAsyncLifetime
         //ApplyOrSkipAsync evaluates IdempotencyCheckSql (pragma_table_info probe) for each
         //V_k — returns >0 because the V_latest builder shape already has the column — so
         //UpScript is skipped, history row inserted only.
-        Assert.Equal(columnsBefore, await GetTableColumns());
+        await Assert.That(await GetTableColumns()).IsEqualTo(columnsBefore);
 
         //Assert — V1 row preserved with its original spec-0023-era description (the runner's
         //normal-path `migration.Version <= maxVersion` filter sees V1 <= maxVersion=1 and skips
         //it entirely); V2..V7 inserted by the normal path with their per-migration descriptions.
         var rowsByVersion = await GetHistoryRowsByVersion();
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest, rowsByVersion.Count);
-        Assert.Equal(Spec0023EraDescription, rowsByVersion[1]);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest);
+        await Assert.That(rowsByVersion[1]).IsEqualTo(Spec0023EraDescription);
 
         for (var v = 2; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            var description = Assert.Contains(v, rowsByVersion);
-            Assert.False(
-                description.StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be a normal-path applied row, not a synthetic bootstrap " +
-                $"(description was: '{description}')");
-            Assert.False(
-                description.StartsWith("fresh install", StringComparison.Ordinal),
-                $"V{v} should be a normal-path applied row, not a fresh-install marker " +
-                $"(description was: '{description}')");
+            await Assert.That(rowsByVersion.ContainsKey(v)).IsTrue();
+            var description = rowsByVersion[v];
+            await Assert.That(description.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
+            await Assert.That(description.StartsWith("fresh install", StringComparison.Ordinal)).IsFalse();
         }
     }
 
@@ -159,8 +153,10 @@ ORDER BY [MigrationVersion]";
         return rows;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

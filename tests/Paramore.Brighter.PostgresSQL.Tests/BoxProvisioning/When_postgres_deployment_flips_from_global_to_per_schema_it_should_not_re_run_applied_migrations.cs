@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -44,7 +43,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 // no-op (NOT EXISTS guard) — same row count, same AppliedAt, no duplicates from a re-seed.
 // PG folds unquoted identifiers to lowercase, so the configured non-default schema is addressed
 // and filtered in its folded form on both sides.
-public class PostgreSqlGlobalToPerSchemaFlipTests : IAsyncLifetime
+public class PostgreSqlGlobalToPerSchemaFlipTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -56,7 +55,7 @@ public class PostgreSqlGlobalToPerSchemaFlipTests : IAsyncLifetime
         _foldedSchema = _schemaName.ToLowerInvariant();
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_deployment_flips_from_global_to_per_schema_it_should_not_re_run_applied_migrations()
     {
         //Arrange — clean slate; operator pre-creates the (folded) schema (runner does not).
@@ -74,27 +73,25 @@ public class PostgreSqlGlobalToPerSchemaFlipTests : IAsyncLifetime
         // Sanity-check the arranged precondition so a regression in the Global path doesn't
         // masquerade as a D5 seed failure: exactly one tenant row in public, none in the per-schema
         // location (which the runner should not have created under Global scope).
-        Assert.Equal(1, await GetHistoryRowCountInSchemaAsync("public"));
-        Assert.False(await TableExistsInSchemaAsync("__BrighterMigrationHistory", _foldedSchema));
+        await Assert.That(await GetHistoryRowCountInSchemaAsync("public")).IsEqualTo(1);
+        await Assert.That(await TableExistsInSchemaAsync("__BrighterMigrationHistory", _foldedSchema)).IsFalse();
         var (legacyDescription, legacyAppliedAt) = await GetSingleHistoryRowAsync("public");
-        Assert.Equal($"fresh install at V{ExpectedMigrationVersions.OutboxLatest}", legacyDescription);
+        await Assert.That(legacyDescription).IsEqualTo($"fresh install at V{ExpectedMigrationVersions.OutboxLatest}");
 
         //Act — flip the SAME deployment to PerSchema (same SchemaName, same box table) and
         //provision again. The D5 seed must run inside EnsureHistoryTableAsync (under the existing
         //advisory lock + transaction) BEFORE state re-detection, so the per-schema history is
         //pre-populated and the box's already-applied version is recognised.
         var perSchemaProvisioner = BuildOutboxProvisioner(MigrationHistoryScope.PerSchema);
-        var flipException = await Record.ExceptionAsync(() => perSchemaProvisioner.ProvisionAsync());
+        var flipException = await TestExceptionRecorder.CaptureAsync(() => perSchemaProvisioner.ProvisionAsync());
 
         //Assert — flip provision succeeds and per-schema history table now exists.
-        Assert.Null(flipException);
-        Assert.True(
-            await TableExistsInSchemaAsync("__BrighterMigrationHistory", _foldedSchema),
-            $"Per-schema history table must be created in '{_foldedSchema}' under PerSchema scope.");
+        await Assert.That(flipException).IsNull();
+        await Assert.That(await TableExistsInSchemaAsync("__BrighterMigrationHistory", _foldedSchema)).IsTrue().Because($"Per-schema history table must be created in '{_foldedSchema}' under PerSchema scope.");
 
         //Assert — per-schema history contains exactly this tenant's prior row (D5 seeded one row,
         //filtered to this tenant's SchemaName + BoxTableName, with NO migration re-applied).
-        Assert.Equal(1, await GetHistoryRowCountInSchemaAsync(_foldedSchema));
+        await Assert.That(await GetHistoryRowCountInSchemaAsync(_foldedSchema)).IsEqualTo(1);
 
         //Assert — the seeded row preserves the ORIGINAL Description and AppliedAt. If the runner
         //had let the bootstrap path execute against an empty per-schema history, Description would
@@ -102,23 +99,23 @@ public class PostgreSqlGlobalToPerSchemaFlipTests : IAsyncLifetime
         //that a migration was effectively re-applied. Equality with the legacy row proves the seed
         //copied, didn't re-stamp.
         var (perSchemaDescription, perSchemaAppliedAt) = await GetSingleHistoryRowAsync(_foldedSchema);
-        Assert.Equal(legacyDescription, perSchemaDescription);
-        Assert.Equal(legacyAppliedAt, perSchemaAppliedAt);
+        await Assert.That(perSchemaDescription).IsEqualTo(legacyDescription);
+        await Assert.That(perSchemaAppliedAt).IsEqualTo(legacyAppliedAt);
 
         //Assert — original legacy public row is left in place (flip does not delete legacy history;
         //the seed is INSERT-only into the per-schema target).
-        Assert.Equal(1, await GetHistoryRowCountInSchemaAsync("public"));
+        await Assert.That(await GetHistoryRowCountInSchemaAsync("public")).IsEqualTo(1);
 
         //Act — second PerSchema provisioning run must be a true no-op (NOT EXISTS guard in the
         //seed + detection short-circuit on the now-populated per-schema history).
-        var secondException = await Record.ExceptionAsync(() => perSchemaProvisioner.ProvisionAsync());
+        var secondException = await TestExceptionRecorder.CaptureAsync(() => perSchemaProvisioner.ProvisionAsync());
 
         //Assert — idempotent: still exactly one per-schema row, AppliedAt unchanged (proves the
         //seed did not re-fire and the runner did not stamp a fresh row).
-        Assert.Null(secondException);
-        Assert.Equal(1, await GetHistoryRowCountInSchemaAsync(_foldedSchema));
+        await Assert.That(secondException).IsNull();
+        await Assert.That(await GetHistoryRowCountInSchemaAsync(_foldedSchema)).IsEqualTo(1);
         var (_, perSchemaAppliedAtAfterSecondRun) = await GetSingleHistoryRowAsync(_foldedSchema);
-        Assert.Equal(perSchemaAppliedAt, perSchemaAppliedAtAfterSecondRun);
+        await Assert.That(perSchemaAppliedAtAfterSecondRun).IsEqualTo(perSchemaAppliedAt);
     }
 
     private PostgreSqlOutboxProvisioner BuildOutboxProvisioner(MigrationHistoryScope scope)
@@ -217,10 +214,10 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @BoxSchemaName";
         command.Parameters.AddWithValue("@BoxTableName", _tableName.ToLowerInvariant());
         command.Parameters.AddWithValue("@BoxSchemaName", _foldedSchema);
         await using var reader = await command.ExecuteReaderAsync();
-        Assert.True(await reader.ReadAsync(), $"Expected exactly one history row in '{physicalSchema}' for this tenant.");
+        await Assert.That(await reader.ReadAsync()).IsTrue().Because($"Expected exactly one history row in '{physicalSchema}' for this tenant.");
         var description = reader.GetString(0);
         var appliedAt = reader.GetValue(1);
-        Assert.False(await reader.ReadAsync(), $"Expected exactly one history row in '{physicalSchema}' for this tenant, found more.");
+        await Assert.That(await reader.ReadAsync()).IsFalse().Because($"Expected exactly one history row in '{physicalSchema}' for this tenant, found more.");
         return (description, appliedAt);
     }
 
@@ -241,8 +238,10 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @BoxSchemaName";
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

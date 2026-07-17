@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -40,7 +39,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 // PerSchema path end-to-end via ProvisionAsync, so a future contributor cannot bypass the
 // catalog and reach a per-schema DDL site (where PgIdentifier.Quote performs no validation
 // itself) without tripping a validation gate.
-public class PostgreSqlPerSchemaUnsafeSchemaNameTests : IAsyncLifetime
+public class PostgreSqlPerSchemaUnsafeSchemaNameTests
 {
     // Evident data: a SchemaName that, if interpolated raw into a double-quoted identifier,
     // would close the quoted string and append further statements. Any of `]`, `;`, `-`, or
@@ -50,7 +49,7 @@ public class PostgreSqlPerSchemaUnsafeSchemaNameTests : IAsyncLifetime
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _boxTableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_per_schema_scope_is_selected_with_an_unsafe_schema_name_postgres_runner_should_throw()
     {
         //Arrange — MigrationHistoryScope.PerSchema + the unsafe SchemaName. The operator-facing
@@ -72,7 +71,7 @@ public class PostgreSqlPerSchemaUnsafeSchemaNameTests : IAsyncLifetime
             runner);
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert — ConfigurationException is the documented contract (Identifiers.AssertSafe);
         //the message must echo the unsafe value so operators can see which configured identifier
@@ -80,10 +79,9 @@ public class PostgreSqlPerSchemaUnsafeSchemaNameTests : IAsyncLifetime
         //matching schema in information_schema.schemata (which would only exist if a CREATE
         //SCHEMA had escaped the validation gate). The schema-name comparison is on the raw
         //unsafe literal, not folded, because the test asserts the literal never reached DDL.
-        var configEx = Assert.IsType<ConfigurationException>(thrown);
-        Assert.Contains(UnsafeSchemaName, configEx.Message);
-        Assert.False(await SchemaExistsAsync(UnsafeSchemaName),
-            $"information_schema.schemata should not contain '{UnsafeSchemaName}' — validation must run before DDL.");
+        var configEx = await Assert.That(thrown).IsTypeOf<ConfigurationException>();
+        await Assert.That(configEx.Message).Contains(UnsafeSchemaName);
+        await Assert.That(await SchemaExistsAsync(UnsafeSchemaName)).IsFalse().Because($"information_schema.schemata should not contain '{UnsafeSchemaName}' — validation must run before DDL.");
     }
 
     private async Task<bool> SchemaExistsAsync(string schemaName)
@@ -97,8 +95,10 @@ public class PostgreSqlPerSchemaUnsafeSchemaNameTests : IAsyncLifetime
         return await command.ExecuteScalarAsync() is not null;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         // No teardown needed: the validation gate throws before any DDL runs. The catch is

@@ -30,11 +30,10 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkCommitTests
 {
     // Per ADR 0058 §B.1: MSSQL uses sp_getapplock with @LockOwner='Transaction'. CommitAsync
     // therefore only needs to commit the underlying SqlTransaction — SQL Server releases the
@@ -48,15 +47,16 @@ public class MsSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
     // would leave the transaction active and the second Commit() would succeed silently — so
     // this single assertion fails for a no-op and passes only when CommitAsync actually
     // committed.
-
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mssql_provisioning_uow_commit_async_is_called_it_should_commit_transaction_without_explicit_lock_release()
     {
         // Arrange

@@ -26,12 +26,11 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
-public class RmqMessageProducerDisposeAsyncConfirmationTests : IDisposable, IAsyncLifetime
+[Category("RMQ")]
+public class RmqMessageProducerDisposeAsyncConfirmationTests : IAsyncDisposable
 {
     private readonly Message _message;
     private readonly RmqMessageProducer _messageProducer;
@@ -71,34 +70,24 @@ public class RmqMessageProducerDisposeAsyncConfirmationTests : IDisposable, IAsy
         };
     }
 
-    [Fact]
-    public async Task When_disposing_async_after_sending_should_publish_confirmation()
-    {
-        // Arrange handled by fixture setup.
-
-        // Act
-        await _messageProducer.SendAsync(_message);
-        await _messageProducer.DisposeAsync();
-
-        // Assert
-        // DisposeAsync waits for confirms; the timeout keeps failures bounded if that contract regresses.
-        Assert.True(await _published.Task.WaitAsync(TimeSpan.FromSeconds(10)));
-    }
-
-    public void Dispose()
-    {
-        // The test disposes explicitly; teardown keeps cleanup idempotent if the test fails first.
-        _messageProducer.Dispose();
-    }
-
-    public async Task InitializeAsync()
+    [Before(Test)]
+    public async Task Setup()
     {
         await new QueueFactory(_rmqConnection, _channelName, _routingKeys).CreateAsync();
     }
 
-    public async Task DisposeAsync()
+    [Test]
+    public async Task When_disposing_async_after_sending_should_publish_confirmation()
     {
-        // The test disposes explicitly; teardown keeps cleanup idempotent if the test fails first.
+        await _messageProducer.SendAsync(_message);
+        await _messageProducer.DisposeAsync();
+
+        // DisposeAsync waits for confirms; the timeout keeps failures bounded if that contract regresses.
+        await Assert.That(await _published.Task.WaitAsync(TimeSpan.FromSeconds(10))).IsTrue();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
         await _messageProducer.DisposeAsync();
     }
 }

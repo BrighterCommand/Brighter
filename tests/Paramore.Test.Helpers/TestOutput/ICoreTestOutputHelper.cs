@@ -1,10 +1,10 @@
-﻿using System;
+using System;
+using System.IO;
 using Paramore.Test.Helpers.Base;
-using Xunit.Abstractions;
 
 namespace Paramore.Test.Helpers.TestOutput
 {
-    public interface ICoreTestOutputHelper : ITestOutputHelper, IDisposable
+    public interface ICoreTestOutputHelper : IDisposable
     {
         /// <summary>
         /// Gets the test case associated with the current test output helper.
@@ -17,9 +17,9 @@ namespace Paramore.Test.Helpers.TestOutput
         ITestClassBase TestCase { get; }
 
         /// <summary>
-        /// Gets the wrapped instance of <see cref="ITestOutputHelper"/> used for test output handling.
+        /// Gets the wrapped <see cref="TextWriter"/> used for test output handling.
         /// </summary>
-        ITestOutputHelper WrappedTestOutputHelper { get; }
+        TextWriter WrappedTestOutputHelper { get; }
 
         /// <summary>
         /// Gets the UTC date and time when the test output helper was initialized.

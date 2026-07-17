@@ -26,16 +26,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlPayloadValidatorNullSchemaTests : IAsyncLifetime
+public class MySqlPayloadValidatorNullSchemaTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_mysql_payload_validator_receives_null_schema_name_it_should_substitute_connection_database()
     {
         // Arrange — two box-shaped tables in the connection's default database: one with a
@@ -100,8 +99,10 @@ public class MySqlPayloadValidatorNullSchemaTests : IAsyncLifetime
         return builder.Database;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

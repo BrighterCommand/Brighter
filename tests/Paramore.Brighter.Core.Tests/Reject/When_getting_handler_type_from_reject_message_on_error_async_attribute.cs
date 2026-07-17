@@ -19,30 +19,25 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using Paramore.Brighter.Reject.Attributes;
 using Paramore.Brighter.Reject.Handlers;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Reject
 {
     public class When_getting_handler_type_from_reject_message_on_error_async_attribute
     {
-        [Fact]
-        public void It_should_return_correct_handler_configuration()
+        [Test]
+        public async Task It_should_return_correct_handler_configuration()
         {
             //Arrange
             var attribute = new RejectMessageOnErrorAsyncAttribute(step: 1);
-
             //Act
             var handlerType = attribute.GetHandlerType();
-
             //Assert
-            Assert.Equal(typeof(RejectMessageOnErrorHandlerAsync<>), handlerType); // Returns the correct async handler type
-            Assert.Equal(HandlerTiming.Before, attribute.Timing); // Must wrap subsequent handlers
-            Assert.Equal(1, attribute.Step); // Preserves the specified step
+            await Assert.That(handlerType).IsEqualTo(typeof(RejectMessageOnErrorHandlerAsync<>)); // Returns the correct async handler type
+            await Assert.That(attribute.Timing).IsEqualTo(HandlerTiming.Before); // Must wrap subsequent handlers
+            await Assert.That(attribute.Step).IsEqualTo(1); // Preserves the specified step
         }
     }
 }

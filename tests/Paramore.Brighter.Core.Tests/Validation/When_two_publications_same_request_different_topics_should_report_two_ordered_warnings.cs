@@ -26,7 +26,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Validation;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
@@ -57,8 +57,8 @@ public class ProducerTransformWarningDeterminismTests
         return validator.Validate();
     }
 
-    [Fact]
-    public void When_two_publications_same_request_different_topics_should_report_two_ordered_warnings()
+    [Test]
+    public async Task When_two_publications_same_request_different_topics_should_report_two_ordered_warnings()
     {
         // Arrange — two publications for the same request type on different topics, both declaring the same
         // unresolvable wrap transform. Each entity must yield its own warning (no cross-entity de-duplication),
@@ -72,13 +72,13 @@ public class ProducerTransformWarningDeterminismTests
             .ToList();
 
         // Assert — exactly two warnings, one per topic, in configuration order
-        Assert.Equal(2, transformWarnings.Count);
-        Assert.Equal("Publication 'greeting'", transformWarnings[0].Source);
-        Assert.Equal("Publication 'greeting-v2'", transformWarnings[1].Source);
+        await Assert.That(transformWarnings.Count).IsEqualTo(2);
+        await Assert.That(transformWarnings[0].Source).IsEqualTo("Publication 'greeting'");
+        await Assert.That(transformWarnings[1].Source).IsEqualTo("Publication 'greeting-v2'");
     }
 
-    [Fact]
-    public void When_validated_twice_should_report_the_same_warnings_in_the_same_order()
+    [Test]
+    public async Task When_validated_twice_should_report_the_same_warnings_in_the_same_order()
     {
         // Arrange — the same configuration validated twice must produce identical warnings in identical order
         var first = ValidateTwoPublications(RegistryWithDescribableMapper())
@@ -87,6 +87,6 @@ public class ProducerTransformWarningDeterminismTests
             .Warnings.Where(w => w.Message.Contains(nameof(MyDescribableTransform))).Select(w => w.Source).ToList();
 
         // Assert
-        Assert.Equal(first, second);
+        await Assert.That(second).IsEqualTo(first);
     }
 }

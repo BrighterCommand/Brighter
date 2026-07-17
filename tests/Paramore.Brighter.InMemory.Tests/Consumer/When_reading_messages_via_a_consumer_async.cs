@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
@@ -12,7 +11,7 @@ public class AsyncInMemoryConsumerReceiveTests
     private readonly InMemoryConsumerAcknowledgeTests _inMemoryConsumerAcknowledgeTests = new InMemoryConsumerAcknowledgeTests();
     private readonly InMemoryConsumerRejectTests _inMemoryConsumerRejectTests = new InMemoryConsumerRejectTests();
 
-    [Fact]
+    [Test]
     public async Task When_reading_messages_via_a_consumer()
     {
         //arrange
@@ -35,7 +34,7 @@ public class AsyncInMemoryConsumerReceiveTests
         await consumer.AcknowledgeAsync(message);
 
         //assert
-        Assert.Equal(expectedMessage, message);
-        Assert.Empty(bus.Stream(routingKey));
+        await Assert.That(message).IsEqualTo(expectedMessage);
+        await Assert.That(bus.Stream(routingKey)).IsEmpty();
     }
 }

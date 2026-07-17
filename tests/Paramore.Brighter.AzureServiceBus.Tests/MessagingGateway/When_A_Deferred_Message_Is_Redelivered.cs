@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
@@ -16,7 +16,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 /// Fix: SequenceNumber is in ASBConstants.ReservedHeaders so it is never written
 /// to ApplicationProperties during requeue.
 /// </summary>
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class When_A_Deferred_Message_Is_Redelivered
 {
     private readonly AzureServiceBusMessageCreator _creator;
@@ -32,8 +32,8 @@ public class When_A_Deferred_Message_Is_Redelivered
         _creator = new AzureServiceBusMessageCreator(subscription);
     }
 
-    [Fact]
-    public void When_a_deferred_message_is_redelivered_it_does_not_throw_a_duplicate_key_exception()
+    [Test]
+    public async Task When_a_deferred_message_is_redelivered_it_does_not_throw_a_duplicate_key_exception()
     {
         // Arrange — first delivery from ASB
         var firstDelivery = new BrokeredMessage
@@ -56,9 +56,7 @@ public class When_A_Deferred_Message_Is_Redelivered
         // Simulate requeue: Brighter calls ConvertToServiceBusMessage and republishes.
         // SequenceNumber must NOT appear in ApplicationProperties of the requeued message.
         var requeued = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(brighterMessage);
-        Assert.False(requeued.ApplicationProperties.ContainsKey("SequenceNumber"),
-            "SequenceNumber must not be written to ApplicationProperties on requeue — " +
-            "it is a broker-assigned property and must stay in ReservedHeaders.");
+        await Assert.That(requeued.ApplicationProperties.ContainsKey("SequenceNumber")).IsFalse();
 
         // Arrange — second delivery (redelivery of the requeued message with the same sequence number)
         var secondDelivery = new BrokeredMessage
@@ -75,6 +73,6 @@ public class When_A_Deferred_Message_Is_Redelivered
 
         // Act & Assert — must not throw ArgumentException: duplicate key SequenceNumber
         var redelivered = _creator.MapToBrighterMessage(secondDelivery);
-        Assert.Equal(firstDelivery.SequenceNumber, redelivered.Header.Bag["SequenceNumber"]);
+        await Assert.That(redelivered.Header.Bag["SequenceNumber"]).IsEqualTo(firstDelivery.SequenceNumber);
     }
 }

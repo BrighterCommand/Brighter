@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.Parser;
 
@@ -20,7 +19,7 @@ public class WhenParsingTemplateWithOutboxConfigurationShouldRenderCorrectly : I
         _outputPath = Path.Combine(_testDirectory, "output.txt");
     }
     
-    [Fact]
+    [Test]
     public async Task When_parsing_template_with_outbox_configuration_should_render_correctly()
     {
         // Arrange
@@ -35,8 +34,8 @@ public class WhenParsingTemplateWithOutboxConfigurationShouldRenderCorrectly : I
 
         // Assert
         var result = await File.ReadAllTextAsync(_outputPath);
-        Assert.Contains("namespace MyApp.Tests", result);
-        Assert.Contains("public class SqlServerTests", result);
+        await Assert.That(result).Contains("namespace MyApp.Tests");
+        await Assert.That(result).Contains("public class SqlServerTests");
     }
 
     public void Dispose()

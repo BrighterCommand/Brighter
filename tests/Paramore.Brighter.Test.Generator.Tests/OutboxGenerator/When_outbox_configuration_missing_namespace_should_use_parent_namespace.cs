@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -21,7 +20,7 @@ public class WhenOutboxConfigurationMissingNamespaceShouldUseParentNamespace : I
         _logger = factory.CreateLogger<Generators.OutboxGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_outbox_configuration_missing_namespace_should_use_parent_namespace()
     {
         // Arrange
@@ -43,7 +42,7 @@ public class WhenOutboxConfigurationMissingNamespaceShouldUseParentNamespace : I
         await generator.GenerateAsync(configuration);
 
         // Assert - namespace should be inherited from parent configuration
-        Assert.Equal("MyApp.Tests", configuration.Outbox.Namespace);
+        await Assert.That(configuration.Outbox.Namespace).IsEqualTo("MyApp.Tests");
     }
 
     public void Dispose()

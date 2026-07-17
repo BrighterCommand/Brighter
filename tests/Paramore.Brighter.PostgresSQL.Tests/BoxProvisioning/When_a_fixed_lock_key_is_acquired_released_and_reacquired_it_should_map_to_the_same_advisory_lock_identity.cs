@@ -28,18 +28,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class StableLockKeyIdentityTests : IAsyncLifetime
+public class StableLockKeyIdentityTests
 {
     // The key derivation is a pure deterministic function of the lock key (SHA-256, big-endian),
     // so a fixed lock key must map to the same 64-bit advisory-lock identity on every acquisition
     // (AC-6, FR-4). Acquiring a fixed key, releasing it, and re-acquiring it on the same session,
     // then observing identical pg_locks (classid, objid) both times (with objsubid = 1, the
     // single-arg bigint overload), demonstrates the derivation is stable across repeated use.
-
     // Pooling is disabled so the session is a fresh backend with no residual advisory locks,
     // making the per-session pg_locks observation deterministic.
     private readonly string _connectionString =
@@ -49,7 +47,7 @@ public class StableLockKeyIdentityTests : IAsyncLifetime
 
     private NpgsqlConnection? _connection;
 
-    [Fact]
+    [Test]
     public async Task When_a_fixed_lock_key_is_acquired_released_and_reacquired_it_should_map_to_the_same_advisory_lock_identity()
     {
         // Arrange — ensure the database exists and open a single backend session.
@@ -66,19 +64,18 @@ public class StableLockKeyIdentityTests : IAsyncLifetime
         var firstIdentity = await SingleAdvisoryLockIdentity(_connection);
 
         // Act — release, then re-acquire the same fixed key and capture its identity again.
-        Assert.True(await advisoryLock.ReleaseAsync(_connection, _lockKey, CancellationToken.None));
+        await Assert.That(await advisoryLock.ReleaseAsync(_connection, _lockKey, CancellationToken.None)).IsTrue();
         await advisoryLock.AcquireAsync(_connection, _lockKey, timeout, CancellationToken.None);
         var secondIdentity = await SingleAdvisoryLockIdentity(_connection);
 
         // Assert — both acquisitions used the single-arg bigint overload and produced the identical
         //          (classid, objid) identity, proving the derivation is stable for a fixed key.
-        Assert.Equal(1, firstIdentity.Objsubid);
-        Assert.Equal(1, secondIdentity.Objsubid);
-        Assert.Equal((firstIdentity.Classid, firstIdentity.Objid),
-            (secondIdentity.Classid, secondIdentity.Objid));
+        await Assert.That(firstIdentity.Objsubid).IsEqualTo(1);
+        await Assert.That(secondIdentity.Objsubid).IsEqualTo(1);
+        await Assert.That((secondIdentity.Classid, secondIdentity.Objid)).IsEqualTo((firstIdentity.Classid, firstIdentity.Objid));
 
         // Cleanup — release the re-acquired lock.
-        Assert.True(await advisoryLock.ReleaseAsync(_connection, _lockKey, CancellationToken.None));
+        await Assert.That(await advisoryLock.ReleaseAsync(_connection, _lockKey, CancellationToken.None)).IsTrue();
     }
 
     private static async Task<(long Classid, long Objid, int Objsubid)> SingleAdvisoryLockIdentity(
@@ -90,14 +87,16 @@ public class StableLockKeyIdentityTests : IAsyncLifetime
             "SELECT classid::bigint, objid::bigint, objsubid FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid()";
 
         await using var reader = await command.ExecuteReaderAsync();
-        Assert.True(await reader.ReadAsync(), "Expected one advisory lock held on this session.");
+        await Assert.That(await reader.ReadAsync()).IsTrue().Because("Expected one advisory lock held on this session.");
         var identity = (reader.GetInt64(0), reader.GetInt64(1), reader.GetInt32(2));
-        Assert.False(await reader.ReadAsync(), "Expected exactly one advisory lock on this session.");
+        await Assert.That(await reader.ReadAsync()).IsFalse().Because("Expected exactly one advisory lock on this session.");
         return identity;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

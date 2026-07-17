@@ -31,7 +31,6 @@ using Paramore.Brighter.Extensions;
 using Polly.Registry;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
@@ -73,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new MessageBody("test"));
         }
 
-        [Fact]
+        [Test]
         public async Task When_a_confirmation_fails_should_log_warning_with_id_and_topic()
         {
             // Brighter's loggers are routed to the Serilog TestCorrelator sink by the test
@@ -95,8 +94,8 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                             && e.RenderMessage().Contains(_topic.Value))
                 .ToList();
 
-            Assert.Single(warnings);
-            Assert.DoesNotContain(logEvents, e => e.Level >= LogEventLevel.Error);
+            await Assert.That(warnings).HasSingleItem();
+            await Assert.That((logEvents).Any(e => e.Level >= LogEventLevel.Error)).IsFalse();
         }
     }
 }

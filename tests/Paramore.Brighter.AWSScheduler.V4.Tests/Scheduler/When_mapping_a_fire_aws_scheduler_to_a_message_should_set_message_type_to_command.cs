@@ -4,8 +4,8 @@ namespace Paramore.Brighter.AWSScheduler.V4.Tests.Scheduler;
 
 public class AwsSchedulerFiredMapperTests
 {
-    [Fact]
-    public void When_mapping_a_fire_aws_scheduler_to_a_message_should_set_message_type_to_command()
+    [Test]
+    public async Task When_mapping_a_fire_aws_scheduler_to_a_message_should_set_message_type_to_command()
     {
         // Arrange
         // FireAwsScheduler is a Command, so its wire message must be MT_COMMAND;
@@ -18,6 +18,6 @@ public class AwsSchedulerFiredMapperTests
         var message = mapper.MapToMessage(request, publication);
 
         // Assert
-        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
     }
 }

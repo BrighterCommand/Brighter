@@ -31,11 +31,10 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlProvisioningUnitOfWorkBeginAcquireThrowsTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkBeginAcquireThrowsTests
 {
     // Companion to the partial-init DisposeAsync test
     // (MySqlProvisioningUnitOfWorkBeginThrowsTests): that one
@@ -60,17 +59,18 @@ public class MySqlProvisioningUnitOfWorkBeginAcquireThrowsTests : IAsyncLifetime
     // with releaseResult=null so if Release IS called, it returns NULL and the UoW emits a
     // marker="NULL" Warning. After the F2 fix (swap the two assignment lines), Release is
     // never called and the Warning is never emitted.
-
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
     private readonly FakeMySqlAdvisoryLock _advisoryLock = new(
         releaseResult: null,
         throwOnAcquire: new TimeoutException("forced lock-acquisition failure for F2 reviewer test"));
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mysql_provisioning_uow_begin_acquire_throws_direct_rollback_should_be_clean_no_op()
     {
         // Arrange — capturing logger so we can assert on Warning emissions.
@@ -80,27 +80,27 @@ public class MySqlProvisioningUnitOfWorkBeginAcquireThrowsTests : IAsyncLifetime
         // Act — BeginAsync calls AcquireAsync which throws. Capture and discard the throw;
         // the contract under test is what happens NEXT when the caller (defensively) calls
         // RollbackAsync directly even though the runner contract says it would not.
-        var beginThrown = await Record.ExceptionAsync(() => uow.BeginAsync(
+        var beginThrown = await TestExceptionRecorder.CaptureAsync(() => uow.BeginAsync(
             lockResource: "test_lock_resource",
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None));
-        Assert.IsType<TimeoutException>(beginThrown);
+        await Assert.That(beginThrown).IsTypeOf<TimeoutException>();
 
-        var rollbackThrown = await Record.ExceptionAsync(() =>
+        var rollbackThrown = await TestExceptionRecorder.CaptureAsync(() =>
             uow.RollbackAsync(CancellationToken.None));
 
         // Assert — RollbackAsync did not throw (disposal-style semantics).
-        Assert.Null(rollbackThrown);
+        await Assert.That(rollbackThrown).IsNull();
 
         // Assert — RollbackAsync did NOT call ReleaseAsync on the never-acquired lock.
         // Release on a never-acquired lock returns NULL and emits a "Brighter defect"
         // Warning — both of which would mislead an operator trying to diagnose the
         // original acquisition failure.
-        Assert.Null(_advisoryLock.ReleasedKey);
+        await Assert.That(_advisoryLock.ReleasedKey).IsNull();
 
         // Assert — no Warning emitted. The original Acquire failure is the only event the
         // operator should be reasoning about; a release-side diagnostic would add noise.
         var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Empty(warnings);
+        await Assert.That(warnings).IsEmpty();
     }
 }

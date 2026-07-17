@@ -1,22 +1,22 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 {
-    [Trait("Category", "MSSQL")]
-    public class PurgeTestAsync : IAsyncDisposable, IDisposable
+    [Category("MSSQL")]
+    public class PurgeTestAsync : IAsyncDisposable
     {
         private readonly string _queueName = Guid.NewGuid().ToString();
-        private readonly IAmAProducerRegistry _producerRegistry;
-        private readonly IAmAMessageConsumerAsync _consumer;
-        private readonly RoutingKey _routingKey;
+        private IAmAProducerRegistry _producerRegistry;
+        private IAmAMessageConsumerAsync _consumer;
+        private RoutingKey _routingKey;
 
-        public PurgeTestAsync()
+        [Before(Test)]
+        public async Task Setup()
         {
             var testHelper = new MsSqlTestHelper();
             testHelper.SetupQueueDb();
@@ -27,16 +27,16 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 new SubscriptionName(_queueName),
                 new ChannelName(_routingKey.Value), _routingKey,
                 messagePumpType: MessagePumpType.Proactor);
-            
-            _producerRegistry = new MsSqlProducerRegistryFactory(
+
+            _producerRegistry = await new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration,
                 [new() { Topic = _routingKey }]
-            ).CreateAsync().Result;
-            
+            ).CreateAsync();
+
             _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).CreateAsync(sub);
         }
 
-        [Fact]
+        [Test]
         public async Task When_queue_is_Purged()
         {
             IAmAMessageConsumerAsync consumer = _consumer;
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             // Now read those messages in order
             var firstMessage = await ConsumeMessagesAsync(consumer);
             var message = firstMessage.First();
-            Assert.Equal(msgId, message.Id);
+            await Assert.That(message.Id).IsEqualTo(msgId);
 
             await _consumer.PurgeAsync();
 
@@ -54,7 +54,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             var nextMessage = await ConsumeMessagesAsync(consumer);
             message = nextMessage.First();
 
-            Assert.Equal(new Message(), message);
+            await Assert.That(message).IsEqualTo(new Message());
         }
 
         private async Task<string> SendMessageAsync()
@@ -92,7 +92,8 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             return messages;
         }
 
-        public void Dispose()
+        [After(Test)]
+        public async Task Cleanup()
         {
             ((IAmAMessageConsumerSync)_consumer).Dispose();
             _producerRegistry.Dispose();

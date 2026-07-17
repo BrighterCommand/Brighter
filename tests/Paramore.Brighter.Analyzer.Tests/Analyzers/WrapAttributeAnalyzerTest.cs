@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis.Testing;
+using Microsoft.CodeAnalysis.Testing;
 using Paramore.Brighter.Analyzer.Analyzers;
 using Paramore.Brighter.Analyzer.Tests.Analyzers;
 
@@ -7,7 +7,7 @@ namespace Paramore.Brighter.Analyzer.Test.Analyzers
     public class WrapAttributeAnalyzerTest: BaseAnalyzerTest<WrapAttributeAnalyzer>
     {
 
-        [Fact]
+        [Test]
         public async Task When_Adding_Attribute_To_MessageMapper()
         {
 

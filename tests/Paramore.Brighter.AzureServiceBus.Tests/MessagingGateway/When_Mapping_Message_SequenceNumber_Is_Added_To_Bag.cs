@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Text;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
+using System.Threading.Tasks;
 
 // ASBConstants is internal to the gateway assembly; tests use the agreed
 // public contract string directly so they act as a stability guard too.
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
-[Trait("Category", "ASB")]
+[Property("Category", "ASB")]
 public class AzureServiceBusMessageSequenceNumberTests
 {
     private readonly AzureServiceBusMessageCreator _creator;
@@ -26,8 +26,8 @@ public class AzureServiceBusMessageSequenceNumberTests
         _creator = new AzureServiceBusMessageCreator(subscription);
     }
 
-    [Fact]
-    public void When_mapping_a_message_the_sequence_number_is_added_to_the_header_bag()
+    [Test]
+    public async Task When_mapping_a_message_the_sequence_number_is_added_to_the_header_bag()
     {
         // Arrange
         const long expectedSequenceNumber = 12345678L;
@@ -50,12 +50,12 @@ public class AzureServiceBusMessageSequenceNumberTests
         var message = _creator.MapToBrighterMessage(brokeredMessage);
 
         // Assert
-        Assert.True(message.Header.Bag.ContainsKey("SequenceNumber"));
-        Assert.Equal(expectedSequenceNumber, message.Header.Bag["SequenceNumber"]);
+        await Assert.That(message.Header.Bag.ContainsKey("SequenceNumber")).IsTrue();
+        await Assert.That(message.Header.Bag["SequenceNumber"]).IsEqualTo(expectedSequenceNumber);
     }
 
-    [Fact]
-    public void When_mapping_a_message_with_a_zero_sequence_number_it_is_still_present_in_the_bag()
+    [Test]
+    public async Task When_mapping_a_message_with_a_zero_sequence_number_it_is_still_present_in_the_bag()
     {
         // Arrange
         var brokeredMessage = new BrokeredMessage
@@ -76,7 +76,7 @@ public class AzureServiceBusMessageSequenceNumberTests
         var message = _creator.MapToBrighterMessage(brokeredMessage);
 
         // Assert
-        Assert.True(message.Header.Bag.ContainsKey("SequenceNumber"));
-        Assert.Equal(0L, message.Header.Bag["SequenceNumber"]);
+        await Assert.That(message.Header.Bag.ContainsKey("SequenceNumber")).IsTrue();
+        await Assert.That(message.Header.Bag["SequenceNumber"]).IsEqualTo(0L);
     }
 }

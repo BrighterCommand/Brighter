@@ -64,7 +64,7 @@ namespace GreetingsSender
                     }
                 });
 
-                var producerRegistry = new SnsProducerRegistryFactory(
+                var producerRegistry = await new SnsProducerRegistryFactory(
                     awsConnection,
                     [
                         new SnsPublication<GreetingEvent>
@@ -80,7 +80,7 @@ namespace GreetingsSender
                             }
                         }
                     ]
-                ).Create();
+                ).CreateAsync();
 
                 serviceCollection
                     .AddBrighter()

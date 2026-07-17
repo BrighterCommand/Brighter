@@ -38,11 +38,10 @@ using Paramore.Brighter.Observability;
 using Polly.Registry;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
-    [Collection("Observability")]
+    [System.Obsolete]
     public class ConfirmationSuccessNestedSpanTests : IDisposable
     {
         private const string TestSource = "Paramore.Brighter.Tests";
@@ -113,7 +112,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             a.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingOperationType && t.Value == "settle")
             && a.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && t.Value == _message.Id.Value));
 
-        [Fact]
+        [Test]
         public async Task When_a_confirmation_succeeds_should_nest_dispatch_under_span()
         {
             // Arrange: the message is recorded in the outbox as outstanding, and a publish span is
@@ -129,26 +128,26 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
 
             // Assert: delivery is frozen — the message is now marked dispatched in the outbox.
             var dispatched = _outbox.DispatchedMessages(TimeSpan.Zero, _requestContext).ToList();
-            Assert.Contains(dispatched, m => m.Id == _message.Id);
+            await Assert.That((dispatched).Any(m => m.Id == _message.Id)).IsTrue();
 
             // Assert: a distinct confirmation (settle) span was emitted, linked to the publish span.
             var confirmation = ConfirmationSpan();
-            Assert.NotNull(confirmation);
-            Assert.NotEqual(publishSpan.SpanId, confirmation!.SpanId);
+            await Assert.That(confirmation).IsNotNull();
+            await Assert.That(confirmation!.SpanId).IsNotEqualTo(publishSpan.SpanId);
             var links = confirmation.Links.ToArray();
-            Assert.Single(links);
-            Assert.Equal(publishContext, links[0].Context);
+            await Assert.That(links).HasSingleItem();
+            await Assert.That(links[0].Context).IsEqualTo(publishContext);
 
             // Assert: the MarkDispatched DB span nests under the confirmation span (C-6 fix) — its
             // parent is the confirmation span's id specifically, not merely some ambient parent.
             var dbSpan = _exportedActivities.SingleOrDefault(a =>
                 a.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == MarkDispatchedOperation)
                 && a.TraceId == confirmation.TraceId);
-            Assert.NotNull(dbSpan);
-            Assert.Equal(confirmation.SpanId, dbSpan!.ParentSpanId);
+            await Assert.That(dbSpan).IsNotNull();
+            await Assert.That(dbSpan!.ParentSpanId).IsEqualTo(confirmation.SpanId);
         }
 
-        [Fact]
+        [Test]
         public async Task When_a_confirmation_succeeds_should_not_warn_or_trip()
         {
             // Arrange: the message is recorded in the outbox as outstanding.
@@ -162,12 +161,12 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
 
             // Assert: the sent log is preserved at Information and no Warning is raised (AC-13).
             var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
-            Assert.Contains(logEvents, e =>
-                e.Level == LogEventLevel.Information && e.RenderMessage().Contains(_message.Id.Value));
-            Assert.DoesNotContain(logEvents, e => e.Level == LogEventLevel.Warning);
+            await Assert.That(logEvents.Any(e =>
+                e.Level == LogEventLevel.Information && e.RenderMessage().Contains(_message.Id.Value))).IsTrue();
+            await Assert.That((logEvents).Any(e => e.Level == LogEventLevel.Warning)).IsFalse();
 
             // Assert: a successful confirmation never trips the breaker.
-            Assert.Empty(_circuitBreaker.TrippedTopics);
+            await Assert.That(_circuitBreaker.TrippedTopics).IsEmpty();
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,24 +22,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 public class MigrationVersionRoundTripTests
 {
-    [Fact]
-    public void When_a_migration_version_is_created_from_an_int_it_should_expose_the_value()
+    [Test]
+    public async Task When_a_migration_version_is_created_from_an_int_it_should_expose_the_value()
     {
         //Arrange
         MigrationVersion v = 3;
 
         //Act + Assert
-        Assert.Equal(3, v.Value);
+        await Assert.That(v.Value).IsEqualTo(3);
     }
 
-    [Fact]
-    public void When_a_migration_version_is_implicitly_converted_to_int_it_should_yield_the_original()
+    [Test]
+    public async Task When_a_migration_version_is_implicitly_converted_to_int_it_should_yield_the_original()
     {
         //Arrange
         MigrationVersion v = 3;
@@ -47,33 +47,33 @@ public class MigrationVersionRoundTripTests
         int i = v;
 
         //Assert
-        Assert.Equal(3, i);
+        await Assert.That(i).IsEqualTo(3);
     }
 
-    [Fact]
-    public void When_to_string_is_called_on_a_migration_version_it_should_return_the_number()
+    [Test]
+    public async Task When_to_string_is_called_on_a_migration_version_it_should_return_the_number()
     {
         //Arrange
         MigrationVersion v = new(3);
 
         //Act + Assert
-        Assert.Equal("3", v.ToString());
+        await Assert.That(v.ToString()).IsEqualTo("3");
     }
 
-    [Fact]
-    public void When_two_migration_versions_have_the_same_int_they_should_be_equal()
+    [Test]
+    public async Task When_two_migration_versions_have_the_same_int_they_should_be_equal()
     {
         //Arrange
         var a = new MigrationVersion(3);
         var b = (MigrationVersion)3;
 
         //Act + Assert
-        Assert.Equal(a, b);
-        Assert.True(a == b);
+        await Assert.That(b).IsEqualTo(a);
+        await Assert.That(a == b).IsTrue();
     }
 
-    [Fact]
-    public void When_migration_version_participates_in_int_arithmetic_it_should_yield_the_correct_result()
+    [Test]
+    public async Task When_migration_version_participates_in_int_arithmetic_it_should_yield_the_correct_result()
     {
         //Arrange — FR-4: arithmetic via implicit → int
         var prev = (MigrationVersion)1;
@@ -82,23 +82,23 @@ public class MigrationVersionRoundTripTests
         int next = prev + 1;
 
         //Assert
-        Assert.Equal(2, next);
+        await Assert.That(next).IsEqualTo(2);
     }
 
-    [Fact]
-    public void When_comparing_two_migration_versions_the_lower_value_should_be_less_than_the_higher()
+    [Test]
+    public async Task When_comparing_two_migration_versions_the_lower_value_should_be_less_than_the_higher()
     {
         //Arrange
         var lower = (MigrationVersion)1;
         var higher = (MigrationVersion)2;
 
         //Act + Assert
-        Assert.True(lower < higher);
-        Assert.False(higher < lower);
+        await Assert.That(lower < higher).IsTrue();
+        await Assert.That(higher < lower).IsFalse();
     }
 
-    [Fact]
-    public void When_compare_to_is_called_it_should_order_by_value()
+    [Test]
+    public async Task When_compare_to_is_called_it_should_order_by_value()
     {
         //Arrange
         var v1 = new MigrationVersion(1);
@@ -106,8 +106,8 @@ public class MigrationVersionRoundTripTests
         var v1b = new MigrationVersion(1);
 
         //Act + Assert
-        Assert.True(v1.CompareTo(v2) < 0);
-        Assert.True(v2.CompareTo(v1) > 0);
-        Assert.Equal(0, v1.CompareTo(v1b));
+        await Assert.That(v1.CompareTo(v2) < 0).IsTrue();
+        await Assert.That(v2.CompareTo(v1) > 0).IsTrue();
+        await Assert.That(v1.CompareTo(v1b)).IsEqualTo(0);
     }
 }

@@ -31,11 +31,10 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlProvisioningUnitOfWorkRollbackReleaseThrowsTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkRollbackReleaseThrowsTests
 {
     // Per ADR 0058 §B.3: RollbackAsync MUST NOT throw — disposal-style semantics. The runner's
     // catch path is `catch { await uow.RollbackAsync(CancellationToken.None); throw; }`, so any
@@ -50,14 +49,15 @@ public class MySqlProvisioningUnitOfWorkRollbackReleaseThrowsTests : IAsyncLifet
     //
     // This test pins that the release-side throw is swallowed and logged: best-effort, no
     // rethrow, Warning entry preserving the lock-resource context.
-
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mysql_provisioning_uow_rollback_release_throws_it_should_log_without_throwing()
     {
         // Arrange — release throws (simulates a dead connection / driver fault during
@@ -78,20 +78,20 @@ public class MySqlProvisioningUnitOfWorkRollbackReleaseThrowsTests : IAsyncLifet
 
         // Act — RollbackAsync MUST NOT throw even though ReleaseAsync does. This is the
         // disposal-style contract the runner's catch path depends on.
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(CancellationToken.None));
 
         // Assert — RollbackAsync swallowed the release-side throw.
-        Assert.Null(thrown);
+        await Assert.That(thrown).IsNull();
 
         // Assert — ReleaseAsync was attempted (lock-key recorded before the throw), so the
         // unwind genuinely tried to release rather than skipping it.
-        Assert.Equal("test_lock_resource", advisoryLock.ReleasedKey);
+        await Assert.That(advisoryLock.ReleasedKey).IsEqualTo("test_lock_resource");
 
         // Assert — a Warning was logged naming the lock resource and carrying the original
         // exception so operators can correlate against the broken connection.
         var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
-        Assert.Contains("test_lock_resource", warnings[0].Message, StringComparison.Ordinal);
-        Assert.Same(releaseFault, warnings[0].Exception);
+        await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warnings[0].Message).Contains("test_lock_resource");
+        await Assert.That(warnings[0].Exception).IsSameReferenceAs(releaseFault);
     }
 }

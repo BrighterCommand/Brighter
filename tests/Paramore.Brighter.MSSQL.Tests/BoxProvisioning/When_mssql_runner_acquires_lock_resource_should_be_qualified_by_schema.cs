@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -45,13 +44,12 @@ public class MsSqlRunnerLockResourceSchemaQualificationTests
     // We use a fake IMsSqlAdvisoryLock that throws AFTER recording the resource — that way
     // the runner returns immediately and we don't depend on the schema or table actually
     // existing in the test database.
-
     private readonly string _connectionString = Configuration.DefaultConnectingString;
 
-    [Theory]
-    [InlineData(null, "dbo")]
-    [InlineData("dbo", "dbo")]
-    [InlineData("billing", "billing")]
+    [Test]
+    [Arguments(null, "dbo")]
+    [Arguments("dbo", "dbo")]
+    [Arguments("billing", "billing")]
     public async Task When_mssql_runner_acquires_lock_resource_should_be_qualified_by_schema(
         string? configuredSchema, string expectedSchemaInLockResource)
     {
@@ -79,8 +77,6 @@ public class MsSqlRunnerLockResourceSchemaQualificationTests
                 tableName, configuredSchema, BoxType.Outbox, freshHint));
 
         //Assert
-        Assert.Equal(
-            $"BrighterMigration_{expectedSchemaInLockResource}.{tableName}",
-            fakeLock.AcquiredResource);
+        await Assert.That(fakeLock.AcquiredResource).IsEqualTo($"BrighterMigration_{expectedSchemaInLockResource}.{tableName}");
     }
 }

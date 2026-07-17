@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -11,12 +11,11 @@ using Paramore.Brighter.Transformers.AWS.V4;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;
-using Xunit;
 using Policy = Polly.Policy;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class S3LuggageUploadTests
 {
     private readonly IHttpClientFactory _httpClientFactory;
@@ -31,7 +30,7 @@ public class S3LuggageUploadTests
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
     }
     
-    [Fact]
+    [Test]
     public async Task When_uploading_luggage_to_S3()
     {
         //arrange
@@ -59,12 +58,12 @@ public class S3LuggageUploadTests
 
         //assert
         //do we have a claim?
-        Assert.True((await luggageStore.HasClaimAsync(claim)));
+        await Assert.That((await luggageStore.HasClaimAsync(claim))).IsTrue();
         
         //check for the contents indicated by the claim id on S3
         var result = await luggageStore.RetrieveAsync(claim);
         var resultAsString = await new StreamReader(result).ReadToEndAsync();
-        Assert.Equal(testContent, resultAsString);
+        await Assert.That(resultAsString).IsEqualTo(testContent);
 
         await luggageStore.DeleteAsync(claim);
 

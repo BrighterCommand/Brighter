@@ -21,7 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -32,5 +31,5 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 // per-test Assert.Single(_exportedActivities) check then sometimes counts 2.
 // Serialising both classes through this collection removes the overlap without
 // having to filter exported activities by source-name + tag in every assertion.
-[CollectionDefinition("BoxProvisioningObservability", DisableParallelization = true)]
+[System.Obsolete]
 public class BoxProvisioningObservabilityCollection;

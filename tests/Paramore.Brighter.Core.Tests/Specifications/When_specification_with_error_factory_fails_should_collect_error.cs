@@ -19,141 +19,113 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Specifications;
-
 public class SpecificationValidationTests
 {
-    [Fact]
-    public void When_pure_predicate_fails_should_return_empty_results_from_visitor()
+    [Test]
+    public async Task When_pure_predicate_fails_should_return_empty_results_from_visitor()
     {
         // Arrange — pure predicate constructor, no validation metadata
         var spec = new Specification<string>(s => s.Length > 5);
         var collector = new ValidationResultCollector<string>();
-
         // Act
         var satisfied = spec.IsSatisfiedBy("abc");
         var results = spec.Accept(collector).ToList();
-
         // Assert
-        Assert.False(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_simple_rule_fails_should_collect_validation_error()
+    [Test]
+    public async Task When_simple_rule_fails_should_collect_validation_error()
     {
         // Arrange — simple rule: predicate + error factory
-        var spec = new Specification<string>(
-            s => s.Length > 5,
-            s => new ValidationError(
-                ValidationSeverity.Error,
-                "TestSource",
-                $"String '{s}' is too short"));
+        var spec = new Specification<string>(s => s.Length > 5, s => new ValidationError(ValidationSeverity.Error, "TestSource", $"String '{s}' is too short"));
         var collector = new ValidationResultCollector<string>();
-
         // Act
         var satisfied = spec.IsSatisfiedBy("abc");
         var results = spec.Accept(collector).ToList();
-
         // Assert
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.False(results[0].Success);
-        Assert.Equal(ValidationSeverity.Error, results[0].Error!.Severity);
-        Assert.Equal("TestSource", results[0].Error!.Source);
-        Assert.Contains("abc", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Success).IsFalse();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Error);
+        await Assert.That(results[0].Error!.Source).IsEqualTo("TestSource");
+        await Assert.That(results[0].Error!.Message).Contains("abc");
     }
 
-    [Fact]
-    public void When_simple_rule_passes_should_return_empty_results()
+    [Test]
+    public async Task When_simple_rule_passes_should_return_empty_results()
     {
         // Arrange
-        var spec = new Specification<string>(
-            s => s.Length > 2,
-            s => new ValidationError(ValidationSeverity.Error, "TestSource", "too short"));
+        var spec = new Specification<string>(s => s.Length > 2, s => new ValidationError(ValidationSeverity.Error, "TestSource", "too short"));
         var collector = new ValidationResultCollector<string>();
-
         // Act
         var satisfied = spec.IsSatisfiedBy("hello");
         var results = spec.Accept(collector).ToList();
-
         // Assert
-        Assert.True(satisfied);
-        Assert.Empty(results);
+        await Assert.That(satisfied).IsTrue();
+        await Assert.That(results).IsEmpty();
     }
 
-    [Fact]
-    public void When_collapsed_rule_returns_failures_should_collect_all()
+    [Test]
+    public async Task When_collapsed_rule_returns_failures_should_collect_all()
     {
         // Arrange — collapsed rule: evaluator returns multiple results
-        var spec = new Specification<int>(n => new List<ValidationResult>
-        {
-            ValidationResult.Fail(new ValidationError(ValidationSeverity.Error, "Item1", "first error")),
-            ValidationResult.Ok(),
-            ValidationResult.Fail(new ValidationError(ValidationSeverity.Warning, "Item3", "second error"))
-        });
+        var spec = new Specification<int>(n => new List<ValidationResult> { ValidationResult.Fail(new ValidationError(ValidationSeverity.Error, "Item1", "first error")), ValidationResult.Ok(), ValidationResult.Fail(new ValidationError(ValidationSeverity.Warning, "Item3", "second error")) });
         var collector = new ValidationResultCollector<int>();
-
         // Act
         var satisfied = spec.IsSatisfiedBy(42);
         var results = spec.Accept(collector).ToList();
-
         // Assert — IsSatisfiedBy returns false because not all results are successful
-        Assert.False(satisfied);
-        Assert.Equal(3, results.Count);
-        Assert.False(results[0].Success);
-        Assert.True(results[1].Success);
-        Assert.False(results[2].Success);
-        Assert.Equal(ValidationSeverity.Warning, results[2].Error!.Severity);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results.Count).IsEqualTo(3);
+        await Assert.That(results[0].Success).IsFalse();
+        await Assert.That(results[1].Success).IsTrue();
+        await Assert.That(results[2].Success).IsFalse();
+        await Assert.That(results[2].Error!.Severity).IsEqualTo(ValidationSeverity.Warning);
     }
 
-    [Fact]
-    public void When_predicate_throws_should_produce_error_severity_result()
+    [Test]
+    public async Task When_predicate_throws_should_produce_error_severity_result()
     {
         // Arrange — predicate that throws an exception
-        var spec = new Specification<string>(
-            s => throw new InvalidOperationException("boom"),
-            s => new ValidationError(ValidationSeverity.Warning, "Test", "unused"));
+        var spec = new Specification<string>(s => throw new InvalidOperationException("boom"), s => new ValidationError(ValidationSeverity.Warning, "Test", "unused"));
         var collector = new ValidationResultCollector<string>();
-
         // Act
         var satisfied = spec.IsSatisfiedBy("test");
         var results = spec.Accept(collector).ToList();
-
         // Assert — exception is caught, produces Error-severity result
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.False(results[0].Success);
-        Assert.Equal(ValidationSeverity.Error, results[0].Error!.Severity);
-        Assert.Contains("boom", results[0].Error!.Message);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Success).IsFalse();
+        await Assert.That(results[0].Error!.Severity).IsEqualTo(ValidationSeverity.Error);
+        await Assert.That(results[0].Error!.Message).Contains("boom");
     }
 
-    [Fact]
-    public void When_visitor_called_without_re_evaluating_should_return_cached_results()
+    [Test]
+    public async Task When_visitor_called_without_re_evaluating_should_return_cached_results()
     {
         // Arrange — track evaluation count via closure
         var evaluationCount = 0;
-        var spec = new Specification<string>(
-            s => { evaluationCount++; return s.Length > 5; },
-            s => new ValidationError(ValidationSeverity.Error, "Test", "too short"));
+        var spec = new Specification<string>(s =>
+        {
+            evaluationCount++;
+            return s.Length > 5;
+        }, s => new ValidationError(ValidationSeverity.Error, "Test", "too short"));
         var collector = new ValidationResultCollector<string>();
-
         // Act — evaluate once, then visit twice
         spec.IsSatisfiedBy("abc");
         var results1 = spec.Accept(collector).ToList();
         var results2 = spec.Accept(collector).ToList();
-
         // Assert — predicate evaluated only once; visitor reads cached results
-        Assert.Equal(1, evaluationCount);
-        Assert.Single(results1);
-        Assert.Single(results2);
+        await Assert.That(evaluationCount).IsEqualTo(1);
+        await Assert.That(results1).HasSingleItem();
+        await Assert.That(results2).HasSingleItem();
     }
 }

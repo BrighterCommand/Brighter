@@ -26,13 +26,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Confirmation;
 
 public class ConcurrentStartGuardTests
 {
-    [Fact]
+    [Test]
     public async Task When_concurrent_first_enqueuers_should_start_one_worker()
     {
         // Arrange — many threads race to be the first enqueuer while _worker is still null
@@ -80,7 +79,7 @@ public class ConcurrentStartGuardTests
 
         // Assert — exactly N bus writes and N confirmations; no duplicates, no drops
         var busMessages = bus.Stream(new RoutingKey(topic)).ToList();
-        Assert.Equal(threadCount, busMessages.Count);
-        Assert.Equal(threadCount, busMessages.Select(m => m.Id).Distinct().Count());
+        await Assert.That(busMessages.Count).IsEqualTo(threadCount);
+        await Assert.That(busMessages.Select(m => m.Id).Distinct().Count()).IsEqualTo(threadCount);
     }
 }

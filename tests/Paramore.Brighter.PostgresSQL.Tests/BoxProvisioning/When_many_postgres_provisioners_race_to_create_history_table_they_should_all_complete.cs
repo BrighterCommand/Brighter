@@ -33,7 +33,6 @@ using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -47,8 +46,8 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 // minimal-change escape hatch — no test infrastructure rewrite needed and the savepoint guard the
 // test was added to defend stays covered by the local run + the same project's other concurrent
 // provisioning tests (SpannerConcurrent* mirror the same shape on Spanner).
-[Trait("Fragile", "CI")]
-public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
+[Property("Fragile", "CI")]
+public class PostgreSqlManyProvisionersHistoryRaceTests
 {
     private const int RacerCount = 16;
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
@@ -61,7 +60,7 @@ public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
             .ToArray();
     }
 
-    [Fact]
+    [Test]
     public async Task When_many_postgres_provisioners_race_to_create_history_table_they_should_all_complete()
     {
         // Arrange — 16 racers each provision a distinct outbox table, so each holds its own
@@ -109,8 +108,8 @@ public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
 
         // Assert — none of the racers should have thrown. Use WhenAll's aggregation so a single
         // failure surfaces a meaningful PostgresException rather than a "task faulted" abstraction.
-        var aggregate = await Record.ExceptionAsync(() => Task.WhenAll(racers));
-        Assert.Null(aggregate);
+        var aggregate = await TestExceptionRecorder.CaptureAsync(() => Task.WhenAll(racers));
+        await Assert.That(aggregate).IsNull();
 
         // Force the OTel exporter to flush so completed activities land in exportedActivities.
         tracerProvider.ForceFlush();
@@ -122,10 +121,7 @@ public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
         var swallowEvents = exportedActivities
             .SelectMany(a => a.Events)
             .Count(e => e.Name == BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed);
-        Assert.True(
-            swallowEvents > 0,
-            $"Expected at least one '{BrighterSemanticConventions.BoxMigrationEventHistoryTableRaceSwallowed}' " +
-            $"event across {RacerCount} racers; got none. The race window did not fire.");
+        await Assert.That(swallowEvents > 0).IsTrue();
     }
 
     private async Task DropHistoryTableAsync()
@@ -137,8 +133,10 @@ public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

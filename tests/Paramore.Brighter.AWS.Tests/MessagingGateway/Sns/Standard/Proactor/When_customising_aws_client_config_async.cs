@@ -6,14 +6,13 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
-[Trait("Category", "AWS")]
-public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposable
+[Category("AWS")]
+public class CustomisingAwsClientConfigTestsAsync : IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelAsync _channel;
@@ -67,7 +66,7 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
             );                                                                                      
     }
 
-    [Fact]
+    [Test]
     public async Task When_customising_aws_client_config()
     {
         //arrange
@@ -78,22 +77,23 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
         var message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
         //clear the queue
-        Assert.NotEqual(MessageType.MT_NONE, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
         await _channel.AcknowledgeAsync(message);
 
         //publish_and_subscribe_should_use_custom_http_client_factory
-        Assert.Contains("async_pub", InterceptingDelegatingHandler.RequestCount);
-        Assert.True((InterceptingDelegatingHandler.RequestCount["async_pub"]) > (0));
+        await Assert.That(InterceptingDelegatingHandler.RequestCount).ContainsKey("async_pub");
+        await Assert.That((InterceptingDelegatingHandler.RequestCount["async_pub"]) > (0)).IsTrue();
         
-        Assert.Contains("async_pub", InterceptingDelegatingHandler.RequestCount);
-        Assert.True((InterceptingDelegatingHandler.RequestCount["async_pub"]) > (0));
+        await Assert.That(InterceptingDelegatingHandler.RequestCount).ContainsKey("async_pub");
+        await Assert.That((InterceptingDelegatingHandler.RequestCount["async_pub"]) > (0)).IsTrue();
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         //Clean up resources that we have created
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

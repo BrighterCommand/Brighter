@@ -29,11 +29,10 @@ using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.Legacy;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
+public class MySqlRunnerMidChainFailureResumeTests
 {
     private const int SeedVersion = 3;
     private const int BrokenVersion = 6;
@@ -44,7 +43,7 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied_version_on_next_invocation()
     {
         //Arrange — seed an outbox at V3 (no history) plus a marker row to prove preservation.
@@ -70,26 +69,22 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
         //The runner's three-path branching emits ONE synthetic row at the detected version (V3),
         //not one row per version 1..3 — so V1/V2 history rows must be absent.
         var rowsByVersion = await GetHistoryRowsByVersion();
-        Assert.Equal(3, rowsByVersion.Count);
-        Assert.True(rowsByVersion.ContainsKey(SeedVersion));
-        Assert.True(rowsByVersion.ContainsKey(SeedVersion + 1));
-        Assert.True(rowsByVersion.ContainsKey(SeedVersion + 2));
-        Assert.StartsWith($"bootstrap: detected at V{SeedVersion}", rowsByVersion[SeedVersion]);
-        Assert.False(
-            rowsByVersion[SeedVersion + 1].StartsWith("bootstrap:", StringComparison.Ordinal),
-            "V4 should be an applied migration row, not a synthetic bootstrap row");
-        Assert.False(
-            rowsByVersion[SeedVersion + 2].StartsWith("bootstrap:", StringComparison.Ordinal),
-            "V5 should be an applied migration row, not a synthetic bootstrap row");
+        await Assert.That(rowsByVersion.Count).IsEqualTo(3);
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion)).IsTrue();
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion + 1)).IsTrue();
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion + 2)).IsTrue();
+        await Assert.That(rowsByVersion[SeedVersion]).StartsWith($"bootstrap: detected at V{SeedVersion}");
+        await Assert.That(rowsByVersion[SeedVersion + 1].StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse().Because("V4 should be an applied migration row, not a synthetic bootstrap row");
+        await Assert.That(rowsByVersion[SeedVersion + 2].StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse().Because("V5 should be an applied migration row, not a synthetic bootstrap row");
 
         //Assert — table shape reflects V5 (CloudEvents Source column committed) but not V6.
         var columnsAfterFailure = await GetTableColumns();
-        Assert.Contains("PartitionKey", columnsAfterFailure); // V4 ALTER committed
-        Assert.Contains("Source", columnsAfterFailure);       // V5 ALTER committed
-        Assert.DoesNotContain("WorkflowId", columnsAfterFailure); // V6 never applied (script threw before ALTER)
+        await Assert.That(columnsAfterFailure).Contains("PartitionKey"); // V4 ALTER committed
+        await Assert.That(columnsAfterFailure).Contains("Source");       // V5 ALTER committed
+        await Assert.That(columnsAfterFailure).DoesNotContain("WorkflowId"); // V6 never applied (script threw before ALTER)
 
         //Assert — seeded marker row preserved.
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
 
         //Act + Assert (2) — retry with the real migration list via the provisioner.
         var realRunner = new MySqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
@@ -103,21 +98,19 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
 
         //Assert — V6 + V7 now applied; total exactly 5 history rows (V3 synthetic + V4..V7 applied).
         var rowsAfterRetry = await GetHistoryRowsByVersion();
-        Assert.Equal(5, rowsAfterRetry.Count);
+        await Assert.That(rowsAfterRetry.Count).IsEqualTo(5);
 
         for (var v = SeedVersion + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            Assert.True(rowsAfterRetry.ContainsKey(v), $"Expected applied row for V{v}");
-            Assert.False(
-                rowsAfterRetry[v].StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be an applied migration row on retry");
+            await Assert.That(rowsAfterRetry.ContainsKey(v)).IsTrue().Because($"Expected applied row for V{v}");
+            await Assert.That(rowsAfterRetry[v].StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse().Because($"V{v} should be an applied migration row on retry");
         }
 
         //Assert — table now at V7 shape with marker still present.
         var columnsAfterRetry = await GetTableColumns();
-        Assert.Contains("WorkflowId", columnsAfterRetry); // V6 applied on retry
-        Assert.Contains("DataRef", columnsAfterRetry);    // V7 applied on retry
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(columnsAfterRetry).Contains("WorkflowId"); // V6 applied on retry
+        await Assert.That(columnsAfterRetry).Contains("DataRef");    // V7 applied on retry
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private async Task SeedMarkerRow()
@@ -188,8 +181,10 @@ ORDER BY `MigrationVersion`";
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

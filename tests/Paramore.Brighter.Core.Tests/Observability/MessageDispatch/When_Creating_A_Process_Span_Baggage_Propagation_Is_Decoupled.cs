@@ -28,7 +28,7 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
@@ -48,8 +48,8 @@ public class CreateProcessSpanBaggageDecoupledObservabilityTests : IDisposable
             .Build();
     }
 
-    [Fact]
-    public void When_creating_a_process_span_baggage_propagation_is_decoupled()
+    [Test]
+    public async Task When_creating_a_process_span_baggage_propagation_is_decoupled()
     {
         //"bad=value" is rejected by Baggage validation; CreateSpan no longer propagates baggage, so it must not throw
         var message = new Message(
@@ -60,11 +60,11 @@ public class CreateProcessSpanBaggageDecoupledObservabilityTests : IDisposable
         var processSpan = _tracer.CreateSpan(MessagePumpSpanOperation.Process, message, MessagingSystem.InternalBus);
 
         //Assert
-        Assert.NotNull(processSpan);
+        await Assert.That(processSpan).IsNotNull();
         _tracer.EndSpan(processSpan);
         _traceProvider.ForceFlush();
-        Assert.Contains(_exportedActivities, a =>
-            a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Process.ToSpanName()}");
+        await Assert.That(_exportedActivities.Any(a =>
+            a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Process.ToSpanName()}")).IsTrue();
 
         //baggage propagation is the single place the malformed value is now rejected
         Assert.Throws<ArgumentException>(() => _tracer.PropagateConsumerContext(message));

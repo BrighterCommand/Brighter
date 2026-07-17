@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,8 +26,6 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
@@ -36,27 +34,25 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 /// via a lazily-created producer. Previously RequeueAsync was a no-op; now it delegates to the producer
 /// so that requeued messages are actually redelivered.
 /// </summary>
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
-public class KafkaConsumerRequeueAsyncTests : IAsyncDisposable, IDisposable
+[Category("Kafka")]
+public class KafkaConsumerRequeueAsyncTests : IAsyncDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly string _channelName = Guid.NewGuid().ToString();
-    private readonly IAmAProducerRegistry _producerRegistry;
-    private readonly IAmAMessageConsumerAsync _consumer;
-    private readonly Message _message;
+    private IAmAProducerRegistry _producerRegistry;
+    private IAmAMessageConsumerAsync _consumer;
+    private Message _message;
 
-    public KafkaConsumerRequeueAsyncTests(ITestOutputHelper output)
+    [Before(Test)]
+    public async Task Setup()
     {
         string groupId = Guid.NewGuid().ToString();
-        _output = output;
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(_topic), MessageType.MT_COMMAND),
             new MessageBody("test content for async requeue"));
 
-        _producerRegistry = new KafkaProducerRegistryFactory(
+        _producerRegistry = await new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
                 Name = "Kafka Producer Requeue Async Test",
@@ -72,7 +68,7 @@ public class KafkaConsumerRequeueAsyncTests : IAsyncDisposable, IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).CreateAsync().Result;
+            ]).CreateAsync();
 
         _consumer = new KafkaMessageConsumerFactory(
             new KafkaMessagingGatewayConfiguration
@@ -91,7 +87,7 @@ public class KafkaConsumerRequeueAsyncTests : IAsyncDisposable, IDisposable
             ));
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeuing_async_should_publish_message_via_producer()
     {
         // Arrange - send a message and receive it
@@ -100,19 +96,19 @@ public class KafkaConsumerRequeueAsyncTests : IAsyncDisposable, IDisposable
         ((KafkaMessageProducer)producer).Flush();
 
         var received = await GetMessageAsync();
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
-        _output.WriteLine($"Received body length: {received.Body.Bytes.Length}, value: '{received.Body.Value}'");
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        Console.WriteLine($"Received body length: {received.Body.Bytes.Length}, value: '{received.Body.Value}'");
 
         // Act - requeue the message asynchronously (no delay, so producer sends immediately)
         var result = await _consumer.RequeueAsync(received);
 
         // Assert - requeue should return true
-        Assert.True(result, "RequeueAsync should succeed");
+        await Assert.That(result).IsTrue();
 
         // Assert - message should be available again on the topic (published via producer)
         var requeued = await GetMessageAsync();
-        _output.WriteLine($"Requeued body length: {requeued.Body.Bytes.Length}, value: '{requeued.Body.Value}'");
-        Assert.Equal(_message.Body.Value, requeued.Body.Value);
+        Console.WriteLine($"Requeued body length: {requeued.Body.Bytes.Length}, value: '{requeued.Body.Value}'");
+        await Assert.That(requeued.Body.Value).IsEqualTo(_message.Body.Value);
     }
 
     private async Task<Message> GetMessageAsync()
@@ -134,7 +130,7 @@ public class KafkaConsumerRequeueAsyncTests : IAsyncDisposable, IDisposable
             }
             catch (ChannelFailureException cfx)
             {
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 await Task.Delay(1000);
             }
         } while (maxTries <= 10);
@@ -145,7 +141,8 @@ public class KafkaConsumerRequeueAsyncTests : IAsyncDisposable, IDisposable
         return messages[0];
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         _producerRegistry?.Dispose();
         ((IAmAMessageConsumerSync)_consumer)?.Dispose();
@@ -157,3 +154,4 @@ public class KafkaConsumerRequeueAsyncTests : IAsyncDisposable, IDisposable
         await _consumer.DisposeAsync();
     }
 }
+

@@ -28,19 +28,18 @@ using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.BoxProvisioning.Spanner;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Outbox.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
-[Trait("Category", "Spanner")]
-public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatched_payload_mode_it_should_throw_configuration_exception : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatched_payload_mode_it_should_throw_configuration_exception
 {
     private readonly string _connectionString = Const.ConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task Should_throw_when_existing_outbox_body_is_string_and_provisioner_is_configured_for_binary()
     {
         //Arrange — text-mode outbox already exists; configure provisioner for binary.
@@ -58,10 +57,10 @@ public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatch
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
-    [Fact]
+    [Test]
     public async Task Should_throw_when_existing_outbox_body_is_bytes_and_provisioner_is_configured_for_text()
     {
         //Arrange — binary (BYTES) outbox already exists; configure provisioner for text.
@@ -79,7 +78,7 @@ public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatch
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
     private async Task CreateTable(string ddl)
@@ -90,8 +89,10 @@ public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatch
         await ddlCommand.ExecuteNonQueryAsync();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

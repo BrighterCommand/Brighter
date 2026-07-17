@@ -26,14 +26,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class AddConsumersValidationFlagTests
 {
-    [Fact]
-    public void When_validate_pipelines_then_add_consumers_should_set_consumer_owns_validation_true()
+    [Test]
+    public async Task When_validate_pipelines_then_add_consumers_should_set_consumer_owns_validation_true()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -46,11 +45,11 @@ public class AddConsumersValidationFlagTests
         // Assert
         var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<BrighterPipelineValidationOptions>>().Value;
-        Assert.True(options.ConsumerOwnsValidation);
+        await Assert.That(options.ConsumerOwnsValidation).IsTrue();
     }
 
-    [Fact]
-    public void When_add_consumers_then_validate_pipelines_should_set_consumer_owns_validation_true()
+    [Test]
+    public async Task When_add_consumers_then_validate_pipelines_should_set_consumer_owns_validation_true()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -62,11 +61,11 @@ public class AddConsumersValidationFlagTests
         // Assert
         var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<BrighterPipelineValidationOptions>>().Value;
-        Assert.True(options.ConsumerOwnsValidation);
+        await Assert.That(options.ConsumerOwnsValidation).IsTrue();
     }
 
-    [Fact]
-    public void When_add_consumers_without_validate_pipelines_should_not_register_validation_options()
+    [Test]
+    public async Task When_add_consumers_without_validate_pipelines_should_not_register_validation_options()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -79,6 +78,6 @@ public class AddConsumersValidationFlagTests
         // ValidatePipelines, no IAmAPipelineValidator is registered.
         var provider = services.BuildServiceProvider();
         var validator = provider.GetService<Paramore.Brighter.Validation.IAmAPipelineValidator>();
-        Assert.Null(validator);
+        await Assert.That(validator).IsNull();
     }
 }

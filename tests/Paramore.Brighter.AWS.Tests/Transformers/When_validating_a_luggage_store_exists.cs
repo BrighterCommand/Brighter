@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Amazon.S3;
@@ -8,11 +8,11 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Transformers.AWS;
 using Paramore.Brighter.Transforms.Storage;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Transformers;
 
-[Trait("Category", "AWS")] 
+[Category("AWS")]
+[Property("Fragile", "CI")]
 public class S3LuggageStoreExistsTests 
 {
     private readonly IHttpClientFactory _httpClientFactory;
@@ -26,7 +26,7 @@ public class S3LuggageStoreExistsTests
         _httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
     }
     
-    [Fact]
+    [Test]
     public async Task When_checking_store_that_exists()
     {
         var bucketName = $"brightertestbucket-{Guid.NewGuid()}";
@@ -54,7 +54,7 @@ public class S3LuggageStoreExistsTests
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
         });
 
-        Assert.NotNull(luggageStore);
+        await Assert.That(luggageStore).IsNotNull();
         
         //teardown
         var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
@@ -62,7 +62,7 @@ public class S3LuggageStoreExistsTests
         await client.DeleteBucketAsync(bucketName);
     }
     
-    [Fact]
+    [Test]
     public async Task When_checking_store_that_does_not_exist()
     {
         //act
@@ -81,7 +81,7 @@ public class S3LuggageStoreExistsTests
                  await luggageStore.EnsureStoreExistsAsync();
              });
          
-         Assert.NotNull(doesNotExist);
-         Assert.True(doesNotExist is InvalidOperationException);
+         await Assert.That(doesNotExist).IsNotNull();
+         await Assert.That(doesNotExist is InvalidOperationException).IsTrue();
     }
 }

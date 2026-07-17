@@ -30,11 +30,10 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class RunnerDefaultLockTimeoutTests : IAsyncLifetime
+public class RunnerDefaultLockTimeoutTests
 {
     // Per-test DB file so the test does not interact with siblings running against the shared
     // test.db (same isolation pattern as the cancellation test).
@@ -48,7 +47,7 @@ public class RunnerDefaultLockTimeoutTests : IAsyncLifetime
         _connectionString = $"Data Source={_dbPath}";
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
     {
         //Arrange — the runner is constructed via the detection-helper ctor with `lockTimeout`
@@ -76,12 +75,14 @@ public class RunnerDefaultLockTimeoutTests : IAsyncLifetime
         // UoW's BeginAsync(lockTimeout: ...) call. SqliteBoxMigrationRunner is the reference
         // value the other three relational runners are now harmonised against.
         var spy = capturingRunner.LastUnitOfWork;
-        Assert.NotNull(spy);
-        Assert.Equal(TimeSpan.FromSeconds(30), spy!.CapturedLockTimeout);
+        await Assert.That(spy).IsNotNull();
+        await Assert.That(spy!.CapturedLockTimeout).IsEqualTo(TimeSpan.FromSeconds(30));
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         SqliteConnection.ClearAllPools();

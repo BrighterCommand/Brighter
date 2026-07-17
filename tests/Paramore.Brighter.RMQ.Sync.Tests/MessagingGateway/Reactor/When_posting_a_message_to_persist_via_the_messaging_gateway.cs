@@ -1,12 +1,10 @@
-﻿using System;
+using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RmqMessageProducerSendPersistentMessageTests : IDisposable
 {
     private IAmAMessageProducerSync _messageProducer;
@@ -35,8 +33,8 @@ public class RmqMessageProducerSendPersistentMessageTests : IDisposable
         new QueueFactory(rmqConnection, queueName, new RoutingKeys( _message.Header.Topic)).Create(TimeSpan.FromMilliseconds(1000));
     }
 
-    [Fact]
-    public void When_posting_a_message_to_persist_via_the_messaging_gateway()
+    [Test]
+    public async Task When_posting_a_message_to_persist_via_the_messaging_gateway()
     {
         // arrange
         _messageProducer.Send(_message);
@@ -45,7 +43,7 @@ public class RmqMessageProducerSendPersistentMessageTests : IDisposable
         var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).First();
 
         // assert
-        Assert.Equal(true, result.Persist);
+        await Assert.That(result.Persist).IsEqualTo(true);
     }
 
     public void Dispose()
@@ -53,3 +51,4 @@ public class RmqMessageProducerSendPersistentMessageTests : IDisposable
         _messageProducer.Dispose();
     }
 }
+

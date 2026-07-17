@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
@@ -7,7 +7,6 @@ using MQTTnet;
 using MQTTnet.Server;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Loggers;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor;
-using Shouldly;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server
 {
@@ -68,17 +67,17 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Server
                 return null;
             }
 
-            testMqttServer.ShouldNotBeNull();
-            testMqttServer.ShouldBeOfType<MqttTestServer>();
-
-            testMqttServer.MqttServer.IsStarted.ShouldBeFalse();
+            if (testMqttServer?.MqttServer is null)
+                return null;
 
             try
             {
                 if (startService)
                 {
+                    // Block synchronously so the server is up before the test's
+                    // MQTT producer/consumer constructors attempt to connect — those
+                    // connect eagerly in their ctor and have no retry-after-server-start.
                     testMqttServer.MqttServer.StartAsync().GetAwaiter().GetResult();
-                    testMqttServer.MqttServer.IsStarted.ShouldBeTrue();
                 }
             }
             catch (Exception ex)

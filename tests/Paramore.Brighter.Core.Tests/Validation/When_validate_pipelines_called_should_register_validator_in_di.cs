@@ -19,32 +19,26 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class ValidatePipelinesRegistrationTests
 {
-    [Fact]
-    public void When_validate_pipelines_called_should_register_validator_in_di()
+    [Test]
+    public async Task When_validate_pipelines_called_should_register_validator_in_di()
     {
         // Arrange
         var services = new ServiceCollection();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
-
         // Act
         var returnedBuilder = builder.ValidatePipelines();
-
         // Assert — ValidatePipelines registers IAmAPipelineValidator and returns builder for chaining
-        Assert.Contains(services, sd => sd.ServiceType == typeof(IAmAPipelineValidator));
-        Assert.Same(builder, returnedBuilder);
+        await Assert.That((services).Any(sd => sd.ServiceType == typeof(IAmAPipelineValidator))).IsTrue();
+        await Assert.That(returnedBuilder).IsSameReferenceAs(builder);
     }
 }

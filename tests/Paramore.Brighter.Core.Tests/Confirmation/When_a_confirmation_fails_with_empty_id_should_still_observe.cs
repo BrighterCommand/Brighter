@@ -37,11 +37,10 @@ using Paramore.Brighter.Observability;
 using Polly.Registry;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
-    [Collection("Observability")]
+    [System.Obsolete]
     public class ConfirmationFailureEmptyIdTests : IDisposable
     {
         private const string TestSource = "Paramore.Brighter.Tests";
@@ -94,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             Activity.Current = null;
         }
 
-        [Fact]
+        [Test]
         public async Task When_a_confirmation_fails_with_empty_id_should_still_observe()
         {
             // Arrange: a failing confirmation for a message carrying no id at all (Id.Empty). The
@@ -116,19 +115,18 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 .Where(e => e.Level == LogEventLevel.Warning)
                 .Where(e => e.RenderMessage().Contains(_topic.Value))
                 .ToList();
-            Assert.Single(warnings);
+            await Assert.That(warnings).HasSingleItem();
 
             // Assert (2): the confirmation (settle) span was still emitted for this topic, recording
             // the missing id as the explicit "unknown" marker (not an empty string).
             var confirmationSpan = _exportedActivities.SingleOrDefault(a =>
                 a.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingOperationType && t.Value == "settle")
                 && a.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value == _topic.Value));
-            Assert.NotNull(confirmationSpan);
-            Assert.Contains(confirmationSpan!.Tags,
-                t => t.Key == BrighterSemanticConventions.MessageId && t.Value == "unknown");
+            await Assert.That(confirmationSpan).IsNotNull();
+            await Assert.That((confirmationSpan!.Tags).Any(t => t.Key == BrighterSemanticConventions.MessageId && t.Value == "unknown")).IsTrue();
 
             // Assert (3): the breaker still tripped on the present wire topic.
-            Assert.Contains(_topic, _circuitBreaker.TrippedTopics);
+            await Assert.That(_circuitBreaker.TrippedTopics).Contains(_topic);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -9,7 +9,6 @@ using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
 using Polly.Retry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 {
@@ -17,100 +16,56 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new();
-        private readonly InternalBus _bus = new() ;
+        private readonly InternalBus _bus = new();
         private readonly MessageMapperRegistry _messageMapperRegistry;
         private readonly RoutingKey _routingKey;
-
         public CommandProcessorCallTests()
         {
-
             var timeProvider = new FakeTimeProvider();
             _routingKey = new RoutingKey("MyRequest");
-            var messageProducer = new  InMemoryMessageProducer(_bus, new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)});
-            
+            var messageProducer = new InMemoryMessageProducer(_bus, new Publication { Topic = _routingKey, RequestType = typeof(MyRequest) });
             _messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
                 if (type == typeof(MyRequestMessageMapper))
                     return new MyRequestMessageMapper();
                 if (type == typeof(MyResponseMessageMapper))
                     return new MyResponseMessageMapper();
-               
                 throw new ConfigurationException($"No mapper found for {type.Name}");
             }), null);
             _messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
             _messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
-            
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyResponseHandler());
-
             var internalBus = new InternalBus();
             InMemoryChannelFactory inMemoryChannelFactory = new(internalBus, TimeProvider.System);
-            
             var replySubs = new List<Subscription>
             {
                 new Subscription<MyResponse>()
             };
-
-            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
-                .AddBrighterDefault();
-            
-            var producerRegistry =
-                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
-                {
-                    { _routingKey, messageProducer },
-                });
-
+            var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _routingKey, messageProducer }, });
             var tracer = new BrighterTracer();
-            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
-                resiliencePipelineRegistry,
-                _messageMapperRegistry,
-                new EmptyMessageTransformerFactory(),
-                new EmptyMessageTransformerFactoryAsync(),
-                tracer,
-                new FindPublicationByPublicationTopicOrRequestType(),
-                new InMemoryOutbox(timeProvider){Tracer = tracer});
-        
-            _commandProcessor = new CommandProcessor(
-                subscriberRegistry,
-                handlerFactory,
-                new InMemoryRequestContextFactory(), 
-                new DefaultPolicy(),
-                resiliencePipelineRegistry,
-                bus,
-                replySubscriptions:replySubs,
-                responseChannelFactory: inMemoryChannelFactory,
-                requestSchedulerFactory: new InMemorySchedulerFactory()
-            );
-
-            PipelineBuilder<MyRequest>.ClearPipelineCache();
-            
+            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(producerRegistry, resiliencePipelineRegistry, _messageMapperRegistry, new EmptyMessageTransformerFactory(), new EmptyMessageTransformerFactoryAsync(), tracer, new FindPublicationByPublicationTopicOrRequestType(), new InMemoryOutbox(timeProvider) { Tracer = tracer });
+            _commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new DefaultPolicy(), resiliencePipelineRegistry, bus, replySubscriptions: replySubs, responseChannelFactory: inMemoryChannelFactory, requestSchedulerFactory: new InMemorySchedulerFactory());
             _myRequest.RequestValue = "Hello World";
         }
 
-        [Fact]
-        public void When_Calling_A_Server_Via_The_Command_Processor()
+        [Test]
+        public async Task When_Calling_A_Server_Via_The_Command_Processor()
         {
             //start a message pump on a new thread, to recieve the Call message
-            Channel channel = new(
-                new("MyChannel"), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000))
-            );
-            
-            var messagePump = new Reactor(_commandProcessor, (message) => typeof(MyRequest),_messageMapperRegistry, 
-                    new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
-                { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
-
+            Channel channel = new(new("MyChannel"), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+            var messagePump = new Reactor(_commandProcessor, (message) => typeof(MyRequest), _messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel)
+            {
+                Channel = channel,
+                TimeOut = TimeSpan.FromMilliseconds(5000)
+            };
             //RunAsync the pump on a new thread
-            Task.Factory.StartNew(() => messagePump.Run());
-            
+            Task.Factory.StartNew(() => messagePump.Run(), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOut: TimeSpan.FromMilliseconds(500));
-            
-            MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) {Id = _myRequest.Id});
-            
+            MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) { Id = _myRequest.Id });
             channel.Stop(_routingKey);
-
         }
-   }
+    }
 }

@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -36,8 +36,8 @@ public class MsSqlInboxMigrationsTests
 
     private static readonly string[] s_v2Added = ["ContextKey"];
 
-    [Fact]
-    public void When_mssql_inbox_migrations_are_listed_it_should_return_v1_through_v2_with_correct_logical_columns()
+    [Test]
+    public async Task When_mssql_inbox_migrations_are_listed_it_should_return_v1_through_v2_with_correct_logical_columns()
     {
         //Arrange — derive each version's expected LogicalColumns by accumulating the
         //per-version additions from the archaeology (spec README inbox table).
@@ -50,10 +50,10 @@ public class MsSqlInboxMigrationsTests
         var migrations = new MsSqlInboxMigrationCatalog().All(config);
 
         //Assert — exactly two migrations numbered 1..2 in order
-        Assert.Equal(2, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(2);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         //Assert — LogicalColumns at each version matches the cumulative archaeology
@@ -61,19 +61,13 @@ public class MsSqlInboxMigrationsTests
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
         //Assert — V1 has no single source commit so SourceReference is null;
         //V2 carries the archaeology pointer for the ContextKey addition (787c31c52, Oct 2018).
-        Assert.Null(migrations[0].SourceReference);
-        Assert.False(
-            string.IsNullOrWhiteSpace(migrations[1].SourceReference),
-            "V2 must have a non-empty SourceReference (archaeology pointer for ContextKey addition)");
+        await Assert.That(migrations[0].SourceReference).IsNull();
+        await Assert.That(string.IsNullOrWhiteSpace(migrations[1].SourceReference)).IsFalse().Because("V2 must have a non-empty SourceReference (archaeology pointer for ContextKey addition)");
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

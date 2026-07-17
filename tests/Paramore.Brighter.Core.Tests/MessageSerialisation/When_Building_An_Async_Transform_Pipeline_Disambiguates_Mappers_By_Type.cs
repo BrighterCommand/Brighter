@@ -4,17 +4,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Paramore.Brighter.Observability;
-using Xunit;
 using A = Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKeyed.A;
 using B = Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKeyed.B;
 using Reuse = Paramore.Brighter.Core.Tests.MessageSerialisation.AsyncTransformTypeKeyed.Reuse;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation
 {
     public class When_Building_An_Async_Transform_Pipeline_Disambiguates_Mappers_By_Type
     {
-        [Fact]
-        public void When_two_async_mappers_share_a_simple_name_each_wrap_pipeline_should_build_with_its_own_transforms_first_built_first()
+        [Test]
+        public async Task When_two_async_mappers_share_a_simple_name_each_wrap_pipeline_should_build_with_its_own_transforms_first_built_first()
         {
             // Arrange
             TransformPipelineBuilderAsync.ClearPipelineCache();
@@ -26,12 +26,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
 
             // Assert — B's wrap pipeline carries its own transform, never A's
             string trace = Trace(pipelineB).ToString();
-            Assert.Contains("SecondTransformAsync", trace);
-            Assert.DoesNotContain("FirstTransformAsync", trace);
+            await Assert.That(trace).Contains("SecondTransformAsync");
+            await Assert.That(trace).DoesNotContain("FirstTransformAsync");
         }
 
-        [Fact]
-        public void When_two_async_mappers_share_a_simple_name_each_wrap_pipeline_should_build_with_its_own_transforms_opposite_order()
+        [Test]
+        public async Task When_two_async_mappers_share_a_simple_name_each_wrap_pipeline_should_build_with_its_own_transforms_opposite_order()
         {
             // Arrange
             TransformPipelineBuilderAsync.ClearPipelineCache();
@@ -43,12 +43,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
 
             // Assert — A's wrap pipeline carries its own transform, never B's
             string trace = Trace(pipelineA).ToString();
-            Assert.Contains("FirstTransformAsync", trace);
-            Assert.DoesNotContain("SecondTransformAsync", trace);
+            await Assert.That(trace).Contains("FirstTransformAsync");
+            await Assert.That(trace).DoesNotContain("SecondTransformAsync");
         }
 
-        [Fact]
-        public void When_two_async_mappers_share_a_simple_name_each_unwrap_pipeline_should_build_with_its_own_transforms_first_built_first()
+        [Test]
+        public async Task When_two_async_mappers_share_a_simple_name_each_unwrap_pipeline_should_build_with_its_own_transforms_first_built_first()
         {
             // Arrange
             TransformPipelineBuilderAsync.ClearPipelineCache();
@@ -60,12 +60,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
 
             // Assert — B's unwrap pipeline carries its own transform, never A's
             string trace = Trace(pipelineB).ToString();
-            Assert.Contains("SecondTransformAsync", trace);
-            Assert.DoesNotContain("FirstTransformAsync", trace);
+            await Assert.That(trace).Contains("SecondTransformAsync");
+            await Assert.That(trace).DoesNotContain("FirstTransformAsync");
         }
 
-        [Fact]
-        public void When_two_async_mappers_share_a_simple_name_each_unwrap_pipeline_should_build_with_its_own_transforms_opposite_order()
+        [Test]
+        public async Task When_two_async_mappers_share_a_simple_name_each_unwrap_pipeline_should_build_with_its_own_transforms_opposite_order()
         {
             // Arrange
             TransformPipelineBuilderAsync.ClearPipelineCache();
@@ -77,12 +77,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
 
             // Assert — A's unwrap pipeline carries its own transform, never B's
             string trace = Trace(pipelineA).ToString();
-            Assert.Contains("FirstTransformAsync", trace);
-            Assert.DoesNotContain("SecondTransformAsync", trace);
+            await Assert.That(trace).Contains("FirstTransformAsync");
+            await Assert.That(trace).DoesNotContain("SecondTransformAsync");
         }
 
-        [Fact]
-        public void When_a_single_async_mapper_is_built_twice_post_warmup_should_keep_one_entry_per_transform_cache_keyed_by_its_runtime_type()
+        [Test]
+        public async Task When_a_single_async_mapper_is_built_twice_post_warmup_should_keep_one_entry_per_transform_cache_keyed_by_its_runtime_type()
         {
             // Arrange — a mapper/request unique to this fact, so the process-global mementos hold
             // exactly this mapper's entries and the count assertion stays deterministic
@@ -105,13 +105,13 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
 
             // Assert — exactly one entry per memento, keyed by the mapper's runtime Type, and the
             // second build's transform sequence is equivalent to the first
-            IReadOnlyCollection<Type> wrapKeys = GetMementoKeys("s_wrapTransformsMemento");
-            IReadOnlyCollection<Type> unwrapKeys = GetMementoKeys("s_unWrapTransformsMemento");
+            IReadOnlyCollection<Type> wrapKeys = await GetMementoKeys("s_wrapTransformsMemento");
+            IReadOnlyCollection<Type> unwrapKeys = await GetMementoKeys("s_unWrapTransformsMemento");
 
-            Assert.Equal(new[] { typeof(Reuse.ReuseMapper) }, wrapKeys);
-            Assert.Equal(new[] { typeof(Reuse.ReuseMapper) }, unwrapKeys);
-            Assert.Equal(firstWrap, secondWrap);
-            Assert.Equal(firstUnwrap, secondUnwrap);
+            await Assert.That(wrapKeys).IsEqualTo(new[] { typeof(Reuse.ReuseMapper) });
+            await Assert.That(unwrapKeys).IsEqualTo(new[] { typeof(Reuse.ReuseMapper) });
+            await Assert.That(secondWrap).IsEqualTo(firstWrap);
+            await Assert.That(secondUnwrap).IsEqualTo(firstUnwrap);
         }
 
         private static TransformPipelineBuilderAsync CreateCollidingBuilder()
@@ -149,12 +149,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
             return pipelineTracer;
         }
 
-        private static IReadOnlyCollection<Type> GetMementoKeys(string fieldName)
+        private static async Task<IReadOnlyCollection<Type>> GetMementoKeys(string fieldName)
         {
             FieldInfo? field = typeof(TransformPipelineBuilderAsync).GetField(
                 fieldName,
                 BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(field);
+            await Assert.That(field).IsNotNull();
 
             var cache = (IDictionary)field!.GetValue(null)!;
             return cache.Keys.Cast<Type>().ToList();

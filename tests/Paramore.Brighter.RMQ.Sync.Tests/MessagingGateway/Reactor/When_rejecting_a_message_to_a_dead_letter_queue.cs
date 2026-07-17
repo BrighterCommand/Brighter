@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,12 +25,10 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RmqMessageProducerDLQTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -80,9 +78,9 @@ public class RmqMessageProducerDLQTests : IDisposable
         );
     }
 
-    //[Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]
-    [Fact]
-    public void When_rejecting_a_message_to_a_dead_letter_queue()
+    //[Test, Skip("Breaks due to fault in Task Scheduler running after context has closed")]
+    [Test]
+    public async Task When_rejecting_a_message_to_a_dead_letter_queue()
     {
         //create the infrastructure
         _messageConsumer.Receive(TimeSpan.FromMilliseconds(0)); 
@@ -97,8 +95,8 @@ public class RmqMessageProducerDLQTests : IDisposable
         var dlqMessage = _deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
             
         //assert this is our message
-        Assert.Equal(_message.Id, dlqMessage.Id);
-        Assert.Equal(dlqMessage.Body.Value, message.Body.Value);
+        await Assert.That(dlqMessage.Id).IsEqualTo(_message.Id);
+        await Assert.That(message.Body.Value).IsEqualTo(dlqMessage.Body.Value);
     }
 
     public void Dispose()
@@ -106,3 +104,4 @@ public class RmqMessageProducerDLQTests : IDisposable
         _messageProducer.Dispose();
     }
 }
+

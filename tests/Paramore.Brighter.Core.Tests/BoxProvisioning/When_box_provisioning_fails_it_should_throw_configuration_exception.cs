@@ -5,13 +5,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.Core.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.BoxProvisioning;
 
 public class When_box_provisioning_fails_it_should_throw_configuration_exception
 {
-    [Fact]
+    [Test]
     public async Task Should_wrap_in_configuration_exception()
     {
         //Arrange
@@ -25,12 +24,10 @@ public class When_box_provisioning_fails_it_should_throw_configuration_exception
         );
 
         //Act
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(
-            () => hostedService.StartAsync(CancellationToken.None)
-        );
+        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => hostedService.StartAsync(CancellationToken.None));
 
         //Assert
-        Assert.Same(innerException, exception.InnerException);
-        Assert.Contains("Outbox", exception.Message);
+        await Assert.That(exception.InnerException).IsSameReferenceAs(innerException);
+        await Assert.That(exception.Message).Contains("Outbox");
     }
 }

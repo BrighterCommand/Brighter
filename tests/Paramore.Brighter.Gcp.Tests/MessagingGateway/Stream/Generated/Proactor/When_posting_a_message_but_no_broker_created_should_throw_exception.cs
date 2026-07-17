@@ -5,13 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream.Proactor;
 
-[Trait("Category", "GcpPubSubStream")]
-[Collection("Stream")]
-public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IAsyncLifetime
+[Property("Category", "GcpPubSubStream")]
+[NotInParallel("Stream")]
+public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -28,17 +29,21 @@ public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IA
         _messageBuilder = new DefaultMessageBuilder();
     }
 
+    [Before(Test)]
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
+
+    [After(Test)]
 
     public Task DisposeAsync()
     {
         return Task.CompletedTask;
     }
 
-    [Fact]
+    [Test]
     public async Task When_posting_a_message_but_no_broker_created_should_throw_exception_async()
     {
         try
@@ -57,9 +62,9 @@ public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IA
             // Assert
             Assert.Fail("We are expected to throw an exception");
         }
-        catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)
+        catch (Exception ex) when (ex is not TUnit.Assertions.Exceptions.AssertionException)
         {
-            Assert.True(true);
+            await Assert.That(true).IsTrue();
         }
     }
 }

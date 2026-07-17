@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Outbox.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -15,7 +14,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// PG-folded lowercase form.
 /// </summary>
 public class PostgreSqlReservedKeywordTableNameTests
-    : IAsyncLifetime
 {
     // "Order" is a SQL reserved keyword. Unquoted PG DDL `CREATE TABLE Order ...` is a
     // syntax error. The lowercase-then-quote convention emits `CREATE TABLE "order" ...`,
@@ -44,7 +42,7 @@ public class PostgreSqlReservedKeywordTableNameTests
             _runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_outbox_provisioner_runs_with_reserved_keyword_table_name_it_should_create_and_populate_table()
     {
         new PostgresSqlTestHelper().SetupDatabase();
@@ -63,7 +61,7 @@ SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = @TableName)";
             tableCheck.Parameters.AddWithValue("@TableName", ExpectedPhysicalTableName);
             var tableExists = (bool)(await tableCheck.ExecuteScalarAsync())!;
-            Assert.True(tableExists, "Reserved-keyword table should exist under PG-folded lowercase name");
+            await Assert.That(tableExists).IsTrue().Because("Reserved-keyword table should exist under PG-folded lowercase name");
 
             // History row keyed under lowercase BoxTableName so detection on the next run
             // matches the same row.
@@ -73,7 +71,7 @@ SELECT COUNT(1) FROM ""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
             historyCheck.Parameters.AddWithValue("@BoxTableName", ExpectedPhysicalTableName);
             var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-            Assert.Equal(1, historyCount);
+            await Assert.That(historyCount).IsEqualTo(1);
         }
 
         // Act: chain replay — second provision should be a no-op (history row already
@@ -90,7 +88,7 @@ SELECT COUNT(1) FROM ""__BrighterMigrationHistory""
 WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
             historyCheck.Parameters.AddWithValue("@BoxTableName", ExpectedPhysicalTableName);
             var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-            Assert.Equal(1, historyCount);
+            await Assert.That(historyCount).IsEqualTo(1);
         }
 
         // Act + Assert: runtime DML — write a message via the PG outbox and read it back.
@@ -104,12 +102,14 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
         await outbox.AddAsync(message, new RequestContext());
         var roundTripped = await outbox.GetAsync(message.Id, new RequestContext());
 
-        Assert.Equal(message.Id, roundTripped.Id);
-        Assert.Equal(message.Body.Value, roundTripped.Body.Value);
+        await Assert.That(roundTripped.Id).IsEqualTo(message.Id);
+        await Assert.That(roundTripped.Body.Value).IsEqualTo(message.Body.Value);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

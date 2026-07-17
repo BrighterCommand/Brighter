@@ -26,25 +26,20 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Category("Kafka")]
 public class KafkaMessageConsumerInvalidMessageTests : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly string _invalidMessageTopic;
     private readonly KafkaMessageProducer _producer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaMessageConsumerInvalidMessageTests(ITestOutputHelper output)
+    public KafkaMessageConsumerInvalidMessageTests()
     {
-        _output = output;
         _invalidMessageTopic = $"{_topic}.invalid";
 
         // Create producer directly for the data topic
@@ -69,7 +64,7 @@ public class KafkaMessageConsumerInvalidMessageTests : IDisposable
         _producer.Init();
     }
 
-    [Fact]
+    [Test]
     public async Task When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel()
     {
         //Arrange - let topics propagate in the broker
@@ -85,28 +80,28 @@ public class KafkaMessageConsumerInvalidMessageTests : IDisposable
             new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
             new MessageBody($"test content for invalid message channel")
         );
-        _producer.Send(sentMessage);
+        await _producer.SendAsync(sentMessage);
         _producer.Flush();
 
         //Act - consume and reject the message
         Message? receivedMessage;
         using (var consumer = CreateConsumer(groupId, invalidMessageRoutingKey))
         {
-            receivedMessage = ConsumeMessage(consumer);
-            Assert.Equal(messageId, receivedMessage.Id);
+            receivedMessage = await ConsumeMessage(consumer);
+            await Assert.That(receivedMessage.Id).IsEqualTo(messageId);
 
-            _output.WriteLine($"About to reject message {messageId} with Unacceptable reason");
+            Console.WriteLine($"About to reject message {messageId} with Unacceptable reason");
 
             //reject with Unacceptable reason
             consumer.Reject(receivedMessage, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message"));
 
-            _output.WriteLine($"Message {messageId} rejected, waiting for invalid message channel propagation");
+            Console.WriteLine($"Message {messageId} rejected, waiting for invalid message channel propagation");
 
             //yield to allow invalid message to be produced and topic to be created
             await Task.Delay(TimeSpan.FromMilliseconds(3000));
         }
 
-        _output.WriteLine("Creating invalid message channel consumer");
+        Console.WriteLine("Creating invalid message channel consumer");
 
         //yield to allow invalid message topic to propagate
         await Task.Delay(TimeSpan.FromMilliseconds(1000));
@@ -114,18 +109,18 @@ public class KafkaMessageConsumerInvalidMessageTests : IDisposable
         //Assert - verify message appears on invalid message channel
         using (var invalidMessageConsumer = CreateInvalidMessageConsumer(groupId))
         {
-            _output.WriteLine("Attempting to consume from invalid message channel");
-            var invalidMessage = ConsumeMessage(invalidMessageConsumer);
+            Console.WriteLine("Attempting to consume from invalid message channel");
+            var invalidMessage = await ConsumeMessage(invalidMessageConsumer);
 
-            Assert.NotNull(invalidMessage);
-            Assert.Equal(MessageType.MT_COMMAND, invalidMessage.Header.MessageType);
-            Assert.Equal(receivedMessage.Body.Value, invalidMessage.Body.Value);
+            await Assert.That(invalidMessage).IsNotNull();
+            await Assert.That(invalidMessage.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+            await Assert.That(invalidMessage.Body.Value).IsEqualTo(receivedMessage.Body.Value);
 
             //verify rejection metadata was added
-            Assert.True(invalidMessage.Header.Bag.ContainsKey("OriginalTopic"));
-            Assert.Equal(_topic, invalidMessage.Header.Bag["OriginalTopic"]);
-            Assert.True(invalidMessage.Header.Bag.ContainsKey("RejectionReason"));
-            Assert.Equal("Unacceptable", invalidMessage.Header.Bag["RejectionReason"]);
+            await Assert.That(invalidMessage.Header.Bag.ContainsKey("OriginalTopic")).IsTrue();
+            await Assert.That(invalidMessage.Header.Bag["OriginalTopic"]).IsEqualTo(_topic);
+            await Assert.That(invalidMessage.Header.Bag.ContainsKey("RejectionReason")).IsTrue();
+            await Assert.That(invalidMessage.Header.Bag["RejectionReason"]).IsEqualTo("Unacceptable");
         }
     }
 
@@ -174,7 +169,7 @@ public class KafkaMessageConsumerInvalidMessageTests : IDisposable
             ));
     }
 
-    private Message ConsumeMessage(IAmAMessageConsumerSync consumer)
+    private async Task<Message> ConsumeMessage(IAmAMessageConsumerSync consumer)
     {
         int maxTries = 0;
         do
@@ -191,8 +186,8 @@ public class KafkaMessageConsumerInvalidMessageTests : IDisposable
             }
             catch (ChannelFailureException cfx)
             {
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
-                Task.Delay(1000).GetAwaiter().GetResult();
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(1000);
             }
         } while (maxTries <= 10);
 
@@ -204,3 +199,4 @@ public class KafkaMessageConsumerInvalidMessageTests : IDisposable
         _producer?.Dispose();
     }
 }
+

@@ -442,12 +442,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if (_deadLetterProducer?.IsValueCreated == true && _deadLetterProducer.Value is IAsyncDisposable deadLetterAsync)
                 await deadLetterAsync.DisposeAsync();
             else if (_deadLetterProducer?.IsValueCreated == true)
-                _deadLetterProducer.Value?.Dispose();
+                await _deadLetterProducer.Value!.DisposeAsync();
 
             if (_invalidMessageProducer?.IsValueCreated == true && _invalidMessageProducer.Value is IAsyncDisposable invalidAsync)
                 await invalidAsync.DisposeAsync();
             else if (_invalidMessageProducer?.IsValueCreated == true)
-                _invalidMessageProducer.Value?.Dispose();
+                await _invalidMessageProducer.Value!.DisposeAsync();
 
             GC.SuppressFinalize(this);
         }

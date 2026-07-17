@@ -12,10 +12,17 @@ public class HangfireMessageSchedulerFactory : IAmAMessageSchedulerFactory, IAmA
     /// </summary>
     public string? Queue { get; set; }
 
+    private IBackgroundJobClientV2? _client;
+
     /// <summary>
-    /// The <see cref="IBackgroundJobClientV2"/>.
+    /// The <see cref="IBackgroundJobClientV2"/>. Lazily defaults to a <see cref="BackgroundJobClient"/>
+    /// bound to <see cref="JobStorage.Current"/> only when first accessed without an explicit assignment.
     /// </summary>
-    public IBackgroundJobClientV2 Client { get; set; } = new BackgroundJobClient();
+    public IBackgroundJobClientV2 Client
+    {
+        get => _client ??= new BackgroundJobClient();
+        set => _client = value;
+    }
 
     /// <summary>
     /// The <see cref="System.TimeProvider"/>

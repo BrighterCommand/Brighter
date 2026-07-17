@@ -3,11 +3,10 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlOutboxProvisionerIdempotencyTests : IAsyncLifetime
+public class MsSqlOutboxProvisionerIdempotencyTests
 {
     private readonly string _connectionString;
     private readonly string _tableName;
@@ -34,7 +33,7 @@ public class MsSqlOutboxProvisionerIdempotencyTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_outbox_provisioner_runs_on_already_provisioned_database_it_should_be_idempotent()
     {
         //Arrange
@@ -55,11 +54,13 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = 'dbo' AND [MigrationVers
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = (int)historyCheck.ExecuteScalar()!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

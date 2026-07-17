@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -47,8 +47,8 @@ public class PostgreSqlOutboxMigrationsTests
     private static readonly string[] s_v6Added = ["workflowid", "jobid"];
     private static readonly string[] s_v7Added = ["dataref", "specversion"];
 
-    [Fact]
-    public void When_postgres_outbox_migrations_are_listed_it_should_return_v1_through_v7_with_lowercase_logical_columns_and_if_not_exists_pattern()
+    [Test]
+    public async Task When_postgres_outbox_migrations_are_listed_it_should_return_v1_through_v7_with_lowercase_logical_columns_and_if_not_exists_pattern()
     {
         //Arrange — derive each version's expected (lowercase) LogicalColumns by accumulating
         //per-version additions from the archaeology (spec README outbox table).
@@ -61,10 +61,10 @@ public class PostgreSqlOutboxMigrationsTests
         var migrations = new PostgreSqlOutboxMigrationCatalog().All(config);
 
         //Assert — exactly seven migrations numbered 1..7 in order.
-        Assert.Equal(7, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(7);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         //Assert — LogicalColumns at each version match the cumulative archaeology, all lowercase.
@@ -72,37 +72,28 @@ public class PostgreSqlOutboxMigrationsTests
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.Ordinal))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.Ordinal))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
         //Assert — V2..V7 UpScripts use the Postgres-native idempotent ADD COLUMN IF NOT EXISTS
         //pattern (ADR §5). Case-insensitive contains check tolerates whitespace and casing.
         for (var v = 2; v <= 7; v++)
         {
-            var script = migrations[v - 1].UpScript;
-            Assert.Contains(
-                "ADD COLUMN IF NOT EXISTS",
-                script,
-                StringComparison.OrdinalIgnoreCase);
+            var script = migrations[v - 1].UpScript.Value;
+            await Assert.That(script).Contains("ADD COLUMN IF NOT EXISTS");
         }
 
         //Assert — V1 has no single source commit; V2..V7 each carry archaeology pointers.
-        Assert.Null(migrations[0].SourceReference);
+        await Assert.That(migrations[0].SourceReference).IsNull();
         for (var v = 2; v <= 7; v++)
         {
-            Assert.False(
-                string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
-                $"V{v} must have a non-empty SourceReference (archaeology pointer)");
+            await Assert.That(string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference)).IsFalse().Because($"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
 
         //Assert — V4 PartitionKey was added to Postgres in commit cff67fd5e / PR #3464
         //(distinct from the MSSQL V4 commit 1cdc04b60 / #2560 because Postgres lagged the
         //payload widening / binary-variant work). This pins archaeology accuracy.
-        Assert.Equal("cff67fd5e / #3464", migrations[3].SourceReference);
+        await Assert.That(migrations[3].SourceReference).IsEqualTo("cff67fd5e / #3464");
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

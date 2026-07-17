@@ -30,11 +30,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkBeginThrowsTests
 {
     // Per ADR 0058 §B.3: the runner declares the UoW with `await using`, so DisposeAsync runs
     // on every exit path — including when BeginAsync itself throws. MySQL-specific subtlety:
@@ -47,7 +46,7 @@ public class MySqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
     // a Brighter defect when the real failure was lock acquisition.
     //
     // The test wires a FakeMySqlAdvisoryLock that throws TimeoutException on AcquireAsync. The
-    // whole `await using` block is wrapped in Record.ExceptionAsync. Because `await using` is
+    // whole `await using` block is wrapped in TestExceptionRecorder.CaptureAsync. Because `await using` is
     // sugar for try/finally and C# replaces (not suppresses) the original exception when the
     // finally throws, a clean DisposeAsync surfaces the original TimeoutException — and a
     // throwing DisposeAsync would surface a different type. So Assert.IsType<TimeoutException>
@@ -60,21 +59,22 @@ public class MySqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
     // so it satisfies the contract green-from-the-start. The test exists to prevent a future
     // "be helpful and unconditionally release on dispose" mutation from issuing RELEASE_LOCK
     // when the lock was never acquired.)
-
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
     private readonly FakeMySqlAdvisoryLock _advisoryLock = new(
         releaseResult: true,
         throwOnAcquire: new TimeoutException("forced lock-acquisition failure for spec 0028 §B.3 test"));
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mysql_provisioning_uow_begin_throws_it_should_dispose_without_throwing()
     {
         // Act — capture whatever exception ultimately surfaces from the `await using` scope
-        var thrown = await Record.ExceptionAsync(async () =>
+        var thrown = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             await using var uow = new MySqlProvisioningUnitOfWork(
                 _connection, _advisoryLock, NullLogger.Instance);
@@ -86,10 +86,10 @@ public class MySqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
 
         // Assert — the surfaced exception is the BeginAsync TimeoutException; DisposeAsync did
         // not throw (otherwise its exception would have replaced the TimeoutException).
-        Assert.IsType<TimeoutException>(thrown);
+        await Assert.That(thrown).IsTypeOf<TimeoutException>();
         // Assert — DisposeAsync did not call ReleaseAsync; the lock was never acquired (Acquire
         // threw before completing), so RELEASE_LOCK must not be issued — it would return NULL
         // and produce a misleading tri-state Warning.
-        Assert.Null(_advisoryLock.ReleasedKey);
+        await Assert.That(_advisoryLock.ReleasedKey).IsNull();
     }
 }

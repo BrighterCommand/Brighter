@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -60,25 +59,27 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// in a cancelled state. The fake lock then captures the token actually handed to
 /// <c>ReleaseAsync</c> for direct assertion.
 /// </remarks>
-public class PostgreSqlProvisioningUnitOfWorkBeginTransactionCancelledTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkBeginTransactionCancelledTests
 {
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
     private NpgsqlTransaction? _blockingTransaction;
 
+    [Before(Test)]
     public async Task InitializeAsync()
     {
         await _connection.OpenAsync();
         _blockingTransaction = await _connection.BeginTransactionAsync();
     }
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         if (_blockingTransaction is not null) await _blockingTransaction.DisposeAsync();
         await _connection.DisposeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_begin_transaction_throws_with_cancelled_token_it_should_still_release_the_lock()
     {
         const string lockKey = "test_lock_resource_cancelled_token_cleanup";
@@ -90,17 +91,17 @@ public class PostgreSqlProvisioningUnitOfWorkBeginTransactionCancelledTests : IA
         cts.Cancel();
         var cancelledToken = cts.Token;
 
-        var thrown = await Record.ExceptionAsync(() => uow.BeginAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.BeginAsync(
             lockResource: lockKey,
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: cancelledToken));
 
         // Npgsql's nested-tx guard fires before the cancellation check, so the propagated
         // exception is the unwrapped InvalidOperationException from BeginTransactionAsync.
-        Assert.IsType<InvalidOperationException>(thrown);
+        await Assert.That(thrown).IsTypeOf<InvalidOperationException>();
 
         // The cleanup release ran (basic contract — guarded by the sibling test).
-        Assert.Equal(lockKey, _advisoryLock.ReleasedKey);
+        await Assert.That(_advisoryLock.ReleasedKey).IsEqualTo(lockKey);
 
         // The cleanup release was handed a token that is NOT cancelled. Without the fix
         // (pass CancellationToken.None instead of the caller's token), this captured token
@@ -108,7 +109,7 @@ public class PostgreSqlProvisioningUnitOfWorkBeginTransactionCancelledTests : IA
         // meaning the real PostgreSqlAdvisoryLock.ReleaseAsync would have thrown
         // OperationCanceledException before issuing pg_advisory_unlock and the lock would
         // leak to connection close.
-        Assert.NotNull(_advisoryLock.ReleasedCancellationToken);
-        Assert.False(_advisoryLock.ReleasedCancellationToken!.Value.IsCancellationRequested);
+        await Assert.That(_advisoryLock.ReleasedCancellationToken).IsNotNull();
+        await Assert.That(_advisoryLock.ReleasedCancellationToken!.Value.IsCancellationRequested).IsFalse();
     }
 }

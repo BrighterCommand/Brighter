@@ -6,14 +6,13 @@ using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.Outbox.DynamoDB;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.DynamoDbExtensions;
 
 public class DynamboDbFactoryMultipleGSIIndexesTests
 {
-    [Fact]
-    public void When_Creating_A_Table_With_Multiple_GSI_Inxdexes_Per_Field()
+    [Test]
+    public async Task When_Creating_A_Table_With_Multiple_GSI_Inxdexes_Per_Field()
     {
         //arrange
         var tableRequestFactory = new DynamoDbTableFactory();
@@ -33,12 +32,12 @@ public class DynamboDbFactoryMultipleGSIIndexesTests
         );
 
         //assert
-        Assert.Equal("MyEntity", tableRequest.TableName);
-        Assert.Contains(tableRequest.GlobalSecondaryIndexes,
+        await Assert.That(tableRequest.TableName).IsEqualTo("MyEntity");
+        await Assert.That(tableRequest.GlobalSecondaryIndexes).Contains(
             gsi => gsi.IndexName == "GlobalSecondaryIndex"
                    && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryId" && kse.KeyType == KeyType.HASH)
                    && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryRangeKey" && kse.KeyType == KeyType.RANGE));
-        Assert.Contains(tableRequest.GlobalSecondaryIndexes,
+        await Assert.That(tableRequest.GlobalSecondaryIndexes).Contains(
             gsi => gsi.IndexName == "AnotherGlobalSecondaryIndex"
                    && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryId" && kse.KeyType == KeyType.HASH)
                    && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryRangeKey" && kse.KeyType == KeyType.RANGE));

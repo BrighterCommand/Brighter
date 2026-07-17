@@ -3,11 +3,10 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Inbox.Postgres;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlInboxProvisionerBootstrapTests : IAsyncLifetime
+public class PostgreSqlInboxProvisionerBootstrapTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName;
@@ -29,7 +28,7 @@ public class PostgreSqlInboxProvisionerBootstrapTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgresql_inbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
     {
         //Arrange
@@ -58,11 +57,13 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public' AND ""Migra
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

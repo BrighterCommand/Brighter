@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Paramore.Brighter.Azure.Tests.Helpers;
@@ -30,7 +30,6 @@ public class LargeMessagePayloadAUnwrapTests : IDisposable
             Credential = new AzureCliCredential()
         });
         
-        TransformPipelineBuilder.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
@@ -43,7 +42,7 @@ public class LargeMessagePayloadAUnwrapTests : IDisposable
     }
     
     [Test]
-    public void When_unwrapping_a_large_message_async()
+    public async Task When_unwrapping_a_large_message_async()
     {
         //arrange
         Thread.Sleep(3000); //allow bucket definition to propagate
@@ -55,8 +54,8 @@ public class LargeMessagePayloadAUnwrapTests : IDisposable
         
         var stream = new MemoryStream();                                                                               
         var writer = new StreamWriter(stream);
-        writer.Write(commandAsJson);
-        writer.Flush();
+        await writer.WriteAsync(commandAsJson);
+        await writer.FlushAsync();
         stream.Position = 0;
         var id = _luggageStore.Store(stream);
 
@@ -78,8 +77,8 @@ public class LargeMessagePayloadAUnwrapTests : IDisposable
         
         //assert
         //contents should be from storage
-        Assert.Equals(contents, transformedMessage.Value);
-        Assert.That(_luggageStore.HasClaim(id));
+        await Assert.That(transformedMessage.Value).IsEqualTo(contents);
+        await Assert.That(_luggageStore.HasClaim(id)).IsTrue();
     }
     
     public void Dispose()

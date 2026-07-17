@@ -122,7 +122,6 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
 
         var originalContentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()};
         var contentType = new ContentType(mimeType);
-        contentType.CharSet = message.Header.ContentType?.CharSet ?? CharacterEncoding.UTF8.FromCharacterEncoding();
         message.Header.ContentType = contentType;
         message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, originalContentType.ToString());
 

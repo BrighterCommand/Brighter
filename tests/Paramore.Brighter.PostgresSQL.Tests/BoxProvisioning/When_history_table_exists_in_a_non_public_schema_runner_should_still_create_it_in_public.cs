@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Outbox.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -34,7 +33,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 // shared "public"."__BrighterMigrationHistory" table to demonstrate the schema-qualification
 // bug. DisposeAsync drops the colliding artefacts; the runner naturally recreates the public
 // history table so the rest of the BoxProvisioning suite is left in a consistent state.
-public class PostgreSqlHistoryTableNonPublicSchemaTests : IAsyncLifetime
+public class PostgreSqlHistoryTableNonPublicSchemaTests
 {
     private const string CollidingSchema = "stage_for_history_clash_test";
     private readonly string _setupConnectionString = PostgreSqlSettings.TestsBrighterConnectionString;
@@ -59,7 +58,7 @@ public class PostgreSqlHistoryTableNonPublicSchemaTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_history_table_exists_in_a_non_public_schema_runner_should_still_create_it_in_public()
     {
         //Arrange — pre-create stage_for_history_clash_test."__BrighterMigrationHistory" with a
@@ -74,15 +73,15 @@ public class PostgreSqlHistoryTableNonPublicSchemaTests : IAsyncLifetime
 
         //Act
         var act = async () => await _provisioner.ProvisionAsync();
-        var ex = await Record.ExceptionAsync(act);
+        var ex = await TestExceptionRecorder.CaptureAsync(act);
 
         //Assert — runner must succeed, "public"."__BrighterMigrationHistory" must exist with
         //the correct shape and one V_latest fresh-install row, and the colliding stage table
         //must be untouched.
-        Assert.Null(ex);
-        Assert.True(await PublicHistoryTableExists(), @"""public"".""__BrighterMigrationHistory"" must be created");
-        Assert.Equal(1L, await GetPublicHistoryRowCountForBox());
-        Assert.Equal(0L, await GetCollidingHistoryRowCount());
+        await Assert.That(ex).IsNull();
+        await Assert.That(await PublicHistoryTableExists()).IsTrue().Because(@"""public"".""__BrighterMigrationHistory"" must be created");
+        await Assert.That(await GetPublicHistoryRowCountForBox()).IsEqualTo(1L);
+        await Assert.That(await GetCollidingHistoryRowCount()).IsEqualTo(0L);
     }
 
     private Task DropPublicHistoryTable() =>
@@ -145,8 +144,10 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

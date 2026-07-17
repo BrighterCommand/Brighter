@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis.Testing;
+using Microsoft.CodeAnalysis.Testing;
 using Paramore.Brighter.Analyzer.Analyzers;
 using Paramore.Brighter.Analyzer.Tests.Analyzers;
 
@@ -6,7 +6,7 @@ namespace Paramore.Brighter.Analyzer.Test.Analyzers
 {
     public class SubscriptionConstructorAnalyzerTest : BaseAnalyzerTest<SubscriptionConstructorAnalyzer>
     {
-        [Fact]
+        [Test]
         public async Task When_Initializing_Subscription_With_MessagePump()
         {
 
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Analyzer.Test.Analyzers
             await testContext.RunAsync();
         }
 
-        [Fact]
+        [Test]
         public async Task When_Initializing_Subscription_WithOut_MessagePump()
         {
 
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Analyzer.Test.Analyzers
             testContext.ExpectedDiagnostics.Add(new DiagnosticResult(SubscriptionConstructorAnalyzer.MessagePumpMissingRule).WithLocation(0).WithArguments("SubscriptionTest"));
             await testContext.RunAsync();
         }
-        [Fact]
+        [Test]
         public async Task When_Initializing_SubscriptionNested_WithOut_MessagePump()
         {
 

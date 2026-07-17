@@ -27,11 +27,10 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.Outbox.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
+public class MySqlSpec0023EraHistoryTransitionTests
 {
     private const string Spec0023EraDescription = "spec 0023 fresh install";
     private const string SchemaName = "BrighterTests";
@@ -39,7 +38,7 @@ public class MySqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mysql_table_has_spec_0023_era_history_at_v1_it_should_transition_cleanly_to_v7()
     {
         //Arrange — V7-shaped outbox via the live builder DDL + spec-0023-era history at V1.
@@ -61,24 +60,19 @@ public class MySqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
         await provisioner.ProvisionAsync();
 
         //Assert — table shape unchanged (idempotent information_schema-checked ALTERs were no-ops).
-        Assert.Equal(columnsBefore, await GetTableColumns());
+        await Assert.That(await GetTableColumns()).IsEqualTo(columnsBefore);
 
         //Assert — V1 row preserved with original spec-0023-era description; V2..V7 inserted normally.
         var rowsByVersion = await GetHistoryRowsByVersion();
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest, rowsByVersion.Count);
-        Assert.Equal(Spec0023EraDescription, rowsByVersion[1]);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest);
+        await Assert.That(rowsByVersion[1]).IsEqualTo(Spec0023EraDescription);
 
         for (var v = 2; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            var description = Assert.Contains(v, rowsByVersion);
-            Assert.False(
-                description.StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be a normal-path applied row, not a synthetic bootstrap " +
-                $"(description was: '{description}')");
-            Assert.False(
-                description.StartsWith("fresh install", StringComparison.Ordinal),
-                $"V{v} should be a normal-path applied row, not a fresh-install marker " +
-                $"(description was: '{description}')");
+            await Assert.That(rowsByVersion.ContainsKey(v)).IsTrue();
+            var description = rowsByVersion[v];
+            await Assert.That(description.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
+            await Assert.That(description.StartsWith("fresh install", StringComparison.Ordinal)).IsFalse();
         }
     }
 
@@ -158,8 +152,10 @@ ORDER BY `MigrationVersion`";
         return rows;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

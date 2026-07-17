@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -46,13 +45,13 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // throws `InvalidOperationException : This SqlTransaction has completed; it is no longer
 // usable.` (observed at https://github.com/BrighterCommand/Brighter/actions/runs/26726375087
 // — `MsSqlGlobalToPerSchemaFlipTests` failed in one TFM run, passed in the other on the same
-// commit). The CI workflow runs `dotnet test --filter "Fragile!=CI"`, so `[Trait("Fragile",
+// commit). The CI workflow runs `dotnet test --filter "Fragile!=CI"`, so `[Property("Fragile",
 // "CI")]` is the minimal-change escape hatch — no per-TFM database, no ci.yml change. The
 // schema_id-filter bug this test was added to defend stays covered locally (where the two
 // TFM matrices run sequentially) and the discriminator/detection tests catch regressions in
 // the same area.
-[Trait("Fragile", "CI")]
-public class MsSqlHistoryTableNonDboSchemaTests : IAsyncLifetime
+[Property("Fragile", "CI")]
+public class MsSqlHistoryTableNonDboSchemaTests
 {
     private const string CollidingSchema = "stage_for_history_clash_test";
     private readonly string _connectionString = Configuration.DefaultConnectingString;
@@ -71,7 +70,7 @@ public class MsSqlHistoryTableNonDboSchemaTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_history_table_exists_in_a_non_dbo_schema_runner_should_still_create_it_in_dbo()
     {
         //Arrange — pre-create [stage].[__BrighterMigrationHistory] with a deliberately wrong
@@ -85,14 +84,14 @@ public class MsSqlHistoryTableNonDboSchemaTests : IAsyncLifetime
 
         //Act
         var act = async () => await _provisioner.ProvisionAsync();
-        var ex = await Record.ExceptionAsync(act);
+        var ex = await TestExceptionRecorder.CaptureAsync(act);
 
         //Assert — runner must succeed, [dbo] history table must exist with the correct shape
         //and one V_latest fresh-install row, and the colliding [stage] table must be untouched.
-        Assert.Null(ex);
-        Assert.True(DboHistoryTableExists(), "[dbo].[__BrighterMigrationHistory] must be created");
-        Assert.Equal(1, GetDboHistoryRowCountForBox());
-        Assert.Equal(0, GetCollidingHistoryRowCount());
+        await Assert.That(ex).IsNull();
+        await Assert.That(DboHistoryTableExists()).IsTrue().Because("[dbo].[__BrighterMigrationHistory] must be created");
+        await Assert.That(GetDboHistoryRowCountForBox()).IsEqualTo(1);
+        await Assert.That(GetCollidingHistoryRowCount()).IsEqualTo(0);
     }
 
     private void DropDboHistoryTable()
@@ -160,8 +159,10 @@ CREATE TABLE [{CollidingSchema}].[__BrighterMigrationHistory] (
         command.ExecuteNonQuery();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public Task DisposeAsync()
     {
         try

@@ -19,9 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,13 +28,11 @@ using Microsoft.Extensions.Options;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class ValidationHostedServiceWarningLoggingTests
 {
-    [Fact]
+    [Test]
     public async Task When_validation_has_warnings_should_log_them_at_warning_level()
     {
         // Arrange — two warnings with distinct source and message
@@ -47,20 +43,18 @@ public class ValidationHostedServiceWarningLoggingTests
         var logger = new SpyLogger<BrighterValidationHostedService>();
         var provider = new ServiceCollection().BuildServiceProvider();
         var service = new BrighterValidationHostedService(options, validator, provider, logger);
-
         // Act
         await service.StartAsync(CancellationToken.None);
-
         // Assert — each warning is logged at Warning level with source and message
         var warningEntries = logger.WarningEntries.ToList();
-        Assert.Equal(2, warningEntries.Count);
-        Assert.Contains("HandlerA", warningEntries[0].Message);
-        Assert.Contains("Backstop ordering suboptimal", warningEntries[0].Message);
-        Assert.Contains("HandlerB", warningEntries[1].Message);
-        Assert.Contains("Attribute mismatch suggestion", warningEntries[1].Message);
+        await Assert.That(warningEntries.Count).IsEqualTo(2);
+        await Assert.That(warningEntries[0].Message).Contains("HandlerA");
+        await Assert.That(warningEntries[0].Message).Contains("Backstop ordering suboptimal");
+        await Assert.That(warningEntries[1].Message).Contains("HandlerB");
+        await Assert.That(warningEntries[1].Message).Contains("Attribute mismatch suggestion");
     }
 
-    [Fact]
+    [Test]
     public async Task When_validation_has_no_warnings_should_not_log_warnings()
     {
         // Arrange — no warnings
@@ -69,11 +63,9 @@ public class ValidationHostedServiceWarningLoggingTests
         var logger = new SpyLogger<BrighterValidationHostedService>();
         var provider = new ServiceCollection().BuildServiceProvider();
         var service = new BrighterValidationHostedService(options, validator, provider, logger);
-
         // Act
         await service.StartAsync(CancellationToken.None);
-
         // Assert — no warning log entries
-        Assert.Empty(logger.WarningEntries);
+        await Assert.That(logger.WarningEntries).IsEmpty();
     }
 }

@@ -29,11 +29,10 @@ using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.Legacy;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
+public class MsSqlRunnerMidChainFailureRollbackTests
 {
     private const int SeedVersion = 3;
     private const int BrokenVersion = 6;
@@ -43,7 +42,7 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mssql_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically()
     {
         //Arrange — seed an outbox at V3 (no history) plus a marker row to prove preservation.
@@ -66,16 +65,16 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
             _tableName, schemaName: null, BoxType.Outbox, staleHint));
 
         //Assert — no history rows for this box (synthetic V3 + V4/V5 applied rows all rolled back).
-        Assert.Empty(GetHistoryRowsByVersion());
+        await Assert.That(GetHistoryRowsByVersion()).IsEmpty();
 
         //Assert — table still at V3 shape (V4 PartitionKey ALTER rolled back; V5+ never reached).
         var columnsAfterFailure = GetTableColumns();
-        Assert.Contains("ContentType", columnsAfterFailure); // V3 column present
-        Assert.DoesNotContain("PartitionKey", columnsAfterFailure); // V4 column rolled back
-        Assert.DoesNotContain("Source", columnsAfterFailure); // V5 column never applied
+        await Assert.That(columnsAfterFailure).Contains("ContentType"); // V3 column present
+        await Assert.That(columnsAfterFailure).DoesNotContain("PartitionKey"); // V4 column rolled back
+        await Assert.That(columnsAfterFailure).DoesNotContain("Source"); // V5 column never applied
 
         //Assert — seeded marker row preserved (no DROP/recreate happened).
-        Assert.Equal(1, GetMarkerRowCount());
+        await Assert.That(GetMarkerRowCount()).IsEqualTo(1);
 
         //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
         var realRunner = new MsSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
@@ -89,25 +88,25 @@ public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
 
         //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
         var rowsByVersion = GetHistoryRowsByVersion();
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1);
 
-        var syntheticDescription = Assert.Contains(SeedVersion, rowsByVersion);
-        Assert.StartsWith($"bootstrap: detected at V{SeedVersion}", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion)).IsTrue();
+
+        var syntheticDescription = rowsByVersion[SeedVersion];
+        await Assert.That(syntheticDescription).StartsWith($"bootstrap: detected at V{SeedVersion}");
 
         for (var v = SeedVersion + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            var appliedDescription = Assert.Contains(v, rowsByVersion);
-            Assert.False(
-                appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be an applied migration row, not a synthetic bootstrap row " +
-                $"(description was: '{appliedDescription}')");
+            await Assert.That(rowsByVersion.ContainsKey(v)).IsTrue();
+            var appliedDescription = rowsByVersion[v];
+            await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
         }
 
         //Assert — table now at V7 shape with marker row still present.
         var columnsAfterRetry = GetTableColumns();
-        Assert.Contains("DataRef", columnsAfterRetry); // V7 column
-        Assert.Contains("PartitionKey", columnsAfterRetry); // V4 column applied on retry
-        Assert.Equal(1, GetMarkerRowCount());
+        await Assert.That(columnsAfterRetry).Contains("DataRef"); // V7 column
+        await Assert.That(columnsAfterRetry).Contains("PartitionKey"); // V4 column applied on retry
+        await Assert.That(GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private void SeedMarkerRow()
@@ -172,8 +171,10 @@ ELSE
         return (int)command.ExecuteScalar()!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

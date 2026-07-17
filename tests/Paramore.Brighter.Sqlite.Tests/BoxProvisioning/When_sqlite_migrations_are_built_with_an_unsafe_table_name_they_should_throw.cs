@@ -22,7 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -40,11 +40,11 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
 public class SqliteMigrationsUnsafeIdentifierTests
 {
-    [Theory]
-    [InlineData("O'Brien")]    // single quote — exact injection vector at pragma_table_info('{table}')
-    [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
-    [InlineData("my-outbox")]  // hyphen — would need bracket-quoting to be legal
-    public void When_sqlite_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
+    [Test]
+    [Arguments("O'Brien")]    // single quote — exact injection vector at pragma_table_info('{table}')
+    [Arguments("1Outbox")]    // leading digit — invalid as bare identifier
+    [Arguments("my-outbox")]  // hyphen — would need bracket-quoting to be legal
+    public async Task When_sqlite_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -53,14 +53,14 @@ public class SqliteMigrationsUnsafeIdentifierTests
 
         //Act + Assert
         var ex = Assert.Throws<ConfigurationException>(() => new SqliteOutboxMigrationCatalog().All(config));
-        Assert.Contains(unsafeTable, ex.Message);
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 
-    [Theory]
-    [InlineData("O'Brien")]
-    [InlineData("1Inbox")]
-    [InlineData("my-inbox")]
-    public void When_sqlite_inbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
+    [Test]
+    [Arguments("O'Brien")]
+    [Arguments("1Inbox")]
+    [Arguments("my-inbox")]
+    public async Task When_sqlite_inbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -69,6 +69,6 @@ public class SqliteMigrationsUnsafeIdentifierTests
 
         //Act + Assert
         var ex = Assert.Throws<ConfigurationException>(() => new SqliteInboxMigrationCatalog().All(config));
-        Assert.Contains(unsafeTable, ex.Message);
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 }

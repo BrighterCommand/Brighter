@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 //   - DO NOT grant SELECT on public."__BrighterMigrationHistory" so any read against the legacy
 //     history table fails with PostgresException SQLState 42501 (insufficient_privilege). The
 //     runner must convert that failure into a ConfigurationException with the documented message.
-public class PostgreSqlPerSchemaFlipPermissionTests : IAsyncLifetime
+public class PostgreSqlPerSchemaFlipPermissionTests
 {
     private readonly string _elevatedConnectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -72,7 +71,7 @@ public class PostgreSqlPerSchemaFlipPermissionTests : IAsyncLifetime
         _foldedSchema = _schemaName.ToLowerInvariant();
     }
 
-    [Fact]
+    [Test]
     public async Task When_per_schema_flip_cannot_read_legacy_history_table_postgres_runner_should_throw_clear_error()
     {
         //Arrange — clean slate under elevated creds; operator pre-creates the (folded) tenant schema.
@@ -86,7 +85,7 @@ public class PostgreSqlPerSchemaFlipPermissionTests : IAsyncLifetime
         //with one row for this tenant. This is the legacy history the seed must copy on the flip.
         var globalProvisioner = BuildOutboxProvisioner(_elevatedConnectionString, MigrationHistoryScope.Global);
         await globalProvisioner.ProvisionAsync();
-        Assert.Equal(1, await GetHistoryRowCountInSchemaAsync("public"));
+        await Assert.That(await GetHistoryRowCountInSchemaAsync("public")).IsEqualTo(1);
 
         //Arrange — create the restricted role with the minimum privileges documented at the top of
         //this file: enough to run a PerSchema provision against the tenant schema, but no SELECT on
@@ -96,20 +95,18 @@ public class PostgreSqlPerSchemaFlipPermissionTests : IAsyncLifetime
 
         //Act — flip to PerSchema as the restricted role.
         var perSchemaProvisioner = BuildOutboxProvisioner(_restrictedConnectionString, MigrationHistoryScope.PerSchema);
-        var exception = await Record.ExceptionAsync(() => perSchemaProvisioner.ProvisionAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(() => perSchemaProvisioner.ProvisionAsync());
 
         //Assert — the runner surfaces the failure as a ConfigurationException, NOT a raw PostgresException.
         //The documented message phrase pins the user-facing cause (operators read this and grant SELECT
         //on the legacy table); the inner exception preserves the provider error for diagnostics.
-        var configException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains(
-            "every provision run reads the legacy default-schema history table",
-            configException.Message);
-        Assert.NotNull(configException.InnerException);
+        var configException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configException.Message).Contains("every provision run reads the legacy default-schema history table");
+        await Assert.That(configException.InnerException).IsNotNull();
 
         //Assert — legacy "public"."__BrighterMigrationHistory" row is left intact: the seed is INSERT-only
         //into the per-schema target and the transaction roll-back undoes nothing on the legacy side.
-        Assert.Equal(1, await GetHistoryRowCountInSchemaAsync("public"));
+        await Assert.That(await GetHistoryRowCountInSchemaAsync("public")).IsEqualTo(1);
 
         //Assert — per-schema "<tenant>"."__BrighterMigrationHistory" must NOT be left as an empty stub.
         //The CREATE TABLE and the failing seed both run inside the same provisioning transaction, so
@@ -118,9 +115,7 @@ public class PostgreSqlPerSchemaFlipPermissionTests : IAsyncLifetime
         //re-attempt the seed and ConfigurationException-throw again with the same permission error —
         //but leaving an empty stub still misleads operators inspecting the schema after a failed
         //flip ("history table appears provisioned"), so the rollback remains part of the contract.
-        Assert.False(
-            await TableExistsInSchemaAsync("__BrighterMigrationHistory", _foldedSchema),
-            $"Per-schema history table must not be left as an empty stub in '{_foldedSchema}' after a failed flip.");
+        await Assert.That(await TableExistsInSchemaAsync("__BrighterMigrationHistory", _foldedSchema)).IsFalse().Because($"Per-schema history table must not be left as an empty stub in '{_foldedSchema}' after a failed flip.");
     }
 
     private PostgreSqlOutboxProvisioner BuildOutboxProvisioner(string connectionString, MigrationHistoryScope scope)
@@ -275,8 +270,10 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @BoxSchemaName";
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

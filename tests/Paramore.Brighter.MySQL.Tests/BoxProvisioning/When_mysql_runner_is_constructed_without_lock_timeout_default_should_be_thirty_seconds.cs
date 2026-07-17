@@ -29,16 +29,15 @@ using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
+public class MySqlRunnerDefaultLockTimeoutTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mysql_runner_is_constructed_without_lock_timeout_default_should_be_thirty_seconds()
     {
         //Arrange — the runner is constructed via the detection-helper ctor with `lockTimeout`
@@ -68,11 +67,13 @@ public class MySqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         //Assert — the omitted `lockTimeout` resolves to the 30-second default rather than
         // TimeSpan.Zero. The default is now consistent with SqliteBoxMigrationRunner's existing
         // default (the reference value the four relational runners are being harmonised against).
-        Assert.Equal(TimeSpan.FromSeconds(30), fakeLock.AcquiredTimeout);
+        await Assert.That(fakeLock.AcquiredTimeout).IsEqualTo(TimeSpan.FromSeconds(30));
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

@@ -1,14 +1,13 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 {
-    [Trait("Category", "MSSQL")]
+    [Category("MSSQL")]
     public class MsSqlMessageConsumerRequeueTests
     {
         private readonly Message _message;
@@ -47,8 +46,8 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             _channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration));
         }
 
-        [Fact]
-        public void When_requeueing_a_message()
+        [Test]
+        public async Task When_requeueing_a_message()
         {
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(_message);
             var channel = _channelFactory.CreateSyncChannel(_subscription);
@@ -60,7 +59,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             //clear the queue
             channel.Acknowledge(requeuedMessage);
 
-            Assert.Equal(message.Body.Value, requeuedMessage.Body.Value);
+            await Assert.That(requeuedMessage.Body.Value).IsEqualTo(message.Body.Value);
         }
     }
 }

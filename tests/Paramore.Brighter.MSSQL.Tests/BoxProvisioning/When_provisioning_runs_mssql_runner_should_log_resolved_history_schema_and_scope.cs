@@ -33,7 +33,6 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -44,13 +43,13 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // as an attribute on the existing legacy-history-seeded Activity event so a trace-store query can
 // filter by it. Two facts share this class because the seed scenario reuses the per-run log
 // machinery and the normal-run log must NOT carry the seed fields.
-public class MsSqlBoxMigrationRunnerLoggingTests : IAsyncLifetime
+public class MsSqlBoxMigrationRunnerLoggingTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly string _schemaName = $"billing_obs_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_provisioning_runs_mssql_runner_should_log_resolved_history_schema_and_scope()
     {
         //Arrange — clean slate, PerSchema scope with a non-null SchemaName. No legacy history rows
@@ -91,18 +90,18 @@ public class MsSqlBoxMigrationRunnerLoggingTests : IAsyncLifetime
             && e.HasField("BoxTable")
             && e.HasField("HistorySchema")
             && e.HasField("Scope"));
-        Assert.NotNull(resolvedSchemaLog);
+        await Assert.That(resolvedSchemaLog).IsNotNull();
 
         //Assert — the structured field values match the actual run's configuration. For PerSchema on
         //MSSQL, HistorySchema must be the configured SchemaName (not the backend default "dbo") and
         //Scope must carry the enum value PerSchema, so an operator filtering a structured log sink
         //by Scope=PerSchema and HistorySchema=<tenant> can locate this tenant's provisioning event.
-        Assert.Equal(_tableName, resolvedSchemaLog!.Field("BoxTable")?.ToString());
-        Assert.Equal(_schemaName, resolvedSchemaLog.Field("HistorySchema")?.ToString());
-        Assert.Equal(MigrationHistoryScope.PerSchema, resolvedSchemaLog.Field("Scope"));
+        await Assert.That(resolvedSchemaLog!.Field("BoxTable")?.ToString()).IsEqualTo(_tableName);
+        await Assert.That(resolvedSchemaLog.Field("HistorySchema")?.ToString()).IsEqualTo(_schemaName);
+        await Assert.That(resolvedSchemaLog.Field("Scope")).IsEqualTo(MigrationHistoryScope.PerSchema);
     }
 
-    [Fact]
+    [Test]
     public async Task When_seed_runs_during_global_to_per_schema_flip_runner_should_log_row_count_and_emit_activity_attribute()
     {
         //Arrange — provision once under Global so the legacy dbo history table contains exactly one
@@ -134,8 +133,8 @@ public class MsSqlBoxMigrationRunnerLoggingTests : IAsyncLifetime
 
         // Sanity-check the arranged precondition so a regression in the Global path can't masquerade
         // as a missing seed log: exactly one tenant row in dbo and no per-schema history table yet.
-        Assert.Equal(1, GetHistoryRowCountInSchema("dbo"));
-        Assert.False(TableExistsInSchema("__BrighterMigrationHistory", _schemaName));
+        await Assert.That(GetHistoryRowCountInSchema("dbo")).IsEqualTo(1);
+        await Assert.That(TableExistsInSchema("__BrighterMigrationHistory", _schemaName)).IsFalse();
 
         var capturingLogger = new StructuredCapturingLogger();
         var capturedActivities = new List<Activity>();
@@ -176,11 +175,11 @@ public class MsSqlBoxMigrationRunnerLoggingTests : IAsyncLifetime
             && e.HasField("BoxTable")
             && e.HasField("LegacySchema")
             && e.HasField("TargetSchema"));
-        Assert.NotNull(seedLog);
-        Assert.Equal(1, Convert.ToInt32(seedLog!.Field("RowCount")));
-        Assert.Equal(_tableName, seedLog.Field("BoxTable")?.ToString());
-        Assert.Equal("dbo", seedLog.Field("LegacySchema")?.ToString());
-        Assert.Equal(_schemaName, seedLog.Field("TargetSchema")?.ToString());
+        await Assert.That(seedLog).IsNotNull();
+        await Assert.That(Convert.ToInt32(seedLog!.Field("RowCount"))).IsEqualTo(1);
+        await Assert.That(seedLog.Field("BoxTable")?.ToString()).IsEqualTo(_tableName);
+        await Assert.That(seedLog.Field("LegacySchema")?.ToString()).IsEqualTo("dbo");
+        await Assert.That(seedLog.Field("TargetSchema")?.ToString()).IsEqualTo(_schemaName);
 
         //Assert — the legacy-history-seeded Activity event on the migration span carries the row
         //count as the attribute "brighter.box.migration.seed.rows". Without this attribute, a trace
@@ -192,10 +191,10 @@ public class MsSqlBoxMigrationRunnerLoggingTests : IAsyncLifetime
             .SelectMany(a => a.Events)
             .Where(e => e.Name == BrighterSemanticConventions.BoxMigrationEventLegacyHistorySeeded)
             .ToList();
-        Assert.Single(seedEvent);
+        await Assert.That(seedEvent).HasSingleItem();
         var rowsAttribute = seedEvent[0].Tags.FirstOrDefault(t => t.Key == "brighter.box.migration.seed.rows");
-        Assert.NotNull(rowsAttribute.Key);
-        Assert.Equal(1, Convert.ToInt32(rowsAttribute.Value));
+        await Assert.That(rowsAttribute.Key).IsNotNull();
+        await Assert.That(Convert.ToInt32(rowsAttribute.Value)).IsEqualTo(1);
     }
 
     private void EnsureSchemaExists(string schemaName) =>
@@ -257,8 +256,10 @@ IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = '{schemaName}')
         command.ExecuteNonQuery();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public Task DisposeAsync()
     {
         try

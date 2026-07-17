@@ -26,24 +26,19 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Category("Kafka")]
 public class KafkaMessageConsumerNoChannelsAsyncTests : IAsyncDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly KafkaMessageProducer _producer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaMessageConsumerNoChannelsAsyncTests(ITestOutputHelper output)
+    public KafkaMessageConsumerNoChannelsAsyncTests()
     {
-        _output = output;
 
         // Create producer directly for the data topic
         var publication = new KafkaPublication
@@ -67,7 +62,7 @@ public class KafkaMessageConsumerNoChannelsAsyncTests : IAsyncDisposable
         _producer.Init();
     }
 
-    [Fact]
+    [Test]
     public async Task When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log_async()
     {
         //Arrange - let topics propagate in the broker
@@ -99,23 +94,23 @@ public class KafkaMessageConsumerNoChannelsAsyncTests : IAsyncDisposable
         await using (var consumer = CreateConsumerWithNoChannels(groupId))
         {
             var receivedMessage1 = await ConsumeMessageAsync(consumer);
-            Assert.Equal(messageId1, receivedMessage1.Id);
+            await Assert.That(receivedMessage1.Id).IsEqualTo(messageId1);
 
-            _output.WriteLine($"About to reject message {messageId1} with no channels configured");
+            Console.WriteLine($"About to reject message {messageId1} with no channels configured");
 
             //reject with no channels configured - should acknowledge and log warning
             var rejected = await consumer.RejectAsync(receivedMessage1, new MessageRejectionReason(RejectionReason.DeliveryError, "Test rejection with no channels async"));
 
-            _output.WriteLine($"Message {messageId1} rejected, attempting to consume next message");
+            Console.WriteLine($"Message {messageId1} rejected, attempting to consume next message");
 
             //Assert - verify rejection returned true and we can consume the next message
-            Assert.True(rejected, "RejectAsync should return true even with no channels");
+            await Assert.That(rejected).IsTrue();
 
             //verify we can consume the next message (proving first was acknowledged)
             var receivedMessage2 = await ConsumeMessageAsync(consumer);
-            Assert.Equal(messageId2, receivedMessage2.Id);
+            await Assert.That(receivedMessage2.Id).IsEqualTo(messageId2);
 
-            _output.WriteLine($"Successfully consumed message {messageId2} after rejection");
+            Console.WriteLine($"Successfully consumed message {messageId2} after rejection");
         }
 
         //Additional verification: ensure no messages were sent to non-existent DLQ
@@ -163,7 +158,7 @@ public class KafkaMessageConsumerNoChannelsAsyncTests : IAsyncDisposable
             }
             catch (ChannelFailureException cfx)
             {
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 await Task.Delay(1000);
             }
         } while (maxTries <= 10);
@@ -173,8 +168,13 @@ public class KafkaMessageConsumerNoChannelsAsyncTests : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        _producer?.Dispose();
+        if(_producer != null)
+        {
+            await _producer.DisposeAsync();
+        }
+
         await Task.CompletedTask;
     }
 }
+
 

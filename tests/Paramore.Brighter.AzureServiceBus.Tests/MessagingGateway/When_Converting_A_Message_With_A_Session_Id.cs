@@ -3,18 +3,18 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 // These tests mutate the global JsonSerialisationOptions.Options, so they must not run in
 // parallel with any other test that relies on the serialization policy. Grouping them in a
 // single, parallelism-disabled collection isolates that shared-state change.
-[CollectionDefinition("SerializationPolicy", DisableParallelization = true)]
+[System.Obsolete]
 public class SerializationPolicyCollection;
 
-[Trait("Category", "ASB")]
-[Collection("SerializationPolicy")]
+[Property("Category", "ASB")]
+[NotInParallel]
 public class AzureServiceBusMessagePublisherSessionIdTests
 {
     public static IEnumerable<object?[]> NamingPolicies =>
@@ -28,9 +28,9 @@ public class AzureServiceBusMessagePublisherSessionIdTests
         [null],
     ];
 
-    [Theory]
-    [MemberData(nameof(NamingPolicies))]
-    public void When_the_session_id_bag_key_round_trips_under_the_configured_policy_should_set_the_session_id(
+    [Test]
+    [MethodDataSource(nameof(NamingPolicies))]
+    public async Task When_the_session_id_bag_key_round_trips_under_the_configured_policy_should_set_the_session_id(
         JsonNamingPolicy? policy)
     {
         // Brighter's Outbox serializes the header Bag with JsonSerialisationOptions.Options, and its
@@ -59,10 +59,10 @@ public class AzureServiceBusMessagePublisherSessionIdTests
             var asbMessage = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message);
 
             // the session id is set on the outgoing message...
-            Assert.Equal(expectedSessionId, asbMessage.SessionId);
+            await Assert.That(asbMessage.SessionId).IsEqualTo(expectedSessionId);
             // ...and the reserved header, whatever casing the policy gave it, does not leak into ApplicationProperties
             var roundTrippedKey = policy?.ConvertName(sessionIdKey) ?? sessionIdKey;
-            Assert.False(asbMessage.ApplicationProperties.ContainsKey(roundTrippedKey));
+            await Assert.That(asbMessage.ApplicationProperties.ContainsKey(roundTrippedKey)).IsFalse();
         }
         finally
         {

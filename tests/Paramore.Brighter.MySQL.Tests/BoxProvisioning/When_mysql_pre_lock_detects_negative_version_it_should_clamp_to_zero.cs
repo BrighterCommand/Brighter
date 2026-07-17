@@ -30,7 +30,6 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -53,7 +52,7 @@ public class MySqlPreLockNegativeVersionClampTests
 {
     private const string ConnectionString = Const.DefaultConnectingString;
 
-    [Fact]
+    [Test]
     public async Task When_mysql_outbox_provisioner_pre_lock_detection_returns_negative_version_it_should_clamp_to_zero()
     {
         //Arrange — bootstrap branch (table exists, history missing); DetectCurrentVersionAsync = -1.
@@ -73,11 +72,11 @@ public class MySqlPreLockNegativeVersionClampTests
         await provisioner.ProvisionAsync();
 
         //Assert — captured BoxTableState.CurrentVersion clamped from -1 to 0 by the base.
-        Assert.NotNull(migrationRunner.CapturedTableState);
-        Assert.Equal(0, migrationRunner.CapturedTableState!.CurrentVersion);
+        await Assert.That(migrationRunner.CapturedTableState).IsNotNull();
+        await Assert.That(migrationRunner.CapturedTableState!.CurrentVersion).IsEqualTo(0);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mysql_inbox_provisioner_pre_lock_detection_returns_negative_version_it_should_clamp_to_zero()
     {
         //Arrange — bootstrap branch (table exists, history missing); DetectCurrentVersionAsync = -1.
@@ -97,8 +96,8 @@ public class MySqlPreLockNegativeVersionClampTests
         await provisioner.ProvisionAsync();
 
         //Assert — captured BoxTableState.CurrentVersion clamped from -1 to 0 by the base.
-        Assert.NotNull(migrationRunner.CapturedTableState);
-        Assert.Equal(0, migrationRunner.CapturedTableState!.CurrentVersion);
+        await Assert.That(migrationRunner.CapturedTableState).IsNotNull();
+        await Assert.That(migrationRunner.CapturedTableState!.CurrentVersion).IsEqualTo(0);
     }
 
     private sealed class BootstrapDetectionHelper : IAmAVersionDetectingMigrationHelper<MySqlConnection, MySqlTransaction>

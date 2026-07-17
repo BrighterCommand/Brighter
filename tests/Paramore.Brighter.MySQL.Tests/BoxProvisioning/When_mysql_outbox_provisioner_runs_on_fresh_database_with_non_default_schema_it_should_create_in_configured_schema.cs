@@ -27,7 +27,6 @@ using System;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 //
 // This test pre-creates a non-default MySQL database (the MySQL analogue of a schema),
 // configures SchemaName to that database name, and asserts the table lands there.
-public class MySqlOutboxNonDefaultSchemaTests : IAsyncLifetime
+public class MySqlOutboxNonDefaultSchemaTests
 {
     private readonly string _baseConnectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -50,6 +49,7 @@ public class MySqlOutboxNonDefaultSchemaTests : IAsyncLifetime
     private MySqlOutboxProvisioner _provisioner = default!;
     private string _connectionInDefaultDb = default!;
 
+    [Before(Test)]
     public async Task InitializeAsync()
     {
         await EnsureDatabaseExistsAsync(_nonDefaultDatabase);
@@ -72,7 +72,7 @@ public class MySqlOutboxNonDefaultSchemaTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mysql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
         //Arrange
@@ -80,25 +80,21 @@ public class MySqlOutboxNonDefaultSchemaTests : IAsyncLifetime
         await DropAnyExistingTableAsync(_tableName, "BrighterTests");
 
         //Act — first fresh-install run
-        var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var firstException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert — table lives in the configured database (not the connection's bound DB)
-        Assert.Null(firstException);
-        Assert.True(
-            await TableExistsInDatabaseAsync(_tableName, _nonDefaultDatabase),
-            $"Outbox table '{_tableName}' must exist in '{_nonDefaultDatabase}' after fresh install with SchemaName='{_nonDefaultDatabase}'.");
-        Assert.False(
-            await TableExistsInDatabaseAsync(_tableName, "BrighterTests"),
-            $"Outbox table '{_tableName}' must NOT exist in BrighterTests (connection's default DB) when SchemaName='{_nonDefaultDatabase}' is configured.");
-        Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultDatabase, _tableName));
+        await Assert.That(firstException).IsNull();
+        await Assert.That(await TableExistsInDatabaseAsync(_tableName, _nonDefaultDatabase)).IsTrue().Because($"Outbox table '{_tableName}' must exist in '{_nonDefaultDatabase}' after fresh install with SchemaName='{_nonDefaultDatabase}'.");
+        await Assert.That(await TableExistsInDatabaseAsync(_tableName, "BrighterTests")).IsFalse().Because($"Outbox table '{_tableName}' must NOT exist in BrighterTests (connection's default DB) when SchemaName='{_nonDefaultDatabase}' is configured.");
+        await Assert.That(await GetHistoryRowCountAsync(_nonDefaultDatabase, _tableName)).IsEqualTo(1);
 
         //Act — idempotent second run
-        var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var secondException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert
-        Assert.Null(secondException);
-        Assert.True(await TableExistsInDatabaseAsync(_tableName, _nonDefaultDatabase));
-        Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultDatabase, _tableName));
+        await Assert.That(secondException).IsNull();
+        await Assert.That(await TableExistsInDatabaseAsync(_tableName, _nonDefaultDatabase)).IsTrue();
+        await Assert.That(await GetHistoryRowCountAsync(_nonDefaultDatabase, _tableName)).IsEqualTo(1);
     }
 
     private async Task EnsureDatabaseExistsAsync(string databaseName)
@@ -158,6 +154,7 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
         return Convert.ToInt64(await command.ExecuteScalarAsync());
     }
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

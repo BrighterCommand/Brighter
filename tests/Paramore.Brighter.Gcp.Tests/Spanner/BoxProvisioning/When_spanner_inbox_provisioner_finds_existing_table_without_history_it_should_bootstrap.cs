@@ -5,14 +5,13 @@ using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.BoxProvisioning.Spanner;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Inbox.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
-[Trait("Category", "Spanner")]
-public class When_spanner_inbox_provisioner_finds_existing_table_without_history_it_should_bootstrap : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class When_spanner_inbox_provisioner_finds_existing_table_without_history_it_should_bootstrap
 {
     private readonly string _tableName;
     private readonly string _connectionString;
@@ -34,7 +33,7 @@ public class When_spanner_inbox_provisioner_finds_existing_table_without_history
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_bootstrap_with_synthetic_history()
     {
         // Arrange — create inbox table directly (simulating pre-migration install)
@@ -61,11 +60,13 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
                 { "ExpectedVersion", SpannerDbType.Int64, (long)ExpectedMigrationVersions.InboxLatest }
             });
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

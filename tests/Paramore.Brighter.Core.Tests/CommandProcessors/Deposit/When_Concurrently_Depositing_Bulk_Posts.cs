@@ -9,13 +9,12 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit;
 
 public class ConcurrentBulkDepositPostTests
 {
-    [Fact]
+    [Test]
     public async Task When_concurrently_depositing_bulk_posts_async_no_messages_are_lost_or_errored()
     {
         const int workers = 16;
@@ -87,18 +86,17 @@ public class ConcurrentBulkDepositPostTests
         gate.TrySetResult(true);
         await Task.WhenAll(tasks);
 
-        Assert.Empty(errors);
+        await Assert.That(errors).IsEmpty();
 
         var allIds = depositedIds.SelectMany(ids => ids).ToArray();
-        Assert.Equal(expectedMessageCount, allIds.Length);
-        Assert.Equal(expectedMessageCount, allIds.Distinct().Count());
+        await Assert.That(allIds.Length).IsEqualTo(expectedMessageCount);
+        await Assert.That(allIds.Distinct().Count()).IsEqualTo(expectedMessageCount);
 
         await commandProcessor.ClearOutboxAsync(allIds);
 
         var flushedMessages = bus.Stream(topic).ToArray();
-        Assert.Equal(expectedMessageCount, flushedMessages.Length);
-        Assert.Equal(expectedMessageCount, flushedMessages.Select(m => m.Id).Distinct().Count());
+        await Assert.That(flushedMessages.Length).IsEqualTo(expectedMessageCount);
+        await Assert.That(flushedMessages.Select(m => m.Id).Distinct().Count()).IsEqualTo(expectedMessageCount);
     }
 }
-
 

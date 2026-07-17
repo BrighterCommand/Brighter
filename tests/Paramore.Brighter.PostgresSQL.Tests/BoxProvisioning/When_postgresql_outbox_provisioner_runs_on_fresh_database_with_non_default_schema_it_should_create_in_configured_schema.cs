@@ -27,7 +27,6 @@ using System;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -41,7 +40,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 //
 // This test pre-creates a non-default schema, runs the provisioner with SchemaName set,
 // and asserts the table actually lives in that schema (not in `public`).
-public class PostgreSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
+public class PostgreSqlOutboxNonDefaultSchemaTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -63,7 +62,7 @@ public class PostgreSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgresql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
         //Arrange — non-default schema is pre-created (PG runner does not create schemas itself).
@@ -73,26 +72,22 @@ public class PostgreSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
         await DropAnyExistingTableAsync(_tableName, "public");
 
         //Act — first fresh-install run
-        var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var firstException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert — table lives in the configured schema (not `public`).
-        Assert.Null(firstException);
-        Assert.True(
-            await TableExistsInSchemaAsync(_tableName, _nonDefaultSchema),
-            $"Outbox table '{_tableName}' must exist in '{_nonDefaultSchema}' after fresh install with SchemaName='{_nonDefaultSchema}'.");
-        Assert.False(
-            await TableExistsInSchemaAsync(_tableName, "public"),
-            $"Outbox table '{_tableName}' must NOT exist in 'public' when SchemaName='{_nonDefaultSchema}' is configured.");
+        await Assert.That(firstException).IsNull();
+        await Assert.That(await TableExistsInSchemaAsync(_tableName, _nonDefaultSchema)).IsTrue().Because($"Outbox table '{_tableName}' must exist in '{_nonDefaultSchema}' after fresh install with SchemaName='{_nonDefaultSchema}'.");
+        await Assert.That(await TableExistsInSchemaAsync(_tableName, "public")).IsFalse().Because($"Outbox table '{_tableName}' must NOT exist in 'public' when SchemaName='{_nonDefaultSchema}' is configured.");
 
-        Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultSchema, _tableName));
+        await Assert.That(await GetHistoryRowCountAsync(_nonDefaultSchema, _tableName)).IsEqualTo(1);
 
         //Act — second run on a provisioned database
-        var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var secondException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert — idempotent
-        Assert.Null(secondException);
-        Assert.True(await TableExistsInSchemaAsync(_tableName, _nonDefaultSchema));
-        Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultSchema, _tableName));
+        await Assert.That(secondException).IsNull();
+        await Assert.That(await TableExistsInSchemaAsync(_tableName, _nonDefaultSchema)).IsTrue();
+        await Assert.That(await GetHistoryRowCountAsync(_nonDefaultSchema, _tableName)).IsEqualTo(1);
     }
 
     private async Task EnsureSchemaExistsAsync(string schemaName)
@@ -139,8 +134,10 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

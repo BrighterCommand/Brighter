@@ -25,14 +25,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class When_scheduler_explicitly_configured_should_override_default
 {
-    [Fact]
-    public void Should_resolve_custom_factory_instead_of_InMemorySchedulerFactory()
+    [Test]
+    public async Task Should_resolve_custom_factory_instead_of_InMemorySchedulerFactory()
     {
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
@@ -46,13 +45,13 @@ public class When_scheduler_explicitly_configured_should_override_default
         var resolvedFactory = provider.GetRequiredService<IAmAMessageSchedulerFactory>();
 
         // Assert — the custom factory should be resolved, not the default InMemorySchedulerFactory
-        Assert.NotNull(resolvedFactory);
-        Assert.IsType<StubSchedulerFactory>(resolvedFactory);
-        Assert.Same(customFactory, resolvedFactory);
+        await Assert.That(resolvedFactory).IsNotNull();
+        await Assert.That(resolvedFactory).IsTypeOf<StubSchedulerFactory>();
+        await Assert.That(resolvedFactory).IsSameReferenceAs(customFactory);
     }
 
-    [Fact]
-    public void Should_resolve_scheduler_from_custom_factory()
+    [Test]
+    public async Task Should_resolve_scheduler_from_custom_factory()
     {
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
@@ -66,12 +65,12 @@ public class When_scheduler_explicitly_configured_should_override_default
         var scheduler = provider.GetRequiredService<IAmAMessageScheduler>();
 
         // Assert — the scheduler should come from the custom factory
-        Assert.NotNull(scheduler);
-        Assert.IsType<StubMessageScheduler>(scheduler);
+        await Assert.That(scheduler).IsNotNull();
+        await Assert.That(scheduler).IsTypeOf<StubMessageScheduler>();
     }
 
-    [Fact]
-    public void Should_resolve_custom_request_scheduler_factory()
+    [Test]
+    public async Task Should_resolve_custom_request_scheduler_factory()
     {
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
@@ -85,9 +84,9 @@ public class When_scheduler_explicitly_configured_should_override_default
         var resolvedFactory = provider.GetRequiredService<IAmARequestSchedulerFactory>();
 
         // Assert — the custom factory should be resolved for request scheduling too
-        Assert.NotNull(resolvedFactory);
-        Assert.IsType<StubSchedulerFactory>(resolvedFactory);
-        Assert.Same(customFactory, resolvedFactory);
+        await Assert.That(resolvedFactory).IsNotNull();
+        await Assert.That(resolvedFactory).IsTypeOf<StubSchedulerFactory>();
+        await Assert.That(resolvedFactory).IsSameReferenceAs(customFactory);
     }
 
     private class StubSchedulerFactory : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory

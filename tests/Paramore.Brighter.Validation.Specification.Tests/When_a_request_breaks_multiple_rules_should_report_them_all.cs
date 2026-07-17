@@ -25,14 +25,14 @@ THE SOFTWARE. */
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.Specification.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.Specification.Tests;
 
 public class MultipleRuleFailureTests
 {
-    [Fact]
-    public void When_a_request_breaks_multiple_rules_should_report_them_all()
+    [Test]
+    public async Task When_a_request_breaks_multiple_rules_should_report_them_all()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -44,7 +44,7 @@ public class MultipleRuleFailureTests
         var exception = Assert.Throws<RequestValidationException>(() => handler.Handle(invalidRequest));
 
         //Assert
-        Assert.Contains(exception.Errors, error => error.PropertyName == nameof(PlaceOrder.Quantity));
-        Assert.Contains(exception.Errors, error => error.PropertyName == nameof(PlaceOrder.Sku));
+        await Assert.That((exception.Errors).Any(error => error.PropertyName == nameof(PlaceOrder.Quantity))).IsTrue();
+        await Assert.That((exception.Errors).Any(error => error.PropertyName == nameof(PlaceOrder.Sku))).IsTrue();
     }
 }

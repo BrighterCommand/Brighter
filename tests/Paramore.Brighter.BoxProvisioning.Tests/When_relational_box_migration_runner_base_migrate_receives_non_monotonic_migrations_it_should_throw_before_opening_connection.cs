@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -52,7 +51,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class SqlBoxMigrationRunnerMonotonicityValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_migration_list_has_a_version_gap_migrate_should_throw_before_opening_connection()
     {
         //Arrange
@@ -68,15 +67,15 @@ public class SqlBoxMigrationRunnerMonotonicityValidationTests
         var runner = new OrderProbeTestRunner(catalog);
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => runner.MigrateAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => runner.MigrateAsync(
             tableName: "Orders",
             schemaName: null,
             boxType: BoxType.Outbox,
             tableState: new BoxTableState(false, false, 0)));
 
         //Assert
-        Assert.IsType<ConfigurationException>(thrown);
-        Assert.False(runner.OpenConnectionCalled);
+        await Assert.That(thrown).IsTypeOf<ConfigurationException>();
+        await Assert.That(runner.OpenConnectionCalled).IsFalse();
     }
 
     /// <summary>

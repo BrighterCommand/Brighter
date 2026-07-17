@@ -1,7 +1,7 @@
 using System.Linq;
 using Newtonsoft.Json;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -13,8 +13,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 // default JsonConvert calls pick it up.
 public class BaggageNewtonsoftRoundTripTests
 {
-    [Fact]
-    public void When_Round_Tripping_A_Baggage_Through_Newtonsoft_The_Entries_Survive()
+    [Test]
+    public async Task When_Round_Tripping_A_Baggage_Through_Newtonsoft_The_Entries_Survive()
     {
         var baggage = new Baggage();
         baggage.Add("user", "alice");
@@ -23,9 +23,9 @@ public class BaggageNewtonsoftRoundTripTests
         var json = JsonConvert.SerializeObject(baggage);
         var roundTripped = JsonConvert.DeserializeObject<Baggage>(json);
 
-        Assert.NotNull(roundTripped);
+        await Assert.That(roundTripped).IsNotNull();
         var entries = roundTripped!.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        Assert.Equal("alice", entries["user"]);
-        Assert.Equal("acme", entries["tenant"]);
+        await Assert.That(entries["user"]).IsEqualTo("alice");
+        await Assert.That(entries["tenant"]).IsEqualTo("acme");
     }
 }

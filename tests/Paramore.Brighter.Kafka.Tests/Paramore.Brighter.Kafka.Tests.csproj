@@ -2,29 +2,17 @@
 
     <PropertyGroup>
         <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
+        <OutputType>Exe</OutputType>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" />
-      <PackageReference Include="coverlet.collector">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="GitHubActionsTestLogger">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
       <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
-      <PackageReference Include="Microsoft.NET.Test.Sdk" />
       <PackageReference Include="Serilog.Extensions.Hosting" />
       <PackageReference Include="Serilog.Sinks.TestCorrelator" />
       <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
-      <PackageReference Include="xunit" />
-      <PackageReference Include="xunit.runner.visualstudio">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
+      <PackageReference Include="TUnit" />
     </ItemGroup>
 
     <ItemGroup>

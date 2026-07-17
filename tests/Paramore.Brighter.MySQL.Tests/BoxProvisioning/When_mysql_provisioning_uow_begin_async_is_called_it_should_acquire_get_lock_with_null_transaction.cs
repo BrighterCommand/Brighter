@@ -30,11 +30,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkBeginTests
 {
     // Per ADR 0057 §5a / ADR 0058 §B.1: MySQL is the transactionless backend in the relational
     // family — DDL statements implicitly commit the surrounding transaction, so wrapping a
@@ -56,15 +55,16 @@ public class MySqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
     // and the only valid sink that survives BeginAsync is the Transaction property (because
     // a stack-local would be lost). So `Assert.Null(uow.Transaction)` is the structural pin
     // for "did not open a transaction".
-
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
     private readonly FakeMySqlAdvisoryLock _advisoryLock = new(releaseResult: true);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mysql_provisioning_uow_begin_async_is_called_it_should_acquire_get_lock_with_null_transaction()
     {
         // Arrange
@@ -78,9 +78,9 @@ public class MySqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
             cancellationToken: CancellationToken.None);
 
         // Assert: GET_LOCK was acquired with the lock resource the runner asked for.
-        Assert.Equal("test_lock_resource", _advisoryLock.AcquiredKey);
+        await Assert.That(_advisoryLock.AcquiredKey).IsEqualTo("test_lock_resource");
         // Assert: no transaction was opened — MySQL DDL auto-commits, so a wrapping tx serves
         // no purpose and would be misleading. Per ADR 0057 §5a / ADR 0058 §B.1.
-        Assert.Null(uow.Transaction);
+        await Assert.That(uow.Transaction).IsNull();
     }
 }

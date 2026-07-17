@@ -32,7 +32,6 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -56,7 +55,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// This is the simplest deterministic surface; the same widened catch covers the
 /// zombied-connection cases the reviewer cited.
 /// </remarks>
-public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLifetime
+public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests
 {
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_uow_rollback_non_ioe_{Guid.NewGuid():N}.db");
@@ -70,8 +69,10 @@ public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLife
         _connection = new SqliteConnection(_connectionString);
     }
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         await _connection.DisposeAsync();
@@ -86,7 +87,7 @@ public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLife
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_provisioning_uow_rollback_throws_non_invalid_operation_exception_it_should_log_without_throwing()
     {
         var capturingLogger = new CapturingLogger();
@@ -105,13 +106,13 @@ public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLife
         // Act — RollbackAsync MUST NOT throw even though the inner _transaction.RollbackAsync
         // raises TaskCanceledException. Disposal-style contract: runner's catch path
         // (catch { uow.RollbackAsync(...); throw; }) cannot have its primary exception masked.
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(cts.Token));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(cts.Token));
 
-        Assert.Null(thrown);
+        await Assert.That(thrown).IsNull();
 
         // Best-effort path emitted a Warning carrying the original exception, matching the
         // existing finalised-tx branch's diagnostic shape.
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
+        await Assert.That(warnings).HasSingleItem();
     }
 }

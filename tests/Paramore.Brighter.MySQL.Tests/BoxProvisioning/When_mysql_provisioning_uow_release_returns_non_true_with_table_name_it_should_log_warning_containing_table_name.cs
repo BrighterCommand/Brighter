@@ -31,11 +31,10 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlProvisioningUnitOfWorkReleaseNonTrueTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkReleaseNonTrueTests
 {
     // Phase 5.3 regression guard exposed by Phase 7.3a (orchestration shift from legacy
     // runner-owned RELEASE_LOCK Warning to the inherited base-template orchestration). The
@@ -51,15 +50,16 @@ public class MySqlProvisioningUnitOfWorkReleaseNonTrueTests : IAsyncLifetime
     // Marker, Meaning. Restoring TableName requires the UoW to receive it; this test pins the
     // contract that the optional tableName ctor parameter, when supplied, is named in the
     // Warning alongside lockResource.
-
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Theory]
-    [InlineData(false, "0")]
-    [InlineData(null, "NULL")]
+    [Test]
+    [Arguments(false, "0")]
+    [Arguments(null, "NULL")]
     public async Task When_mysql_provisioning_uow_release_returns_non_true_with_table_name_it_should_log_warning_containing_table_name(
         bool? releaseResult, string expectedMarker)
     {
@@ -79,21 +79,21 @@ public class MySqlProvisioningUnitOfWorkReleaseNonTrueTests : IAsyncLifetime
         // per Phase 5.3.c; exercising Commit here pins the Warning emission contract for the
         // happy-path completion of MigrateAsync (the runner-level integration test exercises
         // Commit too — the runner's catch path only fires when the chain throws).
-        var thrown = await Record.ExceptionAsync(() => uow.CommitAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.CommitAsync(CancellationToken.None));
 
         // Assert — Commit completed without throwing, RELEASE_LOCK was invoked with the
         // lockResource verbatim (UoW does not transform the key).
-        Assert.Null(thrown);
-        Assert.Equal(lockResource, advisoryLock.ReleasedKey);
+        await Assert.That(thrown).IsNull();
+        await Assert.That(advisoryLock.ReleasedKey).IsEqualTo(lockResource);
 
         // Assert — single Warning entry containing BOTH the raw tableName and the lockResource
         // (the hashed GET_LOCK key). Restores the legacy runner's TableName+LockKey emission
         // shape per NF1.
         var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
-        Assert.Contains(tableName, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Contains(lockResource, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Contains(expectedMarker, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Null(warnings[0].Exception);
+        await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warnings[0].Message).Contains(tableName);
+        await Assert.That(warnings[0].Message).Contains(lockResource);
+        await Assert.That(warnings[0].Message).Contains(expectedMarker);
+        await Assert.That(warnings[0].Exception).IsNull();
     }
 }

@@ -30,11 +30,10 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkRollbackTests
 {
     // Per ADR 0058 §B.3: if CommitAsync throws, the runner enters its catch path and calls
     // RollbackAsync — even though the commit was already attempted. By that point the
@@ -55,15 +54,16 @@ public class PostgreSqlProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
     // The post-failed-commit state is simulated by calling NpgsqlTransaction.Commit() out-of-band
     // — externally indistinguishable from a thrown CommitAsync, since both leave the tx in the
     // "completed" state where the next Rollback() throws InvalidOperationException.
-
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_rollback_async_is_called_it_should_release_lock_without_throwing()
     {
         // Arrange
@@ -78,13 +78,13 @@ public class PostgreSqlProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
         transaction.Commit();   // Force the post-failed-commit finalised state
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(CancellationToken.None));
 
         // Assert: best-effort rollback returns cleanly...
-        Assert.Null(thrown);
+        await Assert.That(thrown).IsNull();
         // ...emits a Warning naming the rollback failure...
-        Assert.Contains(capturingLogger.Entries, e => e.Level == LogLevel.Warning);
+        await Assert.That((capturingLogger.Entries).Any(e => e.Level == LogLevel.Warning)).IsTrue();
         // ...and STILL releases the advisory lock (both halves of the contract are attempted).
-        Assert.Equal("test_lock_resource", _advisoryLock.ReleasedKey);
+        await Assert.That(_advisoryLock.ReleasedKey).IsEqualTo("test_lock_resource");
     }
 }

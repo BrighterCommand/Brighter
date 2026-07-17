@@ -29,11 +29,10 @@ using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
+public class MsSqlAdvisoryLockAcquireExceptionPropagationTests
 {
     // sp_getapplock returns one of four negative codes when acquisition fails: -1 (timeout),
     // -2 (cancelled), -3 (deadlock victim), -999 (parameter validation / call error). The
@@ -50,25 +49,24 @@ public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
     // IMsSqlAdvisoryLock whose AcquireAsync throws a specific exception type, and asserts the
     // runner surfaces it without wrapping. The happy-path Fact asserts the migration completes
     // when AcquireAsync succeeds so a passing fake doesn't mask a runner regression.
-
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_acquire_throws_timeout_exception_it_should_propagate_timeout_exception()
     {
         await AssertRunnerPropagatesAcquireException(
             new TimeoutException("forced -1 timeout for spec 0027 Item N test"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_acquire_throws_operation_canceled_exception_it_should_propagate_operation_canceled_exception()
     {
         await AssertRunnerPropagatesAcquireException(
             new OperationCanceledException("forced -2 cancellation for spec 0027 Item N test"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_acquire_throws_migration_lock_deadlock_exception_it_should_propagate_migration_lock_deadlock_exception()
     {
         // -3 is the new path: MigrationLockDeadlockException is introduced by Item N so an
@@ -79,14 +77,14 @@ public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
             new MigrationLockDeadlockException("forced -3 deadlock for spec 0027 Item N test"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_acquire_throws_argument_exception_it_should_propagate_argument_exception()
     {
         await AssertRunnerPropagatesAcquireException(
             new ArgumentException("forced -999 parameter validation for spec 0027 Item N test"));
     }
 
-    [Fact]
+    [Test]
     public async Task When_acquire_succeeds_it_should_complete_migration()
     {
         //Arrange — happy-path fake: AcquireAsync is a no-op success. The runner's real DDL
@@ -110,8 +108,8 @@ public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
         //         expected lock resource (BrighterMigration_<schema>.<table> per ADR §5b —
         //         the schema qualifier prevents same-named tables in different schemas
         //         sharing a single advisory lock).
-        Assert.Equal(1, await GetBoxTableCount());
-        Assert.Equal($"BrighterMigration_dbo.{_tableName}", fakeLock.AcquiredResource);
+        await Assert.That(await GetBoxTableCount()).IsEqualTo(1);
+        await Assert.That(fakeLock.AcquiredResource).IsEqualTo($"BrighterMigration_dbo.{_tableName}");
     }
 
     private async Task AssertRunnerPropagatesAcquireException(Exception toThrow)
@@ -129,19 +127,21 @@ public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert — runner surfaces the same exception type without wrapping.
-        var thrown = await Assert.ThrowsAsync(toThrow.GetType(), () =>
+        var thrown = await TestExceptionRecorder.CaptureAsync(() =>
             runner.MigrateAsync(
                 _tableName, schemaName: null, BoxType.Outbox, freshHint));
-        Assert.Same(toThrow, thrown);
+        await Assert.That(thrown).IsNotNull();
+        await Assert.That(thrown.GetType()).IsEqualTo(toThrow.GetType());
+        await Assert.That(thrown).IsSameReferenceAs(toThrow);
 
         //Assert — the fake observed the acquire attempt under the expected lock resource
         //         (the resource name itself is part of the abstraction's contract — it must
         //         come from the runner, not the fake).
-        Assert.Equal($"BrighterMigration_dbo.{_tableName}", fakeLock.AcquiredResource);
+        await Assert.That(fakeLock.AcquiredResource).IsEqualTo($"BrighterMigration_dbo.{_tableName}");
 
         //Assert — no DDL fired: the box table was NOT created. Acquisition is the first action
         //         inside the lock-bearing transaction, so a throw rolls back cleanly.
-        Assert.Equal(0, await GetBoxTableCount());
+        await Assert.That(await GetBoxTableCount()).IsEqualTo(0);
     }
 
     private async Task<int> GetBoxTableCount()
@@ -156,8 +156,10 @@ WHERE name = @TableName AND schema_id = SCHEMA_ID('dbo')";
         return Convert.ToInt32(await command.ExecuteScalarAsync());
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

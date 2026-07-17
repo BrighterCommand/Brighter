@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Transactions;
 using Hangfire;
 using Hangfire.InMemory;
@@ -13,11 +13,13 @@ using Polly.Registry;
 
 namespace Paramore.Brighter.Hangfire.Tests;
 
-[Collection("Scheduler")]
+// Scheduler tests rely on timing; serialize to avoid CI CPU starvation (equivalent to xUnit [NotInParallel("Scheduler")])
+[NotInParallel("HangfireScheduler")]
 public class HangfireSchedulerMessageTests : IDisposable
 {
     private readonly HangfireMessageSchedulerFactory _scheduler;
     private readonly BackgroundJobServer _server;
+    private readonly JobStorage _storage;
     private readonly IAmACommandProcessor _processor;
     private readonly InMemoryOutbox _outbox;
     private readonly InternalBus _internalBus = new();
@@ -70,18 +72,6 @@ public class HangfireSchedulerMessageTests : IDisposable
             _outbox
         );
 
-        GlobalConfiguration.Configuration
-            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UseInMemoryStorage(new InMemoryStorageOptions { IdType = InMemoryStorageIdType.Guid })
-            .UseActivator(new BrighterActivator());
-
-        _server = new BackgroundJobServer(new BackgroundJobServerOptions
-        {
-            WorkerCount = 1, SchedulePollingInterval = TimeSpan.FromSeconds(1), Activator = new BrighterActivator(),
-        });
-
         _scheduler = new HangfireMessageSchedulerFactory();
 
         _processor = new CommandProcessor(
@@ -94,11 +84,23 @@ public class HangfireSchedulerMessageTests : IDisposable
             _scheduler
         );
 
-        BrighterActivator.Processor = _processor;
+        GlobalConfiguration.Configuration
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings();
+
+        _storage = new InMemoryStorage(new InMemoryStorageOptions { IdType = InMemoryStorageIdType.Guid });
+        var activator = new BrighterActivator(_processor);
+        _server = new BackgroundJobServer(new BackgroundJobServerOptions
+        {
+            WorkerCount = 1, SchedulePollingInterval = TimeSpan.FromSeconds(1), Activator = activator,
+        }, _storage);
+
+        _scheduler.Client = new BackgroundJobClient(_storage);
     }
 
-    [Fact]
-    public void When_scheduler_a_message_with_a_datetimeoffset()
+    [Test]
+    public async Task When_scheduler_a_message_with_a_datetimeoffset()
     {
         var req = new MyEvent();
         var message =
@@ -110,19 +112,19 @@ public class HangfireSchedulerMessageTests : IDisposable
         var id = scheduler.Schedule(message,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
-        Assert.Empty(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).IsEmpty();
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
-        Assert.Equivalent(message, _outbox.Get(message.Id, new RequestContext()));
+        await Assert.That(await _outbox.GetAsync(message.Id, new RequestContext())).IsEqualTo(message);
 
-        Assert.NotEmpty(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).IsNotEmpty();
     }
 
-    [Fact]
-    public void When_scheduler_a_message_with_a_timespan()
+    [Test]
+    public async Task When_scheduler_a_message_with_a_timespan()
     {
         var req = new MyEvent();
         var message =
@@ -133,19 +135,18 @@ public class HangfireSchedulerMessageTests : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
-        Assert.Empty(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).IsEmpty();
 
-        Thread.Sleep(TimeSpan.FromSeconds(2));
+        await Assert.That(() => _internalBus.Stream(_routingKey).Any())
+            .Eventually(s => s.IsTrue(), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(250));
 
-        Assert.NotEmpty(_internalBus.Stream(_routingKey));
-
-        Assert.Equivalent(message, _outbox.Get(req.Id, new RequestContext()));
+        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsEqualTo(message);
     }
 
-    [Fact]
-    public void When_reschedule_a_message_with_a_datetimeoffset()
+    [Test]
+    public async Task When_reschedule_a_message_with_a_datetimeoffset()
     {
         var req = new MyEvent();
         var message =
@@ -156,23 +157,22 @@ public class HangfireSchedulerMessageTests : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.NotEqual(0, id.Length);
-        Assert.Empty(_internalBus.Stream(_routingKey));
+        await Assert.That(id.Length).IsNotEqualTo(0);
+        await Assert.That(_internalBus.Stream(_routingKey)).IsEmpty();
 
-        Assert.True(scheduler
-            .ReScheduler(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5))));
+        await Assert.That(scheduler
+            .ReScheduler(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)))).IsTrue();
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
-        Assert.Empty(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).IsEmpty();
 
-        Thread.Sleep(TimeSpan.FromSeconds(6));
-
-        Assert.NotEmpty(_internalBus.Stream(_routingKey));
-        Assert.Equivalent(message, _outbox.Get(req.Id, new RequestContext()));
+        await Assert.That(() => _internalBus.Stream(_routingKey).Any())
+            .Eventually(s => s.IsTrue(), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(250));
+        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsEqualTo(message);
     }
 
-    [Fact]
-    public void When_reschedule_a_message_with_a_timespan()
+    [Test]
+    public async Task When_reschedule_a_message_with_a_timespan()
     {
         var req = new MyEvent();
         var message =
@@ -183,22 +183,22 @@ public class HangfireSchedulerMessageTests : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromHours(1));
 
-        Assert.NotEqual(0, id.Length);
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        await Assert.That(id.Length).IsNotEqualTo(0);
+        await Assert.That(_internalBus.Stream(_routingKey) ?? []).IsEmpty();
 
-        Assert.True(scheduler.ReScheduler(id, TimeSpan.FromSeconds(5)));
+        await Assert.That(scheduler.ReScheduler(id, TimeSpan.FromSeconds(5))).IsTrue();
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
-        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
+        await Assert.That(_internalBus.Stream(_routingKey) ?? []).IsEmpty();
 
-        Thread.Sleep(TimeSpan.FromSeconds(4));
-        Assert.NotEmpty(_internalBus.Stream(_routingKey));
+        await Assert.That(() => _internalBus.Stream(_routingKey).Any())
+            .Eventually(s => s.IsTrue(), TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(250));
 
-        Assert.NotEqual(Message.Empty, _outbox.Get(req.Id, new RequestContext()));
+        await Assert.That(await _outbox.GetAsync(req.Id, new RequestContext())).IsNotEqualTo(Message.Empty);
     }
 
-    [Fact]
-    public void When_cancel_scheduler_message_with_a_datetimeoffset()
+    [Test]
+    public async Task When_cancel_scheduler_message_with_a_datetimeoffset()
     {
         var req = new MyEvent();
         var message =
@@ -209,32 +209,32 @@ public class HangfireSchedulerMessageTests : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
         scheduler.Cancel(id);
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
         var expected = Message.Empty;
-        var actual = _outbox.Get(req.Id, new RequestContext());
-        
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        var actual = await _outbox.GetAsync(req.Id, new RequestContext());
+
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
     }
 
 
-    [Fact]
-    public void When_cancel_scheduler_request_with_a_timespan()
+    [Test]
+    public async Task When_cancel_scheduler_request_with_a_timespan()
     {
         var req = new MyEvent();
         var message =
@@ -245,27 +245,27 @@ public class HangfireSchedulerMessageTests : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
         var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
 
-        Assert.NotEqual(0, id.Length);
+        await Assert.That(id.Length).IsNotEqualTo(0);
 
         scheduler.Cancel(id);
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
         var expected = Message.Empty;
-        var actual = _outbox.Get(req.Id, new RequestContext());
-        
-        Assert.Equivalent(expected.Body, actual.Body);
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Persist, actual.Persist);
-        Assert.Equal(expected.Redelivered, actual.Redelivered);
-        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
-        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
-        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        var actual = await _outbox.GetAsync(req.Id, new RequestContext());
+
+        await Assert.That(actual.Body).IsEqualTo(expected.Body);
+        await Assert.That(actual.Id).IsEqualTo(expected.Id);
+        await Assert.That(actual.Persist).IsEqualTo(expected.Persist);
+        await Assert.That(actual.Redelivered).IsEqualTo(expected.Redelivered);
+        await Assert.That(actual.DeliveryTag).IsEqualTo(expected.DeliveryTag);
+        await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+        await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+        await Assert.That(actual.Header.TimeStamp).IsEqualTo(expected.Header.TimeStamp).Within(TimeSpan.FromSeconds(1));
+        await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+        await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+        await Assert.That(actual.Header.ContentType).IsEqualTo(expected.Header.ContentType);
+        await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
     }
 
     public void Dispose()

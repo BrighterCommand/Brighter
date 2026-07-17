@@ -28,11 +28,10 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
+public class MySqlRunnerDistinctSchemaNonBlockingTests
 {
     private const string DefaultDatabase = "BrighterTests";
     private const string MasterConnectionString = "Server=localhost;Uid=root;Pwd=root";
@@ -40,7 +39,7 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
     private readonly string _billingDatabase = $"brighter_billing_{Guid.NewGuid():N}";
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mysql_runner_runs_two_provisioners_in_distinct_schemas_they_should_not_block_each_other()
     {
         //Arrange — two provisioners share a table name but bind to distinct MySQL databases
@@ -81,10 +80,10 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
         {
             await holdingLock.AcquireSeen.Task; // synchronization: A has acquired GET_LOCK and is parked
 
-            var taskBException = await Record.ExceptionAsync(() => provisionerB.ProvisionAsync());
+            var taskBException = await TestExceptionRecorder.CaptureAsync(() => provisionerB.ProvisionAsync());
 
             //Assert — B should complete without timing out on a shared lock name.
-            Assert.Null(taskBException);
+            await Assert.That(taskBException).IsNull();
         }
         finally
         {
@@ -106,8 +105,10 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

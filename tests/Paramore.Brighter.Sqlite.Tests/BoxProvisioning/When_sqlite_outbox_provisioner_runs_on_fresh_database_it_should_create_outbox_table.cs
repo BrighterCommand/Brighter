@@ -2,11 +2,10 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
+public class OutboxProvisionerFreshDatabaseTests
 {
     private readonly string _tableName;
     private readonly string _connectionString;
@@ -29,7 +28,7 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table()
     {
         // Act
@@ -44,7 +43,7 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
         tableCheck.CommandText = "SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name=@TableName";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
         var tableCount = Convert.ToInt64(await tableCheck.ExecuteScalarAsync());
-        Assert.Equal(1, tableCount);
+        await Assert.That(tableCount).IsEqualTo(1);
 
         // Verify migration history
         using var historyCheck = connection.CreateCommand();
@@ -54,11 +53,13 @@ WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = Convert.ToInt64(await historyCheck.ExecuteScalarAsync());
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

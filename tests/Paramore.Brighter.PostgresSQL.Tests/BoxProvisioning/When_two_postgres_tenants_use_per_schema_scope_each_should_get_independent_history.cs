@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -38,7 +37,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 // write+read wiring; no prod code expected (ResolveHistorySchema() already keys off SchemaName).
 // PG folds unquoted identifiers to lowercase, so the schemas are pre-created and addressed in
 // their folded form for symmetry with T4's read side.
-public class PostgreSqlMultiTenantPerSchemaIsolationTests : IAsyncLifetime
+public class PostgreSqlMultiTenantPerSchemaIsolationTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _boxTableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -57,7 +56,7 @@ public class PostgreSqlMultiTenantPerSchemaIsolationTests : IAsyncLifetime
         _tenantBProvisioner = BuildPerSchemaProvisioner(_tenantBSchema);
     }
 
-    [Fact]
+    [Test]
     public async Task When_two_postgres_tenants_use_per_schema_scope_each_should_get_independent_history()
     {
         //Arrange — operator pre-creates both folded tenant schemas; runner does not create schemas.
@@ -72,16 +71,16 @@ public class PostgreSqlMultiTenantPerSchemaIsolationTests : IAsyncLifetime
         await DropAnyExistingTableAsync("__BrighterMigrationHistory", _tenantBFolded);
 
         //Act — both tenants provision under PerSchema.
-        var tenantAFirst = await Record.ExceptionAsync(() => _tenantAProvisioner.ProvisionAsync());
-        var tenantBFirst = await Record.ExceptionAsync(() => _tenantBProvisioner.ProvisionAsync());
+        var tenantAFirst = await TestExceptionRecorder.CaptureAsync(() => _tenantAProvisioner.ProvisionAsync());
+        var tenantBFirst = await TestExceptionRecorder.CaptureAsync(() => _tenantBProvisioner.ProvisionAsync());
 
         //Assert — each tenant has exactly one history row in its OWN folded schema, stamped with
         //its own folded SchemaName. The filtered COUNT is 1 only if A's row landed in A and B's
         //in B; any cross-contamination would show as 0 in the schema where the row should have been.
-        Assert.Null(tenantAFirst);
-        Assert.Null(tenantBFirst);
-        Assert.Equal(1L, await GetHistoryRowCountAsync(_tenantAFolded, _tenantAFolded));
-        Assert.Equal(1L, await GetHistoryRowCountAsync(_tenantBFolded, _tenantBFolded));
+        await Assert.That(tenantAFirst).IsNull();
+        await Assert.That(tenantBFirst).IsNull();
+        await Assert.That(await GetHistoryRowCountAsync(_tenantAFolded, _tenantAFolded)).IsEqualTo(1L);
+        await Assert.That(await GetHistoryRowCountAsync(_tenantBFolded, _tenantBFolded)).IsEqualTo(1L);
 
         //Capture tenant B's state to prove provisioning A again leaves B byte-stable.
         var tenantBAppliedAt = await GetSingleHistoryAppliedAtAsync(_tenantBFolded, _tenantBFolded);
@@ -89,16 +88,16 @@ public class PostgreSqlMultiTenantPerSchemaIsolationTests : IAsyncLifetime
 
         //Act — re-provision tenant A. PerSchema reads its OWN per-schema history, finds the box
         //already at the latest version, and applies nothing. Tenant B is not touched.
-        var tenantASecond = await Record.ExceptionAsync(() => _tenantAProvisioner.ProvisionAsync());
+        var tenantASecond = await TestExceptionRecorder.CaptureAsync(() => _tenantAProvisioner.ProvisionAsync());
 
         //Assert — A's history still has exactly one row (idempotent, pinned independently by T7);
         //B's history row count, AppliedAt, and MigrationVersion are unchanged. This is the FR6
         //independence guarantee: A's run does not write to, delete from, or touch B's history.
-        Assert.Null(tenantASecond);
-        Assert.Equal(1L, await GetHistoryRowCountAsync(_tenantAFolded, _tenantAFolded));
-        Assert.Equal(1L, await GetHistoryRowCountAsync(_tenantBFolded, _tenantBFolded));
-        Assert.Equal(tenantBAppliedAt, await GetSingleHistoryAppliedAtAsync(_tenantBFolded, _tenantBFolded));
-        Assert.Equal(tenantBMigrationVersion, await GetSingleHistoryMigrationVersionAsync(_tenantBFolded, _tenantBFolded));
+        await Assert.That(tenantASecond).IsNull();
+        await Assert.That(await GetHistoryRowCountAsync(_tenantAFolded, _tenantAFolded)).IsEqualTo(1L);
+        await Assert.That(await GetHistoryRowCountAsync(_tenantBFolded, _tenantBFolded)).IsEqualTo(1L);
+        await Assert.That(await GetSingleHistoryAppliedAtAsync(_tenantBFolded, _tenantBFolded)).IsEqualTo(tenantBAppliedAt);
+        await Assert.That(await GetSingleHistoryMigrationVersionAsync(_tenantBFolded, _tenantBFolded)).IsEqualTo(tenantBMigrationVersion);
     }
 
     private PostgreSqlOutboxProvisioner BuildPerSchemaProvisioner(string schemaName)
@@ -191,8 +190,10 @@ WHERE table_schema = @SchemaName AND table_name = '__BrighterMigrationHistory'";
         return await command.ExecuteScalarAsync() is not null;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

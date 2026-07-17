@@ -31,11 +31,10 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests
 {
     // Per ADR 0058 §B.3: if CommitAsync throws, the runner enters its catch path and calls
     // RollbackAsync — even though the commit was already attempted. The underlying
@@ -51,15 +50,16 @@ public class MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests : IAsyncLi
     // would silently return without logging — so this test fails until the impl actually calls
     // through to the underlying transaction AND catches the resulting exception with a
     // Warning-level log entry.
-
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mssql_provisioning_uow_rollback_async_is_called_after_commit_threw_it_should_not_throw()
     {
         // Arrange
@@ -73,10 +73,10 @@ public class MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests : IAsyncLi
         transaction.Commit();   // Force the post-failed-commit finalised state
 
         // Act
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(CancellationToken.None));
 
         // Assert: best-effort rollback returns cleanly AND emits a Warning
-        Assert.Null(thrown);
-        Assert.Contains(capturingLogger.Entries, e => e.Level == LogLevel.Warning);
+        await Assert.That(thrown).IsNull();
+        await Assert.That((capturingLogger.Entries).Any(e => e.Level == LogLevel.Warning)).IsTrue();
     }
 }

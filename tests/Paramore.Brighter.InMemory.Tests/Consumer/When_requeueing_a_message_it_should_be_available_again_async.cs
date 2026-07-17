@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,7 +11,6 @@ using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
 using Polly;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
@@ -98,7 +97,7 @@ public class AsyncInMemoryConsumerRequeueTests
     }
     
     
-    [Fact]
+    [Test]
     public async Task When_requeueing_a_message_it_should_be_available_again()
     {
         //arrange
@@ -117,11 +116,11 @@ public class AsyncInMemoryConsumerRequeueTests
         await consumer.RequeueAsync(receivedMessage.Single(), TimeSpan.Zero);
         
         //assert
-        Assert.Single(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).HasSingleItem();
         
     }
     
-    [Fact]
+    [Test]
     public async Task When_requeueing_a_message_with_a_delay_it_should_not_be_available_immediately()
     {
         //arrange
@@ -136,15 +135,15 @@ public class AsyncInMemoryConsumerRequeueTests
         
         //act
         var receivedMessage = await consumer.ReceiveAsync();
-        Assert.Empty(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).IsEmpty();
         
         await consumer.RequeueAsync(receivedMessage.Single(), TimeSpan.FromMilliseconds(1000));
         
         //assert
-        Assert.Empty(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).IsEmpty();
         
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
         
-        Assert.Single(_internalBus.Stream(_routingKey));
+        await Assert.That(_internalBus.Stream(_routingKey)).HasSingleItem();
     }
 }

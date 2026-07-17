@@ -26,7 +26,7 @@ using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.BoxProvisioning.Spanner;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // freshly-installed table actually carries V8's schema. Detection-by-history would then report
 // "needs migration V8" forever on Spanner installs.
 
-[Trait("Category", "Spanner")]
+[Property("Category", "Spanner")]
 public class SpannerVLatestDriftAgainstRelationalCatalogTests
 {
     // Catalog .All(cfg) does not touch the database — it only emits SQL strings keyed off the
@@ -53,19 +53,19 @@ public class SpannerVLatestDriftAgainstRelationalCatalogTests
             outBoxTableName: "drift_test_outbox",
             inboxTableName: "drift_test_inbox");
 
-    [Fact]
-    public void Vlatest_outbox_should_equal_every_relational_outbox_catalog_count()
+    [Test]
+    public async Task Vlatest_outbox_should_equal_every_relational_outbox_catalog_count()
     {
         // Asserts each backend separately so a drift on a single backend surfaces in the
         // failure message rather than collapsing into a generic "counts disagreed" assertion.
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestOutbox, new MsSqlOutboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestOutbox, new MySqlOutboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestOutbox, new PostgreSqlOutboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestOutbox, new SqliteOutboxMigrationCatalog().All(Configuration).Count);
+        await Assert.That(new MsSqlOutboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestOutbox);
+        await Assert.That(new MySqlOutboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestOutbox);
+        await Assert.That(new PostgreSqlOutboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestOutbox);
+        await Assert.That(new SqliteOutboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestOutbox);
     }
 
-    [Fact]
-    public void Vlatest_inbox_should_equal_every_relational_inbox_catalog_count_except_postgres()
+    [Test]
+    public async Task Vlatest_inbox_should_equal_every_relational_inbox_catalog_count_except_postgres()
     {
         // PostgreSQL inbox is V1-only by design (ADR 0057 §E) — its V1 already includes the
         // ContextKey column that MSSQL/MySQL/Sqlite add at V2, so its catalog returns 1
@@ -73,9 +73,9 @@ public class SpannerVLatestDriftAgainstRelationalCatalogTests
         // PostgreSQL gains a V2 (e.g. an unrelated future column add), this constant flips
         // from 1 to 2 and the assertion fails — at that point bump VLatestInbox AND fold
         // PostgreSQL back into the main set.
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new MsSqlInboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new MySqlInboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new SqliteInboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(1, new PostgreSqlInboxMigrationCatalog().All(Configuration).Count);
+        await Assert.That(new MsSqlInboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestInbox);
+        await Assert.That(new MySqlInboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestInbox);
+        await Assert.That(new SqliteInboxMigrationCatalog().All(Configuration).Count).IsEqualTo(SpannerBoxMigrationRunner.VLatestInbox);
+        await Assert.That(new PostgreSqlInboxMigrationCatalog().All(Configuration).Count).IsEqualTo(1);
     }
 }

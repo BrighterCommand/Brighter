@@ -28,16 +28,15 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
+public class MsSqlMigrationCancellationRollbackTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mssql_migration_is_cancelled_mid_flight_it_should_rollback_with_cancellation_token_none()
     {
         //Arrange — fresh database; the cancelling runner's RunFreshPathAsync override blocks
@@ -58,25 +57,23 @@ public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
 
         //Act — caller's CancellationToken is signalled while the runner is mid-flight inside
         // the (substituted) fresh-path hook.
-        var thrown = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancellingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token));
+        var thrown = await Assert.That(() => cancellingRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token)).Throws<OperationCanceledException>();
 
         //Assert — the original OperationCanceledException propagates to the caller (per ADR §B.3).
-        Assert.NotNull(thrown);
+        await Assert.That(thrown).IsNotNull();
 
         //Assert — RollbackAsync IS invoked after the mid-flight cancellation.
         var spy = cancellingRunner.LastUnitOfWork;
-        Assert.NotNull(spy);
-        Assert.True(spy!.RollbackInvoked,
-            "RollbackAsync should have been invoked after the mid-flight cancellation per ADR §B.3.");
+        await Assert.That(spy).IsNotNull();
+        await Assert.That(spy!.RollbackInvoked).IsTrue().Because("RollbackAsync should have been invoked after the mid-flight cancellation per ADR §B.3.");
 
         //Assert — the CancellationToken passed to RollbackAsync is CancellationToken.None, NOT
         // the caller's signalled token. Per ADR §B.3, passing the signalled token here would
         // cause RollbackAsync itself to throw OCE and abandon the unwind, leaving the
         // sp_getapplock attached to a zombied transaction.
-        Assert.False(spy.RollbackToken.IsCancellationRequested,
-            "RollbackAsync should receive CancellationToken.None to ensure lock release completes.");
-        Assert.Equal(CancellationToken.None, spy.RollbackToken);
+        await Assert.That(spy.RollbackToken.IsCancellationRequested).IsFalse().Because("RollbackAsync should receive CancellationToken.None to ensure lock release completes.");
+        await Assert.That(spy.RollbackToken).IsEqualTo(CancellationToken.None);
 
         //Assert — the MSSQL transaction-scoped advisory lock IS released. Verified by a fresh
         // runner whose BeginAsync acquires the same per-table lock resource without waiting
@@ -88,8 +85,7 @@ public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
-        Assert.True(TableExists(),
-            "Subsequent migration should have created the outbox table after the lock was released.");
+        await Assert.That(TableExists()).IsTrue().Because("Subsequent migration should have created the outbox table after the lock was released.");
     }
 
     private bool TableExists()
@@ -103,8 +99,10 @@ public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
         return (int)command.ExecuteScalar()! > 0;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

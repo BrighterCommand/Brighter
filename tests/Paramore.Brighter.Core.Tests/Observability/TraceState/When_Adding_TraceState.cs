@@ -1,60 +1,48 @@
-﻿﻿using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Core.Tests.Observability.Trace;
-
-public class TraceStateTests 
+public class TraceStateTests
 {
-    [Fact]
-    public void When_Adding_TraceState()
+    [Test]
+    public async Task When_Adding_TraceState()
     {
         // Arrange
         var traceState = new Baggage();
-        
         //act
         traceState.Add("key1", "value1");
         traceState.Add("key2", "value2");
-        
         // Assert
-        Assert.Equal("key1=value1,key2=value2", traceState.ToString());
+        await Assert.That(traceState.ToString()).IsEqualTo("key1=value1,key2=value2");
     }
 
-    [Fact]
-    public void When_Adding_TraceState_From_Baggage()
+    [Test]
+    public async Task When_Adding_TraceState_From_Baggage()
     {
         //Arrange
         var traceState = new Baggage();
         var baggage = "key1=value1,key2=value2";
-        
         //Act
         traceState.Add("key3", "value3");
         traceState.LoadBaggage(baggage);
-        
         //Assert
-        Assert.Equal("key3=value3,key1=value1,key2=value2", traceState.ToString()); 
+        await Assert.That(traceState.ToString()).IsEqualTo("key3=value3,key1=value1,key2=value2");
     }
 
-    [Fact]
-    public void When_Enumerating_TraceState()
+    [Test]
+    public async Task When_Enumerating_TraceState()
     {
         //Arrange
         var traceState = new Baggage();
         traceState.Add("key1", "value1");
         traceState.Add("key2", "value2");
-        
         //Act
-        
         //Assert
-        Assert.Collection(traceState,
-            entry =>
-            {
-                Assert.Equal("key1", entry.Key);
-                Assert.Equal("value1", entry.Value);
-            },
-            entry =>
-            {
-                Assert.Equal("key2", entry.Key);
-                Assert.Equal("value2", entry.Value);
-            });
+        var entries = traceState.ToList();
+        await Assert.That(entries).Count().IsEqualTo(2);
+        await Assert.That(entries[0].Key).IsEqualTo("key1");
+        await Assert.That(entries[0].Value).IsEqualTo("value1");
+        await Assert.That(entries[1].Key).IsEqualTo("key2");
+        await Assert.That(entries[1].Value).IsEqualTo("value2");
     }
 }

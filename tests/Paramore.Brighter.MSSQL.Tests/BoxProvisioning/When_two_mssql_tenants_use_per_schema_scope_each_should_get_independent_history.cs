@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -34,7 +33,7 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // each get their own __BrighterMigrationHistory in their own schema, and provisioning one tenant
 // leaves the other tenant's history byte-stable. Characterisation of T3's schema-aware
 // write+read wiring; no prod code expected (ResolveHistorySchema() already keys off SchemaName).
-public class MsSqlMultiTenantPerSchemaIsolationTests : IAsyncLifetime
+public class MsSqlMultiTenantPerSchemaIsolationTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _boxTableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -49,7 +48,7 @@ public class MsSqlMultiTenantPerSchemaIsolationTests : IAsyncLifetime
         _tenantBProvisioner = BuildPerSchemaProvisioner(_tenantBSchema);
     }
 
-    [Fact]
+    [Test]
     public async Task When_two_mssql_tenants_use_per_schema_scope_each_should_get_independent_history()
     {
         //Arrange — operator pre-creates both tenant schemas; runner does not create schemas itself.
@@ -64,16 +63,16 @@ public class MsSqlMultiTenantPerSchemaIsolationTests : IAsyncLifetime
         DropAnyExistingTable("__BrighterMigrationHistory", _tenantBSchema);
 
         //Act — both tenants provision under PerSchema.
-        var tenantAFirst = await Record.ExceptionAsync(() => _tenantAProvisioner.ProvisionAsync());
-        var tenantBFirst = await Record.ExceptionAsync(() => _tenantBProvisioner.ProvisionAsync());
+        var tenantAFirst = await TestExceptionRecorder.CaptureAsync(() => _tenantAProvisioner.ProvisionAsync());
+        var tenantBFirst = await TestExceptionRecorder.CaptureAsync(() => _tenantBProvisioner.ProvisionAsync());
 
         //Assert — each tenant has exactly one history row in its OWN schema, stamped with its
         //own SchemaName. The filtered COUNT is 1 only if A's row landed in A and B's in B; any
         //cross-contamination would show as 0 in the schema where the row should have been.
-        Assert.Null(tenantAFirst);
-        Assert.Null(tenantBFirst);
-        Assert.Equal(1, GetHistoryRowCount(_tenantASchema, _tenantASchema));
-        Assert.Equal(1, GetHistoryRowCount(_tenantBSchema, _tenantBSchema));
+        await Assert.That(tenantAFirst).IsNull();
+        await Assert.That(tenantBFirst).IsNull();
+        await Assert.That(GetHistoryRowCount(_tenantASchema, _tenantASchema)).IsEqualTo(1);
+        await Assert.That(GetHistoryRowCount(_tenantBSchema, _tenantBSchema)).IsEqualTo(1);
 
         //Capture tenant B's state to prove provisioning A again leaves B byte-stable.
         var tenantBAppliedAt = GetSingleHistoryAppliedAt(_tenantBSchema, _tenantBSchema);
@@ -81,16 +80,16 @@ public class MsSqlMultiTenantPerSchemaIsolationTests : IAsyncLifetime
 
         //Act — re-provision tenant A. PerSchema reads its OWN per-schema history, finds the box
         //already at the latest version, and applies nothing. Tenant B is not touched.
-        var tenantASecond = await Record.ExceptionAsync(() => _tenantAProvisioner.ProvisionAsync());
+        var tenantASecond = await TestExceptionRecorder.CaptureAsync(() => _tenantAProvisioner.ProvisionAsync());
 
         //Assert — A's history still has exactly one row (idempotent, pinned independently by T7);
         //B's history row count, AppliedAt, and MigrationVersion are unchanged. This is the FR6
         //independence guarantee: A's run does not write to, delete from, or touch B's history.
-        Assert.Null(tenantASecond);
-        Assert.Equal(1, GetHistoryRowCount(_tenantASchema, _tenantASchema));
-        Assert.Equal(1, GetHistoryRowCount(_tenantBSchema, _tenantBSchema));
-        Assert.Equal(tenantBAppliedAt, GetSingleHistoryAppliedAt(_tenantBSchema, _tenantBSchema));
-        Assert.Equal(tenantBMigrationVersion, GetSingleHistoryMigrationVersion(_tenantBSchema, _tenantBSchema));
+        await Assert.That(tenantASecond).IsNull();
+        await Assert.That(GetHistoryRowCount(_tenantASchema, _tenantASchema)).IsEqualTo(1);
+        await Assert.That(GetHistoryRowCount(_tenantBSchema, _tenantBSchema)).IsEqualTo(1);
+        await Assert.That(GetSingleHistoryAppliedAt(_tenantBSchema, _tenantBSchema)).IsEqualTo(tenantBAppliedAt);
+        await Assert.That(GetSingleHistoryMigrationVersion(_tenantBSchema, _tenantBSchema)).IsEqualTo(tenantBMigrationVersion);
     }
 
     private MsSqlOutboxProvisioner BuildPerSchemaProvisioner(string schemaName)
@@ -184,8 +183,10 @@ IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = '{schemaName}')
         command.ExecuteNonQuery();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public Task DisposeAsync()
     {
         try

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,17 +26,15 @@ using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using RabbitMQ.Client;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RmqMessageGatewayConnectionPoolResetConnectionDoesNotExist
 {
     private readonly RmqMessageGatewayConnectionPool _connectionPool = new("MyConnectionName", 7);
 
-    [Fact]
+    [Test]
     public async Task When_resetting_a_connection_that_does_not_exist()
     {
         var connectionFactory = new ConnectionFactory {HostName = "invalidhost"};
@@ -51,7 +49,8 @@ public class RmqMessageGatewayConnectionPoolResetConnectionDoesNotExist
             resetConnectionExceptionThrown = true;
         }                                
             
-        Assert.False(resetConnectionExceptionThrown);
+        await Assert.That(resetConnectionExceptionThrown).IsFalse();
 
     }
 }
+

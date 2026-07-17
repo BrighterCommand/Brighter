@@ -22,7 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -36,11 +36,11 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
 public class PostgresMigrationsUnsafeIdentifierTests
 {
-    [Theory]
-    [InlineData("O'Brien")]    // single quote — would break inlined string predicates
-    [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
-    [InlineData("my-outbox")]  // hyphen — would need quote-quoting to be legal
-    public void When_postgres_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
+    [Test]
+    [Arguments("O'Brien")]    // single quote — would break inlined string predicates
+    [Arguments("1Outbox")]    // leading digit — invalid as bare identifier
+    [Arguments("my-outbox")]  // hyphen — would need quote-quoting to be legal
+    public async Task When_postgres_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -49,14 +49,14 @@ public class PostgresMigrationsUnsafeIdentifierTests
 
         //Act + Assert
         var ex = Assert.Throws<ConfigurationException>(() => new PostgreSqlOutboxMigrationCatalog().All(config));
-        Assert.Contains(unsafeTable, ex.Message);
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 
-    [Theory]
-    [InlineData("O'Brien")]
-    [InlineData("1Inbox")]
-    [InlineData("my-inbox")]
-    public void When_postgres_inbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
+    [Test]
+    [Arguments("O'Brien")]
+    [Arguments("1Inbox")]
+    [Arguments("my-inbox")]
+    public async Task When_postgres_inbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -65,11 +65,11 @@ public class PostgresMigrationsUnsafeIdentifierTests
 
         //Act + Assert
         var ex = Assert.Throws<ConfigurationException>(() => new PostgreSqlInboxMigrationCatalog().All(config));
-        Assert.Contains(unsafeTable, ex.Message);
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 
-    [Fact]
-    public void When_postgres_outbox_migrations_are_built_with_an_unsafe_schema_name_it_should_throw()
+    [Test]
+    public async Task When_postgres_outbox_migrations_are_built_with_an_unsafe_schema_name_it_should_throw()
     {
         //Arrange — schema overrides the safe "public" default; an unsafe schema name interpolates
         //into the V2+ ALTER TABLE up-scripts at AddColumns(schema, table, ...) so it must be
@@ -81,6 +81,6 @@ public class PostgresMigrationsUnsafeIdentifierTests
 
         //Act + Assert
         var ex = Assert.Throws<ConfigurationException>(() => new PostgreSqlOutboxMigrationCatalog().All(config));
-        Assert.Contains("bad-schema", ex.Message);
+        await Assert.That(ex.Message).Contains("bad-schema");
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Net.Mime;
+using System.Net.Mime;
 using Paramore.Brighter.AWSScheduler.Tests.Helpers;
 using Paramore.Brighter.AWSScheduler.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.AWS;
@@ -7,9 +7,8 @@ using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace Paramore.Brighter.AWSScheduler.Tests.Scheduler.Messages.Sns;
 
-[Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
-[Collection("Scheduler SNS")]
-public class SnsSchedulingMessageTest : IDisposable
+[Property("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
+public class SnsSchedulingMessageTest
 {
     private readonly ContentType _contentType = new ContentType(MediaTypeNames.Text.Plain);
     private const int BufferSize = 3;
@@ -53,14 +52,14 @@ public class SnsSchedulingMessageTest : IDisposable
 
         _consumer.Purge();
 
-        _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
+        _factory = new AwsSchedulerFactory(awsConnection, $"brighter-scheduler-{Guid.NewGuid():N}")
         {
             UseMessageTopicAsTarget = true, MakeRole = OnMissingRole.Create
         };
     }
 
-    [Fact]
-    public void When_Scheduling_A_Sns_Message()
+    [Test]
+    public async Task When_Scheduling_A_Sns_Message()
     {
         var routingKey = new RoutingKey(_topicName);
         var message = new Message(
@@ -77,15 +76,15 @@ public class SnsSchedulingMessageTest : IDisposable
         var stopAt = DateTimeOffset.UtcNow.AddMinutes(2);
         while (stopAt > DateTimeOffset.UtcNow)
         {
-            var messages = _consumer.Receive();
-            Assert.Single(messages);
+            var messages = await _consumer.ReceiveAsync();
+            await Assert.That(messages).HasSingleItem();
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
-                Assert.Equal(message.Header.MessageType, messages[0].Header.MessageType);
-                Assert.Equal((string?)message.Body.Value, (string?)messages[0].Body.Value);
-                Assert.Equivalent(message.Header, messages[0].Header);
-                _consumer.Acknowledge(messages[0]);
+                await Assert.That(messages[0].Header.MessageType).IsEqualTo(message.Header.MessageType);
+                await Assert.That((string?)messages[0].Body.Value).IsEqualTo((string?)message.Body.Value);
+                await Assert.That(messages[0].Header).IsEquivalentTo(message.Header);
+                await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }
 
@@ -95,11 +94,14 @@ public class SnsSchedulingMessageTest : IDisposable
         Assert.Fail("The message wasn't fired");
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteQueueAsync().GetAwaiter().GetResult();
-        _channelFactory.DeleteTopicAsync().GetAwaiter().GetResult();
-        _messageProducer.Dispose();
-        _consumer.Dispose();
+        await _channelFactory.DeleteQueueAsync();
+        await _channelFactory.DeleteTopicAsync();
+        await _messageProducer.DisposeAsync();
+        await _consumer.DisposeAsync();
     }
 }
+
+

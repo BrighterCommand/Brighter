@@ -26,14 +26,14 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class TransformerResolvabilityProbeTests
 {
-    [Fact]
-    public void When_probing_transformer_resolvability_should_match_registered_service_types()
+    [Test]
+    public async Task When_probing_transformer_resolvability_should_match_registered_service_types()
     {
         // Arrange — a service collection with one transformer registered; a second transformer
         // type whose constructor throws is also registered to prove the probe never instantiates.
@@ -44,27 +44,27 @@ public class TransformerResolvabilityProbeTests
         var probe = new ServiceCollectionTransformerResolvabilityProbe(services);
 
         // Act + Assert — a registered transformer resolves
-        Assert.True(probe.Resolves(typeof(CompressPayloadTransformer)));
+        await Assert.That(probe.Resolves(typeof(CompressPayloadTransformer))).IsTrue();
 
         // an unregistered transformer does not resolve
-        Assert.False(probe.Resolves(typeof(UnregisteredTransformer)));
+        await Assert.That(probe.Resolves(typeof(UnregisteredTransformer))).IsFalse();
 
         // and resolvability is answered from registration membership only — the probe does NOT
         // construct the transformer, so a registered type with a throwing constructor still resolves
-        Assert.True(probe.Resolves(typeof(ThrowOnConstructTransformer)));
+        await Assert.That(probe.Resolves(typeof(ThrowOnConstructTransformer))).IsTrue();
     }
 
-    [Fact]
-    public void When_probing_an_empty_service_collection_should_not_resolve_any_transformer()
+    [Test]
+    public async Task When_probing_an_empty_service_collection_should_not_resolve_any_transformer()
     {
         // Arrange — no transformers registered
         var probe = new ServiceCollectionTransformerResolvabilityProbe(new ServiceCollection());
 
         // Act + Assert — nothing resolves
-        Assert.False(probe.Resolves(typeof(CompressPayloadTransformer)));
+        await Assert.That(probe.Resolves(typeof(CompressPayloadTransformer))).IsFalse();
     }
 
-    [Fact]
+    [Test]
     public void When_constructing_a_probe_with_null_services_should_throw()
     {
         // Act + Assert — a null service collection is a configuration error

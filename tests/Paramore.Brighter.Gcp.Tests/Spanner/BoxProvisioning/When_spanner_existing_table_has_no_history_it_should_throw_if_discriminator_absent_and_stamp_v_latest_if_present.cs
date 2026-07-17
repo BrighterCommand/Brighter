@@ -28,14 +28,13 @@ using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.BoxProvisioning.Spanner;
 using Paramore.Brighter.Inbox.Spanner;
 using Paramore.Brighter.Outbox.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
-[Trait("Category", "Spanner")]
-public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class SpannerOutboxBootstrapDiscriminatorTests
 {
     private const string BootstrapDescription =
         "bootstrap: spanner-assumed-current (no known legacy installations, A-2)";
@@ -60,7 +59,7 @@ public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_stamp_v_latest_with_bootstrap_description_when_headerbag_present()
     {
         // Arrange — a Brighter-shaped outbox already exists (HeaderBag present), no history yet
@@ -81,11 +80,11 @@ public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
         var (count, description) = await ReadHistoryAsync(
             connection, _tableName, ExpectedMigrationVersions.OutboxLatest);
 
-        Assert.Equal(1, count);
-        Assert.Equal(BootstrapDescription, description);
+        await Assert.That(count).IsEqualTo(1);
+        await Assert.That(description).IsEqualTo(BootstrapDescription);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_throw_configuration_exception_when_headerbag_absent()
     {
         // Arrange — a foreign table without the outbox discriminator HeaderBag
@@ -98,10 +97,9 @@ public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
         }
 
         // Act / Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(
-            () => _provisioner.ProvisionAsync());
+        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => _provisioner.ProvisionAsync());
 
-        Assert.Contains("not a Brighter outbox", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("not a Brighter outbox");
     }
 
     private static async Task<(long Count, string? Description)> ReadHistoryAsync(
@@ -130,8 +128,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @Version",
         return (count, description);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try
@@ -155,10 +155,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @Version",
     }
 }
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
-[Trait("Category", "Spanner")]
-public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class SpannerInboxBootstrapDiscriminatorTests
 {
     private const string BootstrapDescription =
         "bootstrap: spanner-assumed-current (no known legacy installations, A-2)";
@@ -183,7 +183,7 @@ public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_stamp_v_latest_with_bootstrap_description_when_commandbody_present()
     {
         // Arrange — a Brighter-shaped inbox already exists (CommandBody present), no history yet
@@ -204,11 +204,11 @@ public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
         var (count, description) = await ReadHistoryAsync(
             connection, _tableName, ExpectedMigrationVersions.InboxLatest);
 
-        Assert.Equal(1, count);
-        Assert.Equal(BootstrapDescription, description);
+        await Assert.That(count).IsEqualTo(1);
+        await Assert.That(description).IsEqualTo(BootstrapDescription);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_throw_configuration_exception_when_commandbody_absent()
     {
         // Arrange — a foreign table without the inbox discriminator CommandBody
@@ -221,10 +221,9 @@ public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
         }
 
         // Act / Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(
-            () => _provisioner.ProvisionAsync());
+        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => _provisioner.ProvisionAsync());
 
-        Assert.Contains("not a Brighter inbox", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("not a Brighter inbox");
     }
 
     private static async Task<(long Count, string? Description)> ReadHistoryAsync(
@@ -253,8 +252,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @Version",
         return (count, description);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

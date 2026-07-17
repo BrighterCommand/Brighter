@@ -3,11 +3,10 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlInboxProvisionerFreshDatabaseTests : IAsyncLifetime
+public class MsSqlInboxProvisionerFreshDatabaseTests
 {
     private readonly string _connectionString;
     private readonly string _tableName;
@@ -34,7 +33,7 @@ public class MsSqlInboxProvisionerFreshDatabaseTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table()
     {
         //Arrange
@@ -55,7 +54,7 @@ INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
 WHERE t.name = @TableName AND s.name = 'dbo'";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
         var tableCount = (int)tableCheck.ExecuteScalar()!;
-        Assert.Equal(1, tableCount);
+        await Assert.That(tableCount).IsEqualTo(1);
 
         // Verify migration history contains the latest inbox version
         using var historyCheck = connection.CreateCommand();
@@ -65,11 +64,13 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = 'dbo' AND [MigrationVers
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
         var historyCount = (int)historyCheck.ExecuteScalar()!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

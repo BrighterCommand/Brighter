@@ -26,16 +26,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlDetectionHelperNullSchemaTests : IAsyncLifetime
+public class MsSqlDetectionHelperNullSchemaTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_mssql_detection_helper_receives_null_schema_name_it_should_substitute_dbo()
     {
         // Arrange — a box-shaped table in the dbo schema and a history row recorded against
@@ -57,27 +56,27 @@ public class MsSqlDetectionHelperNullSchemaTests : IAsyncLifetime
         // Act + Assert — DoesTableExistAsync: null and "dbo" must agree, and both must find the table.
         var existsWithDbo = await helper.DoesTableExistAsync(connection, tableName, "dbo");
         var existsWithNull = await helper.DoesTableExistAsync(connection, tableName, schemaName: null);
-        Assert.True(existsWithDbo);
-        Assert.True(existsWithNull);
+        await Assert.That(existsWithDbo).IsTrue();
+        await Assert.That(existsWithNull).IsTrue();
 
         // Act + Assert — DoesHistoryExistAsync: null must locate the row recorded against 'dbo'.
         // historySchema: null keeps the history table in the backend default ('dbo') — today's behaviour.
         var historyWithDbo = await helper.DoesHistoryExistAsync(connection, tableName, "dbo", historySchema: null);
         var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null, historySchema: null);
-        Assert.True(historyWithDbo);
-        Assert.True(historyWithNull);
+        await Assert.That(historyWithDbo).IsTrue();
+        await Assert.That(historyWithNull).IsTrue();
 
         // Act + Assert — GetMaxVersionAsync: null must read the same version recorded under 'dbo'.
         var maxWithDbo = await helper.GetMaxVersionAsync(connection, tableName, "dbo", historySchema: null);
         var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null, historySchema: null);
-        Assert.Equal(3, maxWithDbo);
-        Assert.Equal(3, maxWithNull);
+        await Assert.That(maxWithDbo).IsEqualTo(3);
+        await Assert.That(maxWithNull).IsEqualTo(3);
 
         // Act + Assert — GetTableColumnsAsync: null must return the same column set as 'dbo'.
         var colsWithDbo = await helper.GetTableColumnsAsync(connection, tableName, "dbo");
         var colsWithNull = await helper.GetTableColumnsAsync(connection, tableName, schemaName: null);
-        Assert.Contains("HeaderBag", colsWithDbo);
-        Assert.Contains("HeaderBag", colsWithNull);
+        await Assert.That(colsWithDbo).Contains("HeaderBag");
+        await Assert.That(colsWithNull).Contains("HeaderBag");
     }
 
     private string TrackTable(string tableName)
@@ -122,8 +121,10 @@ VALUES (@MigrationVersion, @SchemaName, @BoxTableName, @Description)";
         command.ExecuteNonQuery();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

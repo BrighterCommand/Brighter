@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -40,7 +39,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 // backends). These characterization tests pin that no-op for both a non-null SchemaName and a
 // null SchemaName, so a future change that wrongly made MySQL honour PerSchema (or throw on
 // null) is caught.
-public class MySqlPerSchemaNoOpTests : IAsyncLifetime
+public class MySqlPerSchemaNoOpTests
 {
     private const string ConnectionDatabase = "BrighterTests";
     private readonly string _baseConnectionString = Const.DefaultConnectingString;
@@ -50,12 +49,13 @@ public class MySqlPerSchemaNoOpTests : IAsyncLifetime
     // this must NOT pull the history table out of the connection's bound database.
     private readonly string _nonDefaultDatabase = $"brighter_billing_{Guid.NewGuid():N}";
 
+    [Before(Test)]
     public async Task InitializeAsync()
     {
         await EnsureDatabaseExistsAsync(_nonDefaultDatabase);
     }
 
-    [Fact]
+    [Test]
     public async Task When_per_schema_is_selected_with_a_non_null_schema_it_should_keep_history_in_connection_database_and_not_throw()
     {
         //Arrange — PerSchema scope + a non-null SchemaName (a non-default database).
@@ -69,22 +69,18 @@ public class MySqlPerSchemaNoOpTests : IAsyncLifetime
         var provisioner = BuildProvisioner(config);
 
         //Act
-        var exception = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert — no throw: the D3 guard does not apply to MySQL (SupportsPerSchemaHistory == false).
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
 
         //Assert — history stays in the connection's bound database, NOT the configured one (no-op).
-        Assert.True(
-            await TableExistsInDatabaseAsync("__BrighterMigrationHistory", ConnectionDatabase),
-            "History must remain in the connection's bound database under PerSchema (no-op).");
-        Assert.False(
-            await TableExistsInDatabaseAsync("__BrighterMigrationHistory", _nonDefaultDatabase),
-            "PerSchema must NOT place history into the configured schema on MySQL.");
-        Assert.Equal(1, await GetHistoryRowCountInConnectionDatabaseAsync(_nonDefaultDatabase));
+        await Assert.That(await TableExistsInDatabaseAsync("__BrighterMigrationHistory", ConnectionDatabase)).IsTrue().Because("History must remain in the connection's bound database under PerSchema (no-op).");
+        await Assert.That(await TableExistsInDatabaseAsync("__BrighterMigrationHistory", _nonDefaultDatabase)).IsFalse().Because("PerSchema must NOT place history into the configured schema on MySQL.");
+        await Assert.That(await GetHistoryRowCountInConnectionDatabaseAsync(_nonDefaultDatabase)).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_per_schema_is_selected_with_a_null_schema_it_should_keep_history_in_connection_database_and_not_throw()
     {
         //Arrange — PerSchema scope + a null SchemaName. On a placement backend this would trip
@@ -98,14 +94,14 @@ public class MySqlPerSchemaNoOpTests : IAsyncLifetime
         var provisioner = BuildProvisioner(config);
 
         //Act
-        var exception = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert — no ConfigurationException (D3 guard is gated off for MySQL).
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
 
         //Assert — history lands in the connection's bound database (the Global location).
-        Assert.True(await TableExistsInDatabaseAsync("__BrighterMigrationHistory", ConnectionDatabase));
-        Assert.Equal(1, await GetHistoryRowCountInConnectionDatabaseAsync(ConnectionDatabase));
+        await Assert.That(await TableExistsInDatabaseAsync("__BrighterMigrationHistory", ConnectionDatabase)).IsTrue();
+        await Assert.That(await GetHistoryRowCountInConnectionDatabaseAsync(ConnectionDatabase)).IsEqualTo(1);
     }
 
     private MySqlOutboxProvisioner BuildProvisioner(RelationalDatabaseConfiguration config)
@@ -179,6 +175,7 @@ WHERE `BoxTableName` = @BoxTableName AND `SchemaName` = @SchemaName";
         return Convert.ToInt64(await command.ExecuteScalarAsync());
     }
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

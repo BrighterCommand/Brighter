@@ -11,7 +11,6 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Inbox.Handlers;
-using Xunit;
 using InboxSyncA = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.InboxTypeKeyed.SyncA;
 using InboxSyncB = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.InboxTypeKeyed.SyncB;
 using InboxAsyncA = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.InboxTypeKeyed.AsyncA;
@@ -26,8 +25,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     // Not RED-able: this holds pre-fix too, so it is a preservation guard, not a /test-first cycle.
     public class When_Building_A_Pipeline_With_Global_Inbox_Each_Handler_Gets_Its_Own_UseInbox
     {
-        [Fact]
-        public void When_two_sync_handlers_share_a_simple_name_each_built_pipeline_gets_its_own_useinbox_and_the_cache_excludes_it_order_AB()
+        [Test]
+        public async Task When_two_sync_handlers_share_a_simple_name_each_built_pipeline_gets_its_own_useinbox_and_the_cache_excludes_it_order_AB()
         {
             // Arrange
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -38,8 +37,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             string traceB = TracePipeline(builderB.Build(new MyCommand(), new RequestContext()).First()).ToString();
 
             // Assert — each built pipeline carries its own UseInbox...
-            Assert.Contains("UseInboxHandler", traceA);
-            Assert.Contains("UseInboxHandler", traceB);
+            await Assert.That(traceA).Contains("UseInboxHandler");
+            await Assert.That(traceB).Contains("UseInboxHandler");
 
             // ...while neither cached memento value carries UseInbox (it is pushed onto the local
             // attribute list after the cache TryAdd, never into the cached sequence).
@@ -47,8 +46,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             AssertCacheExcludesUseInbox(typeof(InboxSyncB.CollidingInboxHandler));
         }
 
-        [Fact]
-        public void When_two_sync_handlers_share_a_simple_name_each_built_pipeline_gets_its_own_useinbox_and_the_cache_excludes_it_order_BA()
+        [Test]
+        public async Task When_two_sync_handlers_share_a_simple_name_each_built_pipeline_gets_its_own_useinbox_and_the_cache_excludes_it_order_BA()
         {
             // Arrange
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -59,14 +58,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             string traceA = TracePipeline(builderA.Build(new MyCommand(), new RequestContext()).First()).ToString();
 
             // Assert
-            Assert.Contains("UseInboxHandler", traceB);
-            Assert.Contains("UseInboxHandler", traceA);
+            await Assert.That(traceB).Contains("UseInboxHandler");
+            await Assert.That(traceA).Contains("UseInboxHandler");
             AssertCacheExcludesUseInbox(typeof(InboxSyncA.CollidingInboxHandler));
             AssertCacheExcludesUseInbox(typeof(InboxSyncB.CollidingInboxHandler));
         }
 
-        [Fact]
-        public void When_two_async_handlers_share_a_simple_name_each_built_pipeline_gets_its_own_useinbox_and_the_cache_excludes_it_order_AB()
+        [Test]
+        public async Task When_two_async_handlers_share_a_simple_name_each_built_pipeline_gets_its_own_useinbox_and_the_cache_excludes_it_order_AB()
         {
             // Arrange
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -77,14 +76,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             string traceB = TracePipeline(builderB.BuildAsync(new MyCommand(), new RequestContext(), false).First()).ToString();
 
             // Assert
-            Assert.Contains("UseInboxHandlerAsync", traceA);
-            Assert.Contains("UseInboxHandlerAsync", traceB);
+            await Assert.That(traceA).Contains("UseInboxHandlerAsync");
+            await Assert.That(traceB).Contains("UseInboxHandlerAsync");
             AssertCacheExcludesUseInbox(typeof(InboxAsyncA.CollidingInboxHandler));
             AssertCacheExcludesUseInbox(typeof(InboxAsyncB.CollidingInboxHandler));
         }
 
-        [Fact]
-        public void When_two_async_handlers_share_a_simple_name_each_built_pipeline_gets_its_own_useinbox_and_the_cache_excludes_it_order_BA()
+        [Test]
+        public async Task When_two_async_handlers_share_a_simple_name_each_built_pipeline_gets_its_own_useinbox_and_the_cache_excludes_it_order_BA()
         {
             // Arrange
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -95,8 +94,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             string traceA = TracePipeline(builderA.BuildAsync(new MyCommand(), new RequestContext(), false).First()).ToString();
 
             // Assert
-            Assert.Contains("UseInboxHandlerAsync", traceB);
-            Assert.Contains("UseInboxHandlerAsync", traceA);
+            await Assert.That(traceB).Contains("UseInboxHandlerAsync");
+            await Assert.That(traceA).Contains("UseInboxHandlerAsync");
             AssertCacheExcludesUseInbox(typeof(InboxAsyncA.CollidingInboxHandler));
             AssertCacheExcludesUseInbox(typeof(InboxAsyncB.CollidingInboxHandler));
         }
@@ -153,24 +152,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 new PipelineBuilder<MyCommand>(registryB, (IAmAHandlerFactoryAsync)factory, inboxConfiguration));
         }
 
-        private static void AssertCacheExcludesUseInbox(Type handlerType)
+        private static async Task AssertCacheExcludesUseInbox(Type handlerType)
         {
-            IReadOnlyCollection<RequestHandlerAttribute> pre = GetCachedAttributes("s_preAttributesMemento", handlerType);
-            IReadOnlyCollection<RequestHandlerAttribute> post = GetCachedAttributes("s_postAttributesMemento", handlerType);
+            IReadOnlyCollection<RequestHandlerAttribute> pre = await GetCachedAttributes("s_preAttributesMemento", handlerType);
+            IReadOnlyCollection<RequestHandlerAttribute> post = await GetCachedAttributes("s_postAttributesMemento", handlerType);
 
-            Assert.DoesNotContain(pre, a => a is UseInboxAttribute or UseInboxAsyncAttribute);
-            Assert.DoesNotContain(post, a => a is UseInboxAttribute or UseInboxAsyncAttribute);
+            await Assert.That((pre).Any(a => a is UseInboxAttribute or UseInboxAsyncAttribute)).IsFalse();
+            await Assert.That((post).Any(a => a is UseInboxAttribute or UseInboxAsyncAttribute)).IsFalse();
         }
 
-        private static IReadOnlyCollection<RequestHandlerAttribute> GetCachedAttributes(string fieldName, Type handlerType)
+        private static async Task<IReadOnlyCollection<RequestHandlerAttribute>> GetCachedAttributes(string fieldName, Type handlerType)
         {
             FieldInfo? field = typeof(PipelineBuilder<MyCommand>).GetField(
                 fieldName,
                 BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(field);
+            await Assert.That(field).IsNotNull();
 
             var cache = (IDictionary)field!.GetValue(null)!;
-            Assert.True(cache.Contains(handlerType), $"Expected a cached memento entry keyed by {handlerType}.");
+            await Assert.That(cache.Contains(handlerType)).IsTrue().Because($"Expected a cached memento entry keyed by {handlerType}.");
             return ((IEnumerable<RequestHandlerAttribute>)cache[handlerType]!).ToList();
         }
 

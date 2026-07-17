@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -36,8 +36,8 @@ public class MySqlInboxMigrationsTests
 
     private static readonly string[] s_v2Added = ["ContextKey"];
 
-    [Fact]
-    public void When_mysql_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_contextkey_added_in_v2()
+    [Test]
+    public async Task When_mysql_inbox_migrations_are_listed_it_should_return_v1_and_v2_with_contextkey_added_in_v2()
     {
         //Arrange — derive each version's expected LogicalColumns by accumulating the
         //per-version additions from the archaeology (spec README inbox table).
@@ -50,10 +50,10 @@ public class MySqlInboxMigrationsTests
         var migrations = new MySqlInboxMigrationCatalog().All(config);
 
         //Assert — exactly two migrations numbered 1..2 in order.
-        Assert.Equal(2, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(2);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         //Assert — LogicalColumns at each version matches the cumulative archaeology.
@@ -61,29 +61,23 @@ public class MySqlInboxMigrationsTests
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
         //Assert — V2 UpScript uses the MySQL information_schema + prepared-statement
         //idempotency pattern (ADR §5). Same pattern used by MySQL outbox V2..V7.
-        var v2Script = migrations[1].UpScript;
-        Assert.Contains("information_schema.columns", v2Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("PREPARE stmt FROM @q", v2Script, StringComparison.OrdinalIgnoreCase);
+        var v2Script = migrations[1].UpScript.Value;
+        await Assert.That(v2Script).Contains("information_schema.columns");
+        await Assert.That(v2Script).Contains("PREPARE stmt FROM @q");
 
         //Assert — V1 has no single source commit so SourceReference is null;
         //V2 carries the archaeology pointer for the ContextKey addition (787c31c52, Oct 2018).
-        Assert.Null(migrations[0].SourceReference);
-        Assert.False(
-            string.IsNullOrWhiteSpace(migrations[1].SourceReference),
-            "V2 must have a non-empty SourceReference (archaeology pointer for ContextKey addition)");
+        await Assert.That(migrations[0].SourceReference).IsNull();
+        await Assert.That(string.IsNullOrWhiteSpace(migrations[1].SourceReference)).IsFalse().Because("V2 must have a non-empty SourceReference (archaeology pointer for ContextKey addition)");
 
         //Assert — IdempotencyCheckSql is null for MySQL (only SQLite uses that field per ADR §6).
-        Assert.Null(migrations[0].IdempotencyCheckSql);
-        Assert.Null(migrations[1].IdempotencyCheckSql);
+        await Assert.That(migrations[0].IdempotencyCheckSql).IsNull();
+        await Assert.That(migrations[1].IdempotencyCheckSql).IsNull();
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

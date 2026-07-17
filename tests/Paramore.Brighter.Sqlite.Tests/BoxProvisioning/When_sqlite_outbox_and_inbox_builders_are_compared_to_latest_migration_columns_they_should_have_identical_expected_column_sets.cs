@@ -29,16 +29,16 @@ using Paramore.Brighter.BoxProvisioning.Tests.Drift;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.BoxProvisioning.Drift;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
 public class SqliteOutboxBuilderDriftTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_sqlite_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_sqlite_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
         bool hasBinaryMessagePayload)
     {
         //Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config so
@@ -63,16 +63,13 @@ public class SqliteOutboxBuilderDriftTests
         migrationColumns.UnionWith(SqliteOutboxHousekeeping.V1);
 
         //Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest ∪ housekeeping: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_sqlite_outbox_v1_upscript_is_inspected_it_should_carry_pre_dispatched_historical_baseline(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_sqlite_outbox_v1_upscript_is_inspected_it_should_carry_pre_dispatched_historical_baseline(
         bool hasBinaryMessagePayload)
     {
         //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
@@ -90,15 +87,15 @@ public class SqliteOutboxBuilderDriftTests
         var migrations = new SqliteOutboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
-        Assert.Equal(1, v1.Version.Value);
-        Assert.DoesNotContain("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("HeaderBag", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(v1.Version.Value).IsEqualTo(1);
+        await Assert.That(v1.UpScript.Value).DoesNotContain("Dispatched");
+        await Assert.That(v1.UpScript.Value).Contains("HeaderBag");
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_sqlite_outbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_sqlite_outbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
         bool hasBinaryMessagePayload)
     {
         //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
@@ -114,14 +111,14 @@ public class SqliteOutboxBuilderDriftTests
         var expected = SqliteOutboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
         var actual = new SqliteOutboxMigrationCatalog().FreshInstallDdl(config);
 
-        Assert.Equal(expected, actual);
+        await Assert.That(actual).IsEqualTo(expected);
     }
 }
 
 public class SqliteInboxBuilderDriftTests
 {
-    [Fact]
-    public void When_sqlite_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
+    [Test]
+    public async Task When_sqlite_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
         //Arrange — SQLite inbox has V1 + V2 (V2 adds ContextKey, mirroring MSSQL/MySQL). After
         //Task 4.3 the migration list should reach V_latest=2 and the live builder column set
@@ -144,14 +141,11 @@ public class SqliteInboxBuilderDriftTests
         migrationColumns.UnionWith(SqliteInboxHousekeeping.V1);
 
         //Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest ∪ housekeeping: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 
-    [Fact]
-    public void When_sqlite_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey()
+    [Test]
+    public async Task When_sqlite_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey()
     {
         //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
         //695522367, March 2019). The SQLite inbox is one of the five "born past V1" backends:
@@ -167,13 +161,13 @@ public class SqliteInboxBuilderDriftTests
         var migrations = new SqliteInboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
-        Assert.Equal(1, v1.Version.Value);
-        Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(v1.Version.Value).IsEqualTo(1);
+        await Assert.That(v1.UpScript.Value).Contains("ContextKey");
+        await Assert.That(v1.UpScript.Value).Contains("CommandBody");
     }
 
-    [Fact]
-    public void When_sqlite_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder()
+    [Test]
+    public async Task When_sqlite_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder()
     {
         //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
         //for the fresh-install fast path (ADR 0057 §3), distinct from V1.UpScript which now
@@ -187,6 +181,6 @@ public class SqliteInboxBuilderDriftTests
         var expected = SqliteInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);
         var actual = new SqliteInboxMigrationCatalog().FreshInstallDdl(config);
 
-        Assert.Equal(expected, actual);
+        await Assert.That(actual).IsEqualTo(expected);
     }
 }

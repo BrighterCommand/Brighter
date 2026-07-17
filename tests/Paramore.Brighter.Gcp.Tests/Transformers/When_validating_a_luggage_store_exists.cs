@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Transformers.Gcp;
@@ -6,10 +6,10 @@ using Paramore.Brighter.Transforms.Storage;
 
 namespace Paramore.Brighter.Gcp.Tests.Transformers;
 
-[Trait("Category", "GCS")] 
+[Category("GCS")] 
 public class LuggageStoreExistsTests 
 {
-    [Fact]
+    [Test]
     public async Task When_checking_store_that_exists()
     {
         var bucketName = $"brightertestbucket-{Guid.NewGuid()}";
@@ -34,7 +34,7 @@ public class LuggageStoreExistsTests
         await client.DeleteBucketAsync(bucketName);
     }
     
-    [Fact]
+    [Test]
     public async Task When_checking_store_that_does_not_exist()
     {
         //act
@@ -52,6 +52,6 @@ public class LuggageStoreExistsTests
                  await luggageStore.EnsureStoreExistsAsync();
              });
          
-         Assert.NotNull(doesNotExist);
+         await Assert.That(doesNotExist).IsNotNull();
     }
 }

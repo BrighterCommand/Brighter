@@ -5,12 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandard.Proactor;
 
-[Trait("Category", "Sqs")]
-[Collection("SqsStandard")]
+[Property("Category", "Sqs")]
+[NotInParallel("SqsStandard")]
 public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -30,14 +31,14 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsyn
         _messageBuilder = new DefaultMessageBuilder();
     }
 
-    [Fact]
+    [Test]
     public async Task When_infrastructure_missing_and_validate_channel_should_throw_exception_async()
     {
         try
         {
             // Arrange
             _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey(), OnMissingChannel.Assume);
-            _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
+            _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
                 _messageGatewayProvider.GetOrCreateChannelName(),
                 OnMissingChannel.Validate);
 
@@ -54,9 +55,9 @@ public class WhenInfrastructureMissingAndValidateChannelShouldThrowExceptionAsyn
             await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
             Assert.Fail("We are expected to throw an exception");
         }
-        catch (Exception ex) when (ex is not Xunit.Sdk.XunitException)
+        catch (Exception ex) when (ex is not TUnit.Assertions.Exceptions.AssertionException)
         {
-            Assert.True(true);
+            await Assert.That(true).IsTrue();
         }
     }
 }

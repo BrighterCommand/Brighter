@@ -1,12 +1,12 @@
 using System;
 using Confluent.Kafka;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[System.Obsolete]
 public class When_a_fatal_producer_error_is_followed_by_a_non_fatal_should_still_throw : IDisposable
 {
     private readonly KafkaMessageProducer _producer;
@@ -29,8 +29,8 @@ public class When_a_fatal_producer_error_is_followed_by_a_non_fatal_should_still
         _producer.Init();
     }
 
-    [Fact]
-    public void When_the_non_fatal_error_arrives_after_the_fatal_error_send_still_throws()
+    [Test]
+    public async Task When_the_non_fatal_error_arrives_after_the_fatal_error_send_still_throws()
     {
         //Arrange - librdkafka reports a fatal error, then immediately a non-fatal one. Errors arrive
         //in bursts, and the fatal state is meant to be a one-way "producer is dead" latch.
@@ -42,10 +42,18 @@ public class When_a_fatal_producer_error_is_followed_by_a_non_fatal_should_still
             new MessageBody("test body"));
 
         //Act
-        var exception = Record.Exception(() => _producer.Send(message));
+        Exception? exception = null;
+        try
+        {
+            _producer.Send(message);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert - the fatal condition must remain latched, so Send reports the producer as unrecoverable
-        Assert.IsType<ChannelFailureException>(exception);
+        await Assert.That(exception).IsTypeOf<ChannelFailureException>();
     }
 
     public void Dispose()

@@ -26,14 +26,13 @@ using System.Threading.Tasks;
 using Google.Api.Gax;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.BoxProvisioning.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
-[Trait("Category", "Spanner")]
-public class SpannerOutboxFreshInstallTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class SpannerOutboxFreshInstallTests
 {
     private readonly string _tableName;
     private readonly string _connectionString;
@@ -55,7 +54,7 @@ public class SpannerOutboxFreshInstallTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_stamp_v_latest_with_fresh_install_description_and_skip_duplicate_on_rerun()
     {
         // Act — first provision on absent table (fresh-install path)
@@ -66,17 +65,17 @@ public class SpannerOutboxFreshInstallTests : IAsyncLifetime
         await connection.OpenAsync();
 
         var (firstCount, firstDescription) = await ReadHistoryAsync(connection, _tableName);
-        Assert.Equal(1, firstCount);
-        Assert.NotNull(firstDescription);
-        Assert.StartsWith("fresh install", firstDescription, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(firstCount).IsEqualTo(1);
+        await Assert.That(firstDescription).IsNotNull();
+        await Assert.That(firstDescription).StartsWith("fresh install");
 
         // Act — second provision must be a no-op (verifies IsMigrationAppliedAsync gate / detection bypass)
         await _provisioner.ProvisionAsync();
 
         // Assert — still exactly one history row at V_latest, description preserved
         var (secondCount, secondDescription) = await ReadHistoryAsync(connection, _tableName);
-        Assert.Equal(1, secondCount);
-        Assert.Equal(firstDescription, secondDescription);
+        await Assert.That(secondCount).IsEqualTo(1);
+        await Assert.That(secondDescription).IsEqualTo(firstDescription);
     }
 
     private static async Task<(long Count, string? Description)> ReadHistoryAsync(
@@ -105,8 +104,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
         return (count, description);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try
@@ -130,10 +131,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
     }
 }
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
-[Trait("Category", "Spanner")]
-public class SpannerInboxFreshInstallTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class SpannerInboxFreshInstallTests
 {
     private readonly string _tableName;
     private readonly string _connectionString;
@@ -155,7 +156,7 @@ public class SpannerInboxFreshInstallTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_stamp_v_latest_with_fresh_install_description_and_skip_duplicate_on_rerun()
     {
         // Act — first provision on absent table (fresh-install path)
@@ -166,17 +167,17 @@ public class SpannerInboxFreshInstallTests : IAsyncLifetime
         await connection.OpenAsync();
 
         var (firstCount, firstDescription) = await ReadHistoryAsync(connection, _tableName);
-        Assert.Equal(1, firstCount);
-        Assert.NotNull(firstDescription);
-        Assert.StartsWith("fresh install", firstDescription, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(firstCount).IsEqualTo(1);
+        await Assert.That(firstDescription).IsNotNull();
+        await Assert.That(firstDescription).StartsWith("fresh install");
 
         // Act — second provision must be a no-op (verifies IsMigrationAppliedAsync gate / detection bypass)
         await _provisioner.ProvisionAsync();
 
         // Assert — still exactly one history row at V_latest, description preserved
         var (secondCount, secondDescription) = await ReadHistoryAsync(connection, _tableName);
-        Assert.Equal(1, secondCount);
-        Assert.Equal(firstDescription, secondDescription);
+        await Assert.That(secondCount).IsEqualTo(1);
+        await Assert.That(secondDescription).IsEqualTo(firstDescription);
     }
 
     private static async Task<(long Count, string? Description)> ReadHistoryAsync(
@@ -205,8 +206,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
         return (count, description);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 using SyncA = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.SyncA;
 using SyncB = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.SyncB;
 using AsyncA = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.AsyncA;
@@ -18,8 +17,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
     public class When_Building_A_Pipeline_Disambiguates_Handlers_By_Type
     {
-        [Fact]
-        public void When_two_sync_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_winner_built_first()
+        [Test]
+        public async Task When_two_sync_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_winner_built_first()
         {
             // Arrange
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -31,12 +30,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             // Assert — B carries its own post decorator (Logging), never A's pre decorator (Validation)
             string trace = TracePipeline(pipelineB).ToString();
-            Assert.Contains("MyLoggingHandler", trace);
-            Assert.DoesNotContain("MyValidationHandler", trace);
+            await Assert.That(trace).Contains("MyLoggingHandler");
+            await Assert.That(trace).DoesNotContain("MyValidationHandler");
         }
 
-        [Fact]
-        public void When_two_sync_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_opposite_order()
+        [Test]
+        public async Task When_two_sync_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_opposite_order()
         {
             // Arrange
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -48,12 +47,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             // Assert — A carries its own pre decorator (Validation), never B's post decorator (Logging)
             string trace = TracePipeline(pipelineA).ToString();
-            Assert.Contains("MyValidationHandler", trace);
-            Assert.DoesNotContain("MyLoggingHandler", trace);
+            await Assert.That(trace).Contains("MyValidationHandler");
+            await Assert.That(trace).DoesNotContain("MyLoggingHandler");
         }
 
-        [Fact]
-        public void When_two_async_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_winner_built_first()
+        [Test]
+        public async Task When_two_async_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_winner_built_first()
         {
             // Arrange
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -66,12 +65,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             // Assert — async B carries its own post decorator, never async A's pre decorator
             string trace = TracePipeline(pipelineB).ToString();
-            Assert.Contains("MyLoggingHandlerAsync", trace);
-            Assert.DoesNotContain("MyValidationHandlerAsync", trace);
+            await Assert.That(trace).Contains("MyLoggingHandlerAsync");
+            await Assert.That(trace).DoesNotContain("MyValidationHandlerAsync");
         }
 
-        [Fact]
-        public void When_two_async_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_opposite_order()
+        [Test]
+        public async Task When_two_async_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_opposite_order()
         {
             // Arrange
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -84,12 +83,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             // Assert — async A carries its own pre decorator, never async B's post decorator
             string trace = TracePipeline(pipelineA).ToString();
-            Assert.Contains("MyValidationHandlerAsync", trace);
-            Assert.DoesNotContain("MyLoggingHandlerAsync", trace);
+            await Assert.That(trace).Contains("MyValidationHandlerAsync");
+            await Assert.That(trace).DoesNotContain("MyLoggingHandlerAsync");
         }
 
-        [Fact]
-        public void When_a_single_handler_is_built_twice_should_leave_one_cache_entry_keyed_by_its_runtime_type()
+        [Test]
+        public async Task When_a_single_handler_is_built_twice_should_leave_one_cache_entry_keyed_by_its_runtime_type()
         {
             // Arrange — a request type unique to this fact, so the process-global per-closed-generic
             // mementos hold exactly this handler's entry and the count assertion stays deterministic
@@ -115,12 +114,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             // Assert — exactly one entry per memento, keyed by the handler's runtime Type, and the
             // second build's decorator sequence is equivalent to the first
-            IReadOnlyCollection<System.Type> preKeys = GetMementoKeys<Reuse.ReuseCommand>("s_preAttributesMemento");
-            IReadOnlyCollection<System.Type> postKeys = GetMementoKeys<Reuse.ReuseCommand>("s_postAttributesMemento");
+            IReadOnlyCollection<System.Type> preKeys = await GetMementoKeys<Reuse.ReuseCommand>("s_preAttributesMemento");
+            IReadOnlyCollection<System.Type> postKeys = await GetMementoKeys<Reuse.ReuseCommand>("s_postAttributesMemento");
 
-            Assert.Equal(new[] { typeof(Reuse.ReuseHandler) }, preKeys);
-            Assert.Equal(new[] { typeof(Reuse.ReuseHandler) }, postKeys);
-            Assert.Equal(firstTrace, secondTrace);
+            await Assert.That(preKeys).IsEqualTo(new[] { typeof(Reuse.ReuseHandler) });
+            await Assert.That(postKeys).IsEqualTo(new[] { typeof(Reuse.ReuseHandler) });
+            await Assert.That(secondTrace).IsEqualTo(firstTrace);
         }
 
         private static (PipelineBuilder<MyCommand>, PipelineBuilder<MyCommand>) CreateSyncBuilders()
@@ -188,13 +187,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             return pipelineTracer;
         }
 
-        private static IReadOnlyCollection<System.Type> GetMementoKeys<TRequest>(string fieldName)
+        private static async Task<IReadOnlyCollection<System.Type>> GetMementoKeys<TRequest>(string fieldName)
             where TRequest : class, IRequest
         {
             FieldInfo? field = typeof(PipelineBuilder<TRequest>).GetField(
                 fieldName,
                 BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(field);
+            await Assert.That(field).IsNotNull();
 
             var cache = (IDictionary)field!.GetValue(null)!;
             return cache.Keys.Cast<System.Type>().ToList();

@@ -26,16 +26,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
+public class PostgreSqlPayloadValidatorNullSchemaTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_postgres_payload_validator_receives_null_schema_name_it_should_substitute_public()
     {
         // Arrange — two box-shaped tables in public: one with a text payload column
@@ -93,8 +92,10 @@ public class PostgreSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
         return tableName;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

@@ -1,17 +1,15 @@
-﻿using System;
-using Xunit;
+using System;
 using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.Redis.Tests.TestDoubles;
 using ServiceStack.Redis;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 
-[Collection("Redis Shared Pool")] //shared connection pool so run sequentially
-[Trait("Category", "Redis")]
+[Category("Redis")]
 public class RedisGatewayConfigurationTests
 {
-    [Fact]
-    public void When_overriding_client_configuration_via_the_gateway()
+    [Test]
+    public async Task When_overriding_client_configuration_via_the_gateway()
     {
         var configuration = new RedisMessagingGatewayConfiguration
         {
@@ -32,17 +30,18 @@ public class RedisGatewayConfigurationTests
 
         using var gateway = new TestRedisGateway(configuration, RoutingKey.Empty);
         //Redis Config is static, so we can just look at the values we should have initialized
-        Assert.Equal(configuration.BackoffMultiplier.Value, RedisConfig.BackOffMultiplier);
-        Assert.Equal(configuration.BackoffMultiplier.Value, RedisConfig.BackOffMultiplier);
-        Assert.Equal(configuration.DeactivatedClientsExpiry.Value, RedisConfig.DeactivatedClientsExpiry);
-        Assert.Equal(configuration.DefaultConnectTimeout.Value, RedisConfig.DefaultConnectTimeout);
-        Assert.Equal(configuration.DefaultIdleTimeOutSecs.Value, RedisConfig.DefaultIdleTimeOutSecs);
-        Assert.Equal(configuration.DefaultReceiveTimeout.Value, RedisConfig.DefaultReceiveTimeout);
-        Assert.Equal(configuration.DefaultSendTimeout.Value, RedisConfig.DefaultSendTimeout);
-        Assert.Equal(!configuration.DisableVerboseLogging.Value, RedisConfig.EnableVerboseLogging);
-        Assert.Equal(configuration.HostLookupTimeoutMs.Value, RedisConfig.HostLookupTimeoutMs);
-        Assert.Equal(configuration.MaxPoolSize.Value, RedisConfig.DefaultMaxPoolSize);
-        Assert.Equal(configuration.MessageTimeToLive.Value, gateway.MessageTimeToLive);
-        Assert.Equal(configuration.VerifyMasterConnections.Value, RedisConfig.VerifyMasterConnections);
+        await Assert.That(RedisConfig.BackOffMultiplier).IsEqualTo(configuration.BackoffMultiplier.Value);
+        await Assert.That(RedisConfig.BackOffMultiplier).IsEqualTo(configuration.BackoffMultiplier.Value);
+        await Assert.That(RedisConfig.DeactivatedClientsExpiry).IsEqualTo(configuration.DeactivatedClientsExpiry.Value);
+        await Assert.That(RedisConfig.DefaultConnectTimeout).IsEqualTo(configuration.DefaultConnectTimeout.Value);
+        await Assert.That(RedisConfig.DefaultIdleTimeOutSecs).IsEqualTo(configuration.DefaultIdleTimeOutSecs.Value);
+        await Assert.That(RedisConfig.DefaultReceiveTimeout).IsEqualTo(configuration.DefaultReceiveTimeout.Value);
+        await Assert.That(RedisConfig.DefaultSendTimeout).IsEqualTo(configuration.DefaultSendTimeout.Value);
+        await Assert.That(RedisConfig.EnableVerboseLogging).IsEqualTo(!configuration.DisableVerboseLogging.Value);
+        await Assert.That(RedisConfig.HostLookupTimeoutMs).IsEqualTo(configuration.HostLookupTimeoutMs.Value);
+        await Assert.That(RedisConfig.DefaultMaxPoolSize).IsEqualTo(configuration.MaxPoolSize.Value);
+        await Assert.That(gateway.MessageTimeToLive).IsEqualTo(configuration.MessageTimeToLive.Value);
+        await Assert.That(RedisConfig.VerifyMasterConnections).IsEqualTo(configuration.VerifyMasterConnections.Value);
     }
 }
+

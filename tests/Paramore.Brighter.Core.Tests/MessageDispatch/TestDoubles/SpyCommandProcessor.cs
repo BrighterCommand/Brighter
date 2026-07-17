@@ -103,7 +103,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             PublishCount = 0;
         }
 
-        public bool WaitForHandle(int timeoutMs = 5000) => _handled.Wait(timeoutMs);
+        public async Task<bool> WaitForHandleAsync(int timeoutMs = 5000) =>
+            await _handled.WaitAsync(TimeSpan.FromMilliseconds(timeoutMs));
 
         public override void Send<T>(T command, RequestContext? requestContext = null)
         {
