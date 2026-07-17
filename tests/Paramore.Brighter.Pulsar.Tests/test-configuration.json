@@ -1,0 +1,20 @@
+{
+  "Namespace": "Paramore.Brighter.Pulsar.Tests",
+  "DestinationFolder": "tests/Paramore.Brighter.Pulsar.Tests",
+  "MessageAssertion": "DefaultMessageAssertion",
+  "MessagingGateway": {
+    "Publication": "Paramore.Brighter.MessagingGateway.Pulsar.PulsarPublication",
+    "Subscription": "Paramore.Brighter.MessagingGateway.Pulsar.PulsarSubscription",
+    "MessageGatewayProvider": "Paramore.Brighter.Pulsar.Tests.Utils.PulsarMessageGatewayProvider",
+    "Category": "Pulsar",
+    "CollectionName": "PulsarMessagingGateway",
+    "HasSupportToPublishConfirmation": false,
+    "HasSupportToDeadLetterQueue": false,
+    "HasSupportToDelayedMessages": true,
+    "HasSupportToValidateBrokerExistence": false,
+    "HasSupportToRequeue": true,
+    "HasSupportToValidateInfrastructure": false,
+    "ReceiveMessageTimeoutInMilliseconds": 4000,
+    "MessageConfirmationTimeoutInMilliseconds": 1000
+  }
+}
