@@ -1,3 +1,18 @@
+---
+id: 0038-aws-sqs-dlq-direct-send
+title: "AWS SQS DLQ: Replace ChangeMessageVisibility with Direct Send"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-11
+summary: "Decides to replace SQS's ChangeMessageVisibility(0) rejection path with direct send to a Brighter-managed DLQ queue followed by immediate deletion from the source queue, following the Kafka pattern established in ADR 0034 and rejection routing strategy from ADR 0036."
+tags:
+  - "aws"
+  - "sqs"
+  - "dead-letter-queue"
+  - "transports"
+---
+
 # 38. AWS SQS DLQ: Replace ChangeMessageVisibility with Direct Send
 
 Date: 2026-02-11

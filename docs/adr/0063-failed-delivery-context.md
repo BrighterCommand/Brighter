@@ -1,3 +1,18 @@
+---
+id: 0063-failed-delivery-context
+title: "Failed Delivery Context for Confirmation-Based Producers"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-06-10
+summary: "Enriches the ISupportPublishConfirmation.OnMessagePublished event to carry a PublishConfirmationResult (wire topic, original publish ActivityContext, message id) so OutboxProducerMediator can emit a linked confirmation span, log a warning, and trip the circuit breaker on async publish failures from Kafka and RMQ producers."
+tags:
+  - "publish"
+  - "observability"
+  - "resilience"
+  - "error-handling"
+---
+
 # 0063. Failed Delivery Context for Confirmation-Based Producers
 
 Date: 2026-06-10

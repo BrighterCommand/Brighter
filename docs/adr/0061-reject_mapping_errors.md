@@ -1,3 +1,18 @@
+---
+id: 0061-reject_mapping_errors
+title: "Route Mapping Failures Through RejectMessage"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-06-01
+summary: "Routes MessageMappingException failures in the Proactor and Reactor message pumps through the existing RejectMessage path with RejectionReason.Unacceptable, so malformed messages are directed to the configured IMQ/DLQ instead of being silently deleted via fall-through acknowledge."
+tags:
+  - "messaging"
+  - "message-pump"
+  - "error-handling"
+  - "message-rejection"
+---
+
 # 0061. Route Mapping Failures Through RejectMessage
 
 Date: 2026-06-01

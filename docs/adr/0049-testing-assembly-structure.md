@@ -1,3 +1,17 @@
+---
+id: 0049-testing-assembly-structure
+title: "Testing Assembly Structure"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-05
+summary: "Establishes a new Paramore.Brighter.Testing NuGet package containing SpyCommandProcessor, CommandType enum, and RecordedCall record as the official, maintained testing utilities for verifying handler interactions with IAmACommandProcessor."
+tags:
+  - "testing"
+  - "api-design"
+  - "architecture"
+---
+
 # 49. Testing Assembly Structure
 
 Date: 2026-02-05

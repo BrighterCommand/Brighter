@@ -1,3 +1,18 @@
+---
+id: 0063-request-validation-handler
+title: "Request validation handler"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2026-06-15
+summary: "Adds opt-in request validation to Brighter's handler pipeline via a ValidateRequest attribute and abstract ValidateRequestHandler<TRequest> in the core assembly, with separate provider packages for FluentValidation, DataAnnotations, and Brighter's Specification pattern; validation failures throw a unified RequestValidationException."
+tags:
+  - "pipeline"
+  - "request-validation"
+  - "middleware"
+  - "di"
+---
+
 # 63. Request validation handler
 
 Date: 2026-06-15

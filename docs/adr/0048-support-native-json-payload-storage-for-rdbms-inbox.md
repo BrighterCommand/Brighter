@@ -1,4 +1,20 @@
+---
+id: 0048-support-native-json-payload-storage-for-rdbms-inbox
+title: "Support Native JSON Payload Storage for RDBMS Inbox"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2026-01-28
+summary: "Extends the RDBMS Inbox to optionally store message payloads in native JSON column types (PostgreSQL JSON/JSONB, MySQL JSON, Spanner JSON) via a new JsonMessagePayload flag on IAmARelationalDatabaseConfiguration, preserving existing default behaviour."
+tags:
+  - "inbox"
+  - "serialization"
+  - "postgres"
+---
+
 # 48. Support Native JSON Payload Storage for RDBMS Inbox
+
+Date: 2026-01-28
 
 ## Status
 

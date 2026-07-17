@@ -1,4 +1,19 @@
-# ADR: Support Circuit Breaking for `Topics` in Outbox Sweeper
+---
+id: 0028-support-circuit-breaking-of-topics
+title: "Support Circuit Breaking for Topics in Outbox Sweeper"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2025-07-04
+summary: "Adds a circuit-breaker mechanism to the outbox sweeper that tracks per-topic dispatch failures and temporarily skips tripped topics for a configurable cooldown period, preventing a failing topic from blocking dispatch of healthy topics."
+tags:
+  - "circuit-breaker"
+  - "outbox"
+  - "resilience"
+  - "messaging"
+---
+
+# 28. Support Circuit Breaking for `Topics` in Outbox Sweeper
 
 Date: 2025-07-04
 

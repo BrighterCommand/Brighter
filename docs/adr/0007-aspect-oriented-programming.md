@@ -1,3 +1,18 @@
+---
+id: 0007-aspect-oriented-programming
+title: "Aspect Oriented Programming"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2019-08-01
+summary: "Brighter uses Aspect Oriented Programming via .NET attributes as pointcuts and a Russian doll pipeline as advice, allowing cross-cutting concerns such as logging, retries, and exception handling to be configured directly on handlers and mappers while remaining visible in the handler code."
+tags:
+  - "aop"
+  - "pipeline"
+  - "middleware"
+  - "architecture"
+---
+
 # 7. Aspect Oriented Programming
 
 Date: 2019-08-01

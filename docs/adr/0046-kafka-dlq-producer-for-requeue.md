@@ -1,10 +1,25 @@
+---
+id: 0046-kafka-dlq-producer-for-requeue
+title: "Kafka DLQ Producer for Requeue"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-01-11
+summary: "Defines how KafkaMessageConsumer creates and owns lazy-initialized KafkaMessageProducer instances for dead letter and invalid message channels, inheriting consumer configuration and matching the data topic's MakeChannels strategy for topic creation."
+tags:
+  - "kafka"
+  - "dead-letter-queue"
+  - "transports"
+  - "messaging"
+---
+
 # 46. Kafka DLQ Producer for Requeue
 
 Date: 2026-01-11
 
 ## Status
 
-Approved
+Accepted
 
 ## Context
 

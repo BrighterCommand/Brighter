@@ -1,3 +1,18 @@
+---
+id: 0037-aws-test-resource-cleanup
+title: "AWS Test Resource Cleanup"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-07
+summary: "Adopts a tag-based cleanup strategy for orphaned AWS test resources by making SnsAttributes.Tags configurable, tagging all test SQS queues and SNS topics with Environment=Test, and replacing the indiscriminate cleanup script with one that filters by tag via the AWS Resource Groups Tagging API."
+tags:
+  - "testing"
+  - "aws"
+  - "sqs"
+  - "sns"
+---
+
 # 37. AWS Test Resource Cleanup
 
 Date: 2026-02-07
