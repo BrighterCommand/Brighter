@@ -31,20 +31,107 @@ The spec commands provide a structured approach to designing and implementing fe
       │                   (Repeat for multiple architectural decisions)
       │
       ▼
- Tasks.md ──────────────► /spec:tasks
-      │                   /spec:approve tasks
+ Choose by certainty ────► (prompted at /spec:approve design)
       │
-      ▼
- Implementation ─────────► /spec:implement
-      │                   (TDD: Tests → Code)
+      ├── Attended ──────► /spec:tasks
+      │   (review each      /spec:approve tasks
+      │    test)            /spec:implement   (sonnet; TDD: Tests → Code)
       │
-      ├── OR (unattended) ► /spec:ralph-tasks
-      │                     /spec:ralph-implement [count]
-      │                     scripts/ralph.sh [n] [max] [cooldown]
+      └── Unattended ────► /spec:ralph-tasks       (standalone, from approved design)
+          (review in        /spec:ralph-implement  (opus + auto mode, self-driving loop)
+           batches)
       │
       ▼
  Pull Request
 ```
+
+**The certainty fork.** After the design is approved, you pick *one* of two paths — and
+`/spec:approve design` prompts you to choose:
+
+- **Attended** (`/spec:tasks` → `/spec:implement`): a strict Red → **user approval** → Green
+  → Refactor loop in the main agent on **sonnet**. Every test is reviewed in the IDE before
+  implementation. Use when the work is uncertain.
+- **Unattended** (`/spec:ralph-tasks` → `/spec:ralph-implement`): `ralph-tasks.md` is
+  generated **directly from the approved design** (no `tasks.md`, no per-test gates), then a
+  self-driving loop on **opus** under **auto mode** delegates each task to a **sonnet**
+  sub-agent. Reviewed in batches rather than per test. Use when the work is well-understood.
+
+## Sub-agents & model policy
+
+Several commands delegate their reasoning-heavy work to a **sub-agent** (launched via the
+`Agent` tool) rather than doing it inline. This keeps the main conversation's context clean
+and gives the heavy work a focused, single-purpose context.
+
+**The convention** (modelled on `/spec:review`):
+
+1. **The main agent gathers inputs.** A sub-agent starts with a clean context — it only
+   knows what is in its prompt. The command reads the needed files (and runs `gh`/`git`)
+   first, then passes the text or paths.
+2. **Launch `Agent`** with an explicit `subagent_type` and `model`:
+   - **Planning commands** (`/spec:design`, `/spec:tasks`, `/spec:ralph-tasks`) use
+     `subagent_type: "Plan"`. `Plan` has all tools **except** `Agent`, `ExitPlanMode`,
+     `Edit`, `Write`, and `NotebookEdit` — so it can Read/Glob/Grep/Bash/WebFetch/WebSearch
+     but has no file-editing tool. That makes it much **harder** for the sub-agent to
+     accidentally write the spec file (no `Write`/`Edit`/`NotebookEdit`) than relying on the
+     prompt alone, though it is not an absolute lock — it still has `Bash`, so a determined
+     `echo >`/`tee`/`sed -i` could write. The prompt still instructs it to return as text;
+     `Plan` simply removes the easy, accidental path to writing.
+   - **`/spec:requirements`** also uses `subagent_type: "Plan"` — drafting requirements is
+     read-only (returns text), so `Plan` fits, and `Plan` has no `AskUserQuestion` so the
+     sub-agent cannot prompt the user.
+   - **`/spec:review`** uses `subagent_type: "general-purpose"` (adversarial reasoning that
+     needs no source mutation).
+   - **`/spec:ralph-implement`** uses `subagent_type: "general-purpose"` because its
+     sub-agent genuinely *writes* source files.
+3. **The main agent owns all user interaction.** A sub-agent is one-shot — once launched it
+   runs to completion and returns; it cannot pause to ask the user anything. So before
+   launching, the main agent clarifies any ambiguous or under-specified inputs with the user
+   via `AskUserQuestion`, then launches the sub-agent with the clarified inputs folded in.
+   Every delegated command keeps `AskUserQuestion` in its own `allowed-tools` for this. The
+   sub-agents never prompt: the `Plan`-based commands (`requirements`, `design`, `tasks`,
+   `ralph-tasks`) have no `AskUserQuestion` so they *structurally* can't, and the
+   `general-purpose` `review` sub-agent is explicitly instructed not to. **Exception:**
+   `/spec:ralph-implement` runs fully **unattended** — neither its main agent nor its
+   sub-agent prompts the user (it has no `AskUserQuestion` at all).
+4. **The sub-agent RETURNS its artifact as text** — it does *not* write the spec file. The
+   one exception is `/spec:ralph-implement`, where the sub-agent must write the test and
+   implementation source files (it still never commits or edits the task list).
+5. **The main agent validates** the returned output against a checklist, then writes the
+   file and does all bookkeeping (approval markers, `.adr-list`, git, next-steps).
+
+**Model policy** — reasoning vs. implementation:
+
+| Command | Sub-agent (type) | Model | Rationale |
+|---------|-----------|-------|-----------|
+| `/spec:requirements` | Yes — `Plan` (read-only drafting) | **opus** | Planning / analysis |
+| `/spec:design` | Yes — `Plan` (read-only) | **opus** | Architecture / design |
+| `/spec:tasks` | Yes — `Plan` (read-only) | **opus** | Planning / coverage mapping |
+| `/spec:ralph-tasks` | Yes — `Plan` (read-only) | **opus** | Planning / decomposition |
+| `/spec:review` | Yes — `general-purpose` | **opus** | Adversarial reasoning |
+| `/spec:ralph-implement` (orchestrator) | — (the loop itself) | **opus** | Cheap bookkeeping + **required for auto mode** |
+| `/spec:ralph-implement` (per-task sub-agent) | Yes — `general-purpose` (writes source) | **sonnet** | Mechanical TDD implementation, kept off the opus loop context for cost |
+| `/spec:implement` | No | **sonnet** (Step 0 prompts to switch) | Implementation work; runs in the main agent, so set the session model |
+| `/spec:new`, `/spec:switch`, `/spec:approve`, `/spec:status` | No | — | Mechanical bookkeeping |
+
+The planning commands use the `Plan` agent so the "return as text, don't write the file"
+rule is much harder to violate accidentally (it has no `Write`/`Edit`/`NotebookEdit`; the
+prompt still forbids writing via `Bash`). `/spec:ralph-implement` keeps `general-purpose`
+because its sub-agent must write source.
+
+`/spec:ralph-implement` runs **two models on purpose**: the orchestrator loop on **opus**
+(required for **auto mode**, and the policy for the unattended path) does only cheap
+bookkeeping — STOP-file check, task selection, marking checkboxes, committing, counting — while
+each task's actual test + implementation is delegated to a **sonnet** sub-agent. That keeps the
+expensive per-task churn on the cheaper model and out of the opus loop's context, lowering cost
+without taking the orchestrator off opus.
+
+`/spec:implement` is deliberately **not** delegated: its per-behavior
+Red → user-approval → Green → Refactor loop is interactive, and the mandatory approval gate
+must run in the main agent where it can reach the user. Because there is no sub-agent to
+assign a model to, run the command itself on **sonnet** (the session model) — it is
+implementation work. **Step 0 of `/spec:implement` actively checks the session model and
+prompts you to switch to sonnet if you are on another model** (e.g. opus). This guidance is
+repeated at the top of `implement.md` itself, since that is where the user reads it.
 
 ## Commands
 
@@ -147,7 +234,10 @@ Approve a specification phase or specific ADR.
 ```
 - Updates Status from "Proposed" to "Accepted" in ALL ADRs for current spec
 - Creates `.design-approved` marker
-- Allows progression to tasks phase
+- **Prompts you to choose the implementation path** (the certainty fork): the **attended**
+  path (`/spec:tasks` → `/spec:implement`, review each test) or the **unattended** path
+  (`/spec:ralph-tasks` → `/spec:ralph-implement`, review in batches). Either path can start
+  straight from the approved design.
 
 **Approve Specific ADR:**
 ```bash
@@ -357,13 +447,15 @@ The implement command follows a rigorous Red-Green-Refactor cycle:
 
 ### `/spec:ralph-tasks`
 
-Generate `ralph-tasks.md` for unattended TDD implementation via the Ralph loop.
+Generate `ralph-tasks.md` for unattended TDD implementation. **Standalone** — the unattended
+peer of `/spec:tasks`, derived **directly from the approved design** (requirements + ADRs). It
+does **not** require `tasks.md` or `.tasks-approved`.
 
 ```bash
 /spec:ralph-tasks
 ```
 
-Creates `specs/{current-spec}/ralph-tasks.md` - a variant of `tasks.md` reformatted for unattended execution:
+Creates `specs/{current-spec}/ralph-tasks.md`, formatted for unattended execution:
 
 - **No approval gates**: No `⛔ STOP HERE` or `/test-first` directives
 - **RALPH-VERIFY**: Each task includes an exact `dotnet test --filter` command
@@ -371,8 +463,11 @@ Creates `specs/{current-spec}/ralph-tasks.md` - a variant of `tasks.md` reformat
 - **Strict atomicity**: One behavior per task, ~200 lines max, ordered by dependency
 
 **Requirements:**
-- Tasks must be approved (`.tasks-approved` exists)
+- Design must be approved (`.design-approved` exists)
 - All ADRs must be approved (Status: Accepted)
+
+> Pick *either* `/spec:tasks` (attended) *or* `/spec:ralph-tasks` (unattended) after design
+> approval — they are alternative branches, not sequential steps.
 
 **Ralph task format:**
 ```markdown
@@ -392,70 +487,80 @@ Creates `specs/{current-spec}/ralph-tasks.md` - a variant of `tasks.md` reformat
 
 ### `/spec:ralph-implement [count]`
 
-Unattended TDD implementation from `ralph-tasks.md`. Core command invoked by the Ralph loop bash script.
+Unattended TDD implementation from `ralph-tasks.md` via a **self-driving loop**. Run it on
+**opus** with **auto mode** enabled for a true unattended run.
 
 ```bash
-# Implement next task (default)
+# Ask the run bound up front, then loop unattended
 /spec:ralph-implement
 
-# Implement next 3 tasks
+# Shortcut: pre-set the tasks bound to 3 (skips the bound prompt)
 /spec:ralph-implement 3
 ```
 
-**Key difference from `/spec:implement`**: No `AskUserQuestion` - runs completely unattended.
+**Up-front setup (Step 0, the only interactive part):**
+- Advises that the orchestrator should be on **opus** and that **auto mode** should be on
+  (auto mode is a permission mode set in Claude Code settings / `CLAUDE_CODE_ENABLE_AUTO_MODE`,
+  Opus-gated — the command can't toggle it; it advises and proceeds).
+- Asks (via `AskUserQuestion`) which **run bound** to use — *unless* a `count` was passed,
+  which sets the tasks bound directly:
+  - **Tasks** — stop after N tasks complete (the `count` argument)
+  - **Turns** — stop after N loop iterations attempted (failures included)
+  - **Budget** — stop after ~N output tokens consumed
 
-**Workflow per task:**
-1. Check for `RALPH_STOP` file (halt if present)
-2. Read task references for context
-3. 🔴 RED: Write test, verify it fails
-4. 🟢 GREEN: Write minimum implementation, verify test passes, check for regressions
-5. 🔵 REFACTOR: Apply Tidy First improvements
-6. Commit and mark task complete in `ralph-tasks.md`
+**Two models on purpose:** the **opus** orchestrator does only bookkeeping; each task's test +
+implementation is delegated to a **sonnet** sub-agent (cheaper, and kept off the opus loop
+context). The sub-agent never commits, pushes, or edits the task files.
+
+**Loop per task:** check `RALPH_STOP` → select next `- [ ]` task → delegate 🔴 Red → 🟢 Green
+→ 🔵 Refactor to a sonnet sub-agent → orchestrator marks the checkbox and commits → check
+continuation → repeat. Long runs can self-pace across context windows with `ScheduleWakeup`.
 
 **Stop mechanisms:**
-- `count` parameter limits tasks per invocation
-- `RALPH_STOP` file at repo root halts after current task
+- The chosen **bound** (tasks / turns / budget)
+- `RALPH_STOP` file at repo root — the unattended kill-switch (`touch RALPH_STOP` from another
+  terminal); halts after the current task
+- **Esc** — cancel a pending self-paced wake-up at the keyboard
 - Automatically stops when all tasks complete
 
 **Error handling:** Failed tasks are marked `- [!]` with an explanation and skipped.
 
 **Requirements:**
-- Tasks must be approved (`.tasks-approved` exists)
+- Design must be approved (`.design-approved` exists)
 - `ralph-tasks.md` must exist (run `/spec:ralph-tasks` first)
+- Recommended: session on **opus** with **auto mode** enabled
 
 ---
 
-### Using the Ralph Loop
+### Running the unattended loop
 
-The Ralph loop enables unattended, overnight TDD implementation by running Claude Code in a bash loop with fresh context per iteration.
+The loop runs **in-session** — no external bash runner. Built-in **auto mode** removes the
+per-action permission prompts and the self-driving loop (optionally self-paced with
+`ScheduleWakeup`) replaces the old `scripts/ralph.sh` overnight runner.
 
-**Setup:**
 ```bash
-# 1. Complete the spec workflow up to approved tasks
+# 1. Spec workflow up to an APPROVED DESIGN (no tasks step needed for this path)
 /spec:requirements 123
 /spec:approve requirements
 /spec:design message-serialization
-/spec:approve design
-/spec:tasks
-/spec:approve tasks
+/spec:approve design          # ← prompts you to pick the unattended path
 
-# 2. Generate ralph-tasks from approved tasks
+# 2. Generate ralph-tasks directly from the approved design
 /spec:ralph-tasks
 
 # 3. Review ralph-tasks.md in your IDE
 
-# 4. Run the loop
-./scripts/ralph.sh              # defaults: 1 task/run, 50 max iterations
-./scripts/ralph.sh 2 20 10      # 2 tasks/run, 20 max iterations, 10s cooldown
+# 4. Switch to opus and enable auto mode, then run the loop
+/model opus
+/spec:ralph-implement         # choose tasks / turns / budget when prompted
 
 # 5. Stop the loop (if needed)
-touch RALPH_STOP                # halts after current task completes
+touch RALPH_STOP              # unattended kill-switch (halts after current task)
+#   …or press Esc to cancel a pending self-paced wake-up
 ```
 
-**Environment variables:**
-```bash
-RALPH_MODEL=opus RALPH_BUDGET=10 ./scripts/ralph.sh
-```
+Optionally drive it with the built-in `/loop` instead, e.g. `/loop /spec:ralph-implement`
+(self-paced) — the same command, repeated by `/loop`.
 
 ---
 

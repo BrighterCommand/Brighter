@@ -3,11 +3,15 @@
   "Outboxes": {
     "Text": {
       "Transaction": "System.Data.Common.DbTransaction",
-      "OutboxProvider": "MySQLTextOutboxProvider"
+      "OutboxProvider": "MySQLTextOutboxProvider",
+      "Category": "MySQL",
+      "CollectionName": "MySQLTextOutbox"
     },
     "Binary": {
       "Transaction": "System.Data.Common.DbTransaction",
-      "OutboxProvider": "MySQLBinaryOutboxProvider"
+      "OutboxProvider": "MySQLBinaryOutboxProvider",
+      "Category": "MySQL",
+      "CollectionName": "MySQLBinaryOutbox"
     }
   }
 }

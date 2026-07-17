@@ -16,7 +16,7 @@
     - Use a single blank line to separate using directives.
   - DO NOT use Microsoft's Framework Design Guidelines. They are not idiomatic and outdated.
 - Prefer expression-bodied members for simple properties and methods.
-- Prefer primary constructors where possible, especially for simple classes and records.
+- Prefer primary constructors where possible, especially for simple classes and records. Use primary constructors as the default for new classes with constructor-injected dependencies — only fall back to traditional constructors when you need complex initialization logic or multiple constructors.
 - Use readonly for fields that do not change after construction.
 - Enable nullable on projects:
   - `<Nullable>enable</Nullable>` should be set in the project file, and that new code should use nullable reference types.
@@ -36,4 +36,9 @@
   - As we support multiple schedulers, these should use their own assembly.
   - As we support multiple locking providers, these should use their own assembly.  
 - Default to a class per source file approach, unless one class clearly exists as the details of another.
+- Comments
+  - Do not put links or references to issues or PRs (e.g. `(issue #4089)`, `#4207`) in code or XML doc comments. The traceability lives in git history and the ADR, not in the source.
+  - A comment is for code that needs explanation — typically the *why* behind a non-obvious decision. Do not narrate *what* the code does, restate the code, or describe the change relative to how the code used to be.
+  - Inline comments are not notes to a reviewer. Context about the fix, the alternatives considered, the previous behaviour, or the history of a change is reviewer-facing rationale and belongs in the ADR, not in an inline comment. A future maintainer reading the code only needs what helps them understand the code as it now stands.
+  - Keep comments concise. Prefer one tight line over a paragraph.
 

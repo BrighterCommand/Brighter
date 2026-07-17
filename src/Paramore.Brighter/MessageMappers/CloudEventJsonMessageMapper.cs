@@ -69,11 +69,11 @@ public class CloudEventJsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>
 #endif
         
         var defaultCloudEventsAdditionalProperties = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
-        var body = new MessageBody(JsonSerializer.Serialize(new CloudEventMessage
+        var body = new MessageBody(JsonSerializer.SerializeToUtf8Bytes(new CloudEventMessage
         {
-            Id = request.Id,
+            Id = request.Id.Value,
             Source = publication.Source,
-            Type = publication.Type,
+            Type = publication.Type?.Value ?? string.Empty,
             DataContentType = bodyContentType.ToString(),
             Subject = publication.Subject,
             DataSchema = publication.DataSchema,
@@ -88,7 +88,7 @@ public class CloudEventJsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>
     /// <inheritdoc />
     public TRequest MapToRequest(Message message)
     {
-        var request = JsonSerializer.Deserialize<CloudEventMessage>(message.Body.Value, JsonSerialisationOptions.Options);
+        var request = JsonSerializer.Deserialize<CloudEventMessage>(message.Body.Memory.Span, JsonSerialisationOptions.Options);
 
         if (request is null)
         {

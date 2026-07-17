@@ -1,3 +1,18 @@
+---
+id: 0042-rocketmq-dlq-brighter-managed
+title: "RocketMQ Dead Letter Queue — Brighter-Managed"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-20
+summary: "Adds Brighter-managed DLQ support to the RocketMQ transport, replacing the infinite requeue loop in Reject() with async lazy DLQ producer creation and Ack()-based source message cleanup on the broker."
+tags:
+  - "dead-letter-queue"
+  - "rocketmq"
+  - "messaging"
+  - "error-handling"
+---
+
 # 42. RocketMQ Dead Letter Queue — Brighter-Managed
 
 Date: 2026-02-20

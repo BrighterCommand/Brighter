@@ -10,17 +10,19 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.DynamoDB.V4.Tests.Outbox.Async;
 
+[Trait("Category", "DynamoDB")]
+[Collection("DynamoDBOutbox")]
 public class WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStoredAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStoredAsync()
     {
         _outboxProvider = new Paramore.Brighter.DynamoDB.V4.Tests.Outbox.DynamoDBOutboxProvider();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     public async Task InitializeAsync()
@@ -43,7 +45,7 @@ public class WhenAddingAMessageWithinTransactionAndRollbackItShouldNotBeStoredAs
         _ = await transaction.GetTransactionAsync();
 
         var context = new RequestContext();
-        var message = _messageFactory.Create();
+        var message = _messageBuilder.Build();
 
         _createdMessages.Add(message);
 

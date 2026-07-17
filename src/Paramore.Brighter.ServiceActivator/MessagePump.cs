@@ -69,6 +69,8 @@ namespace Paramore.Brighter.ServiceActivator
     {
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump>();
 
+        protected const string NoMessageReceivedDescription = "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout";
+
         protected readonly IAmACommandProcessor CommandProcessor;
         protected readonly IAmARequestContextFactory RequestContextFactory;
         protected readonly IAmABrighterTracer? Tracer;
@@ -190,12 +192,12 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (messageType == MessageType.MT_COMMAND && request is IEvent)
             {
-                Log.MessageMismatchCommand(s_logger, request.Id, MessageType.MT_COMMAND);
+                Log.MessageMismatchCommand(s_logger, request.Id.Value, MessageType.MT_COMMAND);
             }
 
             if (messageType == MessageType.MT_EVENT && request is ICommand)
             {
-                Log.MessageMismatchEvent(s_logger, request.Id, MessageType.MT_EVENT);
+                Log.MessageMismatchEvent(s_logger, request.Id.Value, MessageType.MT_EVENT);
             }
         }
 

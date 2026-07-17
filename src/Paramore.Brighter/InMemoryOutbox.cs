@@ -65,7 +65,13 @@ namespace Paramore.Brighter
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
     /// store the message into a Outbox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
     /// This class is intended to be thread-safe, so you can use one InMemoryOutbox across multiple performers. However, the state is not global i.e. static
-    /// so you can use multiple instances safely as well
+    /// so you can use multiple instances safely as well.
+    /// <para>
+    /// Note: <see cref="InMemoryBox{T}.EntryLimit"/> and expiry only govern <b>dispatched</b> messages
+    /// (those whose <see cref="OutboxEntry.TimeFlushed"/> has been set). Undispatched messages are never
+    /// removed by compaction or expiry, so a stalled or slow broker combined with a high write rate will
+    /// continue to grow memory until <see cref="IAmProducersConfiguration.MaxOutStandingMessages"/> trips.
+    /// </para>
     /// </summary>
 #pragma warning disable CS0618
     public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
@@ -130,10 +136,10 @@ namespace Paramore.Brighter
                 ClearExpiredMessages();
                 EnforceCapacityLimit();
 
-                if (!Requests.ContainsKey(message.Id))
+                if (!Requests.ContainsKey(message.Id.Value))
                 {
-                    if (!Requests.TryAdd(message.Id,
-                            new OutboxEntry(message) { WriteTime = _timeProvider.GetUtcNow().DateTime }))
+                    if (!Requests.TryAdd(message.Id.Value,
+                            new OutboxEntry(message) { WriteTime = _timeProvider.GetUtcNow() }))
                     {
                         throw new Exception($"Could not add message with Id: {message.Id} to outbox");
                     }
@@ -159,9 +165,6 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null
         )
         {
-            ClearExpiredMessages();
-            EnforceCapacityLimit();
-
             foreach (Message message in messages)
             {
                 Add(message, requestContext, outBoxTimeout, transactionProvider);
@@ -241,7 +244,7 @@ namespace Paramore.Brighter
         /// <param name="args"></param>
         public void Delete(Id[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
         {
-            foreach (string messageId in messageIds)
+            foreach (var messageId in messageIds)
             {
                 Delete(messageId);
             }
@@ -352,7 +355,7 @@ namespace Paramore.Brighter
 
             try
             {
-                return Requests.TryGetValue(messageId, out OutboxEntry? entry) ? entry.Message : new Message();
+                return Requests.TryGetValue(messageId.Value, out OutboxEntry? entry) ? entry.Message : new Message();
             }
             finally
             {
@@ -375,7 +378,7 @@ namespace Paramore.Brighter
             try
             {
                 return messageIds
-                    .Select(id => Requests.TryGetValue(id, out OutboxEntry? entry) ? entry.Message : null)
+                    .Select(id => Requests.TryGetValue(id.Value, out OutboxEntry? entry) ? entry.Message : null)
                     .Where(msg => msg != null)
                     .Select(msg => msg!);
             }
@@ -511,7 +514,7 @@ namespace Paramore.Brighter
 
             try
             {
-                if (Requests.TryGetValue(id, out OutboxEntry? entry))
+                if (Requests.TryGetValue(id.Value, out OutboxEntry? entry))
                 {
                     entry.TimeFlushed = dispatchedAt ?? _timeProvider.GetUtcNow();
                 }
@@ -559,7 +562,7 @@ namespace Paramore.Brighter
                     .OrderBy(oe=>oe.Message.Header.TimeStamp)
                     .Where(oe => 
                         oe.TimeFlushed == DateTimeOffset.MinValue 
-                        && oe.WriteTime <= sentBefore.DateTime
+                        && oe.WriteTime <= sentBefore
                         && !trippedTopics.Contains(oe.Message.Header.Topic))
                     .Take(pageSize)
                     .Select(oe => oe.Message).ToArray();
@@ -619,7 +622,7 @@ namespace Paramore.Brighter
                     .OrderBy(oe => oe.Message.Header.TimeStamp)
                     .Where(oe =>
                         oe.TimeFlushed == DateTimeOffset.MinValue
-                        && oe.WriteTime <= sentBefore.DateTime)
+                        && oe.WriteTime <= sentBefore)
                     .Take(maxCount)
                     .Count();
                 return outstandingMessageCount;
@@ -642,6 +645,38 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
 
+        protected override void RemoveExpiredMessages(DateTimeOffset now)
+        {
+            var expiredEntries =
+                Requests
+                    .Where(entry =>
+                        entry.Value.TimeFlushed != DateTimeOffset.MinValue
+                        && (now - entry.Value.TimeFlushed) >= EntryTimeToLive)
+                    .Select(entry => entry.Key);
+
+            foreach (var key in expiredEntries)
+            {
+                //if this fails ignore, killed by something else like compaction
+                Requests.TryRemove(key, out _);
+            }
+        }
+
+        protected override void Compact(int entriesToRemove)
+        {
+            var removalList =
+                Requests
+                    .Where(entry => entry.Value.TimeFlushed != DateTimeOffset.MinValue)
+                    .OrderBy(entry => entry.Value.TimeFlushed)
+                    .Take(entriesToRemove)
+                    .Select(entry => entry.Key);
+
+            foreach (var key in removalList)
+            {
+                //ignore errors, likely just something else has cleared it such as TTL eviction
+                Requests.TryRemove(key, out _);
+            }
+        }
+
         private void Delete(Id messageId, RequestContext? requestContext = null)
         {
             var span = Tracer?.CreateDbSpan(
@@ -652,7 +687,7 @@ namespace Paramore.Brighter
 
             try
             {
-                Requests.TryRemove(messageId, out _);
+                Requests.TryRemove(messageId.Value, out _);
             }
             finally
             {

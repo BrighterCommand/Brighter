@@ -1,0 +1,86 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+using Paramore.Brighter.BoxProvisioning.PostgreSql;
+using Xunit;
+
+namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
+
+// Item Q-postgres (spec 0027 PR #4039 third review). Pins the factory-entry wiring of
+// Identifiers.AssertSafe at the PostgreSQL *MigrationCatalog.All(...) entry: any unsafe table or
+// schema name must be rejected before the factory builds migration up-scripts whose UpScript
+// text interpolates the identifier directly into ALTER TABLE / CREATE TABLE strings.
+// ConfigurationException is the documented contract; no Postgres connection is required because
+// the rejection happens before any DDL is rendered against a live server (the connection string
+// is "Host=ignored;Database=ignored;").
+
+public class PostgresMigrationsUnsafeIdentifierTests
+{
+    [Theory]
+    [InlineData("O'Brien")]    // single quote — would break inlined string predicates
+    [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
+    [InlineData("my-outbox")]  // hyphen — would need quote-quoting to be legal
+    public void When_postgres_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
+    {
+        //Arrange
+        var config = new RelationalDatabaseConfiguration(
+            "Host=ignored;Database=ignored;",
+            outBoxTableName: unsafeTable);
+
+        //Act + Assert
+        var ex = Assert.Throws<ConfigurationException>(() => new PostgreSqlOutboxMigrationCatalog().All(config));
+        Assert.Contains(unsafeTable, ex.Message);
+    }
+
+    [Theory]
+    [InlineData("O'Brien")]
+    [InlineData("1Inbox")]
+    [InlineData("my-inbox")]
+    public void When_postgres_inbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
+    {
+        //Arrange
+        var config = new RelationalDatabaseConfiguration(
+            "Host=ignored;Database=ignored;",
+            inboxTableName: unsafeTable);
+
+        //Act + Assert
+        var ex = Assert.Throws<ConfigurationException>(() => new PostgreSqlInboxMigrationCatalog().All(config));
+        Assert.Contains(unsafeTable, ex.Message);
+    }
+
+    [Fact]
+    public void When_postgres_outbox_migrations_are_built_with_an_unsafe_schema_name_it_should_throw()
+    {
+        //Arrange — schema overrides the safe "public" default; an unsafe schema name interpolates
+        //into the V2+ ALTER TABLE up-scripts at AddColumns(schema, table, ...) so it must be
+        //validated alongside the table name.
+        var config = new RelationalDatabaseConfiguration(
+            "Host=ignored;Database=ignored;",
+            outBoxTableName: "Outbox",
+            schemaName: "bad-schema");
+
+        //Act + Assert
+        var ex = Assert.Throws<ConfigurationException>(() => new PostgreSqlOutboxMigrationCatalog().All(config));
+        Assert.Contains("bad-schema", ex.Message);
+    }
+}

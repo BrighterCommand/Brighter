@@ -1,3 +1,17 @@
+---
+id: 0014-di-friendly-framework
+title: "DI Friendly Framework"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2024-07-12
+summary: "Adopts the DI-Friendly Framework pattern, defining per-family Factory interfaces (e.g., IAmAHandlerFactory) for each user-defined type family rather than abstracting an IoC container, keeping the IoC container an optional user choice."
+tags:
+  - "di"
+  - "architecture"
+  - "api-design"
+---
+
 # 14. DI Friendly Framework 
 
 Date: 2024-07-12

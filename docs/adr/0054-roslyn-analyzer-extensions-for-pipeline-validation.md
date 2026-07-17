@@ -1,3 +1,17 @@
+---
+id: 0054-roslyn-analyzer-extensions-for-pipeline-validation
+title: "Roslyn Analyzer Extensions for Pipeline Validation"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2026-03-01
+summary: "Adds three Roslyn analyzer diagnostics (BRT006–BRT008) to `Paramore.Brighter.Analyzer` to detect at compile time: backstop attributes ordered after resilience pipelines, sync/async attribute mismatches on handlers, and subscription pump type mismatches with handler types."
+tags:
+  - "roslyn-analyzers"
+  - "pipeline"
+  - "meta"
+---
+
 # 54. Roslyn Analyzer Extensions for Pipeline Validation
 
 Date: 2026-03-01

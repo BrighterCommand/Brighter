@@ -63,7 +63,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>()
             {
-                { "db.operation.parameter.command.id", command.Id },
+                { "db.operation.parameter.command.id", command.Id.Value },
                 { "db.operation.name", ExtractSqlOperationName(queries.AddCommand) },
                 { "db.query.text", queries.AddCommand }
             };
@@ -158,7 +158,7 @@ namespace Paramore.Brighter
         {
             var dbAttributes = new Dictionary<string, string>
             {
-                { "db.operation.parameter.command.id", command.Id },
+                { "db.operation.parameter.command.id", command.Id.Value },
                 { "db.operation.name", ExtractSqlOperationName(queries.AddCommand) },
                 { "db.query.text", queries.AddCommand }
             };
@@ -403,7 +403,7 @@ namespace Paramore.Brighter
         private DbCommand CreateGetCommand(DbConnection connection, int inboxTimeout, IDbDataParameter[] parameters)
             => CreateCommand(connection, GenerateSqlText(queries.GetCommand), inboxTimeout, parameters);
 
-        private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
+        protected virtual string GenerateSqlText(string sqlFormat, params string[] orderedParams)
             => string.Format(sqlFormat, orderedParams.Prepend(DatabaseConfiguration.InBoxTableName).ToArray());
 
         protected virtual DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout,

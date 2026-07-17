@@ -7,7 +7,7 @@ This sample demonstrates how to use [Quartz.NET](https://www.quartz-scheduler.ne
 - [.NET 6.0 SDK](https://dotnet.microsoft.com/download/dotnet/6.0)
 - [Quartz.NET](https://www.nuget.org/packages/Quartz) (added via NuGet)
 - AWS credentials (if using AWS SQS/SNS integration)
-- Moto (optional, for local AWS service emulation)
+- [Floci](https://github.com/floci-io/floci) (optional, for local AWS service emulation)
 
 ## Getting Started
 
@@ -36,9 +36,9 @@ This sample demonstrates how to use [Quartz.NET](https://www.quartz-scheduler.ne
 
 2. **Running the Application**
 
-To run with Moto for AWS SQS/SNS emulation:
+To run with Floci for AWS SQS/SNS emulation:
 
-- Start Moto:
+- Start Floci:
 
   ```sh
   docker-compose -f docker-compose-aws.yaml up
@@ -48,7 +48,7 @@ To run with Moto for AWS SQS/SNS emulation:
 
 3. **Inspecting AWS Mock Services**
 
-To inspect the queues and topics in Moto, you can use the AWS CLI pointed to the Moto endpoint:
+To inspect the queues and topics in Floci, you can use the AWS CLI pointed to the Floci endpoint:
 
 - Ensure that you set the region to us-east-1
 
@@ -67,4 +67,4 @@ aws configure set region us-east-1
 
 - [Quartz.NET Documentation](https://www.quartz-scheduler.net/documentation/)
 - [Brighter Documentation](https://github.com/BrighterCommand/Brighter)
-- [Moto Documentation](https://docs.getmoto.org/)
+- [Floci Documentation](https://floci.io/)

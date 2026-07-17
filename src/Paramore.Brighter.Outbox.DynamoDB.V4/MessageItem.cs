@@ -218,7 +218,7 @@ public class MessageItem
     {
         var date = message.Header.TimeStamp == DateTimeOffset.MinValue ? DateTimeOffset.UtcNow : message.Header.TimeStamp;
 
-        Body = message.Body.Bytes;
+        Body = message.Body.ToByteArray();
         var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
 
         ContentType = contentType.ToString();

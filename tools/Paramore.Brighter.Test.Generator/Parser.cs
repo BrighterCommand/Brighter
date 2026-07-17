@@ -30,10 +30,17 @@ using Fluid;
 
 namespace Paramore.Brighter.Test.Generator;
 
+/// <summary>
+/// Parses Liquid templates and renders them to output files using the Fluid template engine.
+/// </summary>
 public class Parser
 {
     private readonly FluidParser _parser = new();
-    
+
+    /// <summary>
+    /// Parses a Liquid template file and renders it to the destination file using the provided model.
+    /// </summary>
+    /// <param name="context">The <see cref="ParseContext"/> containing the source template path, destination path, and model data.</param>
     public async Task ParseAsync(ParseContext context)
     {
         var template = await File.ReadAllTextAsync(context.SourceFilePath);
@@ -45,4 +52,10 @@ public class Parser
     }
 }
 
+/// <summary>
+/// Represents the context for a template parsing operation, containing source, destination, and model information.
+/// </summary>
+/// <param name="SourceFilePath">The path to the Liquid template source file.</param>
+/// <param name="DestinationFilePath">The path where the rendered output file will be written.</param>
+/// <param name="Model">The model object whose properties are available to the template during rendering.</param>
 public record ParseContext(string SourceFilePath, string DestinationFilePath, object Model);

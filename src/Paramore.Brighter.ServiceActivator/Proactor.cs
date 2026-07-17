@@ -101,14 +101,14 @@ namespace Paramore.Brighter.ServiceActivator
 
         private async Task Acknowledge(Message message)
         {
-            Log.AcknowledgeMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+            Log.AcknowledgeMessage(s_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
 
             await Channel.AcknowledgeAsync(message);
         }
         
         private async Task DispatchRequest<TRequest>(MessageHeader messageHeader, TRequest request, RequestContext requestContext) where TRequest : class, IRequest
         {
-            Log.DispatchingMessage(s_logger, request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            Log.DispatchingMessage(s_logger, request.Id.Value, Thread.CurrentThread.ManagedThreadId, Channel.Name);
             requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
 
             var messageType = messageHeader.MessageType;
@@ -136,261 +136,279 @@ namespace Paramore.Brighter.ServiceActivator
         private async Task EventLoop()
         {
             var pumpSpan = Tracer?.CreateMessagePumpSpan(MessagePumpSpanOperation.Begin, Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
-
-            do
+            try
             {
-                if (UnacceptableMessageLimitReached())
-                {
-                    await Channel.DisposeAsync();
-                    Status = MessagePumpStatus.MP_LIMIT_EXCEEDED;
-                    break;
-                }
 
-                Log.ReceivingMessagesFromChannel(s_logger, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-
-                Activity? span = null;
-                Message? message = null;
-                try
+                do
                 {
-                    message =  await Channel.ReceiveAsync(TimeOut);
-                    span = Tracer?.CreateSpan(MessagePumpSpanOperation.Receive, message, MessagingSystem.InternalBus, InstrumentationOptions);
-                }
-                catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
-                {
-                    Log.BrokenCircuitExceptionMessages(s_logger, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                    var errorSpan = Tracer?.CreateMessagePumpExceptionSpan(ex, Channel.RoutingKey, MessagePumpSpanOperation.Receive, MessagingSystem.InternalBus, InstrumentationOptions);
-                    Tracer?.EndSpan(errorSpan);
-                     await Task.Delay(ChannelFailureDelay); 
-                    continue;
-                }
-                catch (ChannelFailureException ex)
-                {
-                    Log.ChannelFailureExceptionMessages(s_logger, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                    var errorSpan = Tracer?.CreateMessagePumpExceptionSpan(ex, Channel.RoutingKey, MessagePumpSpanOperation.Receive, MessagingSystem.InternalBus, InstrumentationOptions);
-                    Tracer?.EndSpan(errorSpan );
-                    await Task.Delay(ChannelFailureDelay); 
-                    continue;
-                }
-                catch (Exception ex)
-                {
-                    Log.ExceptionReceivingMessages(s_logger, ex, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                    var errorSpan = Tracer?.CreateMessagePumpExceptionSpan(ex, Channel.RoutingKey, MessagePumpSpanOperation.Receive, MessagingSystem.InternalBus, InstrumentationOptions);
-                    Tracer?.EndSpan(errorSpan );
-                }
-
-                if (message is null)
-                {
-                    await Channel.DisposeAsync();
-                    span?.SetStatus(ActivityStatusCode.Error, "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
-                    Tracer?.EndSpan(span);
-                    Status = MessagePumpStatus.MP_ERROR;
-                    throw new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
-                }
-
-                // empty queue
-                if (message.Header.MessageType == MessageType.MT_NONE)
-                {
-                    span?.SetStatus(ActivityStatusCode.Ok);
-                    Tracer?.EndSpan(span);
-                    await Task.Delay(EmptyChannelDelay); 
-                    continue;
-                }
-
-                // failed to parse a message from the incoming data
-                if (message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
-                {
-                    Log.FailedToParseMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                    var description = $"MessagePump: Failed to parse a message from the incoming message with id {message.Id} from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}";
-                    span?.SetStatus(ActivityStatusCode.Error, description);    
-                    Tracer?.EndSpan(span);
-                    IncrementUnacceptableMessageCount();
-                    await RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, description));
-
-                    continue;
-                }
- 
-                // QUIT command
-                if (message.Header.MessageType == MessageType.MT_QUIT)
-                {
-                    Log.QuitReceivingMessages(s_logger, Channel.Name, Environment.CurrentManagedThreadId);
-                    span?.SetStatus(ActivityStatusCode.Ok);
-                    Tracer?.EndSpan(span);
-                    await Channel.DisposeAsync();
-                    Status = MessagePumpStatus.MP_STOPPED;
-                    break;
-                }
-
-                // Serviceable message
-                try
-                {
-                    RequestContext context = InitRequestContext(span, message);
-
-                    var request = await TranslateMessage(message, context);
-                    
-                    await InvokeDispatchRequest(request, message, context);
-
-                    span?.SetStatus(ActivityStatusCode.Ok);
-                }
-                catch (AggregateException aggregateException)
-                {
-                    var stop = false;
-                    DeferMessageAction? deferAction = null;
-                    DontAckAction? dontAck = null;
-                    var reject = false;
-                    var invalidMessage = false;
-                    string? rejectReason = null;
-
-                    foreach (var exception in aggregateException.InnerExceptions)
+                    if (UnacceptableMessageLimitReached())
                     {
-                        if (exception is ConfigurationException configurationException)
+                        await Channel.DisposeAsync();
+                        Status = MessagePumpStatus.MP_LIMIT_EXCEEDED;
+                        break;
+                    }
+
+                    Log.ReceivingMessagesFromChannel(s_logger, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+
+                    // receive span covers only the broker call so its Duration reflects broker latency, not dispatch
+                    Activity? receiveSpan = null;
+                    Message? message = null;
+                    // serialized once on the receive span and reused by the process span
+                    string? headerJson = null;
+                    try
+                    {
+                        try
                         {
-                            Log.StoppingReceivingMessages(s_logger, configurationException, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                            stop = true;
+                            receiveSpan = Tracer?.CreateReceiveSpan(Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
+                            message = await Channel.ReceiveAsync(TimeOut);
+                            headerJson = Tracer?.EnrichReceiveSpan(receiveSpan, message, InstrumentationOptions);
+                            // only propagate consumer context when we have a receive span: baggage propagation was
+                            // historically gated on the span existing (sampled in, instrumentation enabled), so keep it so
+                            if (receiveSpan is not null)
+                                Tracer?.PropagateConsumerContext(message);
+                        }
+                        catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
+                        {
+                            Log.BrokenCircuitExceptionMessages(s_logger, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                            receiveSpan?.AddException(ex);
+                            receiveSpan?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                            await Task.Delay(ChannelFailureDelay);
+                            continue;
+                        }
+                        catch (ChannelFailureException ex)
+                        {
+                            Log.ChannelFailureExceptionMessages(s_logger, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                            receiveSpan?.AddException(ex);
+                            receiveSpan?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                            await Task.Delay(ChannelFailureDelay);
+                            continue;
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.ExceptionReceivingMessages(s_logger, ex, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                            receiveSpan?.AddException(ex);
+                            receiveSpan?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                        }
+
+                        if (message is null)
+                        {
+                            await Channel.DisposeAsync();
+                            receiveSpan?.SetStatus(ActivityStatusCode.Error, NoMessageReceivedDescription);
                             Status = MessagePumpStatus.MP_ERROR;
+                            throw new Exception(NoMessageReceivedDescription);
+                        }
+
+                        // empty queue
+                        if (message.Header.MessageType == MessageType.MT_NONE)
+                        {
+                            await Task.Delay(EmptyChannelDelay);
+                            continue;
+                        }
+
+                        // failed to parse a message from the incoming data
+                        if (message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
+                        {
+                            Log.FailedToParseMessage(s_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                            var description = $"MessagePump: Failed to parse a message from the incoming message with id {message.Id} from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}";
+                            receiveSpan?.SetStatus(ActivityStatusCode.Error, description);
+                            IncrementUnacceptableMessageCount();
+                            await RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, description));
+
+                            continue;
+                        }
+
+                        // QUIT command
+                        if (message.Header.MessageType == MessageType.MT_QUIT)
+                        {
+                            Log.QuitReceivingMessages(s_logger, Channel.Name, Environment.CurrentManagedThreadId);
+                            await Channel.DisposeAsync();
+                            Status = MessagePumpStatus.MP_STOPPED;
+                            break;
+                        }
+                    }
+                    finally
+                    {
+                        Tracer?.EndSpan(receiveSpan);
+                    }
+
+                    Activity? processSpan = Tracer?.CreateSpan(MessagePumpSpanOperation.Process, message, MessagingSystem.InternalBus, InstrumentationOptions, headerJson);
+                    try
+                    {
+                        RequestContext context = InitRequestContext(processSpan, message);
+
+                        var request = await TranslateMessage(message, context);
+
+                        await InvokeDispatchRequest(request, message, context);
+
+                        processSpan?.SetStatus(ActivityStatusCode.Ok);
+                    }
+                    catch (AggregateException aggregateException)
+                    {
+                        var stop = false;
+                        DeferMessageAction? deferAction = null;
+                        DontAckAction? dontAck = null;
+                        var reject = false;
+                        var invalidMessage = false;
+                        string? rejectReason = null;
+
+                        foreach (var exception in aggregateException.InnerExceptions)
+                        {
+                            if (exception is ConfigurationException configurationException)
+                            {
+                                Log.StoppingReceivingMessages(s_logger, configurationException, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                                stop = true;
+                                Status = MessagePumpStatus.MP_ERROR;
+                                break;
+                            }
+
+                            if (exception is DeferMessageAction da)
+                            {
+                                deferAction = da;
+                                continue;
+                            }
+
+                            if (exception is DontAckAction dontAckAction)
+                            {
+                                dontAck = dontAckAction;
+                                continue;
+                            }
+
+                            if (exception is RejectMessageAction rejectMessageAction)
+                            {
+                                reject = true;
+                                rejectReason = rejectMessageAction.Message;
+                                continue;
+                            }
+
+                            if (exception is InvalidMessageAction invalidMessageAction)
+                            {
+                                invalidMessage = true;
+                                rejectReason = invalidMessageAction.Message;
+                                continue;
+                            }
+
+                            Log.FailedToDispatchMessage(s_logger, exception, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                        }
+
+                        if (deferAction != null)
+                        {
+                            Log.DeferringMessage(s_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                            processSpan?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
+                            if (await RequeueMessage(message, deferAction.Delay))
+                                continue;
+                        }
+
+                        if (dontAck != null)
+                        {
+                            Log.NotAcknowledgingMessage(s_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                            if (dontAck.InnerException != null)
+                                Log.DontAckActionInnerException(s_logger, dontAck.InnerException, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                            processSpan?.SetStatus(ActivityStatusCode.Error, $"Don't Ack Thrown. Not acknowledging message {message.Id}");
+                            await Channel.NackAsync(message);
+                            IncrementUnacceptableMessageCount();
+                            await Task.Delay(DontAckDelay);
+                            continue;
+                        }
+
+                        if (reject)
+                        {
+                            processSpan?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
+                            IncrementUnacceptableMessageCount();
+                            await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, rejectReason));
+                            continue;
+                        }
+
+                        if (invalidMessage)
+                        {
+                            processSpan?.SetStatus(ActivityStatusCode.Error, $"Invalid message {message.Id}");
+                            IncrementUnacceptableMessageCount();
+                            await RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, rejectReason));
+                            continue;
+                        }
+
+                        if (stop)
+                        {
+                            await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, $"Not processed due to configuration exception: {rejectReason}"));
+                            processSpan?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
+                            await Channel.DisposeAsync();
                             break;
                         }
 
-                        if (exception is DeferMessageAction da)
-                        {
-                            deferAction = da;
-                            continue;
-                        }
-
-                        if (exception is DontAckAction dontAckAction)
-                        {
-                            dontAck = dontAckAction;
-                            continue;
-                        }
-
-                        if (exception is RejectMessageAction rejectMessageAction)
-                        {
-                            reject = true;
-                            rejectReason = rejectMessageAction.Message;
-                            continue;
-                        }
-
-                        if (exception is InvalidMessageAction invalidMessageAction)
-                        {
-                            invalidMessage = true;
-                            rejectReason = invalidMessageAction.Message;
-                            continue;
-                        }
-
-                        Log.FailedToDispatchMessage(s_logger, exception, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                        processSpan?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to dispatch message {message.Id} from {Channel.Name} with {Channel.RoutingKey}  on thread # {Environment.CurrentManagedThreadId}");
                     }
-
-                    if (deferAction != null)
+                    catch (ConfigurationException configurationException)
                     {
-                        Log.DeferringMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                        span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
-                        if (await RequeueMessage(message, deferAction.Delay))
-                            continue;
+                        Log.StoppingReceivingMessages2(s_logger, configurationException, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                        await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError,$"Not processed due to configuration exception: {configurationException.Message}"));
+                        processSpan?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
+                        await Channel.DisposeAsync();
+                        Status = MessagePumpStatus.MP_ERROR;
+                        break;
                     }
-
-                    if (dontAck != null)
+                    catch (DeferMessageAction deferAction)
                     {
-                        Log.NotAcknowledgingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                        if (dontAck.InnerException != null)
-                            Log.DontAckActionInnerException(s_logger, dontAck.InnerException, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                        span?.SetStatus(ActivityStatusCode.Error, $"Don't Ack Thrown. Not acknowledging message {message.Id}");
+                        Log.DeferringMessage2(s_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+
+                        processSpan?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
+
+                        if (await RequeueMessage(message, deferAction.Delay)) continue;
+                    }
+                    catch (DontAckAction dontAckAction)
+                    {
+                        Log.NotAcknowledgingMessage(s_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                        if (dontAckAction.InnerException != null)
+                            Log.DontAckActionInnerException(s_logger, dontAckAction.InnerException, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                        processSpan?.SetStatus(ActivityStatusCode.Error, $"Don't Ack Thrown. Not acknowledging message {message.Id}");
                         await Channel.NackAsync(message);
                         IncrementUnacceptableMessageCount();
                         await Task.Delay(DontAckDelay);
                         continue;
                     }
-
-                    if (reject)
+                    catch (RejectMessageAction rejectMessageAction)
                     {
-                        span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
+                        processSpan?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
                         IncrementUnacceptableMessageCount();
-                        await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, rejectReason));
+                        await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, rejectMessageAction.Message));
+
                         continue;
                     }
-
-                    if (invalidMessage)
+                    catch (InvalidMessageAction invalidMessageAction)
                     {
-                        span?.SetStatus(ActivityStatusCode.Error, $"Invalid message {message.Id}");
+                        processSpan?.SetStatus(ActivityStatusCode.Error, $"Invalid message {message.Id}");
                         IncrementUnacceptableMessageCount();
-                        await RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, rejectReason));
+                        await RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, invalidMessageAction.Message));
                         continue;
                     }
-
-                    if (stop)
+                    catch (MessageMappingException messageMappingException)
                     {
-                        await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, $"Not processed due to configuration exception: {rejectReason}"));
-                        span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
-                        await Channel.DisposeAsync();
-                        break;
+                        var description = $"MessagePump: Failed to map message {message.Id} from {Channel.Name} with {Channel.RoutingKey} on thread # {Thread.CurrentThread.ManagedThreadId}";
+                        Log.FailedToMapMessage(s_logger, messageMappingException, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                        IncrementUnacceptableMessageCount();
+                        processSpan?.SetStatus(ActivityStatusCode.Error, description);
+                        await RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, description));
+                        continue;
+                    }
+                    catch (Exception e)
+                    {
+                        Log.FailedToDispatchMessage2(s_logger, e, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                        IncrementUnacceptableMessageCount();
+                        processSpan?.SetStatus(ActivityStatusCode.Error,$"MessagePump: Failed to dispatch message '{message.Id}' from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
+                    }
+                    finally
+                    {
+                        Tracer?.EndSpan(processSpan);
                     }
 
-                    span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to dispatch message {message.Id} from {Channel.Name} with {Channel.RoutingKey}  on thread # {Environment.CurrentManagedThreadId}");
-                }
-                catch (ConfigurationException configurationException)
-                {
-                    Log.StoppingReceivingMessages2(s_logger, configurationException, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                    await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError,$"Not processed due to configuration exception: {configurationException.Message}"));
-                    span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
-                    await Channel.DisposeAsync();
-                    Status = MessagePumpStatus.MP_ERROR;
-                    break;
-                }
-                catch (DeferMessageAction deferAction)
-                {
-                    Log.DeferringMessage2(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                    await Acknowledge(message);
 
-                    span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
+                } while (true);
 
-                    if (await RequeueMessage(message, deferAction.Delay)) continue;
-                }
-                catch (DontAckAction dontAckAction)
-                {
-                    Log.NotAcknowledgingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                    if (dontAckAction.InnerException != null)
-                        Log.DontAckActionInnerException(s_logger, dontAckAction.InnerException, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                    span?.SetStatus(ActivityStatusCode.Error, $"Don't Ack Thrown. Not acknowledging message {message.Id}");
-                    await Channel.NackAsync(message);
-                    IncrementUnacceptableMessageCount();
-                    await Task.Delay(DontAckDelay);
-                    continue;
-                }
-                catch (RejectMessageAction rejectMessageAction)
-                {
-                    span?.SetStatus(ActivityStatusCode.Error, $"Rejecting message {message.Id}");
-                    IncrementUnacceptableMessageCount();
-                    await RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, rejectMessageAction.Message));
-
-                    continue;
-                }
-                catch (InvalidMessageAction invalidMessageAction)
-                {
-                    span?.SetStatus(ActivityStatusCode.Error, $"Invalid message {message.Id}");
-                    IncrementUnacceptableMessageCount();
-                    await RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, invalidMessageAction.Message));
-                    continue;
-                }
-                catch (MessageMappingException messageMappingException)
-                {
-                    Log.FailedToMapMessage(s_logger, messageMappingException, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                    IncrementUnacceptableMessageCount();
-                    span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to map message {message.Id} from {Channel.Name} with {Channel.RoutingKey} on thread # {Thread.CurrentThread.ManagedThreadId}");
-                }
-                catch (Exception e)
-                {
-                    Log.FailedToDispatchMessage2(s_logger, e, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
-                    IncrementUnacceptableMessageCount();
-                    span?.SetStatus(ActivityStatusCode.Error,$"MessagePump: Failed to dispatch message '{message.Id}' from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
-                }
-                finally
-                {
-                    Tracer?.EndSpan(span);
-                }
-
-                await Acknowledge(message);
-
-            } while (true);
-
-            Log.FinishedRunningMessageLoop(s_logger, Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
-            Tracer?.EndSpan(pumpSpan);
+                Log.FinishedRunningMessageLoop(s_logger, Channel.Name, Channel.RoutingKey.Value, Thread.CurrentThread.ManagedThreadId);
+            }
+            finally
+            {
+                Tracer?.EndSpan(pumpSpan);
+            }
         }
 
         private async Task InvokeDispatchRequest(IRequest request, Message message, RequestContext context)
@@ -470,7 +488,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         private Task<bool> RejectMessage(Message message, MessageRejectionReason reason )
         {
-            Log.RejectingMessage(s_logger, message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+            Log.RejectingMessage(s_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
             
             message.Header.Bag[Message.RejectionReasonHeaderName] = $"Message rejected reason: {reason.RejectionReason} Description: {reason.Description}";
             
@@ -487,9 +505,9 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object? value) ? value.ToString() : null;
 
-                    Log.DroppingMessage(s_logger, RequeueCount, message.Id, string.IsNullOrEmpty(originalMessageId)
+                    Log.DroppingMessage(s_logger, RequeueCount, message.Id.Value, string.IsNullOrEmpty(originalMessageId)
                             ? string.Empty
-                            : $" (original message id {originalMessageId})", Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
+                            : $" (original message id {originalMessageId})", Channel.Name, Channel.RoutingKey.Value, Thread.CurrentThread.ManagedThreadId);
 
                     IncrementUnacceptableMessageCount();
                     return RejectMessage(message, new MessageRejectionReason(
@@ -499,14 +517,14 @@ namespace Paramore.Brighter.ServiceActivator
                 }
             }
 
-            Log.ReQueueingMessage(s_logger, message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name, Channel.RoutingKey);
+            Log.ReQueueingMessage(s_logger, message.Id.Value, Thread.CurrentThread.ManagedThreadId, Channel.Name, Channel.RoutingKey.Value);
 
             return Channel.RequeueAsync(message, delay ?? RequeueDelay);
         }
         
         private async Task<IRequest> TranslateMessage(Message message, RequestContext requestContext, CancellationToken cancellationToken = default)
         {
-            Log.TranslateMessage(s_logger, message.Id, Thread.CurrentThread.ManagedThreadId);
+            Log.TranslateMessage(s_logger, message.Id.Value, Thread.CurrentThread.ManagedThreadId);
             requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
 
             var requestType = _mapRequestType(message);
@@ -553,7 +571,7 @@ namespace Paramore.Brighter.ServiceActivator
             if (UnacceptableMessageLimit <= 0) return false;
             if (UnacceptableMessageCount < UnacceptableMessageLimit) return false;
             
-            Log.UnacceptableMessageLimitReached(s_logger, UnacceptableMessageLimit, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+            Log.UnacceptableMessageLimitReached(s_logger, UnacceptableMessageLimit, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
                 
             return true;
         }

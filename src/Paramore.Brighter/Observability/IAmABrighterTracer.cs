@@ -38,19 +38,60 @@ public interface IAmABrighterTracer : IDisposable
     ActivitySource ActivitySource { get; }
     
     /// <summary>
-    /// Create a span when we consume a message from a queue or stream
+    /// Create a span when we consume a message from a queue or stream. If the message has no propagated
+    /// trace context, the span is created as a root span instead of inheriting the long-running pump span.
     /// </summary>
     /// <param name="operation">How did we obtain the message. InstrumentationOptions.Receive => pull; InstrumentationOptions.Process => push</param>
     /// <param name="message">What is the <see cref="Message"/> that we received; if they have a traceparentid we will use that as a parent for this trace</param>
     /// <param name="messagingSystem">What is the messaging system that we are receiving a message from</param>
     /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
+    /// <param name="serializedHeader">The header already serialized by <see cref="EnrichReceiveSpan"/>, reused here instead
+    /// of serializing it again; when null (no preceding receive span) the header is serialized by this method</param>
     /// <returns></returns>
     Activity? CreateSpan(
         MessagePumpSpanOperation operation,
         Message message,
         MessagingSystem messagingSystem,
-        InstrumentationOptions options = InstrumentationOptions.All
+        InstrumentationOptions options = InstrumentationOptions.All,
+        string? serializedHeader = null
     );
+
+    /// <summary>
+    /// Creates a root receive span before the broker call so that the span's <see cref="Activity.Duration"/> reflects
+    /// only broker latency without inheriting the long-running pump span. Tags derived from the received
+    /// <see cref="Message"/> are added later via <see cref="EnrichReceiveSpan"/>.
+    /// </summary>
+    /// <param name="topic">The <see cref="RoutingKey"/> we are receiving from</param>
+    /// <param name="messagingSystem">The <see cref="MessagingSystem"/> we are receiving from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
+    /// <returns>The receive span, or null if the <see cref="ActivitySource"/> has no listeners</returns>
+    Activity? CreateReceiveSpan(
+        RoutingKey topic,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions options = InstrumentationOptions.All);
+
+    /// <summary>
+    /// Enriches a receive span (created via <see cref="CreateReceiveSpan"/>) with tags derived from a received message,
+    /// and propagates the producer's tracestate onto the receive span.
+    /// </summary>
+    /// <param name="span">The receive span to enrich; no-op if null</param>
+    /// <param name="message">The <see cref="Message"/> that was received</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
+    /// <returns>The serialized header, to pass to <see cref="CreateSpan(MessagePumpSpanOperation,Message,MessagingSystem,InstrumentationOptions,string)"/>
+    /// so it is not serialized again; null if there was no span to enrich or messaging instrumentation is disabled</returns>
+    string? EnrichReceiveSpan(
+        Activity? span,
+        Message message,
+        InstrumentationOptions options = InstrumentationOptions.All);
+
+    /// <summary>
+    /// Propagates the producer's baggage onto the consumer side for a received message: lifts the message's
+    /// <see cref="MessageHeader.CorrelationId"/> into its <see cref="MessageHeader.Baggage"/> and sets it as the ambient
+    /// OpenTelemetry baggage for the current execution context. Called by the pump for a received message, gated on a
+    /// receive span existing (sampled in, instrumentation enabled), mirroring the historic span-scoped propagation.
+    /// </summary>
+    /// <param name="message">The <see cref="Message"/> that was received</param>
+    void PropagateConsumerContext(Message message);
 
     /// <summary>
     /// Create a span for a request in CommandProcessor
@@ -169,10 +210,36 @@ public interface IAmABrighterTracer : IDisposable
     /// <param name="instrumentationOptions">How deep should the instrumentation go?</param>
     /// <returns>A new span named channel publish</returns>
     Activity? CreateProducerSpan(
-        Publication publication, 
-        Message? message, 
-        Activity? parentActivity, 
+        Publication publication,
+        Message? message,
+        Activity? parentActivity,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All);
+
+    /// <summary>
+    /// Create a standalone span that represents a broker confirmation (ack/nack) of a previously produced message.
+    /// The span links back to the original publish span (via <paramref name="links"/>) rather than nesting under it,
+    /// so the publish span is never reopened or mutated.
+    /// </summary>
+    /// <remarks>
+    /// This method clears <see cref="Activity.Current"/> to force the confirmation span to be a true root and does
+    /// NOT restore the prior ambient activity — it deliberately leaves the confirmation span as the new
+    /// <see cref="Activity.Current"/> so that work done in the callback (e.g. the success-branch <c>MarkDispatched</c>
+    /// span) nests beneath it. It is therefore only safe to call from a context whose ambient activity is owned and
+    /// disposed by the caller (such as a confirmation callback running on a broker/threadpool thread). Calling it
+    /// inline on a thread that owns a meaningful ambient span would silently lose that <see cref="Activity.Current"/>.
+    /// </remarks>
+    /// <param name="messageId">The id of the message the broker confirmed; <see cref="Id.Empty"/> records an "unknown" marker</param>
+    /// <param name="topic">The wire topic the message was published to, recorded as the messaging destination</param>
+    /// <param name="success">True if the broker confirmed persistence; false records the failure as an error outcome</param>
+    /// <param name="links">Links to the original publish span, if its context was captured at send time; null when absent</param>
+    /// <param name="options">How deep should the instrumentation go?</param>
+    /// <returns>The confirmation span, which also becomes <see cref="Activity.Current"/>, or null if the source has no listeners</returns>
+    Activity? CreateConfirmationSpan(
+        Id messageId,
+        RoutingKey? topic,
+        bool success,
+        ActivityLink[]? links = null,
+        InstrumentationOptions options = InstrumentationOptions.All);
 
     /// <summary>
     /// Ends a span by correctly setting its status and then disposing of it

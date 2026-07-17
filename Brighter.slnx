@@ -6,6 +6,10 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/samples/" />
+  <Folder Name="/samples/AsyncAPI/">
+    <Project Path="samples/AsyncAPI/KafkaAsyncAPI/KafkaAsyncAPI.csproj" />
+    <Project Path="samples/AsyncAPI/RMQAsyncAPI/RMQAsyncAPI.csproj" />
+  </Folder>
   <Folder Name="/samples/Analyzer/">
     <Project Path="samples/Analyzer/AnalyzerSamples/AnalyzerSamples.csproj" />
   </Folder>
@@ -147,6 +151,12 @@
     <Project Path="samples/Transforms/MassTransit/MassTransitSide/MassTransitSide.csproj" />
     <Project Path="samples/Transforms/MassTransit/MBrigtherSide/MBrigtherSide.csproj" />
   </Folder>
+  <Folder Name="/samples/Validation/">
+    <File Path="samples\Validation\README.md" />
+    <Project Path="samples/Validation/DataAnnotationsSample/DataAnnotationsSample.csproj" />
+    <Project Path="samples/Validation/FluentValidationSample/FluentValidationSample.csproj" />
+    <Project Path="samples/Validation/SpecificationSample/SpecificationSample.csproj" />
+  </Folder>
   <Folder Name="/samples/WebAPI/" />
   <Folder Name="/samples/WebAPI/WebAPI_Common/">
     <File Path="samples/WebAPI/WebAPI_Common/README.md" />
@@ -192,6 +202,7 @@
   <Folder Name="/tests/">
     <File Path="tests/README.md" />
     <Project Path="tests/Paramore.Brighter.Analyzer.Tests/Paramore.Brighter.Analyzer.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.AsyncAPI.Tests/Paramore.Brighter.AsyncAPI.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWS.V4.Tests/Paramore.Brighter.AWS.V4.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AWSScheduler.Tests/Paramore.Brighter.AWSScheduler.Tests.csproj" />
@@ -199,6 +210,7 @@
     <Project Path="tests/Paramore.Brighter.Azure.Tests/Paramore.Brighter.Azure.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Base.Test/Paramore.Brighter.Base.Test.csproj" />
+    <Project Path="tests/Paramore.Brighter.BoxProvisioning.Tests/Paramore.Brighter.BoxProvisioning.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj" />
@@ -216,12 +228,15 @@
     <Project Path="tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj" />
-    <Project Path="tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Testing.Tests/Paramore.Brighter.Testing.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.TickerQ.Tests/Paramore.Brighter.TickerQ.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Validation.DataAnnotations.Tests/Paramore.Brighter.Validation.DataAnnotations.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Validation.Specification.Tests/Paramore.Brighter.Validation.Specification.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Validation.FluentValidation.Tests/Paramore.Brighter.Validation.FluentValidation.Tests.csproj" />
     <Project Path="tests/Paramore.Test.Helpers/Paramore.Test.Helpers.csproj" />
   </Folder>
   <Folder Name="/tools/">
@@ -230,6 +245,14 @@
   <Project Path="src/Paramore.Brighter.Analyzer.Package/Paramore.Brighter.Analyzer.Package.csproj" />
   <Project Path="src/Paramore.Brighter.Analyzer/Paramore.Brighter.Analyzer.csproj" />
   <Project Path="src/Paramore.Brighter.Archive.Azure/Paramore.Brighter.Archive.Azure.csproj" />
+  <Project Path="src/Paramore.Brighter.AsyncAPI.NJsonSchema/Paramore.Brighter.AsyncAPI.NJsonSchema.csproj" />
+  <Project Path="src/Paramore.Brighter.AsyncAPI/Paramore.Brighter.AsyncAPI.csproj" />
+  <Project Path="src/Paramore.Brighter.BoxProvisioning/Paramore.Brighter.BoxProvisioning.csproj" />
+  <Project Path="src/Paramore.Brighter.BoxProvisioning.MsSql/Paramore.Brighter.BoxProvisioning.MsSql.csproj" />
+  <Project Path="src/Paramore.Brighter.BoxProvisioning.MySql/Paramore.Brighter.BoxProvisioning.MySql.csproj" />
+  <Project Path="src/Paramore.Brighter.BoxProvisioning.PostgreSql/Paramore.Brighter.BoxProvisioning.PostgreSql.csproj" />
+  <Project Path="src/Paramore.Brighter.BoxProvisioning.Sqlite/Paramore.Brighter.BoxProvisioning.Sqlite.csproj" />
+  <Project Path="src/Paramore.Brighter.BoxProvisioning.Spanner/Paramore.Brighter.BoxProvisioning.Spanner.csproj" />
   <Project Path="src/Paramore.Brighter.Dapper/Paramore.Brighter.Dapper.csproj" />
   <Project Path="src/Paramore.Brighter.DynamoDb.V4/Paramore.Brighter.DynamoDb.V4.csproj" />
   <Project Path="src/Paramore.Brighter.DynamoDb/Paramore.Brighter.DynamoDb.csproj" />
@@ -309,5 +332,11 @@
   <Project Path="src/Paramore.Brighter.Transformers.JustSaying/Paramore.Brighter.Transformers.JustSaying.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.MassTransit/Paramore.Brighter.Transformers.MassTransit.csproj" />
   <Project Path="src/Paramore.Brighter.Transformers.MongoGridFS/Paramore.Brighter.Transformers.MongoGridFS.csproj" />
+  <Project Path="src/Paramore.Brighter.Validation.DataAnnotations/Paramore.Brighter.Validation.DataAnnotations.csproj" />
+  <Project Path="src/Paramore.Brighter.Validation.Specification/Paramore.Brighter.Validation.Specification.csproj" />
+  <Project Path="src/Paramore.Brighter.Validation.FluentValidation/Paramore.Brighter.Validation.FluentValidation.csproj" />
   <Project Path="src/Paramore.Brighter/Paramore.Brighter.csproj" />
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Paramore.Brighter.Benchmarks/Paramore.Brighter.Benchmarks.csproj" />
+  </Folder>
 </Solution>

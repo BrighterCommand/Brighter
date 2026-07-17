@@ -18,11 +18,13 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="System.Memory" />
     <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="System.Threading.Channels" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="NJsonConverters\" />
   </ItemGroup>
-  
+
 </Project>

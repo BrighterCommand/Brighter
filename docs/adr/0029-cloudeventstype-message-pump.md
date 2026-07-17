@@ -1,3 +1,18 @@
+---
+id: 0029-cloudeventstype-message-pump
+title: "Use CloudEventsType for Message Pump"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2025-07-14
+summary: "Replaces compile-time generic type parameters on Reactor and Proactor with a runtime Func<Message, Type> strategy so that a single subscription channel can receive and route multiple CloudEvents message types based on message metadata."
+tags:
+  - "message-pump"
+  - "cloudevents"
+  - "messaging"
+  - "reactive"
+---
+
 # 29.  Use CloudEventsType for Message Pump
 
 Date: 2025-07-14

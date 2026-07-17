@@ -1,10 +1,25 @@
+---
+id: 0033-lifetime-of-command-processor-and-mediator
+title: "Lifetime of Command Processor and Mediator"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2025-08-28
+summary: "Removes the static IAmABoxTransactionProvider from CommandProcessor, scoping the transaction provider to handler instances instead, and reverts CommandProcessor to a singleton lifetime."
+tags:
+  - "lifetime"
+  - "di"
+  - "mediator"
+  - "outbox"
+---
+
 # 33. Lifetime of Command Processor and Mediator
 
 Date: 2025-08-28
 
 ## Status
 
-Draft
+Proposed
 
 ## Context
 

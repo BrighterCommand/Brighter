@@ -93,7 +93,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
                 type: type.Result,
                 timeStamp: timeStamp.Result,
                 correlationId: correlationId.Success ? correlationId.Result : Id.Empty,
-                replyTo: replyTo.Result is not null ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
+                replyTo: replyTo.Result is not null ? new RoutingKey(replyTo.Result.Value) : RoutingKey.Empty,
                 contentType: bodyType!,
                 handledCount: handledCount.Result,
                 dataSchema: dataSchema.Result,
@@ -147,7 +147,8 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
     
     private static Dictionary<string, string> ReadCloudEventHeaders(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.CloudEventHeaders, out var value))
+        if (sqsMessage.MessageAttributes is not null
+            && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.CloudEventHeaders, out var value))
         {
             try
             {
@@ -239,14 +240,17 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Bag, out MessageAttributeValue? value))
+        var bag = new Dictionary<string, object>();
+
+        if (sqsMessage.MessageAttributes is not null
+            && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Bag, out MessageAttributeValue? value))
         {
             try
             {
-                var bag = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(value.StringValue,
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(value.StringValue,
                     JsonSerialisationOptions.Options);
-                if (bag != null)
-                    return bag;
+                if (parsed != null)
+                    bag = parsed;
             }
             catch (Exception)
             {
@@ -254,12 +258,28 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
             }
         }
 
-        return new Dictionary<string, object>();
+        if (sqsMessage.MessageAttributes is null)
+            return bag;
+
+        // Surface inbound MessageAttributes Brighter doesn't already consume so foreign producers'
+        // metadata can flow through to consumers via the bag. Entries already present in Brighter's
+        // own JSON bag attribute take precedence.
+        foreach (var attribute in sqsMessage.MessageAttributes)
+        {
+            if (HeaderNames.IsKnown(attribute.Key) || bag.ContainsKey(attribute.Key))
+                continue;
+            var raw = attribute.Value.StringValue;
+            if (raw != null)
+                bag[attribute.Key] = raw;
+        }
+
+        return bag;
     }
 
     private static HeaderResult<RoutingKey> ReadReplyTo(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ReplyTo, out MessageAttributeValue? value))
+        if (sqsMessage.MessageAttributes is not null
+            && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ReplyTo, out MessageAttributeValue? value))
         {
             return new HeaderResult<RoutingKey>(new RoutingKey(value.StringValue), true);
         }
@@ -269,19 +289,22 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static HeaderResult<DateTimeOffset> ReadTimestamp(Amazon.SQS.Model.Message sqsMessage, Dictionary<string, string> headers)
     {
-        if (headers.TryGetValue(HeaderNames.Timestamp, out var val) 
+        if (headers.TryGetValue(HeaderNames.Timestamp, out var val)
             && DateTimeOffset.TryParse(val, out var timestamp))
         {
             return new HeaderResult<DateTimeOffset>(timestamp, true);
         }
-        
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Time, out var value)
+
+        var attributes = sqsMessage.MessageAttributes;
+        if (attributes is not null
+            && attributes.TryGetValue(HeaderNames.Time, out var value)
             && DateTimeOffset.TryParse(value.StringValue, out timestamp))
         {
             return new HeaderResult<DateTimeOffset>(timestamp, true);
         }
-        
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Timestamp, out value)
+
+        if (attributes is not null
+            && attributes.TryGetValue(HeaderNames.Timestamp, out value)
             && DateTimeOffset.TryParse(value.StringValue, out timestamp))
         {
             return new HeaderResult<DateTimeOffset>(timestamp, true);
@@ -292,7 +315,8 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static HeaderResult<MessageType> ReadMessageType(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.MessageType, out MessageAttributeValue? value))
+        if (sqsMessage.MessageAttributes is not null
+            && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.MessageType, out MessageAttributeValue? value))
         {
             if (Enum.TryParse(value.StringValue, out MessageType messageType))
             {
@@ -316,7 +340,8 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static HeaderResult<Id> ReadCorrelationId(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.CorrelationId,
+        if (sqsMessage.MessageAttributes is not null
+            && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.CorrelationId,
                 out MessageAttributeValue? correlationId))
         {
             return new HeaderResult<Id>(new Id(correlationId.StringValue), true);
@@ -327,18 +352,21 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static HeaderResult<ContentType> ReadContentType(Amazon.SQS.Model.Message sqsMessage, Dictionary<string, string> headers)
     {
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.DataContentType, out var value)
+        var attributes = sqsMessage.MessageAttributes;
+        if (attributes is not null
+            && attributes.TryGetValue(HeaderNames.DataContentType, out var value)
             && !string.IsNullOrEmpty(value.StringValue))
         {
             return new HeaderResult<ContentType>(new ContentType(value.StringValue), true);
         }
-        
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ContentType, out value) 
+
+        if (attributes is not null
+            && attributes.TryGetValue(HeaderNames.ContentType, out value)
             && !string.IsNullOrEmpty(value.StringValue))
         {
             return new HeaderResult<ContentType>(new ContentType(value.StringValue), true);
         }
-        
+
         if (headers.TryGetValue(HeaderNames.DataContentType, out var val))
         {
             return new HeaderResult<ContentType>(new ContentType(val), true);
@@ -349,7 +377,8 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static HeaderResult<Id?> ReadMessageId(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Id, out MessageAttributeValue? messageId))
+        if (sqsMessage.MessageAttributes is not null
+            && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Id, out MessageAttributeValue? messageId))
         {
             var value = messageId.StringValue;
             return new HeaderResult<Id?>(string.IsNullOrEmpty(value) ? Id.Random() : Id.Create(value), true);
@@ -360,7 +389,8 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static HeaderResult<RoutingKey> ReadTopic(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Topic, out MessageAttributeValue? value))
+        if (sqsMessage.MessageAttributes is not null
+            && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Topic, out MessageAttributeValue? value))
         {
             //we have an arn, and we want the topic
             var topic = value.StringValue ?? string.Empty;
@@ -383,7 +413,8 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static HeaderResult<PartitionKey> ReadPartitionKey(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageGroupId, out var value))
+        if (sqsMessage.Attributes is not null
+            && sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageGroupId, out var value))
         {
             //we have an arn, and we want the topic
             var messageGroupId = value;
@@ -395,7 +426,8 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static HeaderResult<string> ReadDeduplicationId(Amazon.SQS.Model.Message sqsMessage)
     {
-        if (sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageDeduplicationId, out var value))
+        if (sqsMessage.Attributes is not null
+            && sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageDeduplicationId, out var value))
         {
             //we have an arn, and we want the topic
             var messageGroupId = value;
@@ -407,7 +439,8 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
     
     private static HeaderResult<string> ReadSubject(Amazon.SQS.Model.Message sqsMessage, Dictionary<string, string> headers)
     {
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Subject, out var value))
+        if (sqsMessage.MessageAttributes is not null
+            && sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Subject, out var value))
         {
             return new HeaderResult<string>(value.StringValue, true);
         }

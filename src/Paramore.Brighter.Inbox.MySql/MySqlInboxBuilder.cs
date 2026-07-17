@@ -76,19 +76,30 @@ namespace Paramore.Brighter.Inbox.MySql
         /// Gets the DDL statements to create an Inbox in MySQL
         /// </summary>
         /// <param name="inboxTableName">The Inbox Table Name</param>
+        /// <param name="binaryMessage">Should the command body be stored as binary.</param>
+        /// <param name="jsonMessage">Should the command body be stored using the JSON type.</param>
+        /// <param name="schemaName">
+        /// Optional MySQL schema (database) name. When non-null, the emitted DDL schema-qualifies
+        /// the table as <c>`schemaName`.`inboxTableName`</c>; otherwise the table is emitted
+        /// unqualified and lands in the connection's bound database. Per PR #4039 reviewer
+        /// item M4-1 (F1c). See the outbox builder for the full rationale.
+        /// </param>
         /// <returns></returns>
-        public static string GetDDL(string inboxTableName, bool binaryMessage = false, bool jsonMessage = false)
+        public static string GetDDL(string inboxTableName, bool binaryMessage = false, bool jsonMessage = false, string? schemaName = null)
         {
+            var qualifiedTable = schemaName is null
+                ? inboxTableName
+                : $"`{schemaName}`.`{inboxTableName}`";
             if (jsonMessage)
             {
-                return string.Format(JsonInboxDDL, inboxTableName);
+                return string.Format(JsonInboxDDL, qualifiedTable);
             }
             if (binaryMessage)
             {
-                return string.Format(BinaryInboxxDDL, inboxTableName);
+                return string.Format(BinaryInboxxDDL, qualifiedTable);
             }
 
-            return string.Format(TextInboxDDL, inboxTableName);
+            return string.Format(TextInboxDDL, qualifiedTable);
         }
 
         /// <summary>

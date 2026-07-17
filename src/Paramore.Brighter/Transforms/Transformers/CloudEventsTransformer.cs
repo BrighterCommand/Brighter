@@ -15,27 +15,34 @@ namespace Paramore.Brighter.Transforms.Transformers;
 
 /// <summary>
 /// Provides support for the <see href="https://github.com/cloudevents/spec?tab=readme-ov-file">Cloud Events specification</see>
-/// by ensuring that our message has the required metadata to support Cloud Events
+/// by ensuring that our message has the required metadata to support Cloud Events.
+///
+/// All settable attributes follow the same precedence (highest priority first):
+///   1. <see cref="CloudEventsAttribute"/> parameters (hardcoded on the attribute)
+///   2. Message header values already set by the message mapper
+///   3. <see cref="Publication"/> properties (fallback defaults)
+///
 /// The following Cloud Events attributes are supported:
 /// REQUIRED
-///     id => the message id <see cref="MessageHeader"/>; you don't set this here, as we use the id from the <see cref="Request"/>
-///     source => uses the source Uri from the <see cref="Publication"/> or <see cref="CloudEventsAttribute"/> and assigns to the message source <see cref="MessageHeader"/>
-///     specversion => uses the spec version <see cref="MessageHeader"/>; you don't set this and it defaults to 1.0
-///     type => uses the type <see cref="MessageHeader"/>; as we used type based routing, we recommend using the hostname
-///         scoped name of the request class you are sending
+///     id => the message id from <see cref="MessageHeader"/>; you don't set this here, as we use the id from the <see cref="Request"/>
+///     source => attribute > mapper > publication
+///     specversion => attribute > mapper; defaults to 1.0 (no publication fallback — <see cref="Publication"/> has no SpecVersion property)
+///     type => attribute > mapper > publication
 /// OPTIONAL
-///      datacontenttype => sets the content type for <see cref="MessageBody"/> and <see cref="MessageHeader"/>
-///      dataschema => sets the schema for <see cref="MessageBody"/> and <see cref="MessageHeader"/>
-///      subject => sets the subject for <see cref="MessageHeader"/>
-///      time => sets the timestamp for <see cref="MessageHeader"/>
+///     datacontenttype => attribute > mapper (no publication fallback)
+///     dataschema => attribute > mapper > publication
+///     subject => attribute > mapper > publication
+///     time => sets the timestamp for <see cref="MessageHeader"/>
 /// </summary>
 public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageTransformAsync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CloudEventsTransformer>();
+    private static readonly Uri s_defaultSource = new(MessageHeader.DefaultSource);
 
     private Uri? _source;
     private string? _type;
     private string? _specVersion;
+    private ContentType? _dataContentType;
     private Uri? _dataSchema;
     private string? _subject;
     private CloudEventFormat _format;
@@ -59,9 +66,10 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     /// 0 - <see cref="CloudEventsAttribute.Source"/> as a string, which will be converted to a <see cref="Uri"/>.
     /// 1 - <see cref="CloudEventsAttribute.Type"/> as a string.
     /// 2 - <see cref="CloudEventsAttribute.SpecVersion"/> as a string, defaults to "1.0".
-    /// 3 - <see cref="CloudEventsAttribute.DataSchema"/> as a string, which will be converted to a <see cref="Uri"/>.
-    /// 4- <see cref="CloudEventsAttribute.Subject"/> as a string.
-    /// 5 - <see cref="CloudEventsAttribute.Format"/> as a <see cref="CloudEventFormat"/>.
+    /// 3 - <see cref="CloudEventsAttribute.DataContentType"/> as a string, which will be converted to a <see cref="ContentType"/>.
+    /// 4 - <see cref="CloudEventsAttribute.DataSchema"/> as a string, which will be converted to a <see cref="Uri"/>.
+    /// 5 - <see cref="CloudEventsAttribute.Subject"/> as a string.
+    /// 6 - <see cref="CloudEventsAttribute.Format"/> as a <see cref="CloudEventFormat"/>.
     /// </param>
     public void InitializeWrapFromAttributeParams(params object?[] initializerList)
     {
@@ -80,17 +88,22 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
             _specVersion = specVersion;
         }
 
-        if (initializerList[3] is string dataSchema)
+        if (initializerList[3] is string dataContentType)
+        {
+            _dataContentType = new ContentType(dataContentType);
+        }
+
+        if (initializerList[4] is string dataSchema)
         {
             _dataSchema = new Uri(dataSchema, UriKind.RelativeOrAbsolute);
         }
 
-        if (initializerList[4] is string subject)
+        if (initializerList[5] is string subject)
         {
             _subject = subject;
         }
 
-        if (initializerList[5] is CloudEventFormat format)
+        if (initializerList[6] is CloudEventFormat format)
         {
             _format = format;
         }
@@ -119,7 +132,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     /// <inheritdoc />
     public Message Wrap(Message message, Publication publication)
     {
-        var msg =  WritePublicationHeaders(message,  publication);
+        var msg =  ApplyCloudEventsPrecedence(message,  publication);
         return _format == CloudEventFormat.Binary ? msg : WriteJsonMessage(msg, publication);
     }
 
@@ -139,7 +152,11 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     {
         try
         {
-            var cloudEvents = JsonSerializer.Deserialize<JsonEvent>(message.Body.Bytes, JsonSerialisationOptions.Options);
+            #if NETSTANDARD2_0
+            var cloudEvents = JsonSerializer.Deserialize<JsonEvent>(message.Body.Memory.ToArray(), JsonSerialisationOptions.Options);
+#else
+            var cloudEvents = JsonSerializer.Deserialize<JsonEvent>(message.Body.Memory.Span, JsonSerialisationOptions.Options);
+#endif
             if (cloudEvents == null)
             {
                 return message;
@@ -202,14 +219,33 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         }
     }
 
-    private Message WritePublicationHeaders(Message message, Publication publication)
+    private Message ApplyCloudEventsPrecedence(Message message, Publication publication)
     {
-        message.Header.Source = _source ?? publication.Source;
-        message.Header.Type = _type is not null ? new CloudEventsType(_type) : publication.Type;
-        message.Header.DataSchema = _dataSchema ?? publication.DataSchema;
-        message.Header.Subject = _subject ?? publication.Subject;
+        // Precedence for all attributes: attribute params > message header (set by mapper) > publication (fallback)
+        message.Header.Source = ResolveWithSentinel(_source, message.Header.Source, s_defaultSource, publication.Source)!;
+        message.Header.Type = ResolveWithSentinel(
+            _type is not null ? new CloudEventsType(_type) : null,
+            message.Header.Type, CloudEventsType.Empty, publication.Type)!;
+        if (_dataContentType is not null)
+            message.Header.ContentType = _dataContentType;
+        message.Header.DataSchema = _dataSchema ?? message.Header.DataSchema ?? publication.DataSchema;
+        message.Header.Subject = _subject ?? message.Header.Subject ?? publication.Subject;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
         return message;
+    }
+
+    /// <summary>
+    /// Resolves a CloudEvents attribute value using 3-way precedence: attribute > mapper > publication.
+    /// Used for fields whose defaults are non-null (e.g. Source, Type), where we need a sentinel to
+    /// distinguish "mapper didn't set it" from "mapper set it explicitly." For nullable fields
+    /// (DataSchema, Subject, DataContentType), plain null-coalescing suffices instead.
+    /// </summary>
+    private static T? ResolveWithSentinel<T>(T? attrValue, T? headerValue, T sentinel, T? publicationValue)
+        where T : class
+    {
+        if (attrValue is not null) return attrValue;
+        if (!Equals(headerValue, sentinel)) return headerValue;
+        return publicationValue;
     }
     
     private Message WriteJsonMessage(Message message, Publication publication)
@@ -228,7 +264,11 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                 else if (contentType.Contains("application/octet-stream"))
                 {
                     // Base64 encode binary data and use data_base64
-                    dataBase64 = Convert.ToBase64String(message.Body.Bytes);
+#if NETSTANDARD2_0
+                    dataBase64 = Convert.ToBase64String(message.Body.Memory.ToArray());
+#else
+                    dataBase64 = Convert.ToBase64String(message.Body.Memory.Span);
+#endif
                 }
                 else
                 {
@@ -245,7 +285,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                 Id = message.Id,
                 SpecVersion = message.Header.SpecVersion,
                 Source = message.Header.Source,
-                Type = message.Header.Type,
+                Type = message.Header.Type?.Value ?? string.Empty,
                 DataContentType = contentType,
                 DataSchema = message.Header.DataSchema,
                 Subject = message.Header.Subject,

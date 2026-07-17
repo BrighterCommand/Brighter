@@ -26,13 +26,17 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    internal sealed class KafkaMessagePublisher(
+    internal sealed partial class KafkaMessagePublisher(
         IProducer<string, byte[]> producer,
         IKafkaMessageHeaderBuilder headerBuilder)
     {
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessagePublisher>();
+
         public void PublishMessage(Message message, Action<DeliveryReport<string, byte[]>> deliveryReport)
         {
             var kafkaMessage = BuildMessage(message);
@@ -49,10 +53,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 var deliveryResult = await producer.ProduceAsync(message.Header.Topic, kafkaMessage, cancellationToken);
                 deliveryReport(deliveryResult);
             }
-            catch (ProduceException<string, byte[]>)
+            catch (ProduceException<string, byte[]> pe)
             {
                 //unlike the sync path, async will throw if it can't write. We want to capture that exception and raise the event
-                //so that our flows match
+                //so that our flows match. Log the broker reason/code at Warning (it is a delivery
+                //outcome we surface, not a fatal producer error) and continue with the synthetic flow.
+                Log.ProduceFailed(s_logger, pe.Error.Code, pe.Error.Reason);
                 DeliveryResult<string, byte[]> deliveryResult = new();
                 deliveryResult.Status = PersistenceStatus.NotPersisted;
                 deliveryResult.Message = new Message<string, byte[]>();
@@ -70,11 +76,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var kafkaMessage = new Message<string, byte[]>
             {
                 Headers = headers,
-                Key = message.Header.PartitionKey,
-                Value = message.Body.Bytes
+                Key = message.Header.PartitionKey.Value,
+                Value = message.Body.ToByteArray()
             };
 
             return kafkaMessage;
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Failed to produce message to Kafka. Code: {ErrorCode}, Reason: {ErrorReason}")]
+            public static partial void ProduceFailed(ILogger logger, ErrorCode errorCode, string errorReason);
         }
     }
 }

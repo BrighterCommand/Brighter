@@ -1,5 +1,46 @@
 {
   "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(pwd)",
+      "Bash(echo:*)",
+      "Bash(which:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(tree:*)",
+      "Bash(file:*)",
+      "Bash(stat:*)",
+      "Bash(diff:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote:*)",
+      "Bash(git tag:*)",
+      "Bash(git blame:*)",
+      "Bash(git describe:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git config --get:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
+      "Bash(dotnet --version)",
+      "Bash(dotnet --info)",
+      "Bash(dotnet --list-sdks)",
+      "Bash(dotnet --list-runtimes)"
+    ],
     "deny": [
       "Read(./.env*)",
       "Read(./secrets/**)",
@@ -13,20 +54,6 @@
       "Bash(ssh:*)"
     ],
     "ask": []
-  },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "slopwatch analyze -d . --hook",
-            "timeout": 60000
-          }
-        ]
-      }
-    ]
   },
   "enabledPlugins": {
     "commit-commands@claude-plugins-official": true,

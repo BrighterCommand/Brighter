@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Claude Code session state
+PROMPT.md
+
 # User-specific files
 *.suo
 *.user
@@ -249,6 +252,9 @@ ServiceFabricBackup/
 
 # SQLite files
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 *.sqlite
 *.sqlite3
 
@@ -341,3 +347,9 @@ tests/certs/
 # Ralph loop
 RALPH_STOP
 ralph.log
+
+# AI agent session state
+PROMPT.md
+
+# Local-only docker compose overrides (e.g. port remaps for host conflicts)
+docker-compose-*.local.yaml

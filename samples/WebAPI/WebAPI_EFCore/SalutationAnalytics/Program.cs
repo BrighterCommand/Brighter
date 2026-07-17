@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 using Paramore.Brighter;
+using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
@@ -21,8 +22,6 @@ using TransportMaker;
 var host = CreateHostBuilder(args).Build();
 host.CheckDbIsUp(ApplicationType.Salutations);
 host.MigrateDatabase();
-host.CreateInbox("Salutations");
-host.CreateOutbox(ApplicationType.Salutations,  "Salutations", HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 
@@ -135,6 +134,11 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
         })
         .AutoFromAssemblies()
+        .UseBoxProvisioning(options =>
+        {
+            BoxProvisioningFactory.AddOutbox(options, rdbms, outboxConfiguration);
+            BoxProvisioningFactory.AddInbox(options, rdbms, relationalDatabaseConfiguration);
+        })
         .ValidatePipelines()
         .DescribePipelines();
 
@@ -147,19 +151,6 @@ static string GetEnvironment()
     //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
     return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
            ?? throw new InvalidOperationException(" ASP_NETCORE_ENVIRONMENT is not set ");
-}
-
-static bool HasBinaryMessagePayload()
-{
-    string? brighterTransport = Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT");
-    if (string.IsNullOrWhiteSpace(brighterTransport))
-        throw new InvalidOperationException("Transport is not set");
-    
-    MessagingTransport? transport = ConfigureTransport.TransportType(brighterTransport);
-    if (transport == null)
-        throw new InvalidOperationException("Transport is not set");
-    
-    return transport == MessagingTransport.Kafka;
 }
 
 static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection services)

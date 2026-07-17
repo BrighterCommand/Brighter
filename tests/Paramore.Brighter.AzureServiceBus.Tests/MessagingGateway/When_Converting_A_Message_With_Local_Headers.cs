@@ -8,6 +8,26 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 public class AzureServiceBusMessagePublisherLocalHeaderTests
 {
     [Fact]
+    public void When_Converting_A_Message_The_SequenceNumber_Bag_Entry_Is_Not_Written_To_ApplicationProperties()
+    {
+        // SequenceNumber is a broker-assigned system property on every delivery.
+        // It must not round-trip through ApplicationProperties — if it did, a requeued
+        // message would arrive back with SequenceNumber in both its native property and
+        // ApplicationProperties, causing a duplicate-key crash in MapToBrighterMessage.
+        var header = new MessageHeader(
+            messageId: Guid.NewGuid().ToString(),
+            topic: new RoutingKey("test.topic"),
+            messageType: MessageType.MT_COMMAND);
+        header.Bag["SequenceNumber"] = 42L;
+
+        var message = new Message(header, new MessageBody("body"));
+
+        var asbMessage = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message);
+
+        Assert.False(asbMessage.ApplicationProperties.ContainsKey("SequenceNumber"));
+    }
+
+    [Fact]
     public void When_Converting_A_Message_The_ProducerTopic_Local_Header_Is_Stripped()
     {
         var header = new MessageHeader(

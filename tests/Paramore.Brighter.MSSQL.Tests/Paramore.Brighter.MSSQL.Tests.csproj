@@ -17,6 +17,10 @@
       </PackageReference>
       <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
       <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+      <PackageReference Include="OpenTelemetry" />
+      <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+      <PackageReference Include="Microsoft.Extensions.Logging" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" />
       <PackageReference Include="xunit" />
       <PackageReference Include="xunit.runner.visualstudio">
@@ -26,11 +30,19 @@
     </ItemGroup>
 
     <ItemGroup>
+      <None Update="xunit.runner.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\Paramore.Brighter.BoxProvisioning.MsSql\Paramore.Brighter.BoxProvisioning.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.MsSql\Paramore.Brighter.Inbox.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.MsSql\Paramore.Brighter.Locking.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.MsSql\Paramore.Brighter.MessagingGateway.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.MsSql\Paramore.Brighter.Outbox.MsSql.csproj" />
       <ProjectReference Include="..\Paramore.Brighter.Base.Test\Paramore.Brighter.Base.Test.csproj" />
+      <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />
     </ItemGroup>
 
 </Project>

@@ -1,3 +1,17 @@
+---
+id: 0036-memory-leak-tests
+title: "Memory Leak Testing Infrastructure"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2026-01-12
+summary: "Establishes a two-tier memory leak testing infrastructure using JetBrains dotMemory Unit and WebApplicationFactory: quick tests (5-10 minutes) run on every PR to catch obvious leaks, and soak tests (30-60 minutes) run nightly to detect gradual accumulation."
+tags:
+  - "testing"
+  - "memory"
+  - "performance"
+---
+
 # 36. Memory Leak Testing Infrastructure
 
 Date: 2026-01-12
@@ -134,7 +148,7 @@ memory-leak-quick:
   needs: [build]
   services:
     rabbitmq:
-      image: brightercommand/rabbitmq:3.13-management-delay
+      image: brightercommand/rabbitmq:4.2-management-delay
 ```
 - Runs in parallel with other test jobs (postgres, mysql, etc.)
 - Fails fast if memory leaks detected
@@ -276,7 +290,7 @@ var baseline = dotMemory.Check();
 dotnet test --filter "Category=MemoryLeak&Speed=Quick"
 
 # Requires RabbitMQ (via Docker)
-docker run -d -p 5672:5672 brightercommand/rabbitmq:3.13-management-delay
+docker run -d -p 5672:5672 brightercommand/rabbitmq:4.2-management-delay
 ```
 
 **Without dotMemory Unit:**

@@ -12,6 +12,13 @@ Current spec directory: specs/
 
 **TDD Cycle**: 🔴 Red → ✅ User Approval → 🟢 Green → 🔵 Refactor
 
+> **Recommended model: `sonnet`.** Unlike the other `/spec:*` commands, `/spec:implement`
+> does its work in the **main agent** (the interactive approval gate must reach the user),
+> so there is no sub-agent to assign a model to — the session model is what runs. This is
+> implementation work, which the model policy puts on **sonnet**. Step 0 below actively
+> prompts you to switch if the session is on another model. See
+> `.claude/commands/spec/README.md` → "Sub-agents & model policy".
+
 ## Critical Guidelines
 
 **ALWAYS follow these instructions when writing code:**
@@ -19,6 +26,21 @@ Current spec directory: specs/
 - **Code Style**: [.agent_instructions/code_style.md](../../../.agent_instructions/code_style.md)
 
 ## Your Task
+
+### Step 0: Confirm the Session Model
+
+`/spec:implement` is interactive implementation work and the model policy puts it on
+**sonnet**. Check the session's current model:
+
+- **If already on sonnet**: continue silently to Step 1.
+- **If on any other model** (e.g. opus, haiku): use `AskUserQuestion` to ask whether to
+  switch to sonnet before starting — e.g. "This session is on {model}. `/spec:implement` is
+  recommended on sonnet. Switch to sonnet first?" with options to **switch** (tell the user to
+  run `/model sonnet`, since a command can't change the session model itself) or **continue on
+  the current model**. Respect the choice; do not switch on their behalf, and do not block if
+  they decline.
+
+This is a one-time check at the start of the command.
 
 ### Step 1: Gather Context
 

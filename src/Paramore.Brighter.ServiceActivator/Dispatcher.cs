@@ -170,7 +170,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="subscription">The subscription.</param>
         public void Open(Subscription subscription)
         {
-            Log.OpeningSubscription(s_logger, subscription.Name);
+            Log.OpeningSubscription(s_logger, subscription.Name.Value);
 
             AddSubscriptionToSubscriptions(subscription);
             var addedConsumers = CreateConsumers([subscription]);
@@ -180,14 +180,14 @@ namespace Paramore.Brighter.ServiceActivator
                 case DispatcherState.DS_RUNNING:
                     addedConsumers.Each(consumer =>
                     {
-                        _consumers.TryAdd(consumer.Name, consumer);
+                        _consumers.TryAdd(consumer.Name.Value, consumer);
                         consumer.Open();
                         _tasks.TryAdd(consumer.JobId, consumer.Job!);
                     });
                     break;
                 case DispatcherState.DS_STOPPED:
                 case DispatcherState.DS_AWAITING:
-                    addedConsumers.Each(consumer => _consumers.TryAdd(consumer.Name, consumer));
+                    addedConsumers.Each(consumer => _consumers.TryAdd(consumer.Name.Value, consumer));
                     Start();
                     break;
                 default:
@@ -208,7 +208,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         public void Receive()
         {
-            CreateConsumers(Subscriptions).Each(consumer => _consumers.TryAdd(consumer.Name, consumer));
+            CreateConsumers(Subscriptions).Each(consumer => _consumers.TryAdd(consumer.Name.Value, consumer));
             Start();
         }
 
@@ -229,7 +229,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                Log.StoppingSubscription(s_logger, subscription.Name);
+                Log.StoppingSubscription(s_logger, subscription.Name.Value);
                 var consumersForConnection = Consumers.Where(consumer => consumer.Subscription.Name == subscription.Name).ToArray();
                 var noOfConsumers = consumersForConnection.Length;
                 for (int i = 0; i < noOfConsumers; ++i)
@@ -241,10 +241,10 @@ namespace Paramore.Brighter.ServiceActivator
 
         public DispatcherStateItem[] GetState()
         {
-            return Subscriptions.Select(s => new DispatcherStateItem(s.Name,
+            return Subscriptions.Select(s => new DispatcherStateItem(s.Name.Value,
                 s.NoOfPerformers,
                 _consumers.Where(c => c.Value.Subscription.Name == s.Name)
-                    .Select(c => new PerformerInformation(c.Value.Name, c.Value.State)).ToArray())
+                    .Select(c => new PerformerInformation(c.Value.Name.Value, c.Value.State)).ToArray())
             ).ToArray();
         }
 
@@ -263,7 +263,7 @@ namespace Paramore.Brighter.ServiceActivator
                 for (var i = currentPerformers; i < numberOfPerformers; i++)
                 {
                     var consumer = CreateConsumer(subscription, i);
-                    _consumers.TryAdd(consumer.Name, consumer);
+                    _consumers.TryAdd(consumer.Name.Value, consumer);
                     consumer.Open();
                     _tasks.TryAdd(consumer.JobId, consumer.Job!);
                 }
@@ -379,9 +379,9 @@ namespace Paramore.Brighter.ServiceActivator
             if (consumer is null)
                 return;
 
-            Log.RemovingConsumer(s_logger, consumer.Name);
+            Log.RemovingConsumer(s_logger, consumer.Name.Value);
 
-            if (_consumers.TryRemove(consumer.Name, out consumer))
+            if (_consumers.TryRemove(consumer.Name.Value, out consumer))
             {
                 consumer.Dispose();
             }
@@ -402,7 +402,7 @@ namespace Paramore.Brighter.ServiceActivator
         
         private Consumer CreateConsumer(Subscription subscription, int? consumerNumber)
         {
-            Log.CreatingConsumer(s_logger, consumerNumber, subscription.Name);
+            Log.CreatingConsumer(s_logger, consumerNumber, subscription.Name.Value);
                 
             if (subscription.MessagePumpType == MessagePumpType.Reactor)
             {

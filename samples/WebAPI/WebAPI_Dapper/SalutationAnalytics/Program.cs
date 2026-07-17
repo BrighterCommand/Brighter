@@ -12,6 +12,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter;
+using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.MsSql;
@@ -30,8 +31,6 @@ var host = builder.Build();
 
 host.CheckDbIsUp(ApplicationType.Salutations);
 host.MigrateDatabase();
-host.CreateInbox("Salutations");
-host.CreateOutbox(ApplicationType.Salutations, "Salutations", ConfigureTransport.HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 
@@ -132,6 +131,11 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             config.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
         })
         .AutoFromAssemblies()
+        .UseBoxProvisioning(options =>
+        {
+            BoxProvisioningFactory.AddOutbox(options, rdbms, outboxConfiguration);
+            BoxProvisioningFactory.AddInbox(options, rdbms, relationalDatabaseConfiguration);
+        })
         .ValidatePipelines()
         .DescribePipelines();
 

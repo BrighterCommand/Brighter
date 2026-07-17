@@ -1,0 +1,88 @@
+# Cloud Spanner emulator for Brighter integration tests.
+#
+#   docker compose -f docker-compose-spanner.yaml up -d --wait
+#
+# The emulator ships with NO instance or database and loses all state on container
+# recreation, so the `spanner-init` one-shot below provisions the instance + database
+# the tests expect on every `compose up`. Use `--wait` so compose blocks until that
+# provisioning completes (it exits 0) before returning — otherwise a test can race the
+# still-running init. `setup-spanner-emulator.sh` remains as a standalone re-provisioner
+# for emulators started outside of compose.
+services:
+  spanner:
+    image: gcr.io/cloud-spanner-emulator/emulator
+    ports:
+      # Host ports are overridable for machines where 9010/9020 are already bound
+      # (e.g. a VPN tunnel); the in-container ports and the compose network are unchanged.
+      - "${SPANNER_GRPC_PORT:-9010}:9010"   # gRPC (client libraries)
+      - "${SPANNER_REST_PORT:-9020}:9020"   # REST/admin (health + provisioning)
+
+  # One-shot: waits for the emulator REST API, then creates the instance + database.
+  # Idempotent — a 409 (already exists) on re-run is ignored, so repeat `up` is safe.
+  # Any other non-2xx aborts with a non-zero exit so `--wait` surfaces the failure
+  # rather than letting tests run against an unprovisioned emulator.
+  # Reaches the emulator by service name (spanner:9020), not localhost, on the compose net.
+  spanner-init:
+    image: curlimages/curl:latest
+    depends_on:
+      - spanner
+    restart: "no"
+    entrypoint:
+      - /bin/sh
+      - -c
+      # NOTE: shell '$' is written as '$$' so Docker/Podman Compose does not
+      # interpolate it as a compose variable — the container receives single '$'.
+      - |
+        set -u
+        PROJECT_ID=brighter-tests
+        INSTANCE_ID=brighter-spanner
+        DATABASE_ID=brightertests
+        REST=http://spanner:9020
+
+        # curl exits 0 for any HTTP status once the TCP connection succeeds, and this
+        # script deliberately runs without `set -e` (the wait loop relies on non-zero
+        # exits), so each create must check the status code explicitly.
+        post() {
+          label=$$1
+          url=$$2
+          body=$$3
+          code=$$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "$$url" \
+            -H "Content-Type: application/json" \
+            -d "$$body") || {
+              echo "ERROR: $$label -> curl could not reach $$url." >&2
+              exit 1
+            }
+          echo "  $$label -> HTTP $$code"
+          case "$$code" in
+            200|201|409) ;;
+            *)
+              echo "ERROR: $$label failed with HTTP $$code (expected 200 or 409)." >&2
+              exit 1
+              ;;
+          esac
+        }
+
+        echo "Waiting for Spanner emulator REST API at spanner:9020..."
+        i=0
+        until curl -s "$$REST" >/dev/null 2>&1; do
+          i=$$((i + 1))
+          if [ "$$i" -ge 60 ]; then
+            echo "ERROR: Spanner emulator did not become ready within 60s." >&2
+            exit 1
+          fi
+          sleep 1
+        done
+        echo "Emulator is ready."
+
+        echo "Creating instance '$$INSTANCE_ID' (409 if it already exists is fine)..."
+        post "instance create" \
+          "$$REST/v1/projects/$$PROJECT_ID/instances" \
+          "{\"instanceId\":\"$$INSTANCE_ID\",\"instance\":{\"config\":\"emulator-config\",\"displayName\":\"Brighter Test Instance\",\"nodeCount\":1}}"
+
+        echo "Creating database '$$DATABASE_ID' (409 if it already exists is fine)..."
+        post "database create" \
+          "$$REST/v1/projects/$$PROJECT_ID/instances/$$INSTANCE_ID/databases" \
+          "{\"createStatement\":\"CREATE DATABASE \`$$DATABASE_ID\`\"}"
+
+        echo "Spanner emulator setup complete."

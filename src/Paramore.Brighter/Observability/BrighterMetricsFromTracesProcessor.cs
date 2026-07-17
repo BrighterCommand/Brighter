@@ -70,6 +70,13 @@ public sealed class BrighterMetricsFromTracesProcessor(
                         case "process":
                             messagingMeter.RecordProcess(activity);
                             break;
+                        case "begin":
+                            // The message-pump "begin" span lives for the entire pump lifetime
+                            // (opened at pump start, closed at shutdown), so recording its duration
+                            // as a client operation pollutes the messaging.client.operation.duration
+                            // histogram with a multi-hour outlier on every shutdown. It is still
+                            // emitted as a trace span; it just must not feed the client metric (#4086).
+                            break;
                         default:
                             messagingMeter.RecordClientOperation(activity);
                             break;

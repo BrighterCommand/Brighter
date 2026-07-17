@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 
             // Arrange: enqueue the message to the BUS (not the channel's internal queue)
             // so that InMemoryMessageConsumer.Receive locks it in _lockedMessages.
-            // This is essential for testing ack/no-ack behavior via the ack timeout mechanism.
+            // DontAckAction is translated to Nack for this channel, which unlocks and re-enqueues immediately.
             var message = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(new MyCommand(), JsonSerialisationOptions.Options))
@@ -68,15 +68,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 
             // Wait for the handler to be invoked (first delivery)
             Assert.True(_commandProcessor.WaitForHandle(), "Handler was not invoked within timeout");
-            Assert.Equal(1, _commandProcessor.SendCount);
+            Assert.True(_commandProcessor.SendCount >= 1,
+                $"Expected at least 1 send, but got {_commandProcessor.SendCount}");
 
-            // Advance time past the ack timeout to trigger requeue of unacknowledged messages.
-            // The message was received via InMemoryMessageConsumer.Receive which locks it in _lockedMessages.
-            // If the message was NOT acknowledged (DontAckAction handler with continue),
-            // the ack timeout timer requeues it and the pump re-delivers it.
-            // If the message WAS acknowledged (generic Exception handler without continue),
-            // it was removed from _lockedMessages and no requeue occurs.
-            _timeProvider.Advance(TimeSpan.FromSeconds(2));
+            // For InMemoryMessageConsumer, DontAckAction is translated to Nack. Nack removes the lock and
+            // re-enqueues the message immediately; the fake ack timeout is not part of this redelivery path.
 
             // Wait for the handler to be invoked again (re-delivery of unacknowledged message)
             Assert.True(_commandProcessor.WaitForHandle(), "Re-delivery did not occur - message may have been acknowledged");

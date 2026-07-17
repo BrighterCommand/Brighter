@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(find:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Read, Write, Glob
+allowed-tools: Bash(cat:*), Bash(grep:*), Bash(test:*), Bash(find:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Read, Write, Glob, Agent, AskUserQuestion
 description: Create ralph-tasks.md for unattended TDD implementation
 ---
 
@@ -7,29 +7,69 @@ description: Create ralph-tasks.md for unattended TDD implementation
 
 Current spec directory: specs/
 
-**Purpose**: Generate `ralph-tasks.md` - a variant of `tasks.md` formatted for **unattended** TDD execution via the Ralph loop. Unlike `tasks.md`, ralph tasks have no approval gates and include all context needed for a fresh Claude session.
+**Purpose**: Generate `ralph-tasks.md` formatted for **unattended** TDD execution via the
+Ralph loop. ralph tasks have no approval gates and include all context needed for a fresh
+Claude session.
+
+**Standalone — derived directly from the approved design.** This command does **not** require
+`tasks.md` or `.tasks-approved`. It is a peer alternative to `/spec:tasks`: from an approved
+design (`.design-approved`) you run *either* `/spec:tasks` (attended path) *or*
+`/spec:ralph-tasks` (unattended path) — not both. The ralph task list is generated straight
+from `requirements.md` + the accepted ADRs. (If a `tasks.md` happens to exist from an earlier
+attended pass, ignore it — the source of truth is the approved design.)
+
+**Sub-agent**: Drafting the ralph task list is delegated to a sub-agent
+(`subagent_type: "Plan"`, **`model: "opus"`**). `Plan` has no `Write`/`Edit`/`NotebookEdit`,
+which makes it much harder to accidentally write the file (the prompt still forbids writing
+via `Bash`), while still allowing Read/Glob/Grep to verify test/impl paths. The sub-agent reads the
+requirements and ADRs and RETURNS the ralph task list as text. The main agent runs the
+validation checklist and writes the file. See `.claude/commands/spec/README.md` →
+"Sub-agents & model policy".
 
 ## Your Task
 
 ### Step 1: Gather Context
 
 1. Read `specs/.current-spec` to determine the active specification directory
-2. Verify `.tasks-approved` exists in that directory (ralph-tasks builds on approved task list)
-3. Read `specs/{current-spec}/tasks.md` to understand the approved tasks
-4. Read `specs/{current-spec}/requirements.md` for requirement context
-5. Read `specs/{current-spec}/.adr-list` to see all ADRs
-6. Read each ADR from `docs/adr/` to understand design decisions
+2. Verify `.design-approved` exists in that directory (ralph-tasks derives from the approved design)
+3. Read `specs/{current-spec}/requirements.md` for requirement context
+4. Read `specs/{current-spec}/.adr-list` to see all ADRs
+5. Read each ADR from `docs/adr/` to understand design decisions
+
+Do **not** read or depend on `tasks.md` — ralph-tasks is generated directly from the approved
+design, independent of the attended `/spec:tasks` path.
 
 ### Step 2: Verify Prerequisites
 
-- `.tasks-approved` MUST exist (ralph-tasks derives from the approved task list)
+- `.design-approved` MUST exist (ralph-tasks derives from the approved design)
 - All ADRs MUST have Status "Accepted"
 
-If prerequisites not met, inform user and exit.
+If prerequisites not met, inform user and exit. Do NOT launch the sub-agent. (Note: there is
+**no** `.tasks-approved` prerequisite — that marker belongs to the attended `/spec:tasks` path.)
 
-### Step 3: Generate ralph-tasks.md
+### Step 3: Launch Sub-Agent to Draft ralph-tasks.md
 
-Create `specs/{current-spec}/ralph-tasks.md` with the following structure:
+**Verify inputs with the user before launching (MAIN agent).** The `Plan` sub-agent is
+one-shot and has no `AskUserQuestion` — it cannot ask the user anything once launched. And
+because the ralph-tasks it produces are later executed **unattended** (no approval gates),
+any ambiguity must be resolved now. So before launching, review the requirements and ADRs for
+open decisions that affect unattended execution (task granularity, ordering, scope boundaries,
+anything that would need a human judgement call mid-loop) and resolve them with the user via
+`AskUserQuestion`. Then launch the sub-agent with the clarified inputs folded in. All user
+interaction stays in the main agent — never the sub-agent.
+
+Launch an `Agent` with `subagent_type: "Plan"` and **`model: "opus"`**. The
+prompt MUST include:
+
+1. The full text of `requirements.md` and each ADR (or their paths to read). The sub-agent
+   decomposes the approved design into atomic ralph tasks itself — there is no `tasks.md` to
+   reformat.
+2. The document structure, task format, key differences, and quality rules below.
+3. An explicit instruction: **RETURN the complete ralph-tasks.md content as markdown text.
+   Do NOT write any file.** The sub-agent may use Read/Glob/Grep to verify the test/impl
+   file paths and `RALPH-VERIFY` filters it references are realistic.
+
+#### Document Structure (include in the sub-agent prompt)
 
 ```markdown
 # Ralph Tasks: {spec-name}
@@ -48,7 +88,7 @@ Create `specs/{current-spec}/ralph-tasks.md` with the following structure:
 {task list}
 ```
 
-### Step 4: Format Each Task
+#### Task Format (include verbatim in the sub-agent prompt)
 
 **CRITICAL**: Each task MUST follow this exact format:
 
@@ -65,17 +105,22 @@ Create `specs/{current-spec}/ralph-tasks.md` with the following structure:
   - **References**: [ADR numbers, requirement sections, existing code files to read]
 ```
 
-### Key Differences from tasks.md
+#### How ralph-tasks differ from the attended `/spec:tasks` output (include in the sub-agent prompt)
 
-| Feature | tasks.md | ralph-tasks.md |
-|---------|----------|----------------|
+ralph-tasks are written for an **unattended** loop, so they differ from what `/spec:tasks`
+produces for the attended path:
+
+| Feature | `/spec:tasks` (attended) | ralph-tasks.md (unattended) |
+|---------|--------------------------|-----------------------------|
 | Approval gates | `⛔ STOP HERE` after each test | None |
 | `/test-first` directive | `USE COMMAND: /test-first ...` | None |
 | Verification command | None | `RALPH-VERIFY:` with exact dotnet test filter |
 | Context references | Assumes human context | `References:` section with files/ADRs to read |
 | Atomicity | Grouped by phase | Strictly one behavior per task |
 
-### Quality Rules (MANDATORY)
+Do **not** emit `⛔ STOP HERE` or `/test-first` directives — those belong to the attended path.
+
+#### Quality Rules (MANDATORY — include in the sub-agent prompt)
 
 Apply these rules to EVERY task:
 
@@ -85,32 +130,37 @@ Apply these rules to EVERY task:
 4. **Ordered by dependency**: If Task B depends on Task A's code, Task A comes first.
 5. **Self-contained**: The `References` section includes ALL files/ADRs a fresh Claude session needs to read before starting the task.
 
-### Step 5: Validate Task List
+Decompose the approved design into the smallest atomic tasks: each task maps to a single
+behavior derived from the requirements/ADRs, formatted for unattended execution. Do NOT emit
+the `⛔ STOP HERE` or `/test-first` directives used by the attended path.
 
-Before writing the file, verify:
+### Step 4: Validate the Returned Task List
+
+After the sub-agent returns, verify before writing:
 
 - [ ] Every task has a `RALPH-VERIFY` command with a valid test filter
 - [ ] Every task has a `References` section
 - [ ] No task combines multiple behaviors
 - [ ] Tasks are ordered so dependencies come first
-- [ ] No task references implementation details from tasks.md's `⛔ STOP HERE` or `/test-first` directives
+- [ ] No task carries the attended path's `⛔ STOP HERE` or `/test-first` directives
 - [ ] Each task's test name follows `When_[condition]_should_[expected_behavior]` convention
 
-### Step 6: Write the File
+If any check fails, ask the sub-agent to revise (or fix it yourself) before writing.
 
-Write the completed ralph-tasks.md to `specs/{current-spec}/ralph-tasks.md`.
+### Step 5: Write the File
+
+Write the validated ralph-tasks.md to `specs/{current-spec}/ralph-tasks.md`.
 
 Print summary:
 ```
 Ralph tasks generated: specs/{current-spec}/ralph-tasks.md
 Total tasks: N
-Ready for: ./scripts/ralph.sh
+Ready for: /spec:ralph-implement
 ```
 
 ## Important Notes
 
-- **NEVER modify tasks.md** - ralph-tasks.md is a separate file
-- Tasks should map 1:1 to behaviors from tasks.md, but reformatted for unattended execution
-- Large tasks from tasks.md should be SPLIT into smaller atomic tasks
+- **NEVER modify tasks.md** - ralph-tasks.md is a separate file (and ralph-tasks does not
+  read tasks.md either — it derives from the approved design)
 - The RALPH-VERIFY command must be copy-pasteable and work from the repo root
 - References should include specific file paths, not general descriptions

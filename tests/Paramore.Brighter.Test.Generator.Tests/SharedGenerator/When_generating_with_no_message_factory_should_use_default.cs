@@ -16,7 +16,7 @@ public class WhenGeneratingWithNoMessageFactoryShouldUseDefault : IDisposable
     {
         _testDirectory = Path.Combine(Path.GetTempPath(), $"SharedGeneratorTests_{Guid.NewGuid()}");
         Directory.CreateDirectory(_testDirectory);
-        
+
         var factory = LoggerFactory.Create(builder => builder.AddConsole());
         _logger = factory.CreateLogger<Generators.SharedGenerator>();
     }
@@ -28,7 +28,7 @@ public class WhenGeneratingWithNoMessageFactoryShouldUseDefault : IDisposable
         var configuration = new TestConfiguration
         {
             Namespace = "MyApp.Tests",
-            DestinationFolder = _testDirectory
+            DestinationFolder = _testDirectory,
         };
         var generator = new Generators.SharedGenerator(_logger);
 
@@ -36,9 +36,9 @@ public class WhenGeneratingWithNoMessageFactoryShouldUseDefault : IDisposable
         await generator.GenerateAsync(configuration);
 
         // Assert
-        Assert.Equal("DefaultMessageFactory", configuration.MessageFactory);
+        Assert.Equal("DefaultMessageBuilder", configuration.MessageBuilder);
     }
-    
+
     public void Dispose()
     {
         if (Directory.Exists(_testDirectory))

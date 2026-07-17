@@ -47,15 +47,15 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
 
  #if NETSTANDARD2_0
         var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType("application/json"),
-            source: publication.Source, type: publication.Type, correlationId: request.CorrelationId, replyTo: publication.ReplyTo ?? RoutingKey.Empty, dataSchema: publication.DataSchema, subject: publication.Subject,  partitionKey: Context.GetPartitionKey());
+            source: publication.Source, type: publication.Type, correlationId: request.CorrelationId, replyTo: publication.ReplyTo is not null ? new RoutingKey(publication.ReplyTo) : RoutingKey.Empty, dataSchema: publication.DataSchema, subject: publication.Subject,  partitionKey: Context.GetPartitionKey());
  #else       
         var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: messageType, contentType: new ContentType(MediaTypeNames.Application.Json),
-            source: publication.Source, type: publication.Type, correlationId: request.CorrelationId, replyTo: publication.ReplyTo ?? RoutingKey.Empty, dataSchema: publication.DataSchema, subject: publication.Subject,  partitionKey: Context.GetPartitionKey());
+            source: publication.Source, type: publication.Type, correlationId: request.CorrelationId, replyTo: publication.ReplyTo is not null ? new RoutingKey(publication.ReplyTo) : RoutingKey.Empty, dataSchema: publication.DataSchema, subject: publication.Subject,  partitionKey: Context.GetPartitionKey());
 #endif
         var defaultHeaders = publication.DefaultHeaders ?? new Dictionary<string, object>();
         header.Bag = defaultHeaders.Merge(Context.GetHeaders());
 
-        var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
+        var body = new MessageBody(JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);
         return message;
     }
@@ -63,7 +63,7 @@ public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMess
     /// <inheritdoc />
     public TRequest MapToRequest(Message message)
     {
-        var request = JsonSerializer.Deserialize<TRequest>(message.Body.Value, JsonSerialisationOptions.Options);
+        var request = JsonSerializer.Deserialize<TRequest>(message.Body.Memory.Span, JsonSerialisationOptions.Options);
 
         if (request is null)
             throw new ArgumentException($"Unable to deseralise message body for {message.Header.Topic}");

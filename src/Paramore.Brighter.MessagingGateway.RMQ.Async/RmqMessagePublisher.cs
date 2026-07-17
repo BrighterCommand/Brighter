@@ -106,17 +106,17 @@ internal sealed partial class RmqMessagePublisher
 
         await _channel.BasicPublishAsync(
             _connection.Exchange.Name,
-            message.Header.Topic,
+            message.Header.Topic.Value,
             false,
             CreateBasicProperties(
-                messageId,
+                messageId.Value,
                 message.Header.TimeStamp,
                 message.Body.ContentType is not null ? message.Body.ContentType.ToString() : MediaTypeNames.Text.Plain,
                 message.Header.ContentType is not null ? message.Header.ContentType.ToString() : MediaTypeNames.Text.Plain,
-                message.Header.ReplyTo ?? string.Empty,
+                message.Header.ReplyTo?.Value ?? string.Empty,
                 message.Persist,
                 headers),
-            message.Body.Bytes, cancellationToken);
+            message.Body.Memory, cancellationToken);
     }
 
     /// <summary>
@@ -131,7 +131,7 @@ internal sealed partial class RmqMessagePublisher
         var messageId = Uuid.NewAsString();
         const string deliveryTag = "1";
 
-        Log.RegeneratingMessage(s_logger, message.Id, deliveryTag, messageId, 1);
+        Log.RegeneratingMessage(s_logger, message.Id.Value, deliveryTag, messageId, 1);
 
         Dictionary<string, object?> headers = AddCloudEventsHeaders(message);
 
@@ -151,10 +151,10 @@ internal sealed partial class RmqMessagePublisher
                 message.Header.TimeStamp,
                 message.Body.ContentType is not null ? message.Body.ContentType.ToString() : MediaTypeNames.Text.Plain,
                 message.Header.ContentType is not null ? message.Header.ContentType.ToString() : MediaTypeNames.Text.Plain,
-                message.Header.ReplyTo ?? string.Empty,
+                message.Header.ReplyTo?.Value ?? string.Empty,
                 message.Persist,
                 headers),
-            message.Body.Bytes, cancellationToken);
+            message.Body.Memory, cancellationToken);
     }
 
     private static Dictionary<string, object?> AddCloudEventsHeaders(Message message)

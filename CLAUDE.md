@@ -24,6 +24,18 @@ When working on implementation tasks in `specs/*/tasks.md`:
 
 **If a task says `/test-first when ...`** - YOU MUST USE THAT COMMAND. Do not write the test file manually.
 
+## Spec Workflow
+
+Follow the structured specification workflow: Requirements → ADR Design → Adversarial Review (multiple rounds) → Task Breakdown → Implementation. Never skip review rounds or assume approval - wait for explicit user approval before proceeding to the next phase.
+
+## Change Scope
+
+Do NOT change defaults or make changes beyond what was explicitly requested. When fixing or modifying code, restrict changes to exactly what the user asked for — no additional "improvements" or default value changes.
+
+## Adversarial Reviews
+
+When conducting adversarial reviews, apply strict judgment criteria. A clear violation should result in FAIL, not NEEDS_ATTENTION. Err on the side of strictness rather than leniency when evaluating against guardrails and principles.
+
 ## Claude Code Skills (Recommended)
 
 Claude Code skills automate common workflows and enforce mandatory engineering practices. **Use these skills proactively** rather than manually following documented procedures:
@@ -36,6 +48,7 @@ Claude Code skills automate common workflows and enforce mandatory engineering p
 - `/test-first <behavior>` - TDD workflow with mandatory approval before implementation ([docs](.claude/commands/tdd/README.md))
 - `/tidy-first <change>` - Separate structural (refactoring) from behavioral (feature) changes ([docs](.claude/commands/refactor/README.md))
 - `/adr <title>` - Create Architecture Decision Records ([docs](.claude/commands/adr/README.md))
+- `/bugfix:*` - Lightweight diagnosis-first bug workflow: Triage → Confirm (✋ gate) → Test-first → Fix → Verify. Use for a bug whose root cause is not yet proven, or that arrived with a suggested fix you should verify first ([docs](.claude/commands/bugfix/README.md))
 
 ### Specification Workflow Skills
 
@@ -46,6 +59,32 @@ Claude Code skills automate common workflows and enforce mandatory engineering p
 - Use `/tidy-first` when code needs refactoring before/during feature work
 - Use `/adr` when documenting architectural decisions
 - Use `/spec:*` commands for full feature development from requirements to implementation
+
+## Context Management
+
+When asked to remember learnings or update guidance:
+- **Prefer project-owned files** (`.agent_instructions/`, `CLAUDE.md`, `PROMPT.md`) over ephemeral Claude memory (`~/.claude/projects/.../memory/`). Project-owned files are shared, version-controlled, and authoritative.
+- Update `.agent_instructions/code_style.md` for coding conventions, `.agent_instructions/testing.md` for test practices, etc.
+- Use `PROMPT.md` (if it exists) for temporary state that should persist across conversations.
+- Only use Claude memory (`MEMORY.md`) for user-specific preferences that don't belong in the project, or for tracking conversation-spanning work state.
+
+## Git Gotcha — `*.sqlite` ignore pattern matches `Paramore.Brighter.*.Sqlite` directories on macOS
+
+`.gitignore` has `*.sqlite` for SQLite database files. On macOS (case-insensitive filesystem with `core.ignoreCase` enabled), this pattern *also* matches any directory whose name ends in `.Sqlite` — including:
+
+- `src/Paramore.Brighter.BoxProvisioning.Sqlite/`
+- `src/Paramore.Brighter.Locking.Sqlite/`
+- `src/Paramore.Brighter.Inbox.Sqlite/`
+- `src/Paramore.Brighter.Outbox.Sqlite/` *(and similar)*
+
+Test directories like `tests/Paramore.Brighter.Sqlite.Tests/` end in `.Tests` and are **not** affected.
+
+**Practical impact**:
+- Modifying *already-tracked* files in those directories — stages normally with `git add`.
+- Adding *new* files in those directories — `git add` reports the parent path as ignored and exits 1. Use `git add -f <path>` for new files in those directories.
+- The `git add` warning aggregates to the parent directory ("paths are ignored by one of your .gitignore files: src/Paramore.Brighter.BoxProvisioning.Sqlite"). If commits fail with this message after a multi-file `git add`, check whether the failing paths are *new* files in a `.Sqlite` directory.
+
+Don't change `.gitignore` to fix this — the pattern is correct for its purpose; the case-insensitive FS quirk is the issue.
 
 ## Detailed Instructions
 For comprehensive guidance on working with this codebase, Claude should read the following files as needed:

@@ -29,8 +29,28 @@ namespace Paramore.Brighter.Observability;
 /// </summary>
 public static class BrighterSemanticConventions
 {
-    public const string ArchiveAge = "paramore.brighter.archive_age_in_milliseconds"; 
+    public const string ArchiveAge = "paramore.brighter.archive_age_in_milliseconds";
     public const string ArchiveMessages = "paramore.brighter.archive_messages";
+    // BoxProvisioning migration span / event conventions. The span wraps a full
+    // <c>IAmABoxMigrationRunner.MigrateAsync</c> call; <c>BoxMigrationPath</c> records
+    // which of fresh/bootstrap/normal was taken after the under-lock re-detection; the
+    // event names are emitted as child <see cref="System.Diagnostics.ActivityEvent"/>s
+    // on the migration span so an operator can trace the path without correlating logs.
+    public const string BoxMigration = "paramore.brighter.box_migration";
+    public const string BoxMigrationPath = "paramore.brighter.box_migration.path";
+    public const string BoxMigrationFromVersion = "paramore.brighter.box_migration.from_version";
+    public const string BoxMigrationToVersion = "paramore.brighter.box_migration.to_version";
+    public const string BoxMigrationEventEnsureHistory = "ensure_history_table";
+    public const string BoxMigrationEventFreshInstall = "fresh_install";
+    public const string BoxMigrationEventBootstrap = "bootstrap";
+    public const string BoxMigrationEventNormalUpdate = "normal_update";
+    public const string BoxMigrationEventHistoryTableRaceSwallowed = "history_table_race_swallowed";
+    public const string BoxMigrationEventLegacyHistorySeeded = "legacy_history_seeded";
+    // Attribute on the legacy_history_seeded event carrying the number of rows the D5 seed copied
+    // from the legacy default-schema history to the per-schema history on a Global→PerSchema flip.
+    // Operators querying a trace store can filter / aggregate by this value to size the flip impact.
+    public const string BoxMigrationSeedRowCount = "brighter.box.migration.seed.rows";
+    public const string BoxType = "paramore.brighter.box.type";
     public const string CeSource = "cloudevents.event_source";
     public const string CeMessageId = "cloudevents.event_id";
     public const string CeVersion = "cloudevents.event_spec_version";

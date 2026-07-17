@@ -95,14 +95,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 message.Header.Topic,
                 false,
                 CreateBasicProperties(
-                    message.Id,
+                    message.Id.Value,
                     message.Header.TimeStamp,
                     bodyContentType.ToString(),
                     contentType.ToString(),
-                    message.Header.ReplyTo ?? string.Empty,
+                    message.Header.ReplyTo?.Value ?? string.Empty,
                     message.Persist,
                     headers),
-                message.Body.Bytes);
+                message.Body.Memory);
         }
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             var messageId = Uuid.NewAsString();
             const string deliveryTag = "1";
 
-            Log.RequeueMessageInformation(s_logger, message.Id, deliveryTag, messageId, 1);
+            Log.RequeueMessageInformation(s_logger, message.Id.Value, deliveryTag, messageId, 1);
 
             Dictionary<string, object> headers = AddCloudEventHeaders(message);
 
@@ -139,10 +139,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     message.Header.TimeStamp,
                     bodyContentType.ToString(),
                     contentType.ToString(),
-                    message.Header.ReplyTo ?? string.Empty,
+                    message.Header.ReplyTo?.Value ?? string.Empty,
                     message.Persist,
                     headers),
-                message.Body.Bytes);
+                message.Body.Memory);
         }
 
         private static Dictionary<string, object> AddCloudEventHeaders(Message message)

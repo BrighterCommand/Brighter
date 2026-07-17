@@ -250,15 +250,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     
                     _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
-                .SetErrorHandler((_, error) =>
-                {
-                    _hasFatalError = error.IsFatal;
-                    
-                    if (_hasFatalError ) 
-                        Log.FatalError(s_logger, error.Code, error.Reason, true);
-                    else
-                        Log.NonFatalError(s_logger, error.Code, error.Reason, false);
-                })
+                .SetErrorHandler((_, error) => HandleError(error))
                 .Build();
 
             Log.SubscribingToTopic(s_logger, Topic);
@@ -298,16 +290,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
             {
-                Log.CannotAcknowledgeMessage(s_logger, message.Id);
+                Log.CannotAcknowledgeMessage(s_logger, message.Id.Value);
                 return;
             }
-            
+
             try
             {
                 var topicPartitionOffset = bagData as TopicPartitionOffset;
                 if (topicPartitionOffset == null)
                 {
-                    Log.CannotAcknowledgeMessage(s_logger, message.Id);
+                    Log.CannotAcknowledgeMessage(s_logger, message.Id.Value);
                     return;
                 }
 
@@ -358,7 +350,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
             {
-                Log.CannotNackMessage(s_logger, message.Id);
+                Log.CannotNackMessage(s_logger, message.Id.Value);
                 return;
             }
 
@@ -367,7 +359,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 var topicPartitionOffset = bagData as TopicPartitionOffset;
                 if (topicPartitionOffset == null)
                 {
-                    Log.CannotNackMessageTypeMismatch(s_logger, message.Id, bagData?.GetType().FullName ?? "null");
+                    Log.CannotNackMessageTypeMismatch(s_logger, message.Id.Value, bagData?.GetType().FullName ?? "null");
                     return;
                 }
 
@@ -597,7 +589,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
               {
                   if (reason != null)
                   {
-                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, reason.RejectionReason.ToString());
                   }
                   Acknowledge(message);
                   return true;
@@ -619,7 +611,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   {
                       message.Header.Topic = routingKey!;
                       if (isFallingBackToDlq)
-                          Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
+                          Log.FallingBackToDLQ(s_logger, message.Header.MessageId.Value);
 
                       // Get the appropriate producer based on routing
                       producer = GetRejectionProducer(routingKey);
@@ -628,16 +620,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   if (producer != null)
                   {
                       producer.Send(message);
-                      Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                      Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                   }
                   else
                   {
-                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                   }
               }
               catch (Exception ex)
               {
-                  Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
+                  Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId.Value, rejectionReason.ToString());
                   Acknowledge(message);
                   return true;
               }
@@ -663,7 +655,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 if (reason != null)
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, reason.RejectionReason.ToString());
                 }
                 await AcknowledgeAsync(message, cancellationToken);
                 return true;
@@ -685,7 +677,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
+                        Log.FallingBackToDLQ(s_logger, message.Header.MessageId.Value);
 
                     // Get the appropriate producer based on routing
                     producer = GetRejectionProducer(routingKey);
@@ -694,16 +686,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 if (producer != null)
                 {
                     await producer.SendAsync(message, cancellationToken);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
             {
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId.Value, rejectionReason.ToString());
                 await AcknowledgeAsync(message, cancellationToken);
                 return true;
             }
@@ -777,6 +769,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return true;
         }
         
+        /// <summary>
+        /// Handles an error raised by the underlying Kafka consumer. Extracted from the
+        /// <c>SetErrorHandler</c> callback so the behaviour is reachable from tests. Not intended to be
+        /// called directly outside of the error-callback wiring.
+        /// </summary>
+        public void HandleError(Error error)
+        {
+            // Latch: once librdkafka reports a fatal error the consumer is unrecoverable. Errors arrive
+            // in bursts, so we must never clear the latch when a later non-fatal error follows a fatal one.
+            if (error.IsFatal)
+                _hasFatalError = true;
+
+            // Log against the error we actually received, independent of the latch, so a non-fatal error
+            // that arrives after a fatal one is still logged as non-fatal.
+            if (error.IsFatal)
+                Log.FatalError(s_logger, error.Code, error.Reason, true);
+            else
+                Log.NonFatalError(s_logger, error.Code, error.Reason, false);
+        }
+
         private void CheckHasPartitions()
         {
             if (_partitions.Count <= 0)

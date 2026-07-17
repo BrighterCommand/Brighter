@@ -14,6 +14,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         byte[]? MessageBodyValue { get; }
 
         /// <summary>
+        /// Message Body as <see cref="ReadOnlyMemory{T}"/> of <see cref="byte"/> for zero-copy access.
+        /// </summary>
+        ReadOnlyMemory<byte> MessageBodyMemory { get; }
+
+        /// <summary>
         /// Application Properties
         /// </summary>
         IReadOnlyDictionary<string, object> ApplicationProperties { get; }
@@ -22,6 +27,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// The Lock Token
         /// </summary>
         string LockToken { get; }
+
+        /// <summary>
+        /// The broker-assigned sequence number. Uniquely identifies a message within a Service Bus entity.
+        /// </summary>
+        long SequenceNumber { get; }
 
         /// <summary>
         /// The message Id.
