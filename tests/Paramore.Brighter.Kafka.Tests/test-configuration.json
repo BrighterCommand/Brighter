@@ -13,7 +13,8 @@
       "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": false,
       "HasSupportToRequeue": false,
-      "ReceiveMessageTimeoutInMilliseconds": 15000
+      "ReceiveMessageTimeoutInMilliseconds": 15000,
+      "HasSupportToValidateInfrastructure": false
     },
     "Consumer": {
       "Publication": "Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication",
@@ -41,7 +42,8 @@
       "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": false,
       "HasSupportToRequeue": false,
-      "ReceiveMessageTimeoutInMilliseconds": 15000
+      "ReceiveMessageTimeoutInMilliseconds": 15000,
+      "HasSupportToValidateInfrastructure": false
     }
   }
 }
