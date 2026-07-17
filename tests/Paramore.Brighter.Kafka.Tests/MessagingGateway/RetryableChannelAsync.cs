@@ -26,14 +26,13 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Confluent.Kafka;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 /// <summary>
 /// Wraps an <see cref="IAmAChannelAsync"/> and retries <see cref="ReceiveAsync"/> calls
-/// when the broker returns <see cref="MessageType.MT_NONE"/> or the topic is not yet
-/// available (transient "Unknown topic or partition" on CI).
+/// when the broker returns <see cref="MessageType.MT_NONE"/>.
+/// Kafka on CI can be slow to deliver messages, so this avoids flaky test failures.
 /// </summary>
 public class RetryableChannelAsync(IAmAChannelAsync inner, int maxRetries = 5) : IAmAChannelAsync
 {
@@ -51,24 +50,13 @@ public class RetryableChannelAsync(IAmAChannelAsync inner, int maxRetries = 5) :
     {
         for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            try
-            {
-                var message = await inner.ReceiveAsync(timeout, cancellationToken);
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                    return message;
-            }
-            catch (ChannelFailureException cfe) when (IsTopicNotReady(cfe))
-            {
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-            }
+            var message = await inner.ReceiveAsync(timeout, cancellationToken);
+            if (message.Header.MessageType != MessageType.MT_NONE)
+                return message;
         }
 
         return await inner.ReceiveAsync(timeout, cancellationToken);
     }
-
-    private static bool IsTopicNotReady(ChannelFailureException cfe) =>
-        cfe.InnerException is ConsumeException ce &&
-        ce.Error.Code == ErrorCode.UnknownTopicOrPart;
 
     public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null,
         CancellationToken cancellationToken = default) =>

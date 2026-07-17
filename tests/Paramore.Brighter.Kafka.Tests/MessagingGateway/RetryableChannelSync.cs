@@ -24,15 +24,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading;
-using Confluent.Kafka;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 /// <summary>
 /// Wraps an <see cref="IAmAChannelSync"/> and retries <see cref="Receive"/> calls
-/// when the broker returns <see cref="MessageType.MT_NONE"/> or the topic is not yet
-/// available (transient "Unknown topic or partition" on CI).
+/// when the broker returns <see cref="MessageType.MT_NONE"/>.
+/// Kafka on CI can be slow to deliver messages, so this avoids flaky test failures.
 /// </summary>
 public class RetryableChannelSync(IAmAChannelSync inner, int maxRetries = 5) : IAmAChannelSync
 {
@@ -48,24 +46,13 @@ public class RetryableChannelSync(IAmAChannelSync inner, int maxRetries = 5) : I
     {
         for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            try
-            {
-                var message = inner.Receive(timeout);
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                    return message;
-            }
-            catch (ChannelFailureException cfe) when (IsTopicNotReady(cfe))
-            {
-                Thread.Sleep(TimeSpan.FromSeconds(1));
-            }
+            var message = inner.Receive(timeout);
+            if (message.Header.MessageType != MessageType.MT_NONE)
+                return message;
         }
 
         return inner.Receive(timeout);
     }
-
-    private static bool IsTopicNotReady(ChannelFailureException cfe) =>
-        cfe.InnerException is ConsumeException ce &&
-        ce.Error.Code == ErrorCode.UnknownTopicOrPart;
 
     public bool Reject(Message message, MessageRejectionReason? reason = null) =>
         inner.Reject(message, reason);
