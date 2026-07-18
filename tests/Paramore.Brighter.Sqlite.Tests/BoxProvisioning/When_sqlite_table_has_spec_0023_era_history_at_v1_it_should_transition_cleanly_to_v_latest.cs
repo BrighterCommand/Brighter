@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
+using TUnit.Assertions.Enums;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -66,7 +67,7 @@ public class Spec0023EraHistoryTransitionTests
         //ApplyOrSkipAsync evaluates IdempotencyCheckSql (pragma_table_info probe) for each
         //V_k — returns >0 because the V_latest builder shape already has the column — so
         //UpScript is skipped, history row inserted only.
-        await Assert.That(await GetTableColumns()).IsEqualTo(columnsBefore);
+        await Assert.That(await GetTableColumns()).IsEquivalentTo(columnsBefore, CollectionOrdering.Matching);
 
         //Assert — V1 row preserved with its original spec-0023-era description (the runner's
         //normal-path `migration.Version <= maxVersion` filter sees V1 <= maxVersion=1 and skips

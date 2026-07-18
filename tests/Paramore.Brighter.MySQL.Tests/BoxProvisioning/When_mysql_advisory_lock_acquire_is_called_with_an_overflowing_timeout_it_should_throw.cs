@@ -113,7 +113,6 @@ public class MySqlAdvisoryLockTimeoutValidationTests
                 connection, lockResource, boundaryTimeout, default));
 
         //Assert — boundary must not be rejected by the validation guard.
-        await Assert.That(ex).IsNotTypeOf<ArgumentOutOfRangeException>();
         await Assert.That(ex).IsNull();
 
         //Cleanup — session-scoped GET_LOCK is released by the `await using` connection dispose.

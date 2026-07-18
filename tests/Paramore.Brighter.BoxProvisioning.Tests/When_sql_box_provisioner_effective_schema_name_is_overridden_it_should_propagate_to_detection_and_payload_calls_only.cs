@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
+using TUnit.Assertions.Enums;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -64,12 +65,12 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
 
         //Assert — every detection/validator call observes the configured "dbo"; both runner calls
         //also observe "dbo" (the runner call propagates `_configuration.SchemaName` directly).
-        await Assert.That(detection.DoesTableExistSchemas).IsEqualTo(new string?[] { "dbo", "dbo" });
-        await Assert.That(detection.DoesHistoryExistSchemas).IsEqualTo(new string?[] { "dbo", "dbo" });
-        await Assert.That(detection.DetectCurrentVersionSchemas).IsEqualTo(new string?[] { "dbo" });
-        await Assert.That(detection.GetMaxVersionSchemas).IsEqualTo(new string?[] { "dbo" });
-        await Assert.That(payloadValidator.ValidateSchemas).IsEqualTo(new string?[] { "dbo", "dbo" });
-        await Assert.That(migrationRunner.MigrateSchemas).IsEqualTo(new string?[] { "dbo", "dbo" });
+        await Assert.That(detection.DoesTableExistSchemas).IsEquivalentTo(new string?[] { "dbo", "dbo" }, CollectionOrdering.Matching);
+        await Assert.That(detection.DoesHistoryExistSchemas).IsEquivalentTo(new string?[] { "dbo", "dbo" }, CollectionOrdering.Matching);
+        await Assert.That(detection.DetectCurrentVersionSchemas).IsEquivalentTo(new string?[] { "dbo" }, CollectionOrdering.Matching);
+        await Assert.That(detection.GetMaxVersionSchemas).IsEquivalentTo(new string?[] { "dbo" }, CollectionOrdering.Matching);
+        await Assert.That(payloadValidator.ValidateSchemas).IsEquivalentTo(new string?[] { "dbo", "dbo" }, CollectionOrdering.Matching);
+        await Assert.That(migrationRunner.MigrateSchemas).IsEquivalentTo(new string?[] { "dbo", "dbo" }, CollectionOrdering.Matching);
     }
 
     [Test]
@@ -93,12 +94,12 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         //Assert — every detection/validator call observes null (the override); the runner call
         //still observes the configured "dbo" — only detection/validation routes through
         //EffectiveSchemaName, per ADR §B.5 line 611-612.
-        await Assert.That(detection.DoesTableExistSchemas).IsEqualTo(new string?[] { null, null });
-        await Assert.That(detection.DoesHistoryExistSchemas).IsEqualTo(new string?[] { null, null });
-        await Assert.That(detection.DetectCurrentVersionSchemas).IsEqualTo(new string?[] { null });
-        await Assert.That(detection.GetMaxVersionSchemas).IsEqualTo(new string?[] { null });
-        await Assert.That(payloadValidator.ValidateSchemas).IsEqualTo(new string?[] { null, null });
-        await Assert.That(migrationRunner.MigrateSchemas).IsEqualTo(new string?[] { "dbo", "dbo" });
+        await Assert.That(detection.DoesTableExistSchemas).IsEquivalentTo(new string?[] { null, null }, CollectionOrdering.Matching);
+        await Assert.That(detection.DoesHistoryExistSchemas).IsEquivalentTo(new string?[] { null, null }, CollectionOrdering.Matching);
+        await Assert.That(detection.DetectCurrentVersionSchemas).IsEquivalentTo(new string?[] { null }, CollectionOrdering.Matching);
+        await Assert.That(detection.GetMaxVersionSchemas).IsEquivalentTo(new string?[] { null }, CollectionOrdering.Matching);
+        await Assert.That(payloadValidator.ValidateSchemas).IsEquivalentTo(new string?[] { null, null }, CollectionOrdering.Matching);
+        await Assert.That(migrationRunner.MigrateSchemas).IsEquivalentTo(new string?[] { "dbo", "dbo" }, CollectionOrdering.Matching);
     }
 
     /// <summary>

@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Outbox.PostgreSql;
+using TUnit.Assertions.Enums;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -60,7 +61,7 @@ public class PostgreSqlSpec0023EraHistoryTransitionTests
         await provisioner.ProvisionAsync();
 
         //Assert — table shape unchanged (idempotent ADD COLUMN IF NOT EXISTS were no-ops).
-        await Assert.That(await GetTableColumns()).IsEqualTo(columnsBefore);
+        await Assert.That(await GetTableColumns()).IsEquivalentTo(columnsBefore, CollectionOrdering.Matching);
 
         //Assert — V1 row preserved with original spec-0023-era description; V2..V7 inserted normally.
         var rowsByVersion = await GetHistoryRowsByVersion();

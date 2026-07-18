@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
+using TUnit.Assertions.Enums;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -60,7 +61,7 @@ public class MsSqlSpec0023EraHistoryTransitionTests
         await provisioner.ProvisionAsync();
 
         //Assert — table shape unchanged (idempotent IF COL_LENGTH ALTERs were no-ops).
-        await Assert.That(GetTableColumns()).IsEqualTo(columnsBefore);
+        await Assert.That(GetTableColumns()).IsEquivalentTo(columnsBefore, CollectionOrdering.Matching);
 
         //Assert — V1 row preserved with original spec-0023-era description; V2..V7 inserted normally.
         var rowsByVersion = GetHistoryRowsByVersion();

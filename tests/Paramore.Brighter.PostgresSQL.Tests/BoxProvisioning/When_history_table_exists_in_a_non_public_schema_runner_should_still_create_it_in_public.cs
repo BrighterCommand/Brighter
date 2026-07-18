@@ -29,20 +29,26 @@ using Paramore.Brighter.Outbox.PostgreSql;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-// REQUIRES SEQUENTIAL EXECUTION (see PROMPT.md / branch convention) — temporarily drops the
-// shared "public"."__BrighterMigrationHistory" table to demonstrate the schema-qualification
-// bug. DisposeAsync drops the colliding artefacts; the runner naturally recreates the public
-// history table so the rest of the BoxProvisioning suite is left in a consistent state.
+// This scenario owns an isolated database because it must control whether the public history
+// table exists without affecting parallel provisioning tests.
 public class PostgreSqlHistoryTableNonPublicSchemaTests
 {
     private const string CollidingSchema = "stage_for_history_clash_test";
-    private readonly string _setupConnectionString = PostgreSqlSettings.TestsBrighterConnectionString;
+    private readonly string _databaseName = $"brighter_history_clash_{Guid.NewGuid():N}";
+    private readonly string _setupConnectionString;
     private readonly string _runnerConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly PostgreSqlOutboxProvisioner _provisioner;
 
     public PostgreSqlHistoryTableNonPublicSchemaTests()
     {
+        var connectionStringBuilder = new NpgsqlConnectionStringBuilder(PostgreSqlSettings.TestsMasterConnectionString)
+        {
+            Database = _databaseName,
+            Pooling = false
+        };
+        _setupConnectionString = connectionStringBuilder.ConnectionString;
+
         // Force the runner's connection to put the colliding schema first on search_path.
         // This is the trigger condition for the bug: an unqualified CREATE TABLE / INSERT /
         // SELECT against "__BrighterMigrationHistory" resolves to whichever schema appears
@@ -66,9 +72,7 @@ public class PostgreSqlHistoryTableNonPublicSchemaTests
         //search_path the unqualified CREATE TABLE IF NOT EXISTS resolves to that schema, sees
         //the existing relation, and skips the create — leaving subsequent unqualified
         //INSERT/SELECT statements to land in the wrong schema (or fail outright).
-        new PostgresSqlTestHelper().SetupDatabase();
-        await DropPublicHistoryTable();
-        await DropCollidingArtefacts();
+        await CreateIsolatedDatabase();
         await CreateCollidingSchemaAndHistoryTable();
 
         //Act
@@ -84,15 +88,10 @@ public class PostgreSqlHistoryTableNonPublicSchemaTests
         await Assert.That(await GetCollidingHistoryRowCount()).IsEqualTo(0L);
     }
 
-    private Task DropPublicHistoryTable() =>
-        ExecuteNonQuery(_setupConnectionString,
-            @"DROP TABLE IF EXISTS ""public"".""__BrighterMigrationHistory""");
-
-    private async Task DropCollidingArtefacts()
-    {
-        await ExecuteNonQuery(_setupConnectionString,
-            $@"DROP SCHEMA IF EXISTS ""{CollidingSchema}"" CASCADE");
-    }
+    private Task CreateIsolatedDatabase() =>
+        ExecuteNonQuery(
+            PostgreSqlSettings.TestsMasterConnectionString,
+            $@"CREATE DATABASE ""{_databaseName}""");
 
     private async Task CreateCollidingSchemaAndHistoryTable()
     {
@@ -152,8 +151,9 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
     {
         try
         {
-            await ExecuteNonQuery(_setupConnectionString, $@"DROP TABLE IF EXISTS ""public"".""{_tableName}""");
-            await DropCollidingArtefacts();
+            await ExecuteNonQuery(
+                PostgreSqlSettings.TestsMasterConnectionString,
+                $@"DROP DATABASE IF EXISTS ""{_databaseName}"" WITH (FORCE)");
         }
         catch
         {

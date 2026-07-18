@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.Outbox.MySql;
+using TUnit.Assertions.Enums;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -60,7 +61,7 @@ public class MySqlSpec0023EraHistoryTransitionTests
         await provisioner.ProvisionAsync();
 
         //Assert — table shape unchanged (idempotent information_schema-checked ALTERs were no-ops).
-        await Assert.That(await GetTableColumns()).IsEqualTo(columnsBefore);
+        await Assert.That(await GetTableColumns()).IsEquivalentTo(columnsBefore, CollectionOrdering.Matching);
 
         //Assert — V1 row preserved with original spec-0023-era description; V2..V7 inserted normally.
         var rowsByVersion = await GetHistoryRowsByVersion();

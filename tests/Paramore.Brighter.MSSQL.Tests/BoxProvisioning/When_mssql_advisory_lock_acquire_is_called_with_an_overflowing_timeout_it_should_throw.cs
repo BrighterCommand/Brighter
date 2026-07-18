@@ -104,7 +104,6 @@ public class MsSqlAdvisoryLockTimeoutValidationTests
                 connection, transaction, lockResource, boundaryTimeout, default));
 
         //Assert — boundary must not be rejected by the validation guard.
-        await Assert.That(ex).IsNotTypeOf<ArgumentOutOfRangeException>();
         await Assert.That(ex).IsNull();
 
         //Cleanup — release the transaction-scoped lock by rolling back.
