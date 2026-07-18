@@ -31,10 +31,12 @@ as *native-capability* switches. This is wrong on two counts:
 2. **The flags are mis-declared against the code.** Verified in the per-transport
    `test-configuration.json` files: PostgreSQL declares `HasSupportToDeadLetterQueue: false`
    and `HasSupportToDelayedMessages: false` despite having a native delay column and
-   native/provided DLQ; AWS SQS declares `HasSupportToDelayedMessages: false` despite native
-   `DelaySeconds` (≤15 min); RocketMQ is the only configuration declaring
-   `HasSupportToDelayedMessages: true`, so the delayed-delivery test currently runs for
-   exactly one transport.
+   native/provided DLQ; three of AWS's four gateway configurations (`SnsStandard`, `SnsFifo`,
+   `SqsFifo`, in both the V3 and V4 test projects) declare `HasSupportToDelayedMessages: false`
+   despite native `DelaySeconds` (≤15 min); and Kafka declares **all three** gates `false` even
+   though its hand-written suite is the canonical grounding for these behaviours. Only AWS
+   `SqsStandard` and RocketMQ declare `HasSupportToDelayedMessages: true`, so the delayed-delivery
+   test currently runs for just three of the ~20 gateway configurations.
 
 The root cause is timing: the Reject→DLQ / invalid-channel / requeue-via-producer /
 requeue-via-scheduler features post-date the generator, so contributors hand-wrote them per
@@ -44,7 +46,7 @@ partial coverage — and the one generated `with_delay` template is broken (see 
 
 ## Proposed Solution
 
-Make the ten canonical Reject/DLQ/requeue-with-delay/delayed-send/Nack behaviours a
+Make the canonical Reject/DLQ/requeue-with-delay/delayed-send/Nack behaviours a
 **universal, ungated** part of the generated messaging-gateway suite, produced identically for
 every transport in both sync (Reactor) and async (Proactor) variants. Retire the
 `HasSupportToDelayedMessages`, `HasSupportToDeadLetterQueue`, and `HasSupportToRequeue` opt-in
@@ -95,7 +97,8 @@ Terminology (used consistently below):
   unspecified reason → DLQ.
 - **Ungated** — the template is generated for every transport regardless of any capability
   flag.
-- **Canonical behaviours** — the ten behaviours in FR-2 … FR-9, FR-16 (Nack) and FR-17
+- **Canonical behaviours** — the behaviours in FR-2, FR-4 … FR-9, FR-15, FR-16 (Nack) and FR-17
+  (FR-3 having been folded into FR-2 by ADR 0066)
   (reject with `None`/unspecified reason → DLQ).
 - **Rejection-metadata key names** — the per-transport `Header.Bag` key strings under which the
   rejection metadata is stamped. The *semantic set* is universal (see FR-8); only the key
@@ -113,15 +116,15 @@ MUST be extended so a test can:
      neither (to drive FR-6 and FR-7);
   3. read a message from the invalid channel (an analogue of the existing
      `GetMessageFromDeadLetterQueue`);
-  4. obtain a **channel whose backing consumer carries a scheduler** — set either to an in-memory
-     scheduler (`src/Paramore.Brighter/InMemoryScheduler.cs`) or, where the test needs to
-     interrogate the delegation, to a recording spy implementing `IAmAMessageScheduler` — so the
-     scheduler-fallback test (FR-3) exercises the gateway's use of the scheduler without driving an
-     external scheduler transport. *(Originally worded as "a producer whose `Scheduler` property is
-     set"; ADR 0066 establishes that the runtime seam is the consumer that backs the channel — the
-     consumer lazily creates the requeue-producer and sets its `Scheduler` — so a standalone
-     producer is not on the `channel.Requeue` path the test drives. Wording amended to match the
-     design; the intent is unchanged.)*
+  4. **[WITHDRAWN by ADR 0066 — no scheduler-carrying member is required.]** *Originally: "obtain a
+     producer whose `Scheduler` property is set" to an in-memory scheduler or a recording spy, so
+     the scheduler-fallback test (FR-3) could interrogate the delegation.* With FR-3 folded into
+     FR-2 as a mechanism-agnostic observable-outcome test, the generic suite never inspects the
+     scheduler, so the provider needs no scheduler-carrying member — and mandating one would have
+     obliged all ~20 provider implementations to stand up a `CommandProcessor`, a
+     `FireSchedulerMessage` handler pipeline and an external bus purely to satisfy an assertion the
+     suite no longer makes. A scheduler-aware provider member may be introduced later for the
+     supplementary per-transport work described in FR-3 / OOS-2;
   5. expose the transport's **rejection-metadata key names** so a generated test asserts the
      universal semantic set (FR-8) without hard-coding any one transport's key strings.
 
@@ -131,27 +134,42 @@ MUST be extended so a test can:
   ladder; `provider.RejectionMetadataKeys.OriginalTopic` returns `"OriginalTopic"` for Kafka
   and `"originalTopic"` for Redis/SQS.
 
-**FR-2 — Requeue with delay via producer.**
-Generate a test proving that when a channel requeues a received message with a non-zero delay
-and the transport routes the requeue through a producer, the message is re-published and
-received again.
+**FR-2 — Requeue with delay redelivers after the delay (mechanism-agnostic).**
+Generate a test proving that when a channel requeues a received message with a non-zero delay,
+the message is redelivered after that delay — **regardless of whether the transport achieves the
+delay natively, by routing the requeue through a producer, or via Brighter's scheduler fallback**.
+Per NFR-3 the test asserts only the observable outcome; it does **not** assert which mechanism the
+gateway used. *(Amended per ADR 0066: originally "Requeue with delay via producer". FR-3 —
+scheduler-fallback — is folded into this requirement; see FR-3.)*
   *Example (grounded in
   `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor/When_kafka_consumer_requeues_with_delay_should_use_producer.cs`):*
   send message `M`; receive `M` off the channel; call `channel.Requeue(M, TimeSpan.FromSeconds(5))`;
   assert `Requeue` returns `true` and a subsequent receive (within a bounded retry loop) yields a
   message whose body equals `M`'s body.
 
-**FR-3 — Requeue with delay via scheduler fallback.**
-Generate a test proving that when a channel requeues with a non-zero delay and the transport
-has no native delay, the requeue is delegated to the producer's scheduler.
-  *Example (grounded in
-  `...When_kafka_consumer_requeues_with_delay_should_use_scheduler.cs`):* build the channel over
-  a consumer carrying the scheduler (per FR-1(4)); receive `M`; call
-  `channel.Requeue(M, TimeSpan.FromSeconds(5))`; assert the delayed redelivery occurs — observed
-  either as `M` being redelivered after the delay (in-memory scheduler) **or** as a recorded
-  schedule call carrying `TimeSpan.FromSeconds(5)` (spy scheduler). The choice of in-memory
-  vs spy is per the design (ADR); the requirement is that the requeue is proven to go via the
-  producer's scheduler, not native delay.
+**FR-3 — [FOLDED INTO FR-2 by ADR 0066 — no separate canonical test.]**
+*Originally: "Requeue with delay via scheduler fallback" — a test proving the requeue is delegated
+to the producer's scheduler when the transport has no native delay.*
+
+This is **withdrawn as a distinct canonical behaviour** in the generic conformance suite, for two
+reasons established during design review:
+
+1. **It is a mechanism assertion, which NFR-3 forbids.** Asserting the requeue went *via the
+   scheduler* rather than *via native delay* is precisely testing *how* a transport achieves the
+   behaviour. NFR-3 and OOS-1 require the generic suite to assert only *that* delayed requeue works.
+2. **The scheduler seam does not exist for most transports.** `IAmAChannelFactoryWithScheduler` is
+   implemented by only six gateways (Kafka, MQTT, MsSql, Redis, RMQ.Async, RMQ.Sync) — within the
+   generator's target set, 6 of the ~20 gateway configurations. The other 14 (AWS ×4, AWS.V4 ×4,
+   GCP ×4, PostgreSQL, RocketMQ) have consumers that take no scheduler and delay natively (e.g.
+   `SqsMessageConsumer.RequeueAsync` uses `ChangeMessageVisibilityAsync`). Running a
+   scheduler-delegation assertion against them would fail **by design** on transports that are
+   nonetheless conformant, and giving them the seam would mean a public runtime API change that
+   C-1 forbids this spec.
+
+The observable behaviour FR-3 cared about — *a delayed requeue actually redelivers after the
+delay* — is fully covered by the amended FR-2, uniformly across every transport. A
+scheduler-delegation test remains valuable for the six gateways that have the seam, but as
+**supplementary per-transport work under OOS-2**, not as part of the universal suite.
 
 **FR-4 — Reject with delivery error routes to DLQ.**
 Generate a test proving that `channel.Reject(M, new MessageRejectionReason(RejectionReason.DeliveryError,
@@ -315,11 +333,12 @@ channel. This is a distinct routing rule from FR-4 (`DeliveryError`) and FR-5 (`
 - **NFR-3 (No new suite-wide gates / no how-testing).** The generic conformance suite MUST NOT
   assert *how* a behaviour is achieved (native vs Brighter fallback); it asserts only *that* the
   observable behaviour holds, and only against the channel/producer surface (not the pump).
-- **NFR-4 (Isolation of scheduler test).** The scheduler-fallback test (FR-3) MUST use the
-  producer's `Scheduler` set to an in-memory scheduler or a recording spy — not an external
-  scheduler transport. Whether an in-memory scheduler (black-box redelivery assertion) or a spy
-  (delegation assertion) is used is a per-test choice — the right tool for what that test needs
-  to observe — not a fixed constraint.
+- **NFR-4 (Isolation of scheduler test).** **[MOOT — withdrawn with FR-3 by ADR 0066.]**
+  *Originally: the scheduler-fallback test MUST use an in-memory scheduler or a recording spy rather
+  than an external scheduler transport.* With FR-3 folded into FR-2 as a mechanism-agnostic test,
+  the generic suite drives no scheduler at all, so there is nothing to isolate. The constraint
+  carries forward to the supplementary per-transport scheduler work (FR-3 / OOS-2) if and when that
+  is undertaken.
 
 ### Constraints and Assumptions
 
@@ -369,16 +388,16 @@ channel. This is a distinct routing rule from FR-4 (`DeliveryError`) and FR-5 (`
   `CreateSubscription` with a dead-letter routing key and an invalid-message routing key, *then*
   it obtains a channel that routes rejections per the fallback ladder; and separate members exist
   to create channels configured with a DLQ only, an invalid channel only, and neither (FR-1(2),
-  validated in use by AC-5/AC-6/AC-7), to read from the DLQ, read from the invalid channel, obtain
-  a channel whose backing consumer carries a scheduler (in-memory or spy — see FR-1(4)), and read
-  the transport's rejection-metadata key names.
-- **AC-2 (FR-2).** *Given* a received message on a producer-backed transport, *when*
+  validated in use by AC-5/AC-6/AC-7), to read from the DLQ, read from the invalid channel, and
+  read the transport's rejection-metadata key names. *(The scheduler-carrying member originally
+  required by FR-1(4) is withdrawn — see FR-1(4) and FR-3.)*
+- **AC-2 (FR-2).** *Given* a received message on **any** target transport, *when*
   `channel.Requeue(message, 5s)` is called, *then* `Requeue` returns `true` and a later receive
-  (within the bounded retry loop) yields a message with the same body.
-- **AC-3 (FR-3).** *Given* a channel whose backing consumer carries a scheduler (per FR-1(4)), and a
-  received message, *when* `channel.Requeue(message, 5s)` is called, *then* the redelivery is proven
-  to go via the scheduler — either the message is redelivered after the delay (in-memory scheduler)
-  or the spy records a schedule call carrying `5s` — and native delay is not relied upon.
+  (within the bounded retry loop) yields a message with the same body — and the test makes no
+  assertion about *how* the delay was achieved (native, producer, or scheduler).
+- **AC-3 (FR-3).** **[WITHDRAWN with FR-3 by ADR 0066.]** The observable outcome it asserted is
+  covered by AC-2, which now applies uniformly to every transport. No separate scheduler-delegation
+  criterion applies to the generic suite.
 - **AC-4 (FR-4).** *Given* a channel with a dead-letter routing key, *when*
   `channel.Reject(message, DeliveryError)` is called, *then* the DLQ consumer receives the message
   with the transport's original-topic key == the data topic and a rejection-reason entry present.
@@ -448,8 +467,8 @@ covering each path with a single thin test. Mapping:
 
 | Kafka hand-written test (Reactor + `_async`)                                   | Canonical FR |
 |--------------------------------------------------------------------------------|--------------|
-| `..._requeues_with_delay_should_use_producer`                                  | FR-2 |
-| `..._requeues_with_delay_should_use_scheduler`                                 | FR-3 |
+| `..._requeues_with_delay_should_use_producer`                                  | FR-2 (as mechanism-agnostic delayed redelivery) |
+| `..._requeues_with_delay_should_use_scheduler`                                 | — (FR-3 withdrawn; mechanism assertion, OOS-2 supplementary) |
 | `..._delivery_error_should_send_to_dlq`                                        | FR-4 |
 | `..._unacceptable_reason_should_send_to_invalid_channel`                       | FR-5 |
 | `..._unacceptable_and_no_invalid_channel_should_fallback_to_dlq`               | FR-6 |
@@ -496,7 +515,9 @@ Grounding read during drafting (all paths relative to the worktree root
   calls `_channel.Requeue(received);` (no delay) after a `SendWithDelay` + `Thread.Sleep(6s)`.
 - Config discrepancies confirmed in `tests/Paramore.Brighter.*.Tests/test-configuration.json`:
   PostgreSQL `HasSupportToDeadLetterQueue:false`/`HasSupportToDelayedMessages:false`; AWS
-  `HasSupportToDelayedMessages:false`; RocketMQ the only `HasSupportToDelayedMessages:true`.
+  `HasSupportToDelayedMessages:false` in three of its four configurations (`SqsStandard` declares
+  `true`, in both V3 and V4); Kafka all three gates `false` in both Standard and PartitionKey;
+  AWS `SqsStandard` and RocketMQ the only `HasSupportToDelayedMessages:true`.
 - Canonical hand-written behaviours (Kafka Reactor folder):
   `When_kafka_consumer_requeues_with_delay_should_use_producer.cs`,
   `..._should_use_scheduler.cs` (uses a `SpySchedulerSync` exposing `ScheduleCalled`/`ScheduledDelay`),
@@ -522,7 +543,9 @@ Grounding read during drafting (all paths relative to the worktree root
   `src/Paramore.Brighter/IAmAMessageProducer.cs` (`IAmAMessageScheduler? Scheduler { get; set; }`),
   `src/Paramore.Brighter/InMemoryScheduler.cs` (ctor takes `IAmACommandProcessor`, `TimeProvider`).
 
-Design decisions deferred to the ADR (`docs/adr/`): the exact shape of the provider-interface
-extension (metadata-key member, producer-with-scheduler factory, invalid-channel read); whether
-FR-12's template is fixed-in-place or replaced by FR-2/FR-3; whether FR-3 uses an in-memory
-scheduler or a spy; and how per-transport conformance fixes (FR-13) are sequenced.
+Design decisions deferred to the ADR (`docs/adr/`) — **all now resolved**: the exact shape of the
+provider-interface extension (metadata-key member, producer-with-scheduler factory, invalid-channel
+read) → ADR 0066; whether FR-12's template is fixed-in-place or replaced → **replaced/deleted**, ADR
+0066; whether FR-3 uses an in-memory scheduler or a spy → **neither; FR-3 is withdrawn as a
+mechanism assertion and folded into FR-2**, ADR 0066; and how per-transport conformance fixes
+(FR-13) are sequenced → **fix-then-flip with a conformance ledger**, ADR 0067.

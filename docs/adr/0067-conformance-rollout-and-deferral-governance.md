@@ -28,8 +28,8 @@ interfaces and, in a single change, retires the three capability gates
 (`HasSupportToDelayedMessages`, `HasSupportToDeadLetterQueue`, `HasSupportToRequeue`) from
 `MessagingGatewayGenerator.SkipTest` and removes the keys from every `test-configuration.json`. The
 moment that change merges, **every** messaging-gateway transport the generator targets begins
-generating the ten canonical conformance behaviours (FR-2…FR-9, FR-16, FR-17) in both Reactor and
-Proactor variants — ungated.
+generating the canonical conformance behaviours (FR-2, FR-4…FR-9, FR-15, FR-16, FR-17 — FR-3 having
+been folded into FR-2 by ADR 0066) in both Reactor and Proactor variants — ungated.
 
 The generator's target set is exactly the transports that declare a messaging-gateway
 `test-configuration.json` with `HasSupportTo*` keys. Verified, that is **nine test projects** —
@@ -50,7 +50,8 @@ property**, and the ledger below is keyed accordingly. Their conformance state i
 - **The DLQ-ADR transports** — AWS SQS (`0038`), Redis (`0039`), MSSQL (`0040`), PostgreSQL
   (`0041`), and RocketMQ (`0042`) — already have Brighter-managed DLQ/reject decisions recorded
   per transport, but their end-to-end conformance against the generated suite is unproven; several
-  mis-declare gates (AWS `HasSupportToDelayedMessages: false`, PostgreSQL both `false`). **RMQ**
+  mis-declare gates (AWS `HasSupportToDelayedMessages: false` in three of its four gateway
+  configurations — `SqsStandard` declares `true` — and PostgreSQL both `false`). **RMQ**
   sits alongside them in the sequence but has **no** per-transport DLQ ADR — RabbitMQ conventionally
   uses a native dead-letter exchange (DLX), and its reject/DLQ conformance rests on the universal
   routing strategy (`0047-message-rejection-routing-strategy` / `0045-provide-dlq-where-missing`),
@@ -137,8 +138,13 @@ against the ledger so neither can drift from the other.
   `GCP / PullOrdering`, `Kafka / PartitionKey`) — roughly twenty rows across the nine projects, plus
   Azure/ASB once added — because generation and therefore conformance are per configuration, not per
   project. A per-configuration row is what lets the ledger express "SQS Standard passes FR-5 but SNS
-  FIFO does not"; a project-level row could not. Columns = the canonical behaviours (FR-2…FR-9,
-  FR-16, FR-17). Each cell holds exactly one of:
+  FIFO does not"; a project-level row could not. Columns = the canonical behaviours (FR-2, FR-4…FR-9,
+  FR-15, FR-16, FR-17). **FR-3 is deliberately not a column** — ADR 0066 withdrew it as a mechanism
+  assertion and folded it into a mechanism-agnostic FR-2. That matters here: had FR-3 survived, the
+  14 of ~20 configurations with no scheduler seam would each have needed an `N/A (native)` cell,
+  reintroducing exactly the native/non-native distinction OOS-1 rejects. With FR-2 mechanism-agnostic
+  every column applies to every configuration, and the cell vocabulary below is sufficient. Each cell
+  holds exactly one of:
   - `Pass` — conforms as generated, both Reactor and Proactor variants green;
   - `Fixed (#PR/commit)` — conformed via an in-spec gateway fix, linked to the PR/commit;
   - `Deferred -> #NNNN (sign-off: @maintainer)` — a named, linked, maintainer-signed-off follow-up
