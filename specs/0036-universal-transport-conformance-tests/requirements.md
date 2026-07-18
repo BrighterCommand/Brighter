@@ -44,7 +44,7 @@ partial coverage — and the one generated `with_delay` template is broken (see 
 
 ## Proposed Solution
 
-Make the eight canonical Reject/DLQ/requeue-with-delay/delayed-send behaviours a
+Make the ten canonical Reject/DLQ/requeue-with-delay/delayed-send/Nack behaviours a
 **universal, ungated** part of the generated messaging-gateway suite, produced identically for
 every transport in both sync (Reactor) and async (Proactor) variants. Retire the
 `HasSupportToDelayedMessages`, `HasSupportToDeadLetterQueue`, and `HasSupportToRequeue` opt-in
@@ -91,10 +91,12 @@ Terminology (used consistently below):
 - **Invalid channel** — the invalid/unacceptable-message channel to which an `Unacceptable`
   rejection is routed; identified by an *invalid-message routing key* on the subscription.
 - **Fallback ladder** — the ordering Brighter applies when routing a rejected message:
-  `Unacceptable` → invalid channel if configured, else DLQ; `DeliveryError` → DLQ.
+  `Unacceptable` → invalid channel if configured, else DLQ; `DeliveryError` → DLQ; `None` /
+  unspecified reason → DLQ.
 - **Ungated** — the template is generated for every transport regardless of any capability
   flag.
-- **Canonical behaviours** — the eight behaviours in FR-2 … FR-9.
+- **Canonical behaviours** — the ten behaviours in FR-2 … FR-9, FR-16 (Nack) and FR-17
+  (reject with `None`/unspecified reason → DLQ).
 - **Rejection-metadata key names** — the per-transport `Header.Bag` key strings under which the
   rejection metadata is stamped. The *semantic set* is universal (see FR-8); only the key
   *names/casing* vary per transport (e.g. Kafka `OriginalTopic`, Redis/SQS `originalTopic`).
@@ -111,11 +113,15 @@ MUST be extended so a test can:
      neither (to drive FR-6 and FR-7);
   3. read a message from the invalid channel (an analogue of the existing
      `GetMessageFromDeadLetterQueue`);
-  4. obtain a **producer whose `Scheduler` property is set** to an in-memory scheduler
-     (`src/Paramore.Brighter/InMemoryScheduler.cs`) — or, where the test needs to interrogate
-     the producer↔scheduler relationship, a recording spy implementing `IAmAMessageScheduler` —
-     so the scheduler-fallback test (FR-3) exercises the gateway's use of the producer's
-     scheduler without driving an external scheduler transport;
+  4. obtain a **channel whose backing consumer carries a scheduler** — set either to an in-memory
+     scheduler (`src/Paramore.Brighter/InMemoryScheduler.cs`) or, where the test needs to
+     interrogate the delegation, to a recording spy implementing `IAmAMessageScheduler` — so the
+     scheduler-fallback test (FR-3) exercises the gateway's use of the scheduler without driving an
+     external scheduler transport. *(Originally worded as "a producer whose `Scheduler` property is
+     set"; ADR 0066 establishes that the runtime seam is the consumer that backs the channel — the
+     consumer lazily creates the requeue-producer and sets its `Scheduler` — so a standalone
+     producer is not on the `channel.Requeue` path the test drives. Wording amended to match the
+     design; the intent is unchanged.)*
   5. expose the transport's **rejection-metadata key names** so a generated test asserts the
      universal semantic set (FR-8) without hard-coding any one transport's key strings.
 
@@ -140,7 +146,7 @@ Generate a test proving that when a channel requeues with a non-zero delay and t
 has no native delay, the requeue is delegated to the producer's scheduler.
   *Example (grounded in
   `...When_kafka_consumer_requeues_with_delay_should_use_scheduler.cs`):* build the channel over
-  a producer whose `Scheduler` is set (per FR-1(4)); receive `M`; call
+  a consumer carrying the scheduler (per FR-1(4)); receive `M`; call
   `channel.Requeue(M, TimeSpan.FromSeconds(5))`; assert the delayed redelivery occurs — observed
   either as `M` being redelivered after the delay (in-memory scheduler) **or** as a recorded
   schedule call carrying `TimeSpan.FromSeconds(5)` (spy scheduler). The choice of in-memory
@@ -271,6 +277,29 @@ parameter so a positive-delay path (FR-2/FR-3) is not conflated with the zero/nu
   `true` and `M` is receivable again within the plain-requeue bounded retry loop (no delay
   window elapses).
 
+**FR-16 — Nack releases the message for redelivery.**
+Generate a test proving that `channel.Nack(M)` / `channel.NackAsync(M)` releases a received
+message back to the transport so it is redelivered on a subsequent receive (as distinct from
+`Acknowledge`, which removes it, and `Reject`, which routes it to DLQ/invalid). `Nack` is on
+`IAmAChannelSync`/`IAmAChannelAsync` (and the consumer interfaces) for every transport, so this
+is a universal obligation.
+  *Example (grounded in
+  `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor/When_nacking_a_message_it_should_be_redelivered.cs`
+  and its `_async` sibling):* send `M`; receive `M`; call `Nack(M)`; a subsequent receive
+  (within the bounded retry loop) yields a message with `M`'s id and body. A second variant, with
+  two queued messages, proves the nacked `M` is redelivered and the pipeline is not blocked for
+  the following message.
+
+**FR-17 — Reject with `None` / unspecified reason routes to DLQ.**
+Generate a test proving that `channel.Reject(M, new MessageRejectionReason(RejectionReason.None,
+"..."))` (an unknown/unspecified reason) on a channel configured with a dead-letter routing key
+routes `M` to the DLQ — the default arm of the fallback ladder — rather than to the invalid
+channel. This is a distinct routing rule from FR-4 (`DeliveryError`) and FR-5 (`Unacceptable`).
+  *Example (grounded in
+  `...When_rejecting_message_with_unknown_reason_should_send_to_dlq.cs`):* after reject with
+  `RejectionReason.None`, the DLQ consumer receives the message with the transport's rejection-
+  reason key == `"None"` and original-topic key == the data topic.
+
 ### Non-functional Requirements
 
 - **NFR-1 (Consistency).** Generated tests MUST follow the established naming convention already
@@ -322,10 +351,13 @@ parameter so a positive-delay path (FR-2/FR-3) is not conflated with the zero/nu
 - **OOS-2.** Supplementary tests that prove the *native* variant of a behaviour specifically
   works (e.g. AWS SQS redrive policy, RabbitMQ DLX, PostgreSQL native-delay column, native
   `DelaySeconds`). These are candidate follow-up work and MUST be captured as a separate issue.
-- **OOS-3.** `Nack` / `NackAsync` (immediate release-for-redelivery on
-  `IAmAChannelSync`/`IAmAChannelAsync`) is **not** part of this conformance suite — it is a
-  separate redelivery primitive outside the reject / requeue-with-delay / delayed-send pathways
-  this spec covers.
+- **OOS-3.** Transport-*internal* mechanics the Kafka suite tests that are not universal channel
+  behaviour — offset commit/sweep, header byte round-tripping, partition-key handling,
+  fatal/non-fatal error escalation, producer-not-persisted synthesis, requeue-producer disposal,
+  and factory/subscription wiring unit tests (`When_creating_channel_with_dlq_subscription_should_pass_routing_keys`,
+  `When_kafka_channel_factory_forwards_scheduler_to_consumers`, etc.). The wiring is proven
+  transitively by the end-to-end canonical tests (FR-3, FR-4, FR-5); the rest is Kafka-specific.
+  See "Coverage reconciliation against the Kafka surface area".
 - **OOS-4.** Sibling defects #4238 (single `Outbox` async-only) and #4239 (`CollectionName`
   ignored by sync outbox templates). Context only.
 - **OOS-5.** Driving any canonical behaviour through the `Reactor`/`Proactor` message pump.
@@ -338,15 +370,15 @@ parameter so a positive-delay path (FR-2/FR-3) is not conflated with the zero/nu
   it obtains a channel that routes rejections per the fallback ladder; and separate members exist
   to create channels configured with a DLQ only, an invalid channel only, and neither (FR-1(2),
   validated in use by AC-5/AC-6/AC-7), to read from the DLQ, read from the invalid channel, obtain
-  a producer with its `Scheduler` set (in-memory or spy), and read the transport's
-  rejection-metadata key names.
+  a channel whose backing consumer carries a scheduler (in-memory or spy — see FR-1(4)), and read
+  the transport's rejection-metadata key names.
 - **AC-2 (FR-2).** *Given* a received message on a producer-backed transport, *when*
   `channel.Requeue(message, 5s)` is called, *then* `Requeue` returns `true` and a later receive
   (within the bounded retry loop) yields a message with the same body.
-- **AC-3 (FR-3).** *Given* a channel over a producer whose `Scheduler` is set, and a received
-  message, *when* `channel.Requeue(message, 5s)` is called, *then* the redelivery is proven to go
-  via the scheduler — either the message is redelivered after the delay (in-memory scheduler) or
-  the spy records a schedule call carrying `5s` — and native delay is not relied upon.
+- **AC-3 (FR-3).** *Given* a channel whose backing consumer carries a scheduler (per FR-1(4)), and a
+  received message, *when* `channel.Requeue(message, 5s)` is called, *then* the redelivery is proven
+  to go via the scheduler — either the message is redelivered after the delay (in-memory scheduler)
+  or the spy records a schedule call carrying `5s` — and native delay is not relied upon.
 - **AC-4 (FR-4).** *Given* a channel with a dead-letter routing key, *when*
   `channel.Reject(message, DeliveryError)` is called, *then* the DLQ consumer receives the message
   with the transport's original-topic key == the data topic and a rejection-reason entry present.
@@ -398,6 +430,51 @@ parameter so a positive-delay path (FR-2/FR-3) is not conflated with the zero/nu
   (or `Requeue(message, null)`) is called, *then* `Requeue` returns `true`, the message is
   receivable again within the plain-requeue bounded retry loop with no delay window elapsing
   (observable outcome only; per NFR-3, scheduler non-engagement is not asserted as a mechanism).
+- **AC-17 (FR-16).** *Given* a received message `M`, *when* `channel.Nack(M)` (or `NackAsync`) is
+  called, *then* a subsequent receive within the bounded retry loop yields a message with `M`'s id
+  and body; and, given a second queued message `M2`, after nacking `M` the redelivered `M` is
+  received and then `M2` is received (pipeline not blocked).
+- **AC-18 (FR-17).** *Given* a channel with a dead-letter routing key, *when*
+  `channel.Reject(M, new MessageRejectionReason(RejectionReason.None, "..."))` is called, *then* the
+  DLQ consumer receives the message with the transport's rejection-reason key == `"None"` and
+  original-topic key == the data topic, and `M` does **not** appear on the invalid channel.
+
+## Coverage Reconciliation (Kafka surface area)
+
+The canonical set was reconciled against the richest existing hand-written suite —
+`tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/` (Reactor + Proactor) — so the generic
+suite matches its *behavioural* surface for the reject/requeue/Nack/delay pathways rather than
+covering each path with a single thin test. Mapping:
+
+| Kafka hand-written test (Reactor + `_async`)                                   | Canonical FR |
+|--------------------------------------------------------------------------------|--------------|
+| `..._requeues_with_delay_should_use_producer`                                  | FR-2 |
+| `..._requeues_with_delay_should_use_scheduler`                                 | FR-3 |
+| `..._delivery_error_should_send_to_dlq`                                        | FR-4 |
+| `..._unacceptable_reason_should_send_to_invalid_channel`                       | FR-5 |
+| `..._unacceptable_and_no_invalid_channel_should_fallback_to_dlq`               | FR-6 |
+| `..._no_channels_configured_should_acknowledge_and_log`                        | FR-7 |
+| `..._rejecting_message_should_include_metadata`                                | FR-8 |
+| `..._unknown_reason_should_send_to_dlq` (rejects with `RejectionReason.None`)  | FR-17 (added) |
+| `When_nacking_a_message_it_should_be_redelivered` (+ two-message variant)      | FR-16 (added) |
+| plain requeue / delayed send                                                   | existing plain-requeue template (ungated by FR-10) / FR-9 |
+
+**Gaps in Kafka's own coverage that the generated suite closes via FR-14 parity:** Kafka has an
+async requeue-via-*producer* test but no async requeue-via-*scheduler* test, and its metadata test
+exists only in the Reactor variant. Because FR-14 mandates both a sync and an async variant of
+every canonical behaviour, the generated suite is *more* complete than the hand-written Kafka set.
+
+**Deliberately excluded (OOS-3)** as transport-internal rather than universal channel behaviour:
+offset commit/sweep/revoke, topic declaration, Brighter↔Kafka header conversion and byte/UTF-8
+round-tripping, partition-key handling, consumer-config hooks, fatal/non-fatal error escalation,
+producer not-persisted/confirmation handling, requeue-producer disposal, and the
+`Nack`-without-offset edge. Also excluded are the **wiring unit tests** — `..._pass_routing_keys`,
+`..._subscription_with_dead_letter/invalid_message_routing_key_should_expose_property`,
+`..._channel_factory_forwards_scheduler_to_consumers`, `..._consumer_factory_..._pass_scheduler` —
+because that plumbing is exercised transitively by the end-to-end canonical tests (a subscription
+that drops the DLQ routing key fails FR-4; a factory that fails to forward the scheduler fails
+FR-3). If a transport should assert this wiring in isolation, that is a candidate follow-up, not
+part of the generic suite.
 
 ## Additional Context
 

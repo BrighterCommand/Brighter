@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-07-18
-summary: "Extends the generated messaging-gateway provider interfaces (IAmAMessageGatewayReactorProvider / IAmAMessageGatewayProactorProvider) with explicit DLQ + invalid-message routing keys, invalid-channel read, in-memory and spy scheduler-backed producers, and a strongly-typed RejectionMetadataKeys accessor; retires the HasSupportToDelayedMessages / HasSupportToDeadLetterQueue / HasSupportToRequeue opt-in gates; and deletes the broken with_delay requeue template (superseded by FR-2/FR-3)."
+summary: "Extends the generated messaging-gateway provider interfaces (IAmAMessageGatewayReactorProvider / IAmAMessageGatewayProactorProvider) with explicit DLQ + invalid-message routing keys, invalid-channel read, in-memory and spy scheduler-backed channels (scheduler wired into the backing consumer per ADR 0039), and a strongly-typed RejectionMetadataKeys accessor; retires the HasSupportToDelayedMessages / HasSupportToDeadLetterQueue / HasSupportToRequeue opt-in gates; and deletes the broken with_delay requeue template (superseded by FR-2/FR-3)."
 tags:
   - "test-generation"
   - "testing"
@@ -56,10 +56,14 @@ not gate them.
 **(b) The gate values are mis-declared against the code** — set to whatever keeps the suite
 green. Verified in `tests/Paramore.Brighter.*.Tests/test-configuration.json`: PostgreSQL
 declares `HasSupportToDeadLetterQueue: false` **and** `HasSupportToDelayedMessages: false`;
-AWS SQS declares `HasSupportToDelayedMessages: false` (despite native `DelaySeconds`); Kafka
-declares `HasSupportToRequeue: false` (in both its Standard and PartitionKey gateway
-configs). Because the `with_delay` filename matches both `requeuing` and `with_delay`, that
-template is today *doubly* gated.
+AWS declares `HasSupportToDelayedMessages: false` in three of its four gateway configurations
+(the fourth declares `true`) despite native `DelaySeconds`; and Kafka — the transport whose
+hand-written suite is the canonical grounding for these templates — declares **all three** gates
+`false` (`HasSupportToRequeue`, `HasSupportToDeadLetterQueue`, `HasSupportToDelayedMessages`) in
+both its Standard and PartitionKey gateway configs, which is the sharpest illustration that these
+values track "what keeps the suite green" rather than what the gateway does. Because the
+`with_delay` filename matches both `requeuing` and `with_delay`, that template is today *doubly*
+gated.
 
 The root cause is timing: the reject→DLQ / invalid-channel / requeue-via-producer /
 requeue-via-scheduler features post-date the generator, so contributors hand-wrote them per
@@ -74,8 +78,10 @@ expose only `CreateSubscription(..., bool setupDeadLetterQueue = false)`, `Creat
 `CreateProducer`/`CreateProducerAsync`, `CreateChannel`/`CreateChannelAsync`, `CleanUp`, and
 `GetMessageFromDeadLetterQueue`/`...Async`. They cannot construct a channel with *both* a
 dead-letter **and** an invalid-message routing key; cannot vary DLQ-only / invalid-only /
-neither; cannot read from the invalid channel; cannot hand back a producer whose `Scheduler`
-is set (in-memory or spy); and cannot surface the transport's rejection-metadata key names.
+neither; cannot read from the invalid channel; cannot hand back a channel whose backing consumer
+carries a scheduler (in-memory or spy) — `CreateChannel` takes only a subscription, so a test has
+no way to reach the scheduler the requeue path actually consults; and cannot surface the
+transport's rejection-metadata key names.
 Those key names genuinely diverge per transport — Kafka stamps PascalCase
 (`src/Paramore.Brighter.MessagingGateway.Kafka/HeaderNames.cs`: `OriginalTopic`, `OriginalType`,
 `RejectionReason`, `RejectionMessage`, `RejectionTimestamp`) while Redis
@@ -97,8 +103,9 @@ capability gates and correcting the mis-declared configs (FR-10 / FR-11), and (3
 broken `with_delay` template (FR-12). The per-transport conformance-fix *sequencing* (FR-13),
 the detailed *content* of each individual canonical template (FR-2…FR-9, FR-16, FR-17) beyond
 what the provider must expose to make them writable, and any reintroduction of a `HasNative*`
-flag (explicitly rejected, OOS-1) are **addressed separately** — FR-13 in a follow-up ADR, the
-template content as generator work under this spec's tasks.
+flag (explicitly rejected, OOS-1) are **addressed separately** — FR-13 in the sibling ADR
+[0067](0067-conformance-rollout-and-deferral-governance.md), the template content as generator work
+under this spec's tasks.
 
 ## Decision
 
@@ -107,6 +114,15 @@ conformance tests drive, retire the three capability gates so the canonical temp
 universally in both Reactor and Proactor variants, and delete the broken `with_delay` template
 (superseded by FR-2/FR-3).
 
+**One deliberate departure from the literal requirement wording.** FR-1(4) and AC-1 ask for a member
+that returns "a producer whose `Scheduler` property is set". We do **not** provide that, because the
+canonical FR-3 test drives `channel.Requeue(M, delay)` and a standalone producer's scheduler is not
+on that path (see Architecture Overview). We realise FR-1(4)/AC-1 instead as a **channel whose
+backing consumer carries the scheduler** — which is where the runtime actually reads it. This is
+within the latitude requirements.md grants ("the exact shape of the provider-interface extension …
+producer-with-scheduler factory" is explicitly deferred to this ADR), and AC-1's wording is amended
+to match so it does not read as unmet at verification.
+
 ### Architecture Overview
 
 The provider is a **service-provider / interfacer** role (per Responsibility-Driven Design): it
@@ -114,10 +130,12 @@ is the single seam between a transport-agnostic generated test and a transport-s
 
 - What the provider **knows**: this transport's actual `Header.Bag` rejection-metadata key
   strings (Kafka PascalCase vs Redis/SQS camelCase), and how to build that transport's
-  subscriptions, channels, and producers (including wiring a producer's `Scheduler`).
+  subscriptions, channels, and producers — including how to wire a scheduler into the
+  **consumer that backs a channel**.
 - What the provider **does**: create publications/subscriptions/channels/producers; read a
-  message back from the DLQ and from the invalid channel; hand back a producer whose
-  `Scheduler` is set to either an in-memory scheduler or a recording spy.
+  message back from the DLQ and from the invalid channel; hand back a **channel whose backing
+  consumer's `Scheduler`** is either an in-memory scheduler or a recording spy (and, for the spy,
+  the spy itself so the test can assert on it).
 
 A generated canonical test knows *nothing* transport-specific; it consumes only the role:
 
@@ -135,12 +153,16 @@ IAmAMessageGatewayReactorProvider (extended)
 
   IAmAMessageProducerSync CreateProducer({Publication} publication)
 
-  // FR-1(4): producer with Scheduler set — two distinct members (NFR-4)
-  IAmAMessageProducerSync CreateProducerWithInMemoryScheduler({Publication} publication)
-  SchedulerSpyProducer    CreateProducerWithSpyScheduler({Publication} publication)
-        // returns the producer AND the spy (ScheduleCalled / ScheduledDelay)
-
   IAmAChannelSync CreateChannel({Subscription} subscription)
+
+  // FR-1(4): a channel whose BACKING CONSUMER has its Scheduler set — two distinct members (NFR-4).
+  // The scheduler is wired into the consumer that backs the channel (the seam ADR 0039 established
+  // via the channel factory), NOT into a standalone producer — because the FR-3 test drives
+  // channel.Requeue(M, delay), and the consumer lazily creates the requeue-producer internally.
+  IAmAChannelSync     CreateChannelWithInMemoryScheduler({Subscription} subscription)
+  SpyScheduledChannel CreateChannelWithSpyScheduler({Subscription} subscription)
+        // SpyScheduledChannel holds { IAmAChannelSync Channel; SpySchedulerSync Spy }
+        // Spy records ScheduleCalled / ScheduledDelay; the test calls Channel.Requeue(M, 5s)
 
   // FR-1(3): read back from DLQ (exists) and from the invalid channel (new)
   Message GetMessageFromDeadLetterQueue({Subscription} subscription)
@@ -155,7 +177,8 @@ IAmAMessageGatewayReactorProvider (extended)
 `IAmAMessageGatewayProactorProvider` mirrors this exactly with `...Async` members returning
 `Task`/`Task<...>` and taking `CancellationToken` (`CreateSubscription` is synchronous config
 construction and stays sync; `CreateChannelAsync`, `CreateProducerAsync`,
-`CreateProducerWithInMemorySchedulerAsync`, `CreateProducerWithSpySchedulerAsync`,
+`CreateChannelWithInMemorySchedulerAsync`, `CreateChannelWithSpySchedulerAsync` (returning a
+`SpyScheduledChannelAsync` holding an `IAmAChannelAsync` and a `SpySchedulerAsync`),
 `GetMessageFromDeadLetterQueueAsync`, `GetMessageFromInvalidChannelAsync` are async;
 `RejectionMetadataKeys` is a plain property shared by both interfaces).
 
@@ -178,9 +201,17 @@ from the provider.
 For the scheduler-fallback path (FR-3), the spy is the shape already proven in
 `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Reactor/When_kafka_consumer_requeues_with_delay_should_use_scheduler.cs`:
 `SpySchedulerSync : IAmAMessageSchedulerSync` exposing `ScheduleCalled` and `ScheduledDelay`.
-`IAmAMessageSchedulerSync` derives from `IAmAMessageScheduler`, which is the type of the
-producer's `Scheduler` property (`src/Paramore.Brighter/IAmAMessageProducer.cs` line 46), so the
-spy can be assigned directly to `producer.Scheduler`.
+**Critically, that test wires the scheduler into the consumer** — `new KafkaMessageConsumer(...,
+scheduler: _scheduler)` — and asserts against `_consumer.Requeue(received, 5s)`, *not* against a
+producer it holds. The consumer lazily creates its requeue-producer and sets *that* producer's
+`Scheduler` (`IAmAMessageProducer.Scheduler`, `src/Paramore.Brighter/IAmAMessageProducer.cs` line
+46). So the provider sets the scheduler on the **consumer that backs the channel** — the seam
+`0039-transport-scheduler-wiring` established via the channel factory — and hands the test the
+channel plus the spy: `CreateChannelWithSpyScheduler` returns a `SpyScheduledChannel { Channel, Spy }`,
+and the generated FR-3 test calls `channel.Requeue(M, 5s)` then asserts `spy.ScheduleCalled` and
+`spy.ScheduledDelay == 5s`. A standalone producer-with-scheduler factory would be **unobservable
+through `channel.Requeue`**, which is the surface the canonical test drives (Objective and Test
+Boundary) — hence the member is channel-level, not producer-level.
 
 ### Key Components
 
@@ -192,8 +223,9 @@ spy can be assigned directly to `producer.Scheduler`.
   (`.../Configuration/MessagingGatewayConfiguration.cs`) — loses three properties.
 - A new `RejectionMetadataKeys` record (in the generated test-support namespace, per transport,
   **not** in `src/Paramore.Brighter` — C-2).
-- A recording spy scheduler (`SpySchedulerSync` / async sibling) supplied by the provider for
-  the FR-3 delegation assertion.
+- A recording spy scheduler (`SpySchedulerSync` / `SpySchedulerAsync`) wired into the consumer that
+  backs the channel returned by `CreateChannelWithSpyScheduler`, plus the `SpyScheduledChannel`
+  holder (`{ Channel, Spy }`), for the FR-3 delegation assertion.
 - Every hand-written per-transport provider implementation that satisfies these interfaces —
   e.g. `tests/Paramore.Brighter.PostgresSQL.Tests/MessagingGateway/PostgresMessageGatewayProvider.cs`,
   the Kafka/Redis/MSSQL/RMQ/AWS/GCP/RocketMQ providers — must be extended to implement the new
@@ -208,17 +240,56 @@ spy can be assigned directly to `producer.Scheduler`.
   compile error rather than a silent `null` lookup. This is exactly the FR-1(5) example. A
   dictionary would reintroduce stringly-typed access — the primitive-obsession the design
   principles reject.
-- **Both an in-memory scheduler *and* a recording spy for the scheduler member (NFR-4).** FR-3's
-  requirement is that requeue-with-delay is proven to route through the *producer's scheduler*,
-  not native delay. Some canonical tests want a black-box redelivery assertion (in-memory
-  `InMemoryScheduler` actually re-publishes after the delay); others want a delegation assertion
-  (spy records `ScheduleCalled` / `ScheduledDelay == 5s`). Each test picks the right tool, so the
-  provider supplies both. `InMemoryScheduler` requires an `IAmACommandProcessor`, a
-  `TimeProvider`, scheduler-id factory funcs, and a conflict policy
-  (`src/Paramore.Brighter/InMemoryScheduler.cs`); the provider owns that wiring so tests do not.
+- **Both an in-memory scheduler *and* a recording spy, exposed as channel-level members (NFR-4).**
+  FR-3's requirement is that requeue-with-delay is proven to route through the scheduler on the
+  consumer that backs the channel, not native delay. Some canonical tests want a black-box
+  redelivery assertion (in-memory `InMemoryScheduler` actually re-publishes after the delay); others
+  want a delegation assertion (spy records `ScheduleCalled` / `ScheduledDelay == 5s`). Each test
+  picks the right tool, so the provider supplies both — as `CreateChannelWithInMemoryScheduler` and
+  `CreateChannelWithSpyScheduler`. They are **channel-level, not producer-level**, because the seam
+  that carries the scheduler is the consumer/channel factory (ADR 0039); a standalone
+  producer-with-scheduler would be unobservable through the `channel.Requeue` the test drives.
+  The in-memory arm's wiring cost is **not** incidental and is specified below rather than waved at.
 - **Delete (not fix) the `with_delay` template.** FR-2 (requeue-with-delay via producer) and FR-3
   (via scheduler fallback) fully supersede it and are stronger (they pass a non-null delay and use
   bounded retry loops); keeping a fixed-in-place third template would duplicate knowledge.
+
+#### What `CreateChannelWithInMemoryScheduler` actually requires
+
+The in-memory arm only delivers its advertised black-box assertion if the provider stands up enough
+of Brighter for a scheduled message to come back out on the transport. `InMemoryScheduler` is not a
+self-contained timer — it is a *dispatcher into a command processor*. The real chain
+(`src/Paramore.Brighter/InMemoryScheduler.cs`) is:
+
+```
+scheduler.Schedule(message, delay)
+  -> timeProvider.CreateTimer(Execute, (processor, FireSchedulerMessage{Message, Async=false}), delay)
+  -> Execute: BrighterAsyncContext.Run(() => processor.SendAsync(fireSchedulerMessage))   // line 285
+  -> FireSchedulerMessageHandler.HandleAsync -> processor.Post(command)                   // Scheduler/Handlers
+  -> OutboxProducerMediator unwraps FireSchedulerMessage and produces the inner Message    // lines 458, 483
+  -> message reappears on the transport topic
+```
+
+So a provider implementing `CreateChannelWithInMemoryScheduler` MUST supply, per transport:
+
+1. an `IAmACommandProcessor` (a real `CommandProcessor`) — not a stub, because the timer callback
+   calls `SendAsync` on it;
+2. a handler pipeline that resolves `FireSchedulerMessage` to `FireSchedulerMessageHandler`
+   (`src/Paramore.Brighter/Scheduler/Handlers/FireSchedulerMessageHandler.cs`);
+3. an external bus / `OutboxProducerMediator` with a producer registry bound to **this transport's**
+   topic, so the unwrapped inner `Message` is actually produced;
+4. a `TimeProvider` (real, or a fake to compress the delay), the two scheduler-id factory funcs
+   (`Func<IRequest,string>`, `Func<Message,string>`), and an `OnSchedulerConflict` policy — the
+   `InMemoryScheduler` primary-constructor parameters.
+
+The provider owns all four so the generated test does not. Note no existing test constructs
+`InMemoryScheduler` directly — every current usage goes through `InMemorySchedulerFactory` inside a
+full dispatcher setup — so this is new per-provider wiring, and it is the single most expensive part
+of implementing the extended interface. Where a transport cannot yet supply it, that is a
+conformance gap handled under ADR 0067's ledger (a `Deferred` row), not a reason to skip FR-3: the
+**spy arm has none of these prerequisites** (the spy is assigned straight onto the consumer's
+scheduler and records the call), so FR-3's delegation assertion remains available even where the
+in-memory arm is deferred.
 
 ### Implementation Approach
 
@@ -234,8 +305,9 @@ Message GetMessageFromDeadLetterQueue({{ Subscription }} subscription);
 After: replace the `bool setupDeadLetterQueue` with explicit
 `RoutingKey? deadLetterRoutingKey = null, RoutingKey? invalidMessageRoutingKey = null` (both
 null ⇒ "neither"; one set ⇒ DLQ-only or invalid-only ⇒ FR-6/FR-7); add
-`GetMessageFromInvalidChannel`, `CreateProducerWithInMemoryScheduler`,
-`CreateProducerWithSpyScheduler`, and the `RejectionMetadataKeys` property. The `bool` overload
+`GetMessageFromInvalidChannel`, `CreateChannelWithInMemoryScheduler`,
+`CreateChannelWithSpyScheduler` (returning `SpyScheduledChannel`), and the `RejectionMetadataKeys`
+property. The `bool` overload
 is the one thing removed rather than added; a transport that previously derived its DLQ routing
 key internally (as PostgreSQL does when `setupDeadLetterQueue` is true) now receives the routing
 key explicitly from the test, which also removes hidden per-transport DLQ-naming knowledge from
@@ -290,9 +362,19 @@ vs async gateway code paths; it is not pump re-testing.
 
 - **Every per-transport provider implementation must be extended** to satisfy the wider
   interface (Kafka, Redis, MSSQL, PostgreSQL, RMQ, AWS SNS/SQS, GCP, RocketMQ, …). A transport
-  that cannot yet supply an invalid channel, a scheduler-backed producer, or a metadata-key set
+  that cannot yet supply an invalid channel, a scheduler-backed channel, or a metadata-key set
   surfaces as a compile or implementation gap. This is *intended* (it is how non-conformance
   becomes visible per FR-13), but it is real work and is the bulk of the follow-on effort.
+- **The in-memory scheduler arm is expensive per provider.** `CreateChannelWithInMemoryScheduler`
+  obliges every provider to stand up a real `CommandProcessor`, a `FireSchedulerMessage` handler
+  pipeline, and an external bus with a producer registry bound to that transport's topic (see
+  "What `CreateChannelWithInMemoryScheduler` actually requires"). That is materially more work than
+  any other member on the interface, it is repeated across every provider implementation (there are
+  ~20 `*MessageGatewayProvider.cs` files, more than the nine test projects), and no existing test
+  builds `InMemoryScheduler` directly today. We accept this cost to keep the black-box redelivery
+  assertion available (NFR-4); the mitigation is that FR-3 remains provable via the spy arm alone,
+  so a provider may defer the in-memory arm as an ADR-0067 `Deferred` row without losing FR-3
+  coverage.
 - Removing the three properties is a **breaking change** to `MessagingGatewayConfiguration` and
   to the `test-configuration.json` schema; any external tooling that reads those keys breaks.
 - Replacing `bool setupDeadLetterQueue` with explicit routing-key parameters is a breaking
@@ -336,6 +418,7 @@ vs async gateway code paths; it is not pump re-testing.
 
 - Requirements: [specs/0036-universal-transport-conformance-tests/requirements.md](../../specs/0036-universal-transport-conformance-tests/requirements.md)
 - Related ADRs (this ADR builds on all of these; it supersedes none):
+  - [`0067-conformance-rollout-and-deferral-governance`](0067-conformance-rollout-and-deferral-governance.md) [Proposed] — **sibling.** Sequences the per-transport rollout around this ADR's gate-retirement flip (fix-then-flip) and governs auditable deferrals via the conformance ledger; a provider that cannot yet supply a member added here (e.g. the in-memory scheduler arm) is tracked as a `Deferred` row there.
   - `0037-add-messaging-gateway-generated-test` [Accepted] — created this generator and
     `MessagingGatewayConfiguration`; this ADR directly extends its provider interfaces and
     retires three of its capability flags (the most important relation).
@@ -347,8 +430,9 @@ vs async gateway code paths; it is not pump re-testing.
     the producer's `Scheduler`.
   - `0045-provide-dlq-where-missing` — Brighter-managed dead-letter and invalid-message
     channels; the provisioning the new DLQ/invalid provider members rely on.
-  - `0039-transport-scheduler-wiring` — threads `IAmAMessageScheduler` through the channel
-    factory; relevant to how a provider wires a producer's scheduler.
+  - `0039-transport-scheduler-wiring` — threads `IAmAMessageScheduler` through the channel factory
+    into the consumer; this is the seam the `CreateChannelWith*Scheduler` members wire, and the
+    reason FR-3 is observable at `channel.Requeue` rather than via a standalone producer.
   - Per-transport DLQ ADRs (`0038-aws-sqs-dlq-direct-send`, `0039-redis-dlq-brighter-managed`,
     `0040-mssql-dlq-brighter-managed`, `0041-postgres-dlq-brighter-managed`,
     `0042-rocketmq-dlq-brighter-managed`, `0043-mqtt-dlq-brighter-managed`,

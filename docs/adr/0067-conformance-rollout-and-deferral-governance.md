@@ -32,18 +32,30 @@ generating the ten canonical conformance behaviours (FR-2…FR-9, FR-16, FR-17) 
 Proactor variants — ungated.
 
 The generator's target set is exactly the transports that declare a messaging-gateway
-`test-configuration.json` with `HasSupportTo*` keys. Verified, that set is: **AWS (SQS/SNS V3 and
-V4), GCP, Kafka, MSSQL, PostgreSQL, Redis, RMQ.Async, and RocketMQ** — nine configurations. Their
-conformance state is uneven:
+`test-configuration.json` with `HasSupportTo*` keys. Verified, that is **nine test projects** —
+**AWS (V3 and V4), GCP, Kafka, MSSQL, PostgreSQL, Redis, RMQ.Async, and RocketMQ** — but generation
+is per **gateway configuration**, not per project, and those nine projects declare roughly **twenty**
+configurations between them: AWS.Tests and AWS.V4.Tests carry four each (SQS Standard/FIFO, SNS
+Standard/FIFO), GCP four (Pull, PullOrdering, Stream, StreamOrdering), Kafka two (Standard,
+PartitionKey), RMQ.Async two (Classic, Quorum), with the rest one apiece — matching the 20
+`*MessageGatewayProvider.cs` implementations. **Conformance is therefore a per-configuration
+property**, and the ledger below is keyed accordingly. Their conformance state is uneven:
 
 - **Kafka already conforms** — it carries the richest hand-written suite
   (`tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/`, Reactor + Proactor), which is the
-  canonical grounding for the templates; yet it mis-declares `HasSupportToRequeue: false` in both
-  its Standard and PartitionKey configs.
-- **The DLQ-ADR transports** (AWS SQS, Redis, MSSQL, PostgreSQL, RocketMQ, and RMQ) already have
-  Brighter-managed DLQ/reject decisions recorded per transport, but their end-to-end conformance
-  against the generated suite is unproven; several mis-declare gates (AWS
-  `HasSupportToDelayedMessages: false`, PostgreSQL both `false`).
+  canonical grounding for the templates; yet it mis-declares **all three** gates
+  (`HasSupportToRequeue`, `HasSupportToDeadLetterQueue`, `HasSupportToDelayedMessages`) as `false`
+  in both its Standard and PartitionKey configs — the starkest case of a config tuned to keep the
+  suite green rather than to describe the gateway.
+- **The DLQ-ADR transports** — AWS SQS (`0038`), Redis (`0039`), MSSQL (`0040`), PostgreSQL
+  (`0041`), and RocketMQ (`0042`) — already have Brighter-managed DLQ/reject decisions recorded
+  per transport, but their end-to-end conformance against the generated suite is unproven; several
+  mis-declare gates (AWS `HasSupportToDelayedMessages: false`, PostgreSQL both `false`). **RMQ**
+  sits alongside them in the sequence but has **no** per-transport DLQ ADR — RabbitMQ conventionally
+  uses a native dead-letter exchange (DLX), and its reject/DLQ conformance rests on the universal
+  routing strategy (`0047-message-rejection-routing-strategy` / `0045-provide-dlq-where-missing`),
+  not a Brighter-managed-DLQ decision of its own; its fix may therefore be larger than the
+  DLQ-ADR transports' and is treated under the size/risk boundary accordingly.
 - **The known-gap transports** are worst off: GCP has messaging-gateway providers and a
   requeue-to-DLQ generated test but none of the canonical reject-routing / scheduler-fallback /
   metadata behaviours; and Azure / Azure Service Bus, which the parent requirement calls "currently
@@ -96,9 +108,11 @@ The rollout is a pipeline whose fix phase and flip are deliberately distinct:
        (already        end-to-end against the known-good transport      |
         conforms)                                                       |
   (ii) DLQ-ADR        AWS SQS (0038), Redis (0039), MSSQL (0040),       |   ADR 0066
-       transports      PostgreSQL (0041), RocketMQ (0042), RMQ          |   ungating flip
-       (decision       — brought to conformance (Fixed) or deferred    |   (remove 3 gates
-        support)       (Deferred -> #issue)                            |    + config keys)
+       transports      PostgreSQL (0041), RocketMQ (0042);             |   ungating flip
+       (+ RMQ, which    RMQ (no per-transport DLQ ADR — native DLX,    |   (remove 3 gates
+        has no DLQ ADR)  universal routing 0047/0045)                  |    + config keys)
+                       — brought to conformance (Fixed) or deferred    |
+                        (Deferred -> #issue)                           |
   (iii)known-gap      GCP (no canonical coverage today), Azure/ASB     |   merges LAST
        transports      (not yet in generator target set) — most new    |
                        work; conform or signed-off deferral            /
@@ -118,9 +132,13 @@ against the ledger so neither can drift from the other.
 ### Key Components
 
 - **The conformance ledger** — a markdown matrix checked into the spec directory at
-  `specs/0036-universal-transport-conformance-tests/conformance-status.md`. Rows = the nine target
-  transports (plus Azure/ASB once added); columns = the canonical behaviours (FR-2…FR-9, FR-16,
-  FR-17). Each cell holds exactly one of:
+  `specs/0036-universal-transport-conformance-tests/conformance-status.md`. **A row is one gateway
+  configuration**, identified as `project / configuration` (e.g. `AWS.V4 / SqsStandard`,
+  `GCP / PullOrdering`, `Kafka / PartitionKey`) — roughly twenty rows across the nine projects, plus
+  Azure/ASB once added — because generation and therefore conformance are per configuration, not per
+  project. A per-configuration row is what lets the ledger express "SQS Standard passes FR-5 but SNS
+  FIFO does not"; a project-level row could not. Columns = the canonical behaviours (FR-2…FR-9,
+  FR-16, FR-17). Each cell holds exactly one of:
   - `Pass` — conforms as generated, both Reactor and Proactor variants green;
   - `Fixed (#PR/commit)` — conformed via an in-spec gateway fix, linked to the PR/commit;
   - `Deferred -> #NNNN (sign-off: @maintainer)` — a named, linked, maintainer-signed-off follow-up
@@ -133,11 +151,18 @@ against the ledger so neither can drift from the other.
   No such convention exists in `tools/.../Templates/MessagingGateway/` today, so this is new. A
   bare or reasonless `Skip`, or one whose value does not match the required `Deferred: #<n>`
   pattern, is a CI failure.
-- **The CI audit check** — a read-only source scan over the messaging-gateway templates and the
-  generated test tree that (a) fails if any messaging-gateway test carries a `Skip` not matching
-  `Deferred: #<n>`, and (b) cross-checks: every `Skip` must map to a ledger row marked
-  `Deferred -> #issue`, and every `Deferred` ledger row must have an open, linked issue with recorded
-  sign-off. A `Skip` without a ledger row, or a `Deferred` row without an issue, fails audit.
+- **The CI audit check** — a read-only source scan over **in-tree artifacts only** (the
+  messaging-gateway templates, the generated test tree, and the ledger) that (a) fails if any
+  messaging-gateway test carries a `Skip` not matching `Deferred: #<n>`, and (b) cross-checks the
+  in-tree links: every `Skip` must map to a ledger row marked `Deferred -> #issue`, and every
+  `Deferred` ledger row must carry an issue link and a recorded sign-off entry. A `Skip` without a
+  ledger row, or a `Deferred` row missing its issue link or sign-off entry, fails audit.
+  Deliberately, the build does **not** query the live issue tracker for issue *state* (open/closed)
+  or re-verify sign-off provenance — that coupling would make the build brittle against
+  tracker changes and exceeds what FR-13 asks. Confirming the issue is genuinely open and the
+  sign-off real is the **maintainer review gate's** job, not the build's; the build enforces only
+  that the auditable in-tree trail (Skip ↔ ledger row ↔ issue link + sign-off entry) is present and
+  consistent.
 - **The sequencing order** — reference (Kafka) -> DLQ-ADR transports -> known-gap transports -> flip.
 - **The class of in-spec gateway fixes** — the localized reject/requeue/scheduler-wiring changes of
   the same shape the per-transport DLQ ADRs (0038–0043, 0046) already established (`Fixed` rows),
@@ -167,10 +192,12 @@ against the ledger so neither can drift from the other.
    behaviour set to `Unknown`. This is the work list and the flip gate.
 2. **Prove the reference (Kafka).** Run the generated canonical suite against Kafka, whose
    hand-written suite already conforms, to validate the templates and the ADR-0066 extended provider
-   interface end-to-end. Correct Kafka's mis-declared `HasSupportToRequeue: false` as part of the
-   0066 config cleanup. Mark Kafka cells `Pass`.
+   interface end-to-end. Kafka's three mis-declared gates disappear with the 0066 config cleanup
+   (the flip removes the keys outright). Mark both Kafka configuration rows (Standard,
+   PartitionKey) `Pass`.
 3. **Bring the DLQ-ADR transports to conformance.** For each of AWS SQS (0038), Redis (0039), MSSQL
-   (0040), PostgreSQL (0041), RocketMQ (0042), and RMQ: run the generated suite; for each
+   (0040), PostgreSQL (0041), and RocketMQ (0042) — and RMQ, which has no per-transport DLQ ADR and
+   whose reject/DLQ conformance may be a larger fix — run the generated suite; for each
    non-conformant behaviour, apply the fix-to-conform boundary. If localized and low-risk (add a
    lazy DLQ/invalid producer, forward the scheduler to consumers, stamp the metadata semantic set
    under the transport's own keys), fix inline and record `Fixed (#PR)`. Otherwise open a follow-up
@@ -184,9 +211,11 @@ against the ledger so neither can drift from the other.
    `Fixed`, or `Deferred -> #issue` — merge ADR 0066's ungating change (remove the three gates from
    `SkipTest`, the three properties from `MessagingGatewayConfiguration`, and the keys from every
    `test-configuration.json`).
-6. **Enforce in CI.** The audit scan runs on every PR: it fails any messaging-gateway test whose
-   `Skip` does not match `Deferred: #<n>`, and it fails if a `Skip` has no matching `Deferred`
-   ledger row or a `Deferred` row has no linked issue.
+6. **Enforce in CI.** The audit scan runs on every PR over in-tree artifacts only: it fails any
+   messaging-gateway test whose `Skip` does not match `Deferred: #<n>`, and it fails if a `Skip`
+   has no matching `Deferred` ledger row or a `Deferred` row is missing its issue link or sign-off
+   entry. It does not query the issue tracker for live state — issue-open and sign-off validity are
+   the maintainer review gate's responsibility.
 
 **Reactor/Proactor parity applies to the ledger.** A behaviour is `Pass`/`Fixed` for a transport
 only when **both** the Reactor and Proactor variants pass (FR-14); if only one variant conforms, the
