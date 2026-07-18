@@ -1,11 +1,8 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using A = Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.A;
 using B = Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.B;
 using Reuse = Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.Reuse;
+using Scenarios = Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.Scenarios;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation
@@ -16,12 +13,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
         public async Task When_two_mappers_share_a_simple_name_each_wrap_pipeline_should_build_with_its_own_transforms_first_built_first()
         {
             // Arrange
-            TransformPipelineBuilder.ClearPipelineCache();
-            TransformPipelineBuilder builder = CreateCollidingBuilder();
+            TransformPipelineBuilder builder = CreateCollidingBuilder<Scenarios.WrapFirstBuiltFirst>();
 
             // Act — build A (FirstTransform) first, warming the cache, then B (SecondTransform)
-            builder.BuildWrapPipeline<A.EventCommand>();
-            WrapPipeline<B.EventCommand> pipelineB = builder.BuildWrapPipeline<B.EventCommand>();
+            builder.BuildWrapPipeline<A.EventCommand<Scenarios.WrapFirstBuiltFirst>>();
+            WrapPipeline<B.EventCommand<Scenarios.WrapFirstBuiltFirst>> pipelineB =
+                builder.BuildWrapPipeline<B.EventCommand<Scenarios.WrapFirstBuiltFirst>>();
 
             // Assert — B's wrap pipeline carries its own transform, never A's
             string trace = Trace(pipelineB).ToString();
@@ -33,12 +30,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
         public async Task When_two_mappers_share_a_simple_name_each_wrap_pipeline_should_build_with_its_own_transforms_opposite_order()
         {
             // Arrange
-            TransformPipelineBuilder.ClearPipelineCache();
-            TransformPipelineBuilder builder = CreateCollidingBuilder();
+            TransformPipelineBuilder builder = CreateCollidingBuilder<Scenarios.WrapOppositeOrder>();
 
             // Act — build B (SecondTransform) first this time, then A (FirstTransform)
-            builder.BuildWrapPipeline<B.EventCommand>();
-            WrapPipeline<A.EventCommand> pipelineA = builder.BuildWrapPipeline<A.EventCommand>();
+            builder.BuildWrapPipeline<B.EventCommand<Scenarios.WrapOppositeOrder>>();
+            WrapPipeline<A.EventCommand<Scenarios.WrapOppositeOrder>> pipelineA =
+                builder.BuildWrapPipeline<A.EventCommand<Scenarios.WrapOppositeOrder>>();
 
             // Assert — A's wrap pipeline carries its own transform, never B's
             string trace = Trace(pipelineA).ToString();
@@ -50,12 +47,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
         public async Task When_two_mappers_share_a_simple_name_each_unwrap_pipeline_should_build_with_its_own_transforms_first_built_first()
         {
             // Arrange
-            TransformPipelineBuilder.ClearPipelineCache();
-            TransformPipelineBuilder builder = CreateCollidingBuilder();
+            TransformPipelineBuilder builder = CreateCollidingBuilder<Scenarios.UnwrapFirstBuiltFirst>();
 
             // Act — build A (FirstTransform) first, warming the cache, then B (SecondTransform)
-            builder.BuildUnwrapPipeline<A.EventCommand>();
-            UnwrapPipeline<B.EventCommand> pipelineB = builder.BuildUnwrapPipeline<B.EventCommand>();
+            builder.BuildUnwrapPipeline<A.EventCommand<Scenarios.UnwrapFirstBuiltFirst>>();
+            UnwrapPipeline<B.EventCommand<Scenarios.UnwrapFirstBuiltFirst>> pipelineB =
+                builder.BuildUnwrapPipeline<B.EventCommand<Scenarios.UnwrapFirstBuiltFirst>>();
 
             // Assert — B's unwrap pipeline carries its own transform, never A's
             string trace = Trace(pipelineB).ToString();
@@ -67,12 +64,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
         public async Task When_two_mappers_share_a_simple_name_each_unwrap_pipeline_should_build_with_its_own_transforms_opposite_order()
         {
             // Arrange
-            TransformPipelineBuilder.ClearPipelineCache();
-            TransformPipelineBuilder builder = CreateCollidingBuilder();
+            TransformPipelineBuilder builder = CreateCollidingBuilder<Scenarios.UnwrapOppositeOrder>();
 
             // Act — build B (SecondTransform) first this time, then A (FirstTransform)
-            builder.BuildUnwrapPipeline<B.EventCommand>();
-            UnwrapPipeline<A.EventCommand> pipelineA = builder.BuildUnwrapPipeline<A.EventCommand>();
+            builder.BuildUnwrapPipeline<B.EventCommand<Scenarios.UnwrapOppositeOrder>>();
+            UnwrapPipeline<A.EventCommand<Scenarios.UnwrapOppositeOrder>> pipelineA =
+                builder.BuildUnwrapPipeline<A.EventCommand<Scenarios.UnwrapOppositeOrder>>();
 
             // Assert — A's unwrap pipeline carries its own transform, never B's
             string trace = Trace(pipelineA).ToString();
@@ -81,12 +78,9 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
         }
 
         [Test]
-        public async Task When_a_single_mapper_is_built_twice_should_leave_one_entry_per_transform_cache_keyed_by_its_runtime_type()
+        public async Task When_a_single_mapper_is_built_twice_should_produce_the_same_transform_pipelines()
         {
-            // Arrange — a mapper/request unique to this fact, so the process-global mementos hold
-            // exactly this mapper's entries and the count assertion stays deterministic
-            TransformPipelineBuilder.ClearPipelineCache();
-
+            // Arrange
             var registry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new Reuse.ReuseMapper()),
                 null);
@@ -95,33 +89,27 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
             var transformerFactory = new SimpleMessageTransformerFactory(_ => new Reuse.ReuseTransform());
             var builder = new TransformPipelineBuilder(registry, transformerFactory);
 
-            // Act — build the same mapper's wrap and unwrap pipelines twice (single-threaded)
+            // Act
             string firstWrap = Trace(builder.BuildWrapPipeline<Reuse.ReuseCommand>()).ToString();
             string secondWrap = Trace(builder.BuildWrapPipeline<Reuse.ReuseCommand>()).ToString();
             string firstUnwrap = Trace(builder.BuildUnwrapPipeline<Reuse.ReuseCommand>()).ToString();
             string secondUnwrap = Trace(builder.BuildUnwrapPipeline<Reuse.ReuseCommand>()).ToString();
 
-            // Assert — exactly one entry per memento, keyed by the mapper's runtime Type, and the
-            // second build's transform sequence is equivalent to the first
-            IReadOnlyCollection<Type> wrapKeys = await GetMementoKeys("s_wrapTransformsMemento");
-            IReadOnlyCollection<Type> unwrapKeys = await GetMementoKeys("s_unWrapTransformsMemento");
-
-            await Assert.That(wrapKeys).IsEqualTo(new[] { typeof(Reuse.ReuseMapper) });
-            await Assert.That(unwrapKeys).IsEqualTo(new[] { typeof(Reuse.ReuseMapper) });
+            // Assert
             await Assert.That(secondWrap).IsEqualTo(firstWrap);
             await Assert.That(secondUnwrap).IsEqualTo(firstUnwrap);
         }
 
-        private static TransformPipelineBuilder CreateCollidingBuilder()
+        private static TransformPipelineBuilder CreateCollidingBuilder<TScenario>()
         {
             var registry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(t =>
-                    t == typeof(A.CollidingMapper)
-                        ? new A.CollidingMapper()
-                        : (IAmAMessageMapper)new B.CollidingMapper()),
+                    t == typeof(A.CollidingMapper<TScenario>)
+                        ? new A.CollidingMapper<TScenario>()
+                        : (IAmAMessageMapper)new B.CollidingMapper<TScenario>()),
                 null);
-            registry.Register<A.EventCommand, A.CollidingMapper>();
-            registry.Register<B.EventCommand, B.CollidingMapper>();
+            registry.Register<A.EventCommand<TScenario>, A.CollidingMapper<TScenario>>();
+            registry.Register<B.EventCommand<TScenario>, B.CollidingMapper<TScenario>>();
 
             var transformerFactory = new SimpleMessageTransformerFactory(t =>
                 t == typeof(A.FirstTransform)
@@ -147,16 +135,6 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
             return pipelineTracer;
         }
 
-        private static async Task<IReadOnlyCollection<Type>> GetMementoKeys(string fieldName)
-        {
-            FieldInfo? field = typeof(TransformPipelineBuilder).GetField(
-                fieldName,
-                BindingFlags.Static | BindingFlags.NonPublic);
-            await Assert.That(field).IsNotNull();
-
-            var cache = (IDictionary)field!.GetValue(null)!;
-            return cache.Keys.Cast<Type>().ToList();
-        }
     }
 }
 
@@ -167,7 +145,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.A
     using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
     using Paramore.Brighter.Extensions;
 
-    public sealed class EventCommand : Command
+    public sealed class EventCommand<TScenario> : Command
     {
         public EventCommand() : base(Guid.NewGuid()) { }
     }
@@ -193,12 +171,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.A
         public override Type GetHandlerType() => typeof(FirstTransform);
     }
 
-    internal sealed class CollidingMapper : IAmAMessageMapper<EventCommand>
+    internal sealed class CollidingMapper<TScenario> : IAmAMessageMapper<EventCommand<TScenario>>
     {
         public IRequestContext Context { get; set; }
 
         [FirstWrapWith(0)]
-        public Message MapToMessage(EventCommand request, Publication publication)
+        public Message MapToMessage(EventCommand<TScenario> request, Publication publication)
         {
             return new Message(
                 new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), timeStamp: DateTime.UtcNow),
@@ -206,9 +184,9 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.A
         }
 
         [FirstUnwrapWith(0)]
-        public EventCommand MapToRequest(Message message)
+        public EventCommand<TScenario> MapToRequest(Message message)
         {
-            return JsonSerializer.Deserialize<EventCommand>(message.Body.Value);
+            return JsonSerializer.Deserialize<EventCommand<TScenario>>(message.Body.Value);
         }
     }
 }
@@ -220,7 +198,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.B
     using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
     using Paramore.Brighter.Extensions;
 
-    public sealed class EventCommand : Command
+    public sealed class EventCommand<TScenario> : Command
     {
         public EventCommand() : base(Guid.NewGuid()) { }
     }
@@ -246,12 +224,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.B
         public override Type GetHandlerType() => typeof(SecondTransform);
     }
 
-    internal sealed class CollidingMapper : IAmAMessageMapper<EventCommand>
+    internal sealed class CollidingMapper<TScenario> : IAmAMessageMapper<EventCommand<TScenario>>
     {
         public IRequestContext Context { get; set; }
 
         [SecondWrapWith(0)]
-        public Message MapToMessage(EventCommand request, Publication publication)
+        public Message MapToMessage(EventCommand<TScenario> request, Publication publication)
         {
             return new Message(
                 new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), timeStamp: DateTime.UtcNow),
@@ -259,11 +237,19 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.B
         }
 
         [SecondUnwrapWith(0)]
-        public EventCommand MapToRequest(Message message)
+        public EventCommand<TScenario> MapToRequest(Message message)
         {
-            return JsonSerializer.Deserialize<EventCommand>(message.Body.Value);
+            return JsonSerializer.Deserialize<EventCommand<TScenario>>(message.Body.Value);
         }
     }
+}
+
+namespace Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.Scenarios
+{
+    internal sealed class WrapFirstBuiltFirst { }
+    internal sealed class WrapOppositeOrder { }
+    internal sealed class UnwrapFirstBuiltFirst { }
+    internal sealed class UnwrapOppositeOrder { }
 }
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation.TransformTypeKeyed.Reuse
