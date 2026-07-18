@@ -42,8 +42,10 @@ public class NatsMessageProducer(
     public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
     {
         BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Nats, message, instrumentations);
-        await client.PublishAsync(publication.Topic!.Value, message.Body.ToByteArray(),
+        await client.PublishAsync(publication.Topic!.Value, 
+            message.Body.ToByteArray(),
             headers: message.Header.ToNatsHeaders(),
+            replyTo: message.Header.ReplyTo?.Value,
             cancellationToken: cancellationToken);
     }
 

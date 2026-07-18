@@ -25,4 +25,21 @@ public static class HeadersName
 {
     public const string Id = "ce-id";
     public const string Baggage = "ce-baggage";
+    public const string ContentType = "ce-datacontenttype";
+    public const string CorrelationId = "ce-correlationid";
+    public const string DataSchema = "ce-dataschema";
+    public const string DataRef = "ce-dataref";
+    public const string JobId = "brighter-jobid";
+    public const string MessageType = "brighter-messagetype";
+    public const string ReplyTo = "ce-replyto";
+    public const string Subject = "ce-subject";
+    public const string SpecVersion  = "ce-specversion";
+    public const string Source  = "ce-source";
+    public const string Time = "ce-time";
+    public const string TraceParent = "ce-traceparent";
+    public const string TraceState = "ce-tracestate";
+    public const string WorkflowId ="brighter-workflowid";
+
+
+    public const string NatsMessage = "BrighterNats";
 }

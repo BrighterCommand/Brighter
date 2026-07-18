@@ -30,53 +30,51 @@ internal static class MessageHeaderExtensions
         var headers = new NatsHeaders();
         headers[HeadersName.Id] = messageHeader.MessageId.Value;
         headers[HeadersName.Baggage] = messageHeader.Baggage.ToString();
-        headers["ce-datacontenttype"] = messageHeader.ContentType.ToString();
-        headers["ce-correlationid"] = messageHeader.CorrelationId.Value;
-        headers["ce-specversion"] = messageHeader.SpecVersion;
-        headers["ce-source"] = messageHeader.Source.ToString();
-        headers["ce-time"] = messageHeader.TimeStamp.ToString("O");
-
-        headers["brighter-messagetype"] = messageHeader.MessageType.ToString();
-        headers["brighter-topic"] = messageHeader.Topic.ToString();
+        headers[HeadersName.ContentType] = messageHeader.ContentType.ToString();
+        headers[HeadersName.CorrelationId] = messageHeader.CorrelationId.Value;
+        headers[HeadersName.MessageType] = messageHeader.MessageType.ToString();
+        headers[HeadersName.SpecVersion] = messageHeader.SpecVersion;
+        headers[HeadersName.Source] = messageHeader.Source.ToString();
+        headers[HeadersName.Time] = messageHeader.TimeStamp.ToString("O");
 
         if (messageHeader.DataSchema != null)
         {
-            headers["ce-dataschema"] = messageHeader.DataSchema.ToString();
+            headers[HeadersName.DataSchema] = messageHeader.DataSchema.ToString();
         }
 
         if (messageHeader.DataRef != null)
         {
-            headers["ce-dataref"] = messageHeader.DataRef;
+            headers[HeadersName.DataRef] = messageHeader.DataRef;
         }
 
         if (messageHeader.JobId != null)
         {
-            headers["brighter-jobib"] = messageHeader.JobId.ToString();
+            headers[HeadersName.JobId] = messageHeader.JobId.ToString();
         }
         
         if (!RoutingKey.IsNullOrEmpty(messageHeader.ReplyTo))
         {
-            headers["ce-replyto"] = messageHeader.ReplyTo.Value;
+            headers[HeadersName.ReplyTo] = messageHeader.ReplyTo.Value;
         }
 
         if (messageHeader.Subject != null)
         {
-            headers["ce-subject"] = messageHeader.Subject;
+            headers[HeadersName.Subject] = messageHeader.Subject;
         }
 
         if (messageHeader.TraceParent != null)
         {
-            headers["ce-traceparent"] = messageHeader.TraceParent.Value;
+            headers[HeadersName.TraceParent] = messageHeader.TraceParent.Value;
         }
 
         if (messageHeader.TraceState != null)
         {
-            headers["ce-tracestate"] = messageHeader.TraceState.ToString();
+            headers[HeadersName.TraceState] = messageHeader.TraceState.ToString();
         }
         
         if (messageHeader.WorkflowId != null)
         {
-            headers["brighter-workflow"] = messageHeader.WorkflowId.ToString();
+            headers[HeadersName.WorkflowId] = messageHeader.WorkflowId.ToString();
         }
 
         foreach (var keyPair in messageHeader.Baggage)
