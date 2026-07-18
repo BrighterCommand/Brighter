@@ -72,7 +72,8 @@ Concretely:
 - **Unit under test.** Canonical tests exercise the transport's **channel** and **producer**
   surface directly: `IAmAChannelSync` / `IAmAChannelAsync` (`Receive`, `Reject`, `Requeue`,
   `Acknowledge`) and `IAmAMessageProducerSync` / `IAmAMessageProducerAsync`
-  (`Send`, `SendWithDelay`, and the producer's `Scheduler`). 
+  (`Send`, `SendWithDelay`). *(The producer's `Scheduler` was in scope while FR-3 asserted
+  scheduler delegation; with FR-3 withdrawn the suite no longer reaches for that mechanism.)*
 - **Sync and async are both exercised** because the sync and async channel/producer methods are
   genuinely distinct code paths. This — not pump mechanics — is what the Reactor and Proactor
   test variants (FR-14) mean in this suite.
@@ -98,8 +99,8 @@ Terminology (used consistently below):
 - **Ungated** — the template is generated for every transport regardless of any capability
   flag.
 - **Canonical behaviours** — the behaviours in FR-2, FR-4 … FR-9, FR-15, FR-16 (Nack) and FR-17
-  (FR-3 having been folded into FR-2 by ADR 0066)
-  (reject with `None`/unspecified reason → DLQ).
+  (reject with `None`/unspecified reason → DLQ). FR-3 is not among them: ADR 0066 withdrew it as a
+  mechanism assertion and folded it into FR-2.
 - **Rejection-metadata key names** — the per-transport `Header.Bag` key strings under which the
   rejection metadata is stamped. The *semantic set* is universal (see FR-8); only the key
   *names/casing* vary per transport (e.g. Kafka `OriginalTopic`, Redis/SQS `originalTopic`).
@@ -160,11 +161,14 @@ reasons established during design review:
 2. **The scheduler seam does not exist for most transports.** `IAmAChannelFactoryWithScheduler` is
    implemented by only six gateways (Kafka, MQTT, MsSql, Redis, RMQ.Async, RMQ.Sync) — within the
    generator's target set, 6 of the ~20 gateway configurations. The other 14 (AWS ×4, AWS.V4 ×4,
-   GCP ×4, PostgreSQL, RocketMQ) have consumers that take no scheduler and delay natively (e.g.
-   `SqsMessageConsumer.RequeueAsync` uses `ChangeMessageVisibilityAsync`). Running a
-   scheduler-delegation assertion against them would fail **by design** on transports that are
-   nonetheless conformant, and giving them the seam would mean a public runtime API change that
-   C-1 forbids this spec.
+   GCP ×4, PostgreSQL, RocketMQ) have consumers that take no scheduler at all — nine of them delay
+   natively (e.g. `SqsMessageConsumer.RequeueAsync` uses `ChangeMessageVisibilityAsync`;
+   `PostgresMessageConsumer.Requeue` binds the delay as a query parameter), while GCP ×4 ignores the
+   delay outright and RocketMQ's `Requeue` is currently a no-op pending an upstream client fix.
+   Running a scheduler-delegation assertion against any of the 14 would fail **by design**,
+   including against transports that are nonetheless conformant, and giving them the seam would mean
+   a public runtime API change that C-1 forbids this spec. *(The GCP and RocketMQ gaps are real
+   FR-2 non-conformances and are governed by ADR 0067's rollout ledger.)*
 
 The observable behaviour FR-3 cared about — *a delayed requeue actually redelivers after the
 delay* — is fully covered by the amended FR-2, uniformly across every transport. A
@@ -244,10 +248,11 @@ the generic suite (see Out of Scope).
 
 **FR-11 — Correct mis-declared per-transport configurations.**
 The `test-configuration.json` files that were set to satisfy the retiring gates MUST be corrected
-as part of retiring the flags — including PostgreSQL and AWS SQS (both declare
-`HasSupportToDelayedMessages: false`; PostgreSQL also declares
-`HasSupportToDeadLetterQueue: false`) and Kafka (declares `HasSupportToRequeue: false`). After
-FR-10 all three keys are removed from every config rather than left with misleading values.
+as part of retiring the flags — including PostgreSQL (both `HasSupportToDeadLetterQueue: false` and
+`HasSupportToDelayedMessages: false`), AWS (`HasSupportToDelayedMessages: false` in three of its
+four gateway configurations), Kafka (all three gates `false`), and MSSQL
+(`HasSupportToDeadLetterQueue: false` despite ADR 0040's Brighter-managed DLQ). After FR-10 all
+three keys are removed from every config rather than left with misleading values.
 
 **FR-12 — Resolve the broken `requeuing_with_delay` template.**
 The template
@@ -261,7 +266,7 @@ lacks that template's bounded receive-retry loop. This defect MUST be resolved o
 **the choice being an explicit design (ADR) decision**:
   (a) **fix in place** — rewrite it to pass a non-null delay to `Requeue` and include a bounded
       receive-retry loop; or
-  (b) **replace** — delete it because FR-2 (producer) and FR-3 (scheduler fallback) supersede it.
+  (b) **replace** — delete it because the amended, mechanism-agnostic FR-2 supersedes it.
 In no case may a template remain that passes no delay to `Requeue`. AC-12 applies conditionally
 on outcome (a).
 
@@ -290,7 +295,7 @@ Generate (or extend a canonical test to assert) that `channel.Requeue(M, TimeSpa
 requeue: the message is available to be received again without waiting for a delay window. Per
 NFR-3 the assertion is the observable outcome (no delay window elapses); the test does not assert
 scheduler non-engagement as an internal mechanism. This pins the lower boundary of the delay
-parameter so a positive-delay path (FR-2/FR-3) is not conflated with the zero/null no-op path.
+parameter so a positive-delay path (FR-2) is not conflated with the zero/null no-op path.
   *Example:* receive `M`; call `channel.Requeue(M, TimeSpan.Zero)`; assert `Requeue` returns
   `true` and `M` is receivable again within the plain-requeue bounded retry loop (no delay
   window elapses).
@@ -375,7 +380,7 @@ channel. This is a distinct routing rule from FR-4 (`DeliveryError`) and FR-5 (`
   fatal/non-fatal error escalation, producer-not-persisted synthesis, requeue-producer disposal,
   and factory/subscription wiring unit tests (`When_creating_channel_with_dlq_subscription_should_pass_routing_keys`,
   `When_kafka_channel_factory_forwards_scheduler_to_consumers`, etc.). The wiring is proven
-  transitively by the end-to-end canonical tests (FR-3, FR-4, FR-5); the rest is Kafka-specific.
+  transitively by the end-to-end canonical tests (FR-4, FR-5); the rest is Kafka-specific.
   See "Coverage reconciliation against the Kafka surface area".
 - **OOS-4.** Sibling defects #4238 (single `Outbox` async-only) and #4239 (`CollectionName`
   ignored by sync outbox templates). Context only.
@@ -386,8 +391,10 @@ channel. This is a distinct routing rule from FR-4 (`DeliveryError`) and FR-5 (`
 
 - **AC-1 (FR-1).** *Given* a transport's generated provider, *when* a test calls
   `CreateSubscription` with a dead-letter routing key and an invalid-message routing key, *then*
-  it obtains a channel that routes rejections per the fallback ladder; and separate members exist
-  to create channels configured with a DLQ only, an invalid channel only, and neither (FR-1(2),
+  it obtains a channel that routes rejections per the fallback ladder; and the provider exposes a
+  means to create channels configured with a DLQ only, an invalid channel only, and neither —
+  ADR 0066 does this via nullable, defaulted `deadLetterRoutingKey` / `invalidMessageRoutingKey`
+  parameters on a single `CreateSubscription` rather than separate members (FR-1(2),
   validated in use by AC-5/AC-6/AC-7), to read from the DLQ, read from the invalid channel, and
   read the transport's rejection-metadata key names. *(The scheduler-carrying member originally
   required by FR-1(4) is withdrawn — see FR-1(4) and FR-3.)*
@@ -430,7 +437,7 @@ channel. This is a distinct routing rule from FR-4 (`DeliveryError`) and FR-5 (`
 - **AC-12 (FR-12, conditional on fix-in-place).** *If* the design retains and fixes the
   `with_delay` template, *then* the corrected template passes a non-null `TimeSpan` delay to
   `Requeue` and includes a bounded receive-retry loop, and the generated test fails if delayed
-  requeue does not redeliver the message. *If* the design replaces it with FR-2/FR-3, *then* the
+  requeue does not redeliver the message. *If* the design replaces it with FR-2, *then* the
   template is deleted and a template-source inspection confirms no remaining messaging-gateway
   template calls `Requeue` / `RequeueAsync` without a `TimeSpan` delay argument.
 - **AC-13 (FR-13).** *Given* a full generation run, *when* the suite is generated for every
@@ -478,10 +485,11 @@ covering each path with a single thin test. Mapping:
 | `When_nacking_a_message_it_should_be_redelivered` (+ two-message variant)      | FR-16 (added) |
 | plain requeue / delayed send                                                   | existing plain-requeue template (ungated by FR-10) / FR-9 |
 
-**Gaps in Kafka's own coverage that the generated suite closes via FR-14 parity:** Kafka has an
-async requeue-via-*producer* test but no async requeue-via-*scheduler* test, and its metadata test
-exists only in the Reactor variant. Because FR-14 mandates both a sync and an async variant of
-every canonical behaviour, the generated suite is *more* complete than the hand-written Kafka set.
+**Gaps in Kafka's own coverage that the generated suite closes via FR-14 parity:** Kafka's metadata
+test exists only in the Reactor variant. Because FR-14 mandates both a sync and an async variant of
+every canonical behaviour, the generated suite closes that gap. *(Kafka also lacks an async
+requeue-via-scheduler test; the generated suite does **not** close that one, since FR-3 is withdrawn
+and scheduler delegation is now OOS-2 supplementary work.)*
 
 **Deliberately excluded (OOS-3)** as transport-internal rather than universal channel behaviour:
 offset commit/sweep/revoke, topic declaration, Brighter↔Kafka header conversion and byte/UTF-8
@@ -490,10 +498,13 @@ producer not-persisted/confirmation handling, requeue-producer disposal, and the
 `Nack`-without-offset edge. Also excluded are the **wiring unit tests** — `..._pass_routing_keys`,
 `..._subscription_with_dead_letter/invalid_message_routing_key_should_expose_property`,
 `..._channel_factory_forwards_scheduler_to_consumers`, `..._consumer_factory_..._pass_scheduler` —
-because that plumbing is exercised transitively by the end-to-end canonical tests (a subscription
-that drops the DLQ routing key fails FR-4; a factory that fails to forward the scheduler fails
-FR-3). If a transport should assert this wiring in isolation, that is a candidate follow-up, not
-part of the generic suite.
+because the routing-key plumbing is exercised transitively by the end-to-end canonical tests (a
+subscription that drops the DLQ routing key fails FR-4). **The scheduler-forwarding wiring tests are
+a different case**: with FR-3 withdrawn, nothing in the generic suite proves scheduler forwarding
+transitively, so those two remain excluded not because they are redundant but because scheduler
+delegation is now OOS-2 supplementary work for the six gateways that expose the seam. If a transport
+should assert this wiring in isolation, that is a candidate follow-up, not part of the generic
+suite.
 
 ## Additional Context
 
@@ -517,6 +528,7 @@ Grounding read during drafting (all paths relative to the worktree root
   PostgreSQL `HasSupportToDeadLetterQueue:false`/`HasSupportToDelayedMessages:false`; AWS
   `HasSupportToDelayedMessages:false` in three of its four configurations (`SqsStandard` declares
   `true`, in both V3 and V4); Kafka all three gates `false` in both Standard and PartitionKey;
+  MSSQL `HasSupportToDeadLetterQueue:false` despite ADR 0040's Brighter-managed DLQ;
   AWS `SqsStandard` and RocketMQ the only `HasSupportToDelayedMessages:true`.
 - Canonical hand-written behaviours (Kafka Reactor folder):
   `When_kafka_consumer_requeues_with_delay_should_use_producer.cs`,

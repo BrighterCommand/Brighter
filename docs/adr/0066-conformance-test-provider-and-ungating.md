@@ -110,7 +110,7 @@ under this spec's tasks.
 We extend both generated provider interfaces to expose the full surface the canonical
 conformance tests drive, retire the three capability gates so the canonical templates generate
 universally in both Reactor and Proactor variants, and delete the broken `with_delay` template
-(superseded by FR-2/FR-3).
+(superseded by the amended FR-2).
 
 **One deliberate departure from the original requirement wording.** FR-1(4) and AC-1 asked for a
 member returning "a producer whose `Scheduler` property is set", to support FR-3's
@@ -175,9 +175,12 @@ construction and stays sync; `CreateChannelAsync`, `CreateProducerAsync`,
 `GetMessageFromDeadLetterQueue` and `GetMessageFromInvalidChannel` — and their async siblings —
 MUST poll with a bounded retry (NFR-2) and, when nothing arrives within the bound, return a message
 whose `Header.MessageType` is `MessageType.MT_NONE`. They MUST NOT throw and MUST NOT block
-indefinitely on an empty queue. This makes "the message did **not** appear on the DLQ / invalid
-channel" a uniform, transport-agnostic assertion; without it, AC-5 ("does not appear on any DLQ")
-and AC-18 ("does not appear on the invalid channel") are unwritable as a single template.
+indefinitely on an empty queue. Reading a DLQ or invalid channel that the subscription does **not**
+configure likewise returns `MT_NONE` rather than throwing. This makes "the message did **not**
+appear on the DLQ / invalid channel" a uniform, transport-agnostic assertion; without it, AC-5
+("does not appear on any DLQ") and AC-18 ("does not appear on the invalid channel") are unwritable
+as a single template. The FR-5 and FR-17 templates configure **both** routing keys and assert the
+message landed on one channel and not the other.
 
 `RejectionMetadataKeys` is a small immutable value type (record) exposing the universal
 semantic set as named members returning this transport's actual key strings:
@@ -211,12 +214,24 @@ withdraw that, and FR-3 with it (see requirements.md FR-3, now folded into FR-2)
    Redis, RMQ.Async, RMQ.Sync — and only those consumers accept an `IAmAMessageScheduler`. Of the
    ~20 gateway configurations the generator targets, **6** can carry a scheduler (Kafka ×2, MSSQL,
    Redis, RMQ.Async ×2); the other **14** (AWS ×4, AWS.V4 ×4, GCP ×4, PostgreSQL, RocketMQ) take no
-   scheduler and delay natively — `SqsMessageConsumer.RequeueAsync` issues a
-   `ChangeMessageVisibilityAsync` carrying the delay; `PostgresMessageConsumer.Requeue` passes it as
-   a query parameter. A scheduler-delegation assertion would fail **by design** on those 14 even
-   though they are conformant, and giving them the seam would mean adding a constructor parameter
-   to `SqsMessageConsumer`, `PostgresMessageConsumer`, the GCP consumers and RocketMQ's — a public
-   runtime API change that **C-1 forbids this spec**.
+   scheduler at all. Nine of those fourteen honour the delay **natively** —
+   `SqsMessageConsumer.RequeueAsync` issues a `ChangeMessageVisibilityAsync` carrying the delay
+   (line 402), `PostgresMessageConsumer.Requeue` binds it as a query parameter (line 459). The
+   remaining five honour it **by neither route**: all four GCP configurations ignore the delay
+   outright (`GcpPullMessageConsumer.Requeue` calls `ModifyAckDeadline(..., 0)`; its own XML doc
+   reads *"An optional delay (not used by Pub/Sub)"* — redelivery timing is governed by the
+   subscription's RetryPolicy), and `RocketMessageConsumer.Requeue` is a **no-op that returns
+   `true`**, its `ChangeInvisibleDuration` call commented out pending an upstream RocketMQ C#
+   client fix. A scheduler-delegation assertion would fail **by design** on all fourteen, and
+   giving them the seam would mean adding a constructor parameter to `SqsMessageConsumer`,
+   `PostgresMessageConsumer`, the GCP consumers and RocketMQ's — a public runtime API change that
+   **C-1 forbids this spec**.
+
+   Those last five matter for the rollout, not for this decision: the mechanism-agnostic FR-2 will
+   **fail on GCP ×4 and RocketMQ** at the flip, because neither actually delays a requeue. That is
+   a genuine conformance gap — exactly what an ungated suite is meant to expose — and ADR 0067
+   sequences and governs it (RocketMQ's is blocked on an upstream dependency, so it is a likely
+   signed-off `Deferred` row rather than an in-spec `Fixed`).
 
 So FR-2's generated test asserts the observable outcome only: *requeue with delay D, and the message
 is redelivered after D*. That is uniform across all ~20 configurations regardless of mechanism, and
@@ -344,7 +359,7 @@ both Standard and PartitionKey) values (FR-11). Removing the keys (rather than c
 template-source inspection MUST confirm no messaging-gateway template calls `Requeue` /
 `RequeueAsync` without a non-null `TimeSpan` delay argument. The still-valid plain-requeue
 template (`When_requeuing_a_failed_message_should_receive_message_again.cs.liquid`, ungated by
-FR-10) covers the no-delay path; FR-2/FR-3 cover the delayed path.
+FR-10) covers the no-delay path; the amended FR-2 covers the delayed path.
 
 **Reactor/Proactor parity (FR-14).** Every change above lands in *both* template trees and both
 provider interfaces — the async members return `Task`/`Task<...>` and take a
@@ -364,14 +379,14 @@ vs async gateway code paths; it is not pump re-testing.
   confidence; the configs no longer carry misleading values.
 - Strongly-typed `RejectionMetadataKeys` gives refactor-safe metadata assertions across the
   genuinely divergent Kafka/Redis/SQS key names.
-- One obvious way to test delayed requeue (FR-2/FR-3) instead of two overlapping templates.
+- One canonical delayed-requeue behaviour (the amended FR-2) instead of two overlapping templates.
 
 ### Negative
 
 - **Every per-transport provider implementation must be extended** to satisfy the wider
   interface (Kafka, Redis, MSSQL, PostgreSQL, RMQ, AWS SNS/SQS, GCP, RocketMQ, …). A transport
-  that cannot yet supply an invalid channel, a scheduler-backed channel, or a metadata-key set
-  surfaces as a compile or implementation gap. This is *intended* (it is how non-conformance
+  that cannot yet supply an invalid channel or a metadata-key set surfaces as a compile or
+  implementation gap. This is *intended* (it is how non-conformance
   becomes visible per FR-13), but it is real work and is the bulk of the follow-on effort.
 - **We lose the ability to prove, in the generic suite, that a transport without native delay really
   falls back to Brighter's scheduler.** That was FR-3's purpose, and dropping it means a gateway
@@ -393,8 +408,8 @@ vs async gateway code paths; it is not pump re-testing.
   the point*, not a regression — handled under FR-13 (fix-to-conform, or a named, linked,
   signed-off deferral; never a silent `[Skip]`). Sequencing is a separate ADR.
 - *Risk*: timing flakiness in delayed/redelivery assertions. *Mitigation*: NFR-2 bounded
-  receive-retry loops (as in the plain-requeue template), and the spy-scheduler variant removes
-  timing from the delegation assertion entirely.
+  receive-retry loops (as in the plain-requeue template), which is now the only defence since the
+  suite makes no timing-free mechanism assertion.
 - *Risk*: provider implementations drift from the interface. *Mitigation*: the interface is
   generated and compiled against each hand-written provider, so drift is a build break.
 
@@ -409,15 +424,17 @@ vs async gateway code paths; it is not pump re-testing.
    reintroduces primitive obsession. The strongly-typed record makes an omitted field a compile
    error and reads as intent.
 3. **Fix the `with_delay` template in place (FR-12 option a).** Rejected: redundant with and
-   weaker than FR-2 (producer) + FR-3 (scheduler fallback); keeping it duplicates knowledge and
+   weaker than the amended, mechanism-agnostic FR-2; keeping it duplicates knowledge and
    leaves a third delayed-requeue template to maintain.
 4. **Keep a scheduler-delegation test in the generic suite (spy, in-memory, or both).** Rejected on
    two independent grounds. *Principle*: it asserts the delay **mechanism**, which NFR-3 and OOS-1
-   forbid — "we don't want to test how, we want to test supported". *Practice*: only 6 of the ~20
-   target gateway configurations expose a scheduler seam
-   (`IAmAChannelFactoryWithScheduler` — Kafka, MQTT, MsSql, Redis, RMQ.Async, RMQ.Sync); the other
-   14 delay natively and take no scheduler, so the assertion fails by design on conformant
-   transports, and giving them the seam is a public runtime API change C-1 forbids. Retained as
+   forbid — "we don't want to test how, we want to test supported". *Practice*:
+   `IAmAChannelFactoryWithScheduler` is implemented by six gateways (Kafka, MQTT, MsSql, Redis,
+   RMQ.Async, RMQ.Sync), of which four are in the generator's target set, contributing **6 of the
+   ~20 target configurations** (Kafka ×2, MSSQL, Redis, RMQ.Async ×2) — MQTT and RMQ.Sync have no
+   `test-configuration.json` and are out of scope. The other 14 take no scheduler, so the assertion
+   fails by design on them, including on conformant transports, and giving them the seam is a
+   public runtime API change C-1 forbids. Retained as
    OOS-2 supplementary work for the six gateways that can support it. (An earlier draft of this ADR
    chose "both arms"; the seam-coverage evidence above overturned it.)
 5. **A shared core `RejectionMetadataKeys` type in `src/Paramore.Brighter`.** Rejected per C-2:
@@ -430,7 +447,7 @@ vs async gateway code paths; it is not pump re-testing.
 
 - Requirements: [specs/0036-universal-transport-conformance-tests/requirements.md](../../specs/0036-universal-transport-conformance-tests/requirements.md)
 - Related ADRs (this ADR builds on all of these; it supersedes none):
-  - [`0067-conformance-rollout-and-deferral-governance`](0067-conformance-rollout-and-deferral-governance.md) [Proposed] — **sibling.** Sequences the per-transport rollout around this ADR's gate-retirement flip (fix-then-flip) and governs auditable deferrals via the conformance ledger; a provider that cannot yet supply a member added here (e.g. the in-memory scheduler arm) is tracked as a `Deferred` row there.
+  - [`0067-conformance-rollout-and-deferral-governance`](0067-conformance-rollout-and-deferral-governance.md) [Proposed] — **sibling.** Sequences the per-transport rollout around this ADR's gate-retirement flip (fix-then-flip) and governs auditable deferrals via the conformance ledger; a provider that cannot yet supply a member added here (e.g. the invalid-channel read, or the rejection-metadata key set) is tracked as a `Deferred` row there.
   - `0037-add-messaging-gateway-generated-test` [Accepted] — created this generator and
     `MessagingGatewayConfiguration`; this ADR directly extends its provider interfaces and
     retires three of its capability flags (the most important relation).
@@ -438,8 +455,8 @@ vs async gateway code paths; it is not pump re-testing.
     (DeliveryError→DLQ; Unacceptable→invalid else DLQ; None→DLQ) and origin-metadata enrichment;
     the contract the generated tests now assert universally (not redefined here).
   - `0037-universal-scheduler-delay` — routes delayed requeue through `IAmAMessageScheduler`
-    with `InMemoryScheduler` default; the mechanism FR-3's scheduler-fallback test exercises via
-    the producer's `Scheduler`.
+    with `InMemoryScheduler` default; this was the mechanism the withdrawn FR-3 would have
+    asserted, and remains the mechanism any OOS-2 supplementary scheduler test would exercise.
   - `0045-provide-dlq-where-missing` — Brighter-managed dead-letter and invalid-message
     channels; the provisioning the new DLQ/invalid provider members rely on.
   - `0039-transport-scheduler-wiring` — threads `IAmAMessageScheduler` through the channel factory

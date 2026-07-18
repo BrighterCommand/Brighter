@@ -51,12 +51,23 @@ property**, and the ledger below is keyed accordingly. Their conformance state i
   (`0041`), and RocketMQ (`0042`) — already have Brighter-managed DLQ/reject decisions recorded
   per transport, but their end-to-end conformance against the generated suite is unproven; several
   mis-declare gates (AWS `HasSupportToDelayedMessages: false` in three of its four gateway
-  configurations — `SqsStandard` declares `true` — and PostgreSQL both `false`). **RMQ**
+  configurations — `SqsStandard` declares `true`; PostgreSQL both `false`; and MSSQL
+  `HasSupportToDeadLetterQueue: false` despite ADR `0040` giving it a Brighter-managed DLQ). **RMQ**
   sits alongside them in the sequence but has **no** per-transport DLQ ADR — RabbitMQ conventionally
   uses a native dead-letter exchange (DLX), and its reject/DLQ conformance rests on the universal
   routing strategy (`0047-message-rejection-routing-strategy` / `0045-provide-dlq-where-missing`),
   not a Brighter-managed-DLQ decision of its own; its fix may therefore be larger than the
   DLQ-ADR transports' and is treated under the size/risk boundary accordingly.
+- **Two known FR-2 non-conformances are already identified**, ahead of any generation run. The
+  mechanism-agnostic FR-2 asserts a delayed requeue is redelivered after the delay; neither GCP nor
+  RocketMQ does that today. All four GCP configurations ignore the delay argument —
+  `GcpPullMessageConsumer.Requeue` calls `ModifyAckDeadline(..., 0)` and its XML doc states the
+  delay is "not used by Pub/Sub" (redelivery timing comes from the subscription's RetryPolicy) —
+  and `RocketMessageConsumer.Requeue` is a **no-op returning `true`**, its `ChangeInvisibleDuration`
+  call commented out pending an upstream RocketMQ C# client release. RocketMQ's is therefore blocked
+  on a third-party dependency and is a likely signed-off `Deferred` row rather than an in-spec
+  `Fixed`; GCP's requires deciding whether subscription-RetryPolicy redelivery can satisfy FR-2 at
+  all. Both are seeded into the ledger as known non-conformances rather than discovered at the flip.
 - **The known-gap transports** are worst off: GCP has messaging-gateway providers and a
   requeue-to-DLQ generated test but none of the canonical reject-routing / scheduler-fallback /
   metadata behaviours; and Azure / Azure Service Bus, which the parent requirement calls "currently
