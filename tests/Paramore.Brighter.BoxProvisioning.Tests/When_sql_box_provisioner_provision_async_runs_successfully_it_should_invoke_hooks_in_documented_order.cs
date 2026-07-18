@@ -66,7 +66,7 @@ public class SqlBoxProvisionerHookOrderTests
         //Assert: normal-path order — detection takes the GetMaxVersion branch (history exists),
         //        payload validation runs on the SAME connection (item #11: prior shape opened a
         //        second connection here and closed both back-to-back), then MigrateAsync.
-        await Assert.That(log).IsEqualTo(new[]
+        await Assert.That(log).IsEquivalentTo(new[]
             {
                 "CreateConnection",
                 "OpenAsync",
@@ -76,7 +76,7 @@ public class SqlBoxProvisionerHookOrderTests
                 "ValidateAsync",
                 "Dispose",
                 "MigrateAsync"
-            });
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
         await Assert.That(migrationRunner.CapturedTableState).IsNotNull();
         await Assert.That(migrationRunner.CapturedTableState!.TableExists).IsTrue();
         await Assert.That(migrationRunner.CapturedTableState!.HistoryExists).IsTrue();
@@ -107,7 +107,7 @@ public class SqlBoxProvisionerHookOrderTests
         //Assert: bootstrap-path order — detection takes the DetectCurrentVersion branch
         //        (table present, no history); payload validation runs on the SAME connection
         //        (item #11: prior shape opened a second connection here), then MigrateAsync.
-        await Assert.That(log).IsEqualTo(new[]
+        await Assert.That(log).IsEquivalentTo(new[]
             {
                 "CreateConnection",
                 "OpenAsync",
@@ -117,7 +117,7 @@ public class SqlBoxProvisionerHookOrderTests
                 "ValidateAsync",
                 "Dispose",
                 "MigrateAsync"
-            });
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
         await Assert.That(migrationRunner.CapturedTableState).IsNotNull();
         await Assert.That(migrationRunner.CapturedTableState!.TableExists).IsTrue();
         await Assert.That(migrationRunner.CapturedTableState!.HistoryExists).IsFalse();
@@ -145,14 +145,14 @@ public class SqlBoxProvisionerHookOrderTests
         //Assert: fresh-path order — DoesTableExistAsync returns false, so DoesHistoryExistAsync
         //        is NOT called, payload validation is NOT called, and MigrateAsync is invoked
         //        directly with TableExists: false / HistoryExists: false / CurrentVersion: 0.
-        await Assert.That(log).IsEqualTo(new[]
+        await Assert.That(log).IsEquivalentTo(new[]
             {
                 "CreateConnection",
                 "OpenAsync",
                 "DoesTableExistAsync",
                 "Dispose",
                 "MigrateAsync"
-            });
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
         await Assert.That(migrationRunner.CapturedTableState).IsNotNull();
         await Assert.That(migrationRunner.CapturedTableState!.TableExists).IsFalse();
         await Assert.That(migrationRunner.CapturedTableState!.HistoryExists).IsFalse();

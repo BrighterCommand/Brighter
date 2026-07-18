@@ -66,7 +66,9 @@ public class UseBoxProvisioningPublicApiTests
             .ToArray();
 
         //Assert
-        await Assert.That(parameterTypes).IsEqualTo(new[] { typeof(IBrighterBuilder), typeof(Action<BoxProvisioningOptions>) });
+        await Assert.That(parameterTypes).IsEquivalentTo(
+            new[] { typeof(IBrighterBuilder), typeof(Action<BoxProvisioningOptions>) },
+            TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     [Test]

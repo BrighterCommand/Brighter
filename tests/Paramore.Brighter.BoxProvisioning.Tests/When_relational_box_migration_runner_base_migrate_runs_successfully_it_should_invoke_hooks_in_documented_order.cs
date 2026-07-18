@@ -61,7 +61,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
             tableState: new BoxTableState(false, false, 0));
 
         //Assert
-        await Assert.That(unitOfWork.Log).IsEqualTo(new[]
+        await Assert.That(unitOfWork.Log).IsEquivalentTo(new[]
             {
                 "OpenConnection",
                 "CreateUnitOfWork",
@@ -71,7 +71,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
                 "RunFreshPath",
                 "CommitAsync",
                 "DisposeAsync"
-            });
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     [Test]
@@ -94,7 +94,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
             tableState: new BoxTableState(true, false, 0));
 
         //Assert
-        await Assert.That(unitOfWork.Log).IsEqualTo(new[]
+        await Assert.That(unitOfWork.Log).IsEquivalentTo(new[]
             {
                 "OpenConnection",
                 "CreateUnitOfWork",
@@ -104,7 +104,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
                 "RunBootstrapPath",
                 "CommitAsync",
                 "DisposeAsync"
-            });
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     [Test]
@@ -127,7 +127,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
             tableState: new BoxTableState(true, true, 0));
 
         //Assert
-        await Assert.That(unitOfWork.Log).IsEqualTo(new[]
+        await Assert.That(unitOfWork.Log).IsEquivalentTo(new[]
             {
                 "OpenConnection",
                 "CreateUnitOfWork",
@@ -137,7 +137,7 @@ public class SqlBoxMigrationRunnerHookOrderTests
                 "RunNormalPath",
                 "CommitAsync",
                 "DisposeAsync"
-            });
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     /// <summary>

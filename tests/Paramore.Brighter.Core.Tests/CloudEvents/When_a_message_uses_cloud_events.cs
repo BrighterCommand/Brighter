@@ -8,6 +8,7 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Transformers;
+using TUnit.Assertions.Enums;
 
 namespace Paramore.Brighter.Core.Tests.CloudEvents;
 public class CloudEventsTransformerTests
@@ -119,7 +120,7 @@ public class CloudEventsTransformerTests
         //act
         _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test Topic"), MessageType.MT_COMMAND), new MessageBody("teste"));
         var body = _message.Body;
-        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, _type, null, null, _dataSchema.ToString(), _subject, CloudEventFormat.Json);
         var cloudEvents = _transformer.Wrap(_message, new Publication { DataSchema = _dataSchema, Source = _source, Type = _type, Subject = _subject });
         //assert
         await Assert.That(cloudEvents.Header.Source).IsEqualTo(_source);
@@ -266,7 +267,7 @@ public class CloudEventsTransformerTests
        await Assert.That(message.Header.Type).IsEqualTo(_type);
        await Assert.That(message.Header.DataSchema).IsEqualTo(_dataSchema);
        await Assert.That(message.Header.Subject).IsEqualTo(_subject);
-       await Assert.That(message.Body.Bytes).IsEqualTo(_message.Body.Bytes);
+       await Assert.That(message.Body.Bytes).IsEquivalentTo(_message.Body.Bytes, CollectionOrdering.Matching);
     }
 
     [Test]

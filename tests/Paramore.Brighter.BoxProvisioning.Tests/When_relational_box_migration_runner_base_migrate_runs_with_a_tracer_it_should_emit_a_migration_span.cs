@@ -107,11 +107,11 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
         //Assert — child events fired in the documented order: ensure_history_table first,
         //then fresh_install (the path-taken event).
         var eventNames = span.Events.Select(e => e.Name).ToArray();
-        await Assert.That(eventNames).IsEqualTo(new[]
+        await Assert.That(eventNames).IsEquivalentTo(new[]
             {
                 BrighterSemanticConventions.BoxMigrationEventEnsureHistory,
                 BrighterSemanticConventions.BoxMigrationEventFreshInstall
-            });
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     [Test]
@@ -143,11 +143,11 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
         await Assert.That((span.TagObjects).Any(t => t.Key == BrighterSemanticConventions.DbNamespace)).IsFalse();
 
         var eventNames = span.Events.Select(e => e.Name).ToArray();
-        await Assert.That(eventNames).IsEqualTo(new[]
+        await Assert.That(eventNames).IsEquivalentTo(new[]
             {
                 BrighterSemanticConventions.BoxMigrationEventEnsureHistory,
                 BrighterSemanticConventions.BoxMigrationEventBootstrap
-            });
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     [Test]
@@ -175,11 +175,11 @@ public class SqlBoxMigrationRunnerObservabilityTests : IDisposable
         await Assert.That((span.TagObjects).Any(t => t.Key == BrighterSemanticConventions.BoxMigrationPath && (string?)t.Value == "normal")).IsTrue();
 
         var eventNames = span.Events.Select(e => e.Name).ToArray();
-        await Assert.That(eventNames).IsEqualTo(new[]
+        await Assert.That(eventNames).IsEquivalentTo(new[]
             {
                 BrighterSemanticConventions.BoxMigrationEventEnsureHistory,
                 BrighterSemanticConventions.BoxMigrationEventNormalUpdate
-            });
+            }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
     }
 
     [Test]

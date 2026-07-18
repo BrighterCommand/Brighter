@@ -27,6 +27,7 @@ using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Validation;
 using System.Threading.Tasks;
+using TUnit.Assertions.Enums;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
@@ -87,6 +88,6 @@ public class ProducerTransformWarningDeterminismTests
             .Warnings.Where(w => w.Message.Contains(nameof(MyDescribableTransform))).Select(w => w.Source).ToList();
 
         // Assert
-        await Assert.That(second).IsEqualTo(first);
+        await Assert.That(second).IsEquivalentTo(first, CollectionOrdering.Matching);
     }
 }
