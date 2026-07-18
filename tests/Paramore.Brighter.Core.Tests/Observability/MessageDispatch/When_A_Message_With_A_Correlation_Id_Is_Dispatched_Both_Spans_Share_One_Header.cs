@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
     public class MessageHeaderCorrelationIdObservabilityTests
     {
         private const string ChannelName = "myChannel";
-        private readonly RoutingKey _routingKey = new("MyTopic");
+        private readonly RoutingKey _routingKey = new(nameof(MessageHeaderCorrelationIdObservabilityTests));
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
@@ -110,9 +110,12 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             );
 
             channel.Enqueue(_message);
-            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey("MyTopic"));
+            var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
         }
+
+        [After(Test)]
+        public void DisposeTraceProvider() => _traceProvider.Dispose();
 
         [Test]
         public async Task When_a_message_with_a_correlation_id_is_dispatched_both_spans_share_one_header()

@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 public class MessagePumpProcessSpanObservabilityTests
 {
     private const string ChannelName = "myChannel";
-    private readonly RoutingKey _routingKey = new("MyTopic");
+    private readonly RoutingKey _routingKey = new(nameof(MessagePumpProcessSpanObservabilityTests));
     private readonly InternalBus _bus = new();
     private readonly FakeTimeProvider _timeProvider = new();
     private readonly IAmAMessagePump _messagePump;
@@ -117,6 +117,9 @@ public class MessagePumpProcessSpanObservabilityTests
         channel.Enqueue(_message);
         channel.Enqueue(MessageFactory.CreateQuitMessage(_routingKey));
     }
+
+    [After(Test)]
+    public void DisposeTraceProvider() => _traceProvider.Dispose();
 
     [Test]
     public async Task When_A_Message_Is_Processed_A_Process_Span_Is_Created()

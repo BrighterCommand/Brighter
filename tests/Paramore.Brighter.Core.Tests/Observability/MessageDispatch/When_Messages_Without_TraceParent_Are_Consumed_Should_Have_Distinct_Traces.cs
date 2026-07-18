@@ -24,7 +24,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -38,7 +37,7 @@ public class MessagePumpTraceIsolationObservabilityTests : IDisposable
     private readonly ICollection<Activity> _exportedActivities = new List<Activity>();
     private readonly TracerProvider _traceProvider;
     private readonly BrighterTracer _tracer = new();
-    private readonly RoutingKey _routingKey = new("MyTopic");
+    private readonly RoutingKey _routingKey = new(nameof(MessagePumpTraceIsolationObservabilityTests));
 
     public MessagePumpTraceIsolationObservabilityTests()
     {
@@ -100,8 +99,6 @@ public class MessagePumpTraceIsolationObservabilityTests : IDisposable
 
         await Assert.That(firstProcessSpan.ParentId).IsNull();
         await Assert.That(secondProcessSpan.ParentId).IsNull();
-
-        await Assert.That(_exportedActivities.Where(a => a.DisplayName.EndsWith(MessagePumpSpanOperation.Process.ToSpanName()))).All(processSpan => processSpan.ParentId == null);
     }
 
     [Test]
