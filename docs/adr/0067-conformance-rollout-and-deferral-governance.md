@@ -31,15 +31,20 @@ moment that change merges, **every** messaging-gateway transport the generator t
 generating the canonical conformance behaviours (FR-2, FR-4…FR-9, FR-15, FR-16, FR-17 — FR-3 having
 been folded into FR-2 by ADR 0066) in both Reactor and Proactor variants — ungated.
 
-The generator's target set is exactly the transports that declare a messaging-gateway
-`test-configuration.json` with `HasSupportTo*` keys. Verified, that is **nine test projects** —
-**AWS (V3 and V4), GCP, Kafka, MSSQL, PostgreSQL, Redis, RMQ.Async, and RocketMQ** — but generation
-is per **gateway configuration**, not per project, and those nine projects declare roughly **twenty**
-configurations between them: AWS.Tests and AWS.V4.Tests carry four each (SQS Standard/FIFO, SNS
-Standard/FIFO), GCP four (Pull, PullOrdering, Stream, StreamOrdering), Kafka two (Standard,
-PartitionKey), RMQ.Async two (Classic, Quorum), with the rest one apiece — matching the 20
-`*MessageGatewayProvider.cs` implementations. **Conformance is therefore a per-configuration
-property**, and the ledger below is keyed accordingly. Their conformance state is uneven:
+The target set is **every transport with a messaging gateway** — all twelve
+`src/Paramore.Brighter.MessagingGateway.*` projects (requirements.md FR-13). Membership is *having a
+gateway*, not having generator wiring: a missing `test-configuration.json` is a gap FR-20 closes, not
+grounds for exclusion. Nor is membership keyed on the `HasSupportTo*` flags — FR-10/FR-11 delete
+those, so a keys-based definition would erase itself the moment this change lands.
+
+Nine of the twelve are wired today — **AWS (V3 and V4), GCP, Kafka, MSSQL, PostgreSQL, Redis,
+RMQ.Async, RocketMQ** — and generation is per **gateway configuration**, not per project: those nine
+declare **twenty** configurations between them (AWS and AWS.V4 four each — SQS Standard/FIFO, SNS
+Standard/FIFO; GCP four — Pull, PullOrdering, Stream, StreamOrdering; Kafka two — Standard,
+PartitionKey; RMQ.Async two — Classic, Quorum; the rest one apiece), matching the 20
+`*MessageGatewayProvider.cs` implementations. The other three — **AzureServiceBus, MQTT, RMQ.Sync** —
+are wired by FR-20 and contribute their own rows. **Conformance is therefore a per-configuration
+property**, and the ledger below is keyed accordingly. Conformance state is uneven:
 
 - **Kafka already conforms** — it carries the richest hand-written suite
   (`tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/`, Reactor + Proactor), which is the
@@ -68,13 +73,18 @@ property**, and the ledger below is keyed accordingly. Their conformance state i
   on a third-party dependency and is a likely signed-off `Deferred` row rather than an in-spec
   `Fixed`; GCP's requires deciding whether subscription-RetryPolicy redelivery can satisfy FR-2 at
   all. Both are seeded into the ledger as known non-conformances rather than discovered at the flip.
-- **The known-gap transports** are worst off: GCP has messaging-gateway providers and a
-  requeue-to-DLQ generated test but none of the canonical reject-routing / scheduler-fallback /
-  metadata behaviours; and Azure / Azure Service Bus, which the parent requirement calls "currently
-  partial," in fact has **no** `test-configuration.json` at all
-  (`tests/Paramore.Brighter.Azure.Tests` and `tests/Paramore.Brighter.AzureServiceBus.Tests`
-  exist but are not in the generator's target set), so bringing it under generated conformance
-  requires first adding a config and provider — the largest gap of all.
+- **The known-gap transports** are worst off. **GCP** has messaging-gateway providers and a
+  requeue-to-DLQ generated test but none of the canonical reject-routing or metadata behaviours, and
+  its `Requeue` ignores the delay outright, so it will fail FR-2 at the flip.
+
+  **AzureServiceBus, MQTT and RMQ.Sync** have messaging gateways and test projects but **no generator
+  wiring at all** — no `test-configuration.json`, no provider — so they generate nothing today.
+  FR-20 brings all three into the generator: a config declaring their gateway configuration(s), one
+  or both provider implementations against the FR-1 surface, and CI infrastructure. They are not
+  starting from zero — RMQ.Sync carries 31 hand-written gateway tests, MQTT 18, AzureServiceBus 8 —
+  and both MQTT and RMQ.Sync implement `IAmAChannelFactoryWithScheduler`, while MQTT has its own
+  dead-letter ADR (`0043-mqtt-dlq-brighter-managed`). This is the largest new work in the rollout and
+  sequences last.
 
 FR-13 forbids silently skipping, `[Skip]`-ping, or gating any canonical test to make the suite
 green, and requires that any deferred gateway fix be a **named, linked, maintainer-signed-off
@@ -125,9 +135,11 @@ The rollout is a pipeline whose fix phase and flip are deliberately distinct:
         has no DLQ ADR)  universal routing 0047/0045)                  |    + config keys)
                        — brought to conformance (Fixed) or deferred    |
                         (Deferred -> #issue)                           |
-  (iii)known-gap      GCP (no canonical coverage today), Azure/ASB     |   merges LAST
-       transports      (not yet in generator target set) — most new    |
-                       work; conform or signed-off deferral            /
+  (iii)known-gap      GCP (no canonical coverage; Requeue ignores      |   merges LAST
+       transports      the delay), then the unwired three —            |
+                       ASB, MQTT, RMQ.Sync (FR-20: config +            |
+                       provider + CI) — most new work;                 |
+                       conform or signed-off deferral                  /
                                                                         |
        conformance-status.md (ledger)  <== single source of truth =====+
        transport x behaviour matrix; cells Pass | Fixed | Deferred->#issue
@@ -146,8 +158,9 @@ against the ledger so neither can drift from the other.
 - **The conformance ledger** — a markdown matrix checked into the spec directory at
   `specs/0036-universal-transport-conformance-tests/conformance-status.md`. **A row is one gateway
   configuration**, identified as `project / configuration` (e.g. `AWS.V4 / SqsStandard`,
-  `GCP / PullOrdering`, `Kafka / PartitionKey`) — roughly twenty rows across the nine projects, plus
-  Azure/ASB once added — because generation and therefore conformance are per configuration, not per
+  `GCP / PullOrdering`, `Kafka / PartitionKey`) — twenty rows across the nine wired projects today,
+  plus the rows AzureServiceBus, MQTT and RMQ.Sync contribute once FR-20 wires them — because
+  generation and therefore conformance are per configuration, not per
   project. A per-configuration row is what lets the ledger express "SQS Standard passes FR-5 but SNS
   FIFO does not"; a project-level row could not. Columns = the canonical behaviours (FR-2, FR-4…FR-9,
   FR-15, FR-16, FR-17). **FR-3 is deliberately not a column** — ADR 0066 withdrew it as a mechanism
@@ -220,10 +233,13 @@ against the ledger so neither can drift from the other.
    under the transport's own keys), fix inline and record `Fixed (#PR)`. Otherwise open a follow-up
    issue, obtain maintainer sign-off, add the `Deferred: #NNNN` Skip to the generated test, and
    record `Deferred -> #issue`.
-4. **Close the known-gap transports last.** GCP (no canonical coverage today) and Azure/ASB (not yet
-   in the generator target set — adding a `test-configuration.json` and provider is a prerequisite,
-   and is itself a candidate `Deferred` item if out of proportion to this spec). These carry the
-   most new work and are sequenced last so the machinery is proven before it meets the hardest gaps.
+4. **Close the known-gap transports last.** First GCP (no canonical coverage; `Requeue` ignores the
+   delay), then the three FR-20 onboardings — AzureServiceBus, MQTT, RMQ.Sync — each needing a
+   `test-configuration.json`, provider implementation(s) and CI infrastructure before it can generate
+   at all. These carry the most new work and are sequenced last, once the templates and the extended
+   provider interface are proven on transports that already generate. An onboarding that cannot be
+   completed in-spec (most likely for CI-infrastructure reasons) takes a signed-off `Deferred` ledger
+   row like any other gap — it does not drop out of the target set.
 5. **Merge the flip.** Only when the ledger has **no `Unknown` cells** — every behaviour is `Pass`,
    `Fixed`, or `Deferred -> #issue` — merge ADR 0066's ungating change (remove the three gates from
    `SkipTest`, the three properties from `MessagingGatewayConfiguration`, and the keys from every
@@ -255,7 +271,7 @@ receive-retry loops so broker propagation delay does not produce false failures.
 - Deferrals cannot rot into silent gaps — each is a named, linked, signed-off issue that CI keeps
   honest against both the ledger and the in-code Skip.
 - Proving the machinery on the known-good transport (Kafka) first de-risks the templates and the
-  extended provider before they meet the hardest gaps (GCP, Azure/ASB).
+  extended provider before they meet the hardest gaps (GCP, then the FR-20 onboardings).
 
 ### Negative
 
@@ -267,9 +283,12 @@ receive-retry loops so broker propagation delay does not produce false failures.
   behaviour; the heuristic reduces but does not remove disagreement.
 - A long fix phase risks **drift** between the templates/provider interface (evolving under 0066's
   tasks) and the transport gateways being fixed against them.
-- Azure/ASB needing a config + provider before it can even be generated means its conformance may
-  realistically land as a signed-off deferral rather than inline — universal generation is
-  "complete or deferred," not necessarily "complete," for that transport at flip time.
+- Including the three unwired transports (FR-20) makes this spec **materially larger**: AzureServiceBus,
+  MQTT and RMQ.Sync each need a `test-configuration.json`, provider implementation(s) and CI
+  infrastructure before a single canonical test can run for them. ASB in particular is a cloud
+  service whose CI story is not solved here. The mitigation is that FR-13's deferral rule applies
+  unchanged — an incomplete onboarding becomes a signed-off ledger row, not a silent exclusion — but
+  the honest expectation is that one or more of the three lands as `Deferred` at flip time.
 
 ## Risks and Mitigations
 
@@ -303,7 +322,7 @@ receive-retry loops so broker propagation delay does not produce false failures.
    Rejected: no single coverage view, and sign-off provenance is reduced to whatever a string
    asserts; there is nothing to cross-check the Skip against.
 5. **Fix-everything-in-spec** — forbid all deferrals; conform every transport inline. Rejected:
-   risks an unbounded, long-running spec, and some gaps (Azure/ASB config+provider, subsystem-level
+   risks an unbounded, long-running spec, and some gaps (RocketMQ's upstream-client block, subsystem-level
    changes, runtime API changes forbidden by C-1) genuinely belong in follow-up work.
 6. **Defer-all-gateway-fixes** — flip and open issues for every non-conformance. Rejected: universal
    conformance would be almost entirely promissory at merge, defeating the spec's purpose of proving
@@ -316,6 +335,6 @@ receive-retry loops so broker propagation delay does not produce false failures.
   - [`0066-conformance-test-provider-and-ungating`](0066-conformance-test-provider-and-ungating.md) [Proposed] — **sibling; the most important relation.** Extends the provider interfaces and retires the three gates + config keys in one change; this ADR sequences the per-transport rollout *around* that flip and governs deferrals. 0067 does not supersede 0066.
   - `0037-add-messaging-gateway-generated-test` [Accepted] — created the generator and `MessagingGatewayConfiguration` this whole spec extends; the target-set and `SkipTest` gating originate here.
   - `0047-message-rejection-routing-strategy` — the `Reject()` fallback ladder and origin-metadata contract; a transport is "conformant" in the ledger precisely when it honours this.
-  - Per-transport DLQ ADRs — collectively the class of localized, in-spec `Fixed` changes and the reason these transports sequence ahead of GCP/Azure: `0038-aws-sqs-dlq-direct-send`, `0039-redis-dlq-brighter-managed`, `0040-mssql-dlq-brighter-managed`, `0041-postgres-dlq-brighter-managed`, `0042-rocketmq-dlq-brighter-managed`, `0043-mqtt-dlq-brighter-managed`, `0046-kafka-dlq-producer-for-requeue`.
+  - Per-transport DLQ ADRs — collectively the class of localized, in-spec `Fixed` changes and the reason these transports sequence ahead of GCP: `0038-aws-sqs-dlq-direct-send`, `0039-redis-dlq-brighter-managed`, `0040-mssql-dlq-brighter-managed`, `0041-postgres-dlq-brighter-managed`, `0042-rocketmq-dlq-brighter-managed`, `0043-mqtt-dlq-brighter-managed`, `0046-kafka-dlq-producer-for-requeue`.
   - `0037-universal-scheduler-delay`, `0039-transport-scheduler-wiring`, `0045-provide-dlq-where-missing` — the runtime mechanisms (scheduler-backed delayed requeue, channel-factory scheduler wiring, Brighter-managed DLQ/invalid channels) that conformance depends on and the in-spec fixes wire up.
 - External references: none.

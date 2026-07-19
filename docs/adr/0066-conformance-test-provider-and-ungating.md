@@ -117,10 +117,13 @@ member returning "a producer whose `Scheduler` property is set", to support FR-3
 scheduler-delegation test. We provide **no scheduler-carrying member at all**, and FR-3 is withdrawn
 as a distinct canonical behaviour — folded into a mechanism-agnostic FR-2 — because asserting the
 delay *mechanism* violates NFR-3/OOS-1 and because 14 of the ~20 target configurations have no
-scheduler seam and cannot acquire one within C-1 (see "Why there is no scheduler member"). This is
-within the latitude requirements.md grants (the provider-interface shape and the in-memory-vs-spy
-choice are both explicitly deferred to this ADR); FR-1(4), FR-3, NFR-4, AC-1 and AC-3 are amended in
-requirements.md to match, so none reads as unmet at verification.
+scheduler seam and cannot acquire one within C-1 (see "Why there is no scheduler member").
+
+Requirements.md has since been rewritten to state obligations without carrying design rationale.
+FR-1(4), FR-3, NFR-4 and AC-3 are **retired identifiers** there — left as permanent gaps, never
+reused — and AC-1 no longer asks for a scheduler-carrying member. **This ADR is therefore the sole
+record of why that surface is absent**, and nothing in requirements.md reads as unmet at
+verification. The supplementary scheduler-delegation work the withdrawal displaced is OOS-2.
 
 ### Architecture Overview
 
@@ -202,7 +205,8 @@ from the provider.
 
 Earlier drafts of this ADR exposed a scheduler-carrying provider member so a generated test could
 prove a delayed requeue was *delegated to the scheduler* rather than served by native delay. We
-withdraw that, and FR-3 with it (see requirements.md FR-3, now folded into FR-2), for two reasons:
+withdraw that, and FR-3 with it — its observable behaviour is now covered by the mechanism-agnostic
+requirements.md FR-2 — for two reasons:
 
 1. **It is a mechanism assertion, which NFR-3 and OOS-1 forbid.** "Did the requeue go via the
    scheduler rather than native delay?" is a question about *how* the transport achieves the
@@ -356,10 +360,15 @@ both Standard and PartitionKey) values (FR-11). Removing the keys (rather than c
 `.../Templates/MessagingGateway/{Reactor,Proactor}/When_requeuing_a_failed_message_with_delay_should_receive_message_again.cs.liquid`
 (the Reactor variant calls `_channel.Requeue(received);` with no delay after a `SendWithDelay` +
 `Thread.Sleep(6s)` — line 62). This is the AC-12 **replace** arm: after deletion, a
-template-source inspection MUST confirm no messaging-gateway template calls `Requeue` /
-`RequeueAsync` without a non-null `TimeSpan` delay argument. The still-valid plain-requeue
-template (`When_requeuing_a_failed_message_should_receive_message_again.cs.liquid`, ungated by
-FR-10) covers the no-delay path; the amended FR-2 covers the delayed path.
+template-source inspection MUST confirm that every template *purporting to exercise delayed
+requeue* passes a non-null `TimeSpan` to `Requeue` / `RequeueAsync`.
+
+The prohibition is scoped to delayed-requeue templates, not to every call site, because two
+templates legitimately requeue with no delay: the plain-requeue template
+(`When_requeuing_a_failed_message_should_receive_message_again.cs.liquid`, ungated by FR-10) and the
+zero/null-boundary template required by FR-15. (The requeue-count-exhaustion template also requeues
+without a delay, but FR-19 deletes it.)
+Between them they cover the no-delay path; the amended FR-2 covers the delayed path.
 
 **Reactor/Proactor parity (FR-14).** Every change above lands in *both* template trees and both
 provider interfaces — the async members return `Task`/`Task<...>` and take a
@@ -400,7 +409,25 @@ vs async gateway code paths; it is not pump re-testing.
   to the `test-configuration.json` schema; any external tooling that reads those keys breaks.
 - Replacing `bool setupDeadLetterQueue` with explicit routing-key parameters is a breaking
   change to `CreateSubscription`; every provider and every existing generated caller must move to
-  the new signature in the same change.
+  the new signature in the same change (requirements.md FR-1(6), verified by AC-1). The only
+  existing template that passes the bool is
+  `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs.liquid`, which FR-19
+  deletes — so after this change the parameter has no callers at all.
+- Retiring the gates ungates **more than the canonical set**. Because `SkipTest` matches on
+  filename substrings, `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue`
+  matches *both* `dead_letter_queue` and `requeuing` and is doubly gated today; it currently
+  generates for 16 of the 20 configurations (all but Kafka ×2, MSSQL and PostgreSQL), and after
+  FR-10 it would generate for all 20.
+
+  **It must not be allowed to.** Requeue-count exhaustion is enforced by the message pump —
+  `Reactor`/`Proactor.RequeueMessage` call `Header.UpdateHandledCount()` then
+  `Message.HandledCountReached(RequeueCount)`, and that method has no other caller in the codebase.
+  `Channel.Requeue` forwards straight to `_messageConsumer.Requeue` and counts nothing. Where the
+  template passes today it is proving the *transport's* native redrive: the AWS provider pairs
+  `requeueCount: 3` with `redrivePolicy: new RedrivePolicy(dlqName, 3)`, so SQS does the counting.
+  That is a pump test (OOS-5) or a native-mechanism test (NFR-3, OOS-1) — the same defect that got
+  FR-3 withdrawn. Requirements.md **FR-19 deletes the template**, as FR-12 deletes the broken
+  `with_delay` one.
 
 ### Risks and Mitigations
 
@@ -430,13 +457,12 @@ vs async gateway code paths; it is not pump re-testing.
    two independent grounds. *Principle*: it asserts the delay **mechanism**, which NFR-3 and OOS-1
    forbid — "we don't want to test how, we want to test supported". *Practice*:
    `IAmAChannelFactoryWithScheduler` is implemented by six gateways (Kafka, MQTT, MsSql, Redis,
-   RMQ.Async, RMQ.Sync), of which four are in the generator's target set, contributing **6 of the
-   ~20 target configurations** (Kafka ×2, MSSQL, Redis, RMQ.Async ×2) — MQTT and RMQ.Sync have no
-   `test-configuration.json` and are out of scope. The other 14 take no scheduler, so the assertion
-   fails by design on them, including on conformant transports, and giving them the seam is a
-   public runtime API change C-1 forbids. Retained as
-   OOS-2 supplementary work for the six gateways that can support it. (An earlier draft of this ADR
-   chose "both arms"; the seam-coverage evidence above overturned it.)
+   RMQ.Async, RMQ.Sync) — all six targeted transports under FR-13, though MQTT and RMQ.Sync generate
+   nothing until FR-20 wires them. Of the twenty configurations wired today, the seam covers **6**
+   (Kafka ×2, MSSQL, Redis, RMQ.Async ×2); the other 14 take no scheduler at all, so the assertion
+   fails by design on them, including on conformant transports, and giving them the seam is a public
+   runtime API change C-1 forbids. Retained as OOS-2 supplementary work for the six gateways that can
+   support it.
 5. **A shared core `RejectionMetadataKeys` type in `src/Paramore.Brighter`.** Rejected per C-2:
    the key names/casing are genuinely per-transport (Kafka `OriginalType` vs Redis/SQS
    `originalMessageType` is a name difference, not just casing). A shared core type would falsely
