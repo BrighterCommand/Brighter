@@ -24,4 +24,3 @@ Spec numbers are not strictly sequential. Gaps exist to accommodate parallel wor
 | 0013 | [PostgreSQL Dead Letter Queue](0013-postgres-dead-letter-queue/) | Requirements draft |
 | 0014 | [RocketMQ Dead Letter Queue](0014-rocketmq-dead-letter-queue/) | Requirements draft |
 | 0015 | [MQTT Dead Letter Queue](0015-mqtt-dead-letter-queue/) | Requirements draft |
-| 0036 | [NATS / JetStream Messaging Gateway](0036-nats-jetstream-messaging-gateway/) | Requirements draft |
