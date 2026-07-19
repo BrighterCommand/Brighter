@@ -1,4 +1,4 @@
-﻿// The MIT License (MIT)
+// The MIT License (MIT)
 // Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,11 +27,20 @@ using NATS.Net;
 
 namespace Paramore.Brighter.MessagingGateway.NATS;
 
+/// <summary>
+/// Creates a <see cref="ProducerRegistry"/> of NATS message producers from a set of publications.
+/// </summary>
+/// <param name="configuration">The <see cref="NatsMessageGatewayConfiguration"/> used to connect to NATS.</param>
+/// <param name="publications">The <see cref="NatsPublication"/> set to create producers for.</param>
 public class NatsProducerRegistryFactory(
     NatsMessageGatewayConfiguration configuration,
     IEnumerable<NatsPublication> publications) : IAmAProducerRegistryFactory
 {
-    
+    /// <summary>
+    /// Creates the producer registry, opening a NATS connection and a JetStream context.
+    /// </summary>
+    /// <returns>An <see cref="IAmAProducerRegistry"/> holding one producer per publication.</returns>
+    /// <exception cref="ChannelFailureException">Thrown when a stream publication is validated but its JetStream stream does not exist.</exception>
     public IAmAProducerRegistry Create()
     {
         var natsClient = new NatsClient(configuration.NatsOpts);
@@ -41,6 +50,12 @@ public class NatsProducerRegistryFactory(
         return new ProducerRegistry(producerFactory.Create());
     }
 
+    /// <summary>
+    /// Creates the producer registry, opening a NATS connection and a JetStream context.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>An <see cref="IAmAProducerRegistry"/> holding one producer per publication.</returns>
+    /// <exception cref="ChannelFailureException">Thrown when a stream publication is validated but its JetStream stream does not exist.</exception>
     public Task<IAmAProducerRegistry> CreateAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Create());

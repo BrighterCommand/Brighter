@@ -12,7 +12,4 @@
   <ItemGroup>
     <PackageReference Include="NATS.Net"/>
   </ItemGroup>
-  <ItemGroup>
-    <InternalsVisibleTo Include="Paramore.Brighter.MessagingGateway.NATS.Tests"/>
-  </ItemGroup>
 </Project>
