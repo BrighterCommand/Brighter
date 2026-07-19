@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-07-18
-summary: "Extends the generated messaging-gateway provider interfaces (IAmAMessageGatewayReactorProvider / IAmAMessageGatewayProactorProvider) with explicit DLQ + invalid-message routing keys, an invalid-channel read, and a strongly-typed RejectionMetadataKeys accessor; retires the HasSupportToDelayedMessages / HasSupportToDeadLetterQueue / HasSupportToRequeue opt-in gates; deletes the broken with_delay requeue template; and withdraws FR-3's scheduler-delegation test as a mechanism assertion (folded into a mechanism-agnostic FR-2), so no scheduler-carrying provider member is required."
+summary: "Extends the generated messaging-gateway provider interfaces (IAmAMessageGatewayReactorProvider / IAmAMessageGatewayProactorProvider) with explicit DLQ + invalid-message routing keys, an invalid-channel read, and a strongly-typed RejectionMetadataKeys accessor; makes canonical conformance templates ungated by construction by narrowing the HasSupportToDelayedMessages / HasSupportToDeadLetterQueue / HasSupportToRequeue gates to a closed list of four legacy templates, which stay suppressed until deleted along with their eighty generated copies, after which the gates and config keys retire as a terminal cleanup; and withdraws FR-3's scheduler-delegation test as a mechanism assertion (folded into a mechanism-agnostic FR-2), so no scheduler-carrying provider member is required."
 tags:
   - "test-generation"
   - "testing"
@@ -90,40 +90,64 @@ field is `OriginalType` on Kafka but `originalMessageType` on Redis/SQS. Only th
 is universal, which is exactly why the provider must own the key names (per constraint C-2:
 these are **not** a shared core type).
 
-**Why now:** making the canonical behaviours universal and ungated (the parent
-requirement) is only possible once the provider interface can drive them; extending that
-interface and retiring the gates are the same change.
+**Why now:** making the canonical behaviours universal and ungated (the parent requirement) is only
+possible once the provider interface can drive them. Extending that interface and narrowing the gates
+are the same change — both are what the first canonical template needs in order to generate. Retiring
+the gates outright is *not* part of that change; it waits until the legacy templates they suppress
+have been deleted.
 
 **Parent Requirement**: [specs/0036-universal-transport-conformance-tests/requirements.md](../../specs/0036-universal-transport-conformance-tests/requirements.md)
 
-**Scope**: This ADR decides (1) the provider-interface extension (FR-1), (2) retiring the three
-capability gates and correcting the mis-declared configs (FR-10 / FR-11), and (3) replacing the
-broken `with_delay` template (FR-12). The per-transport conformance-fix *sequencing* (FR-13),
-the detailed *content* of each individual canonical template (FR-2…FR-9, FR-16, FR-17) beyond
-what the provider must expose to make them writable, and any reintroduction of a `HasNative*`
-flag (explicitly rejected, OOS-1) are **addressed separately** — FR-13 in the sibling ADR
+**Scope**: This ADR decides (1) the provider-interface extension (FR-1), (2) the **gating lifecycle**
+— scoping the three capability gates to the legacy templates they suppress, and retiring gates and
+config keys only once those templates are deleted (FR-10 / FR-11), and (3) deleting the broken
+`with_delay` template (FR-12) and the requeue-count-exhaustion template (FR-19), both of which are
+legacy gated templates. The per-transport conformance-fix *sequencing* (FR-13), the FR-20
+onboardings, and the detailed *content* of each individual canonical template (FR-2, FR-4 … FR-9,
+FR-15, FR-16, FR-17, FR-22) beyond what the provider must expose to make them writable are
+**addressed separately** — FR-13 and FR-20 in the sibling ADR
 [0067](0067-conformance-rollout-and-deferral-governance.md), the template content as generator work
-under this spec's tasks.
+under this spec's tasks. Any reintroduction of a `HasNative*` flag is explicitly rejected (OOS-1).
+
+**The target set this ADR's interface must serve** is defined by requirements.md FR-13: every
+transport with a messaging gateway — all twelve `src/Paramore.Brighter.MessagingGateway.*` projects —
+counted per *gateway configuration*, not per project. Nine of the twelve are wired today and declare
+**twenty** configurations between them; the interface changes below land against those twenty now.
+The other three — AzureServiceBus, MQTT and RMQ.Sync — are wired by FR-20 and implement the
+post-FR-1 signature directly, never the `bool setupDeadLetterQueue` this ADR removes. Where the text
+below cites "the twenty configurations wired today", it is describing today's implementation
+surface, not the boundary of the target set.
 
 ## Decision
 
-We extend both generated provider interfaces to expose the full surface the canonical
-conformance tests drive, retire the three capability gates so the canonical templates generate
-universally in both Reactor and Proactor variants, and delete the broken `with_delay` template
-(superseded by the amended FR-2).
+We extend both generated provider interfaces to expose the full surface the canonical conformance
+tests drive; make the canonical templates **ungated by construction** rather than by removing the
+gates; keep the three gates in force — narrowed to the four legacy templates they suppress — until
+those templates are deleted; and then retire the gates and their config keys as a terminal cleanup.
 
-**One deliberate departure from the original requirement wording.** FR-1(4) and AC-1 asked for a
-member returning "a producer whose `Scheduler` property is set", to support FR-3's
-scheduler-delegation test. We provide **no scheduler-carrying member at all**, and FR-3 is withdrawn
-as a distinct canonical behaviour — folded into a mechanism-agnostic FR-2 — because asserting the
-delay *mechanism* violates NFR-3/OOS-1 and because 14 of the ~20 target configurations have no
-scheduler seam and cannot acquire one within C-1 (see "Why there is no scheduler member").
+**The canonical templates are never gated, and the legacy templates are never ungated.** This is the
+ordering decision, and it is the opposite of "retire the gates first, then fix the fallout". The old
+tests are not wanted at any point: not before the canonical set exists, and not after. A gate that
+suppresses a legacy template is doing useful work right up until that template is deleted, so
+removing the gates first would generate precisely the tests this spec exists to replace — against
+transports that have not been fixed yet. Sequencing the gate removal last means the generated suite
+only ever grows the tests we want.
 
-Requirements.md has since been rewritten to state obligations without carrying design rationale.
-FR-1(4), FR-3, NFR-4 and AC-3 are **retired identifiers** there — left as permanent gaps, never
-reused — and AC-1 no longer asks for a scheduler-carrying member. **This ADR is therefore the sole
-record of why that surface is absent**, and nothing in requirements.md reads as unmet at
-verification. The supplementary scheduler-delegation work the withdrawal displaced is OOS-2.
+Concretely, `SkipTest` consults the three gates **only** for an explicit, closed list of the four
+legacy template filenames. Anything not on that list generates regardless of any flag value, so a
+canonical template cannot be suppressed however it is named. This deliberately does not rely on
+naming: `SkipTest` matches filename *substrings*, and NFR-1's convention means a canonical
+delayed-requeue template naturally contains both `requeuing` and `with_delay` and would otherwise be
+silently suppressed — the same defect that left the exhaustion template doubly gated.
+
+**The provider exposes no scheduler-carrying member.** A generated test never obtains a producer
+whose `Scheduler` property is set, and the suite asserts nothing about the delay *mechanism*:
+such an assertion violates NFR-3/OOS-1, and 14 of the twenty configurations wired today have no
+scheduler seam and cannot acquire one within C-1 (see "Why there is no scheduler member"). The
+delayed-requeue behaviour is covered mechanism-agnostically by requirements.md FR-2; FR-1(4), FR-3,
+NFR-4 and AC-3 are retired identifiers there; supplementary scheduler-delegation testing is OOS-2.
+The deliberation behind that withdrawal is recorded in the spec's
+[decision-log.md](../../specs/0036-universal-transport-conformance-tests/decision-log.md).
 
 ### Architecture Overview
 
@@ -203,10 +227,10 @@ from the provider.
 
 #### Why there is no scheduler member
 
-Earlier drafts of this ADR exposed a scheduler-carrying provider member so a generated test could
-prove a delayed requeue was *delegated to the scheduler* rather than served by native delay. We
-withdraw that, and FR-3 with it — its observable behaviour is now covered by the mechanism-agnostic
-requirements.md FR-2 — for two reasons:
+A scheduler-carrying provider member would let a generated test prove a delayed requeue was
+*delegated to the scheduler* rather than served by native delay. The provider exposes no such
+member, and requirements.md FR-2 covers the observable behaviour mechanism-agnostically instead, for
+two reasons:
 
 1. **It is a mechanism assertion, which NFR-3 and OOS-1 forbid.** "Did the requeue go via the
    scheduler rather than native delay?" is a question about *how* the transport achieves the
@@ -216,9 +240,11 @@ requirements.md FR-2 — for two reasons:
 2. **The scheduler seam does not exist for most of the target set.**
    `IAmAChannelFactoryWithScheduler` is implemented by six gateways only — Kafka, MQTT, MsSql,
    Redis, RMQ.Async, RMQ.Sync — and only those consumers accept an `IAmAMessageScheduler`. Of the
-   ~20 gateway configurations the generator targets, **6** can carry a scheduler (Kafka ×2, MSSQL,
-   Redis, RMQ.Async ×2); the other **14** (AWS ×4, AWS.V4 ×4, GCP ×4, PostgreSQL, RocketMQ) take no
-   scheduler at all. Nine of those fourteen honour the delay **natively** —
+   **twenty configurations wired today**, **6** can carry a scheduler (Kafka ×2, MSSQL, Redis,
+   RMQ.Async ×2); the other **14** (AWS ×4, AWS.V4 ×4, GCP ×4, PostgreSQL, RocketMQ) take no
+   scheduler at all. (MQTT and RMQ.Sync hold the seam but generate nothing until FR-20 wires them,
+   at which point they add seam-capable configurations to the target set — which does not change the
+   conclusion, since the fourteen without the seam remain.) Nine of those fourteen honour the delay **natively** —
    `SqsMessageConsumer.RequeueAsync` issues a `ChangeMessageVisibilityAsync` carrying the delay
    (line 402), `PostgresMessageConsumer.Requeue` binds it as a query parameter (line 459). The
    remaining five honour it **by neither route**: all four GCP configurations ignore the delay
@@ -232,13 +258,14 @@ requirements.md FR-2 — for two reasons:
    **C-1 forbids this spec**.
 
    Those last five matter for the rollout, not for this decision: the mechanism-agnostic FR-2 will
-   **fail on GCP ×4 and RocketMQ** at the flip, because neither actually delays a requeue. That is
+   **fail on GCP ×4 and RocketMQ** as soon as the canonical templates generate, because neither
+   actually delays a requeue. That is
    a genuine conformance gap — exactly what an ungated suite is meant to expose — and ADR 0067
    sequences and governs it (RocketMQ's is blocked on an upstream dependency, so it is a likely
    signed-off `Deferred` row rather than an in-spec `Fixed`).
 
 So FR-2's generated test asserts the observable outcome only: *requeue with delay D, and the message
-is redelivered after D*. That is uniform across all ~20 configurations regardless of mechanism, and
+is redelivered after D*. That is uniform across every targeted configuration regardless of mechanism, and
 it is exactly what the Objective and Test Boundary asks for ("prove the observable outcome … not the
 internal mechanism"). The consequence is that FR-2 and the former FR-3 collapse into one canonical
 behaviour — which is correct, because once the mechanism is not asserted, they *were* the same test.
@@ -262,11 +289,18 @@ tests under OOS-2**, not in the universal suite.
   **not** in `src/Paramore.Brighter` — C-2).
 - *(No scheduler spy or scheduler-carrying member — withdrawn with FR-3; see "Why there is no
   scheduler member".)*
-- Every hand-written per-transport provider implementation that satisfies these interfaces —
-  e.g. `tests/Paramore.Brighter.PostgresSQL.Tests/MessagingGateway/PostgresMessageGatewayProvider.cs`,
-  the Kafka/Redis/MSSQL/RMQ/AWS/GCP/RocketMQ providers — must be extended to implement the new
-  members (see Consequences).
-- Every `tests/Paramore.Brighter.*.Tests/test-configuration.json` — the three keys removed.
+- Every hand-written per-transport provider implementation that satisfies these interfaces — the
+  twenty `*MessageGatewayProvider.cs` files wired today, e.g.
+  `tests/Paramore.Brighter.PostgresSQL.Tests/MessagingGateway/PostgresMessageGatewayProvider.cs`,
+  and the Kafka/Redis/MSSQL/RMQ.Async/AWS/AWS.V4/GCP/RocketMQ providers — must be extended to
+  implement the new members (see Consequences).
+- The **provider implementations FR-20 adds** for AzureServiceBus, MQTT and RMQ.Sync. These are
+  written fresh against the post-FR-1 surface — routing-key parameters, `GetMessageFromInvalidChannel`,
+  `RejectionMetadataKeys` — and never carry `bool setupDeadLetterQueue`, so they need no migration.
+  Each transport supplies its own `RejectionMetadataKeys` values from the key strings its gateway
+  actually stamps; ASB, MQTT and RMQ.Sync are not assumed to share Kafka's or Redis/SQS's casing.
+- Every `tests/Paramore.Brighter.*.Tests/test-configuration.json` — the three keys removed; plus the
+  three new configuration files FR-20 creates, which never declare them.
 
 ### Technology Choices
 
@@ -278,8 +312,8 @@ tests under OOS-2**, not in the universal suite.
   principles reject.
 - **No scheduler member; FR-2's delayed-requeue test is mechanism-agnostic.** The suite asserts
   that a delayed requeue redelivers after the delay, not which mechanism delivered it (NFR-3,
-  OOS-1). This keeps the test uniform across all ~20 gateway configurations — including the 14 whose
-  consumers cannot carry a scheduler — and avoids obliging every provider to stand up a
+  OOS-1). This keeps the test uniform across every targeted gateway configuration — including the
+  14 wired today whose consumers cannot carry a scheduler — and avoids obliging every provider to stand up a
   `CommandProcessor`, a `FireSchedulerMessage` handler pipeline and an external bus purely to
   satisfy an assertion the suite no longer makes. See "Why there is no scheduler member".
 - **Delete (not fix) the `with_delay` template.** The amended FR-2 (delayed requeue redelivers after
@@ -288,10 +322,10 @@ tests under OOS-2**, not in the universal suite.
 
 #### Recorded for the OOS-2 follow-up: what an in-memory-scheduler harness would cost
 
-A draft of this ADR proposed a provider member handing back a channel backed by an
-`InMemoryScheduler`, for a black-box "the scheduler really re-published it" assertion. We dropped it
-with FR-3, but the cost analysis is recorded here because whoever builds the OOS-2 supplementary
-scheduler tests will hit it.
+The alternative to a recording spy is a provider member handing back a channel backed by an
+`InMemoryScheduler`, giving a black-box "the scheduler really re-published it" assertion. It forms no
+part of this design, but its cost is recorded here because whoever builds the OOS-2 supplementary
+scheduler tests faces the same choice.
 
 `InMemoryScheduler` is not a self-contained timer — it is a *dispatcher into a command processor*
 (`src/Paramore.Brighter/InMemoryScheduler.cs`):
@@ -339,36 +373,83 @@ key internally (as PostgreSQL does when `setupDeadLetterQueue` is true) now rece
 key explicitly from the test, which also removes hidden per-transport DLQ-naming knowledge from
 the provider.
 
-**`SkipTest` loses three branches.** Delete the `HasSupportToDelayedMessages`/`delayed_message`
-branch (lines 122–125), the `HasSupportToDelayedMessages`/`with_delay` branch (lines 127–130),
-the `HasSupportToDeadLetterQueue`/`dead_letter_queue` branch (lines 132–135), and the
-`HasSupportToRequeue`/`requeuing` branch (lines 145–148). The retained gates
-(`HasSupportToPublishConfirmation`/`confirming_posting`,
+**`SkipTest`'s three gate branches are first narrowed, then deleted.**
+
+*Step A — narrow (lands first, with the first canonical template).* The gate branches at lines
+122–125 (`HasSupportToDelayedMessages`/`delayed_message`), 127–130
+(`HasSupportToDelayedMessages`/`with_delay`), 132–135
+(`HasSupportToDeadLetterQueue`/`dead_letter_queue`) and 145–148
+(`HasSupportToRequeue`/`requeuing`) become reachable only for an explicit legacy list:
+
+```csharp
+private static readonly string[] LegacyGatedTemplates =
+[
+    "When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery",
+    "When_requeuing_a_failed_message_should_receive_message_again",
+    "When_requeuing_a_failed_message_with_delay_should_receive_message_again",
+    "When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue",
+];
+// the three gate branches below are consulted only when fileName is on this list;
+// every other template — canonical or otherwise — generates regardless of flag value
+```
+
+The list is exhaustive and closed: it enumerates exactly the four templates gated today (verified by
+substring match against the template directory), and nothing is ever added to it. It is also the
+work list for step C — the set to delete — so the two cannot drift apart.
+
+*Step B — the canonical set is built and the transports are fixed.* Throughout, canonical templates
+generate for every configuration while the four legacy templates stay suppressed. This is what makes
+the reference transport workable: Kafka declares all three gates `false`, yet its canonical FR-2 and
+FR-9 tests generate and run, because the gates no longer reach them.
+
+*Step C — delete (lands last).* Delete the four legacy templates in both variants, **and their
+eighty checked-in generated copies** (6 + 36 + 6 + 32 — see "The generated tree" below). Then delete
+the three now-unreachable gate branches, remove `HasSupportToDelayedMessages`,
+`HasSupportToDeadLetterQueue` and `HasSupportToRequeue` from `MessagingGatewayConfiguration` (lines
+91, 96, 106), and remove the keys from every `test-configuration.json` (FR-11) — including the
+mis-declared PostgreSQL (`false`/`false`), AWS and AWS.V4 (`HasSupportToDelayedMessages: false` in
+three of their four gateway configurations each; both `SqsStandard` declare `true` — six of the eight
+AWS-family configurations mis-declare), and Kafka (all three gates `false`, in both Standard and
+PartitionKey) values. Removing the keys rather than correcting them to `true` is the AC-11 outcome:
+the flags no longer exist, so a stale value cannot mislead.
+
+**The key removal must not precede the template deletion.** Removing a key makes the flag default,
+which ungates the legacy template it was suppressing — generating exactly the old test the sequence
+exists to avoid. AC-11 is therefore stated as an *ordered* criterion.
+
+The retained gates (`HasSupportToPublishConfirmation`/`confirming_posting`,
 `HasSupportToValidateBrokerExistence`/`no_broker_created`,
-`HasSupportToValidateInfrastructure`/`assume_channel`/`validate_channel`) are untouched — this
-ADR retires only the three named gates.
+`HasSupportToValidateInfrastructure`/`assume_channel`/`validate_channel`) are untouched throughout —
+this ADR narrows and then retires only the three named gates.
 
-**Config surface loses three properties.** Remove `HasSupportToDelayedMessages`,
-`HasSupportToDeadLetterQueue`, and `HasSupportToRequeue` from `MessagingGatewayConfiguration`
-(lines 91, 96, 106) and remove the keys from every `test-configuration.json` — including the
-mis-declared PostgreSQL (`false`/`false`), AWS (`HasSupportToDelayedMessages: false` in three of its
-four gateway configurations; `SqsStandard` declares `true`), and Kafka (all three gates `false`, in
-both Standard and PartitionKey) values (FR-11). Removing the keys (rather than correcting them to
-`true`) is the AC-11 outcome: after FR-10 the flags do not exist, so a stale value cannot mislead.
+**The generated tree.** Generated output is committed to this repository, and deleting a `.liquid`
+template does not delete what it previously produced. Two sweeps are therefore part of this change,
+not follow-up hygiene:
 
-**Delete the broken template.** Remove
+- **Legacy orphans (step C)** — eighty `.cs` copies of the four legacy templates under
+  `tests/Paramore.Brighter.*.Tests/**/Generated/`: 6 of the delayed-message template, 36 of
+  plain-requeue, 6 of `with_delay`, 32 of the exhaustion test. AC-10(b), AC-12 and AC-22 assert their
+  absence.
+- **Provider-interface copies (with FR-1(6))** — **forty** checked-in
+  `Generated/{Reactor,Proactor}/IAmAMessageGateway*Provider.cs` files declare
+  `CreateSubscription(..., bool setupDeadLetterQueue = false)`. Removing that parameter makes every
+  one of them stale, so all twenty configurations are regenerated and re-committed in the same change
+  that lands FR-1(6).
+
+**Delete the broken template (in step C).** Remove
 `.../Templates/MessagingGateway/{Reactor,Proactor}/When_requeuing_a_failed_message_with_delay_should_receive_message_again.cs.liquid`
 (the Reactor variant calls `_channel.Requeue(received);` with no delay after a `SendWithDelay` +
-`Thread.Sleep(6s)` — line 62). This is the AC-12 **replace** arm: after deletion, a
-template-source inspection MUST confirm that every template *purporting to exercise delayed
-requeue* passes a non-null `TimeSpan` to `Requeue` / `RequeueAsync`.
+`Thread.Sleep(6s)` — line 62), together with its six generated copies. It is one of the four legacy
+gated templates, so it stays suppressed until step C rather than being deleted early — there is no
+hurry, because it generates for nothing in the meantime. After deletion, a template-source
+inspection MUST confirm that every template *purporting to exercise delayed requeue* passes a
+non-null `TimeSpan` to `Requeue` / `RequeueAsync` (AC-12).
 
 The prohibition is scoped to delayed-requeue templates, not to every call site, because two
-templates legitimately requeue with no delay: the plain-requeue template
-(`When_requeuing_a_failed_message_should_receive_message_again.cs.liquid`, ungated by FR-10) and the
-zero/null-boundary template required by FR-15. (The requeue-count-exhaustion template also requeues
-without a delay, but FR-19 deletes it.)
-Between them they cover the no-delay path; the amended FR-2 covers the delayed path.
+**canonical** templates legitimately requeue with no delay: the canonical plain-requeue template
+(FR-22, which may be migrated from the legacy `When_requeuing_a_failed_message_should_receive_message_again`)
+and the zero/null-boundary template required by FR-15. Between them they cover the no-delay path;
+FR-2 covers the delayed path.
 
 **Reactor/Proactor parity (FR-14).** Every change above lands in *both* template trees and both
 provider interfaces — the async members return `Task`/`Task<...>` and take a
@@ -393,15 +474,19 @@ vs async gateway code paths; it is not pump re-testing.
 ### Negative
 
 - **Every per-transport provider implementation must be extended** to satisfy the wider
-  interface (Kafka, Redis, MSSQL, PostgreSQL, RMQ, AWS SNS/SQS, GCP, RocketMQ, …). A transport
-  that cannot yet supply an invalid channel or a metadata-key set surfaces as a compile or
-  implementation gap. This is *intended* (it is how non-conformance
+  interface — the twenty wired today (Kafka, Redis, MSSQL, PostgreSQL, RMQ.Async, AWS SNS/SQS ×2
+  versions, GCP, RocketMQ). A transport that cannot yet supply an invalid channel or a metadata-key
+  set surfaces as a compile or implementation gap. This is *intended* (it is how non-conformance
   becomes visible per FR-13), but it is real work and is the bulk of the follow-on effort.
+- **Three further provider implementations must be written from scratch** under FR-20, for
+  AzureServiceBus, MQTT and RMQ.Sync. They are not a migration cost — they implement the post-FR-1
+  signature directly — but they are new work this ADR's interface defines the shape of, and they
+  land after the twenty existing providers have proven that shape. ADR 0067 sequences them last.
 - **We lose the ability to prove, in the generic suite, that a transport without native delay really
   falls back to Brighter's scheduler.** That was FR-3's purpose, and dropping it means a gateway
   could regress from scheduler-fallback to silently-no-delay and the universal suite would still be
   green *provided the message is redelivered after the delay by some means*. This is an accepted
-  trade: the mechanism assertion is unavailable on 14 of 20 configurations anyway, and NFR-3
+  trade: the mechanism assertion is unavailable on 14 of the 20 configurations wired today anyway, and NFR-3
   forbids it. The mitigation is the OOS-2 supplementary per-transport scheduler tests for the six
   gateways that expose the seam — which should be raised as a follow-up issue rather than left
   implicit.
@@ -413,21 +498,29 @@ vs async gateway code paths; it is not pump re-testing.
   existing template that passes the bool is
   `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs.liquid`, which FR-19
   deletes — so after this change the parameter has no callers at all.
-- Retiring the gates ungates **more than the canonical set**. Because `SkipTest` matches on
-  filename substrings, `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue`
-  matches *both* `dead_letter_queue` and `requeuing` and is doubly gated today; it currently
-  generates for 16 of the 20 configurations (all but Kafka ×2, MSSQL and PostgreSQL), and after
-  FR-10 it would generate for all 20.
+- **The substring-matching hazard is now prevented by construction rather than argued about.**
+  Because `SkipTest` matches on filename substrings,
+  `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue` matches *both*
+  `dead_letter_queue` and `requeuing` and is doubly gated today; it currently generates for 16 of the
+  20 configurations (all but Kafka ×2, MSSQL and PostgreSQL). Under the superseded "remove the gates
+  first" sequencing it would have generated for all 20.
 
-  **It must not be allowed to.** Requeue-count exhaustion is enforced by the message pump —
+  **It must not, and now cannot.** Requeue-count exhaustion is enforced by the message pump —
   `Reactor`/`Proactor.RequeueMessage` call `Header.UpdateHandledCount()` then
   `Message.HandledCountReached(RequeueCount)`, and that method has no other caller in the codebase.
   `Channel.Requeue` forwards straight to `_messageConsumer.Requeue` and counts nothing. Where the
   template passes today it is proving the *transport's* native redrive: the AWS provider pairs
   `requeueCount: 3` with `redrivePolicy: new RedrivePolicy(dlqName, 3)`, so SQS does the counting.
   That is a pump test (OOS-5) or a native-mechanism test (NFR-3, OOS-1) — the same defect that got
-  FR-3 withdrawn. Requirements.md **FR-19 deletes the template**, as FR-12 deletes the broken
-  `with_delay` one.
+  FR-3 withdrawn. The template is on the closed legacy list, so it stays suppressed for its whole
+  remaining life and is then deleted with its 32 generated copies (FR-19), exactly as the broken
+  `with_delay` template is (FR-12).
+
+  The residual risk inverts: the legacy list is now load-bearing, and a canonical template is only
+  ungated because it is *absent* from that list. A future edit that adds a name to the list, or a
+  legacy template renamed without updating it, silently changes what generates. The mitigations are
+  that the list is declared closed, and that it is the same list step C deletes — so a stale entry
+  surfaces as a deletion that finds no file.
 
 ### Risks and Mitigations
 
@@ -450,9 +543,10 @@ vs async gateway code paths; it is not pump re-testing.
    stringly-typed call sites, no compile-time guarantee the semantic set is complete, and it
    reintroduces primitive obsession. The strongly-typed record makes an omitted field a compile
    error and reads as intent.
-3. **Fix the `with_delay` template in place (FR-12 option a).** Rejected: redundant with and
-   weaker than the amended, mechanism-agnostic FR-2; keeping it duplicates knowledge and
-   leaves a third delayed-requeue template to maintain.
+3. **Fix the `with_delay` template in place.** Rejected: redundant with and weaker than the
+   mechanism-agnostic FR-2; keeping it duplicates knowledge and leaves a third delayed-requeue
+   template to maintain. It is also an *old* test, and the spec's position is that the old tests are
+   replaced rather than repaired.
 4. **Keep a scheduler-delegation test in the generic suite (spy, in-memory, or both).** Rejected on
    two independent grounds. *Principle*: it asserts the delay **mechanism**, which NFR-3 and OOS-1
    forbid — "we don't want to test how, we want to test supported". *Practice*:
@@ -463,7 +557,17 @@ vs async gateway code paths; it is not pump re-testing.
    fails by design on them, including on conformant transports, and giving them the seam is a public
    runtime API change C-1 forbids. Retained as OOS-2 supplementary work for the six gateways that can
    support it.
-5. **A shared core `RejectionMetadataKeys` type in `src/Paramore.Brighter`.** Rejected per C-2:
+5. **Retire the three gates up front, then chase the fallout.** Rejected — this was the earlier
+   sequencing, and it does not survive contact with the fix phase. Removing the gates first
+   immediately generates the four legacy templates for every configuration: the exhaustion template
+   onto Kafka ×2, MSSQL and PostgreSQL (none of which counts deliveries), and the broken `with_delay`
+   template onto every configuration declaring a delay gate `false`. Those are precisely the tests
+   this spec deletes, and they would land red on transports not yet fixed. It also creates a circular
+   dependency with ADR 0067's cleanup gate: the ledger cannot record a `Pass` for FR-2 or FR-9 on the
+   reference transport, because Kafka declares all three gates `false` and so would not generate
+   those canonical tests until the very change the ledger is meant to authorise. Narrowing the gates
+   to a closed legacy list dissolves both problems at once.
+6. **A shared core `RejectionMetadataKeys` type in `src/Paramore.Brighter`.** Rejected per C-2:
    the key names/casing are genuinely per-transport (Kafka `OriginalType` vs Redis/SQS
    `originalMessageType` is a name difference, not just casing). A shared core type would falsely
    imply a single canonical key set and would not match what each gateway actually stamps. Only
@@ -473,7 +577,7 @@ vs async gateway code paths; it is not pump re-testing.
 
 - Requirements: [specs/0036-universal-transport-conformance-tests/requirements.md](../../specs/0036-universal-transport-conformance-tests/requirements.md)
 - Related ADRs (this ADR builds on all of these; it supersedes none):
-  - [`0067-conformance-rollout-and-deferral-governance`](0067-conformance-rollout-and-deferral-governance.md) [Proposed] — **sibling.** Sequences the per-transport rollout around this ADR's gate-retirement flip (fix-then-flip) and governs auditable deferrals via the conformance ledger; a provider that cannot yet supply a member added here (e.g. the invalid-channel read, or the rejection-metadata key set) is tracked as a `Deferred` row there.
+  - [`0067-conformance-rollout-and-deferral-governance`](0067-conformance-rollout-and-deferral-governance.md) [Proposed] — **sibling.** Sequences the per-transport rollout around this ADR's gating lifecycle (generate-then-fix-then-clean-up) and governs auditable deferrals via the conformance ledger; a provider that cannot yet supply a member added here (e.g. the invalid-channel read, or the rejection-metadata key set) is tracked as a `Deferred` row there.
   - `0037-add-messaging-gateway-generated-test` [Accepted] — created this generator and
     `MessagingGatewayConfiguration`; this ADR directly extends its provider interfaces and
     retires three of its capability flags (the most important relation).
@@ -487,8 +591,8 @@ vs async gateway code paths; it is not pump re-testing.
     channels; the provisioning the new DLQ/invalid provider members rely on.
   - `0039-transport-scheduler-wiring` — threads `IAmAMessageScheduler` through the channel factory
     into the consumer. Relevant here as the reason FR-3 was withdrawn rather than redesigned: that
-    seam is opt-in (`IAmAChannelFactoryWithScheduler`) and reaches only 6 of the ~20 target gateway
-    configurations, so a scheduler assertion cannot be universal. It remains the seam any OOS-2
+    seam is opt-in (`IAmAChannelFactoryWithScheduler`) and reaches only 6 of the twenty gateway
+    configurations wired today, so a scheduler assertion cannot be universal. It remains the seam any OOS-2
     supplementary scheduler test would use.
   - Per-transport DLQ ADRs (`0038-aws-sqs-dlq-direct-send`, `0039-redis-dlq-brighter-managed`,
     `0040-mssql-dlq-brighter-managed`, `0041-postgres-dlq-brighter-managed`,

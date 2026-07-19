@@ -10,6 +10,56 @@ below.
 
 ---
 
+## Reversed: gate retirement moved from first step to last — FR-10 rewritten
+
+**Reversed 2026-07-19, by spec-owner instruction, after design review round 5.** Not a retirement;
+FR-10 keeps its identifier and changes its content. FR-22/AC-25 added for the canonical plain-requeue
+template the old FR-10 supplied by ungating.
+
+FR-10 originally read "`SkipTest` MUST no longer skip any template on the three gates … the existing
+plain-requeue template becomes ungated and generates for every transport alongside the canonical
+templates", and FR-9 said the existing delayed-message template "satisfies FR-9 once FR-10 ungates
+it; no new canonical template is required".
+
+**How it arose.** The spec's founding insight is that the gates mis-model universal obligations, so
+removing them read as the obvious first move. Nobody asked what the gates were *doing* in the
+meantime.
+
+**Why it was wrong.** Two independent failures, one found by review, one by the spec owner.
+
+Design review round 5 found a **circular dependency**: 0067's flip gate required every ledger cell
+resolved *before* the gates were retired, but while the gates are live `SkipTest` suppresses any
+template whose filename contains `requeuing`, `with_delay`, `delayed_message` or `dead_letter_queue`
+— and Kafka, the reference transport, declares all three gates `false`. The rollout could not
+execute step 1: Kafka's canonical FR-2 and FR-9 tests would not generate until the very change the
+ledger was supposed to authorise.
+
+The spec owner's ruling went further and dissolved the problem at its root: **the old tests are never
+wanted.** Not before the canonical set exists, and not after. A gate suppressing a legacy template is
+doing useful work until that template is deleted, so retiring the gates first generates precisely the
+tests this spec exists to replace — the broken `with_delay` template and the pump-owned exhaustion
+template among them — against transports not yet fixed. Ungating an old test is never a step toward
+the goal.
+
+**What replaced it.** Canonical templates are ungated *by construction*: `SkipTest` consults the
+three gates only for a closed, explicit list of the four legacy template filenames, so a canonical
+template cannot be suppressed however it is named. This deliberately does not rely on naming —
+`SkipTest` matches substrings, and NFR-1's convention means a canonical delayed-requeue template
+naturally contains both `requeuing` and `with_delay`, the same trap that left the exhaustion template
+doubly gated. The four legacy templates stay suppressed for their whole remaining life, are deleted
+with their eighty generated copies once the canonical set is complete, and only then do the gates and
+config keys go.
+
+**Consequences accepted.** FR-9 and FR-22 now require canonical templates that MAY be migrations of
+the two salvageable legacy ones, rather than reusing them in place. The deletion sweep doubles from
+38 generated copies to 80. And the deferral marker becomes the *normal* transitional state of a
+canonical test rather than an exceptional escape hatch — canonical tests generate everywhere from the
+day they land, so the five configurations known to fail FR-2 (GCP ×4, RocketMQ) carry linked,
+signed-off, ledger-backed markers until fixed. ADR 0067 records why that is not the "normalized red"
+it otherwise resembles: a suppressed test is one being retired, a deferred test is one being adopted.
+
+---
+
 ## Retired: OOS-6 — the exclusion of unwired gateway transports
 
 **Retired 2026-07-19, by spec-owner instruction.** In scope: all twelve gateway transports. FR-20

@@ -1,5 +1,301 @@
 # Review: requirements — 0036-universal-transport-conformance-tests
 
+## Round 7 (2026-07-19) — cross-document consistency after the twelve-transport rewrite
+
+**Threshold**: 60
+**Verdict**: NEEDS WORK — 10 findings at or above threshold 60. **No Critical findings** (second
+round running clean at 90+).
+
+Round weighted toward cross-document consistency per the standing instruction: round 6 found that
+requirements were being edited without the ADRs following. That is exactly what this round found
+again — 5 of the 10 at-threshold findings are ADR follow-through (2, 3, 6, 7, 8), and one is the
+spec README (9). Only findings 1, 4, 5 and 10 are defects in `requirements.md` itself.
+
+Findings by round: 11 → 8 → 5 → 11. The count rose because FR-20, the twelve-transport target set,
+the widened C-1, AC-20's exemption and the AC-12/AC-22 generated-copy clauses had never been
+reviewed by anyone.
+
+### 1. FR-13's definition of "targeted gateway configuration" is a truncated, dangling sentence — the term is never defined (Score: 88)
+
+FR-13 opens by defining two terms. The first definition stops mid-clause and the second sentence
+begins on the next line, so `requirements.md` never says what a *targeted gateway configuration* is.
+The term is load-bearing: it is in FR-13's own heading, it is what FR-13's normative sentence ("MUST
+be generated for **every** configuration of **every** targeted transport") quantifies over, and
+AC-13 verifies "every configuration of all twelve gateway transports". Confirmed by direct read —
+a real editing artifact, not a rendering effect.
+
+The only complete statement of the rule now lives in ADR 0067 (`0067:42-45`: "generation is per
+**gateway configuration**, not per project… those nine declare **twenty** configurations"). That
+inverts the intended direction of authority: a requirement's defining term is recoverable only from
+a design document.
+
+**Evidence**: `requirements.md:192-194`
+
+```
+**FR-13 — Generate for every targeted configuration; non-conformance is a defect to fix.**
+A **targeted gateway configuration** is one declared under the `MessagingGateway` (singular, one
+A **targeted transport** is **every transport with a messaging gateway** — that is, every
+```
+
+**Recommendation**: Restore the sentence, e.g. "A **targeted gateway configuration** is one declared
+under the `MessagingGateway` (singular, one configuration) or `MessagingGateways` (plural, several)
+section of a `tests/Paramore.Brighter.*.Tests/test-configuration.json`; generation and conformance
+are per configuration, not per project." Also reconcile the heading ("targeted configuration") with
+the defined term.
+
+---
+
+### 2. ADR 0066 was never updated for the twelve-transport target set or for FR-20 (Score: 74)
+
+ADR 0066 still describes the target set in the pre-reversal, nine-transport world. It refers to
+"**~20 target configurations**" in five places, all of which now describe only the *wired* set — the
+target set under FR-13 is twelve transports, and ADR 0067 and requirements.md both say so. Line 461
+was corrected to "the twenty configurations **wired today**"; lines 119, 219, 241, 281 and 490 were
+not, so the ADR contradicts itself and the requirement.
+
+Worse, **FR-20 appears exactly once in ADR 0066** (line 461, in an Alternatives footnote). It
+appears nowhere in the Decision, Key Components, Implementation Approach, or Consequences. Yet
+FR-1(6) — which ADR 0066 is the deciding ADR for — explicitly carves out FR-20: "Providers newly
+written under FR-20 implement the post-FR-1 signature directly and never carry the bool." ADR 0066's
+corresponding text enumerates only the nine wired transports' providers.
+
+Note also that MQTT and RMQ.Sync *do* implement `IAmAChannelFactoryWithScheduler`, so once FR-20
+lands, the "6 of ~20 have the seam" arithmetic in the "Why there is no scheduler member" section no
+longer describes the target set at all.
+
+**Evidence**: `docs/adr/0066-…:119` ("14 of the ~20 **target** configurations have no scheduler
+seam"); `:219` ("Of the ~20 gateway configurations the generator **targets**"); `:490` ("reaches
+only 6 of the ~20 **target** gateway configurations"); vs `:461` ("Of the twenty configurations
+**wired today**"). Provider enumeration at `:265-268` and `:396` — "Kafka, Redis, MSSQL, PostgreSQL,
+RMQ, AWS SNS/SQS, GCP, RocketMQ, …" with no AzureServiceBus / MQTT / RMQ.Sync. `grep -c "FR-20"
+docs/adr/0066-*.md` returns 1.
+
+**Recommendation**: Replace "~20 target configurations" with "the twenty configurations wired today"
+everywhere it means the wired set. Add an FR-20 paragraph to Key Components and Consequences stating
+that three further provider implementations are written fresh against the post-FR-1 signature, and
+correct the scheduler-seam arithmetic to say it covers 6 of the 20 wired configurations, rising once
+FR-20 wires two more scheduler-capable gateways.
+
+---
+
+### 3. AC-13 forbids skipping outright, while ADR 0067 mandates a `Skip` attribute on every deferred canonical test (Score: 72)
+
+FR-13 correctly says "No canonical test may be **silently** skipped or gated away." AC-13 drops the
+qualifier: "every configuration … has the canonical tests present, **and none is skipped or gated
+away**". As a directly-executable assertion — which is what an AC is for — that reads "no
+messaging-gateway test carries a `Skip`". ADR 0067 requires the opposite: every deferred canonical
+test **must** carry `Skip = "Deferred: #NNNN — …"`, and a CI audit fails any deferred test lacking
+one.
+
+The trailing "no silent skip, no unaudited deferral" makes the intent recoverable, but two
+developers will build different audit checks from AC-13 — one asserting zero `Skip` attributes, one
+asserting only `Deferred:`-form ones.
+
+**Evidence**: `requirements.md:376-381` (AC-13) vs `docs/adr/0067-…:178-183` ("any deferred canonical
+test carries an explicit `Skip` string of the form `Skip = "Deferred: #NNNN — …"`. … A bare or
+reasonless `Skip` … is a CI failure") and `:247-251`.
+
+**Recommendation**: Reword AC-13's middle clause to match FR-13 and ADR 0067: "…has the canonical
+tests present, and none is silently skipped or gated away — any skip carries an auditable deferral
+marker…".
+
+---
+
+### 4. The "conformance ledger" is depended on by an AC but never required, defined, or created (Score: 70)
+
+`requirements.md` refers to a "conformance ledger" twice, as though it were an established artifact,
+but no FR requires its existence, no AC verifies it, and the document never names the file. AC-23
+makes a deferral's validity conditional on "a conformance-ledger row" — an acceptance criterion that
+cannot be evaluated because the thing it tests has no defining requirement.
+
+ADR 0067 defines it completely (`specs/0036-universal-transport-conformance-tests/conformance-status.md`,
+one row per configuration, cell vocabulary `Pass` / `Fixed (#PR)` / `Deferred -> #NNNN`, `Unknown`
+blocking the flip) and makes it the **flip gate**. So the single most consequential process
+obligation in the spec exists only in the design document. The file does not exist in the spec
+directory.
+
+**Evidence**: `requirements.md:277`, `:423`; no other occurrence of "ledger" in the file.
+`docs/adr/0067-…:159-177`, `:221-222`, `:243-246`.
+
+**Recommendation**: Add a numbered FR requiring the ledger — its location, its per-configuration row
+granularity, its canonical-behaviour columns, and the rule that no `Unknown` cell may remain when
+the ungating change merges — plus a matching AC. ADR 0067 then decides *how* it is enforced (the
+Skip convention and CI audit), which is properly ADR territory.
+
+---
+
+### 5. FR-20(3) — "supply whatever test infrastructure the transport needs to run in CI" — is unbounded and has no acceptance criterion (Score: 70)
+
+FR-20 enumerates three obligations per onboarded transport. The first two are concrete and
+checkable. The third is not: "supply **whatever** test infrastructure the transport needs to run in
+CI" specifies no target, no boundary, and no acceptance condition. AC-23 verifies only that a config
+section and a provider implementation exist, and that generation emits the canonical templates — it
+says nothing about infrastructure.
+
+Not hypothetical vagueness: ADR 0067 concedes the problem directly — "**ASB in particular is a cloud
+service whose CI story is not solved here**." Three reasonable implementations follow from the same
+sentence: stand up an emulator, provision a live cloud namespace, or declare it infeasible and open
+a deferral. All three satisfy FR-20 as written.
+
+**Evidence**: `requirements.md:270`; AC-23 at `:418-423` contains no infrastructure clause;
+`docs/adr/0067-…:286-291`.
+
+**Recommendation**: Either state the acceptance condition ("the generated suite for the transport
+executes against a broker in CI — container, emulator, or live service — and `Pass` requires an
+actual run, not a compile", mirroring ADR 0067's "Infra reality" paragraph), or state explicitly
+that CI infrastructure which cannot be stood up in-spec is a first-class candidate for the FR-13
+deferral rule, and add that arm to AC-23.
+
+---
+
+### 6. DLQ ADRs are cited by bare number, and every number cited resolves to two or more ADRs (Score: 68)
+
+`docs/adr/` reuses numbers 0038–0043. Verified by direct listing: `0038-aws-sqs-dlq-direct-send.md`,
+`0038-dont-ack-action.md`, `0038-remove-clear-service-bus.md`; `0039-redis-dlq-brighter-managed.md`,
+`0039-opentelemetry-builder-extension.md`, `0039-scoping-dependencies-inline-with-lifetime-scope.md`,
+`0039-transport-scheduler-wiring.md`; `0040-mssql-dlq-brighter-managed.md`,
+`0040-add-the-specification-pattern.md`; `0041-postgres-dlq-brighter-managed.md`,
+`0041-add-parallel-split-to-mediator.md`; `0042-rocketmq-dlq-brighter-managed.md`,
+`0042-use-reactive-programming-for-mediator.md`; `0043-mqtt-dlq-brighter-managed.md`,
+`0043-rabbitmq-mutual-tls.md`.
+
+Every bare-number citation is therefore ambiguous, and the range form is outright wrong: "the
+per-transport DLQ ADRs (**0038–0043**, 0046)" sweeps in six ADRs about ack actions, OpenTelemetry,
+DI scoping, the specification pattern, parallel split, reactive mediator, and RabbitMQ mutual TLS.
+ADR 0066's References section and requirements.md FR-20 both get this right by using slugs; the body
+prose of both requirements.md and ADR 0067 does not.
+
+**Evidence**: `requirements.md:28` ("MSSQL declares no DLQ despite ADR **0040**").
+`docs/adr/0067-…:55-60`, `:132-135` (diagram), `:198` and `:228` ("the per-transport DLQ ADRs
+(0038–0043, 0046)").
+
+**Recommendation**: Replace every bare number with the slug (`0040-mssql-dlq-brighter-managed`), and
+replace the range with the explicit seven-slug list already present in both ADRs' References
+sections.
+
+---
+
+### 7. ADR 0067 restates C-1 without the FR-20 widening, so its own stated constraint forbids the work it schedules (Score: 65)
+
+C-1 was widened to permit FR-20's test-side work: "…and the test-side onboarding FR-20 requires (new
+configs, new provider implementations, and the CI infrastructure to run them)." ADR 0067 restates
+C-1 in its Context and omits that clause entirely. ADR 0067's own Implementation Approach step 4
+then schedules exactly the omitted work — "each needing a `test-configuration.json`, provider
+implementation(s) and CI infrastructure" — which its own statement of C-1 places outside the spec's
+boundary.
+
+This is the round-6 pattern repeating: requirements edited, ADR not followed.
+
+**Evidence**: `requirements.md:295-300` (C-1) vs `docs/adr/0067-…:92-95`: "C-1 confines the work to
+the generator, its templates and configs, plus the transport-gateway source fixes FR-13 requires —
+no public Brighter runtime API redesign beyond FR-1's generated providers." Contrast
+`docs/adr/0067-…:236-242` (step 4).
+
+**Recommendation**: Bring ADR 0067's C-1 restatement into line with the widened C-1, naming the
+FR-20 test-side onboarding as in-boundary.
+
+---
+
+### 8. ADR 0066 carries draft-history narration the editorial rule bans, and claims to be the "sole record" of rationale decision-log.md now also holds (Score: 64)
+
+The editorial rule in force is that `requirements.md` and the ADRs carry assertions only; withdrawal
+narration and self-reference to earlier drafts belong in `decision-log.md`. ADR 0066 violates this
+in four places, and one of them makes a claim that is now factually false.
+
+- `:115` — "**One deliberate departure from the original requirement wording.** FR-1(4) and AC-1
+  asked for…"
+- `:122-124` — "Requirements.md **has since been rewritten**… **This ADR is therefore the sole record
+  of why that surface is absent**"
+- `:205-206` — "**Earlier drafts of this ADR** exposed a scheduler-carrying provider member…"
+- `:289-293` — "**A draft of this ADR proposed** a provider member handing back a channel backed by
+  an `InMemoryScheduler`… We dropped it with FR-3"
+
+The "sole record" claim is contradicted by `decision-log.md`'s section "Retired: FR-3, FR-1(4),
+NFR-4, AC-3 — scheduler-delegation testing", which gives the same two reasons in the same order. Two
+documents now assert exclusive ownership of one rationale, and readers get no rule for which governs
+if they drift.
+
+**Evidence**: `docs/adr/0066-…:115`, `:122-126`, `:205-208`, `:289-293`; `decision-log.md:76-93`.
+
+**Recommendation**: Rewrite the four passages as present-tense assertions ("The provider exposes no
+scheduler-carrying member, because…"), delete the "sole record" sentence, and let `decision-log.md`
+own the withdrawal history.
+
+---
+
+### 9. README.md contradicts OOS-1 and the withdrawn scheduler design, and its status checklist is stale (Score: 62)
+
+The spec's own front page still describes the pre-ADR-0066 world and states as a goal the exact
+thing OOS-1 explicitly rejects. It is the first document a reader of this spec directory opens.
+
+**Evidence**: `README.md:21-22` — "…and **(optionally) reintroduce genuinely *native* behaviour as
+distinct `HasNative...` flags**" vs OOS-1: "Re-introducing any `HasNative*` capability flag into the
+suite… is explicitly rejected." `README.md:47-48` — "Provider interface extension: …
+**InMemoryScheduler wired to the producer for these tests**" vs ADR 0066's decision that there is no
+scheduler-carrying provider member at all. `README.md:26-30` — Requirements marked "✅ APPROVED
+2026-07-18" and Design "(ADR `0066`) — `/spec:design` (**not started**)", though ADRs 0066 and 0067
+exist and requirements has since been through review rounds 4–6.
+
+**Recommendation**: Update the README summary to the current scope (twelve transports, no scheduler
+member, no `HasNative*` flags, FR-19 and FR-20) and refresh the status checklist.
+
+---
+
+### 10. AC-23's "corresponding test project" has no mapping rule and is not mechanically checkable (Score: 60)
+
+AC-23 is written as an enumeration assertion: "*when* `src/Paramore.Brighter.MessagingGateway.*` is
+enumerated, *then* each of the twelve gateway projects has a **corresponding** test project…". Five
+of the twelve pairs do not correspond by name, so "corresponding" cannot be evaluated without a
+mapping the document does not supply.
+
+Verified pairings: `MessagingGateway.AWSSQS` → `Paramore.Brighter.AWS.Tests`;
+`MessagingGateway.AWSSQS.V4` → `Paramore.Brighter.AWS.V4.Tests`; `MessagingGateway.GcpPubSub` →
+`Paramore.Brighter.Gcp.Tests`; `MessagingGateway.MsSql` → `Paramore.Brighter.MSSQL.Tests`;
+`MessagingGateway.Postgres` → `Paramore.Brighter.PostgresSQL.Tests`. A further trap:
+`tests/Paramore.Brighter.Azure.Tests` exists alongside `tests/Paramore.Brighter.AzureServiceBus.Tests`,
+so a naive prefix match picks the wrong project.
+
+**Evidence**: `requirements.md:418-420`; directory listings of `src/Paramore.Brighter.MessagingGateway.*`
+and `tests/Paramore.Brighter.*.Tests`.
+
+**Recommendation**: Replace the enumeration with the explicit twelve-row gateway→test-project
+mapping, or restate AC-23 in terms the generator actually consumes ("twelve `test-configuration.json`
+files declare a `MessagingGateway`/`MessagingGateways` section, one per gateway project, per the
+mapping in FR-13").
+
+---
+
+### 11. Requirements.md records no known non-conformances, though ADR 0067 seeds two into the ledger before any generation run (Score: 45)
+
+ADR 0067 identifies, ahead of implementation, that all four GCP configurations and RocketMQ will
+fail the mechanism-agnostic FR-2, and that RocketMQ's is blocked on an upstream client release and
+is "a likely signed-off `Deferred` row". FR-13's deferral machinery covers this, so it is not a
+contradiction — but the requirement that establishes the twelve-transport target set records nothing
+about the five configurations already known to fail it, which understates the spec's size for a
+reader of requirements.md alone.
+
+**Evidence**: `docs/adr/0067-…:66-75`; no corresponding text in `requirements.md` FR-2, FR-13 or
+AC-13.
+
+**Recommendation**: Optional — a sentence in FR-13 noting that non-conformances identified before the
+rollout begins are seeded into the ledger rather than discovered at the flip.
+
+---
+
+### Round 7 summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 5 |
+| 50-69 (Medium) | 5 |
+| 0-49 (Low) | 1 |
+
+**Total findings**: 11
+**Findings at or above threshold (60)**: 10
+
+---
+
 ## Round 6 (2026-07-19) — re-review after round-5 remediation
 
 **Threshold**: 60

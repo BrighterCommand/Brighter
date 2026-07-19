@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-07-18
-summary: "Sequences the universal messaging-gateway conformance rollout as fix-then-flip — per-transport gateway fixes land first (Kafka reference, then the DLQ-ADR transports, then the known-gap transports), with ADR 0066's gate-retirement flip merged last so master never goes red — and governs deferrals through a checked-in conformance ledger cross-checked against a mandatory greppable linked-issue Skip convention, with a size/risk fix-to-conform boundary."
+summary: "Sequences the universal messaging-gateway conformance rollout as generate-then-fix-then-clean-up — canonical templates land early and generate everywhere, each carrying an audited deferral marker for configurations not yet proven; per-transport gateway fixes then clear those markers in order (Kafka reference, then the DLQ-ADR transports, then the known-gap transports and FR-20 onboardings); and ADR 0066's legacy-template retirement and gate removal merges last so master never goes red — with deferrals governed by a checked-in conformance ledger cross-checked against a mandatory greppable linked-issue Skip convention, and a size/risk fix-to-conform boundary."
 tags:
   - "test-generation"
   - "testing"
@@ -24,12 +24,23 @@ Proposed
 ## Context
 
 Sibling ADR [0066](0066-conformance-test-provider-and-ungating.md) extends the generated provider
-interfaces and, in a single change, retires the three capability gates
-(`HasSupportToDelayedMessages`, `HasSupportToDeadLetterQueue`, `HasSupportToRequeue`) from
-`MessagingGatewayGenerator.SkipTest` and removes the keys from every `test-configuration.json`. The
-moment that change merges, **every** messaging-gateway transport the generator targets begins
-generating the canonical conformance behaviours (FR-2, FR-4…FR-9, FR-15, FR-16, FR-17 — FR-3 having
-been folded into FR-2 by ADR 0066) in both Reactor and Proactor variants — ungated.
+interfaces and decides the **gating lifecycle**: canonical templates are ungated *by construction* —
+`MessagingGatewayGenerator.SkipTest` consults the three capability gates
+(`HasSupportToDelayedMessages`, `HasSupportToDeadLetterQueue`, `HasSupportToRequeue`) only for a
+closed list of four legacy templates — and the gates themselves, plus the keys in every
+`test-configuration.json`, are removed only after those legacy templates are deleted.
+
+**This means canonical generation does not wait for a flip.** From the moment the first canonical
+template merges, it generates for **every** targeted gateway configuration (FR-2, FR-4…FR-9, FR-15,
+FR-16, FR-17, FR-22 — FR-3 having been folded into FR-2 by ADR 0066) in both Reactor and Proactor
+variants, whatever any configuration's flags say. The four legacy templates stay suppressed
+throughout and generate for nothing.
+
+That changes what this ADR sequences. The rollout is no longer "hold everything back, then flip the
+switch"; it is "canonical tests generate from the start, and each transport is brought to conformance
+under an audited deferral marker until it is". The terminal cleanup — delete the four legacy
+templates and their eighty generated copies, then remove the gates and config keys — is the last
+merge rather than the enabling one.
 
 The target set is **every transport with a messaging gateway** — all twelve
 `src/Paramore.Brighter.MessagingGateway.*` projects (requirements.md FR-13). Membership is *having a
@@ -52,12 +63,15 @@ property**, and the ledger below is keyed accordingly. Conformance state is unev
   (`HasSupportToRequeue`, `HasSupportToDeadLetterQueue`, `HasSupportToDelayedMessages`) as `false`
   in both its Standard and PartitionKey configs — the starkest case of a config tuned to keep the
   suite green rather than to describe the gateway.
-- **The DLQ-ADR transports** — AWS SQS (`0038`), Redis (`0039`), MSSQL (`0040`), PostgreSQL
-  (`0041`), and RocketMQ (`0042`) — already have Brighter-managed DLQ/reject decisions recorded
+- **The DLQ-ADR transports** — AWS SQS (`0038-aws-sqs-dlq-direct-send`), Redis
+  (`0039-redis-dlq-brighter-managed`), MSSQL (`0040-mssql-dlq-brighter-managed`), PostgreSQL
+  (`0041-postgres-dlq-brighter-managed`), and RocketMQ (`0042-rocketmq-dlq-brighter-managed`) —
+  already have Brighter-managed DLQ/reject decisions recorded
   per transport, but their end-to-end conformance against the generated suite is unproven; several
   mis-declare gates (AWS `HasSupportToDelayedMessages: false` in three of its four gateway
   configurations — `SqsStandard` declares `true`; PostgreSQL both `false`; and MSSQL
-  `HasSupportToDeadLetterQueue: false` despite ADR `0040` giving it a Brighter-managed DLQ). **RMQ**
+  `HasSupportToDeadLetterQueue: false` despite ADR `0040-mssql-dlq-brighter-managed` giving it a
+  Brighter-managed DLQ). **RMQ**
   sits alongside them in the sequence but has **no** per-transport DLQ ADR — RabbitMQ conventionally
   uses a native dead-letter exchange (DLX), and its reject/DLQ conformance rests on the universal
   routing strategy (`0047-message-rejection-routing-strategy` / `0045-provide-dlq-where-missing`),
@@ -72,10 +86,11 @@ property**, and the ledger below is keyed accordingly. Conformance state is unev
   call commented out pending an upstream RocketMQ C# client release. RocketMQ's is therefore blocked
   on a third-party dependency and is a likely signed-off `Deferred` row rather than an in-spec
   `Fixed`; GCP's requires deciding whether subscription-RetryPolicy redelivery can satisfy FR-2 at
-  all. Both are seeded into the ledger as known non-conformances rather than discovered at the flip.
+  all. Both are seeded into the ledger as known non-conformances rather than discovered late.
 - **The known-gap transports** are worst off. **GCP** has messaging-gateway providers and a
   requeue-to-DLQ generated test but none of the canonical reject-routing or metadata behaviours, and
-  its `Requeue` ignores the delay outright, so it will fail FR-2 at the flip.
+  its `Requeue` ignores the delay outright, so it fails FR-2 as soon as the canonical templates
+  generate for it.
 
   **AzureServiceBus, MQTT and RMQ.Sync** have messaging gateways and test projects but **no generator
   wiring at all** — no `test-configuration.json`, no provider — so they generate nothing today.
@@ -86,17 +101,23 @@ property**, and the ledger below is keyed accordingly. Conformance state is unev
   dead-letter ADR (`0043-mqtt-dlq-brighter-managed`). This is the largest new work in the rollout and
   sequences last.
 
-FR-13 forbids silently skipping, `[Skip]`-ping, or gating any canonical test to make the suite
-green, and requires that any deferred gateway fix be a **named, linked, maintainer-signed-off
+FR-13 forbids *silently* skipping or gating any canonical test to make the suite
+green — an audited, linked, ledger-backed deferral marker is permitted and is the expected
+transitional state; a bare or reasonless `[Skip]` is not — and requires that any deferred gateway fix be a **named, linked, maintainer-signed-off
 follow-up issue referenced from the spec** — "a deferral is auditable, never an open-ended escape
 hatch." AC-13 restates this as "no silent skip and no unaudited deferral." C-1 confines the work to
-the generator, its templates and configs, plus the transport-gateway source fixes FR-13 requires —
-no public Brighter runtime API redesign beyond FR-1's generated providers. OOS-2 keeps
-native-variant supplementary tests as separate follow-up issues.
+the generator, its templates and configs; the transport-gateway source fixes FR-13 requires; **and
+the test-side onboarding FR-20 requires — new `test-configuration.json` files, new provider
+implementations, and the CI infrastructure to run them** — with no public Brighter runtime API
+redesign beyond FR-1's generated providers. That last clause is what puts step 4's onboarding work
+inside the boundary: FR-20 wires existing gateways into the generator, it does not modify them
+except where FR-13 applies. OOS-2 keeps native-variant supplementary tests as separate follow-up
+issues.
 
 That raises three questions ADR 0066 explicitly leaves open and this ADR answers:
 
-1. In what **order** do transports reach conformance relative to the ungating flip?
+1. In what **order** do transports reach conformance, between the canonical templates landing and
+   the terminal cleanup?
 2. **How** is a not-yet-conformant transport represented so a deferral is auditable rather than a
    silent skip?
 3. **Where** is the boundary between fixing a gateway inline in this spec versus deferring it?
@@ -111,51 +132,77 @@ ADR does **not** supersede 0066 — it sequences the rollout around it.
 
 ## Decision
 
-We land universal conformance as **fix-then-flip**: per-transport gateway conformance fixes merge
-first, in a defined order, and ADR 0066's gate-retirement flip is the **last** merge, once every
-targeted transport is either green or carries a signed-off deferral — so master is never red. A
-checked-in **conformance ledger** is the single source of truth for per-transport conformance
-state, cross-checked against a mandatory, greppable **linked-issue Skip** convention. The boundary
-between fixing inline and deferring is a **size/risk threshold**, maintainer-judged and recorded in
-the ledger.
+We land universal conformance as **generate-then-fix-then-clean-up**: canonical templates merge
+early and generate everywhere immediately; each is introduced carrying an audited deferral marker
+for every configuration not yet known to conform; per-transport gateway fixes then remove those
+markers one configuration at a time; and ADR 0066's legacy retirement and gate removal is the
+**last** merge. A checked-in **conformance ledger** is the single source of truth for
+per-configuration conformance state, cross-checked against a mandatory, greppable **linked-issue
+Skip** convention. The boundary between fixing inline and deferring is a **size/risk threshold**,
+maintainer-judged and recorded in the ledger.
+
+**How master stays green.** A canonical template generates for all twenty-plus configurations the
+moment it merges, and five of them are known in advance not to conform (GCP ×4 and RocketMQ fail the
+mechanism-agnostic FR-2). Master stays green because a canonical test lands **already carrying** a
+`Skip = "Deferred: #NNNN …"` for each configuration not yet proven, and the fix phase removes those
+markers as transports are brought to conformance — the marker is deleted in the same PR as the
+gateway fix. This inverts the usual reading of the Skip convention: it is not an exceptional escape
+hatch used at the end, it is the **normal transitional state** of a canonical test between merging
+and its transport being fixed.
+
+The trade is deliberate. The alternative — hold every canonical template back until its transport is
+fixed — would keep the templates unexercised until late, which is exactly how the broken `with_delay`
+template survived undetected. Landing them early runs them against real brokers immediately, and the
+audit machinery below is what stops "temporarily skipped" decaying into "permanently invisible": every
+marker needs a linked issue and a ledger row from the day it appears, not from the day someone
+notices it is still there.
 
 ### Architecture Overview
 
-The rollout is a pipeline whose fix phase and flip are deliberately distinct:
+The rollout is a pipeline whose enabling change, fix phase and cleanup are deliberately distinct:
 
 ```
-  FIX PHASE (each stage merges to a green master)                        CAPSTONE
-  ---------------------------------------------------------------------  ------------------
-  (i)  Kafka          reference — prove templates + extended provider  \
-       (already        end-to-end against the known-good transport      |
-        conforms)                                                       |
-  (ii) DLQ-ADR        AWS SQS (0038), Redis (0039), MSSQL (0040),       |   ADR 0066
-       transports      PostgreSQL (0041), RocketMQ (0042);             |   ungating flip
-       (+ RMQ, which    RMQ (no per-transport DLQ ADR — native DLX,    |   (remove 3 gates
-        has no DLQ ADR)  universal routing 0047/0045)                  |    + config keys)
-                       — brought to conformance (Fixed) or deferred    |
-                        (Deferred -> #issue)                           |
-  (iii)known-gap      GCP (no canonical coverage; Requeue ignores      |   merges LAST
-       transports      the delay), then the unwired three —            |
-                       ASB, MQTT, RMQ.Sync (FR-20: config +            |
-                       provider + CI) — most new work;                 |
-                       conform or signed-off deferral                  /
-                                                                        |
-       conformance-status.md (ledger)  <== single source of truth =====+
-       transport x behaviour matrix; cells Pass | Fixed | Deferred->#issue
+  ENABLE (first)          FIX PHASE (each stage merges to a green master)      CLEAN UP (last)
+  ----------------------  ---------------------------------------------------  ------------------
+  canonical templates     (i)  Kafka        reference — prove templates +   \
+  land, ungated by             (already      extended provider end-to-end    |
+  construction; SkipTest        conforms)    against the known-good          |
+  gates narrowed to the                      transport                       |   ADR 0066
+  4 legacy templates      (ii) DLQ-ADR      AWS, AWS.V4, Redis, MSSQL,      |   legacy retirement
+                               transports    PostgresSQL, RocketMQ (DLQ-ADR  |   - delete 4 legacy
+  each canonical test          (+ RMQ.Async, slugs in References);           |     templates + their
+  merges carrying a             no DLQ ADR)  RMQ.Async (native DLX,          |     80 generated
+  Deferred marker for                        universal routing 0047/0045)    |     copies
+  every config not yet                      — Fixed, or Deferred -> #issue   |   - then remove the
+  proven                  (iii)known-gap    GCP (no canonical coverage;      |     3 gates + the
+                               transports    Requeue ignores the delay),     |     3 config keys
+  the 4 legacy templates                     then the unwired three — ASB,   |
+  stay suppressed and                        MQTT, RMQ.Sync (FR-20: config + |   merges LAST
+  generate for nothing                       provider + CI) — most new work; |
+                                             conform or signed-off deferral  /
+                                                                             |
+       conformance-status.md (ledger)  <== single source of truth ==========+
+       configuration x behaviour matrix; cells Pass | Fixed | Deferred->#issue
                 cross-checked against in-code `Skip = "Deferred: #NNNN ..."`
 ```
+
+Stage (ii) names projects exactly as the Context does: **AWS** and **AWS.V4** are distinct projects
+contributing four configurations each, and **RMQ.Async** is the wired RabbitMQ project — `RMQ.Sync`
+is unwired and belongs to stage (iii) under FR-20, never to stage (ii).
 
 The **ledger is the knowing responsibility** (Responsibility-Driven Design): the one information
 holder that knows, per transport × canonical behaviour, whether that behaviour conforms as
 generated (`Pass`), conforms via an in-spec gateway fix (`Fixed`), or is deferred to a signed-off
-issue (`Deferred -> #issue`). No cell may read `Unknown` when the flip merges. The in-code Skip
+issue (`Deferred -> #issue`). No cell may read `Unknown` when the cleanup merges. The in-code Skip
 marker is the *doing/enforcing* half — a greppable in-tree signal that a CI audit cross-checks
 against the ledger so neither can drift from the other.
 
 ### Key Components
 
-- **The conformance ledger** — a markdown matrix checked into the spec directory at
+- **The conformance ledger** — required by requirements.md **FR-21**, which fixes its location, its
+  per-configuration row granularity, its canonical-behaviour columns, and the rule that no cell may
+  remain unresolved when the cleanup merges; this ADR decides the cell vocabulary and the enforcement
+  machinery below. A markdown matrix checked into the spec directory at
   `specs/0036-universal-transport-conformance-tests/conformance-status.md`. **A row is one gateway
   configuration**, identified as `project / configuration` (e.g. `AWS.V4 / SqsStandard`,
   `GCP / PullOrdering`, `Kafka / PartitionKey`) — twenty rows across the nine wired projects today,
@@ -165,7 +212,8 @@ against the ledger so neither can drift from the other.
   FIFO does not"; a project-level row could not. Columns = the canonical behaviours (FR-2, FR-4…FR-9,
   FR-15, FR-16, FR-17). **FR-3 is deliberately not a column** — ADR 0066 withdrew it as a mechanism
   assertion and folded it into a mechanism-agnostic FR-2. That matters here: had FR-3 survived, the
-  14 of ~20 configurations with no scheduler seam would each have needed an `N/A (native)` cell,
+  14 of the 20 configurations wired today with no scheduler seam would each have needed an
+  `N/A (native)` cell,
   reintroducing exactly the native/non-native distinction OOS-1 rejects. With FR-2 mechanism-agnostic
   every column applies to every configuration, and the cell vocabulary below is sufficient. Each cell
   holds exactly one of:
@@ -173,7 +221,7 @@ against the ledger so neither can drift from the other.
   - `Fixed (#PR/commit)` — conformed via an in-spec gateway fix, linked to the PR/commit;
   - `Deferred -> #NNNN (sign-off: @maintainer)` — a named, linked, maintainer-signed-off follow-up
     issue.
-  A transient `Unknown` is permitted only during the fix phase; the flip is blocked while any
+  A transient `Unknown` is permitted only during the fix phase; the cleanup is blocked while any
   `Unknown` remains.
 - **The greppable linked-issue Skip convention** — any deferred canonical test carries an explicit
   `Skip` string of the form
@@ -195,16 +243,22 @@ against the ledger so neither can drift from the other.
   consistent.
 - **The sequencing order** — reference (Kafka) -> DLQ-ADR transports -> known-gap transports -> flip.
 - **The class of in-spec gateway fixes** — the localized reject/requeue/scheduler-wiring changes of
-  the same shape the per-transport DLQ ADRs (0038–0043, 0046) already established (`Fixed` rows),
-  versus follow-up issues for anything needing a new subsystem or runtime API change (`Deferred`
-  rows).
+  the same shape the per-transport DLQ ADRs already established (`Fixed` rows), versus follow-up
+  issues for anything needing a new subsystem or runtime API change (`Deferred` rows). Those ADRs
+  are cited by slug in References; note that ADR *numbers* 0038–0043 are each reused in this
+  repository, so a bare number or a numeric range does not identify them.
 
 ### Technology Choices
 
-- **Fix-then-flip over flip-then-fix.** Landing the fixes first keeps master green at every merge;
-  the flip (removing the three gates + config keys) becomes a single, atomic, reversible capstone
-  whose blast radius is known. Flip-then-fix would put a red or `[Skip]`-riddled suite on master and
-  normalize red — exactly what FR-13/AC-13 forbid.
+- **Generate-then-fix over flip-then-fix.** Landing canonical templates early — behind audited
+  per-configuration deferral markers — exercises them against real brokers from the start, so a
+  defective template is caught in days rather than surviving to the end of the rollout (the fate of
+  the `with_delay` template). Master stays green at every merge because each canonical test arrives
+  with markers already in place and sheds them as fixes land. The terminal cleanup (delete the four
+  legacy templates + 80 generated copies, then remove the three gates + config keys) is a single,
+  atomic, reversible capstone whose blast radius is known. Retiring the gates *first* would instead
+  ungate the four legacy templates onto every configuration — putting known-bad old tests on master
+  and forcing bare `[Skip]`s to green it, exactly what FR-13/AC-13 forbid.
 - **Ledger + linked-issue Skip, cross-checked, over ledger-only or Skip-only.** Auditability is
   wanted from *both* directions: a single at-a-glance coverage matrix (the ledger) *and* an in-code,
   greppable marker at the exact deferred test (the Skip). Cross-checking the two is what makes a
@@ -218,33 +272,41 @@ against the ledger so neither can drift from the other.
 
 ### Implementation Approach
 
-1. **Seed the ledger.** Build `conformance-status.md` with every target transport × canonical
-   behaviour set to `Unknown`. This is the work list and the flip gate.
-2. **Prove the reference (Kafka).** Run the generated canonical suite against Kafka, whose
+1. **Seed the ledger.** Build `conformance-status.md` with every targeted gateway configuration ×
+   canonical behaviour set to `Unknown`. This is the work list and the cleanup gate.
+2. **Narrow the gates and land the canonical templates.** Apply ADR 0066's step A — `SkipTest`
+   consults the three gates only for the closed legacy list — then merge the canonical templates.
+   They generate for every targeted configuration immediately, each carrying a `Deferred: #NNNN`
+   marker for configurations not yet proven.
+3. **Prove the reference (Kafka).** Run the generated canonical suite against Kafka, whose
    hand-written suite already conforms, to validate the templates and the ADR-0066 extended provider
-   interface end-to-end. Kafka's three mis-declared gates disappear with the 0066 config cleanup
-   (the flip removes the keys outright). Mark both Kafka configuration rows (Standard,
-   PartitionKey) `Pass`.
-3. **Bring the DLQ-ADR transports to conformance.** For each of AWS SQS (0038), Redis (0039), MSSQL
-   (0040), PostgreSQL (0041), and RocketMQ (0042) — and RMQ, which has no per-transport DLQ ADR and
-   whose reject/DLQ conformance may be a larger fix — run the generated suite; for each
-   non-conformant behaviour, apply the fix-to-conform boundary. If localized and low-risk (add a
-   lazy DLQ/invalid producer, forward the scheduler to consumers, stamp the metadata semantic set
-   under the transport's own keys), fix inline and record `Fixed (#PR)`. Otherwise open a follow-up
-   issue, obtain maintainer sign-off, add the `Deferred: #NNNN` Skip to the generated test, and
-   record `Deferred -> #issue`.
-4. **Close the known-gap transports last.** First GCP (no canonical coverage; `Requeue` ignores the
+   interface end-to-end. **Kafka's three mis-declared gates are irrelevant here**: they still read
+   `false` at this point and are not removed until the final cleanup, but they no longer reach
+   canonical templates, so the canonical suite generates and runs for Kafka regardless. Mark both
+   Kafka configuration rows (Standard, PartitionKey) `Pass` and drop their deferral markers.
+4. **Bring the DLQ-ADR transports to conformance.** For each of **AWS**, **AWS.V4**, **Redis**,
+   **MSSQL**, **PostgresSQL** and **RocketMQ** (DLQ-ADR slugs in References) — and **RMQ.Async**,
+   which has no per-transport DLQ ADR and whose reject/DLQ conformance may be a larger fix — run the
+   generated suite; for each non-conformant behaviour, apply the fix-to-conform boundary. If
+   localized and low-risk (add a lazy DLQ/invalid producer, forward the scheduler to consumers, stamp
+   the metadata semantic set under the transport's own keys), fix inline, **remove that
+   configuration's deferral marker in the same PR**, and record `Fixed (#PR)`. Otherwise open a
+   follow-up issue, obtain maintainer sign-off, leave the `Deferred: #NNNN` Skip in place, and record
+   `Deferred -> #issue`.
+5. **Close the known-gap transports last.** First GCP (no canonical coverage; `Requeue` ignores the
    delay), then the three FR-20 onboardings — AzureServiceBus, MQTT, RMQ.Sync — each needing a
    `test-configuration.json`, provider implementation(s) and CI infrastructure before it can generate
    at all. These carry the most new work and are sequenced last, once the templates and the extended
    provider interface are proven on transports that already generate. An onboarding that cannot be
    completed in-spec (most likely for CI-infrastructure reasons) takes a signed-off `Deferred` ledger
    row like any other gap — it does not drop out of the target set.
-5. **Merge the flip.** Only when the ledger has **no `Unknown` cells** — every behaviour is `Pass`,
-   `Fixed`, or `Deferred -> #issue` — merge ADR 0066's ungating change (remove the three gates from
-   `SkipTest`, the three properties from `MessagingGatewayConfiguration`, and the keys from every
-   `test-configuration.json`).
-6. **Enforce in CI.** The audit scan runs on every PR over in-tree artifacts only: it fails any
+6. **Merge the cleanup.** Only when the ledger has **no `Unknown` cells** — every behaviour is
+   `Pass`, `Fixed`, or `Deferred -> #issue` — merge ADR 0066's step C: delete the four legacy
+   templates in both variants **and their eighty generated copies**, then remove the three gate
+   branches from `SkipTest`, the three properties from `MessagingGatewayConfiguration`, and the keys
+   from every `test-configuration.json`. The order within this step matters — removing a key before
+   its template is deleted would ungate that legacy template.
+7. **Enforce in CI.** The audit scan runs on every PR over in-tree artifacts only: it fails any
    messaging-gateway test whose `Skip` does not match `Deferred: #<n>`, and it fails if a `Skip`
    has no matching `Deferred` ledger row or a `Deferred` row is missing its issue link or sign-off
    entry. It does not query the issue tracker for live state — issue-open and sign-off validity are
@@ -252,7 +314,7 @@ against the ledger so neither can drift from the other.
 
 **Reactor/Proactor parity applies to the ledger.** A behaviour is `Pass`/`Fixed` for a transport
 only when **both** the Reactor and Proactor variants pass (FR-14); if only one variant conforms, the
-cell stays `Unknown` (blocks the flip) or is split into a deferral for the lagging variant.
+cell stays `Unknown` (blocks the cleanup) or is split into a deferral for the lagging variant.
 
 **Infra reality.** `Pass` means the generated suite actually *ran* against the transport's broker
 (container/emulator), not merely compiled. Timing-sensitive behaviours use NFR-2 bounded
@@ -262,11 +324,14 @@ receive-retry loops so broker propagation delay does not produce false failures.
 
 ### Positive
 
-- Master is never red: every merge in the fix phase leaves a green suite, and the flip is a single
-  atomic, reversible capstone.
+- Master is never red: canonical tests arrive carrying audited deferral markers and shed them as
+  fixes land, so every merge leaves a green suite, and the cleanup is a single atomic, reversible
+  capstone.
+- Canonical templates are **exercised from the moment they merge**, against every configuration that
+  already conforms — so template defects surface immediately instead of at the end of the rollout.
 - Universal conformance is provably **complete or auditably deferred** at merge — AC-13's "no silent
   skip and no unaudited deferral" is enforced mechanically, not by convention.
-- The ledger gives at-a-glance per-transport coverage and doubles as the flip gate: the flip cannot
+- The ledger gives at-a-glance per-configuration coverage and doubles as the cleanup gate: the cleanup cannot
   land while any cell is `Unknown`.
 - Deferrals cannot rot into silent gaps — each is a named, linked, signed-off issue that CI keeps
   honest against both the ledger and the in-code Skip.
@@ -275,8 +340,15 @@ receive-retry loops so broker propagation delay does not produce false failures.
 
 ### Negative
 
-- Fix-then-flip **serializes** the rollout behind the flip, so universal ungated generation is not
-  visible on master until late — the payoff is deferred to the capstone.
+- **Deferral markers are visible on master for most of the rollout**, and there will be many of them
+  at the start — one per unproven configuration × behaviour. A reader browsing the generated suite
+  mid-rollout sees a lot of skipped tests, which looks like the "normalized red" this ADR set out to
+  avoid. The distinction is real but not self-evident from the test tree alone: every marker is
+  linked, signed off and ledger-backed, and CI fails any that is not. The ledger is what makes the
+  difference legible, which raises the cost of letting it drift.
+- The **legacy templates linger** in the tree, suppressed but present, until the final cleanup. They
+  generate for nothing, so they cost no CI time, but a contributor can still read them and mistake
+  them for live coverage.
 - The ledger, the Skip convention, and the CI audit are **new machinery** to build and maintain
   (none exists today), adding process weight to the spec.
 - The size/risk fix-to-conform boundary is a **judgement call** that can be contested per transport ×
@@ -288,7 +360,7 @@ receive-retry loops so broker propagation delay does not produce false failures.
   infrastructure before a single canonical test can run for them. ASB in particular is a cloud
   service whose CI story is not solved here. The mitigation is that FR-13's deferral rule applies
   unchanged — an incomplete onboarding becomes a signed-off ledger row, not a silent exclusion — but
-  the honest expectation is that one or more of the three lands as `Deferred` at flip time.
+  the honest expectation is that one or more of the three lands as `Deferred` at cleanup time.
 
 ## Risks and Mitigations
 
@@ -299,9 +371,9 @@ receive-retry loops so broker propagation delay does not produce false failures.
   conformance can't be proven. *Mitigation*: `Pass` requires the suite to actually run, not just
   compile; NFR-2 bounded retries absorb propagation jitter; a transport that genuinely can't be
   exercised in CI becomes a signed-off `Deferred` row rather than a silently skipped test.
-- *Risk*: the flip is delayed indefinitely behind stragglers. *Mitigation*: the ledger surfaces
+- *Risk*: the cleanup is delayed indefinitely behind stragglers. *Mitigation*: the ledger surfaces
   exactly which transport × behaviour cells remain `Unknown`, so the block is explicit and
-  actionable; a straggler can be converted to a signed-off deferral to unblock the flip without
+  actionable; a straggler can be converted to a signed-off deferral to unblock the cleanup without
   hiding the gap.
 - *Risk*: template/gateway drift over a long fix phase. *Mitigation*: the provider interface is
   generated and compiled against each hand-written provider (per 0066), so drift is a build break,
@@ -309,10 +381,23 @@ receive-retry loops so broker propagation delay does not produce false failures.
 
 ## Alternatives Considered
 
-1. **Flip-then-fix** — retire the gates first, then chase conformance. Rejected: master carries a
-   known-failing or `[Skip]`-riddled suite for the duration, normalizing red and violating
-   FR-13/AC-13; the ungating "win" is illusory while transports are non-conformant.
-2. **Reference-first then big-bang** — prove Kafka, then land all remaining fixes plus the flip in
+1. **Flip-then-fix** — retire the three gates first, then chase conformance. Rejected, and the
+   distinction from what we *do* adopt is worth being precise about, because both involve tests that
+   do not run for a while.
+
+   Retiring the gates first ungates the **four legacy templates** as a side effect — including the
+   broken `with_delay` template and the exhaustion template, which assert the wrong things and which
+   this spec deletes. Master then carries known-failing *old* tests, and the only ways to green it
+   are a bare `[Skip]` or a rushed fix to code that is about to be deleted. That is what normalizes
+   red and violates FR-13/AC-13.
+
+   What we adopt instead lands **canonical** tests early, each carrying a linked, signed-off,
+   ledger-backed deferral marker for configurations not yet proven — and never ungates a legacy
+   template at all. The suppressed tests are the ones being retired; the deferred tests are the ones
+   being adopted, and every deferral is owned and audited from the moment it appears. The superficial
+   similarity — "some tests aren't running yet" — hides opposite intents: one defers *removal* of
+   tests we don't want, the other defers *enforcement* of tests we do.
+2. **Reference-first then big-bang** — prove Kafka, then land all remaining fixes plus the cleanup in
    one enormous final merge. Rejected: one unreviewable, un-bisectable merge; a single regression
    anywhere blocks the whole rollout.
 3. **Ledger-only, no in-code marker** — track deferrals solely in `conformance-status.md`. Rejected:
