@@ -38,13 +38,14 @@ namespace Paramore.Brighter
     /// The in-memory producer is mainly intended for usage with tests. It allows you to send messages to a bus and
     /// then inspect the messages that have been sent.
     /// </summary>
-    public sealed class InMemoryMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync, ISupportPublishConfirmation
+    public sealed class InMemoryMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync, ISupportPublishConfirmation, ISupportPublishConfirmationAsync
     {
         private readonly IAmABus _bus;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly System.Threading.Channels.Channel<WorkItem> _channel =
             System.Threading.Channels.Channel.CreateUnbounded<WorkItem>(new UnboundedChannelOptions { SingleReader = true });
         private readonly List<Task> _raiseTasks = new(); // drain worker is single-threaded; read only after worker completes
+        private event Func<PublishConfirmationResult, Task>? OnMessagePublishedAsync;
         // volatile so a DisposeAsync on another thread sees the worker the CAS winner publishes (NFR-3)
         private volatile Task? _worker;
         private int _pumpStarted; // 0 = not started, 1 = started; CAS guard
@@ -125,6 +126,12 @@ namespace Paramore.Brighter
         /// What action should we take on confirmation that a message has been published to a broker
         /// </summary>
         public event Action<PublishConfirmationResult>? OnMessagePublished;
+
+        event Func<PublishConfirmationResult, Task> ISupportPublishConfirmationAsync.OnMessagePublishedAsync
+        {
+            add => OnMessagePublishedAsync += value;
+            remove => OnMessagePublishedAsync -= value;
+        }
 
         /// <summary>
         /// Dispose of the producer. Blocks until any in-flight async pump has fully drained
@@ -241,11 +248,11 @@ namespace Paramore.Brighter
         {
             if (PublishFailurePredicate?.Invoke(message) == true)
             {
-                OnMessagePublished?.Invoke(new PublishConfirmationResult(false, message.Id, message.Header.Topic, null));
+                RaisePublishConfirmation(new PublishConfirmationResult(false, message.Id, message.Header.Topic, null));
                 return;
             }
             _bus.Enqueue(message);
-            OnMessagePublished?.Invoke(new PublishConfirmationResult(true, message.Id, message.Header.Topic, null));
+            RaisePublishConfirmation(new PublishConfirmationResult(true, message.Id, message.Header.Topic, null));
         }
 
         private async Task DrainAsync()
@@ -256,17 +263,31 @@ namespace Paramore.Brighter
                 {
                     var failResult = new PublishConfirmationResult(false, item.Message.Id, item.Message.Header.Topic, item.Context);
                     _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(failResult)));
+                    await RaisePublishConfirmationAsync(failResult);
                     continue;
                 }
                 _bus.Enqueue(item.Message);
                 var successResult = new PublishConfirmationResult(true, item.Message.Id, item.Message.Header.Topic, item.Context);
-                // NOTE: when the subscriber is an async-void callback (as the mediator's success branch is, which
-                // awaits MarkDispatchedAsync), Invoke returns at its first await — so this raise Task completes, and
-                // DisposeAsync's drain therefore awaits, only up to that first await, NOT the whole callback. Do not
-                // rely on DisposeAsync having flushed a success-path MarkDispatched. The failure path has no await
-                // before TripTopic, so it does drain to completion (which the trip/isolation tests depend on).
                 _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(successResult)));
+                await RaisePublishConfirmationAsync(successResult);
             }
+        }
+
+        private void RaisePublishConfirmation(PublishConfirmationResult result)
+        {
+            OnMessagePublished?.Invoke(result);
+            if (OnMessagePublishedAsync is not null)
+                BrighterAsyncContext.Run(() => RaisePublishConfirmationAsync(result));
+        }
+
+        private async Task RaisePublishConfirmationAsync(PublishConfirmationResult result)
+        {
+            var handlers = OnMessagePublishedAsync;
+            if (handlers is null)
+                return;
+
+            foreach (Func<PublishConfirmationResult, Task> handler in handlers.GetInvocationList())
+                await handler(result);
         }
 
         /// <summary>
