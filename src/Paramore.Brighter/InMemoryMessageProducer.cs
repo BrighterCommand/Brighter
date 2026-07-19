@@ -45,7 +45,7 @@ namespace Paramore.Brighter
         private readonly System.Threading.Channels.Channel<WorkItem> _channel =
             System.Threading.Channels.Channel.CreateUnbounded<WorkItem>(new UnboundedChannelOptions { SingleReader = true });
         private readonly List<Task> _raiseTasks = new(); // drain worker is single-threaded; read only after worker completes
-        private event Func<PublishConfirmationResult, Task>? OnMessagePublishedAsync;
+        private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
         // volatile so a DisposeAsync on another thread sees the worker the CAS winner publishes (NFR-3)
         private volatile Task? _worker;
         private int _pumpStarted; // 0 = not started, 1 = started; CAS guard
@@ -129,8 +129,8 @@ namespace Paramore.Brighter
 
         event Func<PublishConfirmationResult, Task> ISupportPublishConfirmationAsync.OnMessagePublishedAsync
         {
-            add => OnMessagePublishedAsync += value;
-            remove => OnMessagePublishedAsync -= value;
+            add => _onMessagePublishedAsync += value;
+            remove => _onMessagePublishedAsync -= value;
         }
 
         /// <summary>
@@ -277,13 +277,14 @@ namespace Paramore.Brighter
         private void RaisePublishConfirmation(PublishConfirmationResult result)
         {
             OnMessagePublished?.Invoke(result);
-            if (OnMessagePublishedAsync is not null)
+            // Defensive fallback for in-assembly subscribers; this blocks the send until handlers finish.
+            if (_onMessagePublishedAsync is not null)
                 BrighterAsyncContext.Run(() => RaisePublishConfirmationAsync(result));
         }
 
         private async Task RaisePublishConfirmationAsync(PublishConfirmationResult result)
         {
-            var handlers = OnMessagePublishedAsync;
+            var handlers = _onMessagePublishedAsync;
             if (handlers is null)
                 return;
 

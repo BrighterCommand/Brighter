@@ -842,10 +842,20 @@ namespace Paramore.Brighter
             }
             finally
             {
-                // End via the tracer (not raw Dispose) so the end time is stamped from the tracer's
-                // TimeProvider — matching the start time set in CreateConfirmationSpan — and a
-                // successful span gets Ok status, consistent with every other span in this file.
+                EndConfirmationSpan(confirmationSpan);
+            }
+        }
+
+        private void EndConfirmationSpan(Activity? confirmationSpan)
+        {
+            try
+            {
+                // End via the tracer so its TimeProvider stamps the end consistently with the start.
                 _tracer?.EndSpan(confirmationSpan);
+            }
+            catch (Exception ex)
+            {
+                Log.ConfirmationObservabilityFault(s_logger, ex);
             }
         }
 
@@ -923,10 +933,7 @@ namespace Paramore.Brighter
                     }
                     finally
                     {
-                        // End via the tracer (not raw Dispose) so the end time is stamped from the tracer's
-                        // TimeProvider — matching the start time set in CreateConfirmationSpan — and a
-                        // successful span gets Ok status, consistent with every other span in this file.
-                        _tracer?.EndSpan(confirmationSpan);
+                        EndConfirmationSpan(confirmationSpan);
                     }
                 };
                 return true;
