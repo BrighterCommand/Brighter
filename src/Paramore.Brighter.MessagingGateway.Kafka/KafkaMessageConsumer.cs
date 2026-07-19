@@ -108,7 +108,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="invalidMessageRoutingKey">If we support an invalid message topic what is the <see cref="RoutingKey"/></param>
         /// <param name="scheduler">Optional scheduler for delayed requeue operations. When provided, the lazily-created
         /// requeue producer will use this scheduler for delayed sends.</param>
-        /// <param name="groupProtocol">The <see cref="IGroupProtocol"/> used to apply Kafka group coordination settings. Defaults to <see cref="ClassicGroupProtocol"/> with <paramref name="sessionTimeout"/> when <see langword="null"/>.</param>
+        /// <param name="groupProtocol">The <see cref="IGroupProtocol"/> used to apply Kafka group coordination settings. Defaults to <see cref="ClassicGroupProtocol"/> with <paramref name="sessionTimeout"/> when <see langword="null"/>.
+        /// The consumer back-fills any <see langword="null"/> properties of a <see cref="ClassicGroupProtocol"/> in place, so do not share an instance across subscriptions.</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -206,7 +207,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 classicGroupProtocol.SessionTimeout ??= sessionTimeout;
                 classicGroupProtocol.PartitionAssignmentStrategy ??= partitionAssignmentStrategy;
             }
-            
+
             groupProtocol.Apply(_consumerConfig);
             
             if (configHook != null)

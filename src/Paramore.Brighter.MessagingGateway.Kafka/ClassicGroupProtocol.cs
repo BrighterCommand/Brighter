@@ -1,4 +1,4 @@
-﻿// The MIT License (MIT)
+// The MIT License (MIT)
 // Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -36,7 +36,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka;
 ///   <item><description><see cref="PartitionAssignmentStrategy"/> is set from the consumer's <c>partitionAssignmentStrategy</c> parameter (default <see cref="Confluent.Kafka.PartitionAssignmentStrategy.RoundRobin"/>).</description></item>
 /// </list>
 /// When you supply a pre-configured <see cref="ClassicGroupProtocol"/> instance explicitly, any properties
-/// you have already set are preserved; only <see langword="null"/> ones are overridden.
+/// you have already set are preserved; only <see langword="null"/> ones are overridden. The back-fill mutates
+/// the instance in place, so do not share an instance across subscriptions: with a shared instance, the first
+/// consumer's back-filled values would silently apply to the second subscription as well.
 /// </remarks>
 public class ClassicGroupProtocol : IGroupProtocol
 {
@@ -73,6 +75,9 @@ public class ClassicGroupProtocol : IGroupProtocol
     public void Apply(ConsumerConfig config)
     {
         config.GroupProtocol = GroupProtocol.Classic;
+        //Won't be null when applied via KafkaMessageConsumer: the consumer back-fills it from its
+        //constructor parameter (default RoundRobin). If Apply is called directly with it unset,
+        //assigning null is a harmless no-op.
         config.PartitionAssignmentStrategy = PartitionAssignmentStrategy;
         if(SessionTimeout.HasValue)
         {
@@ -81,7 +86,7 @@ public class ClassicGroupProtocol : IGroupProtocol
 
         if (HeartbeatInterval.HasValue)
         {
-            config.HeartbeatIntervalMs =  Convert.ToInt32(HeartbeatInterval.Value.TotalMilliseconds);
+            config.HeartbeatIntervalMs = Convert.ToInt32(HeartbeatInterval.Value.TotalMilliseconds);
         }
     }
 }

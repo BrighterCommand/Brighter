@@ -26,6 +26,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka;
 /// <summary>
 /// Configures Kafka's consumer group protocol for broker-driven assignment.
 /// </summary>
+/// <remarks>
+/// With the consumer protocol (KIP-848), group membership is broker-driven and completes asynchronously:
+/// subscribing to a non-existent topic does not fail synchronously at consumer creation. Infrastructure
+/// validation via <see cref="OnMissingChannel.Validate"/> therefore has weaker guarantees than with the
+/// classic protocol; prefer <see cref="OnMissingChannel.Create"/>, or provision topics out-of-band.
+/// </remarks>
 public class ConsumerGroupProtocol : IGroupProtocol
 {
     /// <summary>
@@ -38,6 +44,14 @@ public class ConsumerGroupProtocol : IGroupProtocol
     /// Gets or sets the static membership identifier for this consumer instance.
     /// </summary>
     /// <value>The static member identifier as a <see cref="string"/>, or <see langword="null"/> for dynamic membership.</value>
+    /// <remarks>
+    /// Kafka static membership requires a unique <c>group.instance.id</c> per consumer instance. The
+    /// <see cref="ConsumerGroupProtocol"/> instance held by a subscription is applied to every consumer
+    /// created from that subscription (one per performer), so all of those consumers would register the
+    /// same static id and collide on group join. Only set this property when the subscription has a single
+    /// performer; to use static membership with multiple performers, assign a unique
+    /// <c>group.instance.id</c> per consumer via the <c>configHook</c> instead.
+    /// </remarks>
     public string? GroupInstanceId { get; set; }
     
     /// <inheritdoc />

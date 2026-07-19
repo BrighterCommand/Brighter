@@ -133,6 +133,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Gets or sets the group protocol configuration applied when creating the Kafka consumer.
         /// </summary>
         /// <value>An <see cref="IGroupProtocol"/> implementation, or <see langword="null"/> to use the default classic protocol behavior.</value>
+        /// <remarks>
+        /// Do not share an instance across subscriptions: the consumer back-fills <see langword="null"/>
+        /// properties in place, so a shared instance would carry the first subscription's values into the
+        /// second. The instance is also applied to every consumer created from this subscription (one per
+        /// performer).
+        /// </remarks>
         public IGroupProtocol? GroupProtocol { get; set; }
 
         /// <summary>

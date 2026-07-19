@@ -1,6 +1,6 @@
 services:
   kafka:
-    image: apache/kafka:latest 
+    image: apache/kafka:4.0.2
     hostname: kafka
     container_name: kafka
     ports:
@@ -27,7 +27,7 @@ services:
       KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
 
   schema-registry:
-    image: confluentinc/cp-schema-registry:latest
+    image: confluentinc/cp-schema-registry:8.0.6
     hostname: schema-registry
     container_name: schema-registry
     depends_on:
@@ -40,7 +40,7 @@ services:
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
   
   control-center:
-    image: confluentinc/cp-enterprise-control-center:latest
+    image: confluentinc/cp-enterprise-control-center:7.9.8
     hostname: control-center
     container_name: control-center
     depends_on:

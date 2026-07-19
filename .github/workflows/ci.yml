@@ -284,7 +284,7 @@ jobs:
 
     services:
       kafka:
-        image: apache/kafka:latest
+        image: apache/kafka:4.0.2
         ports:
           - 9092:9092
         env:
@@ -307,7 +307,7 @@ jobs:
           KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
           KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       schema-registry:
-        image: confluentinc/cp-schema-registry:latest
+        image: confluentinc/cp-schema-registry:8.0.6
         ports:
           - 8081:8081
         env:
