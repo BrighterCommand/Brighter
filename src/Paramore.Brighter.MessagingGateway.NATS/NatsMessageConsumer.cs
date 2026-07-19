@@ -20,19 +20,15 @@
 // THE SOFTWARE.
 
 using System;
-using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
 using NATS.Client.Core;
 using Paramore.Brighter.MessagingGateway.NATS.Extensions;
-using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.NATS;
 
-public class NatsMessageConsumer(
-    INatsSub<byte[]> subscription,
-    INatsClient client) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
+public class NatsMessageConsumer(INatsSub<byte[]> subscription, INatsClient client) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     public Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
@@ -90,11 +86,7 @@ public class NatsMessageConsumer(
         return true;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await subscription.DisposeAsync();
-        await client.DisposeAsync();
-    }
+    
 
     
     public void Acknowledge(Message message)
@@ -126,5 +118,15 @@ public class NatsMessageConsumer(
     
     public void Dispose()
     {
+        var task = DisposeAsync();
+        if (!task.IsCompletedSuccessfully)
+        {
+            task.GetAwaiter().GetResult();
+        }
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        await subscription.DisposeAsync();
     }
 }

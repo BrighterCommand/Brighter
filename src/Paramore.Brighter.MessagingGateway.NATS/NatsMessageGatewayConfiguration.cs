@@ -25,9 +25,25 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.NATS;
 
-public class NatsMessageGatewayConfiguration(NatsOpts opts)
+public class NatsMessageGatewayConfiguration
 {
-    public NatsOpts NatsOpts { get; set; } = opts;
+    public NatsMessageGatewayConfiguration()
+    {
+        
+    }
+
+    public NatsMessageGatewayConfiguration(NatsOpts natsOpts)
+    {
+        NatsOpts = natsOpts;
+    }
+    
+    public NatsMessageGatewayConfiguration(NatsOpts natsOpts, NatsJSOpts natsJSOpts)
+    {
+        NatsOpts = natsOpts;
+        NatsJsOpts = natsJSOpts;
+    }
+    
+    public NatsOpts NatsOpts { get; set; } = new NatsOpts();
     public NatsJSOpts? NatsJsOpts { get; set; }
 
     public InstrumentationOptions Instrumentation { get; set; } = InstrumentationOptions.All;

@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,9 +20,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
+using NATS.Client.Core;
 using NATS.Client.JetStream.Models;
 
 namespace Paramore.Brighter.MessagingGateway.NATS;
@@ -31,6 +34,39 @@ namespace Paramore.Brighter.MessagingGateway.NATS;
 /// </summary>
 public class NatsSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
 {
+    public string? QueueGroup { get; }
+    public NatsSubOpts? NatsSubOpts { get; }
+
+    public RoutingKey? DeadLetterRoutingKey { get; set; }
+    public RoutingKey? InvalidMessageRoutingKey { get; set; }
+
+    public NatsSubscription(SubscriptionName subscriptionName,
+        ChannelName channelName,
+        RoutingKey routingKey,
+        Type? requestType = null,
+        Func<Message, Type>? getRequestType = null,
+        int bufferSize = 1,
+        int noOfPerformers = 1,
+        TimeSpan? timeOut = null,
+        int requeueCount = -1,
+        TimeSpan? requeueDelay = null,
+        int unacceptableMessageLimit = 0,
+        MessagePumpType messagePumpType = MessagePumpType.Unknown,
+        IAmAChannelFactory? channelFactory = null,
+        OnMissingChannel makeChannels = OnMissingChannel.Create,
+        TimeSpan? emptyChannelDelay = null,
+        TimeSpan? channelFailureDelay = null,
+        TimeSpan? unacceptableMessageLimitWindow = null,
+        string? queueGroup = null,
+        NatsSubOpts? natsSubOpts = null)
+        : base(subscriptionName, channelName, routingKey, requestType,
+            getRequestType, bufferSize, noOfPerformers, timeOut,
+            requeueCount, requeueDelay, unacceptableMessageLimit,
+            messagePumpType, channelFactory, makeChannels,
+            emptyChannelDelay, channelFailureDelay,
+            unacceptableMessageLimitWindow)
+    {
+        QueueGroup = queueGroup;
+        NatsSubOpts = natsSubOpts;
+    }
 }
-
-

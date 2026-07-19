@@ -23,7 +23,16 @@ using NATS.Client.JetStream.Models;
 
 namespace Paramore.Brighter.MessagingGateway.NATS;
 
-public class NatsStreamPublication : Publication
+public class NatsStreamPublication : NatsPublication
 {
     public StreamConfig? StreamConfiguration { get; set; }
+}
+
+public class NatsStreamPublication<TRequest> : NatsStreamPublication
+    where TRequest : class, IRequest
+{
+    public NatsStreamPublication()
+    {
+        RequestType = typeof(TRequest);
+    }
 }

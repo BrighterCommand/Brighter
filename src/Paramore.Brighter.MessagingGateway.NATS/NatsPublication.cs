@@ -34,15 +34,15 @@ public class NatsPublication : Publication
 /// <summary>
 /// Represents a publication for NATS, associating a specific message type with the publication.
 /// </summary>
-/// <typeparam name="T">The type of request that this publication handles.</typeparam>
-public class NatsPublication<T> : NatsPublication
-    where T : class, IRequest
+/// <typeparam name="TRequest">The type of request that this publication handles.</typeparam>
+public class NatsPublication<TRequest> : NatsPublication
+    where TRequest : class, IRequest
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NatsPublication{T}"/> class.
     /// </summary>
     public NatsPublication()
     {
-        RequestType = typeof(T);
+        RequestType = typeof(TRequest);
     }
 }

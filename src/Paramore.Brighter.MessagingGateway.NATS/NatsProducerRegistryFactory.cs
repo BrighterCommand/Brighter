@@ -22,6 +22,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using NATS.Client.JetStream;
 using NATS.Net;
 
 namespace Paramore.Brighter.MessagingGateway.NATS;
@@ -34,7 +35,8 @@ public class NatsProducerRegistryFactory(
     public IAmAProducerRegistry Create()
     {
         var natsClient = new NatsClient(configuration.NatsOpts);
-        var producerFactory = new NatsMessageProducerFactory(natsClient, publications, configuration.Instrumentation);
+        var jsClient = natsClient.CreateJetStreamContext(configuration.NatsJsOpts ?? new NatsJSOpts(configuration.NatsOpts));
+        var producerFactory = new NatsMessageProducerFactory(natsClient, jsClient, publications, configuration.Instrumentation);
 
         return new ProducerRegistry(producerFactory.Create());
     }

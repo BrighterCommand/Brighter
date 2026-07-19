@@ -19,19 +19,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NATS.Client.Core;
+using NATS.Client.JetStream;
+using NATS.Client.JetStream.Models;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.NATS;
 
 public class NatsMessageProducerFactory(
     INatsClient client,
+    INatsJSContext jsContext,
     IEnumerable<NatsPublication> publications,
     InstrumentationOptions instrumentation) : IAmAMessageProducerFactory
 {
     public Dictionary<ProducerKey, IAmAMessageProducer> Create()
+    {
+        return BrighterAsyncContext.Run(async () => await CreateAsync());
+    }
+
+    public async Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
     {
         var publicationsByTopic = new Dictionary<ProducerKey, IAmAMessageProducer>();
         foreach (var publication in publications)
@@ -40,15 +50,46 @@ public class NatsMessageProducerFactory(
             {
                 continue;
             }
-            
-            publicationsByTopic[new ProducerKey(publication.Topic, publication.Type)] = new NatsMessageProducer(client, publication, instrumentation);
+
+            if (publication is NatsStreamPublication streamPublication)
+            {
+                await EnsureExistsAsync(streamPublication);
+                publicationsByTopic[new ProducerKey(publication.Topic, publication.Type)] =
+                    new NatsStreamMessageProducer(jsContext, streamPublication, instrumentation);
+            }
+            else
+            {
+                publicationsByTopic[new ProducerKey(publication.Topic, publication.Type)] =
+                    new NatsMessageProducer(client, publication, instrumentation);
+            }
         }
-        
-        return  publicationsByTopic;
+
+        return publicationsByTopic;
     }
 
-    public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
+
+    private async Task EnsureExistsAsync(NatsStreamPublication publication)
     {
-        return Task.FromResult(Create());
+        if (publication.MakeChannels == OnMissingChannel.Assume)
+        {
+            return;
+        }
+
+        if (publication.MakeChannels == OnMissingChannel.Validate)
+        {
+            try
+            {
+                _ = await jsContext.GetStreamAsync(publication.Topic!.Value);
+            }
+            catch (NatsJSApiException e) when (e.Error.Code == 404)
+            {
+                throw new Exception();
+            }
+
+            return;
+        }
+
+        var config = publication.StreamConfiguration ?? new StreamConfig();
+        await jsContext.CreateOrUpdateStreamAsync(config);
     }
 }
