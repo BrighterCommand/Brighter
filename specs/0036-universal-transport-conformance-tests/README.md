@@ -44,9 +44,10 @@ Twelve targeted transports — every `src/Paramore.Brighter.MessagingGateway.*` 
 *gateway configuration*, not per project. Nine are wired today, declaring twenty configurations
 between them; AzureServiceBus, MQTT and RMQ.Sync are onboarded by FR-20.
 
-Canonical behaviours the generator owns, ungated (FR-2, FR-4 … FR-9, FR-15, FR-16, FR-17):
+Canonical behaviours the generator owns, ungated (FR-2, FR-4 … FR-9, FR-15, FR-16, FR-17, FR-22):
 - Requeue with delay — redelivered after the delay, mechanism unasserted
-- Zero/null delay requeue — behaves as an immediate plain requeue
+- Plain requeue — `Requeue(M)` with no delay, redelivered and receivable again (FR-22)
+- Explicit zero delay — `Requeue(M, TimeSpan.Zero)` is not special-cased (FR-15)
 - Reject → DLQ (delivery-error, and the `None`/unspecified default arm)
 - Reject → invalid/unacceptable channel
 - Fallback ladder (unacceptable → invalid, else → DLQ; delivery-error → DLQ)
@@ -70,10 +71,18 @@ accessor. **No scheduler-carrying member**: asserting the delay mechanism is for
 **Gating lifecycle.** The three gates are not removed up front. Canonical templates are ungated *by
 construction* — `SkipTest` consults the gates only for a closed list of the four legacy templates it
 suppresses today — so canonical tests generate everywhere from the moment they land, even for Kafka,
-which declares all three gates `false`. The four legacy templates are never ungated; they stay
-suppressed until the canonical set covers the required behaviours, are then deleted along with their
-80 checked-in generated copies, and only then do the gates and config keys retire. The old tests are
-never wanted, so they are never generated.
+which declares all three gates `false`. The four legacy templates are never ungated — each keeps
+exactly the gating it has today until it is deleted, along with its checked-in generated copies (80
+in total), and only then do the gates and config keys retire.
+
+⚠️ *Never ungated* is not *never generated*. Most configurations declare these gates `true`, so **all
+four** legacy templates generate **today** — the exhaustion template for 16 configurations, plain
+requeue for 18, `with_delay` and delayed-message for 3 each — and keep generating on every
+regeneration run until deletion. What the lifecycle guarantees is that they gain no **new** generation
+site, not that they stop generating where they already do. FR-1(6) has a compile-time consequence
+during that interim: the exhaustion template passes `setupDeadLetterQueue` positionally, so its 32
+generated call sites break when the parameter is removed and are invisible to a search for the
+parameter name.
 
 Rollout is therefore generate-then-fix-then-clean-up, governed by a conformance ledger (FR-21) that
 gates the terminal cleanup.

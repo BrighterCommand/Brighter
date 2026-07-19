@@ -33,8 +33,10 @@ closed list of four legacy templates — and the gates themselves, plus the keys
 **This means canonical generation does not wait for a flip.** From the moment the first canonical
 template merges, it generates for **every** targeted gateway configuration (FR-2, FR-4…FR-9, FR-15,
 FR-16, FR-17, FR-22 — FR-3 having been folded into FR-2 by ADR 0066) in both Reactor and Proactor
-variants, whatever any configuration's flags say. The four legacy templates stay suppressed
-throughout and generate for nothing.
+variants, whatever any configuration's flags say. The four legacy templates are never ungated
+throughout — they keep exactly the gating they have today and reach no new configuration. They do not
+stop generating where they already do: **all four** generate — for 16, 18, 3 and 3 configurations
+respectively — and continue until the terminal cleanup deletes them.
 
 That changes what this ADR sequences. The rollout is no longer "hold everything back, then flip the
 switch"; it is "canonical tests generate from the start, and each transport is brought to conformance
@@ -124,11 +126,18 @@ That raises three questions ADR 0066 explicitly leaves open and this ADR answers
 
 **Parent Requirement**: [specs/0036-universal-transport-conformance-tests/requirements.md](../../specs/0036-universal-transport-conformance-tests/requirements.md)
 
-**Scope**: This ADR decides rollout sequencing, the conformance-ledger + linked-issue Skip deferral
-mechanism, and the fix-to-conform boundary (FR-13 / AC-13). The provider-interface extension and
-gate retirement are decided in [ADR 0066](0066-conformance-test-provider-and-ungating.md);
-individual template content and native-variant supplementary tests (OOS-2) are out of scope. This
-ADR does **not** supersede 0066 — it sequences the rollout around it.
+**Scope**: This ADR decides (1) rollout sequencing and the fix-to-conform boundary (FR-13 / AC-13),
+(2) the **FR-20 onboardings** of the three unwired transports — AzureServiceBus, MQTT and RMQ.Sync —
+including what a deferred onboarding must produce (FR-20 / AC-23), and (3) the **conformance ledger**
+required by FR-21 / AC-24: its cell vocabulary, the linked-issue `Skip` deferral marker that
+cross-checks it, and the CI audit that enforces the two against each other. FR-21 states *that* the
+ledger exists and what it must contain; this ADR decides *how* it is expressed and enforced.
+
+The provider-interface extension, the gating lifecycle and gate retirement, and the deletion of the
+`with_delay` (FR-12) and exhaustion (FR-19) templates are decided in
+[ADR 0066](0066-conformance-test-provider-and-ungating.md); individual template content and
+native-variant supplementary tests (OOS-2) are out of scope. This ADR does **not** supersede 0066 —
+it sequences the rollout around it.
 
 ## Decision
 
@@ -177,8 +186,8 @@ The rollout is a pipeline whose enabling change, fix phase and cleanup are delib
   proven                  (iii)known-gap    GCP (no canonical coverage;      |     3 gates + the
                                transports    Requeue ignores the delay),     |     3 config keys
   the 4 legacy templates                     then the unwired three — ASB,   |
-  stay suppressed and                        MQTT, RMQ.Sync (FR-20: config + |   merges LAST
-  generate for nothing                       provider + CI) — most new work; |
+  are never ungated —                        MQTT, RMQ.Sync (FR-20: config + |   merges LAST
+  no new generation site                     provider + CI) — most new work; |
                                              conform or signed-off deferral  /
                                                                              |
        conformance-status.md (ledger)  <== single source of truth ==========+
@@ -209,8 +218,31 @@ against the ledger so neither can drift from the other.
   plus the rows AzureServiceBus, MQTT and RMQ.Sync contribute once FR-20 wires them — because
   generation and therefore conformance are per configuration, not per
   project. A per-configuration row is what lets the ledger express "SQS Standard passes FR-5 but SNS
-  FIFO does not"; a project-level row could not. Columns = the canonical behaviours (FR-2, FR-4…FR-9,
-  FR-15, FR-16, FR-17). **FR-3 is deliberately not a column** — ADR 0066 withdrew it as a mechanism
+  FIFO does not"; a project-level row could not.
+
+  **Naming a singular-section configuration.** The three examples above come from `MessagingGateways`
+  (plural) sections, where the configuration name is the JSON key. Four wired configurations — Redis,
+  MSSQL, PostgreSQL and RocketMQ — use a singular `MessagingGateway` section carrying no name key;
+  such a configuration is named by its `CollectionName`, giving rows like
+  `Redis / RedisMessagingGateway`. Without this rule four of the twenty rows have no constructible
+  identifier.
+
+  **Placeholder rows, so a deferred onboarding cannot hide.** A transport whose FR-20 onboarding is
+  deferred declares no `test-configuration.json`, therefore no configuration, therefore no row — and
+  the `Unknown`-free cleanup gate below would pass **vacuously** for exactly the case this ADR calls
+  likeliest (ASB). Every one of the twelve targeted transports MUST therefore occupy the ledger. A
+  transport that has not yet declared a configuration takes a single placeholder row
+  `<Project> / (not yet declared)` — e.g. `AzureServiceBus / (not yet declared)` — whose cells may
+  hold transient `Unknown` during the fix phase and, at cleanup, **only** the
+  `Deferred -> #NNNN (sign-off: @maintainer)` form — never `Pass` or `Fixed`, since nothing has been
+  generated to pass. (Seeding at step 1 therefore sets a placeholder row's cells to `Unknown` like any
+  other row; what distinguishes it is that `Unknown` may only ever resolve to `Deferred`, never to
+  `Pass` or `Fixed`, while the row remains a placeholder.) The placeholder is replaced by per-configuration rows when the
+  configuration lands. **The cleanup gate is evaluated over all twelve targeted transports, not over
+  whichever rows happen to exist**: a transport contributing no row at all fails the gate rather than
+  passing it silently.
+
+  Columns = the canonical behaviours (FR-2, FR-4…FR-9, FR-15, FR-16, FR-17, FR-22). **FR-3 is deliberately not a column** — ADR 0066 withdrew it as a mechanism
   assertion and folded it into a mechanism-agnostic FR-2. That matters here: had FR-3 survived, the
   14 of the 20 configurations wired today with no scheduler seam would each have needed an
   `N/A (native)` cell,
@@ -241,7 +273,8 @@ against the ledger so neither can drift from the other.
   sign-off real is the **maintainer review gate's** job, not the build's; the build enforces only
   that the auditable in-tree trail (Skip ↔ ledger row ↔ issue link + sign-off entry) is present and
   consistent.
-- **The sequencing order** — reference (Kafka) -> DLQ-ADR transports -> known-gap transports -> flip.
+- **The sequencing order** — reference (Kafka) -> DLQ-ADR transports -> known-gap transports ->
+  terminal cleanup.
 - **The class of in-spec gateway fixes** — the localized reject/requeue/scheduler-wiring changes of
   the same shape the per-transport DLQ ADRs already established (`Fixed` rows), versus follow-up
   issues for anything needing a new subsystem or runtime API change (`Deferred` rows). Those ADRs
@@ -312,9 +345,22 @@ against the ledger so neither can drift from the other.
    entry. It does not query the issue tracker for live state — issue-open and sign-off validity are
    the maintainer review gate's responsibility.
 
-**Reactor/Proactor parity applies to the ledger.** A behaviour is `Pass`/`Fixed` for a transport
-only when **both** the Reactor and Proactor variants pass (FR-14); if only one variant conforms, the
-cell stays `Unknown` (blocks the cleanup) or is split into a deferral for the lagging variant.
+**Reactor/Proactor parity applies to the ledger.** A behaviour is `Pass`/`Fixed` for a transport only
+when **both** the Reactor and Proactor variants pass (FR-14).
+
+Partial conformance is a routine expected state, not an edge case: the async gateway paths are
+genuinely distinct code, and parity applies to every canonical column on every row. It is recorded as
+**a single `Deferred -> #NNNN` cell whose issue names the lagging variant** — never as a split cell,
+two values in one cell, or a per-variant column split. The cell vocabulary stays closed at
+`Pass` / `Fixed (#PR/commit)` / `Deferred -> #NNNN (sign-off: @maintainer)` plus transient `Unknown`,
+and "exactly one of" continues to hold, so the CI audit needs no additional cell grammar.
+
+This loses nothing that matters. The ledger cell records **conformance**, and FR-14 makes parity part
+of what conformance means — so a transport whose Proactor variant fails does not conform for that
+behaviour, and `Deferred` is the honest reading. The detail that one variant already passes belongs
+in the linked issue, where the remaining work is described, not in the matrix. (During the fix phase a
+partially-conforming behaviour may sit at `Unknown`; it must resolve to `Deferred` with a signed-off
+issue, or to `Pass`/`Fixed` once both variants pass, before the cleanup merges.)
 
 **Infra reality.** `Pass` means the generated suite actually *ran* against the transport's broker
 (container/emulator), not merely compiled. Timing-sensitive behaviours use NFR-2 bounded
@@ -346,9 +392,14 @@ receive-retry loops so broker propagation delay does not produce false failures.
   avoid. The distinction is real but not self-evident from the test tree alone: every marker is
   linked, signed off and ledger-backed, and CI fails any that is not. The ledger is what makes the
   difference legible, which raises the cost of letting it drift.
-- The **legacy templates linger** in the tree, suppressed but present, until the final cleanup. They
-  generate for nothing, so they cost no CI time, but a contributor can still read them and mistake
-  them for live coverage.
+- The **legacy templates linger** in the tree, and **all four** keep generating and running, until
+  the final cleanup. This is a real cost, not a cosmetic one: the exhaustion template runs for
+  16 configurations, plain requeue for 18, `with_delay` and delayed-message for 3 each — 80 generated
+  files consuming CI time and asserting behaviours this spec has judged wrong (a pump-owned
+  behaviour, and a delayed requeue that passes no delay). A contributor can also read them and
+  mistake them for live coverage. The alternative — deleting them early — was rejected because it
+  would leave the canonical replacements unbuilt and the transports unproven in the interim; the cost
+  is accepted for the duration of the rollout and discharged in one atomic cleanup.
 - The ledger, the Skip convention, and the CI audit are **new machinery** to build and maintain
   (none exists today), adding process weight to the spec.
 - The size/risk fix-to-conform boundary is a **judgement call** that can be contested per transport ×
@@ -417,7 +468,7 @@ receive-retry loops so broker propagation delay does not produce false failures.
 
 - Requirements: [specs/0036-universal-transport-conformance-tests/requirements.md](../../specs/0036-universal-transport-conformance-tests/requirements.md)
 - Related ADRs (this ADR builds on all of these; it supersedes none):
-  - [`0066-conformance-test-provider-and-ungating`](0066-conformance-test-provider-and-ungating.md) [Proposed] — **sibling; the most important relation.** Extends the provider interfaces and retires the three gates + config keys in one change; this ADR sequences the per-transport rollout *around* that flip and governs deferrals. 0067 does not supersede 0066.
+  - [`0066-conformance-test-provider-and-ungating`](0066-conformance-test-provider-and-ungating.md) [Proposed] — **sibling; the most important relation.** Extends the provider interfaces, makes canonical templates ungated by construction, and retires the three gates + config keys only as a terminal cleanup after the four legacy templates are deleted; this ADR sequences the per-transport rollout around that lifecycle and governs deferrals. 0067 does not supersede 0066.
   - `0037-add-messaging-gateway-generated-test` [Accepted] — created the generator and `MessagingGatewayConfiguration` this whole spec extends; the target-set and `SkipTest` gating originate here.
   - `0047-message-rejection-routing-strategy` — the `Reject()` fallback ladder and origin-metadata contract; a transport is "conformant" in the ledger precisely when it honours this.
   - Per-transport DLQ ADRs — collectively the class of localized, in-spec `Fixed` changes and the reason these transports sequence ahead of GCP: `0038-aws-sqs-dlq-direct-send`, `0039-redis-dlq-brighter-managed`, `0040-mssql-dlq-brighter-managed`, `0041-postgres-dlq-brighter-managed`, `0042-rocketmq-dlq-brighter-managed`, `0043-mqtt-dlq-brighter-managed`, `0046-kafka-dlq-producer-for-requeue`.

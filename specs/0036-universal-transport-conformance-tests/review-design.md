@@ -1,5 +1,144 @@
 # Review: design — 0036-universal-transport-conformance-tests
 
+## Round 6 (2026-07-19) — first pass since the gating reversal and the round-8 requirements sweep
+
+**Threshold**: 60
+**Verdict**: NEEDS WORK — 3 findings at or above threshold 60. **No Critical findings** (third design
+round running clean at 90+).
+
+Findings by round: 6 → 12 → **6**. All four owed round-5 findings confirmed resolved.
+
+### Round 5 remediation check
+
+- **F3 (ledger row granularity / deferred FR-20 onboarding unrepresentable)** — **RESOLVED.** 0067
+  now mandates a single placeholder row `<Project> / (not yet declared)` per un-onboarded transport,
+  restricts its cells to the `Deferred` form, and states the cleanup gate is evaluated over all
+  twelve targeted transports rather than over whichever rows exist.
+- **F4 (Scope statements don't collectively own FR-19/FR-20/FR-21/AC-24)** — **RESOLVED.** 0067's
+  Scope now claims FR-20/AC-23 and FR-21/AC-24; 0066's already claimed FR-12 and FR-19.
+- **F5 (`RejectionMetadataKeys` has no defined home)** — **RESOLVED.** 0066 names
+  `Templates/MessagingGateway/Shared/RejectionMetadataKeys.cs.liquid`, emitting once per gateway
+  configuration into the parent namespace at `Generated/RejectionMetadataKeys.cs`, listed in Key
+  Components, plus the `string.Empty` rule for unstamped fields. Verified plausible against the
+  generator: `GenerateAsync` already loops per configuration, and C# namespace nesting makes the
+  parent namespace visible from both variant namespaces without a `using`.
+- **F9 (parity permits a cell the vocabulary can't express)** — **RESOLVED.** 0067 rules that partial
+  parity is a single `Deferred -> #NNNN` cell whose issue names the lagging variant, keeping
+  "exactly one of" intact.
+
+**Reference verification**: all substantive code references resolve — `SkipTest` 122/127/132/145;
+`MessagingGatewayConfiguration` 91/96/106; `IAmAChannelSync` 64/83; twelve gateway projects; twenty
+configurations across nine wired projects; exactly three declaring `HasSupportToDelayedMessages: true`;
+18 requeue-true, 16 DLQ∧requeue; generated copies 6/36/6/32 = 80; 40 provider-interface copies; 20
+hand-written providers; zero occurrences of `setupDeadLetterQueue` in the 32 exhaustion copies;
+`HandledCountReached` callers only `Reactor.cs:498`/`Proactor.cs:504`; all twelve cited ADR slugs
+resolve, none cited by bare number.
+
+### 1. Both ADRs instruct the cleanup to delete "the three gate branches"; there are four (Score: 70)
+
+`SkipTest` has **four** branches keyed on the three gates, because `HasSupportToDelayedMessages` is
+tested twice — `delayed_message` (122) and `with_delay` (127). requirements.md FR-10(4) and AC-10(c)
+both call this out; the ADRs did not follow. 0066 said "loses three branches", "`SkipTest`'s three
+gate branches", "the three gate branches below", "delete the three now-unreachable gate branches".
+0066 contradicted itself: it enumerates **four** line ranges eight lines below the "three gate
+branches" heading. An implementer following it literally leaves the `with_delay` branch behind and
+fails AC-10(c).
+
+**Evidence**: `0066:326, :423, :439, :455`; contrast `0066:425-429`. Verified at
+`MessagingGatewayGenerator.cs:122,127,132,145`.
+
+**Recommendation**: "the **four** gate branches (keyed on three gates)". "Three properties" and
+"three config keys" are correct and stay.
+
+---
+
+### 2. 0067's References entry for 0066 still describes the superseded flip-then-fix sequencing (Score: 65)
+
+0066's reciprocal entry was updated for the reversal; 0067's was not. It still asserts 0066 "retires
+the three gates + config keys **in one change**" and frames 0067's job as sequencing "*around* that
+flip" — contradicting 0066's Decision, its Step A/B/C staging, and 0067's own Context and step 6.
+This is the paragraph a reader consults to learn how the two ADRs relate, and it told them the
+opposite of what both bodies decide. A residual "-> flip" also survived in the sequencing summary.
+
+**Evidence**: `0067:467`, `0067:273`; contrast `0066:630` and `0067:26-45, :332-337`.
+
+**Recommendation**: Restate to match 0066:630; replace "-> flip" with "-> terminal cleanup". Uses of
+"flip-then-fix" in Alternatives are naming a *rejected* option and are fine.
+
+---
+
+### 3. "Three of the four legacy templates generate today" — it is four of four (Score: 62)
+
+All four generate. Verified by counting checked-in copies: delayed-message 6, plain requeue 36,
+`with_delay` 6, exhaustion 32 — every one non-zero, totalling the 80 the deletion sweep depends on.
+Both ADRs said "three of the four" and then enumerated four templates with four non-zero counts.
+`0067:38` was sharpest: "three of the four generate for 16, 18 and 3 configurations respectively" —
+three numbers for four templates, dropping delayed-message entirely. A reader could conclude that
+template is inert and needs no generated-copy sweep, contradicting AC-10(b)'s "6 + 36 + 6 + 32".
+
+⚠️ **This error originated in requirements round 8's prose** (which tabulated four non-zero counts
+while saying "three of the four") and was propagated into both ADRs, requirements.md, the README and
+the decision log during remediation. Corrected in all five.
+
+**Evidence**: `0066:145-147`, `0067:38-39`, `0067:391-394`, `requirements.md:222`.
+
+**Recommendation**: "**all four**" throughout; `0067:38-39` to "16, 18, 3 and 3 configurations".
+
+---
+
+### 4. Placeholder-row cell rule and ledger-seeding step 1 disagree about `Unknown` (Score: 55)
+
+Step 1 seeds every configuration × behaviour to `Unknown`, and step 5 puts the FR-20 onboardings in
+the fix phase — so ASB, MQTT and RMQ.Sync begin as unresolved work. But the placeholder rule said
+their cells "may hold **only** the `Deferred` form", read literally requiring a signed-off issue for
+every behaviour × transport before any onboarding is attempted. The following clause implies
+`Unknown` is tolerated; the two were never reconciled at the point of decision.
+
+**Evidence**: `0067:235-238` vs `0067:304-306`.
+
+**Recommendation**: Permit transient `Unknown` on placeholder rows during the fix phase, resolving
+only ever to `Deferred` while the row remains a placeholder.
+
+---
+
+### 5. 0066's Context undercounts the AWS-family gate mis-declarations its own Implementation Approach corrects (Score: 45)
+
+Round 5's finding 10 was remediated in the Implementation Approach ("six of the eight AWS-family
+configurations") but the Context paragraph kept the old wording naming only AWS. Verified: AWS.V4
+declares the identical pattern. Cosmetic, but the two halves of one ADR disagreed.
+
+**Evidence**: `0066:59-60`; contrast `:457-460`.
+
+---
+
+### 6. 0066 attributes the disappearance of the last `setupDeadLetterQueue` caller to FR-19 (Score: 40)
+
+The Consequences bullet said the exhaustion template "FR-19 deletes — so after this change the
+parameter has no callers at all". FR-19's deletion is at step C, long after FR-1(6). What removes
+the last caller is the mandatory edit of the template's `.liquid` source in the FR-1 change, which
+the Decision section correctly insists on. The wording invited exactly the misreading the round-8
+sweep closed.
+
+**Evidence**: `0066:547-550`.
+
+---
+
+### Round 6 summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 1 |
+| 50-69 (Medium) | 3 |
+| 0-49 (Low) | 2 |
+
+**Total findings**: 6
+**Findings at or above threshold (60)**: 3
+
+**All six remediated** in the same pass (2026-07-19), including the two below threshold.
+
+---
+
 ## Round 5 (2026-07-19) — first design pass since the round-7 requirements remediation
 
 **Threshold**: 60

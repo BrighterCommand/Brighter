@@ -25,8 +25,9 @@ Three things prevent that today:
 2. **The gate values are mis-declared against the code.** Kafka declares all three gates `false`
    despite its hand-written suite being the canonical grounding for these behaviours; PostgreSQL
    declares no DLQ and no delayed messages despite having both; MSSQL declares no DLQ despite
-   ADR `0040-mssql-dlq-brighter-managed`. Only AWS `SqsStandard` and RocketMQ declare `HasSupportToDelayedMessages: true`, so
-   the delayed-delivery test runs for three of roughly twenty gateway configurations.
+   ADR `0040-mssql-dlq-brighter-managed`. Exactly three configurations declare
+   `HasSupportToDelayedMessages: true` — `AWS/SqsStandard`, `AWS.V4/SqsStandard` and `RocketMQ` — so
+   the delayed-delivery test runs for three of the twenty wired gateway configurations.
 
 3. **Coverage is inconsistent and one template is defective.** The reject / DLQ / invalid-channel /
    delayed-requeue features post-date the generator, so contributors hand-wrote them per transport
@@ -82,7 +83,9 @@ Terminology:
 - **Canonical template** — a template this spec creates to assert a canonical behaviour. Ungated by
   construction (FR-10(1)) and generated for every targeted gateway configuration.
 - **Legacy gated template** — one of the four pre-existing templates `SkipTest` suppresses on a
-  capability gate, enumerated in FR-10(3). Never ungated; suppressed until deleted.
+  capability gate, enumerated in FR-10(3). Never ungated — it keeps exactly its current gating, so it
+  continues to generate wherever that gate is `true`, gains no new generation site, and is deleted
+  rather than freed.
 - **Rejection-metadata key names** — the per-transport `Header.Bag` key strings under which
   rejection metadata is stamped. The *semantic set* is universal (FR-8); only the names and casing
   vary per transport.
@@ -108,6 +111,20 @@ The generated provider interfaces `IAmAMessageGatewayReactorProvider` and
   `IAmAMessageGateway*Provider.cs.liquid` interface templates, and every generated caller migrate in
   the same change. Providers newly written under FR-20 implement the post-FR-1 signature directly
   and never carry the bool.
+
+  **Interim obligation — the still-live legacy caller.** The exhaustion template
+  (`When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue`) is the only current
+  caller, and FR-10(3) keeps it generating for **sixteen** configurations until it is deleted at
+  FR-10(3)'s retirement step — long after FR-1 lands. Its `.liquid` source is not a "generated
+  caller", so it MUST be edited in the FR-1 change to stop passing the flag, or the AWS, AWS.V4, GCP,
+  Redis, RMQ.Async and RocketMQ test projects fail to compile on the next regeneration.
+
+  ⚠️ The template passes the flag **positionally**, as a bare `true` fourth argument — not as a
+  named `setupDeadLetterQueue:` argument. None of the 32 generated copies contains the string
+  `setupDeadLetterQueue`, so a name-based search for callers finds the 40 generated interface copies
+  and the 20 provider implementations and **misses every one of the 32 broken call sites**. The bare
+  `true` will not bind to the nullable `RoutingKey?` parameters of FR-1(1), so this is a hard compile
+  break that the obvious search strategy cannot find. Search for the call, not for the parameter name.
 
 Both dead-letter and invalid-channel reads MUST be bounded and non-throwing: they return
 `MessageType.MT_NONE` when the channel is empty *or* when the subscription does not configure that
@@ -171,9 +188,10 @@ not, and is handled under FR-13.
 Generate a **canonical** test proving that a message sent with `producer.SendWithDelay(M, delay)` is
 not receivable before the delay elapses and is receivable after it. The legacy
 `When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery.cs.liquid` template
-asserts this behaviour today but is gated and stays suppressed (FR-10); it MAY be **migrated** into
-the canonical template rather than rewritten from scratch, and is retired with the other legacy
-templates. The canonical template, not the legacy one, is what satisfies FR-9.
+asserts this behaviour today but is gated and is never ungated (FR-10) — it continues to generate for
+the three configurations declaring `HasSupportToDelayedMessages: true` until it is deleted. It MAY be
+**migrated** into the canonical template rather than rewritten from scratch, and is retired with the
+other legacy templates. The canonical template, not the legacy one, is what satisfies FR-9.
 
 **FR-10 — Gating lifecycle: canonical templates are never gated; the gates retire with the legacy templates they gate.**
 The three capability gates are **not** removed up front. They are narrowed, then retired last, in
@@ -188,19 +206,39 @@ this order:
   gates only for the four **legacy gated templates** named in FR-10(3). A template not on that list
   generates regardless of any flag value. The list is exhaustive and closed — nothing is ever added
   to it.
-- **FR-10(3) — The legacy gated templates stay suppressed and are then retired.** Exactly four
+- **FR-10(3) — The legacy gated templates are never ungated, and are then retired.** Exactly four
   templates are gated today, in both Reactor and Proactor variants:
   `When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery` (gated by
   `delayed_message`), `When_requeuing_a_failed_message_should_receive_message_again` (`requeuing`),
   `When_requeuing_a_failed_message_with_delay_should_receive_message_again` (`with_delay` **and**
   `requeuing`), and `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue`
-  (`dead_letter_queue` **and** `requeuing`). None is ever ungated. Each stays suppressed until the
-  canonical set covers the required behaviours, and is then **deleted** — template and every
-  generated copy. Two are superseded by canonical replacements (FR-9's delayed send, FR-22's plain
-  requeue) which MAY be migrations of them; two are deleted outright as defective (FR-12, FR-19).
+  (`dead_letter_queue` **and** `requeuing`). **None is ever ungated**: each keeps exactly the gating
+  it has today until it is **deleted** — template and every generated copy — once the canonical set
+  covers the required behaviours. Two are superseded by canonical replacements (FR-9's delayed send,
+  FR-22's plain requeue) which MAY be migrations of them; two are deleted outright as defective
+  (FR-12, FR-19).
+
+  ⚠️ *Never ungated* is not *never generated*. A gate suppresses a template only where that gate is
+  declared `false`, and most configurations declare these gates `true`. **All four** legacy templates
+  therefore generate **today**, and keep generating on every regeneration run, until they are
+  deleted:
+
+  | Legacy template | Gates | Configurations generating it | Copies |
+  |---|---|---|---|
+  | `..._too_many_times_should_move_to_dead_letter_queue` | DLQ ∧ Requeue | AWS 4, AWS.V4 4, GCP 4, Redis 1, RMQ.Async 2, RocketMQ 1 = **16** | 32 |
+  | `..._failed_message_should_receive_message_again` | Requeue | all but Kafka ×2 = **18** | 36 |
+  | `..._with_delay_...` | Delayed ∧ Requeue | `AWS/SqsStandard`, `AWS.V4/SqsStandard`, `RocketMQ` = **3** | 6 |
+  | `..._delayed_message_...` | Delayed | same **3** | 6 |
+
+  What FR-10(2) guarantees is that none of them ever generates **anywhere new**. What it does not
+  claim is that they stop generating where they already do — see FR-1(6) for the compile-time
+  consequence of that during the interim.
 - **FR-10(4) — Only then do the gates themselves go.** Once the four legacy templates are deleted,
-  the three gate branches in `SkipTest` gate nothing and MUST be removed, along with the three
-  properties on `MessagingGatewayConfiguration` and the keys in every configuration (FR-11).
+  the gate branches in `SkipTest` gate nothing and MUST be removed, along with the three properties
+  on `MessagingGatewayConfiguration` and the keys in every configuration (FR-11). Note there are
+  **four branches keyed on the three gates** — `HasSupportToDelayedMessages` is tested twice, once
+  for `delayed_message` and once for `with_delay` — so removing "the three gates" leaves one branch
+  behind.
 
 No replacement `HasNative*` flag is introduced at any point (see OOS-1).
 
@@ -218,10 +256,14 @@ deleted — removing the keys earlier would ungate the legacy templates, which F
 Generate a **canonical** test proving that a message requeued with no delay is redelivered and
 receivable again within a bounded retry loop. The legacy
 `When_requeuing_a_failed_message_should_receive_message_again.cs.liquid` template asserts this today
-but is gated and stays suppressed (FR-10); it MAY be **migrated** into the canonical template, and
-is retired with the other legacy templates. This is the no-delay counterpart to FR-2's positive-delay
-path, and is distinct from FR-15, which pins the explicit `TimeSpan.Zero` / `null` arguments rather
-than the no-argument call.
+but is gated (FR-10) and is never ungated; it MAY be **migrated** into the canonical template, and is
+retired with the other legacy templates. This is the no-delay counterpart to FR-2's positive-delay
+path.
+
+FR-22 owns the **no-delay call in both its spellings**. Because the runtime signature is
+`bool Requeue(Message message, TimeSpan? timeOut = null)`, `Requeue(m)` and `Requeue(m, null)`
+compile to the identical call; they are not two behaviours and MUST NOT be specified as two. FR-15 is
+therefore scoped to the explicit `TimeSpan.Zero` argument only — see FR-15.
 
 **FR-12 — Remove the defective delayed-requeue template.**
 The `When_requeuing_a_failed_message_with_delay_should_receive_message_again` template calls
@@ -234,8 +276,9 @@ It is one of the four legacy gated templates of FR-10(3), and is deleted on that
 generated copies — rather than as a standalone early change.
 
 This prohibition is deliberately scoped to delayed-requeue templates. Two canonical templates
-legitimately call `Requeue` with no delay, or with an explicitly null one, and are unaffected: the
-canonical plain-requeue template (FR-22) and the zero/null-boundary template (FR-15).
+legitimately call `Requeue` without a positive delay and are unaffected: the canonical plain-requeue
+template (FR-22, `Requeue(M)` — equivalently `Requeue(M, null)`) and the zero-boundary template
+(FR-15, `Requeue(M, TimeSpan.Zero)`).
 
 **FR-13 — Generate for every targeted gateway configuration; non-conformance is a defect to fix.**
 A **targeted transport** is **every transport with a messaging gateway** — that is, every
@@ -296,11 +339,18 @@ Every canonical template MUST be produced in both a Reactor variant driving `IAm
 `IAmAMessageProducerSync`, and a Proactor variant driving `IAmAChannelAsync` and
 `IAmAMessageProducerAsync`. Neither variant drives a message pump.
 
-**FR-15 — Zero or null delay requeue does not delay.**
-Generate (or extend a canonical test to assert) that `channel.Requeue(M, TimeSpan.Zero)` and
-`channel.Requeue(M, null)` behave as an immediate plain requeue: the message is receivable again
-without a delay window elapsing. This pins the lower boundary of the delay parameter so the
-positive-delay path (FR-2) is not conflated with the no-op path.
+**FR-15 — An explicit zero delay does not delay.**
+Generate a canonical test asserting that `channel.Requeue(M, TimeSpan.Zero)` behaves as an immediate
+plain requeue: the message is receivable again without a delay window elapsing. This pins the lower
+boundary of the delay parameter so the positive-delay path (FR-2) is not conflated with the no-op
+path, and so `TimeSpan.Zero` is not special-cased into an error or an unbounded wait.
+
+FR-15 is scoped to the **explicit `TimeSpan.Zero` argument only**. The omitted and explicitly-null
+spellings both belong to FR-22: the signature is
+`bool Requeue(Message message, TimeSpan? timeOut = null)`, so `Requeue(M)` and `Requeue(M, null)` are
+the same call and cannot be two requirements. FR-15 and FR-22 are separate canonical behaviours with
+separate ledger columns — *"zero is not special-cased"* and *"plain requeue redelivers"* — asserted by
+separate templates.
 
 **FR-16 — Nack releases the message for redelivery.**
 Generate a test proving that `channel.Nack(M)` / `NackAsync(M)` releases a received message back to
@@ -328,8 +378,8 @@ where the *transport* natively counts deliveries and redrives — as SQS does, w
 provider pairs `requeueCount: 3` with `redrivePolicy: new RedrivePolicy(dlqName, 3)`.
 
 That makes the template a pump test (excluded by OOS-5) or a native-mechanism test (excluded by
-NFR-3 and OOS-1). It is one of the four legacy gated templates of FR-10(3): it stays suppressed and
-is deleted with its generated copies, never ungated. Under the superseded "retire the gates first"
+NFR-3 and OOS-1). It is one of the four legacy gated templates of FR-10(3): never ungated, still
+generating for its sixteen configurations, and deleted with its thirty-two generated copies. Under the superseded "retire the gates first"
 sequencing it would have been ungated onto Kafka ×2, MSSQL and PostgreSQL — none of which have a
 delivery counter — producing four failures that FR-13 would have misclassified as gateway defects.
 FR-10(3) removes that hazard by construction.
@@ -377,13 +427,33 @@ FR-10/FR-11 gate-retirement change.
   nine wired projects today, plus the rows AzureServiceBus, MQTT and RMQ.Sync contribute under
   FR-20. A project-level row cannot express "SQS Standard conforms to FR-5 but SNS FIFO does not",
   which is why the granularity is per configuration.
+
+  **Naming rule for singular sections.** The three examples above come from `MessagingGateways`
+  (plural) sections, where the configuration name is the JSON key. Four wired configurations —
+  **Redis, MSSQL, PostgreSQL, RocketMQ** — instead use a singular `MessagingGateway` section, which
+  carries no name key. Such a configuration is named by its `CollectionName`, so the row reads
+  e.g. `Redis / RedisMessagingGateway`. Without this rule four of the twenty rows have no
+  constructible identifier.
+
+  **Placeholder rows for un-onboarded transports.** A transport whose FR-20 onboarding is deferred
+  declares no `test-configuration.json`, therefore declares no configuration, therefore would
+  contribute no row — and the completeness gate below would pass **vacuously** for exactly the
+  transport the spec expects to defer. Every one of the twelve targeted transports MUST therefore
+  occupy the ledger. A transport that has not yet declared a configuration takes a single
+  **placeholder row** named `<Project> / (not yet declared)` — e.g.
+  `AzureServiceBus / (not yet declared)` — whose cells may only record a signed-off deferral. The
+  placeholder is replaced by per-configuration rows when its configuration lands. The completeness
+  gate is evaluated over **all twelve targeted transports**, not over whichever rows happen to exist.
 - **One column per canonical behaviour** — FR-2, FR-4 … FR-9, FR-15, FR-16, FR-17, FR-22.
 - **Each cell records** that the behaviour conforms as generated, conforms via an in-spec gateway
   fix linked to its PR or commit, or is deferred to a named, linked, maintainer-signed-off follow-up
   issue. A cell may be provisionally unresolved only while the fix phase is in progress.
-- **The completeness gate**: the change that retires the three gates (FR-10, FR-11) MUST NOT merge
-  while any cell remains unresolved. Every cell must read as conforming, fixed, or signed-off
-  deferred at that point.
+- **The completeness gate**: the change that retires the three gates (**FR-10(4)**, FR-11) MUST NOT
+  merge while any cell remains unresolved. Every cell must read as conforming, fixed, or signed-off
+  deferred at that point. The citation is to FR-10(**4**) specifically: FR-10 as a whole is a
+  four-part lifecycle whose *first* step must land before any canonical test can generate, and
+  therefore before any cell can resolve — gating the whole of FR-10 on a populated ledger would
+  reinstate the circular dependency this lifecycle exists to dissolve.
 - A configuration conforms for a behaviour only when **both** the Reactor and Proactor variants pass
   (FR-14), and only when the suite has actually run against a broker rather than merely compiled
   (FR-20(3)).
@@ -450,7 +520,10 @@ decisions recorded in ADR 0067.
   with a DLQ only, an invalid channel only, and neither, can read from both the DLQ and the invalid
   channel, and exposes the transport's rejection-metadata key names; and *when* the provider
   interfaces are inspected, *then* `CreateSubscription` no longer declares a `bool
-  setupDeadLetterQueue` parameter, and no provider implementation or generated caller references it.
+  setupDeadLetterQueue` parameter, and no provider implementation or generated caller references it —
+  **including the still-live exhaustion template**, which passes the flag positionally as a bare
+  `true` and so is not found by searching for the parameter name (FR-1(6)). *Then* every affected
+  project compiles after regeneration.
 - **AC-2 (FR-2).** *Given* a received message on **any** target configuration, *when*
   `channel.Requeue(message, 5s)` is called, *then* `Requeue` returns `true` and a later receive
   within the bounded retry loop yields a message with the same body — with no assertion about how
@@ -476,20 +549,23 @@ decisions recorded in ADR 0067.
 - **AC-9 (FR-9).** *Given* `producer.SendWithDelay(message, 5s)` driven by the **canonical**
   delayed-send template, *when* a receive is attempted immediately, *then* it yields `MT_NONE`;
   *when* a receive is attempted after the delay, *then* it yields the message. The legacy
-  `..._delayed_message_...` template does not satisfy this criterion; it is suppressed and then
+  `..._delayed_message_...` template does not satisfy this criterion; it is never ungated and is then
   deleted (FR-10(3)).
 - **AC-10 (FR-10).** Three checkpoints, in order.
   *(a) While the canonical set is being built* — *given* the generator source, *when* `SkipTest` is
-  inspected, *then* the three gate branches are reachable only for the four legacy template names of
-  FR-10(3); and *when* generation runs for a configuration declaring all three gates `false` (Kafka
-  Standard and PartitionKey do today), *then* every canonical template is still emitted for it, and
-  none of the four legacy templates is.
+  inspected, *then* the four gate branches (keyed on three gates) are reachable only for the four
+  legacy template names of FR-10(3); and *when* generation runs for a configuration declaring all
+  three gates `false` (Kafka Standard and PartitionKey do today), *then* every canonical template is
+  still emitted for it, and none of the four legacy templates is. This checkpoint asserts the legacy
+  templates gain **no new** generation sites; it does not assert they stop generating where their
+  gates are already `true`.
   *(b) After the canonical set is complete* — *when* the template directories are inspected, *then*
   none of the four legacy templates remains, in either variant, and no generated copy of any of them
   remains under any `tests/Paramore.Brighter.*.Tests/**/Generated/` directory (**eighty** such copies
   exist today: 6 + 36 + 6 + 32).
-  *(c) Finally* — *when* `SkipTest` and `MessagingGatewayConfiguration` are inspected, *then* no
-  branch is keyed on any of the three gates and the three properties are absent.
+  *(c) Finally* — *when* `SkipTest` and `MessagingGatewayConfiguration` are inspected, *then* **no
+  branch** is keyed on any of the three gates — all **four** of them, since
+  `HasSupportToDelayedMessages` is tested twice — and the three properties are absent.
 - **AC-11 (FR-11).** *Given* the per-transport configurations, *when* they are inspected **after
   AC-10(b) holds**, *then* none contains `HasSupportToDelayedMessages`,
   `HasSupportToDeadLetterQueue`, or `HasSupportToRequeue`. Inspected *before* that point, the keys
@@ -500,9 +576,9 @@ decisions recorded in ADR 0067.
   copy of it remains under any `tests/Paramore.Brighter.*.Tests/**/Generated/` directory** (six such
   copies exist today, and deleting a template does not delete them), and every remaining
   messaging-gateway template that exercises delayed requeue passes a non-null `TimeSpan` to
-  `Requeue`/`RequeueAsync`. The canonical plain-requeue template (FR-22) and the zero/null-boundary
-  template (FR-15) are expected to call `Requeue` with no delay or an explicitly null one, and do
-  not violate this.
+  `Requeue`/`RequeueAsync`. The canonical plain-requeue template (FR-22, calling `Requeue(M)` or
+  equivalently `Requeue(M, null)`) and the zero-boundary template (FR-15, calling
+  `Requeue(M, TimeSpan.Zero)`) do not exercise delayed requeue and do not violate this.
 - **AC-13 (FR-13).** *Given* a full generation run, *when* the suite is generated, *then* every
   configuration of all **twelve** gateway transports — including AzureServiceBus, MQTT and RMQ.Sync
   once FR-20 wires them — has the canonical tests present, and none is **silently** skipped or gated
@@ -519,9 +595,10 @@ decisions recorded in ADR 0067.
   pump.
 - **AC-15 (NFR-1).** *Given* the generated files, *when* their names are inspected, *then* they
   match the established `When_...` conventions.
-- **AC-16 (FR-15).** *Given* a received message, *when* `channel.Requeue(message, TimeSpan.Zero)`
-  or `Requeue(message, null)` is called, *then* `Requeue` returns `true` and the message is
-  receivable again within the plain-requeue bounded retry loop, with no delay window elapsing.
+- **AC-16 (FR-15).** *Given* a received message, *when* `channel.Requeue(message, TimeSpan.Zero)` is
+  called, *then* `Requeue` returns `true` and the message is receivable again within the
+  plain-requeue bounded retry loop, with no delay window elapsing. The `Requeue(message, null)` and
+  `Requeue(message)` spellings are the same call and are asserted by AC-25, not here.
 - **AC-17 (FR-16).** *Given* a received message `M`, *when* `channel.Nack(M)` or `NackAsync(M)` is
   called, *then* a subsequent receive within the bounded retry loop yields a message with `M`'s id
   and body; and, given a second queued message `M2`, after nacking `M` the redelivered `M` is
@@ -550,7 +627,10 @@ decisions recorded in ADR 0067.
   `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs.liquid` is absent from
   both the Reactor and Proactor template directories, **and no generated copy of it remains under any
   `tests/Paramore.Brighter.*.Tests/**/Generated/` directory** (thirty-two such copies exist today).
-  Before that point it is expected to be present and suppressed by its gates, never generated.
+  Before that point the template is expected to be present and gated exactly as it is today —
+  generated for the **sixteen** configurations declaring both `HasSupportToDeadLetterQueue` and
+  `HasSupportToRequeue` true (AWS ×4, AWS.V4 ×4, GCP ×4, Redis, RMQ.Async ×2, RocketMQ), and for no
+  others. It is never *ungated*; it does not stop generating where it already does.
 - **AC-23 (FR-20).** *Given* the twelve gateway-project → test-project pairs in FR-13's mapping
   table, *when* each pair's test project is inspected, *then* it contains a `test-configuration.json`
   declaring a `MessagingGateway` or `MessagingGateways` section and at least one
@@ -562,20 +642,27 @@ decisions recorded in ADR 0067.
   silent absence from the target set. Inability to provide CI infrastructure is a valid ground for
   that deferral; silently omitting the transport is not.
 - **AC-25 (FR-22).** *Given* a received message on any target configuration, *when* the canonical
-  plain-requeue template calls `channel.Requeue(message)` with no delay argument, *then* `Requeue`
+  plain-requeue template calls `channel.Requeue(message)` with no delay argument — equivalently
+  `Requeue(message, null)`, the parameter being optional and null-defaulted — *then* `Requeue`
   returns `true` and a subsequent receive within the bounded retry loop yields a message with the
   same body. This criterion is satisfied by the canonical template only; the legacy
-  `When_requeuing_a_failed_message_should_receive_message_again` template is suppressed and then
-  deleted (FR-10(3)).
+  `When_requeuing_a_failed_message_should_receive_message_again` template is never ungated and is
+  then deleted (FR-10(3)).
 - **AC-24 (FR-21).** *Given* the spec directory, *when*
   `specs/0036-universal-transport-conformance-tests/conformance-status.md` is inspected, *then* it
-  contains one row per targeted gateway configuration — identified as `project / configuration`, and
-  covering every configuration of all twelve targeted transports — and one column per canonical
-  behaviour (FR-2, FR-4 … FR-9, FR-15, FR-16, FR-17, FR-22); and *when* the FR-10/FR-11 gate-retirement
-  change is proposed for merge, *then* no cell is unresolved: each reads as conforming, fixed with a
-  linked PR or commit, or deferred to a named, linked, signed-off issue. A configuration is recorded
-  as conforming for a behaviour only where both the Reactor and Proactor variants passed against a
-  running broker.
+  contains one row per targeted gateway configuration — identified as `project / configuration`,
+  naming a singular `MessagingGateway` section's configuration by its `CollectionName` — and one
+  column per canonical behaviour (FR-2, FR-4 … FR-9, FR-15, FR-16, FR-17, FR-22).
+
+  *Then* **all twelve** targeted transports are represented: a transport that declares no
+  configuration yet occupies a single placeholder row `<Project> / (not yet declared)` whose cells
+  all read as a signed-off deferral. The completeness check counts transports, not rows, so a
+  transport contributing no rows fails it rather than passing vacuously.
+
+  And *when* the **FR-10(4)**/FR-11 gate-retirement change is proposed for merge, *then* no cell is
+  unresolved: each reads as conforming, fixed with a linked PR or commit, or deferred to a named,
+  linked, signed-off issue. A configuration is recorded as conforming for a behaviour only where both
+  the Reactor and Proactor variants passed against a running broker.
 
 ## Coverage Reconciliation (Kafka reference surface)
 

@@ -10,6 +10,60 @@ below.
 
 ---
 
+## Corrected: "never ungated" is not "never generated" — requirements round 8
+
+**Corrected 2026-07-19, after requirements review round 8 (findings 1 and 3).** No identifier
+changed; the reversal below was described in language that overstated it.
+
+The gating reversal was written as though suppressing the four legacy templates meant they stopped
+generating. It does not. A gate suppresses a template only where that gate is declared `false`, and
+most configurations declare these gates `true`. Verified against all fourteen `test-configuration.json`
+files and the checked-in generated tree: **all four** legacy templates generate **today** — the
+exhaustion template for 16 configurations (32 copies), plain requeue for 18 (36 copies), `with_delay`
+and delayed-message for 3 each (6 copies each) — and keep generating on every regeneration run until
+they are deleted.
+
+(Requirements round 8 stated this as "three of the four" while tabulating four non-zero counts; design
+round 6 caught the arithmetic. All four are non-zero, and 6 + 36 + 6 + 32 = 80 is the sweep the
+cleanup depends on.)
+
+What the lifecycle actually guarantees is that a legacy template gains **no new** generation site.
+"Stays suppressed" and "never generated" were false as written, and AC-22 contradicted itself by
+asserting "never generated" one clause after counting the thirty-two copies that disprove it.
+
+**Why it mattered beyond wording.** FR-1(6) removes `setupDeadLetterQueue` from `CreateSubscription`
+while the exhaustion template is still live for sixteen configurations. The template passes the flag
+**positionally**, as a bare `true` fourth argument, so none of its 32 generated copies contains the
+string `setupDeadLetterQueue`. A maintainer migrating "every generated caller" by searching for the
+parameter name finds the 40 interface copies and 20 provider implementations and misses all 32 broken
+call sites — a hard compile break invisible to the obvious search. FR-1(6) now carries an explicit
+interim obligation to edit the template in the same change, and AC-1 records that positional call
+sites are not name-searchable.
+
+---
+
+## Decided: FR-15 narrowed to `TimeSpan.Zero`; FR-22 owns the no-delay call
+
+**Decided 2026-07-19, by spec-owner ruling, after requirements review round 8 (finding 2).**
+
+FR-22 claimed to be "distinct from FR-15, which pins the explicit `TimeSpan.Zero` / `null` arguments
+rather than the no-argument call". That distinction does not exist: the signature is
+`bool Requeue(Message message, TimeSpan? timeOut = null)`, so `Requeue(m)` and `Requeue(m, null)`
+compile to the identical call. FR-22 and FR-15's null arm were one behaviour specified twice, with
+two ledger columns.
+
+**Ruling**: FR-22 owns the no-delay call in both spellings (omitted and explicitly null). FR-15
+narrows to the explicit `TimeSpan.Zero` argument only, asserting that zero is not special-cased into
+an error or an unbounded wait. Both remain canonical behaviours with their own ledger columns and
+their own templates — *"plain requeue redelivers"* and *"zero is not special-cased"* are genuinely
+different assertions.
+
+**Rejected alternative**: merging both into one template with three assertions and a single ledger
+column. Fewer artifacts, but it loses the separation between the two assertions and would have
+reopened the FR-21/AC-24 column counts.
+
+---
+
 ## Reversed: gate retirement moved from first step to last — FR-10 rewritten
 
 **Reversed 2026-07-19, by spec-owner instruction, after design review round 5.** Not a retirement;
@@ -46,7 +100,7 @@ three gates only for a closed, explicit list of the four legacy template filenam
 template cannot be suppressed however it is named. This deliberately does not rely on naming —
 `SkipTest` matches substrings, and NFR-1's convention means a canonical delayed-requeue template
 naturally contains both `requeuing` and `with_delay`, the same trap that left the exhaustion template
-doubly gated. The four legacy templates stay suppressed for their whole remaining life, are deleted
+doubly gated. The four legacy templates are never ungated for their whole remaining life, are deleted
 with their eighty generated copies once the canonical set is complete, and only then do the gates and
 config keys go.
 

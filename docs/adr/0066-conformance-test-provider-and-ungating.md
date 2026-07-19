@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-07-18
-summary: "Extends the generated messaging-gateway provider interfaces (IAmAMessageGatewayReactorProvider / IAmAMessageGatewayProactorProvider) with explicit DLQ + invalid-message routing keys, an invalid-channel read, and a strongly-typed RejectionMetadataKeys accessor; makes canonical conformance templates ungated by construction by narrowing the HasSupportToDelayedMessages / HasSupportToDeadLetterQueue / HasSupportToRequeue gates to a closed list of four legacy templates, which stay suppressed until deleted along with their eighty generated copies, after which the gates and config keys retire as a terminal cleanup; and withdraws FR-3's scheduler-delegation test as a mechanism assertion (folded into a mechanism-agnostic FR-2), so no scheduler-carrying provider member is required."
+summary: "Extends the generated messaging-gateway provider interfaces (IAmAMessageGatewayReactorProvider / IAmAMessageGatewayProactorProvider) with explicit DLQ + invalid-message routing keys, an invalid-channel read, and a strongly-typed RejectionMetadataKeys accessor; makes canonical conformance templates ungated by construction by narrowing the HasSupportToDelayedMessages / HasSupportToDeadLetterQueue / HasSupportToRequeue gates to a closed list of four legacy templates, which are never ungated (they keep their current gating and reach no new configuration) until deleted along with their eighty generated copies, after which the gates and config keys retire as a terminal cleanup; and withdraws FR-3's scheduler-delegation test as a mechanism assertion (folded into a mechanism-agnostic FR-2), so no scheduler-carrying provider member is required."
 tags:
   - "test-generation"
   - "testing"
@@ -56,8 +56,9 @@ not gate them.
 **(b) The gate values are mis-declared against the code** — set to whatever keeps the suite
 green. Verified in `tests/Paramore.Brighter.*.Tests/test-configuration.json`: PostgreSQL
 declares `HasSupportToDeadLetterQueue: false` **and** `HasSupportToDelayedMessages: false`;
-AWS declares `HasSupportToDelayedMessages: false` in three of its four gateway configurations
-(the fourth declares `true`) despite native `DelaySeconds`; and Kafka — the transport whose
+AWS **and AWS.V4** each declare `HasSupportToDelayedMessages: false` in three of their four gateway
+configurations (both `SqsStandard` declare `true`) despite native `DelaySeconds` — six of the eight
+AWS-family configurations; and Kafka — the transport whose
 hand-written suite is the canonical grounding for these templates — declares **all three** gates
 `false` (`HasSupportToRequeue`, `HasSupportToDeadLetterQueue`, `HasSupportToDelayedMessages`) in
 both its Standard and PartitionKey gateway configs, which is the sharpest illustration that these
@@ -139,6 +140,21 @@ canonical template cannot be suppressed however it is named. This deliberately d
 naming: `SkipTest` matches filename *substrings*, and NFR-1's convention means a canonical
 delayed-requeue template naturally contains both `requeuing` and `with_delay` and would otherwise be
 silently suppressed — the same defect that left the exhaustion template doubly gated.
+
+⚠️ **"Never ungated" is not "never generated", and the difference has a compile-time consequence.** A
+gate suppresses a template only where that gate is declared `false`; most configurations declare
+these gates `true`. **All four** legacy templates therefore generate today and keep generating until
+deletion — the exhaustion template for 16 configurations (32 copies), plain requeue for 18 (36
+copies), `with_delay` and delayed-message for 3 each (6 copies each). What the narrowing guarantees
+is that they gain no **new** generation site.
+
+This bites on FR-1(6). Removing `bool setupDeadLetterQueue` from `CreateSubscription` breaks the
+exhaustion template's call sites while that template is still live for sixteen configurations, and it
+passes the flag **positionally** — a bare `true` fourth argument — so none of its 32 generated copies
+contains the string `setupDeadLetterQueue`. Migrating "every generated caller" by searching for the
+parameter name finds the 40 interface copies and 20 provider implementations and misses all 32. The
+template's `.liquid` source MUST therefore be edited in the FR-1 change, even though the template is
+scheduled for deletion later.
 
 **The provider exposes no scheduler-carrying member.** A generated test never obtains a producer
 whose `Scheduler` property is set, and the suite asserts nothing about the delay *mechanism*:
@@ -225,6 +241,32 @@ A metadata test then reads `provider.RejectionMetadataKeys.OriginalTopic` rather
 any one transport's strings — the semantic set is asserted uniformly (FR-8), the key names come
 from the provider.
 
+**Where the record lives.** The two provider interfaces are emitted into *different* namespaces and
+*different* directories — `{{ Namespace }}.MessagingGateway{{ Prefix }}.Reactor` under
+`Generated/Reactor/`, and `….Proactor` under `Generated/Proactor/` — so a type "shared by both"
+cannot live in either. `RejectionMetadataKeys` is therefore emitted **once per gateway configuration**
+by a new template, `Templates/MessagingGateway/Shared/RejectionMetadataKeys.cs.liquid`, into the
+parent namespace `{{ Namespace }}.MessagingGateway{{ Prefix }}` at `Generated/RejectionMetadataKeys.cs`
+— a sibling of the `Reactor/` and `Proactor/` directories, which both already have the parent
+namespace in scope. This requires a third template directory (`Shared/`) alongside `Reactor/` and
+`Proactor/`, and generator wiring to emit its contents once per configuration rather than once per
+variant; both are new and are listed in Key Components below.
+
+The rejected alternatives are worth naming, because each is a plausible misreading: emitting the
+record into *both* variant namespaces produces two distinct types with the same name, so nothing is
+shared and any common helper breaks; emitting it into `src/Paramore.Brighter` is forbidden by C-2;
+hand-writing it per transport contradicts "generated" and re-admits the drift the record exists to
+remove.
+
+**What a provider returns for a field its gateway does not stamp.** The member returns
+`string.Empty` — never `null`, never a plausible-looking guess at a key name the gateway does not
+actually write. An empty key cannot match a header, so the FR-8 assertion for that semantic field
+fails, and it fails as a **genuine non-conformance** rather than as a test defect: FR-8 says a
+transport that does not stamp the universal semantic set does not conform. That failure is then
+recorded in the ledger like any other — `Fixed` if the gateway is taught to stamp the field, or
+`Deferred -> #NNNN` with sign-off. Returning `null` would instead surface as a `NullReferenceException`
+inside the test body, which reads as a broken test rather than a non-conforming transport.
+
 #### Why there is no scheduler member
 
 A scheduler-carrying provider member would let a generated test prove a delayed requeue was
@@ -282,11 +324,18 @@ tests under OOS-2**, not in the universal suite.
 - The two provider interface templates:
   `.../Templates/MessagingGateway/{Reactor,Proactor}/IAmAMessageGateway*Provider.cs.liquid`.
 - `MessagingGatewayGenerator.SkipTest`
-  (`.../Generators/MessagingGatewayGenerator.cs`) — loses three branches.
+  (`.../Generators/MessagingGatewayGenerator.cs`) — loses **four** branches (keyed on three gates:
+  `HasSupportToDelayedMessages` is tested twice, for `delayed_message` and for `with_delay`).
 - `MessagingGatewayConfiguration`
   (`.../Configuration/MessagingGatewayConfiguration.cs`) — loses three properties.
-- A new `RejectionMetadataKeys` record (in the generated test-support namespace, per transport,
-  **not** in `src/Paramore.Brighter` — C-2).
+- A new `RejectionMetadataKeys` record (in the generated test-support namespace, per gateway
+  configuration, **not** in `src/Paramore.Brighter` — C-2), emitted into the parent namespace
+  `{{ Namespace }}.MessagingGateway{{ Prefix }}` so both variant namespaces can see it.
+- A new template `Templates/MessagingGateway/Shared/RejectionMetadataKeys.cs.liquid`, and with it a
+  third template directory `Shared/` alongside the existing `Reactor/` and `Proactor/`. Its contents
+  are emitted **once per gateway configuration** to `Generated/RejectionMetadataKeys.cs`, not once
+  per variant — a generation mode the generator does not have today, so
+  `MessagingGatewayGenerator` gains it.
 - *(No scheduler spy or scheduler-carrying member — withdrawn with FR-3; see "Why there is no
   scheduler member".)*
 - Every hand-written per-transport provider implementation that satisfies these interfaces — the
@@ -373,7 +422,7 @@ key internally (as PostgreSQL does when `setupDeadLetterQueue` is true) now rece
 key explicitly from the test, which also removes hidden per-transport DLQ-naming knowledge from
 the provider.
 
-**`SkipTest`'s three gate branches are first narrowed, then deleted.**
+**`SkipTest`'s four gate branches are first narrowed, then deleted.**
 
 *Step A — narrow (lands first, with the first canonical template).* The gate branches at lines
 122–125 (`HasSupportToDelayedMessages`/`delayed_message`), 127–130
@@ -389,7 +438,7 @@ private static readonly string[] LegacyGatedTemplates =
     "When_requeuing_a_failed_message_with_delay_should_receive_message_again",
     "When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue",
 ];
-// the three gate branches below are consulted only when fileName is on this list;
+// the four gate branches below are consulted only when fileName is on this list;
 // every other template — canonical or otherwise — generates regardless of flag value
 ```
 
@@ -398,13 +447,14 @@ substring match against the template directory), and nothing is ever added to it
 work list for step C — the set to delete — so the two cannot drift apart.
 
 *Step B — the canonical set is built and the transports are fixed.* Throughout, canonical templates
-generate for every configuration while the four legacy templates stay suppressed. This is what makes
+generate for every configuration while the four legacy templates keep exactly the gating they have
+today — never ungated, never reaching a new configuration. This is what makes
 the reference transport workable: Kafka declares all three gates `false`, yet its canonical FR-2 and
 FR-9 tests generate and run, because the gates no longer reach them.
 
 *Step C — delete (lands last).* Delete the four legacy templates in both variants, **and their
 eighty checked-in generated copies** (6 + 36 + 6 + 32 — see "The generated tree" below). Then delete
-the three now-unreachable gate branches, remove `HasSupportToDelayedMessages`,
+the four now-unreachable gate branches, remove `HasSupportToDelayedMessages`,
 `HasSupportToDeadLetterQueue` and `HasSupportToRequeue` from `MessagingGatewayConfiguration` (lines
 91, 96, 106), and remove the keys from every `test-configuration.json` (FR-11) — including the
 mis-declared PostgreSQL (`false`/`false`), AWS and AWS.V4 (`HasSupportToDelayedMessages: false` in
@@ -440,8 +490,10 @@ not follow-up hygiene:
 `.../Templates/MessagingGateway/{Reactor,Proactor}/When_requeuing_a_failed_message_with_delay_should_receive_message_again.cs.liquid`
 (the Reactor variant calls `_channel.Requeue(received);` with no delay after a `SendWithDelay` +
 `Thread.Sleep(6s)` — line 62), together with its six generated copies. It is one of the four legacy
-gated templates, so it stays suppressed until step C rather than being deleted early — there is no
-hurry, because it generates for nothing in the meantime. After deletion, a template-source
+gated templates, so it is never ungated and is deleted at step C rather than early. It is not inert
+in the meantime: it generates for the three configurations declaring `HasSupportToDelayedMessages:
+true` (`AWS/SqsStandard`, `AWS.V4/SqsStandard`, `RocketMQ`), six copies in all, and continues to do
+so until step C deletes it. After deletion, a template-source
 inspection MUST confirm that every template *purporting to exercise delayed requeue* passes a
 non-null `TimeSpan` to `Requeue` / `RequeueAsync` (AC-12).
 
@@ -496,8 +548,12 @@ vs async gateway code paths; it is not pump re-testing.
   change to `CreateSubscription`; every provider and every existing generated caller must move to
   the new signature in the same change (requirements.md FR-1(6), verified by AC-1). The only
   existing template that passes the bool is
-  `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs.liquid`, which FR-19
-  deletes — so after this change the parameter has no callers at all.
+  `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs.liquid`, which is
+  **edited in this same change** to stop passing the flag — and deleted outright later, under FR-19.
+  It is the edit, not the deletion, that removes the last caller: the template keeps generating for
+  sixteen configurations until step C, so waiting for FR-19 would leave 32 generated call sites
+  passing an argument the signature no longer has. After this change the parameter has no callers at
+  all.
 - **The substring-matching hazard is now prevented by construction rather than argued about.**
   Because `SkipTest` matches on filename substrings,
   `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue` matches *both*
@@ -512,9 +568,9 @@ vs async gateway code paths; it is not pump re-testing.
   template passes today it is proving the *transport's* native redrive: the AWS provider pairs
   `requeueCount: 3` with `redrivePolicy: new RedrivePolicy(dlqName, 3)`, so SQS does the counting.
   That is a pump test (OOS-5) or a native-mechanism test (NFR-3, OOS-1) — the same defect that got
-  FR-3 withdrawn. The template is on the closed legacy list, so it stays suppressed for its whole
-  remaining life and is then deleted with its 32 generated copies (FR-19), exactly as the broken
-  `with_delay` template is (FR-12).
+  FR-3 withdrawn. The template is on the closed legacy list, so it is never ungated — it keeps
+  generating for its sixteen configurations until it is deleted with its 32 generated copies (FR-19),
+  exactly as the broken `with_delay` template is (FR-12).
 
   The residual risk inverts: the legacy list is now load-bearing, and a canonical template is only
   ungated because it is *absent* from that list. A future edit that adds a name to the list, or a

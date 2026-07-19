@@ -1,5 +1,234 @@
 # Review: requirements — 0036-universal-transport-conformance-tests
 
+## Round 8 (2026-07-19) — first pass over the gating-lifecycle reversal
+
+**Threshold**: 60
+**Verdict**: NEEDS WORK — 4 findings at or above threshold 60. **No Critical findings** (third
+round running clean at 90+).
+
+First review of the material rewritten under the 2026-07-19 spec-owner ruling (FR-9, FR-10, FR-11,
+FR-12, FR-19 rewritten; FR-21/AC-24 and FR-22/AC-25 new). Findings by round: 11 → 8 → 5 → 11 → **8**.
+
+The dominant theme is a single conflation: the reversal was written as if *not ungated* meant *not
+generated*. It does not. The gates are `true` for most configurations, so three of the four legacy
+templates generate today — for 16, 18 and 3 configurations respectively — and will keep generating on
+every regeneration run until they are deleted. That one error produces findings 1 and 3 and has
+propagated into both ADRs, the README and the decision log.
+
+> **Corrected by design review round 6 (finding 3):** this paragraph is itself wrong — it is **all
+> four**, for 16, 18, 3 and 3 configurations. The finding-1 table below tabulates four non-zero
+> counts (6 + 36 + 6 + 32 = 80), which contradicts the "three of the four" in this summary. The
+> delayed-message template generates for the same three configurations as `with_delay`. The error was
+> propagated into both ADRs, requirements.md, the README and the decision log during remediation, and
+> corrected in all five. Left in place here as the record of what round 8 actually said.
+
+**Main-agent verification note.** Every factual claim below was independently re-verified against
+source before remediation (the standing rule after two rounds were lost to unverified remediation).
+All confirmed. Finding 3 was found to be *understated* — see the addendum on that finding.
+
+### 1. AC-22 asserts the legacy templates are "never generated" and FR-10(3) says they "stay suppressed" — both are false for most configurations, and AC-22 contradicts itself in the same sentence (Score: 85)
+
+The rewrite's central framing is that the four legacy templates are suppressed for their whole
+remaining life. That is true only where the gate is `false`. Verified gate values across the twenty
+wired configurations:
+
+| Legacy template | Gates | Configurations where it generates | Copies |
+|---|---|---|---|
+| `..._too_many_times_should_move_to_dead_letter_queue` | DLQ ∧ Requeue | AWS 4, AWS.V4 4, GCP 4, Redis 1, RMQ.Async 2, RocketMQ 1 = **16** | 32 |
+| `..._failed_message_should_receive_message_again` | Requeue | all but Kafka ×2 = **18** | 36 |
+| `..._with_delay_...` | Delayed ∧ Requeue | AWS/SqsStandard, AWS.V4/SqsStandard, RocketMQ = **3** | 6 |
+| `..._delayed_message_...` | Delayed | same **3** | 6 |
+
+AC-22 is self-contradicting: it asserts "never generated" and in the preceding clause counts the 32
+generated copies that disprove it. As a test assertion it is unsatisfiable — an implementer checking
+"is this template ever generated?" finds the file under AWS, GCP, Redis, RMQ.Async and RocketMQ and
+must conclude AC-22 fails before the deletion, when the intent is that it passes trivially.
+
+The distinction the document needs — and repeatedly blurs — is between *never ungated* (true, and
+what FR-10(2) actually guarantees) and *never generated* (false).
+
+**Evidence**: `requirements.md:548-553` (AC-22) — "Before that point it is expected to be present and
+suppressed by its gates, **never generated**" immediately after "(**thirty-two such copies exist
+today**)". `requirements.md:197-199` (FR-10(3)). Same framing in `README.md:73-76`,
+`decision-log.md:49-50`, `docs/adr/0066-…:128, :401, :443, :515` and frontmatter `summary`,
+`docs/adr/0067-…:36, :180`.
+
+**Recommendation**: Replace "stays suppressed" / "never generated" with "is never *ungated* — it
+continues to generate wherever its gate is already `true`, and generates nowhere new". Rewrite
+AC-22's final clause to name the sixteen configurations explicitly. Sweep FR-10(3), FR-9, FR-22,
+AC-25, both ADRs, the README and the decision log.
+
+---
+
+### 2. FR-22 and FR-15's null arm are the same call: `Requeue`'s delay parameter is optional and defaults to `null` (Score: 72)
+
+FR-22 claims it "is distinct from FR-15, which pins the explicit `TimeSpan.Zero` / `null` arguments
+rather than the no-argument call". That distinction does not exist. The runtime signature is
+`bool Requeue(Message message, TimeSpan? timeOut = null)` — `Requeue(m)` and `Requeue(m, null)`
+compile to the identical call. AC-25 and AC-16 therefore assert the same behaviour of the same call,
+with the same expected outcome.
+
+This is not a naming quibble — FR-22 is a *new* canonical behaviour with its own ledger column
+(FR-21), so it duplicates a column with FR-15's null arm.
+
+**Evidence**: `src/Paramore.Brighter/IAmAChannelSync.cs:83`; `IAmAChannelAsync.cs:90`.
+`requirements.md:222-224` (FR-22), `:299-303` (FR-15), `:522-524` (AC-16), `:564-569` (AC-25).
+
+**Recommendation**: Either state that FR-15 covers only the `TimeSpan.Zero` boundary and that the
+null/omitted case is FR-22, or merge them into one template with three assertions and one ledger
+column. Resolve FR-15's "generate or extend" into a single decision so AC-12's reference to "the
+zero/null-boundary template" resolves.
+
+---
+
+### 3. FR-1(6) removes `setupDeadLetterQueue` while the exhaustion template still generates for sixteen configurations, and nothing requires the interim template edit (Score: 70)
+
+FR-1(6) removes `bool setupDeadLetterQueue` from `CreateSubscription` and requires all twenty
+provider implementations, both interface templates, and "every **generated caller**" migrate in the
+same change. FR-19 notes the exhaustion template is "the **only** current caller" — but the new
+lifecycle keeps that template generating for sixteen configurations until AC-10(b), long after FR-1
+lands. The `.liquid` template is the *source*, not a "generated caller", so FR-1(6)'s enumeration
+does not reach it. An implementer who satisfies FR-1(6) literally regenerates and the AWS, GCP,
+Redis, RMQ.Async and RocketMQ test projects fail to compile.
+
+**⚠️ Addendum from main-agent verification — the finding is understated.** The exhaustion template
+passes the flag **positionally**, not by name:
+
+```csharp
+_subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
+    _messageGatewayProvider.GetOrCreateChannelName(),
+    OnMissingChannel.Create,
+    true);          // <-- setupDeadLetterQueue, positional
+```
+
+So the 32 generated copies contain **no occurrence of the string `setupDeadLetterQueue`**. A
+maintainer following FR-1(6) by grepping the parameter name finds the 40 interface copies and the 20
+provider implementations (62 files total) and **misses all 32 broken call sites**. The bare `true`
+will not bind to the new nullable `RoutingKey?` parameters, so this is a hard compile break that the
+obvious search strategy cannot find.
+
+**Evidence**: `requirements.md:104-110` (FR-1(6)), `:337-339`, `:197-200`.
+`tools/…/Templates/MessagingGateway/Reactor/When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs.liquid:45-48`
+(and the Proactor twin at `:50`). Verified: 62 files match `setupDeadLetterQueue`; 0 of the 32
+generated exhaustion copies do.
+
+**Recommendation**: Add an explicit interim obligation to FR-1(6) or FR-19: the exhaustion template
+MUST be edited in the FR-1 change to stop passing the flag, so the sixteen configurations for which
+it still generates continue to compile until deletion. Extend AC-1 to name the still-live legacy
+template **and to state that positional call sites will not be found by name search**.
+
+---
+
+### 4. FR-21's ledger row identity `project / configuration` cannot be constructed for four wired projects, nor for a transport deferred before onboarding (Score: 68)
+
+FR-21 mandates "One row per targeted gateway configuration … identified as `project / configuration`
+— e.g. `AWS.V4 / SqsStandard`". All three examples come from `MessagingGateways` (plural) sections,
+where the configuration name is the JSON key. Four of the twenty wired configurations — Redis, MSSQL,
+PostgreSQL, RocketMQ — use the **singular** `MessagingGateway` section, which has no name key. So
+four of twenty rows have no constructible identifier.
+
+The same gap appears at the other end: a transport deferred at FR-20 step 1 declares no
+configuration, so AC-24's completeness assertion is unverifiable for exactly the transport the spec
+expects to defer (AzureServiceBus).
+
+**Evidence**: `requirements.md:375-378`, `:570-578`, `:363-367`. Verified: MSSQL, PostgresSQL, Redis
+and RocketMQ `test-configuration.json` all use `"MessagingGateway"` singular with no name key; AWS,
+AWS.V4, Gcp, Kafka, RMQ.Async use `"MessagingGateways"` plural.
+
+**Recommendation**: State the naming rule for singular sections (name by `CollectionName`), give a
+worked example, and state that a transport deferred before declaring any configuration carries a
+single placeholder row whose cells all read as the signed-off deferral. This is the requirements-side
+twin of design finding F3.
+
+---
+
+### 5. FR-21's completeness gate cites "FR-10" whole, but FR-10 spans the entire lifecycle including its first step (Score: 52)
+
+FR-21's gate reads "the change that retires the three gates (**FR-10**, FR-11) MUST NOT merge while
+any cell remains unresolved". FR-10 is now a four-part lifecycle whose *first* step must land before
+any canonical test can generate, and therefore before any ledger cell can resolve. Read literally,
+the FR-10 change is gated on a ledger that cannot be populated until the FR-10 change has landed —
+precisely the circular dependency this rewrite exists to dissolve. The "gate-retirement" qualifier
+makes the intent recoverable, so this is imprecision rather than contradiction.
+
+**Evidence**: `requirements.md:384-386`, `:573-574`; contrast `:201-203` (FR-10(4)).
+
+**Recommendation**: Cite `FR-10(4)` and `FR-11` rather than `FR-10` in both places.
+
+---
+
+### 6. The problem statement still names two configurations where there are three (Score: 50)
+
+"Only AWS `SqsStandard` and RocketMQ declare `HasSupportToDelayedMessages: true`, so the
+delayed-delivery test runs for three of roughly twenty gateway configurations." The enumeration reads
+as two items and the count says three. This is the exact phrasing error PROMPT.md flags as recurring.
+
+**Evidence**: `requirements.md:28-30`. Verified: exactly three configurations declare it —
+`AWS.Tests`, `AWS.V4.Tests`, `RocketMQ.Tests`.
+
+**Recommendation**: "Exactly three configurations declare `HasSupportToDelayedMessages: true` —
+`AWS/SqsStandard`, `AWS.V4/SqsStandard` and `RocketMQ` — so the delayed-delivery test runs for three
+of the twenty wired gateway configurations."
+
+---
+
+### 7. README's canonical-behaviour enumeration was not updated for FR-22 (Score: 45)
+
+The rewrite added FR-22 to requirements.md's terminology list, FR-21's columns, AC-24 and the
+Coverage Reconciliation table. The spec README's Scope section still enumerates the set without it.
+
+**Evidence**: `README.md:47` and the nine bullets following, none covering plain requeue.
+
+**Recommendation**: Add FR-22 to the enumeration and a plain-requeue bullet.
+
+---
+
+### 8. "The three gate branches" in `SkipTest` are actually four (Score: 40)
+
+FR-10(4) and AC-10(a)/(c) refer to "the three gate branches in `SkipTest`". `SkipTest` has **four**
+branches keyed on the three properties: `HasSupportToDelayedMessages` appears twice, once for
+`delayed_message` and once for `with_delay`. An implementer removing "the three gate branches" leaves
+one behind.
+
+**Evidence**: `MessagingGatewayGenerator.cs` `SkipTest` — verified branches at lines 122, 127, 132,
+145. `requirements.md:201-203`, `:482-484`, `:491-492`.
+
+**Recommendation**: "the four branches keyed on the three gates" throughout FR-10(4) and AC-10.
+
+---
+
+### Checks that passed (no finding)
+
+Verified against source: twelve `src/Paramore.Brighter.MessagingGateway.*` projects; fourteen
+`test-configuration.json` files, nine with a gateway section, the five outbox-only exclusions named
+correctly; twenty configurations distributed 4+4+4+2+2+1+1+1+1; twenty `*MessageGatewayProvider.cs`
+implementations; forty generated provider-interface copies; 6+36+6+32 = **80** generated legacy
+copies; the FR-13 mapping table including the `Paramore.Brighter.Azure.Tests` trap; RMQ.Sync 31 /
+MQTT 18 / ASB 8 hand-written tests; Kafka as the only all-three-gates-`false` configuration; FR-12's
+characterisation of the `with_delay` template; the four gated filenames matching exactly the
+substrings FR-10(3) attributes to them, with no fifth template matching any of them.
+
+**Ordering integrity is adequately handled** — FR-10 states its parts "in this order", AC-10 is three
+ordered checkpoints, and AC-11 explicitly pins the *before* state. The dangerous intermediate state is
+stated as a constraint and is checkable at a single point in time. No finding.
+
+Every FR maps to at least one AC and every AC to an FR or NFR; the retired-identifier gaps match the
+closing note exactly.
+
+### Round 8 summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 3 |
+| 50-69 (Medium) | 3 |
+| 0-49 (Low) | 2 |
+
+**Total findings**: 8
+**Findings at or above threshold (60)**: 4
+
+---
+
 ## Round 7 (2026-07-19) — cross-document consistency after the twelve-transport rewrite
 
 **Threshold**: 60
