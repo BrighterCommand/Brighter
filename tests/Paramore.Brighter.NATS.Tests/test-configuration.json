@@ -1,0 +1,17 @@
+{
+  "Namespace": "Paramore.Brighter.NATS.Tests",
+  "MessagingGateway": {
+    "Publication": "Paramore.Brighter.MessagingGateway.NATS.NatsPublication",
+    "Subscription": "Paramore.Brighter.MessagingGateway.NATS.NatsSubscription",
+    "MessageGatewayProvider": "Paramore.Brighter.NATS.Tests.MessagingGateway.NatsMessageGatewayProvider",
+    "Category": "NATS",
+    "CollectionName": "NATSMessagingGateway",
+    "ReceiveMessageTimeoutInMilliseconds": 4000,
+    "HasSupportToPublishConfirmation": false,
+    "HasSupportToDeadLetterQueue": false,
+    "HasSupportToDelayedMessages": false,
+    "HasSupportToValidateBrokerExistence": false,
+    "HasSupportToRequeue": true,
+    "HasSupportToValidateInfrastructure": false
+  }
+}

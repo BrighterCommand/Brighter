@@ -217,6 +217,31 @@ jobs:
       - name: MQTT Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Category=MQTT&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
 
+  nats-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [build]
+
+    services:
+      nats:
+        image: nats:latest
+        ports:
+        - 4222:4222
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: NATS Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.NATS.Tests/Paramore.Brighter.NATS.Tests.csproj --filter "Category=NATS&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
+
   rabbitmq-async-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 8

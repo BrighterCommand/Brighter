@@ -223,6 +223,7 @@
     <Project Path="tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.NATS.Tests/Paramore.Brighter.NATS.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj" />

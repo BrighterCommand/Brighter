@@ -72,6 +72,9 @@ public static class HeadersName
     /// <summary>The CloudEvents tracestate header carrying the W3C trace state.</summary>
     public const string TraceState = "ce-tracestate";
 
+    /// <summary>The CloudEvents type header.</summary>
+    public const string Type = "ce-type";
+
     /// <summary>The Brighter header carrying the workflow id.</summary>
     public const string WorkflowId ="brighter-workflowid";
 

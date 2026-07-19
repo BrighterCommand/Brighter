@@ -1,4 +1,4 @@
-﻿// The MIT License (MIT)
+// The MIT License (MIT)
 // Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -48,6 +48,7 @@ internal static class NatsMsgExtensions
                 topic: new RoutingKey(natsMsg.Subject),
                 traceParent: GetTraceParent(natsMsg.Headers),
                 traceState: GetTraceState(natsMsg.Headers),
+                type: GetCloudEventsType(natsMsg.Headers),
                 workflowId: GetWorkflowId(natsMsg.Headers))
             {
                 DataRef = GetDataRef(natsMsg.Headers), SpecVersion = GetSpecVersion(natsMsg.Headers)
@@ -97,6 +98,7 @@ internal static class NatsMsgExtensions
                 topic: new RoutingKey(natsMsg.Subject),
                 traceParent: GetTraceParent(natsMsg.Headers),
                 traceState: GetTraceState(natsMsg.Headers),
+                type: GetCloudEventsType(natsMsg.Headers),
                 workflowId: GetWorkflowId(natsMsg.Headers))
             {
                 DataRef = GetDataRef(natsMsg.Headers), SpecVersion = GetSpecVersion(natsMsg.Headers)
@@ -290,6 +292,19 @@ internal static class NatsMsgExtensions
             && traceParent.Count == 1)
         {
             return new TraceState(traceParent.ToString());
+        }
+
+        return null;
+    }
+
+    private static CloudEventsType? GetCloudEventsType(NatsHeaders? headers)
+    {
+        if (headers != null
+            && headers.TryGetValue(HeadersName.Type, out var type)
+            && type.Count == 1
+            && !string.IsNullOrEmpty(type.ToString()))
+        {
+            return new CloudEventsType(type.ToString());
         }
 
         return null;

@@ -69,9 +69,14 @@ internal static class MessageHeaderExtensions
 
         if (messageHeader.TraceState != null)
         {
-            headers[HeadersName.TraceState] = messageHeader.TraceState.ToString();
+            headers[HeadersName.TraceState] = messageHeader.TraceState.Value;
         }
-        
+
+        if (!string.IsNullOrEmpty(messageHeader.Type?.Value))
+        {
+            headers[HeadersName.Type] = messageHeader.Type.Value;
+        }
+
         if (messageHeader.WorkflowId != null)
         {
             headers[HeadersName.WorkflowId] = messageHeader.WorkflowId.ToString();

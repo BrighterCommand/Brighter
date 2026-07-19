@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -42,6 +42,7 @@ public static class MessagingSystemExtensions
         MessagingSystem.InternalBus => "internal_bus",
         MessagingSystem.JMS => "jms",
         MessagingSystem.Kafka => "kafka",
+        MessagingSystem.Nats => "nats",
         MessagingSystem.PubSub => "gcp_pubsub",
         MessagingSystem.RabbitMQ => "rabbitmq",
         MessagingSystem.RocketMQ => "rocketmq",

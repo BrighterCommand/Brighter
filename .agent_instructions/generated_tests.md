@@ -1,6 +1,6 @@
 # Generated Tests
 
-Brighter uses a test generation tool to produce consistent test suites across all provider implementations for both **outbox** (MSSQL, PostgreSQL, MySQL, SQLite, DynamoDB, MongoDB, GCP Spanner/Firestore) and **messaging gateway** (RabbitMQ, Kafka, AWS SNS/SQS, Redis, RocketMQ, GCP Pub/Sub, PostgreSQL, MSSQL) tests. See [ADR 0035](../docs/adr/0035-generated-test.md) for the design rationale.
+Brighter uses a test generation tool to produce consistent test suites across all provider implementations for both **outbox** (MSSQL, PostgreSQL, MySQL, SQLite, DynamoDB, MongoDB, GCP Spanner/Firestore) and **messaging gateway** (RabbitMQ, Kafka, AWS SNS/SQS, NATS, Redis, RocketMQ, GCP Pub/Sub, PostgreSQL, MSSQL) tests. See [ADR 0035](../docs/adr/0035-generated-test.md) for the design rationale.
 
 ## Key Principle
 
@@ -60,6 +60,7 @@ tests/Paramore.Brighter.*.Tests/
 | `Paramore.Brighter.AWS.Tests` | | ✅ | SnsStandard, SnsFifo, SqsStandard, SqsFifo |
 | `Paramore.Brighter.AWS.V4.Tests` | | ✅ | SnsStandard, SnsFifo, SqsStandard, SqsFifo |
 | `Paramore.Brighter.Kafka.Tests` | | ✅ | Standard, PartitionKey |
+| `Paramore.Brighter.NATS.Tests` | | ✅ | single |
 | `Paramore.Brighter.Redis.Tests` | | ✅ | single |
 | `Paramore.Brighter.RocketMQ.Tests` | | ✅ | single |
 
