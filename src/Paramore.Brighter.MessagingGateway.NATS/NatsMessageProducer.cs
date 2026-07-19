@@ -33,7 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.NATS;
 public class NatsMessageProducer(
     INatsClient client,
     NatsPublication publication,
-    InstrumentationOptions instrumentations) : IAmAMessageProducerAsync , IAmAMessageProducerSync
+    InstrumentationOptions instrumentation) : IAmAMessageProducerAsync , IAmAMessageProducerSync
 {
     public Publication Publication => publication;
     public Activity? Span { get; set; }
@@ -41,7 +41,7 @@ public class NatsMessageProducer(
 
     public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
     {
-        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Nats, message, instrumentations);
+        BrighterTracer.WriteProducerEvent(Span, MessagingSystem.Nats, message, instrumentation);
         await client.PublishAsync(publication.Topic!.Value, 
             message.Body.ToByteArray(),
             headers: message.Header.ToNatsHeaders(),
@@ -49,14 +49,14 @@ public class NatsMessageProducer(
             cancellationToken: cancellationToken);
     }
 
-    public Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+    public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        await SendAsync(message, cancellationToken);
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        // TODO release managed resources here
+        return new ValueTask();
     }
 
     public void Dispose()

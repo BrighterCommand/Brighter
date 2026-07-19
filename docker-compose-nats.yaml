@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  nats:
+    image: nats:latest
+    hostname: nats-server
+    # -js enables JetStream; -sd sets the stream storage directory; -m enables HTTP monitoring
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    ports:
+      - "4222:4222"   # client connections (NATS_URL=nats://localhost:4222)
+      - "8222:8222"   # HTTP monitoring
+    volumes:
+      - nats_data:/data
+
+volumes:
+  nats_data:

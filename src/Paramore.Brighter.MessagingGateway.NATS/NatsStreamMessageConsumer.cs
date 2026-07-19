@@ -24,12 +24,15 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using NATS.Client.JetStream;
+using NATS.Client.JetStream.Models;
 using Paramore.Brighter.MessagingGateway.NATS.Extensions;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.NATS;
 
-public class NatsStreamMessageConsumer(IAsyncEnumerable<INatsJSMsg<byte[]>> messagesBuffer) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
+public class NatsStreamMessageConsumer(
+    INatsJSStream stream, 
+    IAsyncEnumerable<INatsJSMsg<byte[]>> messagesBuffer) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
@@ -55,9 +58,9 @@ public class NatsStreamMessageConsumer(IAsyncEnumerable<INatsJSMsg<byte[]>> mess
         return true;
     }
 
-    public Task PurgeAsync(CancellationToken cancellationToken = default)
+    public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
-        return Task.CompletedTask;
+        await stream.PurgeAsync(new StreamPurgeRequest(), cancellationToken);
     }
 
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
