@@ -257,6 +257,7 @@ namespace Paramore.Brighter
 
         private async Task DrainAsync()
         {
+            // External Action subscribers remain fire-and-forget; mediator confirmations use the awaited event.
             await foreach (var item in _channel.Reader.ReadAllAsync(CancellationToken.None))
             {
                 if (PublishFailurePredicate?.Invoke(item.Message) == true)

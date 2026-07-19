@@ -29,6 +29,8 @@ namespace Paramore.Brighter
 {
     internal interface ISupportPublishConfirmationAsync
     {
+        bool UseAsyncPublishConfirmation { get; }
+
         event Func<PublishConfirmationResult, Task> OnMessagePublishedAsync;
     }
 }

@@ -764,7 +764,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducerAsync producer, RequestContext requestContext)
         {
-            if (producer is ISupportPublishConfirmationAsync asyncConfirmingProducer)
+            if (producer is ISupportPublishConfirmationAsync { UseAsyncPublishConfirmation: true } asyncConfirmingProducer)
             {
                 asyncConfirmingProducer.OnMessagePublishedAsync += result =>
                     HandleAsyncPublishConfirmation(result, requestContext);
