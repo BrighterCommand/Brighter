@@ -10,6 +10,40 @@ below.
 
 ---
 
+## Corrected: RocketMQ does not fail FR-2's before-`D` arm — design round 7
+
+**Corrected 2026-07-20, after design review round 7 (single finding, score 64).** No identifier
+changed; the two-sided-FR-2 edits made while remediating requirements rounds 9–10 attributed the
+before-`D` (immediate-`MT_NONE`) lower-bound arm to the wrong witness for RocketMQ.
+
+The edits credited the before-`D` arm as "what makes GCP ×4 **and RocketMQ** fail as generated."
+Verified against source, that holds for GCP but not RocketMQ:
+
+- **GCP ×4 redelivers immediately** — `GcpPullMessageConsumer.Requeue` calls
+  `ModifyAckDeadline(..., 0)`; `GcpPubSubStreamMessageConsumer.Requeue` calls
+  `gcpStreamMessage.Reject()`. An immediate receive gets the message straight back, so GCP fails the
+  before-`D` arm. Correct as written.
+- **RocketMQ's `Requeue` is a no-op** (`RocketMessageConsumer.cs:179-189`) that neither acks nor
+  changes visibility; `ChangeInvisibleDuration` is commented out pending an upstream client fix. The
+  message was received under `invisibilityTimeout`, whose **default is 30 s**
+  (`RocketMqSubscription.cs:105`), and `Nack`'s own comment (`:103`) confirms redelivery is
+  timeout-governed. So after the no-op requeue the message stays *invisible*; an immediate receive
+  yields `MT_NONE` and RocketMQ **passes** the before-`D` arm. Its non-conformance (it ignores the
+  delay) shows, if the generated test catches it at all, on the **after-`D`** arm — the 30 s timeout
+  lands at FR-2's 30 s retry ceiling — and a timeout inside the retry window could even let RocketMQ
+  pass FR-2 by accident, which is a further reason its mechanism belongs in OOS-2.
+
+**Why it mattered.** The before-`D` arm was the hard-won FR-2 lower bound from requirements rounds
+9–10; getting its witness wrong undercut the very rationale for the arm. The arm itself stands — it
+is fully justified by GCP ×4 alone. Only RocketMQ's attribution was wrong. Corrected in both ADRs
+(0066, 0067) and, because the same imprecision was inherited into the approved requirements (AC-2
+even self-contradicted, scoping the arm to "ignores the delay **and redelivers at once**" while
+naming RocketMQ), in requirements FR-2/AC-2/FR-21 as well — a factual correction that changes no
+design decision, scope, or acceptance outcome (RocketMQ lands as a signed-off `Deferred` row either
+way). The `.requirements-approved` marker stands.
+
+---
+
 ## Corrected: "never ungated" is not "never generated" — requirements round 8
 
 **Corrected 2026-07-19, after requirements review round 8 (findings 1 and 3).** No identifier

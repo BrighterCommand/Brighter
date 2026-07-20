@@ -1,7 +1,7 @@
 ---
 id: 0067-conformance-rollout-and-deferral-governance
 title: "Universal Conformance Rollout Sequencing and Auditable-Deferral Governance"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-07-18
@@ -19,7 +19,7 @@ Date: 2026-07-18
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -83,11 +83,18 @@ property**, and the ledger below is keyed accordingly. Conformance state is unev
   (GCP ×4 and RocketMQ) — ahead of any generation run.** (Counted per configuration, which is the
   ledger's unit, it is five rows; per transport it is two.) The mechanism-agnostic FR-2 asserts a
   delayed requeue is not redelivered before the delay and is redelivered after it; neither GCP nor
-  RocketMQ does that today, and each is caught by AC-2's before-`D` (immediate-`MT_NONE`) arm. All four GCP configurations ignore the delay argument —
-  `GcpPullMessageConsumer.Requeue` calls `ModifyAckDeadline(..., 0)` and its XML doc states the
-  delay is "not used by Pub/Sub" (redelivery timing comes from the subscription's RetryPolicy) —
-  and `RocketMessageConsumer.Requeue` is a **no-op returning `true`**, its `ChangeInvisibleDuration`
-  call commented out pending an upstream RocketMQ C# client release. RocketMQ's is therefore blocked
+  RocketMQ does that today, but by **different** failure modes. **GCP ×4** redelivers immediately —
+  all four configurations ignore the delay argument: `GcpPullMessageConsumer.Requeue` calls
+  `ModifyAckDeadline(..., 0)` and its XML doc states the delay is "not used by Pub/Sub" (redelivery
+  timing comes from the subscription's RetryPolicy), and `GcpPubSubStreamMessageConsumer.Requeue`
+  calls `gcpStreamMessage.Reject()` — so GCP is caught by AC-2's before-`D` (immediate-`MT_NONE`)
+  arm. **RocketMQ** is a different case: `RocketMessageConsumer.Requeue` is a **no-op returning
+  `true`**, its `ChangeInvisibleDuration` call commented out pending an upstream RocketMQ C# client
+  release, so it neither acks nor changes visibility and redelivery is governed by the consumer's
+  invisibility timeout (default 30 s), unrelated to `D`. RocketMQ therefore **passes** the before-`D`
+  arm (the message stays invisible, so an immediate receive yields `MT_NONE`); its non-conformance,
+  if the generated test catches it at all, shows on the after-`D` arm, and a timeout inside the retry
+  window could even let it pass FR-2 by accident while still ignoring `D`. RocketMQ's fix is blocked
   on a third-party dependency and is a likely signed-off `Deferred` row rather than an in-spec
   `Fixed`; GCP's requires deciding whether subscription-RetryPolicy redelivery can satisfy FR-2 at
   all. Both are seeded into the ledger as known non-conformances rather than discovered late.

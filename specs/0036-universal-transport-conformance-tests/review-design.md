@@ -1,5 +1,159 @@
 # Review: design — 0036-universal-transport-conformance-tests
 
+## Round 8 (2026-07-20) — re-review of the round-7 remediation
+
+**Threshold**: 60
+**Verdict**: **PASS** — no findings at or above threshold 60. **Zero findings total.**
+
+Findings by round: 6 → 12 → 6 → 1 → **0**. First clean design round since the gating reversal.
+
+### Round 7 remediation check — CONFIRMED FIXED
+
+The single round-7 finding (score 64: FR-2's before-`D` arm mis-attributed to RocketMQ) is corrected
+consistently across all three documents and logged. Source re-verified:
+
+- `RocketMessageConsumer.cs:179-189` — `Requeue` no-op returning `true`, never acks, never changes
+  visibility (`ChangeInvisibleDuration` commented out); `RocketMqSubscription.cs:105` —
+  `InvisibilityTimeout` default `TimeSpan.FromSeconds(30)`; `GcpPullMessageConsumer.cs:297`
+  `ModifyAckDeadline(..., 0)`; `GcpPubSubStreamMessageConsumer.cs:224` `gcpStreamMessage.Reject()`.
+- **0066** (~302-324, 551-556), **0067** (~82-100), **requirements.md** FR-2/AC-2/FR-21, and
+  **decision-log.md** (new top entry) all now say GCP ×4 fails the before-`D` arm and RocketMQ
+  **passes** it (message held invisible), failing — if caught at all — on the after-`D` arm. The
+  earlier AC-2 self-contradiction ("ignores the delay **and redelivers at once**" while naming
+  RocketMQ) is gone. `grep` clean for any residual "RocketMQ fails the before-`D`/immediate arm".
+
+General pass surfaced nothing at or above threshold. Counts intact ("five configurations / two
+transports"; before-`D` arm justified by GCP ×4 alone); FR-2 still two-sided; all cross-references
+(`see FR-21` / `see above` / `see Context`) resolve. 0067:165 ("GCP ×4 and RocketMQ fail the
+mechanism-agnostic FR-2") is a mechanism-state statement (both genuinely ignore `D`), consistent with
+the corrected detection nuance — not a regression.
+
+### Summary (Round 8)
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 0 |
+| 0-49 (Low) | 0 |
+
+**Total findings**: 0
+**Findings at or above threshold (60)**: 0
+
+**Design is clean.** Next step is spec-owner approval (`/spec:approve design`), then `/spec:tasks`.
+
+---
+
+## Round 7 (2026-07-20) — round-6 remediation + this session's ADR sweeps (two-sided FR-2, counts, provider parity)
+
+**Threshold**: 60
+**Verdict**: NEEDS WORK — 1 finding at or above threshold 60. **No Critical, no High.**
+
+Findings by round: 6 → 12 → 6 → **1**. All six round-6 findings confirmed landed and none regressed.
+
+### Round 6 remediation check (all confirmed landed, verified against current ADR text)
+
+- **F1 (cleanup deletes "three gate branches"; there are four)** — **RESOLVED.** 0066 now says
+  "loses **four** branches (keyed on three gates)" (:329), "`SkipTest`'s four gate branches"
+  (:427), enumerates four line ranges (:432-433), "delete the four now-unreachable gate branches"
+  (:457). No residual "three branches".
+- **F2 (0067's 0066 reference still described flip-then-fix "in one change")** — **RESOLVED.**
+  0067:476 now says "retires the three gates + config keys only as a terminal cleanup after the four
+  legacy templates are deleted; this ADR sequences … around that lifecycle". Sequencing summary
+  0067:281 ends "→ terminal cleanup"; no residual "→ flip".
+- **F3 ("three of the four legacy templates generate" → four of four)** — **RESOLVED.** "all four"
+  throughout (0066:146, 0067:38-39 "16, 18, 3 and 3 configurations", 0067:400-402).
+- **F4 (placeholder-row `Unknown`-seeding contradiction, was 55)** — **RESOLVED.** 0067:244-245
+  now permits transient `Unknown` on placeholder rows, resolving only ever to `Deferred`.
+- **F5 (0066 Context undercounted AWS-family mis-declarations, was 45)** — **RESOLVED.** 0066:59-60
+  now "six of the eight AWS-family configurations".
+- **F6 (last `setupDeadLetterQueue` caller removal attributed to FR-19, was 40)** — **RESOLVED.**
+  0066:554-560 now attributes it to the `.liquid` edit in the FR-1 change, not FR-19's deletion.
+
+### This session's fresh ADR sweeps — verified
+
+- **Two-sided FR-2 / immediate-`MT_NONE` before-`D` arm** — reviewed; see the single finding below
+  (RocketMQ mis-attribution).
+- **Two transports / five configurations** (GCP ×4 + RocketMQ) — counting consistent (0067:82-84,
+  :158; requirements:480). ✓
+- **Negative-consequence reword** (0066:539-548) — internally consistent with AC-2 (the genuine
+  no-delay regression is caught by the before-`D` arm; the blind spot is a mechanism swap that
+  preserves the observable delay). ✓
+- **FR-20 provider parity** (both Reactor + Proactor interfaces, 0067:100-108) — consistent with
+  FR-20(2). ✓
+- **Hand-written test counts RMQ.Sync 31 / MQTT 19 / AzureServiceBus 15** (0067:104) — **verified
+  by `find` against `tests/Paramore.Brighter.{RMQ.Sync,MQTT,AzureServiceBus}.Tests/MessagingGateway/`.**
+  All three correct. ✓
+- **PostgresSQL ledger-token rule** (0067:227-234) — consistent with FR-21 row-identity. ✓
+
+**Reference verification**: GCP `ModifyAckDeadline(..., 0)` (Pull `:297`) and stream `Reject()`
+(`:224`) confirmed — both redeliver immediately; RocketMQ `Requeue` no-op returning `true`
+(`:179-189`), `ChangeInvisibleDuration` commented out (`:187`); `InvisibilityTimeout` default
+`TimeSpan.FromSeconds(30)` (`RocketMqSubscription.cs:105`).
+
+### 1. Two-sided FR-2 edit mis-attributes RocketMQ's failure to the before-`D` arm; source shows RocketMQ's no-op requeue passes it (Score: 64)
+
+The never-reviewed two-sided-FR-2 edits credit the immediate-`MT_NONE` (before-`D`) arm as "what
+makes GCP ×4 **and RocketMQ** fail as generated". Verified against source, this holds for GCP but
+**not** for RocketMQ.
+
+`RocketMessageConsumer.Requeue` (`:179-189`) is a no-op returning `true` — it does **not** ack and
+does **not** change invisibility (`ChangeInvisibleDuration` commented out, `:187`). The message was
+received under `invisibilityTimeout` (`:85`), whose default is **30 s**
+(`RocketMqSubscription.cs:105`), and `Nack`'s own comment (`:103`) states the model: *"invisibility
+timeout will expire and message will become available for redelivery."* So after a no-op `Requeue`
+the message stays invisible; an **immediate** re-receive yields `MT_NONE` — exactly what the
+before-`D` arm asserts, so that arm **passes** for RocketMQ. RocketMQ's non-conformance, if the
+generated test catches it at all, manifests on the **after-`D`** arm: redelivery is governed by the
+30 s invisibility timeout (unrelated to `D`), which lands right at FR-2's 30 s retry ceiling. By
+contrast GCP genuinely redelivers immediately (`ModifyAckDeadline(..., 0)`; stream `Reject()`), so
+the before-`D` arm correctly catches GCP ×4. **The lower-bound arm's justification is carried
+entirely by GCP; RocketMQ is the wrong witness for it.**
+
+Secondary concern: because RocketMQ's redelivery is timeout-governed (~30 s) rather than `D`-driven,
+whether it fails FR-2 at all is a race against the 30 s ceiling — it may even *pass* FR-2 by
+accident while still ignoring the delay, which would undercut its "known non-conformance" seeding.
+This is the same "redelivery timing set elsewhere" situation the ADRs already acknowledge for GCP's
+RetryPolicy, and it is a further argument for RocketMQ's OOS-2 mechanism test.
+
+This inaccuracy is **inherited from the approved requirements** — AC-2:600 ("GCP ×4 and RocketMQ are
+known to fail" the immediate arm) and FR-2:153 ("a gateway whose `Requeue` ignores the delay fails
+the immediate-`MT_NONE` arm") — and AC-2:599 even contradicts itself by scoping the arm to "a
+gateway that ignores the delay **and redelivers at once**", which RocketMQ does not. So it is an
+ADR-vs-source (and requirements-vs-source) inaccuracy, not an ADR-vs-requirements contradiction;
+fixing the ADRs alone would put them at odds with approved requirements, so both should be
+reconciled together. Scored Medium (not High) because RocketMQ lands as a signed-off `Deferred` row
+regardless of which arm nominally flags it.
+
+**Evidence**: `0066:309-311`; `0067:85-86`; contrast the precise wording at `0066:543-544` ("AC-2's
+before-`D` arm fails a gateway that redelivers **immediately**"). Source:
+`src/Paramore.Brighter.MessagingGateway.RocketMQ/RocketMessageConsumer.cs:179-189, :85, :103`;
+`RocketMqSubscription.cs:105`. Requirements: `AC-2:599-600`, `FR-2:153`.
+
+**Recommendation**: In both ADRs, restrict the before-`D`-arm attribution to GCP ×4 (immediate
+redelivery) and describe RocketMQ's failure as after-`D` / invisibility-timeout-governed — e.g.
+"the before-`D` arm catches GCP ×4 (immediate redelivery); RocketMQ's no-op requeue instead leaves
+redelivery to its 30 s invisibility timeout, unrelated to `D`, so it fails the after-`D` arm — or,
+if the timeout falls inside the retry window, may pass FR-2 by accident, which is itself why its
+mechanism belongs in OOS-2." Reconcile the same imprecision in requirements AC-2/FR-2. GCP's
+attribution is accurate and stays.
+
+---
+
+## Summary (Round 7)
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 1 |
+| 0-49 (Low) | 0 |
+
+**Total findings**: 1
+**Findings at or above threshold (60)**: 1
+
+---
+
 ## Round 6 (2026-07-19) — first pass since the gating reversal and the round-8 requirements sweep
 
 **Threshold**: 60

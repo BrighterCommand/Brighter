@@ -149,9 +149,11 @@ assertion about which mechanism the gateway used to achieve the delay.
 *Example:* send `M`; receive `M`; call `channel.Requeue(M, TimeSpan.FromSeconds(5))`; assert
 `Requeue` returns `true`; a receive attempted immediately (a single bounded receive, before the 5s
 elapses) yields `MT_NONE`; and a subsequent receive, within a bounded retry loop, after the delay
-yields a message whose body equals `M`'s. A gateway whose `Requeue` ignores the delay fails the
-immediate-`MT_NONE` arm — this is what makes the known non-conformances (FR-21) fail as generated
-rather than pass green.
+yields a message whose body equals `M`'s. A gateway whose `Requeue` ignores the delay by
+**redelivering immediately** fails the immediate-`MT_NONE` arm — this is what makes GCP ×4 (FR-21)
+fail as generated rather than pass green. (A gateway that ignores the delay without redelivering at
+once — e.g. one whose no-op requeue leaves the message held by a native invisibility timeout — is
+instead caught, if at all, on the after-delay arm; see FR-21 on RocketMQ.)
 
 **FR-4 — Reject with delivery error routes to the DLQ.**
 Generate a test proving that
@@ -488,9 +490,15 @@ FR-2**, ahead of any generation run, and are seeded as such:
   comes from the subscription's RetryPolicy, not the requeue delay. These are in-scope gateway defects
   under FR-13.
 - **RocketMQ** — `RocketMessageConsumer.Requeue` is a no-op returning `true`
-  (`ChangeInvisibleDuration` is commented out pending an upstream RocketMQ C# client fix). Because
-  the fix is blocked on a third party, this is expected to resolve as a signed-off `Deferred` ledger
-  row rather than an in-spec fix.
+  (`ChangeInvisibleDuration` is commented out pending an upstream RocketMQ C# client fix). Unlike
+  GCP, RocketMQ does **not** redeliver immediately: the no-op neither acks nor changes visibility,
+  so the message stays held by the consumer's native invisibility timeout (default 30 s), unrelated
+  to the requeue delay. It therefore **passes** AC-2's before-`D` arm (an immediate receive finds the
+  message still invisible and yields `MT_NONE`); its non-conformance is that it ignores the delay,
+  which the generated test catches — if at all — on the after-`D` arm, and a timeout falling inside
+  the retry window could even let it pass FR-2 by accident. Because the fix is blocked on a third
+  party regardless, RocketMQ is expected to resolve as a signed-off `Deferred` ledger row rather than
+  an in-spec fix.
 
 These are known *non-conformances*, not the only ones the rollout may surface; other cells resolve
 as configurations are generated and run. The exact cell vocabulary, the greppable in-code deferral
@@ -597,7 +605,10 @@ faces of that boundary — mechanism proofs and internal-mechanics proofs respec
   `MT_NONE`; *and when* a receive is attempted after the delay, within the bounded retry loop, *then*
   it yields a message with the same body — with no assertion about how the delay was achieved. The
   immediate-`MT_NONE` arm is the lower bound: without it a gateway that ignores the delay and
-  redelivers at once would pass. It is the assertion GCP ×4 and RocketMQ are known to fail (FR-21).
+  redelivers at once would pass. It is the assertion **GCP ×4** are known to fail (FR-21), because
+  those consumers redeliver immediately. RocketMQ also ignores the delay but does *not* redeliver at
+  once — its no-op requeue leaves the message held by a native invisibility timeout — so it passes
+  this arm and, if caught at all, fails on the after-delay arm; see FR-21.
 - **AC-4 (FR-4).** *Given* a channel with a dead-letter routing key, *when*
   `channel.Reject(message, DeliveryError)` is called, *then* the DLQ consumer receives the message
   with original-topic equal to the data topic and a rejection-reason entry present.

@@ -1,7 +1,7 @@
 ---
 id: 0066-conformance-test-provider-and-ungating
 title: "Conformance-Test Provider Interface Extension and Capability-Gate Retirement"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-07-18
@@ -19,7 +19,7 @@ Date: 2026-07-18
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -299,17 +299,29 @@ two reasons:
    `PostgresMessageConsumer`, the GCP consumers and RocketMQ's — a public runtime API change that
    **C-1 forbids this spec**.
 
-   Those last five matter for the rollout, not for this decision: the mechanism-agnostic FR-2 will
-   **fail on GCP ×4 and RocketMQ** as soon as the canonical templates generate, because neither
-   actually delays a requeue. That is
-   a genuine conformance gap — exactly what an ungated suite is meant to expose — and ADR 0067
-   sequences and governs it (RocketMQ's is blocked on an upstream dependency, so it is a likely
-   signed-off `Deferred` row rather than an in-spec `Fixed`).
+   Those last five matter for the rollout, not for this decision: neither GCP ×4 nor RocketMQ
+   actually delays a requeue, so both are genuine FR-2 conformance gaps — but they surface
+   **differently** once the canonical templates generate. **GCP ×4 redelivers
+   immediately** (`ModifyAckDeadline(..., 0)` for Pull/PullOrdering, `gcpStreamMessage.Reject()` for
+   Stream/StreamOrdering), which the before-`D` arm catches directly. **RocketMQ ignores the delay by
+   a different route**: its `Requeue` is a no-op that neither acks nor changes visibility, so
+   redelivery is left to the consumer's invisibility timeout (default 30 s,
+   `RocketMqSubscription.cs:105`) — a schedule unrelated to `D`. That means an immediate receive
+   yields `MT_NONE` because the message is still *invisible*, so RocketMQ **passes** the before-`D`
+   arm; its non-conformance, if the generated test catches it at all, shows up on the after-`D` arm
+   (the timeout lands at FR-2's 30 s retry ceiling), and a timeout inside the retry window could even
+   let RocketMQ pass FR-2 by accident while still ignoring `D` — a further reason its mechanism
+   belongs in OOS-2. Both are genuine conformance gaps; the difference is that the ungated suite
+   exposes GCP reliably (immediate redelivery) while RocketMQ's is timing-dependent, which is why the
+   OOS-2 mechanism follow-up is wanted alongside it. ADR 0067 sequences and governs them (RocketMQ's
+   is blocked on an upstream dependency, so it is a likely signed-off `Deferred` row rather than an
+   in-spec `Fixed`).
 
 So FR-2's generated test asserts the observable outcome only: *requeue with delay D — the message is
-not redelivered before D and is redelivered after D*. The before-D arm (a single immediate receive
-yielding `MT_NONE`, AC-2) is what makes GCP ×4 and RocketMQ fail as generated rather than pass green.
-That is uniform across every targeted configuration regardless of mechanism, and
+not redelivered before D and is redelivered after D*. The before-`D` arm (a single immediate receive
+yielding `MT_NONE`, AC-2) is what makes **GCP ×4** fail as generated rather than pass green, because
+those four consumers redeliver immediately; RocketMQ's no-op requeue is *not* caught by this arm (see
+above). That is uniform across every targeted configuration regardless of mechanism, and
 it is exactly what the Objective and Test Boundary asks for ("prove the observable outcome … not the
 internal mechanism"). The consequence is that FR-2 and the former FR-3 collapse into one canonical
 behaviour — which is correct, because once the mechanism is not asserted, they *were* the same test.
