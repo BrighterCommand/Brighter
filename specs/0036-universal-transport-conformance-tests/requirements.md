@@ -139,13 +139,19 @@ passing neither yields the FR-7 channel. For FR-1(5),
 `"originalTopic"` for Redis and SQS — the divergence is PascalCase versus camelCase per transport.
 
 **FR-2 — Requeue with delay redelivers after the delay.**
-Generate a test proving that when a channel requeues a received message with a non-zero delay, the
-message is redelivered after that delay. The test asserts the observable outcome only; it makes no
+Generate a test proving that when a channel requeues a received message with a non-zero delay `D`,
+the message is **not** redelivered before `D` elapses and **is** redelivered after it. Both arms are
+required: a gateway that ignores the delay and redelivers immediately still satisfies a
+"redelivered eventually" assertion, so the test MUST also prove the lower bound — a receive attempted
+before `D` elapses yields no message. The test asserts the observable outcome only; it makes no
 assertion about which mechanism the gateway used to achieve the delay.
 
 *Example:* send `M`; receive `M`; call `channel.Requeue(M, TimeSpan.FromSeconds(5))`; assert
-`Requeue` returns `true` and a subsequent receive, within a bounded retry loop, yields a message
-whose body equals `M`'s.
+`Requeue` returns `true`; a receive attempted immediately (a single bounded receive, before the 5s
+elapses) yields `MT_NONE`; and a subsequent receive, within a bounded retry loop, after the delay
+yields a message whose body equals `M`'s. A gateway whose `Requeue` ignores the delay fails the
+immediate-`MT_NONE` arm — this is what makes the known non-conformances (FR-21) fail as generated
+rather than pass green.
 
 **FR-4 — Reject with delivery error routes to the DLQ.**
 Generate a test proving that
@@ -296,7 +302,7 @@ while failing in another. This is the unit the target set is counted in, the uni
 emitted for, and the unit a conformance-ledger row (FR-21) records.
 
 Nine of the twelve are wired today, declaring **twenty** targeted gateway configurations between
-them: AWS, AWS.V4, GCP, Kafka, MSSQL, PostgreSQL, Redis, RMQ.Async, RocketMQ — AWS and AWS.V4 four
+them: AWS, AWS.V4, GCP, Kafka, MSSQL, PostgresSQL, Redis, RMQ.Async, RocketMQ — AWS and AWS.V4 four
 each, GCP four, Kafka two, RMQ.Async two, and one apiece for the rest, matching the twenty
 `*MessageGatewayProvider.cs` implementations. (Fourteen `test-configuration.json` files exist; five —
 DynamoDB, DynamoDB.V4, MongoDb, MySQL, Sqlite — declare only `Outbox`/`Outboxes` and have no gateway
@@ -341,9 +347,11 @@ Every canonical template MUST be produced in both a Reactor variant driving `IAm
 
 **FR-15 — An explicit zero delay does not delay.**
 Generate a canonical test asserting that `channel.Requeue(M, TimeSpan.Zero)` behaves as an immediate
-plain requeue: the message is receivable again without a delay window elapsing. This pins the lower
-boundary of the delay parameter so the positive-delay path (FR-2) is not conflated with the no-op
-path, and so `TimeSpan.Zero` is not special-cased into an error or an unbounded wait.
+plain requeue: the message is received on the **first** iteration of the plain-requeue bounded retry
+loop (NFR-2), and the elapsed time from the `Requeue` call to receipt is less than FR-2's positive
+delay (5s). This proves `TimeSpan.Zero` is not special-cased into an error or an unbounded wait, and
+is not treated as a positive delay. (FR-2's own before-`D` arm, not FR-15, is what prevents a
+delay-ignoring gateway from being mistaken for a conforming one.)
 
 FR-15 is scoped to the **explicit `TimeSpan.Zero` argument only**. The omitted and explicitly-null
 spellings both belong to FR-22: the signature is
@@ -379,10 +387,9 @@ provider pairs `requeueCount: 3` with `redrivePolicy: new RedrivePolicy(dlqName,
 
 That makes the template a pump test (excluded by OOS-5) or a native-mechanism test (excluded by
 NFR-3 and OOS-1). It is one of the four legacy gated templates of FR-10(3): never ungated, still
-generating for its sixteen configurations, and deleted with its thirty-two generated copies. Under the superseded "retire the gates first"
-sequencing it would have been ungated onto Kafka ×2, MSSQL and PostgreSQL — none of which have a
-delivery counter — producing four failures that FR-13 would have misclassified as gateway defects.
-FR-10(3) removes that hazard by construction.
+generating for its sixteen configurations, and deleted with its thirty-two generated copies. FR-10(2)'s
+closed-list guarantee ensures it never reaches a configuration with no delivery counter, so it cannot
+produce a false failure that FR-13 would misclassify as a gateway defect.
 
 Note this template is the **only** current caller of `CreateSubscription`'s `bool
 setupDeadLetterQueue`; deleting it does not remove the obligation to drop that parameter, which
@@ -395,18 +402,23 @@ templates are produced for it like any other transport. For each:
 
 1. add a `test-configuration.json` declaring its gateway configuration(s) under `MessagingGateway`
    or `MessagingGateways`;
-2. implement `IAmAMessageGatewayReactorProvider` and/or `IAmAMessageGatewayProactorProvider` against
-   the FR-1 surface — including the routing-key parameters of FR-1(1), the invalid-channel read of
-   FR-1(3) and the metadata key names of FR-1(5);
+2. implement **both** `IAmAMessageGatewayReactorProvider` and `IAmAMessageGatewayProactorProvider`
+   against the FR-1 surface — including the routing-key parameters of FR-1(1), the invalid-channel
+   read of FR-1(3) and the metadata key names of FR-1(5). Both variants are required because FR-14
+   mandates a Reactor and a Proactor variant of every canonical template, and FR-21 records a
+   configuration as conforming only when both variants pass; a single-variant onboarding could never
+   resolve to conforming. All three FR-20 transports have both a sync and an async
+   consumer/producer surface, so this asks for nothing they cannot supply;
 3. supply the CI test infrastructure the transport's generated suite needs in order to **execute
    against a real broker** — a container, an emulator, or a live service instance. The acceptance
    condition is that the canonical tests *run* against that broker, not merely that they compile:
    a configuration whose suite only compiles is not conformant and MUST NOT be recorded as passing
    (FR-21).
 
-Existing hand-written gateway coverage these onboardings build on: RMQ.Sync 31 tests, MQTT 18,
-AzureServiceBus 8. MQTT has its own dead-letter ADR (`0043-mqtt-dlq-brighter-managed`); MQTT and
-RMQ.Sync both implement `IAmAChannelFactoryWithScheduler`.
+Existing hand-written gateway coverage these onboardings build on, counted as test files under
+`tests/Paramore.Brighter.*.Tests/MessagingGateway/`: RMQ.Sync 31, MQTT 19, AzureServiceBus 15. MQTT
+has its own dead-letter ADR (`0043-mqtt-dlq-brighter-managed`); MQTT and RMQ.Sync both implement
+`IAmAChannelFactoryWithScheduler`.
 
 An onboarding that cannot be completed within this spec is governed by FR-13's deferral rule: a
 named, linked follow-up issue with explicit maintainer sign-off, recorded in the conformance ledger.
@@ -428,12 +440,14 @@ FR-10/FR-11 gate-retirement change.
   FR-20. A project-level row cannot express "SQS Standard conforms to FR-5 but SNS FIFO does not",
   which is why the granularity is per configuration.
 
-  **Naming rule for singular sections.** The three examples above come from `MessagingGateways`
-  (plural) sections, where the configuration name is the JSON key. Four wired configurations —
-  **Redis, MSSQL, PostgreSQL, RocketMQ** — instead use a singular `MessagingGateway` section, which
-  carries no name key. Such a configuration is named by its `CollectionName`, so the row reads
-  e.g. `Redis / RedisMessagingGateway`. Without this rule four of the twenty rows have no
-  constructible identifier.
+  **Row identity.** A row's `project` token is the **test-project** name from FR-13's mapping table
+  (e.g. `PostgresSQL`, not the `Postgres` gateway-project name, and not the product spelling
+  `PostgreSQL`), because ADR 0067's CI audit compares that token as a string against in-code `Skip`
+  markers. The three examples above come from `MessagingGateways` (plural) sections, where the
+  configuration name is the JSON key. Four wired configurations — **Redis, MSSQL, PostgresSQL,
+  RocketMQ** — instead use a singular `MessagingGateway` section, which carries no name key. Such a
+  configuration is named by its `CollectionName`, so the row reads e.g. `Redis / RedisMessagingGateway`.
+  Without this rule four of the twenty rows have no constructible identifier.
 
   **Placeholder rows for un-onboarded transports.** A transport whose FR-20 onboarding is deferred
   declares no `test-configuration.json`, therefore declares no configuration, therefore would
@@ -441,8 +455,12 @@ FR-10/FR-11 gate-retirement change.
   transport the spec expects to defer. Every one of the twelve targeted transports MUST therefore
   occupy the ledger. A transport that has not yet declared a configuration takes a single
   **placeholder row** named `<Project> / (not yet declared)` — e.g.
-  `AzureServiceBus / (not yet declared)` — whose cells may only record a signed-off deferral. The
-  placeholder is replaced by per-configuration rows when its configuration lands. The completeness
+  `AzureServiceBus / (not yet declared)`. A placeholder cell is seeded like any other cell and may be
+  provisionally unresolved while the fix phase runs, but it may only ever *resolve* to a signed-off
+  deferral — never to conforming or fixed — because the transport has no generated suite to pass. At
+  the point the FR-10(4)/FR-11 gate-retirement change is proposed for merge, every placeholder cell
+  must read as a signed-off deferral. The placeholder is replaced by per-configuration rows when its
+  configuration lands. The completeness
   gate is evaluated over **all twelve targeted transports**, not over whichever rows happen to exist.
 - **One column per canonical behaviour** — FR-2, FR-4 … FR-9, FR-15, FR-16, FR-17, FR-22.
 - **Each cell records** that the behaviour conforms as generated, conforms via an in-spec gateway
@@ -459,9 +477,25 @@ FR-10/FR-11 gate-retirement change.
   (FR-20(3)).
 
 Non-conformances identified before the rollout begins are seeded into the ledger rather than
-discovered late. The exact cell vocabulary, the greppable in-code deferral marker that
-cross-checks the ledger, and the CI audit that enforces the two against each other are design
-decisions recorded in ADR 0067.
+discovered late. **Five configurations across two transports are already known not to conform to
+FR-2**, ahead of any generation run, and are seeded as such:
+
+- **GCP ×4** (`Pull`, `PullOrdering`, `Stream`, `StreamOrdering`) — all four Pub/Sub consumers'
+  `Requeue` ignores the delay argument: `GcpPullMessageConsumer.Requeue` calls
+  `ModifyAckDeadline(..., 0)` (its XML doc reads "not used by Pub/Sub"), and
+  `GcpPubSubStreamMessageConsumer.Requeue` calls `Reject()` on the stream message; neither applies the
+  delay, so the message is redelivered immediately and fails AC-2's before-`D` arm. Redelivery timing
+  comes from the subscription's RetryPolicy, not the requeue delay. These are in-scope gateway defects
+  under FR-13.
+- **RocketMQ** — `RocketMessageConsumer.Requeue` is a no-op returning `true`
+  (`ChangeInvisibleDuration` is commented out pending an upstream RocketMQ C# client fix). Because
+  the fix is blocked on a third party, this is expected to resolve as a signed-off `Deferred` ledger
+  row rather than an in-spec fix.
+
+These are known *non-conformances*, not the only ones the rollout may surface; other cells resolve
+as configurations are generated and run. The exact cell vocabulary, the greppable in-code deferral
+marker that cross-checks the ledger, and the CI audit that enforces the two against each other are
+design decisions recorded in ADR 0067.
 
 ### Non-functional Requirements
 
@@ -470,7 +504,17 @@ decisions recorded in ADR 0067.
   `When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel`,
   `When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log`.
 - **NFR-2 (Determinism).** Timing-dependent tests MUST use bounded receive-retry loops rather than
-  a single receive after a fixed sleep, so broker propagation delays do not cause false failures.
+  a single receive after a fixed sleep, so broker propagation delays do not cause false failures. The
+  bound is a single wall-clock ceiling with a poll interval, stated once here and cited by FR-2,
+  FR-9, FR-15, FR-16 and FR-22: **an arrival retry loop polls at a 500 ms interval up to a 30 s
+  ceiling**, returning as soon as a message arrives and failing if the ceiling is reached with none.
+  The **positive delay** used by the FR-2 and FR-9 tests is **5 s**, comfortably inside the 30 s
+  ceiling; the **lower-bound / negative** assertions (a receive that must find nothing — FR-2's
+  before-`D` arm, FR-9's immediate receive, and the "does not appear" checks) are the exemption of
+  AC-20: a single bounded receive with the transport's default receive timeout, performed before the
+  relevant window, not a retry loop. FR-15's zero-delay check is **not** in this set — it is a
+  positive first-iteration arrival that stays inside the retry loop. (These figures are a determinism
+  floor for CI, not a behavioural contract; a maintainer may widen the ceiling for a slow broker.)
 - **NFR-3 (No mechanism assertions).** The suite MUST NOT assert *how* a behaviour is achieved —
   native versus Brighter fallback. It asserts only that the observable behaviour holds, and only
   against the channel and producer surfaces. The related prohibition on reintroducing capability
@@ -498,16 +542,39 @@ decisions recorded in ADR 0067.
 
 ### Out of Scope
 
+**The scope boundary in one line: this spec's generated suite proves that each transport conforms to
+the behaviours *Brighter* guarantees universally. Proving that a transport behaves as *its own
+implementer* intends — that a transport-specific mechanism works, or that transport-internal
+machinery is correct — remains bespoke, hand-written by that transport's implementer, and out of
+scope here.** The generated tests answer "does this gateway honour Brighter's universal contract?";
+they deliberately do not answer "does this gateway do everything its implementer meant it to?". That
+second question is real and worth testing, but it is per-transport work the implementer owns, not
+something this generator can or should produce from a shared template. OOS-2 and OOS-3 are the two
+faces of that boundary — mechanism proofs and internal-mechanics proofs respectively.
+
 - **OOS-1.** Re-introducing any `HasNative*` capability flag into the suite. A native/non-native
   distinction in these conformance tests is explicitly rejected: we test *supported*, not *how*.
-- **OOS-2.** Supplementary per-transport tests that prove a *specific mechanism* works — native
-  redrive policies, native DLX, native delay columns, and scheduler delegation for the six gateways
-  that implement `IAmAChannelFactoryWithScheduler`. These are candidate follow-up work, recorded as
-  a task in tasks.md rather than as an obligation of this spec.
-- **OOS-3.** Transport-*internal* mechanics: offset commit and sweep, header byte round-tripping,
-  partition-key handling, fatal/non-fatal error escalation, producer-not-persisted synthesis,
-  requeue-producer disposal, and factory/subscription wiring unit tests. Routing-key plumbing is
-  proven transitively by the end-to-end canonical tests; the remainder is transport-specific.
+- **OOS-2.** Implementer-owned proofs that a *specific mechanism* works — native redrive policies,
+  native DLX, native delay columns, the *provisioning* substitution of Brighter's generic DLQ for an
+  absent native one (distinct from FR-6's in-scope reject-reason routing to whatever DLQ exists),
+  scheduler delegation for the six gateways that implement `IAmAChannelFactoryWithScheduler`, and the
+  like.
+  These assert *how* a transport achieves a behaviour, so by NFR-3 they can never be part of the
+  mechanism-agnostic generated suite; they are the transport implementer's bespoke tests, and where
+  this spec surfaces a candidate one it is recorded as a follow-up task in tasks.md rather than as an
+  obligation here. For the scheduler-delegation subset, injecting an `InMemoryScheduler` backed by a
+  `FakeTimeProvider` (which the scheduler already supports — it schedules via
+  `timeProvider.CreateTimer`) gives a deterministic, non-flaky way to assert the delay by advancing
+  the fake clock past it. That technique is deliberately confined to OOS-2: it controls only the six
+  scheduler-delegating configurations, not the native-delay ones (AWS SQS visibility, Postgres), and
+  it asserts the *mechanism*, so it cannot serve the mechanism-agnostic universal FR-2, which uses
+  the real-broker before-`D`/after-`D` arms instead.
+- **OOS-3.** Implementer-owned proofs of transport-*internal* mechanics: offset commit and sweep,
+  header byte round-tripping, partition-key handling, fatal/non-fatal error escalation,
+  producer-not-persisted synthesis, requeue-producer disposal, and factory/subscription wiring unit
+  tests. These prove the transport behaves as its implementer intends, not as Brighter universally
+  requires, so they stay bespoke. Routing-key plumbing is the one item proven transitively by the
+  end-to-end canonical tests; the remainder is transport-specific and out of scope.
 - **OOS-4.** Sibling defects #4238 (single `Outbox` async-only) and #4239 (`CollectionName` ignored
   by sync outbox templates).
 - **OOS-5.** Driving any canonical behaviour through the Reactor or Proactor message pump.
@@ -525,9 +592,12 @@ decisions recorded in ADR 0067.
   `true` and so is not found by searching for the parameter name (FR-1(6)). *Then* every affected
   project compiles after regeneration.
 - **AC-2 (FR-2).** *Given* a received message on **any** target configuration, *when*
-  `channel.Requeue(message, 5s)` is called, *then* `Requeue` returns `true` and a later receive
-  within the bounded retry loop yields a message with the same body — with no assertion about how
-  the delay was achieved.
+  `channel.Requeue(message, 5s)` is called, *then* `Requeue` returns `true`; *and when* a receive is
+  attempted immediately — a single bounded receive, before the 5s elapses — *then* it yields
+  `MT_NONE`; *and when* a receive is attempted after the delay, within the bounded retry loop, *then*
+  it yields a message with the same body — with no assertion about how the delay was achieved. The
+  immediate-`MT_NONE` arm is the lower bound: without it a gateway that ignores the delay and
+  redelivers at once would pass. It is the assertion GCP ×4 and RocketMQ are known to fail (FR-21).
 - **AC-4 (FR-4).** *Given* a channel with a dead-letter routing key, *when*
   `channel.Reject(message, DeliveryError)` is called, *then* the DLQ consumer receives the message
   with original-topic equal to the data topic and a rejection-reason entry present.
@@ -589,16 +659,18 @@ decisions recorded in ADR 0067.
   suppressed by a capability gate**, fails this criterion; a skip carrying both satisfies it. The
   suppression of the four legacy templates (FR-10(3)) is not a violation — they are not canonical
   tests and never become any configuration's coverage. No silent skip, no unaudited deferral.
-- **AC-14 (FR-14).** *Given* the generated output, *when* a configuration supporting both sync and
-  async channels is generated, *then* each canonical behaviour appears in both a Reactor variant
-  driving `IAmAChannelSync` and a Proactor variant driving `IAmAChannelAsync`, and neither drives a
-  pump.
+- **AC-14 (FR-14).** *Given* the generated output, *when* a configuration is generated, *then* each
+  canonical behaviour appears in both a Reactor variant driving `IAmAChannelSync` and a Proactor
+  variant driving `IAmAChannelAsync`, and neither drives a pump. Every targeted configuration has
+  both channel surfaces (FR-20(2)), so the parity is unconditional — there is no configuration for
+  which only one variant is generated.
 - **AC-15 (NFR-1).** *Given* the generated files, *when* their names are inspected, *then* they
   match the established `When_...` conventions.
 - **AC-16 (FR-15).** *Given* a received message, *when* `channel.Requeue(message, TimeSpan.Zero)` is
-  called, *then* `Requeue` returns `true` and the message is receivable again within the
-  plain-requeue bounded retry loop, with no delay window elapsing. The `Requeue(message, null)` and
-  `Requeue(message)` spellings are the same call and are asserted by AC-25, not here.
+  called, *then* `Requeue` returns `true` and the message is received on the **first** iteration of
+  the plain-requeue bounded retry loop, with elapsed time from the `Requeue` call to receipt less
+  than FR-2's positive delay (5s). The `Requeue(message, null)` and `Requeue(message)` spellings are
+  the same call and are asserted by AC-25, not here.
 - **AC-17 (FR-16).** *Given* a received message `M`, *when* `channel.Nack(M)` or `NackAsync(M)` is
   called, *then* a subsequent receive within the bounded retry loop yields a message with `M`'s id
   and body; and, given a second queued message `M2`, after nacking `M` the redelivered `M` is
@@ -611,13 +683,15 @@ decisions recorded in ADR 0067.
   inspected, *then* every assertion that a message **arrives** sits inside a bounded receive-retry
   loop, and none takes the form of a fixed sleep followed by a single unretried receive.
 
-  The exemption is per *assertion*, not per AC — several ACs contain one of each. Exempt are only:
-  AC-5's "does not appear on any DLQ", AC-9's "a receive attempted immediately yields `MT_NONE`",
-  AC-16's "no delay window elapsing", and AC-18's "does not appear on the invalid channel". Each of
-  those uses a single bounded receive after the stated window, because retrying until arrival would
-  invert them. The **positive** half of the same criteria — AC-5's and AC-18's DLQ/invalid-channel
-  arrivals, AC-9's receive after the delay, AC-16's "receivable again within the plain-requeue
-  bounded retry loop" — stays inside a bounded retry loop like every other arrival.
+  The exemption is per *assertion*, not per AC — several ACs contain one of each. Exempt are only
+  the assertions that a message is **not** present: AC-2's "a receive attempted before the delay
+  yields `MT_NONE`", AC-5's "does not appear on any DLQ", AC-9's "a receive attempted immediately
+  yields `MT_NONE`", and AC-18's "does not appear on the invalid channel". Each is a single bounded
+  receive checking absence — before a delay elapses (AC-2, AC-9) or on a channel that must stay empty
+  (AC-5, AC-18) — because retrying until arrival would invert the assertion. The **positive** half of
+  the same criteria — AC-2's and AC-9's receive after the delay, AC-5's and AC-18's
+  DLQ/invalid-channel arrivals — stays inside a bounded retry loop like every other arrival, as does
+  AC-16's first-iteration receipt.
 - **AC-21 (NFR-3).** *Given* the generated messaging-gateway templates, *when* their sources are
   inspected, *then* no assertion references a scheduler, a native-delay API, a redrive policy, a
   DLX, or any other transport-specific mechanism — every assertion is on an observable outcome
@@ -633,21 +707,16 @@ decisions recorded in ADR 0067.
   others. It is never *ungated*; it does not stop generating where it already does.
 - **AC-23 (FR-20).** *Given* the twelve gateway-project → test-project pairs in FR-13's mapping
   table, *when* each pair's test project is inspected, *then* it contains a `test-configuration.json`
-  declaring a `MessagingGateway` or `MessagingGateways` section and at least one
-  `*MessageGatewayProvider.cs` implementing the post-FR-1 surface; and *when* generation runs,
+  declaring a `MessagingGateway` or `MessagingGateways` section and a
+  `*MessageGatewayProvider.cs` implementing **both** the Reactor and Proactor provider interfaces of
+  the post-FR-1 surface (FR-20(2)) — as all twenty wired providers already do; and *when* generation
+  runs,
   *then* AzureServiceBus, MQTT and RMQ.Sync each emit the canonical templates for every
   configuration they declare; and *when* those templates are executed, *then* they run against a
   broker — container, emulator, or live service — rather than only compiling. Any pair not meeting
   this has a named, linked, signed-off deferral issue and a conformance-ledger row (FR-21) — never
   silent absence from the target set. Inability to provide CI infrastructure is a valid ground for
   that deferral; silently omitting the transport is not.
-- **AC-25 (FR-22).** *Given* a received message on any target configuration, *when* the canonical
-  plain-requeue template calls `channel.Requeue(message)` with no delay argument — equivalently
-  `Requeue(message, null)`, the parameter being optional and null-defaulted — *then* `Requeue`
-  returns `true` and a subsequent receive within the bounded retry loop yields a message with the
-  same body. This criterion is satisfied by the canonical template only; the legacy
-  `When_requeuing_a_failed_message_should_receive_message_again` template is never ungated and is
-  then deleted (FR-10(3)).
 - **AC-24 (FR-21).** *Given* the spec directory, *when*
   `specs/0036-universal-transport-conformance-tests/conformance-status.md` is inspected, *then* it
   contains one row per targeted gateway configuration — identified as `project / configuration`,
@@ -655,14 +724,24 @@ decisions recorded in ADR 0067.
   column per canonical behaviour (FR-2, FR-4 … FR-9, FR-15, FR-16, FR-17, FR-22).
 
   *Then* **all twelve** targeted transports are represented: a transport that declares no
-  configuration yet occupies a single placeholder row `<Project> / (not yet declared)` whose cells
-  all read as a signed-off deferral. The completeness check counts transports, not rows, so a
-  transport contributing no rows fails it rather than passing vacuously.
+  configuration yet occupies a single placeholder row `<Project> / (not yet declared)`. A
+  placeholder cell may be provisionally unresolved while the fix phase runs, but may only ever
+  resolve to a signed-off deferral — never to conforming or fixed. **At the point the
+  FR-10(4)/FR-11 gate-retirement change is proposed for merge**, every placeholder cell reads as a
+  signed-off deferral. The completeness check counts transports, not rows, so a transport
+  contributing no rows fails it rather than passing vacuously.
 
   And *when* the **FR-10(4)**/FR-11 gate-retirement change is proposed for merge, *then* no cell is
   unresolved: each reads as conforming, fixed with a linked PR or commit, or deferred to a named,
   linked, signed-off issue. A configuration is recorded as conforming for a behaviour only where both
   the Reactor and Proactor variants passed against a running broker.
+- **AC-25 (FR-22).** *Given* a received message on any target configuration, *when* the canonical
+  plain-requeue template calls `channel.Requeue(message)` with no delay argument — equivalently
+  `Requeue(message, null)`, the parameter being optional and null-defaulted — *then* `Requeue`
+  returns `true` and a subsequent receive within the bounded retry loop yields a message with the
+  same body. This criterion is satisfied by the canonical template only; the legacy
+  `When_requeuing_a_failed_message_should_receive_message_again` template is never ungated and is
+  then deleted (FR-10(3)).
 
 ## Coverage Reconciliation (Kafka reference surface)
 

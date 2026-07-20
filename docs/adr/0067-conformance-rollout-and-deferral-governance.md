@@ -79,9 +79,11 @@ property**, and the ledger below is keyed accordingly. Conformance state is unev
   routing strategy (`0047-message-rejection-routing-strategy` / `0045-provide-dlq-where-missing`),
   not a Brighter-managed-DLQ decision of its own; its fix may therefore be larger than the
   DLQ-ADR transports' and is treated under the size/risk boundary accordingly.
-- **Two known FR-2 non-conformances are already identified**, ahead of any generation run. The
-  mechanism-agnostic FR-2 asserts a delayed requeue is redelivered after the delay; neither GCP nor
-  RocketMQ does that today. All four GCP configurations ignore the delay argument —
+- **Known FR-2 non-conformances are already identified across two transports — five configurations
+  (GCP ×4 and RocketMQ) — ahead of any generation run.** (Counted per configuration, which is the
+  ledger's unit, it is five rows; per transport it is two.) The mechanism-agnostic FR-2 asserts a
+  delayed requeue is not redelivered before the delay and is redelivered after it; neither GCP nor
+  RocketMQ does that today, and each is caught by AC-2's before-`D` (immediate-`MT_NONE`) arm. All four GCP configurations ignore the delay argument —
   `GcpPullMessageConsumer.Requeue` calls `ModifyAckDeadline(..., 0)` and its XML doc states the
   delay is "not used by Pub/Sub" (redelivery timing comes from the subscription's RetryPolicy) —
   and `RocketMessageConsumer.Requeue` is a **no-op returning `true`**, its `ChangeInvisibleDuration`
@@ -96,10 +98,12 @@ property**, and the ledger below is keyed accordingly. Conformance state is unev
 
   **AzureServiceBus, MQTT and RMQ.Sync** have messaging gateways and test projects but **no generator
   wiring at all** — no `test-configuration.json`, no provider — so they generate nothing today.
-  FR-20 brings all three into the generator: a config declaring their gateway configuration(s), one
-  or both provider implementations against the FR-1 surface, and CI infrastructure. They are not
-  starting from zero — RMQ.Sync carries 31 hand-written gateway tests, MQTT 18, AzureServiceBus 8 —
-  and both MQTT and RMQ.Sync implement `IAmAChannelFactoryWithScheduler`, while MQTT has its own
+  FR-20 brings all three into the generator: a config declaring their gateway configuration(s), a
+  provider implementing both the Reactor and Proactor interfaces of the FR-1 surface, and CI
+  infrastructure. They are not starting from zero — counted as test files under
+  `tests/Paramore.Brighter.*.Tests/MessagingGateway/`, RMQ.Sync carries 31, MQTT 19,
+  AzureServiceBus 15 — and both MQTT and RMQ.Sync implement `IAmAChannelFactoryWithScheduler`, while
+  MQTT has its own
   dead-letter ADR (`0043-mqtt-dlq-brighter-managed`). This is the largest new work in the rollout and
   sequences last.
 
@@ -222,10 +226,11 @@ against the ledger so neither can drift from the other.
 
   **Naming a singular-section configuration.** The three examples above come from `MessagingGateways`
   (plural) sections, where the configuration name is the JSON key. Four wired configurations — Redis,
-  MSSQL, PostgreSQL and RocketMQ — use a singular `MessagingGateway` section carrying no name key;
+  MSSQL, PostgresSQL and RocketMQ — use a singular `MessagingGateway` section carrying no name key;
   such a configuration is named by its `CollectionName`, giving rows like
-  `Redis / RedisMessagingGateway`. Without this rule four of the twenty rows have no constructible
-  identifier.
+  `Redis / RedisMessagingGateway`. The row's project token is the test-project name (`PostgresSQL`,
+  not the `Postgres` gateway project), which the CI audit compares as a string. Without this rule
+  four of the twenty rows have no constructible identifier.
 
   **Placeholder rows, so a deferred onboarding cannot hide.** A transport whose FR-20 onboarding is
   deferred declares no `test-configuration.json`, therefore no configuration, therefore no row — and

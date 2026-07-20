@@ -135,8 +135,9 @@ described what was *being tested* and were treated as what a transport *owed*; a
 `test-configuration.json` describes what the generator *covers* and was likewise treated as what
 needs covering. Absence of wiring is a gap to close, not a scope boundary.
 
-The three are not bare gateways: RMQ.Sync carries 31 hand-written gateway tests, MQTT 18,
-AzureServiceBus 8. MQTT has its own dead-letter ADR (`0043-mqtt-dlq-brighter-managed`), and both
+The three are not bare gateways: counted as test files under
+`tests/Paramore.Brighter.*.Tests/MessagingGateway/`, RMQ.Sync carries 31, MQTT 19,
+AzureServiceBus 15. MQTT has its own dead-letter ADR (`0043-mqtt-dlq-brighter-managed`), and both
 MQTT and RMQ.Sync implement `IAmAChannelFactoryWithScheduler`.
 
 **Consequence accepted.** Onboarding needs a config, provider implementations and CI infrastructure

@@ -1,5 +1,337 @@
 # Review: requirements — 0036-universal-transport-conformance-tests
 
+## Round 10 (2026-07-20) — review of round-9 remediation + the OOS reframing
+
+**Threshold**: 60
+**Verdict**: PASS — **0 findings at or above threshold 60.** First clean requirements round of the
+series (findings by round 4→10: 11 → 8 → 5 → 11 → 8 → 9 → **2**, and both round-10 findings are
+below threshold). No Critical for two rounds since the one round-9 raised and closed.
+
+The round-9 remediation was verified against source and holds up: AC-2's before-`D` arm is a single
+unretried receive listed in AC-20's exemption list, FR-2 and both ADRs are two-sided, NFR-2's bound
+is stated once (500 ms / 30 s / 5 s) and consistent, FR-15 is assertable and no longer claims to
+"pin the lower boundary", FR-21 seeds the five known non-conformances, FR-20(2)/AC-23 require both
+provider interfaces with no "and/or" surviving, test counts are 31/19/15, the `PostgresSQL` token is
+normalised, AC-24 precedes AC-25, 6+36+6+32 = 80, and every live FR maps to ≥1 AC.
+
+Two below-threshold findings, **both remediated immediately after this round**:
+
+### F1. FR-21 mis-cited `GcpPubSubStreamMessageConsumer.Requeue`'s mechanism (Score: 58) — FIXED
+
+The F4 seeding text claimed both GCP consumers call `ModifyAckDeadline(..., 0)` with the doc "not
+used by Pub/Sub". Verified in source: only `GcpPullMessageConsumer.Requeue` does that (`:297`, doc
+`:281`); `GcpPubSubStreamMessageConsumer.Requeue` calls `gcpStreamMessage.Reject()` (`:224`), doc
+"may not be strictly honored by Pub/Sub" (`:215`). The conclusion (all four GCP ignore the delay ⇒
+fail AC-2) was unaffected, and the ADRs already cite only Pull — so requirements.md was inconsistent
+with its own ADRs in fresh round-9 text. **Corrected**: the GCP bullet now cites Pull's
+`ModifyAckDeadline(..., 0)` and Stream's `Reject()` separately, matching source and the ADRs.
+
+### F2. OOS-2's "fallback from a native DLQ to Brighter's generic one" collided lexically with FR-6's in-scope fallback ladder (Score: 45) — FIXED
+
+FR-6 is the "Fallback ladder" (reject-reason routing, in scope); OOS-2's DLQ-provisioning "fallback"
+reused the word. The distinction was recoverable from context but the collision was avoidable.
+**Corrected**: OOS-2 now reads "the *provisioning* substitution of Brighter's generic DLQ for an
+absent native one (distinct from FR-6's in-scope reject-reason routing to whatever DLQ exists)".
+
+**Summary**
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 1 |
+| 0-49 (Low) | 1 |
+
+**Total findings**: 2 · **At or above threshold (60)**: 0 · both fixed post-round.
+
+---
+
+## Round 9 (2026-07-19) — review of round-8 remediation
+
+**Threshold**: 60
+**Verdict**: NEEDS WORK — 6 findings at or above threshold 60. **One Critical** (F1), ending three
+rounds clean at 90+.
+
+> **All nine findings remediated (2026-07-19).** F2/F5/F6/F7/F8/F9 applied first. F1/F3/F4 held for a
+> spec-owner ruling on FR-2's shape; the owner chose **FR-2 stays universal-by-wallclock with an
+> AC-9-style lower-bound arm**, and `FakeTimeProvider` was routed to OOS-2. The three then landed as
+> one change: AC-2 gained an immediate-`MT_NONE` before-`D` arm (added to AC-20's exemption list);
+> NFR-2's bound was quantified (500 ms poll / 30 s ceiling, 5 s positive delay); FR-15's unassertable
+> "no window elapsing" clause and its false "pins the lower boundary" claim were replaced with a
+> concrete first-iteration/elapsed-<5 s assertion; FR-21 now names the five known FR-2
+> non-conformances (GCP ×4 + RocketMQ); ADR 0067's "two vs five" was reconciled (two transports /
+> five configurations); ADRs 0066/0067 swept for the two-sided FR-2. Independently re-verified.
+> Round 10 is owed on this remediation before approval.
+
+Round 8's arithmetic remediation is **clean**, verified against source: all four legacy templates
+generate today (6 + 36 + 6 + 32 = 80 checked-in copies, confirmed by `find`), four gate branches in
+`SkipTest` keyed on three gates, exactly 20 configurations across 9 wired projects, exactly 3
+declaring `HasSupportToDelayedMessages: true`, DLQ∧Requeue = 16, Requeue = 18, 62 files matching
+`setupDeadLetterQueue` of which **0** are the 32 exhaustion copies (positional bare `true` confirmed
+at the template's line 48), `HandledCountReached` with exactly two callers, both in the pump. Every
+live FR has at least one AC; no retired identifier has reappeared; the FR-15/FR-22 boundary has not
+been re-merged and `null` has not been re-added to FR-15. Every count in the document reconciles.
+
+**F1 was not found by the review agent.** It was raised from the spec owner's own read of AC-2 and
+then confirmed by an independent verification pass against source. The review agent filed F4 —
+that five configurations are known to fail FR-2 — without noticing that AC-2 as written would
+report all five as conforming. Recording this because it is the same class of miss as round 8's:
+a reviewer asserting a count while the evidence in front of it contradicted the assertion.
+
+Findings by round: 11 → 8 → 5 → 11 → 8 → **9**.
+
+### 1. FR-2's "after the delay" obligation is stated and then never rendered into an assertion; AC-2 cannot detect the non-conformance the spec says it will detect (Score: 92)
+
+FR-2's normative prose is correct — the heading reads "Requeue with delay redelivers **after** the
+delay" and the body says "the message is redelivered after that delay". But neither the worked
+Example nor AC-2, its sole acceptance criterion, renders that "after" into an assertable form. Both
+arms of AC-2 are positive: `Requeue` returns `true`, and *a later receive* within the bounded retry
+loop yields the body. "A later receive" has no floor — a receive at t=0ms qualifies. AC-2 therefore
+cannot distinguish "honoured D" from "ignored D and redelivered immediately".
+
+Three pieces of corroborating evidence that the arm was never intended, rather than merely worded
+loosely:
+
+- **AC-9 and AC-16 both carry the arm AC-2 lacks.** AC-9: "*when* a receive is attempted
+  immediately, *then* it yields `MT_NONE`". AC-16: "with no delay window elapsing". FR-9's prose
+  even states the two-sided obligation explicitly ("not receivable before the delay elapses and is
+  receivable after it") — which FR-2's prose never does. The document has the vocabulary and
+  applies it to the delay requirements on *either side* of FR-2.
+- **AC-20's exemption list is exhaustive and omits AC-2.** "Exempt are only:" names four arms —
+  AC-5, AC-9, AC-16, AC-18. A negative arm for AC-2 would necessarily be a single unretried receive
+  and would therefore *have* to appear on that list. Its absence is structural evidence.
+- **FR-12 constrains the call, not the assertion.** It requires delayed-requeue templates to pass a
+  non-null `TimeSpan` — but a template can pass `5s` and assert nothing about it. That is precisely
+  the defect FR-12 exists to kill in the legacy `with_delay` template, reappearing one level up.
+
+**The consequence is a direct contradiction with the seeded ledger.** ADR 0066 (`:303-307`) and
+ADR 0067 (`:84-95`, `:154`) assert as established fact that GCP ×4 and RocketMQ fail FR-2. Verified
+in source this round: `GcpPullMessageConsumer.Requeue` ignores `delay` and calls
+`ModifyAckDeadline(..., 0)` — its XML doc reads "An optional delay (not used by Pub/Sub)" — and
+`GcpPubSubStreamMessageConsumer.Requeue` likewise; `RocketMessageConsumer.Requeue` is a no-op
+returning `true` with `ChangeInvisibleDuration` commented out. GCP **does** redeliver, just
+immediately. So the generated FR-2 test would report GCP's four configurations **green** while the
+ledger seeds them as failing. FR-21's completeness gate could then be satisfied by a cell reading
+"conforms" for a behaviour the source demonstrably does not implement.
+
+**FR-15's prose is also wrong, not merely incomplete.** It claims to "pin the lower boundary of the
+delay parameter so the positive-delay path (FR-2) is not conflated with the no-op path". It does
+not: a gateway ignoring a positive delay passes FR-15 and FR-2 identically — the exact conflation
+the sentence claims to prevent.
+
+**Evidence**: `requirements.md` AC-2 — "*then* `Requeue` returns `true` and a later receive within
+the bounded retry loop yields a message with the same body"; FR-2 Example — "assert `Requeue`
+returns `true` and a subsequent receive, within a bounded retry loop, yields a message whose body
+equals `M`'s", which is behaviourally identical to AC-25's *no-delay* criterion except for the
+argument. Against ADR 0066 `:303-307` and ADR 0067 `:84-95`, `:154`.
+
+**Recommendation**: Give AC-2 a lower-bound arm mirroring AC-9 — "*when* a receive is attempted
+before the delay elapses, *then* it yields `MT_NONE`" — and add that arm to AC-20's exemption list
+as a fifth entry. Mirror it into FR-2's prose and worked Example. Correct FR-15's "pins the lower
+boundary" sentence, which is the claim this finding refutes. **Sequencing**: this repair is what
+*causes* GCP ×4 and RocketMQ to fail, so it must land in the same change as F4's seeded ledger rows,
+not after them.
+
+---
+
+### 2. FR-20's "and/or", AC-23's "at least one" and AC-14's "supporting both" together open a documented route to zero Proactor coverage, which FR-21 then makes permanently non-conformant (Score: 68)
+
+FR-20 step 2 permits an onboarding to implement one provider interface. AC-23 ratifies this ("at
+least one `*MessageGatewayProvider.cs`"). AC-14 hedges parity behind an untested precondition ("a
+configuration **supporting both** sync and async channels"), and the document never says who decides
+whether a configuration supports both, or on what evidence.
+
+But FR-14 is unconditional ("Every canonical template MUST be produced in both a Reactor variant …
+and a Proactor variant"), and FR-21 makes parity constitutive of conformance ("A configuration
+conforms for a behaviour only when **both** the Reactor and Proactor variants pass"). So a
+Reactor-only onboarding is not a smaller version of the work — it is a row whose eleven cells can
+*never* read `Pass` or `Fixed`, only signed-off `Deferred`, indefinitely. Nothing in the document
+acknowledges that outcome or forbids it, and FR-13's prohibition on gating a test away "to make the
+suite green" is exactly what a one-variant onboarding achieves with a maintainer signature.
+
+Verified this is not needed in the safe direction: **all twenty existing providers implement both
+interfaces** (confirmed — 20 of 20 non-generated `*MessageGatewayProvider.cs` name both), and all
+three FR-20 transports have both sync and async consumer/producer surfaces
+(`RmqMessageConsumer`/`RmqMessageConsumerFactory`, `MQTTMessageConsumer`, `AzureServiceBusConsumer`).
+There is no transport for which the "and/or" is needed; its only effect is to license a gap.
+
+**Evidence**: FR-20(2) — "implement `IAmAMessageGatewayReactorProvider` **and/or**
+`IAmAMessageGatewayProactorProvider`"; AC-23 — "**at least one** `*MessageGatewayProvider.cs`";
+AC-14 — "*when* a configuration **supporting both sync and async channels** is generated"; against
+FR-14 and FR-21.
+
+**Recommendation**: Change FR-20(2) to "implement **both**" and AC-23 to "**two** provider
+implementations, or one type implementing both interfaces". Delete AC-14's "supporting both sync and
+async channels" hedge. If a one-variant onboarding is genuinely to be permitted, say so explicitly
+and state that its row is `Deferred` by construction.
+
+---
+
+### 3. FR-15/AC-16's "with no delay window elapsing" is not assertable, and AC-20's exemption rationale does not apply to it (Score: 65)
+
+FR-15 is now the *only* thing separating the zero-delay behaviour from FR-22's plain requeue, so its
+distinguishing assertion carries the whole weight of the round-8 boundary ruling. That assertion is
+"receivable again **without a delay window elapsing**". No window is defined. There is nothing to
+elapse — the point of the requirement is that the delay is zero.
+
+AC-20 compounds this. It lists AC-16's clause among the four exemptions and explains all four with
+one sentence: "Each of those uses a **single bounded receive after the stated window**". AC-5, AC-9
+and AC-18 all have a stated window or a stated "immediately". **AC-16 has neither**, so AC-20's
+rationale is inapplicable to the one entry that most needs it.
+
+Aggravated by NFR-2 never quantifying the bound it mandates. "Bounded receive-retry loop" appears in
+NFR-2, FR-2, FR-22, AC-2, AC-16, AC-17, AC-25 and AC-20 with no retry count, interval, or wall-clock
+ceiling anywhere. Because AC-16's only remaining assertion is "receivable again within the
+plain-requeue bounded retry loop", the bound is precisely what determines whether FR-15's test
+asserts anything FR-22's does not. **This interacts with F1**: quantifying the bound is also what
+makes F1's lower-bound arm expressible.
+
+**Evidence**: FR-15 — "receivable again without a delay window elapsing"; AC-20 — "Exempt are only:
+… AC-16's 'no delay window elapsing' … Each of those uses a single bounded receive **after the
+stated window**". NFR-2 states no bound.
+
+**Recommendation**: Replace AC-16's clause with a concrete one — e.g. "received on the **first**
+iteration of the plain-requeue retry loop, and total elapsed time from `Requeue` to receipt is less
+than FR-2's delay value". Quantify NFR-2's bound once and have FR-2/FR-15/FR-22 cite it.
+
+---
+
+### 4. Round-7 F11 re-assessed: the known FR-2 non-conformances are asserted as fact in both ADRs and stated nowhere in requirements.md, and FR-21's seeding rule is a dangling forward reference (Score: 62)
+
+**Strengthened since round 7; now above threshold.** In round 7 this was an ADR-only fact (score
+45). Round 8 added FR-21's closing sentence — "Non-conformances identified before the rollout begins
+are seeded into the ledger rather than discovered late" — which introduces a category of information
+and never populates it. A reader of requirements.md alone cannot tell whether any such
+non-conformance exists; the sentence reads as a contingency when it is known to apply to **five of
+the twenty rows on day one**.
+
+This is material at the requirements level, not design detail: FR-13 declares non-conformance "a
+**defect in that transport's gateway** and is in scope to fix", so five known-failing configurations
+are five in-scope defects the requirements never scopes. It also decides RocketMQ's likely
+disposition (blocked on an upstream client release ⇒ `Deferred`), which is a scope commitment.
+
+The ADRs are also internally inconsistent on granularity — 0067`:84` says "**Two** known FR-2
+non-conformances" (transports) while `:154` says "**five** of them" (configurations) — precisely the
+per-project/per-configuration confusion FR-13 exists to prevent.
+
+**Of the two candidate resolutions, (a) is right and (b) does not work.** The ledger cannot be the
+sole home: it does not exist yet, it is *created by* this spec under FR-21, and FR-13 makes these
+non-conformances in-scope work items. A scope fact cannot live only in the artifact the scope
+produces.
+
+**Evidence**: FR-21 final paragraph (no non-conformance named anywhere in the document). Contrast
+`docs/adr/0066-…:303-307` and `docs/adr/0067-…:84-95, :154`.
+
+**Recommendation**: Add two or three sentences alongside FR-21's seeding rule naming the four GCP
+configurations and RocketMQ, with the mechanism for each and RocketMQ's expected deferral. Reconcile
+0067`:84`'s "Two" with `:154`'s "five" by stating both counts explicitly (two transports, five
+configurations). **Land with F1** — see F1's sequencing note.
+
+---
+
+### 5. AC-24's placeholder-row clause carries no temporal qualifier and contradicts ADR 0067's seeding step (Score: 62)
+
+AC-24 asserts unconditionally that a placeholder row's "cells **all read as a signed-off deferral**".
+FR-21 says the same ("**may only** record a signed-off deferral"). But ADR 0067's step 1 seeds the
+entire ledger — placeholder rows included — with `Unknown`, and explicitly parenthesises this. Read
+literally, the ADR's mandated first action violates the requirement, and AC-24 fails from the moment
+the ledger is created until sign-off is obtained.
+
+The neighbouring FR-21 bullet ("A cell may be provisionally unresolved only while the fix phase is in
+progress") makes the intent recoverable, but AC-24 is the *testable* form and is stated as an
+unqualified property of the file. The document elsewhere shows it knows how to handle this: AC-11
+scopes to "after AC-10(b) holds", AC-12 and AC-22 to "after the legacy retirement of AC-10(b)", and
+AC-24's own third paragraph to the merge point. Only the placeholder paragraph is unscoped. This is
+the newest and least-reviewed AC in the document.
+
+**Evidence**: AC-24 — "whose cells all read as a signed-off deferral"; FR-21 — "may only record a
+signed-off deferral". Contrast `docs/adr/0067-…:230-243` and step 1 at `:308-310`.
+
+**Recommendation**: Scope it as AC-11 and AC-12 are scoped: "…whose cells, **at the point the
+FR-10(4)/FR-11 change is proposed for merge**, all read as a signed-off deferral; before that point
+they may be provisionally unresolved, but may only ever resolve to a deferral." Mirror into FR-21.
+
+---
+
+### 6. FR-19 carries narration about the superseded draft sequencing, which belongs in decision-log.md (Score: 60)
+
+requirements.md is required to carry assertions only. FR-19 argues its case partly by counterfactual
+against a withdrawn earlier decision, naming it as such. The content is not wrong (Kafka ×2 + MSSQL +
+PostgreSQL = 4, and 16 + 4 = 20) and it duplicates material already correctly held in
+`decision-log.md` and ADR 0066's Alternatives Considered §5 — the right homes. Left in place it
+re-establishes the precedent that requirements prose may reason about drafts.
+
+**Evidence**: FR-19 — "**Under the superseded 'retire the gates first' sequencing** it would have
+been ungated onto Kafka ×2, MSSQL and PostgreSQL … FR-10(3) removes that hazard by construction."
+
+**Recommendation**: Delete both sentences. The live assertion FR-19 needs is already carried by
+FR-10(2)'s closed-list guarantee and FR-19's preceding sentence.
+
+---
+
+### 7. FR-20's hand-written test counts (31 / 18 / 8) are not reproducible under any single counting rule (Score: 58)
+
+FR-20 states "RMQ.Sync 31 tests, MQTT 18, AzureServiceBus 8." The unit "tests" is undefined and no
+consistent rule yields all three. Counted against source this round:
+
+| | files under `MessagingGateway/` | `[Fact]`+`[Theory]` there | whole project `[Fact]` | claimed |
+|---|---|---|---|---|
+| RMQ.Sync | **31** | 51 | 53 | 31 |
+| MQTT | 19 | 27 | 30 | **18** |
+| AzureServiceBus | 15 | 89 | 64 | **8** |
+
+RMQ.Sync's 31 is exactly the file count; the same rule gives MQTT 19 and AzureServiceBus 15.
+AzureServiceBus's "8" equals its top-level `When_*.cs` count, a rule giving MQTT 4 and RMQ.Sync 5.
+Three numbers, three rules. FR-20 uses these to size the largest new work in the spec, and ADR
+0067`:101` and `decision-log.md:139` repeat them verbatim. AzureServiceBus — the transport the spec
+expects to defer — is understated by roughly half.
+
+**Recommendation**: State the unit and recount under one rule — "test files under
+`tests/Paramore.Brighter.*.Tests/MessagingGateway/`: RMQ.Sync 31, MQTT 19, AzureServiceBus 15" — and
+sweep the ADR and decision log. **Also correct PROMPT.md**, which carries 18 and 8 as verified facts.
+
+---
+
+### 8. The PostgreSQL test project is named inconsistently, and ledger row identity depends on that token (Score: 52)
+
+FR-13's mapping table gives the test project as `PostgresSQL` (correct — verified
+`tests/Paramore.Brighter.PostgresSQL.Tests`), but FR-13's prose list and FR-21's naming rule both
+write `PostgreSQL`. FR-21 makes row identity `project / configuration` and ADR 0067 specifies a CI
+audit cross-checking ledger rows against in-code `Skip` markers, so the token is a machine-compared
+string. `PostgreSQL / …` and `PostgresSQL / …` are different rows.
+
+The document already warns about exactly this class of error for AzureServiceBus ("Use the table,
+not a name-derivation rule") and then does not follow its own table.
+
+**Recommendation**: State once that row identity uses the **test project** name from FR-13's table,
+and normalise every occurrence to `PostgresSQL`. Consider adding the four singular-section rows as
+worked examples.
+
+---
+
+### 9. AC-25 is placed before AC-24 (Score: 25)
+
+The section runs AC-20 … AC-23, **AC-25, AC-24**. Every other identifier is in ascending order, and
+the two out-of-order entries are the two newest ACs.
+
+**Recommendation**: Swap them.
+
+---
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 1 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 7 |
+| 0-49 (Low) | 1 |
+
+**Total findings**: 9
+**Findings at or above threshold (60)**: 6
+
+---
+
 ## Round 8 (2026-07-19) — first pass over the gating-lifecycle reversal
 
 **Threshold**: 60

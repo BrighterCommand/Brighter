@@ -306,8 +306,10 @@ two reasons:
    sequences and governs it (RocketMQ's is blocked on an upstream dependency, so it is a likely
    signed-off `Deferred` row rather than an in-spec `Fixed`).
 
-So FR-2's generated test asserts the observable outcome only: *requeue with delay D, and the message
-is redelivered after D*. That is uniform across every targeted configuration regardless of mechanism, and
+So FR-2's generated test asserts the observable outcome only: *requeue with delay D — the message is
+not redelivered before D and is redelivered after D*. The before-D arm (a single immediate receive
+yielding `MT_NONE`, AC-2) is what makes GCP ×4 and RocketMQ fail as generated rather than pass green.
+That is uniform across every targeted configuration regardless of mechanism, and
 it is exactly what the Objective and Test Boundary asks for ("prove the observable outcome … not the
 internal mechanism"). The consequence is that FR-2 and the former FR-3 collapse into one canonical
 behaviour — which is correct, because once the mechanism is not asserted, they *were* the same test.
@@ -534,11 +536,13 @@ vs async gateway code paths; it is not pump re-testing.
   AzureServiceBus, MQTT and RMQ.Sync. They are not a migration cost — they implement the post-FR-1
   signature directly — but they are new work this ADR's interface defines the shape of, and they
   land after the twenty existing providers have proven that shape. ADR 0067 sequences them last.
-- **We lose the ability to prove, in the generic suite, that a transport without native delay really
-  falls back to Brighter's scheduler.** That was FR-3's purpose, and dropping it means a gateway
-  could regress from scheduler-fallback to silently-no-delay and the universal suite would still be
-  green *provided the message is redelivered after the delay by some means*. This is an accepted
-  trade: the mechanism assertion is unavailable on 14 of the 20 configurations wired today anyway, and NFR-3
+- **We lose the ability to prove, in the generic suite, *which* mechanism a transport uses to
+  achieve the delay.** That was FR-3's purpose, and dropping it means a gateway could switch from
+  scheduler-fallback to native delay (or vice versa) and the universal suite would still be green,
+  *provided the observable delay still holds* — FR-2's before-`D`/after-`D` arms verify the outcome
+  but not the route. A regression to genuinely-no-delay is **not** in this blind spot: AC-2's
+  before-`D` arm fails a gateway that redelivers immediately. This is an accepted trade: the
+  mechanism assertion is unavailable on 14 of the 20 configurations wired today anyway, and NFR-3
   forbids it. The mitigation is the OOS-2 supplementary per-transport scheduler tests for the six
   gateways that expose the seam — which should be raised as a follow-up issue rather than left
   implicit.
