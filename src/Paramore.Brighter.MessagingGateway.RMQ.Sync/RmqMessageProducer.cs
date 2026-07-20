@@ -223,12 +223,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             GC.SuppressFinalize(this);
         }
         
-        public  ValueTask DisposeAsync()
+        public ValueTask DisposeAsync()
         {
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            // The sync client has no async teardown, so dispose runs synchronously here; returning
+            // default gives the caller a completed ValueTask. (Previously this returned a
+            // TaskCompletionSource task that was never completed, so awaiting it hung forever.)
             Dispose(true);
             GC.SuppressFinalize(this);
-            return new ValueTask(tcs.Task);
+            return default;
         }
 
         protected override void Dispose(bool disposing)
