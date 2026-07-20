@@ -63,7 +63,7 @@ namespace Paramore.Brighter
         private readonly IAmAnOutboxCircuitBreaker? _outboxCircuitBreaker;
         private readonly ConcurrentDictionary<string, List<TMessage>> _outboxBatches = new();
 
-        private static readonly SemaphoreSlim s_backgroundClearSemaphoreToken = new(1, 1);
+        private readonly SemaphoreSlim _backgroundClearSemaphore = new(1, 1);
 
         //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static
         //bool should be made thread-safe by locking the object
@@ -645,7 +645,7 @@ namespace Paramore.Brighter
         {
             _outboxCircuitBreaker?.CoolDown();
 
-            if ( await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero, cancellationToken))
+            if (await _backgroundClearSemaphore.WaitAsync(TimeSpan.Zero, cancellationToken))
             {
                 var parentSpan = requestContext.Span;
                 var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
@@ -686,7 +686,7 @@ namespace Paramore.Brighter
                 finally
                 {
                     _tracer?.EndSpan(span);
-                    s_backgroundClearSemaphoreToken.Release();
+                    _backgroundClearSemaphore.Release();
                 }
 
                 CheckOutstandingMessages(requestContext);
