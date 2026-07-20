@@ -39,6 +39,9 @@ namespace Paramore.Brighter
         /// event, awaiting each in subscription order. This is the canonical raise for the awaited
         /// confirmation event: sequential (never concurrent) invocation, over a snapshot of the
         /// invocation list. A null <paramref name="handlers"/> (no subscribers) is a no-op.
+        /// A throwing subscriber propagates its exception and skips the remaining subscribers for
+        /// that confirmation — callers (the producers) wrap the whole raise in a per-confirmation
+        /// catch, so a fault is contained to one confirmation, not one subscriber.
         /// </summary>
         /// <param name="handlers">The event's backing delegate; may be null or multicast.</param>
         /// <param name="result">The confirmation to deliver to each subscriber.</param>
