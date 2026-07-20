@@ -36,6 +36,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         // Bounds the dispose-time wait for confirmation callbacks still running after Flush() has
         // drained the delivery reports; without it a hung Outbox write would block dispose forever.
+        // Fixed rather than configurable: KafkaPublication has no confirm-wait setting (unlike
+        // RmqPublication's WaitForConfirmsTimeOutInMilliseconds), and none of its existing timeouts
+        // describe this wait. 5s matches the RMQ.Async producer's active-sends shutdown bound.
         private const int ConfirmationCallbacksShutdownTimeoutMs = 5000;
 
         /// <summary>
