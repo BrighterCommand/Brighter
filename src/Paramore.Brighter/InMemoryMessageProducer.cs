@@ -269,16 +269,31 @@ namespace Paramore.Brighter
                 if (PublishFailurePredicate?.Invoke(item.Message) == true)
                 {
                     var failResult = new PublishConfirmationResult(false, item.Message.Id, item.Message.Header.Topic, item.Context);
-                    _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(failResult)));
+                    RaiseActionSubscribers(failResult);
                     await RaiseConfirmationCallbacksAsync(failResult);
                     continue;
                 }
                 _bus.Enqueue(item.Message);
                 var successResult = new PublishConfirmationResult(true, item.Message.Id, item.Message.Header.Topic, item.Context);
-                _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(successResult)));
+                RaiseActionSubscribers(successResult);
                 await RaiseConfirmationCallbacksAsync(successResult);
             }
         }
+
+        private void RaiseActionSubscribers(PublishConfirmationResult result) =>
+            // Isolated like the awaited path: a throwing Action subscriber would otherwise fault its
+            // raise task and re-surface out of DisposeAsync's Task.WhenAll over _raiseTasks.
+            _raiseTasks.Add(Task.Run(() =>
+            {
+                try
+                {
+                    OnMessagePublished?.Invoke(result);
+                }
+                catch (Exception ex)
+                {
+                    Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
+                }
+            }));
 
         private async Task RaiseConfirmationCallbacksAsync(PublishConfirmationResult result)
         {
