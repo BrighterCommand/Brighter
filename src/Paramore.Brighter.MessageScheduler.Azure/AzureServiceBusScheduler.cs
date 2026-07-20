@@ -132,7 +132,7 @@ public class AzureServiceBusScheduler(
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
 
         foreach (var header in message.Header.Bag.Where(h =>
-                     !ASBConstants.ReservedHeaders.Contains(h.Key)
+                     !ASBConstants.IsReservedHeader(h.Key)
                      && !MessageHeader.IsLocalHeader(h.Key)))
         {
             azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
@@ -144,11 +144,14 @@ public class AzureServiceBusScheduler(
         }
 
         var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
-        
+
         azureServiceBusMessage.ContentType = contentType.ToString();
         azureServiceBusMessage.MessageId = message.Header.MessageId;
-        if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
-            azureServiceBusMessage.SessionId = value.ToString();
+        var sessionId = message.Header.Bag
+            .FirstOrDefault(h => ASBConstants.IsBagKey(h.Key, ASBConstants.SessionIdKey))
+            .Value;
+        if (sessionId is not null)
+            azureServiceBusMessage.SessionId = sessionId.ToString();
 
         return azureServiceBusMessage;
     }
@@ -167,6 +170,30 @@ public class AzureServiceBusScheduler(
                 LockTokenHeaderBagKey, MessageTypeHeaderBagKey, HandledCountHeaderBagKey, ReplyToHeaderBagKey,
                 SessionIdKey
             };
+
+        /// <summary>
+        /// Does a header bag <paramref name="key"/> refer to the reserved key <paramref name="reservedKey"/>?
+        /// Brighter's Outbox serializes the bag with <see cref="JsonSerialisationOptions.Options"/>, whose
+        /// <see cref="System.Text.Json.JsonSerializerOptions.PropertyNamingPolicy"/> rewrites bag keys — so a key
+        /// written as "SessionId" comes back transformed (for example "sessionId" or "session_id") depending on the
+        /// configured policy. We therefore match both the raw key and the key as the active naming policy would
+        /// render it, case-insensitively, so the lookup stays correct whatever policy the user configures.
+        /// </summary>
+        public static bool IsBagKey(string key, string reservedKey)
+        {
+            if (string.Equals(key, reservedKey, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            var namingPolicy = JsonSerialisationOptions.Options.PropertyNamingPolicy;
+            return namingPolicy is not null
+                   && string.Equals(key, namingPolicy.ConvertName(reservedKey), StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Is a header bag <paramref name="key"/> one of the <see cref="ReservedHeaders"/>, accounting for any
+        /// naming-policy transformation applied during an Outbox round-trip? See <see cref="IsBagKey"/>.
+        /// </summary>
+        public static bool IsReservedHeader(string key) => ReservedHeaders.Any(reserved => IsBagKey(key, reserved));
     }
 
     /// <inheritdoc />
