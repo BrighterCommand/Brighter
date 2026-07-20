@@ -100,6 +100,33 @@ public class AsyncPublishConfirmationTests
         }
     }
 
+    [Fact]
+    public async Task When_an_async_confirmation_subscriber_throws_dispose_still_drains()
+    {
+        // Arrange
+        var producer = new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = s_topic })
+        {
+            UseAsyncPublishConfirmation = true
+        };
+        var confirmed = new List<string>();
+        ((ISupportPublishConfirmationAsync)producer).OnMessagePublishedAsync += result =>
+        {
+            confirmed.Add(result.MessageId.Value);
+            throw new InvalidOperationException("subscriber fault");
+        };
+        var firstMessage = CreateMessage();
+        var secondMessage = CreateMessage();
+
+        // Act: the first callback's throw must not fault the drain worker, strand the second
+        // message, or re-surface out of DisposeAsync.
+        producer.Send(firstMessage);
+        producer.Send(secondMessage);
+        await producer.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2));
+
+        // Assert
+        Assert.Equal(new[] { firstMessage.Id.Value, secondMessage.Id.Value }, confirmed);
+    }
+
     private static Message CreateMessage() => new(
         new MessageHeader(Id.Random(), s_topic, MessageType.MT_EVENT),
         new MessageBody("test"));

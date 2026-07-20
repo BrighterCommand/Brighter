@@ -29,6 +29,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
@@ -38,8 +40,9 @@ namespace Paramore.Brighter
     /// The in-memory producer is mainly intended for usage with tests. It allows you to send messages to a bus and
     /// then inspect the messages that have been sent.
     /// </summary>
-    public sealed class InMemoryMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync, ISupportPublishConfirmation, ISupportPublishConfirmationAsync
+    public sealed partial class InMemoryMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync, ISupportPublishConfirmation, ISupportPublishConfirmationAsync
     {
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryMessageProducer>();
         private readonly IAmABus _bus;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly System.Threading.Channels.Channel<WorkItem> _channel =
@@ -267,13 +270,28 @@ namespace Paramore.Brighter
                 {
                     var failResult = new PublishConfirmationResult(false, item.Message.Id, item.Message.Header.Topic, item.Context);
                     _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(failResult)));
-                    await _onMessagePublishedAsync.InvokeAllAsync(failResult);
+                    await RaiseConfirmationCallbacksAsync(failResult);
                     continue;
                 }
                 _bus.Enqueue(item.Message);
                 var successResult = new PublishConfirmationResult(true, item.Message.Id, item.Message.Header.Topic, item.Context);
                 _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(successResult)));
-                await _onMessagePublishedAsync.InvokeAllAsync(successResult);
+                await RaiseConfirmationCallbacksAsync(successResult);
+            }
+        }
+
+        private async Task RaiseConfirmationCallbacksAsync(PublishConfirmationResult result)
+        {
+            // A faulting subscriber must not fault the drain worker: that would strand the remaining
+            // queued items and re-surface out of DisposeAsync's await of the worker. Mirrors the
+            // broker producers' per-confirmation isolation.
+            try
+            {
+                await _onMessagePublishedAsync.InvokeAllAsync(result);
+            }
+            catch (Exception ex)
+            {
+                Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
             }
         }
 
@@ -332,7 +350,13 @@ namespace Paramore.Brighter
                 return;
             }
 
-            throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
+            throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration.");
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Confirmation callback for message {MessageId} faulted; remaining confirmations continue")]
+            public static partial void ConfirmationCallbackFault(ILogger logger, string messageId, Exception exception);
         }
     }
 }

@@ -78,6 +78,11 @@ namespace Paramore.Brighter.Tasks
         /// <summary>
         /// Blocks until all in-flight callbacks have completed, or the timeout elapses.
         /// </summary>
+        /// <remarks>
+        /// A <see cref="Begin"/> that races in after the wait has observed zero and returned is not
+        /// tracked by that wait — callers are expected to have stopped producing new callbacks
+        /// (e.g. drained the broker's acks) before waiting, as a shutdown path does.
+        /// </remarks>
         /// <param name="timeout">How long to wait for the drain.</param>
         /// <param name="stillInFlight">The number of callbacks still running when the wait ended.</param>
         /// <returns>True when the tracker drained within the timeout; false when callbacks remain.</returns>
