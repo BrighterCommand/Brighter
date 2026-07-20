@@ -773,34 +773,15 @@ namespace Paramore.Brighter
 
             if (producer is ISupportPublishConfirmation confirmingProducer)
             {
-                confirmingProducer.OnMessagePublished += async delegate(PublishConfirmationResult result)
-                {
-                    await HandleAsyncPublishConfirmation(result, requestContext);
-                };
+                // Discard, not async void: HandleAsyncPublishConfirmation catches its own faults, and a
+                // discarded task cannot tear down the raising thread the way an async void throw would.
+                confirmingProducer.OnMessagePublished += result => _ = HandleAsyncPublishConfirmation(result, requestContext);
             }
         }
 
         private async Task HandleAsyncPublishConfirmation(PublishConfirmationResult result, RequestContext requestContext)
         {
-            // Emit a standalone confirmation span FIRST on every invocation (success or
-            // failure). It links back to the original publish span (when its context was
-            // captured at send time) rather than reopening it, and degrades to no link when
-            // the context is absent. The observability work is isolated in try/catch so a
-            // tracing fault can never destabilise the producer thread (NFR-4); the span is
-            // disposed in the finally so it starts and stops within the callback (NFR-2).
-            Activity? confirmationSpan = null;
-            try
-            {
-                var links = result.PublishSpanContext is { } publishContext
-                    ? new[] { new ActivityLink(publishContext) }
-                    : null;
-                confirmationSpan = _tracer?.CreateConfirmationSpan(
-                    result.MessageId, result.Topic, result.Success, links);
-            }
-            catch (Exception ex)
-            {
-                Log.ConfirmationObservabilityFault(s_logger, ex);
-            }
+            var confirmationSpan = StartConfirmationSpan(result);
 
             try
             {
@@ -846,6 +827,31 @@ namespace Paramore.Brighter
             }
         }
 
+        /// <summary>
+        /// Emit a standalone confirmation span FIRST on every confirmation callback (success or
+        /// failure). It links back to the original publish span (when its context was captured at
+        /// send time) rather than reopening it, and degrades to no link when the context is absent.
+        /// The observability work is isolated in try/catch so a tracing fault can never destabilise
+        /// the producer thread (NFR-4); end the span via <see cref="EndConfirmationSpan"/> in the
+        /// callback's finally so it starts and stops within the callback (NFR-2).
+        /// </summary>
+        private Activity? StartConfirmationSpan(PublishConfirmationResult result)
+        {
+            try
+            {
+                var links = result.PublishSpanContext is { } publishContext
+                    ? new[] { new ActivityLink(publishContext) }
+                    : null;
+                return _tracer?.CreateConfirmationSpan(
+                    result.MessageId, result.Topic, result.Success, links);
+            }
+            catch (Exception ex)
+            {
+                Log.ConfirmationObservabilityFault(s_logger, ex);
+                return null;
+            }
+        }
+
         private void EndConfirmationSpan(Activity? confirmationSpan)
         {
             try
@@ -871,25 +877,7 @@ namespace Paramore.Brighter
             {
                 producerSync.OnMessagePublished += delegate(PublishConfirmationResult result)
                 {
-                    // Emit a standalone confirmation span FIRST on every invocation (success or
-                    // failure). It links back to the original publish span (when its context was
-                    // captured at send time) rather than reopening it, and degrades to no link when
-                    // the context is absent. The observability work is isolated in try/catch so a
-                    // tracing fault can never destabilise the producer thread (NFR-4); the span is
-                    // disposed in the finally so it starts and stops within the callback (NFR-2).
-                    Activity? confirmationSpan = null;
-                    try
-                    {
-                        var links = result.PublishSpanContext is { } publishContext
-                            ? new[] { new ActivityLink(publishContext) }
-                            : null;
-                        confirmationSpan = _tracer?.CreateConfirmationSpan(
-                            result.MessageId, result.Topic, result.Success, links);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.ConfirmationObservabilityFault(s_logger, ex);
-                    }
+                    var confirmationSpan = StartConfirmationSpan(result);
 
                     try
                     {

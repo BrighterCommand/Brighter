@@ -64,13 +64,7 @@ internal sealed class StubConfirmingProducerAsync(RoutingKey topic) : IAmAMessag
     public async Task RaiseConfirmationAsync(PublishConfirmationResult result)
     {
         OnMessagePublished?.Invoke(result);
-
-        var handlers = _onMessagePublishedAsync;
-        if (handlers is null)
-            return;
-
-        foreach (Func<PublishConfirmationResult, Task> handler in handlers.GetInvocationList())
-            await handler(result);
+        await _onMessagePublishedAsync.InvokeAllAsync(result);
     }
 
     public ValueTask DisposeAsync() => default;

@@ -246,13 +246,16 @@ namespace Paramore.Brighter
 
         private void Enqueue(Message message)
         {
+            // The awaited event fires only on the deferred pump (UseAsyncPublishConfirmation true);
+            // the synchronous path raises the fire-and-forget event only, preserving its non-blocking
+            // send contract.
             if (PublishFailurePredicate?.Invoke(message) == true)
             {
-                RaisePublishConfirmation(new PublishConfirmationResult(false, message.Id, message.Header.Topic, null));
+                OnMessagePublished?.Invoke(new PublishConfirmationResult(false, message.Id, message.Header.Topic, null));
                 return;
             }
             _bus.Enqueue(message);
-            RaisePublishConfirmation(new PublishConfirmationResult(true, message.Id, message.Header.Topic, null));
+            OnMessagePublished?.Invoke(new PublishConfirmationResult(true, message.Id, message.Header.Topic, null));
         }
 
         private async Task DrainAsync()
@@ -264,32 +267,14 @@ namespace Paramore.Brighter
                 {
                     var failResult = new PublishConfirmationResult(false, item.Message.Id, item.Message.Header.Topic, item.Context);
                     _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(failResult)));
-                    await RaisePublishConfirmationAsync(failResult);
+                    await _onMessagePublishedAsync.InvokeAllAsync(failResult);
                     continue;
                 }
                 _bus.Enqueue(item.Message);
                 var successResult = new PublishConfirmationResult(true, item.Message.Id, item.Message.Header.Topic, item.Context);
                 _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(successResult)));
-                await RaisePublishConfirmationAsync(successResult);
+                await _onMessagePublishedAsync.InvokeAllAsync(successResult);
             }
-        }
-
-        private void RaisePublishConfirmation(PublishConfirmationResult result)
-        {
-            OnMessagePublished?.Invoke(result);
-            // Defensive fallback for in-assembly subscribers; this blocks the send until handlers finish.
-            if (_onMessagePublishedAsync is not null)
-                BrighterAsyncContext.Run(() => RaisePublishConfirmationAsync(result));
-        }
-
-        private async Task RaisePublishConfirmationAsync(PublishConfirmationResult result)
-        {
-            var handlers = _onMessagePublishedAsync;
-            if (handlers is null)
-                return;
-
-            foreach (Func<PublishConfirmationResult, Task> handler in handlers.GetInvocationList())
-                await handler(result);
         }
 
         /// <summary>

@@ -60,12 +60,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
         private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
         // The ack/nack handlers run on the client's connection loop, which must never block on a
-        // subscriber, so awaited callbacks run on worker tasks. This counter and TCS let Dispose wait
-        // for them — including the awaited Outbox mark-dispatched — after WaitForConfirms has drained
-        // the broker acks themselves. Guarded by _confirmationStateLock.
-        private readonly object _confirmationStateLock = new();
-        private int _inFlightConfirmationCallbacks;
-        private TaskCompletionSource<bool>? _confirmationCallbacksCompleted;
+        // subscriber, so awaited callbacks run on worker tasks. The tracker lets Dispose wait for
+        // them — including the awaited Outbox mark-dispatched — after WaitForConfirms has drained
+        // the broker acks themselves.
+        private readonly InFlightCallbackTracker _confirmationCallbacks = new();
 
         /// <summary>
         /// Action taken when a message is published, following receipt of a confirmation from the broker
@@ -284,15 +282,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 return;
 
             // Awaited callbacks must not block the connection loop (WaitForConfirms depends on it to
-            // process acks), so they run on a worker task; Dispose waits on the in-flight counter,
+            // process acks), so they run on a worker task; Dispose waits on the in-flight tracker,
             // which must be released on every path or that wait would hang until its timeout.
-            BeginConfirmationCallback();
+            _confirmationCallbacks.Begin();
             Task.Run(async () =>
             {
                 try
                 {
-                    foreach (Func<PublishConfirmationResult, Task> handler in handlers.GetInvocationList())
-                        await handler(result);
+                    await handlers.InvokeAllAsync(result);
                 }
                 catch (Exception ex)
                 {
@@ -300,31 +297,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 }
                 finally
                 {
-                    EndConfirmationCallback();
+                    _confirmationCallbacks.End();
                 }
             });
-        }
-
-        private void BeginConfirmationCallback()
-        {
-            lock (_confirmationStateLock)
-            {
-                if (_inFlightConfirmationCallbacks == 0)
-                    _confirmationCallbacksCompleted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-                _inFlightConfirmationCallbacks++;
-            }
-        }
-
-        private void EndConfirmationCallback()
-        {
-            lock (_confirmationStateLock)
-            {
-                _inFlightConfirmationCallbacks--;
-
-                if (_inFlightConfirmationCallbacks == 0)
-                    _confirmationCallbacksCompleted?.TrySetResult(true);
-            }
         }
 
         private void WaitForConfirmationCallbacks()
@@ -333,28 +308,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             if (_waitForConfirmsTimeOutInMilliseconds == 0)
                 return;
 
-            Task? callbacksCompleted;
-            lock (_confirmationStateLock)
-            {
-                if (_inFlightConfirmationCallbacks == 0)
-                    return;
-
-                callbacksCompleted = _confirmationCallbacksCompleted?.Task;
-            }
-
-            if (callbacksCompleted is null)
-                return;
-
-            if (!callbacksCompleted.Wait(TimeSpan.FromMilliseconds(_waitForConfirmsTimeOutInMilliseconds)))
-            {
-                int inFlightCallbacks;
-                lock (_confirmationStateLock)
-                {
-                    inFlightCallbacks = _inFlightConfirmationCallbacks;
-                }
-
-                Log.FailedToAwaitConfirmationCallbacks(s_logger, inFlightCallbacks, _waitForConfirmsTimeOutInMilliseconds);
-            }
+            if (!_confirmationCallbacks.TryWait(TimeSpan.FromMilliseconds(_waitForConfirmsTimeOutInMilliseconds), out int stillInFlight))
+                Log.FailedToAwaitConfirmationCallbacks(s_logger, stillInFlight, _waitForConfirmsTimeOutInMilliseconds);
         }
 
         private static partial class Log
@@ -383,7 +338,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             [LoggerMessage(LogLevel.Warning, "Failed to await {CallbackCount} confirmation callbacks after {TimeoutMs}ms when shutting down")]
             public static partial void FailedToAwaitConfirmationCallbacks(ILogger logger, int callbackCount, int timeoutMs);
 
-            [LoggerMessage(LogLevel.Warning, "Confirmation callback for message {MessageId} faulted; the message is left un-dispatched for the Sweeper to retry")]
+            [LoggerMessage(LogLevel.Warning, "Confirmation callback for message {MessageId} faulted; remaining confirmations continue")]
             public static partial void ConfirmationCallbackFault(ILogger logger, string messageId, Exception exception);
         }
     }
