@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tasks
@@ -36,7 +37,9 @@ namespace Paramore.Brighter.Tasks
     /// </summary>
     /// <remarks>
     /// The drain waiter is allocated lazily by <see cref="TryWait"/>, so the per-callback cost on
-    /// the confirmation path is a single short lock, with no allocation.
+    /// the confirmation path is a single short lock, with no allocation. Public so that Brighter's
+    /// transport packages can consume it across the assembly boundary; it is not intended as a
+    /// general-purpose synchronization primitive.
     /// </remarks>
     public sealed class InFlightCallbackTracker
     {
@@ -65,7 +68,11 @@ namespace Paramore.Brighter.Tasks
         {
             lock (_lock)
             {
-                _inFlight--;
+                // An unbalanced End would drive the count negative and the drain waiter would never
+                // release; assert loudly in debug builds and refuse to go below zero in release.
+                Debug.Assert(_inFlight > 0, "InFlightCallbackTracker.End called without a matching Begin");
+                if (_inFlight > 0)
+                    _inFlight--;
 
                 if (_inFlight == 0 && _drained is not null)
                 {

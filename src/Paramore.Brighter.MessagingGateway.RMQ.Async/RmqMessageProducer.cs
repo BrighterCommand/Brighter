@@ -453,7 +453,12 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     {
         lock (_stateLock)
         {
-            _inFlightConfirmationCallbacks--;
+            // An unbalanced decrement would drive the count negative and the drain TCS would never
+            // complete; assert loudly in debug builds and refuse to go below zero in release.
+            Debug.Assert(_inFlightConfirmationCallbacks > 0, "EndConfirmationCallback called without a matching beginCallbacks removal");
+            if (_inFlightConfirmationCallbacks > 0)
+                _inFlightConfirmationCallbacks--;
+
             CompleteConfirmationsIfDrainedLocked();
         }
     }

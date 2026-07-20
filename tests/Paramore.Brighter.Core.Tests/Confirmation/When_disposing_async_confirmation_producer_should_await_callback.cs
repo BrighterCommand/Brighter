@@ -23,7 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 using Paramore.Brighter.CircuitBreaker;
@@ -98,6 +100,32 @@ public class AsyncPublishConfirmationTests
             await sendTask.WaitAsync(TimeSpan.FromSeconds(1));
             await outbox.DispatchCompleted.WaitAsync(TimeSpan.FromSeconds(1));
         }
+    }
+
+    [Fact]
+    public async Task When_disposing_with_concurrent_sends_should_drain_every_confirmation()
+    {
+        // Arrange
+        var producer = new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = s_topic })
+        {
+            UseAsyncPublishConfirmation = true
+        };
+        var confirmed = new ConcurrentBag<string>();
+        ((ISupportPublishConfirmationAsync)producer).OnMessagePublishedAsync += async result =>
+        {
+            await Task.Yield();
+            confirmed.Add(result.MessageId.Value);
+        };
+        var messages = Enumerable.Range(0, 5).Select(_ => CreateMessage()).ToArray();
+
+        // Act: concurrent sends race the pump start; dispose must still drain every callback.
+        await Task.WhenAll(messages.Select(message => Task.Run(() => producer.Send(message))));
+        await producer.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2));
+
+        // Assert
+        Assert.Equal(
+            messages.Select(message => message.Id.Value).OrderBy(id => id),
+            confirmed.OrderBy(id => id));
     }
 
     [Fact]

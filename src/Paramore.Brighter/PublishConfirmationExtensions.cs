@@ -28,7 +28,9 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Helpers for raising publish-confirmation callbacks.
+    /// Helpers for raising publish-confirmation callbacks. Public so that Brighter's transport
+    /// packages can consume them across the assembly boundary; producers implementing
+    /// <see cref="ISupportPublishConfirmationAsync"/> are the intended callers.
     /// </summary>
     public static class PublishConfirmationExtensions
     {
