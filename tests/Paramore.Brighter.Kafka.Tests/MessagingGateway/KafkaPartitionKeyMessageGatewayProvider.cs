@@ -30,6 +30,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
+using Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey;
 using Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Proactor;
 using Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Reactor;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
@@ -190,7 +191,8 @@ public class KafkaPartitionKeyMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
         return new KafkaSubscription<MyCommand>(
@@ -203,7 +205,9 @@ public class KafkaPartitionKeyMessageGatewayProvider
             numOfPartitions: 2,
             replicationFactor: 1,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: makeChannel
+            makeChannels: makeChannel,
+            deadLetterRoutingKey: deadLetterRoutingKey,
+            invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
 
@@ -222,17 +226,35 @@ public class KafkaPartitionKeyMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
-        throw new NotSupportedException(
-            "Kafka does not support dead letter queues in generated tests."
-        );
+        return Task.FromResult(Message.Empty);
     }
 
     public Message GetMessageFromDeadLetterQueue(KafkaSubscription subscription)
     {
-        throw new NotSupportedException(
-            "Kafka does not support dead letter queues in generated tests."
-        );
+        return Message.Empty;
     }
+
+    public Task<Message> GetMessageFromInvalidChannelAsync(
+        KafkaSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return Task.FromResult(Message.Empty);
+    }
+
+    public Message GetMessageFromInvalidChannel(KafkaSubscription subscription)
+    {
+        return Message.Empty;
+    }
+
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            HeaderNames.ORIGINAL_TOPIC,
+            HeaderNames.ORIGINAL_TYPE,
+            HeaderNames.REJECTION_REASON,
+            HeaderNames.REJECTION_MESSAGE,
+            HeaderNames.REJECTION_TIMESTAMP
+        );
 
     private void DisposeRegistries()
     {

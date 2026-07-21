@@ -74,7 +74,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~MessagingGatewayGenerator"`
   - **References**: requirements FR-1(5), FR-8, C-2; ADR 0066 "Where the record lives", "What a provider returns for a field its gateway does not stamp" (`string.Empty`, never null), "Key Components" (third `Shared/` directory + once-per-config mode).
 
-- [ ] **Migrate the Kafka providers to the FR-1 surface and regenerate Kafka (reference provider first)**
+- [x] **Migrate the Kafka providers to the FR-1 surface and regenerate Kafka (reference provider first)**
   - **Behavior**: The two Kafka providers implement the post-FR-1 interface (routing-key params, `GetMessageFromInvalidChannel`, `RejectionMetadataKeys` returning Kafka's PascalCase key strings), and Kafka's Generated tree is regenerated so its interface copies + Shared record + edited exhaustion copies are current. Kafka compiles (AC-1). This is the reference migration that proves the interface shape before the other projects follow.
   - **Test file**: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Standard/Generated/Reactor/IAmAMessageGatewayReactorProvider.cs` (regenerated artifact; verification is compilation)
   - **Test should verify**:
