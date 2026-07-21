@@ -123,7 +123,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.Gcp.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "Key Components", "Why there is no scheduler member" (GCP delay behaviour, for Phase 4 context).
 
-- [ ] **Migrate the MSSQL provider to the FR-1 surface and regenerate MSSQL**
+- [x] **Migrate the MSSQL provider to the FR-1 surface and regenerate MSSQL**
   - **Behavior**: `MsSqlMessageGatewayProvider` implements the post-FR-1 interface and `RejectionMetadataKeys`; MSSQL Generated tree regenerated; MSSQL compiles. Note MSSQL previously derived its DLQ routing key internally when `setupDeadLetterQueue` was true — it now receives `deadLetterRoutingKey` explicitly from the test.
   - **Test file**: `tests/Paramore.Brighter.MSSQL.Tests/MessagingGateway/Generated/**` (regenerated artifacts; verification is compilation)
   - **Test should verify**:
