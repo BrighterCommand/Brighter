@@ -134,7 +134,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MSSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.MSSQL.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "Implementation Approach" (explicit DLQ key removes hidden naming knowledge); ADR `0040-mssql-dlq-brighter-managed`.
 
-- [ ] **Migrate the PostgresSQL provider to the FR-1 surface and regenerate PostgresSQL**
+- [x] **Migrate the PostgresSQL provider to the FR-1 surface and regenerate PostgresSQL**
   - **Behavior**: `PostgresMessageGatewayProvider` implements the post-FR-1 interface and `RejectionMetadataKeys`; PostgresSQL Generated tree regenerated; PostgresSQL compiles.
   - **Test file**: `tests/Paramore.Brighter.PostgresSQL.Tests/MessagingGateway/Generated/**` (regenerated artifacts; verification is compilation)
   - **Test should verify**:
