@@ -22,7 +22,7 @@
 
 ### Phase 0 — Seams that unblock everything
 
-- [ ] **Seed the conformance ledger**
+- [x] **Seed the conformance ledger**
   - **Behavior**: A new checked-in markdown matrix records per-configuration conformance state and is the gate on the terminal cleanup. It has one row per wired gateway configuration (20) plus one placeholder row per un-onboarded transport (3), so all twelve targeted transports are represented; 11 columns, one per canonical behaviour (FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-15, FR-16, FR-17, FR-22); every cell seeded `Unknown`. Cell vocabulary: `Unknown` (transient, fix-phase only) / `Pass` / `Fixed (#PR/commit)` / `Deferred -> #NNNN (sign-off: @maintainer)`. Placeholder-row cells may only ever resolve to `Deferred`.
   - **Test file**: `specs/0036-universal-transport-conformance-tests/conformance-status.md` (artifact under test; no xUnit test)
   - **Test should verify**:
