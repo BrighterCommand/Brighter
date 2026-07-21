@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using Google.Api.Gax;
 using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.Helper;
+using Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 using Paramore.Brighter.Tasks;
@@ -87,13 +88,13 @@ public class GcpPullMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
-            var dlqTopic = $"dlq-pull-{Guid.NewGuid():N}";
-            var dlqSub = $"dlq-pull-{Guid.NewGuid():N}";
+            var dlqChannelName = new ChannelName(deadLetterRoutingKey.Value);
 
             return new GcpPubSubSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
@@ -102,7 +103,7 @@ public class GcpPullMessageGatewayProvider
                 messagePumpType: MessagePumpType.Proactor,
                 ackDeadlineSeconds: 60,
                 requeueCount: 5,
-                deadLetter: new DeadLetterPolicy(new RoutingKey(dlqTopic), new ChannelName(dlqSub))
+                deadLetter: new DeadLetterPolicy(deadLetterRoutingKey, dlqChannelName)
                 {
                     AckDeadlineSeconds = 60,
                     MaxDeliveryAttempts = 5,
@@ -301,4 +302,26 @@ public class GcpPullMessageGatewayProvider
             dlqChannel.Dispose();
         }
     }
+
+    public Message GetMessageFromInvalidChannel(GcpPubSubSubscription subscription)
+    {
+        return Message.Empty;
+    }
+
+    public Task<Message> GetMessageFromInvalidChannelAsync(
+        GcpPubSubSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return Task.FromResult(Message.Empty);
+    }
+
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty
+        );
 }

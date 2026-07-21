@@ -112,7 +112,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.AWS.V4.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "Key Components".
 
-- [ ] **Migrate the GCP providers to the FR-1 surface and regenerate GCP**
+- [x] **Migrate the GCP providers to the FR-1 surface and regenerate GCP**
   - **Behavior**: The four GCP providers (Pull, PullOrdering, Stream, StreamOrdering) implement the post-FR-1 interface and `RejectionMetadataKeys` (returning GCP's own key strings, `string.Empty` where a field is not stamped); GCP Generated tree regenerated; GCP compiles. This migration only makes GCP compile — GCP's FR-2 non-conformance is addressed in Phase 4.
   - **Test file**: `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Generated/**` (regenerated artifacts; verification is compilation)
   - **Test should verify**:
