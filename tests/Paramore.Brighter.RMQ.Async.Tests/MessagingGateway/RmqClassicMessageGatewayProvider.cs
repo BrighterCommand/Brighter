@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
+using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic;
 using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Proactor;
 using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Reactor;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
@@ -193,10 +194,11 @@ public class RmqClassicMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
             return new RmqSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(Uuid.NewAsString()),
@@ -204,8 +206,8 @@ public class RmqClassicMessageGatewayProvider
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
-                deadLetterChannelName: new ChannelName($"{routingKey}.DLQ"),
-                deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                deadLetterChannelName: new ChannelName(deadLetterRoutingKey.Value),
+                deadLetterRoutingKey: deadLetterRoutingKey,
                 requeueCount: 3
             );
         }
@@ -295,6 +297,28 @@ public class RmqClassicMessageGatewayProvider
             dlqConsumer.Dispose();
         }
     }
+
+    public Task<Message> GetMessageFromInvalidChannelAsync(
+        RmqSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return Task.FromResult(Message.Empty);
+    }
+
+    public Message GetMessageFromInvalidChannel(RmqSubscription subscription)
+    {
+        return Message.Empty;
+    }
+
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty
+        );
 
     /// <summary>
     /// Channel decorator that tracks requeue count per original message ID and

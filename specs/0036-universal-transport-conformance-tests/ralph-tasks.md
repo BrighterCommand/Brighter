@@ -157,7 +157,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Redis.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.Redis.Tests`
   - **References**: requirements FR-1(6), AC-1; Redis keys via `RedisMessageConsumer.RefreshMetadata`; ADR `0039-redis-dlq-brighter-managed`.
 
-- [ ] **Migrate the RMQ.Async providers to the FR-1 surface and regenerate RMQ.Async**
+- [x] **Migrate the RMQ.Async providers to the FR-1 surface and regenerate RMQ.Async**
   - **Behavior**: `RmqClassicMessageGatewayProvider` and `RmqQuorumMessageGatewayProvider` implement the post-FR-1 interface and `RejectionMetadataKeys`; RMQ.Async Generated tree regenerated; RMQ.Async compiles.
   - **Test file**: `tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway/Generated/**` (regenerated artifacts; verification is compilation)
   - **Test should verify**:

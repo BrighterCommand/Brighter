@@ -47,10 +47,10 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
-        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
+        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
             OnMissingChannel.Create,
-            true);
+            deadLetterRoutingKey: new RoutingKey($"{_publication.Topic!}.DLQ"));
 
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
