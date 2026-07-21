@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -65,12 +65,6 @@ public class RocketMqMessageGatewayProvider
         ["When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received_async"] = "gen_p_partition_key",
     };
 
-    private static readonly Dictionary<string, string> s_dlqTargetMap = new()
-    {
-        ["gen_r_dlq"] = "gen_r_dlq_target",
-        ["gen_p_dlq"] = "gen_p_dlq_target",
-    };
-
     public RocketMqMessageGatewayProvider()
     {
         _connection = GatewayFactory.CreateConnection();
@@ -106,9 +100,10 @@ public class RocketMqMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false)
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null)
     {
-        if (setupDeadLetterQueue && s_dlqTargetMap.TryGetValue(routingKey.Value, out var dlqTarget))
+        if (deadLetterRoutingKey != null || invalidMessageRoutingKey != null)
         {
             return new RocketMqSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(Uuid.NewAsString()),
@@ -117,7 +112,8 @@ public class RocketMqMessageGatewayProvider
                 consumerGroup: Guid.NewGuid().ToString(),
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
-                deadLetterRoutingKey: new RoutingKey(dlqTarget),
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey,
                 requeueCount: 3
             );
         }
@@ -196,6 +192,15 @@ public class RocketMqMessageGatewayProvider
         }
     }
 
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            "originalTopic",
+            "originalMessageType",
+            "rejectionReason",
+            "rejectionMessage",
+            "rejectionTimestamp"
+        );
+
     public Message GetMessageFromDeadLetterQueue(RocketSubscription subscription)
     {
         return BrighterAsyncContext.Run(() => GetMessageFromDeadLetterQueueAsync(subscription));
@@ -205,6 +210,9 @@ public class RocketMqMessageGatewayProvider
         RocketSubscription subscription,
         CancellationToken cancellationToken = default)
     {
+        if (subscription.DeadLetterRoutingKey == null)
+            return Message.Empty;
+
         var dlqConsumer = await new SimpleConsumer.Builder()
             .SetClientConfig(_connection.ClientConfig)
             .SetConsumerGroup(Guid.NewGuid().ToString())
@@ -216,6 +224,53 @@ public class RocketMqMessageGatewayProvider
             .Build();
 
         var consumer = new RocketMessageConsumer(dlqConsumer, 1, TimeSpan.FromSeconds(30));
+
+        try
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                var message = messages.First();
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    await consumer.AcknowledgeAsync(message, cancellationToken);
+                    return message;
+                }
+
+                await Task.Delay(1000, cancellationToken);
+            }
+
+            return new Message();
+        }
+        finally
+        {
+            await consumer.DisposeAsync();
+        }
+    }
+
+    public Message GetMessageFromInvalidChannel(RocketSubscription subscription)
+    {
+        return BrighterAsyncContext.Run(() => GetMessageFromInvalidChannelAsync(subscription));
+    }
+
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
+        RocketSubscription subscription,
+        CancellationToken cancellationToken = default)
+    {
+        if (subscription.InvalidMessageRoutingKey == null)
+            return Message.Empty;
+
+        var invalidConsumer = await new SimpleConsumer.Builder()
+            .SetClientConfig(_connection.ClientConfig)
+            .SetConsumerGroup(Guid.NewGuid().ToString())
+            .SetAwaitDuration(TimeSpan.FromSeconds(5))
+            .SetSubscriptionExpression(new Dictionary<string, FilterExpression>
+            {
+                [subscription.InvalidMessageRoutingKey!] = new("*")
+            })
+            .Build();
+
+        var consumer = new RocketMessageConsumer(invalidConsumer, 1, TimeSpan.FromSeconds(30));
 
         try
         {

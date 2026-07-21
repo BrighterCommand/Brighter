@@ -168,7 +168,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Async.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.RMQ.Async.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "Key Components".
 
-- [ ] **Migrate the RocketMQ provider to the FR-1 surface and regenerate RocketMQ**
+- [x] **Migrate the RocketMQ provider to the FR-1 surface and regenerate RocketMQ**
   - **Behavior**: `RocketMqMessageGatewayProvider` implements the post-FR-1 interface and `RejectionMetadataKeys`; RocketMQ Generated tree regenerated; RocketMQ compiles. This is the last of the 20 provider migrations; after it, AC-1 is satisfiable via a full regenerate.
   - **Test file**: `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Generated/**` (regenerated artifacts; verification is compilation)
   - **Test should verify**:
