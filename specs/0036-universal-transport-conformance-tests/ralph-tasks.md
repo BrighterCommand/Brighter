@@ -46,7 +46,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~MessagingGatewayGenerator"`
   - **References**: requirements FR-10(1),(2),(3), AC-10(a); ADR 0066 "SkipTest's four gate branches — Step A", "the substring-matching hazard"; verified branch lines 122/127/132/145 in `MessagingGatewayGenerator.cs`.
 
-- [ ] **Extend the FR-1 provider interface templates (both variants) and edit the exhaustion template to drop the positional bool**
+- [x] **Extend the FR-1 provider interface templates (both variants) and edit the exhaustion template to drop the positional bool**
   - **Behavior**: The two generated provider interface templates gain the full canonical surface, and `CreateSubscription`'s `bool setupDeadLetterQueue` is removed. Because the still-live exhaustion template passes that flag **positionally** as a bare `true` fourth argument (invisible to a name search), its `.liquid` source must be edited in this same change or six test projects fail to compile on regeneration. No project is regenerated in this task (template-only change, verified via the generator test project), so nothing breaks yet.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/MessagingGatewayGenerator/When_generating_provider_interface_should_expose_canonical_surface.cs`
   - **Test should verify**:
