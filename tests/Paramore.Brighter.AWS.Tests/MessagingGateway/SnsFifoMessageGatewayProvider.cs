@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
+using Paramore.Brighter.AWS.Tests.MessagingGateway.SnsFifo;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -39,11 +40,12 @@ public class SnsFifoMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false)
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null)
     {
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
-            var deadLetterChannelName = new ChannelName($"{channelName.Value.Replace(".fifo", "")}-dlq.fifo");
+            var deadLetterChannelName = new ChannelName(deadLetterRoutingKey.Value);
             return new SqsSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
                 channelName: channelName,
@@ -56,7 +58,8 @@ public class SnsFifoMessageGatewayProvider
                     redrivePolicy: new RedrivePolicy(deadLetterChannelName, 3)
                 ),
                 topicAttributes: new SnsAttributes { Type = SqsType.Fifo },
-                deadLetterRoutingKey: new RoutingKey(deadLetterChannelName),
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey,
                 requeueCount: 3
             );
         }
@@ -69,9 +72,31 @@ public class SnsFifoMessageGatewayProvider
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: makeChannel,
             queueAttributes: new SqsAttributes(type: SqsType.Fifo),
-            topicAttributes: new SnsAttributes { Type = SqsType.Fifo }
+            topicAttributes: new SnsAttributes { Type = SqsType.Fifo },
+            invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
+
+    public Message GetMessageFromInvalidChannel(SqsSubscription subscription)
+    {
+        return Message.Empty;
+    }
+
+    public Task<Message> GetMessageFromInvalidChannelAsync(
+        SqsSubscription subscription,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(Message.Empty);
+    }
+
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            "originalTopic",
+            "originalMessageType",
+            "rejectionReason",
+            "rejectionMessage",
+            "rejectionTimestamp"
+        );
 
     public void CleanUp(
         IAmAMessageProducerSync? producer,

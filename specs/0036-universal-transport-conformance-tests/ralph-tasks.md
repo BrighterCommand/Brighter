@@ -88,7 +88,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Kafka.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.Kafka.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "Key Components" (per-transport providers), Kafka key names in `src/Paramore.Brighter.MessagingGateway.Kafka/HeaderNames.cs`; regenerate steps in `.agent_instructions/generated_tests.md`.
 
-- [ ] **Migrate the AWS (V3) providers to the FR-1 surface and regenerate AWS**
+- [x] **Migrate the AWS (V3) providers to the FR-1 surface and regenerate AWS**
   - **Behavior**: The four AWS providers (SnsStandard, SnsFifo, SqsStandard, SqsFifo) implement the post-FR-1 interface — routing-key params, `GetMessageFromInvalidChannel`, `RejectionMetadataKeys` returning SQS camelCase key strings (`originalTopic`, `originalMessageType`, `rejectionReason`, `rejectionMessage`, `rejectionTimestamp`; `string.Empty` for any field the gateway does not stamp) — and the AWS Generated tree is regenerated. AWS compiles. (If this exceeds one iteration, split per provider; land SqsStandard first.)
   - **Test file**: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Generated/**` (regenerated artifacts; verification is compilation)
   - **Test should verify**:
