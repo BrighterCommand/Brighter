@@ -181,10 +181,11 @@ public class RedisMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
             return new RedisSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(Guid.NewGuid().ToString()),
@@ -192,7 +193,8 @@ public class RedisMessageGatewayProvider
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
-                deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey,
                 requeueCount: 3
             );
         }
@@ -202,7 +204,8 @@ public class RedisMessageGatewayProvider
             channelName: channelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: makeChannel
+            makeChannels: makeChannel,
+            invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
 
@@ -282,6 +285,28 @@ public class RedisMessageGatewayProvider
 
         return new Message();
     }
+
+    public Message GetMessageFromInvalidChannel(RedisSubscription subscription)
+    {
+        return Message.Empty;
+    }
+
+    public Task<Message> GetMessageFromInvalidChannelAsync(
+        RedisSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return Task.FromResult(Message.Empty);
+    }
+
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            "originalTopic",
+            "originalMessageType",
+            "rejectionReason",
+            "rejectionMessage",
+            "rejectionTimestamp"
+        );
 
     /// <summary>
     /// Channel decorator that tracks requeue count per original message ID and

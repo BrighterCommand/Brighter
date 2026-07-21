@@ -145,7 +145,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.PostgresSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.PostgresSQL.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR `0041-postgres-dlq-brighter-managed`.
 
-- [ ] **Migrate the Redis provider to the FR-1 surface and regenerate Redis**
+- [x] **Migrate the Redis provider to the FR-1 surface and regenerate Redis**
   - **Behavior**: `RedisMessageGatewayProvider` implements the post-FR-1 interface and `RejectionMetadataKeys` (Redis camelCase: `originalTopic`, `originalMessageType`, `rejectionReason`, `rejectionMessage`, `rejectionTimestamp`); Redis Generated tree regenerated; Redis compiles.
   - **Test file**: `tests/Paramore.Brighter.Redis.Tests/MessagingGateway/Generated/**` (regenerated artifacts; verification is compilation)
   - **Test should verify**:
