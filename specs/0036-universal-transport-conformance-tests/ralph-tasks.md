@@ -101,7 +101,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.AWS.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "What a provider returns for a field its gateway does not stamp"; SQS keys via `SqsMessageConsumer.RefreshMetadata` in `src/Paramore.Brighter.MessagingGateway.AWSSQS`.
 
-- [ ] **Migrate the AWS.V4 providers to the FR-1 surface and regenerate AWS.V4**
+- [x] **Migrate the AWS.V4 providers to the FR-1 surface and regenerate AWS.V4**
   - **Behavior**: The four AWS.V4 providers implement the post-FR-1 interface with SQS camelCase `RejectionMetadataKeys`; AWS.V4 Generated tree regenerated; AWS.V4 compiles. Split per provider if needed, SqsStandard first.
   - **Test file**: `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/Generated/**` (regenerated artifacts; verification is compilation)
   - **Test should verify**:
