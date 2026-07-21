@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,7 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -41,14 +41,14 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 public class AssertSafeIdentifierTests
 {
-    [Theory]
-    [InlineData("O'Brien")]              // single quote — breaks information_schema probe at MySqlOutboxMigrationCatalog.cs:165
-    [InlineData("Outbox; DROP")]         // semicolon — statement terminator
-    [InlineData("my-outbox")]            // hyphen — invalid in bare identifiers
-    [InlineData("1Outbox")]              // leading digit — invalid as bare identifier across all backends
-    [InlineData("")]                     // empty
-    [InlineData("_underscore_leading")]  // leading underscore — Spanner rejects `_`-prefixed identifiers as reserved (PR #4039 review item E4)
-    public void When_assert_safe_identifier_is_called_with_known_unsafe_inputs_it_should_throw(string unsafeIdentifier)
+    [Test]
+    [Arguments("O'Brien")]              // single quote — breaks information_schema probe at MySqlOutboxMigrationCatalog.cs:165
+    [Arguments("Outbox; DROP")]         // semicolon — statement terminator
+    [Arguments("my-outbox")]            // hyphen — invalid in bare identifiers
+    [Arguments("1Outbox")]              // leading digit — invalid as bare identifier across all backends
+    [Arguments("")]                     // empty
+    [Arguments("_underscore_leading")]  // leading underscore — Spanner rejects `_`-prefixed identifiers as reserved (PR #4039 review item E4)
+    public async Task When_assert_safe_identifier_is_called_with_known_unsafe_inputs_it_should_throw(string unsafeIdentifier)
     {
         //Arrange
         const string parameterName = "tableName";
@@ -59,14 +59,14 @@ public class AssertSafeIdentifierTests
 
         //Assert — message must name both the offending identifier (so operators see the bad value)
         // and the parameter (so contributors see which call-site rejected it).
-        Assert.Contains(parameterName, exception.Message);
-        Assert.Contains(unsafeIdentifier, exception.Message);
+        await Assert.That(exception.Message).Contains(parameterName);
+        await Assert.That(exception.Message).Contains(unsafeIdentifier);
     }
 
-    [Theory]
-    [InlineData("Outbox")]
-    [InlineData("my_outbox_v2")]
-    [InlineData("Outbox123")]
+    [Test]
+    [Arguments("Outbox")]
+    [Arguments("my_outbox_v2")]
+    [Arguments("Outbox123")]
     public void When_assert_safe_identifier_is_called_with_safe_inputs_it_should_not_throw(string safeIdentifier)
     {
         //Act + Assert — the regex must accept canonical legal identifiers; an over-strict
@@ -74,8 +74,8 @@ public class AssertSafeIdentifierTests
         Identifiers.AssertSafe(safeIdentifier, "tableName");
     }
 
-    [Fact]
-    public void When_assert_safe_identifier_is_called_with_a_null_identifier_it_should_throw()
+    [Test]
+    public async Task When_assert_safe_identifier_is_called_with_a_null_identifier_it_should_throw()
     {
         //Act
         var exception = Assert.Throws<ConfigurationException>(
@@ -83,11 +83,11 @@ public class AssertSafeIdentifierTests
 
         //Assert — null fails the same defence-in-depth check; the helper is the only place
         // a null leak would surface as an actionable error rather than a downstream NRE.
-        Assert.Contains("tableName", exception.Message);
+        await Assert.That(exception.Message).Contains("tableName");
     }
 
-    [Fact]
-    public void When_assert_safe_identifier_is_called_with_a_null_identifier_it_should_not_blame_the_regex()
+    [Test]
+    public async Task When_assert_safe_identifier_is_called_with_a_null_identifier_it_should_not_blame_the_regex()
     {
         // The null path is a missing-configuration failure, not a malformed-identifier failure.
         // The original message conflated the two by rendering '<null>' against the regex hint,
@@ -101,7 +101,7 @@ public class AssertSafeIdentifierTests
         //Assert — the null path must surface as a named missing-configuration error, not
         // a regex-pattern complaint. Mention the null-ness explicitly so operators see the
         // real root cause.
-        Assert.DoesNotContain("regex", exception.Message);
-        Assert.Contains("null", exception.Message);
+        await Assert.That(exception.Message).DoesNotContain("regex");
+        await Assert.That(exception.Message).Contains("null");
     }
 }

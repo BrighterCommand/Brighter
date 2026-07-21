@@ -26,16 +26,15 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.Outbox.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlOutboxPayloadModeMismatchTests : IAsyncLifetime
+public class MySqlOutboxPayloadModeMismatchTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_existing_outbox_body_is_text_and_provisioner_is_configured_for_binary_it_should_throw_configuration_exception()
     {
         //Arrange — text-mode outbox already exists; configure provisioner for binary.
@@ -54,10 +53,10 @@ public class MySqlOutboxPayloadModeMismatchTests : IAsyncLifetime
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
-    [Fact]
+    [Test]
     public async Task When_existing_outbox_body_is_binary_and_provisioner_is_configured_for_text_it_should_throw_configuration_exception()
     {
         //Arrange — binary (BLOB) outbox already exists; configure provisioner for text.
@@ -76,7 +75,7 @@ public class MySqlOutboxPayloadModeMismatchTests : IAsyncLifetime
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
-        Assert.Contains("mismatch", exception.Message, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("mismatch");
     }
 
     private async Task CreateTable(string ddl)
@@ -88,8 +87,10 @@ public class MySqlOutboxPayloadModeMismatchTests : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

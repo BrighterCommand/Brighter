@@ -1,24 +1,21 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 {
-    [Trait("Category", "MQTT")]
-    [Collection("MQTT")]
+    [Category("MQTT")]
     public class WhenQueueIsPurgedAsync : MqttTestClassBase<WhenQueueIsPurgedAsync>
     {
         private const string ClientId = "BrighterIntegrationTests-Purge";
         private const string TopicPrefix = "BrighterIntegrationTests/PurgeTests";
 
-        public WhenQueueIsPurgedAsync(ITestOutputHelper testOutputHelper)
-        : base(ClientId, TopicPrefix, testOutputHelper)
+        public WhenQueueIsPurgedAsync()
+        : base(ClientId, TopicPrefix)
         {
         }
 
-        [Fact]
+        [Test]
         public async Task WhenPurgingTheQueueOnTheMessagingGatewayAsync()
         {
             for (int i = 0; i < 5; i++)
@@ -37,9 +34,10 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 
             Message[] receivedMessages = await MessageConsumerAsync.ReceiveAsync(TimeSpan.FromMilliseconds(100));
 
-            Assert.NotEmpty(receivedMessages);
-            Assert.Single(receivedMessages);
-            Assert.Contains(_noopMessage, receivedMessages);
+            await Assert.That(receivedMessages).IsNotEmpty();
+            await Assert.That(receivedMessages).HasSingleItem();
+            await Assert.That(receivedMessages).Contains(_noopMessage);
         }
     }
 }
+

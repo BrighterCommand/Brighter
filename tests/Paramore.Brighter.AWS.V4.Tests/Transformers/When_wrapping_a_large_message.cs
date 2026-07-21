@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Amazon.S3;
@@ -10,11 +10,10 @@ using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transformers.AWS.V4;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
-[Trait("Category", "AWS")]
+[Property("Category", "AWS")]
 public class LargeMessagePayloadWrapTests : IAsyncDisposable 
 {
     private string? _id;
@@ -30,7 +29,6 @@ public class LargeMessagePayloadWrapTests : IAsyncDisposable
     public LargeMessagePayloadWrapTests()
     {
         //arrange
-        TransformPipelineBuilderAsync.ClearPipelineCache();
             
         var mapperRegistry =
             new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
@@ -68,7 +66,7 @@ public class LargeMessagePayloadWrapTests : IAsyncDisposable
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, InstrumentationOptions.None);
     }
 
-    [Fact]
+    [Test]
     public async Task When_wrapping_a_large_message()
     {
         //act
@@ -76,12 +74,12 @@ public class LargeMessagePayloadWrapTests : IAsyncDisposable
         var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
 
         //assert
-        Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
-        Assert.NotNull(message.Header.DataRef);
+        await Assert.That(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK)).IsTrue();
+        await Assert.That(message.Header.DataRef).IsNotNull();
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
-        Assert.Equal($"Claim Check {_id}", message.Body.Value);
+        await Assert.That(message.Body.Value).IsEqualTo($"Claim Check {_id}");
             
-        Assert.True(await _luggageStore.HasClaimAsync(_id));
+        await Assert.That(await _luggageStore.HasClaimAsync(_id)).IsTrue();
     }
 
     public async ValueTask DisposeAsync()

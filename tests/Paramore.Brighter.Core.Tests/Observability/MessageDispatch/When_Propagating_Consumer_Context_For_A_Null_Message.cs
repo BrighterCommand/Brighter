@@ -23,7 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
@@ -31,14 +31,22 @@ public class PropagateConsumerContextNullMessageObservabilityTests : IDisposable
 {
     private readonly BrighterTracer _tracer = new();
 
-    [Fact]
-    public void When_propagating_consumer_context_for_a_null_message_should_not_throw()
+    [Test]
+    public async Task When_propagating_consumer_context_for_a_null_message_should_not_throw()
     {
         //The pump calls PropagateConsumerContext before its own null-message check, so a broker returning no
         //message must not raise a NullReferenceException that masks the real "no message received" outcome.
-        var exception = Record.Exception(() => _tracer.PropagateConsumerContext(null!));
+        Exception? exception = null;
+        try
+        {
+            _tracer.PropagateConsumerContext(null!);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 
     public void Dispose() => _tracer.Dispose();

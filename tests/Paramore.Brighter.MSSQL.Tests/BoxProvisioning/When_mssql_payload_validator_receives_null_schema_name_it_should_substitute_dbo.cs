@@ -26,16 +26,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
+public class MsSqlPayloadValidatorNullSchemaTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_mssql_payload_validator_receives_null_schema_name_it_should_substitute_dbo()
     {
         // Arrange — two box-shaped tables in dbo: one with a text payload column
@@ -84,8 +83,10 @@ public class MsSqlPayloadValidatorNullSchemaTests : IAsyncLifetime
         return tableName;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

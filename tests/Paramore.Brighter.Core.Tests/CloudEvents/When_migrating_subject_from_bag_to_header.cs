@@ -3,7 +3,7 @@ using System.Net.Mime;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CloudEvents;
 
@@ -18,8 +18,8 @@ namespace Paramore.Brighter.Core.Tests.CloudEvents;
 /// </summary>
 public class When_migrating_subject_from_bag_to_header
 {
-    [Fact]
-    public void When_subject_is_in_bag_serialization_preserves_the_key_verbatim()
+    [Test]
+    public async Task When_subject_is_in_bag_serialization_preserves_the_key_verbatim()
     {
         //Arrange - V9 pattern: user puts Subject in the Bag with a PascalCase key
         var message = new Message(
@@ -33,12 +33,12 @@ public class When_migrating_subject_from_bag_to_header
 
         //Assert - the key survives verbatim, so a consumer looking for "Subject" still finds it
         using var doc = JsonDocument.Parse(bagJson);
-        Assert.True(doc.RootElement.TryGetProperty("Subject", out _), "Bag key 'Subject' should survive serialization verbatim");
-        Assert.False(doc.RootElement.TryGetProperty("subject", out _), "Bag key should not be rewritten to camelCase 'subject'");
+        await Assert.That(doc.RootElement.TryGetProperty("Subject", out _)).IsTrue().Because("Bag key 'Subject' should survive serialization verbatim");
+        await Assert.That(doc.RootElement.TryGetProperty("subject", out _)).IsFalse().Because("Bag key should not be rewritten to camelCase 'subject'");
     }
 
-    [Fact]
-    public void When_subject_is_set_on_header_it_is_available_for_sns_publish_request()
+    [Test]
+    public async Task When_subject_is_set_on_header_it_is_available_for_sns_publish_request()
     {
         //Arrange - V10 pattern: user sets Subject on the MessageHeader directly
         const string expectedSubject = "OrderAccepted";
@@ -53,11 +53,11 @@ public class When_migrating_subject_from_bag_to_header
         //Assert - Header.Subject is the value the SNS publisher uses for the native SNS Subject field
         // (PublishRequest constructor third argument), which AWS serializes as PascalCase "Subject" in the
         // SNS notification envelope that downstream consumers (e.g. Python Lambdas) read
-        Assert.Equal(expectedSubject, message.Header.Subject);
+        await Assert.That(message.Header.Subject).IsEqualTo(expectedSubject);
     }
 
-    [Fact]
-    public void When_subject_is_set_on_header_cloud_events_transformer_preserves_it()
+    [Test]
+    public async Task When_subject_is_set_on_header_cloud_events_transformer_preserves_it()
     {
         //Arrange - V10 pattern: mapper sets Subject on header, publication has no Subject
         const string expectedSubject = "OrderAccepted";
@@ -76,6 +76,6 @@ public class When_migrating_subject_from_bag_to_header
         var wrapped = transformer.Wrap(message, publication);
 
         //Assert - Subject survives the transformer and is available for the SNS publisher
-        Assert.Equal(expectedSubject, wrapped.Header.Subject);
+        await Assert.That(wrapped.Header.Subject).IsEqualTo(expectedSubject);
     }
 }

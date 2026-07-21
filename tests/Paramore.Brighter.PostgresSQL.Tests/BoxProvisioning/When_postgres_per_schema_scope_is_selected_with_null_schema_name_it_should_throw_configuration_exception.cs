@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 // MigrationHistoryScope.PerSchema with a null SchemaName is a misconfiguration — there is no
 // schema to place history in. The runner must reject it at the MigrateAsync entry with a
 // ConfigurationException and must NOT silently fall back to Global or create any history.
-public class PostgreSqlPerSchemaNullSchemaNameTests : IAsyncLifetime
+public class PostgreSqlPerSchemaNullSchemaNameTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -54,26 +53,24 @@ public class PostgreSqlPerSchemaNullSchemaNameTests : IAsyncLifetime
             scope: MigrationHistoryScope.PerSchema);
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_per_schema_scope_is_selected_with_null_schema_name_it_should_throw_configuration_exception()
     {
         //Arrange — a real database; no box table for this run yet.
         new PostgresSqlTestHelper().SetupDatabase();
 
         //Act
-        var exception = await Record.ExceptionAsync(() => _runner.MigrateAsync(
+        var exception = await TestExceptionRecorder.CaptureAsync(() => _runner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, new BoxTableState(false, false, 0)));
 
         //Assert — rejected with a ConfigurationException naming the cause.
-        var configException = Assert.IsType<ConfigurationException>(exception);
-        Assert.Contains("PerSchema", configException.Message);
-        Assert.Contains("SchemaName", configException.Message);
+        var configException = await Assert.That(exception).IsTypeOf<ConfigurationException>();
+        await Assert.That(configException.Message).Contains("PerSchema");
+        await Assert.That(configException.Message).Contains("SchemaName");
 
         //Assert — no silent fall-back to Global: nothing was created/recorded for this box.
-        Assert.False(
-            await TableExistsInSchemaAsync(_tableName, "public"),
-            $"No box table '{_tableName}' should be created when the run is rejected.");
-        Assert.Equal(0, await GetHistoryRowCountAsync(_tableName));
+        await Assert.That(await TableExistsInSchemaAsync(_tableName, "public")).IsFalse().Because($"No box table '{_tableName}' should be created when the run is rejected.");
+        await Assert.That(await GetHistoryRowCountAsync(_tableName)).IsEqualTo(0);
     }
 
     private async Task<bool> TableExistsInSchemaAsync(string tableName, string schemaName)
@@ -113,8 +110,10 @@ SELECT CASE WHEN EXISTS(SELECT 1 FROM information_schema.tables
         await command.ExecuteNonQueryAsync();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

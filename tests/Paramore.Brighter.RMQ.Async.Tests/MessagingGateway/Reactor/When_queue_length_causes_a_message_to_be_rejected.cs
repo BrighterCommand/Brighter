@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,12 +25,10 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RmqMessageProducerQueueLengthTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _messageProducer;
@@ -73,8 +71,8 @@ public class RmqMessageProducerQueueLengthTests : IDisposable
         );
     }
 
-    [Fact]
-    public void When_rejecting_a_message_due_to_queue_length()
+    [Test]
+    public async Task When_rejecting_a_message_due_to_queue_length()
     {
         //create the infrastructure
         _messageConsumer.Receive(TimeSpan.Zero); 
@@ -92,7 +90,7 @@ public class RmqMessageProducerQueueLengthTests : IDisposable
         //try to grab the next message
         var nextMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000));
         message = nextMessages.First();
-        Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);
+        await Assert.That(message.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
     }
 
@@ -101,3 +99,4 @@ public class RmqMessageProducerQueueLengthTests : IDisposable
         _messageProducer.Dispose();
     }
 }
+

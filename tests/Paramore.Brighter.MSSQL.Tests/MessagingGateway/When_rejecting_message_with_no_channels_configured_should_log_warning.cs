@@ -26,11 +26,10 @@ using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 
-[Trait("Category", "MSSQL")]
+[Category("MSSQL")]
 public class MsSqlMessageConsumerNoChannelsConfiguredTests : IDisposable
 {
     private readonly MsSqlMessageProducer _producer;
@@ -56,30 +55,30 @@ public class MsSqlMessageConsumerNoChannelsConfiguredTests : IDisposable
         _consumer = (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
     }
 
-    [Fact]
-    public void When_rejecting_message_with_no_channels_configured_should_return_true()
+    [Test]
+    public async Task When_rejecting_message_with_no_channels_configured_should_return_true()
     {
         // Arrange - send a message and consume it
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND),
             new MessageBody("test content"));
-        _producer.Send(message);
+        await _producer.SendAsync(message);
         var receivedMessage = ConsumeMessage(_consumer);
 
         // Act - reject with DeliveryError but no channels configured
-        var result = _consumer.Reject(receivedMessage,
+        var result = await _consumer.RejectAsync(receivedMessage,
             new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
 
         // Assert - reject returns true (message is silently dropped)
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - consumer can continue to receive subsequent messages
         var nextMessage = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND),
             new MessageBody("second message"));
-        _producer.Send(nextMessage);
+        await _producer.SendAsync(nextMessage);
         var received = ConsumeMessage(_consumer);
-        Assert.Equal(nextMessage.Id, received.Id);
+        await Assert.That(received.Id).IsEqualTo(nextMessage.Id);
     }
 
     private static Message ConsumeMessage(IAmAMessageConsumerSync consumer)

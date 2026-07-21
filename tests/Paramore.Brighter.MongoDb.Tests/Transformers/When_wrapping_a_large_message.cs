@@ -1,13 +1,12 @@
-﻿using System;
+using System;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Paramore.Brighter.Transformers.MongoGridFS;
 using Paramore.Brighter.Transforms.Transformers;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDb.Tests.Transformers;
 
-[Trait("Category", "MongoDb")]
+[Category("MongoDb")]
 public class LargeMessagePayloadWrapTests : IDisposable
 {
     private string? _id;
@@ -20,7 +19,6 @@ public class LargeMessagePayloadWrapTests : IDisposable
     public LargeMessagePayloadWrapTests ()
     {
         //arrange
-        TransformPipelineBuilderAsync.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
@@ -44,20 +42,20 @@ public class LargeMessagePayloadWrapTests : IDisposable
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactoryAsync);
     }
 
-    [Fact]
-    public void When_wrapping_a_large_message()
+    [Test]
+    public async Task When_wrapping_a_large_message()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
         var message = _transformPipeline.Wrap(_myCommand, new RequestContext(), _publication);
 
         //assert
-        Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
-        Assert.NotNull(message.Header.DataRef);
+        await Assert.That(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK)).IsTrue();
+        await Assert.That(message.Header.DataRef).IsNotNull();
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
-        Assert.Equal($"Claim Check {_id}", message.Body.Value);
+        await Assert.That(message.Body.Value).IsEqualTo($"Claim Check {_id}");
             
-        Assert.True(_luggageStore.HasClaim(_id));
+        await Assert.That(await _luggageStore.HasClaimAsync(_id)).IsTrue();
     }
 
     public void Dispose()

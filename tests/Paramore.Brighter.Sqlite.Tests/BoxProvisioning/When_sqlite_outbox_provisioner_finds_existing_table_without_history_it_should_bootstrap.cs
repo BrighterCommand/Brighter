@@ -3,11 +3,10 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class OutboxProvisionerBootstrapTests : IAsyncLifetime
+public class OutboxProvisionerBootstrapTests
 {
     private readonly string _connectionString = Configuration.ConnectionString;
     private readonly string _tableName;
@@ -29,7 +28,7 @@ public class OutboxProvisionerBootstrapTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
     {
         // Arrange — create outbox table directly (simulating pre-migration install)
@@ -59,11 +58,13 @@ WHERE [BoxTableName] = @BoxTableName AND [MigrationVersion] = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = Convert.ToInt64(await historyCheck.ExecuteScalarAsync());
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

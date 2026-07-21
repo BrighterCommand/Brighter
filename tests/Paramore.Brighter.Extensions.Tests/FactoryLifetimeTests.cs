@@ -26,14 +26,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class FactoryLifetimeTests
 {
-    [Fact]
-    public void Factory_WithScopedLifetime_ReturnsSameInstanceWithinScope()
+    [Test]
+    public async Task Factory_WithScopedLifetime_ReturnsSameInstanceWithinScope()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -52,11 +51,11 @@ public class FactoryLifetimeTests
         var handler2 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime);
 
         // Assert - Same scope should return same instance
-        Assert.Same(handler1, handler2);
+        await Assert.That(handler2).IsSameReferenceAs(handler1);
     }
 
-    [Fact]
-    public void Factory_WithScopedLifetime_ReturnsDifferentInstancesAcrossScopes()
+    [Test]
+    public async Task Factory_WithScopedLifetime_ReturnsDifferentInstancesAcrossScopes()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -76,11 +75,11 @@ public class FactoryLifetimeTests
         var handler2 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime2);
 
         // Assert - Different scopes should return different instances
-        Assert.NotSame(handler1, handler2);
+        await Assert.That(handler2).IsNotSameReferenceAs(handler1);
     }
 
-    [Fact]
-    public void Factory_WithTransientLifetime_ReturnsDifferentInstancesEachTime()
+    [Test]
+    public async Task Factory_WithTransientLifetime_ReturnsDifferentInstancesEachTime()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -99,11 +98,11 @@ public class FactoryLifetimeTests
         var handler2 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime);
 
         // Assert - Transient should return new instance each time
-        Assert.NotSame(handler1, handler2);
+        await Assert.That(handler2).IsNotSameReferenceAs(handler1);
     }
 
-    [Fact]
-    public void Factory_WithSingletonLifetime_ReturnsSameInstanceAcrossScopes()
+    [Test]
+    public async Task Factory_WithSingletonLifetime_ReturnsSameInstanceAcrossScopes()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -123,11 +122,11 @@ public class FactoryLifetimeTests
         var handler2 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime2);
 
         // Assert - Singleton should return same instance regardless of scope
-        Assert.Same(handler1, handler2);
+        await Assert.That(handler2).IsSameReferenceAs(handler1);
     }
 
-    [Fact]
-    public void AsyncFactory_WithSingletonLifetime_ReturnsSameInstanceAcrossScopes()
+    [Test]
+    public async Task AsyncFactory_WithSingletonLifetime_ReturnsSameInstanceAcrossScopes()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -147,11 +146,11 @@ public class FactoryLifetimeTests
         var handler2 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime2);
 
         // Assert - Singleton should return same instance regardless of scope
-        Assert.Same(handler1, handler2);
+        await Assert.That(handler2).IsSameReferenceAs(handler1);
     }
 
-    [Fact]
-    public void AsyncFactory_WithScopedLifetime_ReturnsSameInstanceWithinScope()
+    [Test]
+    public async Task AsyncFactory_WithScopedLifetime_ReturnsSameInstanceWithinScope()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -170,11 +169,11 @@ public class FactoryLifetimeTests
         var handler2 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime);
 
         // Assert
-        Assert.Same(handler1, handler2);
+        await Assert.That(handler2).IsSameReferenceAs(handler1);
     }
 
-    [Fact]
-    public void AsyncFactory_WithScopedLifetime_ReturnsDifferentInstancesAcrossScopes()
+    [Test]
+    public async Task AsyncFactory_WithScopedLifetime_ReturnsDifferentInstancesAcrossScopes()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -194,11 +193,11 @@ public class FactoryLifetimeTests
         var handler2 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime2);
 
         // Assert
-        Assert.NotSame(handler1, handler2);
+        await Assert.That(handler2).IsNotSameReferenceAs(handler1);
     }
 
-    [Fact]
-    public void AsyncFactory_WithTransientLifetime_ReturnsDifferentInstances()
+    [Test]
+    public async Task AsyncFactory_WithTransientLifetime_ReturnsDifferentInstances()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -217,11 +216,11 @@ public class FactoryLifetimeTests
         var handler2 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime);
 
         // Assert
-        Assert.NotSame(handler1, handler2);
+        await Assert.That(handler2).IsNotSameReferenceAs(handler1);
     }
 
-    [Fact]
-    public void Factory_HandlerWithDependency_ResolvesBothCorrectly()
+    [Test]
+    public async Task Factory_HandlerWithDependency_ResolvesBothCorrectly()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -240,12 +239,12 @@ public class FactoryLifetimeTests
         var handler = (HandlerWithDependency)((IAmAHandlerFactorySync)factory).Create(typeof(HandlerWithDependency), lifetime)!;
 
         // Assert
-        Assert.NotNull(handler);
-        Assert.NotNull(handler.Dependency);
+        await Assert.That(handler).IsNotNull();
+        await Assert.That(handler.Dependency).IsNotNull();
     }
 
-    [Fact]
-    public void Factory_Release_ClearsHandlerFromCache()
+    [Test]
+    public async Task Factory_Release_ClearsHandlerFromCache()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -265,12 +264,12 @@ public class FactoryLifetimeTests
         var handler2 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime);
 
         // Assert - After release, we should get a new handler instance
-        Assert.NotNull(handler2);
-        Assert.NotSame(handler1, handler2);
+        await Assert.That(handler2).IsNotNull();
+        await Assert.That(handler2).IsNotSameReferenceAs(handler1);
     }
 
-    [Fact]
-    public void Factory_WithScopedLifetime_TracksDisposableHandler()
+    [Test]
+    public async Task Factory_WithScopedLifetime_TracksDisposableHandler()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -288,8 +287,8 @@ public class FactoryLifetimeTests
         var handler = (DisposableTestHandler)((IAmAHandlerFactorySync)factory).Create(typeof(DisposableTestHandler), lifetime)!;
 
         // Assert - Handler should be created and not disposed initially
-        Assert.NotNull(handler);
-        Assert.False(handler.IsDisposed);
+        await Assert.That(handler).IsNotNull();
+        await Assert.That(handler.IsDisposed).IsFalse();
     }
 
     private class TestHandler : RequestHandler<TestCommand>

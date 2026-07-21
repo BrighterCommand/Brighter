@@ -31,11 +31,10 @@ using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlAdvisoryUnlockReturnsFalseTests : IAsyncLifetime
+public class PostgreSqlAdvisoryUnlockReturnsFalseTests
 {
     // pg_advisory_unlock returns false when the calling session does not currently hold the
     // named lock — a diagnostic anomaly because the runner just acquired it. The release
@@ -43,11 +42,10 @@ public class PostgreSqlAdvisoryUnlockReturnsFalseTests : IAsyncLifetime
     // condition through a Warning-level log entry naming the table name and the lock key, and
     // continue. Per ADR 0057 §5b, this contract is the public boundary between the runner and
     // its IPostgreSqlAdvisoryLock collaborator.
-
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_postgres_advisory_unlock_returns_false_runner_should_log_warning_and_complete_normally()
     {
         //Arrange — ensure database exists; runner uses a real Postgres connection for DDL,
@@ -69,24 +67,24 @@ public class PostgreSqlAdvisoryUnlockReturnsFalseTests : IAsyncLifetime
             _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert — migration committed normally: box table created, history populated.
-        Assert.Equal(1, await GetBoxTableCount());
-        Assert.True(await GetHistoryRowCount() >= 1);
+        await Assert.That(await GetBoxTableCount()).IsEqualTo(1);
+        await Assert.That(await GetHistoryRowCount() >= 1).IsTrue();
 
         //Assert — fake observed both the acquire and release calls under the expected lock key.
         //schemaName=null in MigrateAsync resolves to effectiveSchema="public" in the runner, and
         //the lock key folds the schema in (BrighterMigration_<schema>.<table>) to keep same-named
         //tables in different schemas from sharing a lock. See Item O / ADR 0057.
         var expectedLockKey = $"BrighterMigration_public.{_tableName}";
-        Assert.Equal(expectedLockKey, fakeLock.AcquiredKey);
-        Assert.Equal(expectedLockKey, fakeLock.ReleasedKey);
+        await Assert.That(fakeLock.AcquiredKey).IsEqualTo(expectedLockKey);
+        await Assert.That(fakeLock.ReleasedKey).IsEqualTo(expectedLockKey);
 
         //Assert — exactly one Warning entry whose message names both the table name and the
         //         lock key, with no exception attached (diagnostic only).
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
-        Assert.Contains(_tableName, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Contains(expectedLockKey, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Null(warnings[0].Exception);
+        await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warnings[0].Message).Contains(_tableName);
+        await Assert.That(warnings[0].Message).Contains(expectedLockKey);
+        await Assert.That(warnings[0].Exception).IsNull();
     }
 
     private async Task<int> GetBoxTableCount()
@@ -113,8 +111,10 @@ WHERE ""BoxTableName"" = @TableName";
         return Convert.ToInt32(await command.ExecuteScalarAsync());
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

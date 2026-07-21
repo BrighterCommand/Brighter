@@ -139,5 +139,34 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
         baggage.LoadBaggage(baggageString);
         return baggage;
     }
+
+    /// <summary>
+    /// Two Baggage instances are equal when they contain the same set of key-value
+    /// pairs. W3C baggage is an unordered set, so iteration order is not significant.
+    /// </summary>
+    public bool Equals(Baggage? other)
+    {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        if (_entries.Count != other._entries.Count) return false;
+
+        foreach (var kvp in _entries)
+        {
+            if (!other._entries.TryGetValue(kvp.Key, out var otherValue)) return false;
+            if (!string.Equals(kvp.Value, otherValue, StringComparison.Ordinal)) return false;
+        }
+
+        return true;
+    }
+
+    public override bool Equals(object? obj) => obj is Baggage other && Equals(other);
+
+    public override int GetHashCode()
+    {
+        var hash = 0;
+        foreach (var kvp in _entries)
+            hash ^= HashCode.Combine(kvp.Key, kvp.Value);
+        return hash;
+    }
 }
 

@@ -30,11 +30,10 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkBeginThrowsTests
 {
     // Per ADR 0058 §B.3: the runner declares the UoW with `await using`, so DisposeAsync runs
     // on every exit path — including when BeginAsync itself throws. In that case the UoW may
@@ -45,21 +44,22 @@ public class MsSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
     //
     // The test wires a FakeMsSqlAdvisoryLock that throws TimeoutException on AcquireAsync, so
     // BeginAsync opens the transaction successfully and then propagates the lock-acquisition
-    // exception. The whole `await using` block is wrapped in Record.ExceptionAsync. Because
+    // exception. The whole `await using` block is wrapped in TestExceptionRecorder.CaptureAsync. Because
     // `await using` is sugar for try/finally and C# replaces (not suppresses) the original
     // exception when the finally throws, a clean DisposeAsync surfaces the original
     // TimeoutException — and a throwing DisposeAsync would surface a different type. So the
     // single Assert.IsType<TimeoutException> check pins both halves of the contract:
     //   1. BeginAsync propagates the AcquireAsync failure
     //   2. DisposeAsync ran cleanly (no exception type substitution)
-
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mssql_provisioning_uow_begin_throws_it_should_dispose_without_throwing()
     {
         // Arrange — fake lock that fails Acquire after the transaction has been opened
@@ -67,7 +67,7 @@ public class MsSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
             throwOnAcquire: new TimeoutException("forced lock-acquisition failure for spec 0028 §B.3 test"));
 
         // Act — capture whatever exception ultimately surfaces from the `await using` scope
-        var thrown = await Record.ExceptionAsync(async () =>
+        var thrown = await TestExceptionRecorder.CaptureAsync(async () =>
         {
             await using var uow = new MsSqlProvisioningUnitOfWork(_connection, failingLock, NullLogger.Instance);
             await uow.BeginAsync(
@@ -78,6 +78,6 @@ public class MsSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
 
         // Assert — the surfaced exception is the BeginAsync TimeoutException; DisposeAsync did
         // not throw (otherwise its exception would have replaced the TimeoutException).
-        Assert.IsType<TimeoutException>(thrown);
+        await Assert.That(thrown).IsTypeOf<TimeoutException>();
     }
 }

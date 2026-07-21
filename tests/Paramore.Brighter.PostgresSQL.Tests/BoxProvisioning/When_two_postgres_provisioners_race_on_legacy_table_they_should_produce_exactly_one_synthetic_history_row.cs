@@ -27,11 +27,10 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.Legacy;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
+public class PostgreSqlLegacyTableRaceTests
 {
     private const int OutboxSeedVersion = 3;
     private const string OutboxMarkerMessageId = "outbox-marker-must-survive";
@@ -42,7 +41,7 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
     private readonly string _outboxTableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly string _inboxTableName = $"test_inbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_two_outbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v3()
     {
         //Arrange — seed an outbox at V3 (no history row) plus a marker row to prove preservation.
@@ -69,26 +68,26 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
 
         //Assert — history has exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
         var rowsByVersion = await GetHistoryRowsByVersion(_outboxTableName);
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest - OutboxSeedVersion + 1, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest - OutboxSeedVersion + 1);
 
-        var syntheticDescription = Assert.Contains(OutboxSeedVersion, rowsByVersion);
-        Assert.StartsWith($"bootstrap: detected at V{OutboxSeedVersion}", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(OutboxSeedVersion)).IsTrue();
+
+        var syntheticDescription = rowsByVersion[OutboxSeedVersion];
+        await Assert.That(syntheticDescription).StartsWith($"bootstrap: detected at V{OutboxSeedVersion}");
 
         for (var v = OutboxSeedVersion + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            var appliedDescription = Assert.Contains(v, rowsByVersion);
-            Assert.False(
-                appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be an applied migration row, not a synthetic bootstrap row " +
-                $"(description was: '{appliedDescription}')");
+            await Assert.That(rowsByVersion.ContainsKey(v)).IsTrue();
+            var appliedDescription = rowsByVersion[v];
+            await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
         }
 
         //Assert — table ends at V7 with seeded marker preserved.
-        Assert.Contains("dataref", await GetTableColumns(_outboxTableName));
-        Assert.Equal(1, await GetOutboxMarkerRowCount());
+        await Assert.That(await GetTableColumns(_outboxTableName)).Contains("dataref");
+        await Assert.That(await GetOutboxMarkerRowCount()).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_two_inbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v1()
     {
         //Arrange — seed a V1 Postgres inbox (V1-only chain) plus a marker command row.
@@ -115,16 +114,18 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
 
         //Assert — exactly one synthetic V1 row (Postgres inbox is V1-only — no V2 to apply).
         var rowsByVersion = await GetHistoryRowsByVersion(_inboxTableName);
-        Assert.Single(rowsByVersion);
+        await Assert.That(rowsByVersion).HasSingleItem();
 
-        var syntheticDescription = Assert.Contains(1, rowsByVersion);
-        Assert.StartsWith("bootstrap: detected at V1", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(1)).IsTrue();
+
+        var syntheticDescription = rowsByVersion[1];
+        await Assert.That(syntheticDescription).StartsWith("bootstrap: detected at V1");
 
         //Assert — V1 columns intact (commandid, contextkey both present in composite PK) and marker preserved.
         var columns = await GetTableColumns(_inboxTableName);
-        Assert.Contains("commandid", columns);
-        Assert.Contains("contextkey", columns);
-        Assert.True(await InboxMarkerRowExists());
+        await Assert.That(columns).Contains("commandid");
+        await Assert.That(columns).Contains("contextkey");
+        await Assert.That(await InboxMarkerRowExists()).IsTrue();
     }
 
     private async Task SeedOutboxMarkerRow()
@@ -211,8 +212,10 @@ WHERE commandid = @CommandId AND contextkey = @ContextKey";
         return (long)(await command.ExecuteScalarAsync())! == 1;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

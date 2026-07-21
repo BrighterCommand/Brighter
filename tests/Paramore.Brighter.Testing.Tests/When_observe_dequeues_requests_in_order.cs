@@ -24,8 +24,6 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -47,42 +45,43 @@ public class SpyCommandProcessorObserveTests
         _spy.Send(_command2);
     }
 
-    [Fact]
-    public void Then_first_observe_returns_first_request()
+    [Test]
+    public async Task Then_first_observe_returns_first_request()
     {
         //Act
         var observed = _spy.Observe<TestCommand>();
 
         //Assert
-        observed.ShouldBeSameAs(_command1);
-        observed.Name.ShouldBe("first");
+        await Assert.That(observed).IsSameReferenceAs(_command1);
+        await Assert.That(observed.Name).IsEqualTo("first");
     }
 
-    [Fact]
-    public void Then_second_observe_returns_second_request()
+    [Test]
+    public async Task Then_second_observe_returns_second_request()
     {
         //Act
         _spy.Observe<TestCommand>(); // Dequeue first
         var observed = _spy.Observe<TestCommand>();
 
         //Assert
-        observed.ShouldBeSameAs(_command2);
-        observed.Name.ShouldBe("second");
+        await Assert.That(observed).IsSameReferenceAs(_command2);
+        await Assert.That(observed.Name).IsEqualTo("second");
     }
 
-    [Fact]
-    public void Then_observe_throws_when_queue_is_empty()
+    [Test]
+    public Task Then_observe_throws_when_queue_is_empty()
     {
         //Act
         _spy.Observe<TestCommand>(); // Dequeue first
         _spy.Observe<TestCommand>(); // Dequeue second
 
         //Assert
-        Should.Throw<InvalidOperationException>(() => _spy.Observe<TestCommand>());
+        Assert.ThrowsExactly<InvalidOperationException>(() => _spy.Observe<TestCommand>());
+        return Task.CompletedTask;
     }
 
-    [Fact]
-    public void Then_observe_filters_by_request_type()
+    [Test]
+    public async Task Then_observe_filters_by_request_type()
     {
         //Arrange - add a different type
         _spy.Publish(new TestEvent());
@@ -91,7 +90,7 @@ public class SpyCommandProcessorObserveTests
         var observed = _spy.Observe<TestEvent>();
 
         //Assert
-        observed.ShouldBeOfType<TestEvent>();
+        await Assert.That(observed).IsTypeOf<TestEvent>();
     }
 
     private sealed class TestCommand(string name) : Command(Id.Random())

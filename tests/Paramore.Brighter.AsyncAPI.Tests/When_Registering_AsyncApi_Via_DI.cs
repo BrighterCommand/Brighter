@@ -31,7 +31,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Neuroglia.AsyncApi.v3;
 using Paramore.Brighter.AsyncAPI.NJsonSchema;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
 {
@@ -44,8 +43,8 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             return builder;
         }
 
-        [Fact]
-        public void It_Should_Register_Options_As_Singleton()
+        [Test]
+        public async Task It_Should_Register_Options_As_Singleton()
         {
             var services = new ServiceCollection();
             services.AddLogging();
@@ -55,11 +54,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var provider = services.BuildServiceProvider();
             var options = provider.GetRequiredService<AsyncApiOptions>();
-            Assert.Equal("My API", options.Title);
+            await Assert.That(options.Title).IsEqualTo("My API");
         }
 
-        [Fact]
-        public void It_Should_Register_Generator()
+        [Test]
+        public async Task It_Should_Register_Generator()
         {
             var services = new ServiceCollection();
             services.AddLogging();
@@ -69,11 +68,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var provider = services.BuildServiceProvider();
             var generator = provider.GetRequiredService<IAmAnAsyncApiDocumentGenerator>();
-            Assert.NotNull(generator);
+            await Assert.That(generator).IsNotNull();
         }
 
-        [Fact]
-        public void It_Should_Register_Default_Schema_Generator()
+        [Test]
+        public async Task It_Should_Register_Default_Schema_Generator()
         {
             var services = new ServiceCollection();
             services.AddLogging();
@@ -83,11 +82,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var provider = services.BuildServiceProvider();
             var schemaGen = provider.GetRequiredService<IAmASchemaGenerator>();
-            Assert.IsType<NJsonSchemaGenerator>(schemaGen);
+            await Assert.That(schemaGen).IsTypeOf<NJsonSchemaGenerator>();
         }
 
-        [Fact]
-        public void It_Should_Not_Override_Custom_Schema_Generator()
+        [Test]
+        public async Task It_Should_Not_Override_Custom_Schema_Generator()
         {
             var services = new ServiceCollection();
             services.AddLogging();
@@ -98,11 +97,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var provider = services.BuildServiceProvider();
             var schemaGen = provider.GetRequiredService<IAmASchemaGenerator>();
-            Assert.IsType<FakeSchemaGenerator>(schemaGen);
+            await Assert.That(schemaGen).IsTypeOf<FakeSchemaGenerator>();
         }
 
-        [Fact]
-        public void It_Should_Apply_Configure_Delegate()
+        [Test]
+        public async Task It_Should_Apply_Configure_Delegate()
         {
             var services = new ServiceCollection();
             services.AddLogging();
@@ -117,13 +116,13 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var provider = services.BuildServiceProvider();
             var options = provider.GetRequiredService<AsyncApiOptions>();
-            Assert.Equal("Custom Title", options.Title);
-            Assert.Equal("2.0.0", options.Version);
-            Assert.Equal("Custom description", options.Description);
+            await Assert.That(options.Title).IsEqualTo("Custom Title");
+            await Assert.That(options.Version).IsEqualTo("2.0.0");
+            await Assert.That(options.Description).IsEqualTo("Custom description");
         }
 
-        [Fact]
-        public void It_Should_Return_Builder_For_Chaining()
+        [Test]
+        public async Task It_Should_Return_Builder_For_Chaining()
         {
             var services = new ServiceCollection();
             services.AddLogging();
@@ -131,10 +130,10 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var result = builder.UseAsyncApi();
 
-            Assert.Same(builder, result);
+            await Assert.That(result).IsSameReferenceAs(builder);
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Generate_Document_With_Default_Options()
         {
             var services = new ServiceCollection();
@@ -147,9 +146,9 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = provider.GetRequiredService<IAmAnAsyncApiDocumentGenerator>();
             var doc = await generator.GenerateAsync();
 
-            Assert.Equal("3.0.0", doc.AsyncApi);
-            Assert.Equal("Brighter Application", doc.Info.Title);
-            Assert.Equal("1.0.0", doc.Info.Version);
+            await Assert.That(doc.AsyncApi).IsEqualTo("3.0.0");
+            await Assert.That(doc.Info.Title).IsEqualTo("Brighter Application");
+            await Assert.That(doc.Info.Version).IsEqualTo("1.0.0");
         }
 
         private sealed class FakeSchemaGenerator : IAmASchemaGenerator

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,7 +26,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
@@ -65,17 +64,17 @@ public class AsyncInMemoryConsumerRequeueWithDelayTests
         _consumer.Receive();
     }
 
-    [Fact]
+    [Test]
     public async Task Should_use_async_scheduler_when_requeuing_with_delay()
     {
         // Act
         await _consumer.RequeueAsync(_message, _delay);
 
         // Assert
-        Assert.True(_scheduler.ScheduleAsyncCalled, "Scheduler.ScheduleAsync should have been called via producer");
+        await Assert.That(_scheduler.ScheduleAsyncCalled).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task Should_not_have_message_immediately_available_on_bus()
     {
         // Act
@@ -83,17 +82,17 @@ public class AsyncInMemoryConsumerRequeueWithDelayTests
 
         // Assert - message should not be immediately available (scheduler holds it)
         var messagesOnBus = _bus.Stream(_routingKey);
-        Assert.Empty(messagesOnBus);
+        await Assert.That(messagesOnBus).IsEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task Should_return_true_on_successful_requeue()
     {
         // Act
         var result = await _consumer.RequeueAsync(_message, _delay);
 
         // Assert
-        Assert.True(result, "RequeueAsync should return true");
+        await Assert.That(result).IsTrue();
     }
 
     /// <summary>

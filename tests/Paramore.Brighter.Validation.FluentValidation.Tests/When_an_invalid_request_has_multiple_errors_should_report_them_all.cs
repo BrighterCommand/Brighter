@@ -26,15 +26,15 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
-using Xunit;
 using global::FluentValidation;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests
 {
     public class MultipleValidationErrorsTests
     {
-        [Fact]
-        public void When_an_invalid_request_has_multiple_errors_should_report_them_all()
+        [Test]
+        public async Task When_an_invalid_request_has_multiple_errors_should_report_them_all()
         {
             //Arrange
             var services = new ServiceCollection();
@@ -46,10 +46,10 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
             var exception = Assert.Throws<RequestValidationException>(() => handler.Handle(command));
 
             //Assert
-            Assert.Equal(2, exception.Errors.Count);
-            Assert.Contains(exception.Errors, error => error.PropertyName == nameof(GreetingCommand.Name));
-            Assert.Contains(exception.Errors, error => error.PropertyName == nameof(GreetingCommand.Email));
-            Assert.All(exception.Errors, error => Assert.False(string.IsNullOrWhiteSpace(error.ErrorMessage)));
+            await Assert.That(exception.Errors.Count).IsEqualTo(2);
+            await Assert.That((exception.Errors).Any(error => error.PropertyName == nameof(GreetingCommand.Name))).IsTrue();
+            await Assert.That((exception.Errors).Any(error => error.PropertyName == nameof(GreetingCommand.Email))).IsTrue();
+            await Assert.That(exception.Errors).All(error => !(string.IsNullOrWhiteSpace(error.ErrorMessage)));
         }
     }
 }

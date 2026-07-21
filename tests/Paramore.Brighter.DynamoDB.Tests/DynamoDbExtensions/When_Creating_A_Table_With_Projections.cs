@@ -5,14 +5,13 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Outbox.DynamoDB;
-using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 {
     public class DynamoDbFactoryProjectionsTests
     {
-        [Fact]
-        public void When_Creating_A_Table_With_Projections()
+        [Test]
+        public async Task When_Creating_A_Table_With_Projections()
         {
             var tableRequestFactory = new DynamoDbTableFactory();
             var gsiProjection = new DynamoGSIProjections
@@ -38,10 +37,8 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             );
 
             //assert
-            Assert.Equal(ProjectionType.KEYS_ONLY, tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").Projection.ProjectionType);
-            Assert.Equal(
-                new List<string>{"Id", "Version"},
-                tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").Projection.NonKeyAttributes);
+            await Assert.That(tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").Projection.ProjectionType).IsEqualTo(ProjectionType.KEYS_ONLY);
+            await Assert.That(tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").Projection.NonKeyAttributes).IsEquivalentTo(new List<string>{"Id", "Version"});
         }
 
         [DynamoDBTable("MyEntity")]

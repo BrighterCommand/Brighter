@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -15,8 +15,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 // (symptom 2) which is covered by a separate test.
 public class MessageHeaderNewtonsoftRoundTripTests
 {
-    [Fact]
-    public void When_Serializing_A_Message_Header_Through_Newtonsoft_Custom_Converter_Properties_Are_Bare_Strings()
+    [Test]
+    public async Task When_Serializing_A_Message_Header_Through_Newtonsoft_Custom_Converter_Properties_Are_Bare_Strings()
     {
         var header = new MessageHeader(
             messageId: "id-1",
@@ -29,16 +29,16 @@ public class MessageHeaderNewtonsoftRoundTripTests
         var json = JsonConvert.SerializeObject(header);
         var parsed = JObject.Parse(json);
 
-        Assert.Equal(JTokenType.String, parsed["Topic"]!.Type);
-        Assert.Equal("the.topic", parsed["Topic"]!.Value<string>());
+        await Assert.That(parsed["Topic"]!.Type).IsEqualTo(JTokenType.String);
+        await Assert.That(parsed["Topic"]!.Value<string>()).IsEqualTo("the.topic");
 
-        Assert.Equal(JTokenType.String, parsed["ReplyTo"]!.Type);
-        Assert.Equal("the.reply.to", parsed["ReplyTo"]!.Value<string>());
+        await Assert.That(parsed["ReplyTo"]!.Type).IsEqualTo(JTokenType.String);
+        await Assert.That(parsed["ReplyTo"]!.Value<string>()).IsEqualTo("the.reply.to");
 
-        Assert.Equal(JTokenType.String, parsed["TraceParent"]!.Type);
-        Assert.Equal("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01", parsed["TraceParent"]!.Value<string>());
+        await Assert.That(parsed["TraceParent"]!.Type).IsEqualTo(JTokenType.String);
+        await Assert.That(parsed["TraceParent"]!.Value<string>()).IsEqualTo("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01");
 
-        Assert.Equal(JTokenType.String, parsed["TraceState"]!.Type);
-        Assert.Equal("vendor=value", parsed["TraceState"]!.Value<string>());
+        await Assert.That(parsed["TraceState"]!.Type).IsEqualTo(JTokenType.String);
+        await Assert.That(parsed["TraceState"]!.Value<string>()).IsEqualTo("vendor=value");
     }
 }

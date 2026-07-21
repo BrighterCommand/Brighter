@@ -9,13 +9,14 @@ using System.Threading.Tasks;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.SnsStandard.Proactor;
 
-[Trait("Category", "Sns")]
-[Collection("SnsStandard")]
-public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLifetime
+[Property("Category", "Sns")]
+[NotInParallel("SnsStandard")]
+public class WhenSendingAMessageShouldPropagateActivityContextAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -34,17 +35,21 @@ public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLife
         _messageBuilder = new DefaultMessageBuilder();
     }
 
+    [Before(Test)]
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
+
+    [After(Test)]
 
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
     public async Task When_sending_a_message_should_propagate_activity_context_async()
     {
         // Arrange
@@ -64,7 +69,7 @@ public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLife
         Baggage.SetBaggage("key2", "value2");
 
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
-        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
+        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
             OnMissingChannel.Create);
 
@@ -86,8 +91,8 @@ public class WhenSendingAMessageShouldPropagateActivityContextAsync : IAsyncLife
         tracerProvider.ForceFlush();
 
         // Assert
-        Assert.NotNull(message.Header.TraceParent);
-        Assert.Equal("brighter=00f067aa0ba902b7,congo=t61rcWkgMzE", message.Header.TraceState);
-        Assert.Equal("key=value,key2=value2", message.Header.Baggage.ToString());
+        await Assert.That(message.Header.TraceParent).IsNotNull();
+        await Assert.That(message.Header.TraceState).IsEqualTo("brighter=00f067aa0ba902b7,congo=t61rcWkgMzE");
+        await Assert.That(message.Header.Baggage.ToString()).IsEqualTo("key=value,key2=value2");
     }
 }

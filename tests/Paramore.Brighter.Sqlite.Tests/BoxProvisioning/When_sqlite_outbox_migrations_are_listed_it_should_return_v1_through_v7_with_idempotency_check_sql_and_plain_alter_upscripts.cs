@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
@@ -48,8 +48,8 @@ public class SqliteOutboxMigrationsTests
     private static readonly string[] s_v6Added = ["WorkflowId", "JobId"];
     private static readonly string[] s_v7Added = ["DataRef", "SpecVersion"];
 
-    [Fact]
-    public void When_sqlite_outbox_migrations_are_listed_it_should_return_v1_through_v7_with_idempotency_check_sql_and_plain_alter_upscripts()
+    [Test]
+    public async Task When_sqlite_outbox_migrations_are_listed_it_should_return_v1_through_v7_with_idempotency_check_sql_and_plain_alter_upscripts()
     {
         //Arrange — derive each version's expected LogicalColumns by accumulating per-version
         //additions from the archaeology (spec README outbox table). SQLite's V1 UpScript stays
@@ -66,10 +66,10 @@ public class SqliteOutboxMigrationsTests
         var migrations = new SqliteOutboxMigrationCatalog().All(config);
 
         //Assert — exactly seven migrations numbered 1..7 in order.
-        Assert.Equal(7, migrations.Count);
+        await Assert.That(migrations.Count).IsEqualTo(7);
         for (var i = 0; i < migrations.Count; i++)
         {
-            Assert.Equal(i + 1, migrations[i].Version.Value);
+            await Assert.That(migrations[i].Version.Value).IsEqualTo(i + 1);
         }
 
         //Assert — LogicalColumns at each version match the cumulative archaeology.
@@ -77,29 +77,23 @@ public class SqliteOutboxMigrationsTests
         {
             var migration = migrations[v - 1];
             var expected = expectedPerVersion[v];
-            Assert.True(
-                expected.SetEquals(migration.LogicalColumns),
-                $"V{v} LogicalColumns mismatch — " +
-                $"expected: [{string.Join(", ", expected.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-                $"got: [{string.Join(", ", migration.LogicalColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+            await Assert.That(expected.SetEquals(migration.LogicalColumns)).IsTrue();
         }
 
         //Assert — V1 IdempotencyCheckSql is null (V1 is the full CREATE TABLE — its own
         //CREATE TABLE IF NOT EXISTS provides idempotency).
-        Assert.Null(migrations[0].IdempotencyCheckSql);
+        await Assert.That(migrations[0].IdempotencyCheckSql).IsNull();
 
         //Assert — V2..V7 each carry an IdempotencyCheckSql probing pragma_table_info for
         //a column added by that version. Per ADR §6, the runner evaluates this scalar before
         //running UpScript and skips it (still stamping history) when the result is > 0.
         for (var v = 2; v <= 7; v++)
         {
-            var check = migrations[v - 1].IdempotencyCheckSql;
-            Assert.False(
-                string.IsNullOrWhiteSpace(check),
-                $"V{v} must have a non-empty IdempotencyCheckSql per ADR §6");
-            Assert.Contains("SELECT COUNT(*)", check, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains($"pragma_table_info('{TableName}')", check, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("WHERE name=", check, StringComparison.OrdinalIgnoreCase);
+            var check = migrations[v - 1].IdempotencyCheckSql?.Value;
+            await Assert.That(string.IsNullOrWhiteSpace(check)).IsFalse().Because($"V{v} must have a non-empty IdempotencyCheckSql per ADR §6");
+            await Assert.That(check).Contains("SELECT COUNT(*)");
+            await Assert.That(check).Contains($"pragma_table_info('{TableName}')");
+            await Assert.That(check).Contains("WHERE name=");
         }
 
         //Assert — V2..V7 UpScripts are plain ALTER TABLE ADD COLUMN statements with no
@@ -108,42 +102,40 @@ public class SqliteOutboxMigrationsTests
         //lives entirely in IdempotencyCheckSql, applied by the runner.
         for (var v = 2; v <= 7; v++)
         {
-            var script = migrations[v - 1].UpScript;
-            Assert.Contains($"ALTER TABLE [{TableName}]", script, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("ADD COLUMN", script, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("pragma_table_info", script, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("IF NOT EXISTS", script, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("PREPARE", script, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("information_schema", script, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("COL_LENGTH", script, StringComparison.OrdinalIgnoreCase);
+            var script = migrations[v - 1].UpScript.Value;
+            await Assert.That(script).Contains($"ALTER TABLE [{TableName}]");
+            await Assert.That(script).Contains("ADD COLUMN");
+            await Assert.That(script).DoesNotContain("pragma_table_info");
+            await Assert.That(script).DoesNotContain("IF NOT EXISTS");
+            await Assert.That(script).DoesNotContain("PREPARE");
+            await Assert.That(script).DoesNotContain("information_schema");
+            await Assert.That(script).DoesNotContain("COL_LENGTH");
         }
 
         //Assert — every column added by V_k appears as its own [col] ADD COLUMN clause in
         //V_k's UpScript. The expected new columns for V_k = LogicalColumns(V_k) \ LogicalColumns(V_{k-1}).
         for (var v = 2; v <= 7; v++)
         {
-            var script = migrations[v - 1].UpScript;
+            var script = migrations[v - 1].UpScript.Value;
             var newColumns = new HashSet<string>(expectedPerVersion[v], StringComparer.OrdinalIgnoreCase);
             newColumns.ExceptWith(expectedPerVersion[v - 1]);
             foreach (var column in newColumns)
             {
-                Assert.Contains($"[{column}]", script, StringComparison.OrdinalIgnoreCase);
+                await Assert.That(script).Contains($"[{column}]");
             }
         }
 
         //Assert — V1 has no single source commit; V2..V7 each carry archaeology pointers.
-        Assert.Null(migrations[0].SourceReference);
+        await Assert.That(migrations[0].SourceReference).IsNull();
         for (var v = 2; v <= 7; v++)
         {
-            Assert.False(
-                string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference),
-                $"V{v} must have a non-empty SourceReference (archaeology pointer)");
+            await Assert.That(string.IsNullOrWhiteSpace(migrations[v - 1].SourceReference)).IsFalse().Because($"V{v} must have a non-empty SourceReference (archaeology pointer)");
         }
 
         //Assert — V4 PartitionKey on SQLite ships with the cross-backend commit
         //1cdc04b60 / PR #2560 (same as MSSQL/MySQL — distinct from Postgres's
         //cff67fd5e / #3464 which lagged the payload widening). Pins archaeology accuracy.
-        Assert.Equal("1cdc04b60 / #2560", migrations[3].SourceReference);
+        await Assert.That(migrations[3].SourceReference).IsEqualTo("1cdc04b60 / #2560");
     }
 
     private static Dictionary<int, HashSet<string>> BuildExpectedColumnsByVersion()

@@ -24,14 +24,14 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests
 {
     public class MissingValidatorTests
     {
-        [Fact]
-        public void When_no_validator_is_registered_should_throw_configuration_exception()
+        [Test]
+        public async Task When_no_validator_is_registered_should_throw_configuration_exception()
         {
             //Arrange
             var emptyProvider = new ServiceCollection().BuildServiceProvider();
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
             var exception = Assert.Throws<ConfigurationException>(() => handler.Handle(command));
 
             //Assert
-            Assert.Contains(nameof(GreetingCommand), exception.Message);
+            await Assert.That(exception.Message).Contains(nameof(GreetingCommand));
         }
     }
 }

@@ -1,14 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
-[Trait("Category", "PostgresSql")]
+[Category("PostgresSql")]
 public class OrderTest : IAsyncDisposable, IDisposable
 {
     private readonly string _queueName = Guid.NewGuid().ToString();
@@ -36,8 +35,8 @@ public class OrderTest : IAsyncDisposable, IDisposable
         _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration)).Create(sub);
     }
 
-    [Fact]
-    public void When_a_message_is_sent_keep_order()
+    [Test]
+    public async Task When_a_message_is_sent_keep_order()
     {
         //Send a sequence of messages to postgres 
         var msgId = SendMessage();
@@ -49,23 +48,23 @@ public class OrderTest : IAsyncDisposable, IDisposable
 
         var firstMessage = ConsumeMessages(_consumer);
         var message = firstMessage.First();
-        Assert.False(message.IsEmpty);
-        Assert.Equal(msgId, message.Id);
+        await Assert.That(message.IsEmpty).IsFalse();
+        await Assert.That(message.Id).IsEqualTo(msgId);
 
         var secondMessage = ConsumeMessages(_consumer);
         message = secondMessage.First();
-        Assert.False(message.IsEmpty);
-        Assert.Equal(msgId2, message.Id);
+        await Assert.That(message.IsEmpty).IsFalse();
+        await Assert.That(message.Id).IsEqualTo(msgId2);
 
         var thirdMessages = ConsumeMessages(_consumer);
         message = thirdMessages.First();
-        Assert.False(message.IsEmpty);
-        Assert.Equal(msgId3, message.Id);
+        await Assert.That(message.IsEmpty).IsFalse();
+        await Assert.That(message.Id).IsEqualTo(msgId3);
 
         var fourthMessage = ConsumeMessages(_consumer);
         message = fourthMessage.First();
-        Assert.False(message.IsEmpty);
-        Assert.Equal(msgId4, message.Id);
+        await Assert.That(message.IsEmpty).IsFalse();
+        await Assert.That(message.Id).IsEqualTo(msgId4);
     }
 
     private string SendMessage()

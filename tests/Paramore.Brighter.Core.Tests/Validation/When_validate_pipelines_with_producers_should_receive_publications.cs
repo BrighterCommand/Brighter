@@ -19,29 +19,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
-
 public class ValidatePipelinesWithProducersTests
 {
-    [Fact]
-    public void When_validate_pipelines_with_producers_should_detect_missing_request_type()
+    [Test]
+    public async Task When_validate_pipelines_with_producers_should_detect_missing_request_type()
     {
         // Arrange — set up a producer whose publication has no RequestType
         var routingKey = new RoutingKey("test.validation.topic");
-        var producer = new InMemoryMessageProducer(
-            new InternalBus(), new Publication { Topic = routingKey });
-        var producerRegistry = new ProducerRegistry(
-            new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer } });
-
+        var producer = new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey });
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer } });
         var services = new ServiceCollection();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
@@ -50,29 +43,22 @@ public class ValidatePipelinesWithProducersTests
         services.AddSingleton(mapperRegistry);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         builder.ValidatePipelines();
-
         var provider = services.BuildServiceProvider();
-
         // Act — resolve validator and run validation
         var validator = provider.GetRequiredService<IAmAPipelineValidator>();
         var result = validator.Validate();
-
         // Assert — validation should detect the missing RequestType on the publication
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Message.Contains("RequestType is null"));
+        await Assert.That(result.IsValid).IsFalse();
+        await Assert.That((result.Errors).Any(e => e.Message.Contains("RequestType is null"))).IsTrue();
     }
 
-    [Fact]
-    public void When_validate_pipelines_with_valid_producers_should_pass_producer_checks()
+    [Test]
+    public async Task When_validate_pipelines_with_valid_producers_should_pass_producer_checks()
     {
         // Arrange — set up a producer with a valid publication
         var routingKey = new RoutingKey("test.validation.topic");
-        var producer = new InMemoryMessageProducer(
-            new InternalBus(),
-            new Publication { Topic = routingKey, RequestType = typeof(MyValidationCommand) });
-        var producerRegistry = new ProducerRegistry(
-            new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer } });
-
+        var producer = new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(MyValidationCommand) });
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer } });
         var services = new ServiceCollection();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
@@ -81,19 +67,18 @@ public class ValidatePipelinesWithProducersTests
         services.AddSingleton(mapperRegistry);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         builder.ValidatePipelines();
-
         var provider = services.BuildServiceProvider();
-
         // Act
         var validator = provider.GetRequiredService<IAmAPipelineValidator>();
         var result = validator.Validate();
-
         // Assert — no producer validation errors
-        Assert.DoesNotContain(result.Errors, e => e.Source.Contains("Publication"));
+        await Assert.That((result.Errors).Any(e => e.Source.Contains("Publication"))).IsFalse();
     }
 
-    private class MyValidationCommand : Command
+    private class MyValidationCommand : Paramore.Brighter.Command, Paramore.Brighter.ICommand, Paramore.Brighter.IRequest
     {
-        public MyValidationCommand() : base(System.Guid.NewGuid()) { }
+        public MyValidationCommand() : base(System.Guid.NewGuid())
+        {
+        }
     }
 }

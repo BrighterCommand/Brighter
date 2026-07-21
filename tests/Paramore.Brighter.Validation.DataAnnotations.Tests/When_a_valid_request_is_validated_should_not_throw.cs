@@ -24,14 +24,14 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.DataAnnotations.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.DataAnnotations.Tests;
 
 public class ValidRequestValidationTests
 {
-    [Fact]
-    public void When_a_valid_request_is_validated_should_not_throw()
+    [Test]
+    public async Task When_a_valid_request_is_validated_should_not_throw()
     {
         //Arrange
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
@@ -39,9 +39,17 @@ public class ValidRequestValidationTests
         var validRequest = new RegisterUser { Name = "Ada", Email = "ada@example.com" };
 
         //Act
-        var exception = Record.Exception(() => handler.Handle(validRequest));
+        Exception? exception = null;
+        try
+        {
+            handler.Handle(validRequest);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

@@ -2,7 +2,7 @@
 using System.Net;
 using System.Text.Json.Nodes;
 using Paramore.Brighter.Transformers.JustSaying;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Transforms.Adaptors.Tests.JustSaying;
 
@@ -12,8 +12,8 @@ namespace Paramore.Brighter.Transforms.Adaptors.Tests.JustSaying;
 /// </summary>
 public class JustSayingPropertySerializationTests
 {
-    [Fact]
-    public void When_mapping_justsaying_command_should_serialize_all_properties_as_flat_values()
+    [Test]
+    public async Task When_mapping_justsaying_command_should_serialize_all_properties_as_flat_values()
     {
         // Arrange
         var mapper = new JustSayingMessageMapper<TestJustSayingCommand>();
@@ -32,35 +32,35 @@ public class JustSayingPropertySerializationTests
         // Act
         var message = mapper.MapToMessage(command, new Publication());
         var doc = JsonNode.Parse(message.Body.Bytes, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
-        Assert.NotNull(doc);
+        await Assert.That(doc).IsNotNull();
 
         // Assert - Conversation should be a flat string, not {"Value":"..."}
         var conversationNode = doc[nameof(IJustSayingRequest.Conversation)];
-        Assert.NotNull(conversationNode);
-        Assert.IsAssignableFrom<JsonValue>(conversationNode);
-        Assert.Equal(command.Conversation.ToString(), conversationNode.GetValue<string>());
+        await Assert.That(conversationNode).IsNotNull();
+        await Assert.That(conversationNode).IsAssignableTo<JsonValue>();
+        await Assert.That(conversationNode.GetValue<string>()).IsEqualTo(command.Conversation.ToString());
 
         // Assert - Tenant should be a flat string, not {"Value":"..."}
         var tenantNode = doc[nameof(IJustSayingRequest.Tenant)];
-        Assert.NotNull(tenantNode);
-        Assert.IsAssignableFrom<JsonValue>(tenantNode);
-        Assert.Equal(command.Tenant.ToString(), tenantNode.GetValue<string>());
+        await Assert.That(tenantNode).IsNotNull();
+        await Assert.That(tenantNode).IsAssignableTo<JsonValue>();
+        await Assert.That(tenantNode.GetValue<string>()).IsEqualTo(command.Tenant.ToString());
 
         // Assert - SourceIp should be a flat string, not an object
         var sourceIpNode = doc[nameof(IJustSayingRequest.SourceIp)];
-        Assert.NotNull(sourceIpNode);
-        Assert.IsAssignableFrom<JsonValue>(sourceIpNode);
-        Assert.Equal(IPAddress.Loopback.ToString(), sourceIpNode.GetValue<string>());
+        await Assert.That(sourceIpNode).IsNotNull();
+        await Assert.That(sourceIpNode).IsAssignableTo<JsonValue>();
+        await Assert.That(sourceIpNode.GetValue<string>()).IsEqualTo(IPAddress.Loopback.ToString());
 
         // Assert - primitive properties serialize correctly
-        Assert.Equal(command.RaisingComponent, doc[nameof(IJustSayingRequest.RaisingComponent)]?.GetValue<string>());
-        Assert.Equal(command.Version, doc[nameof(IJustSayingRequest.Version)]?.GetValue<string>());
-        Assert.Equal(command.Name, doc["Name"]?.GetValue<string>());
-        Assert.NotNull(doc[nameof(IJustSayingRequest.TimeStamp)]);
+        await Assert.That(doc[nameof(IJustSayingRequest.RaisingComponent)]?.GetValue<string>()).IsEqualTo(command.RaisingComponent);
+        await Assert.That(doc[nameof(IJustSayingRequest.Version)]?.GetValue<string>()).IsEqualTo(command.Version);
+        await Assert.That(doc["Name"]?.GetValue<string>()).IsEqualTo(command.Name);
+        await Assert.That(doc[nameof(IJustSayingRequest.TimeStamp)]).IsNotNull();
     }
 
-    [Fact]
-    public void When_mapping_justsaying_event_should_serialize_all_properties_as_flat_values()
+    [Test]
+    public async Task When_mapping_justsaying_event_should_serialize_all_properties_as_flat_values()
     {
         // Arrange
         var mapper = new JustSayingMessageMapper<TestJustSayingEvent>();
@@ -79,31 +79,31 @@ public class JustSayingPropertySerializationTests
         // Act
         var message = mapper.MapToMessage(@event, new Publication());
         var doc = JsonNode.Parse(message.Body.Bytes, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
-        Assert.NotNull(doc);
+        await Assert.That(doc).IsNotNull();
 
         // Assert - Conversation should be a flat string, not {"Value":"..."}
         var conversationNode = doc[nameof(IJustSayingRequest.Conversation)];
-        Assert.NotNull(conversationNode);
-        Assert.IsAssignableFrom<JsonValue>(conversationNode);
-        Assert.Equal(@event.Conversation.ToString(), conversationNode.GetValue<string>());
+        await Assert.That(conversationNode).IsNotNull();
+        await Assert.That(conversationNode).IsAssignableTo<JsonValue>();
+        await Assert.That(conversationNode.GetValue<string>()).IsEqualTo(@event.Conversation.ToString());
 
         // Assert - Tenant should be a flat string, not {"Value":"..."}
         var tenantNode = doc[nameof(IJustSayingRequest.Tenant)];
-        Assert.NotNull(tenantNode);
-        Assert.IsAssignableFrom<JsonValue>(tenantNode);
-        Assert.Equal(@event.Tenant.ToString(), tenantNode.GetValue<string>());
+        await Assert.That(tenantNode).IsNotNull();
+        await Assert.That(tenantNode).IsAssignableTo<JsonValue>();
+        await Assert.That(tenantNode.GetValue<string>()).IsEqualTo(@event.Tenant.ToString());
 
         // Assert - SourceIp should be a flat string, not an object
         var sourceIpNode = doc[nameof(IJustSayingRequest.SourceIp)];
-        Assert.NotNull(sourceIpNode);
-        Assert.IsAssignableFrom<JsonValue>(sourceIpNode);
-        Assert.Equal(IPAddress.IPv6Loopback.ToString(), sourceIpNode.GetValue<string>());
+        await Assert.That(sourceIpNode).IsNotNull();
+        await Assert.That(sourceIpNode).IsAssignableTo<JsonValue>();
+        await Assert.That(sourceIpNode.GetValue<string>()).IsEqualTo(IPAddress.IPv6Loopback.ToString());
 
         // Assert - primitive properties serialize correctly
-        Assert.Equal(@event.RaisingComponent, doc[nameof(IJustSayingRequest.RaisingComponent)]?.GetValue<string>());
-        Assert.Equal(@event.Version, doc[nameof(IJustSayingRequest.Version)]?.GetValue<string>());
-        Assert.Equal(@event.Name, doc["Name"]?.GetValue<string>());
-        Assert.NotNull(doc[nameof(IJustSayingRequest.TimeStamp)]);
+        await Assert.That(doc[nameof(IJustSayingRequest.RaisingComponent)]?.GetValue<string>()).IsEqualTo(@event.RaisingComponent);
+        await Assert.That(doc[nameof(IJustSayingRequest.Version)]?.GetValue<string>()).IsEqualTo(@event.Version);
+        await Assert.That(doc["Name"]?.GetValue<string>()).IsEqualTo(@event.Name);
+        await Assert.That(doc[nameof(IJustSayingRequest.TimeStamp)]).IsNotNull();
     }
 
     public class TestJustSayingCommand : JustSayingCommand
@@ -116,4 +116,3 @@ public class JustSayingPropertySerializationTests
         public string Name { get; set; } = string.Empty;
     }
 }
-

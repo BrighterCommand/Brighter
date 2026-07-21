@@ -5,13 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RocketMQ")]
-[Collection("RocketMQMessagingGateway")]
-public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDeliveryAsync : IAsyncLifetime
+[Property("Category", "RocketMQ")]
+[NotInParallel("RocketMQMessagingGateway")]
+public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDeliveryAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -32,22 +33,26 @@ public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery
         _messageAssertion = new RocketMqMessageAssertion();
     }
 
+    [Before(Test)]
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
+
+    [After(Test)]
 
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
     public async Task When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
-        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
+        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
             OnMissingChannel.Create);
 
@@ -61,13 +66,13 @@ public class WhenReadingADelayedMessageViaTheMessagingGatewayShouldDelayDelivery
 
         // Act
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
-        Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
         await Task.Delay(TimeSpan.FromSeconds(5));
 
         // Assert
         received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
-        _messageAssertion.Assert(message, received);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await _messageAssertion.AssertAsync(message, received);
     }
 }

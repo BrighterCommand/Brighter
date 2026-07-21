@@ -27,11 +27,10 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.Legacy;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlInboxV1ToV2UpgradeTests : IAsyncLifetime
+public class MySqlInboxV1ToV2UpgradeTests
 {
     private const string MarkerCommandId = "marker-command-must-survive";
 
@@ -43,7 +42,7 @@ public class MySqlInboxV1ToV2UpgradeTests : IAsyncLifetime
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_inbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mysql_inbox_table_is_bootstrapped_at_v1_it_should_upgrade_to_v2()
     {
         //Arrange — seed a V1 inbox (no ContextKey, no history) plus a marker command row.
@@ -66,24 +65,25 @@ public class MySqlInboxV1ToV2UpgradeTests : IAsyncLifetime
         var actualColumns = await GetTableColumns();
         foreach (var expected in s_v2ExpectedColumns)
         {
-            Assert.Contains(expected, actualColumns);
+            await Assert.That(actualColumns).Contains(expected);
         }
 
         //Assert — history rows: one synthetic at V1 + one applied at V2
         var rowsByVersion = await GetHistoryRowsByVersion();
-        Assert.Equal(2, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(2);
 
-        var syntheticDescription = Assert.Contains(1, rowsByVersion);
-        Assert.StartsWith("bootstrap: detected at V1", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(1)).IsTrue();
 
-        var appliedDescription = Assert.Contains(2, rowsByVersion);
-        Assert.False(
-            appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-            $"V2 should be an applied migration row, not a synthetic bootstrap row " +
-            $"(description was: '{appliedDescription}')");
+        var syntheticDescription = rowsByVersion[1];
+        await Assert.That(syntheticDescription).StartsWith("bootstrap: detected at V1");
+
+        await Assert.That(rowsByVersion.ContainsKey(2)).IsTrue();
+
+        var appliedDescription = rowsByVersion[2];
+        await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
 
         //Assert — the seeded marker row survived with NULL ContextKey on the new column
-        Assert.True(await MarkerRowExistsWithNullContextKey());
+        await Assert.That(await MarkerRowExistsWithNullContextKey()).IsTrue();
     }
 
     private async Task SeedMarkerRow()
@@ -156,8 +156,10 @@ WHERE `CommandId` = @CommandId AND `ContextKey` IS NULL";
         return (long)(await command.ExecuteScalarAsync())! == 1L;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

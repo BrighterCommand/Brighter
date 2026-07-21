@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.MessagingGateway.Redis;
-using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 
@@ -33,8 +32,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 /// to a lazily-created producer's SendWithDelay rather than adding it back to the list immediately.
 /// This ensures the delay is respected via the scheduler instead of being ignored.
 /// </summary>
-[Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
-[Trait("Category", "Redis")]
+[Category("Redis")]
 public class When_redis_consumer_requeues_with_delay_should_use_producer : IDisposable
 {
     private readonly RedisMessageConsumer _consumer;
@@ -57,19 +55,19 @@ public class When_redis_consumer_requeues_with_delay_should_use_producer : IDisp
             new MessageBody("test content for delayed requeue"));
     }
 
-    [Fact]
-    public void When_requeuing_with_delay_should_use_producer()
+    [Test]
+    public async Task When_requeuing_with_delay_should_use_producer()
     {
         // Act - requeue with non-zero delay
-        var result = _consumer.Requeue(_message, TimeSpan.FromSeconds(5));
+        var result = await _consumer.RequeueAsync(_message, TimeSpan.FromSeconds(5));
 
         // Assert - should return true
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - scheduler should have been called via the producer path
-        Assert.True(_scheduler.ScheduleCalled);
-        Assert.Equal(_message.Body.Value, _scheduler.ScheduledMessage?.Body.Value);
-        Assert.Equal(TimeSpan.FromSeconds(5), _scheduler.ScheduledDelay);
+        await Assert.That(_scheduler.ScheduleCalled).IsTrue();
+        await Assert.That(_scheduler.ScheduledMessage?.Body.Value).IsEqualTo(_message.Body.Value);
+        await Assert.That(_scheduler.ScheduledDelay).IsEqualTo(TimeSpan.FromSeconds(5));
     }
 
     public void Dispose()
@@ -103,3 +101,4 @@ public class When_redis_consumer_requeues_with_delay_should_use_producer : IDisp
         public void Cancel(string id) { }
     }
 }
+

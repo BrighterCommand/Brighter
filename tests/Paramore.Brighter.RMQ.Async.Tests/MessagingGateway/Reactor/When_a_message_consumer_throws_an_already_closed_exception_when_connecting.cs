@@ -2,12 +2,10 @@ using System;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RMQ")]
-[Collection("RMQ")]
+[Category("RMQ")]
 public class RmqMessageConsumerConnectionClosedTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _sender;
@@ -38,8 +36,8 @@ public class RmqMessageConsumerConnectionClosedTests : IDisposable
 
     }
 
-    [Fact]
-    public void When_a_message_consumer_throws_an_already_closed_exception_when_connecting()
+    [Test]
+    public async Task When_a_message_consumer_throws_an_already_closed_exception_when_connecting()
     {
         _sender.Send(_sentMessage);
             
@@ -51,10 +49,10 @@ public class RmqMessageConsumerConnectionClosedTests : IDisposable
         catch (ChannelFailureException cfe)
         {
             exceptionHappened = true;
-            Assert.True((cfe.InnerException) is AlreadyClosedException);
+            await Assert.That((cfe.InnerException) is AlreadyClosedException).IsTrue();
         }
            
-        Assert.True(exceptionHappened);
+        await Assert.That(exceptionHappened).IsTrue();
     }
 
     public void Dispose()
@@ -63,3 +61,4 @@ public class RmqMessageConsumerConnectionClosedTests : IDisposable
         _receiver.Dispose();
     }
 }
+

@@ -1,31 +1,33 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
-using Xunit;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {
-    [Trait("Category", "ASB")]
-    public class ASBConsumerTests : IDisposable
+    [Category("ASB")]
+    public class ASBConsumerTests
     {
         private readonly Message _message;
-        private readonly IAmAChannelSync _channel;
-        private readonly IAmAProducerRegistry _producerRegistry;
+        private IAmAChannelSync _channel;
+        private IAmAProducerRegistry _producerRegistry;
         private readonly string _correlationId;
         private readonly ContentType _contentType;
         private readonly string _topicName;
         private readonly string _channelName;
-        private readonly ServiceBusClient _serviceBusClient;
+        private ServiceBusClient _serviceBusClient;
         private readonly IAdministrationClientWrapper _administrationClient;
         private readonly AzureServiceBusSubscriptionConfiguration _subscriptionConfiguration;
+        private readonly AzureServiceBusSubscription<ASBTestCommand> _subscription;
+        private readonly IServiceBusClientProvider _clientProvider;
 
         public ASBConsumerTests()
         {
@@ -34,12 +36,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 CommandValue = "Do the things.",
                 CommandNumber = 26
             };
-            
+
             _channelName = "test-channel";
             _topicName = $"Consumer-Tests-{Guid.NewGuid()}";
             var routingKey = new RoutingKey(_topicName);
-            
-            AzureServiceBusSubscription<ASBTestCommand> subscription = new(
+
+            _subscription = new AzureServiceBusSubscription<ASBTestCommand>(
                 subscriptionName: new SubscriptionName(_channelName),
                 channelName: new ChannelName(_channelName),
                 routingKey: routingKey
@@ -89,28 +91,31 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 SqlFilter = "1=1"
             };
 
-            var clientProvider = ASBCreds.ASBClientProvider;
-            _administrationClient = new AdministrationClientWrapper(clientProvider);
-            _administrationClient.CreateSubscriptionAsync(_topicName, _channelName, _subscriptionConfiguration)
-                .GetAwaiter()
-                .GetResult();
+            _clientProvider = ASBCreds.ASBClientProvider;
+            _administrationClient = new AdministrationClientWrapper(_clientProvider);
+        }
 
-            _serviceBusClient = clientProvider.GetServiceBusClient();
+        [Before(Test)]
+        public async Task Setup()
+        {
+            await _administrationClient.CreateSubscriptionAsync(_topicName, _channelName, _subscriptionConfiguration);
+
+            _serviceBusClient = _clientProvider.GetServiceBusClient();
 
             var channelFactory =
-                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider));
-            _channel = channelFactory.CreateSyncChannel(subscription);
+                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(_clientProvider));
+            _channel = channelFactory.CreateSyncChannel(_subscription);
 
-            _producerRegistry = new AzureServiceBusProducerRegistryFactory(
-                clientProvider,
-                [
-                    new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) }
-                ]
+            _producerRegistry = await new AzureServiceBusProducerRegistryFactory(
+                    _clientProvider,
+                    [
+                        new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) }
+                    ]
                 )
-                .Create();
+                .CreateAsync();
         }
         
-        [Fact]
+        [Test]
         public async Task When_receiving_a_message_via_the_consumer()
         {
             //arrange
@@ -122,34 +127,34 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
             //assert
-            Assert.Equal(_message.Id, message.Id);
-            Assert.Equal(_message.Header.Topic, message.Header.Topic);
-            Assert.Equal(_message.Header.MessageType, message.Header.MessageType);
-            Assert.Equal(_message.Header.Source.ToString(), message.Header.Source.ToString());
-            Assert.Equal(_message.Header.Type, message.Header.Type);
-            Assert.Equal(_message.Header.TimeStamp, message.Header.TimeStamp, TimeSpan.FromSeconds(5));
-            Assert.Equal(_correlationId, message.Header.CorrelationId);
-            Assert.Equal(_message.Header.ReplyTo?.Value, message.Header.ReplyTo?.Value);
-            Assert.Equal(_message.Header.ContentType, message.Header.ContentType);
-            Assert.Equal(_message.Header.PartitionKey.Value, message.Header.PartitionKey.Value);
-            Assert.Equal(_message.Header.DataSchema, message.Header.DataSchema);
-            Assert.Equal(_message.Header.Subject, message.Header.Subject);
-            Assert.Equal(_message.Header.HandledCount, message.Header.HandledCount);
-            Assert.Equal(_message.Header.Delayed.TotalMilliseconds, message.Header.Delayed.TotalMilliseconds) ;
-            Assert.Equal(_message.Header.TraceParent?.Value, message.Header.TraceParent?.Value);
-            Assert.Equal(_message.Header.TraceState?.Value, message.Header.TraceState?.Value);
-            Assert.Equal(MessageHeader.DefaultSpecVersion, message.Header.SpecVersion);
-            Assert.Equal(_message.Header.Baggage, message.Header.Baggage);
+            await Assert.That(message.Id).IsEqualTo(_message.Id);
+            await Assert.That(message.Header.Topic).IsEqualTo(_message.Header.Topic);
+            await Assert.That(message.Header.MessageType).IsEqualTo(_message.Header.MessageType);
+            await Assert.That(message.Header.Source.ToString()).IsEqualTo(_message.Header.Source.ToString());
+            await Assert.That(message.Header.Type).IsEqualTo(_message.Header.Type);
+            await Assert.That(message.Header.TimeStamp).IsEqualTo(_message.Header.TimeStamp).Within(TimeSpan.FromSeconds(5));
+            await Assert.That(message.Header.CorrelationId).IsEqualTo(_correlationId);
+            await Assert.That(message.Header.ReplyTo?.Value).IsEqualTo(_message.Header.ReplyTo?.Value);
+            await Assert.That(message.Header.ContentType).IsEqualTo(_message.Header.ContentType);
+            await Assert.That(message.Header.PartitionKey.Value).IsEqualTo(_message.Header.PartitionKey.Value);
+            await Assert.That(message.Header.DataSchema).IsEqualTo(_message.Header.DataSchema);
+            await Assert.That(message.Header.Subject).IsEqualTo(_message.Header.Subject);
+            await Assert.That(message.Header.HandledCount).IsEqualTo(_message.Header.HandledCount);
+            await Assert.That(message.Header.Delayed.TotalMilliseconds).IsEqualTo(_message.Header.Delayed.TotalMilliseconds) ;
+            await Assert.That(message.Header.TraceParent?.Value).IsEqualTo(_message.Header.TraceParent?.Value);
+            await Assert.That(message.Header.TraceState?.Value).IsEqualTo(_message.Header.TraceState?.Value);
+            await Assert.That(message.Header.SpecVersion).IsEqualTo(MessageHeader.DefaultSpecVersion);
+            await Assert.That(message.Header.Baggage).IsEqualTo(_message.Header.Baggage);
             
-            Assert.Equal(_message.Body.Value, message.Body.Value);
+            await Assert.That(message.Body.Value).IsEqualTo(_message.Body.Value);
             
-            Assert.False(message.Redelivered);
+            await Assert.That(message.Redelivered).IsFalse();
 
             //clear the channel
             _channel.Acknowledge(message);
         }
 
-        [Fact]
+        [Test]
         public async Task When_rejecting_a_message_via_the_consumer()
         {
             //arrange
@@ -168,15 +173,15 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             var deadLetter = await deadLetterReceiver.ReceiveMessageAsync();
 
-            Assert.Equal(message.Id, deadLetter.MessageId);
-            Assert.Equal(_correlationId, deadLetter.CorrelationId);
-            Assert.Equal(MessageType.MT_COMMAND, _message.Header.MessageType);
-            Assert.Equal(message.Body.Value, deadLetter.Body.ToString());
-            Assert.Equal(_message.Header.Topic.ToString(), _topicName);
-            Assert.Equal(TimeSpan.Zero, _message.Header.Delayed);
+            await Assert.That(deadLetter.MessageId).IsEqualTo(message.Id);
+            await Assert.That(deadLetter.CorrelationId).IsEqualTo(_correlationId);
+            await Assert.That(_message.Header.MessageType).IsEqualTo(MessageType.MT_COMMAND);
+            await Assert.That(deadLetter.Body.ToString()).IsEqualTo(message.Body.Value);
+            await Assert.That(_topicName).IsEqualTo(_message.Header.Topic.ToString());
+            await Assert.That(_message.Header.Delayed).IsEqualTo(TimeSpan.Zero);
         }
 
-        [Fact]
+        [Test]
         public async Task When_requeueing_a_message_via_the_consumer()
         {
             //arrange
@@ -192,30 +197,31 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             var requeuedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
-            Assert.Equal(message.Id, requeuedMessage.Id);
-            Assert.False(requeuedMessage.Redelivered);
-            Assert.Equal(new RoutingKey(_topicName), requeuedMessage.Header.Topic);
-            Assert.Equal(_correlationId, requeuedMessage.Header.CorrelationId);
-            Assert.Equal(_contentType, requeuedMessage.Header.ContentType);
-            Assert.Equal(1, requeuedMessage.Header.HandledCount);
+            await Assert.That(requeuedMessage.Id).IsEqualTo(message.Id);
+            await Assert.That(requeuedMessage.Redelivered).IsFalse();
+            await Assert.That(requeuedMessage.Header.Topic).IsEqualTo(new RoutingKey(_topicName));
+            await Assert.That(requeuedMessage.Header.CorrelationId).IsEqualTo(_correlationId);
+            await Assert.That(requeuedMessage.Header.ContentType).IsEqualTo(_contentType);
+            await Assert.That(requeuedMessage.Header.HandledCount).IsEqualTo(1);
         }
 
-        [Fact]
+        [Test]
         public async Task When_A_Subscription_is_created_the_properties_are_set_as_Expected()
         {
             var sub = await _administrationClient.GetSubscriptionAsync(_topicName, _channelName, CancellationToken.None);
 
-            Assert.Equal(_subscriptionConfiguration.DeadLetteringOnMessageExpiration, sub.DeadLetteringOnMessageExpiration);
-            Assert.Equal(_subscriptionConfiguration.DefaultMessageTimeToLive, sub.DefaultMessageTimeToLive);
-            Assert.Equal(_subscriptionConfiguration.LockDuration, sub.LockDuration);
-            Assert.Equal(_subscriptionConfiguration.MaxDeliveryCount, sub.MaxDeliveryCount);
+            await Assert.That(sub.DeadLetteringOnMessageExpiration).IsEqualTo(_subscriptionConfiguration.DeadLetteringOnMessageExpiration);
+            await Assert.That(sub.DefaultMessageTimeToLive).IsEqualTo(_subscriptionConfiguration.DefaultMessageTimeToLive);
+            await Assert.That(sub.LockDuration).IsEqualTo(_subscriptionConfiguration.LockDuration);
+            await Assert.That(sub.MaxDeliveryCount).IsEqualTo(_subscriptionConfiguration.MaxDeliveryCount);
 
             //ToDo: Need to Add Test for Filter
         }
 
-        public void Dispose()
+        [After(Test)]
+        public async Task Cleanup()
         {
-            _administrationClient.DeleteTopicAsync(_topicName).GetAwaiter().GetResult();
+            await _administrationClient.DeleteTopicAsync(_topicName);
             _channel?.Dispose();
             _producerRegistry?.Dispose();
         }

@@ -32,13 +32,12 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
 public class ServiceActivatorValidationTests
 {
-    [Fact]
+    [Test]
     public async Task When_validator_registered_should_validate_before_receive()
     {
         // Arrange
@@ -60,12 +59,12 @@ public class ServiceActivatorValidationTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — validation and diagnostics run before Receive, in correct order
-        Assert.True(validator.ValidateWasCalled);
-        Assert.True(diagnosticWriter.DescribeWasCalled);
-        Assert.Equal(new List<string> { "Describe", "Validate", "Receive" }, actionLog);
+        await Assert.That(validator.ValidateWasCalled).IsTrue();
+        await Assert.That(diagnosticWriter.DescribeWasCalled).IsTrue();
+        await Assert.That(actionLog).IsEquivalentTo(new List<string> { "Describe", "Validate", "Receive" });
     }
 
-    [Fact]
+    [Test]
     public async Task When_validator_not_registered_should_go_straight_to_receive()
     {
         // Arrange — no validator registered, consumer does not own validation
@@ -83,11 +82,11 @@ public class ServiceActivatorValidationTests
         await service.StartAsync(CancellationToken.None);
 
         // Assert — only Receive is called, backward compatible
-        Assert.True(dispatcher.ReceiveWasCalled);
-        Assert.Equal(new List<string> { "Receive" }, actionLog);
+        await Assert.That(dispatcher.ReceiveWasCalled).IsTrue();
+        await Assert.That(actionLog).IsEquivalentTo(new List<string> { "Receive" });
     }
 
-    [Fact]
+    [Test]
     public async Task When_validation_has_errors_should_not_call_receive()
     {
         // Arrange
@@ -109,6 +108,6 @@ public class ServiceActivatorValidationTests
         // Act & Assert — validation error prevents Receive from being called
         await Assert.ThrowsAsync<PipelineValidationException>(
             () => service.StartAsync(CancellationToken.None));
-        Assert.False(dispatcher.ReceiveWasCalled);
+        await Assert.That(dispatcher.ReceiveWasCalled).IsFalse();
     }
 }

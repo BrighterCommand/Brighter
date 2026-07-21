@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -21,7 +20,7 @@ public class WhenGeneratingWithoutOutboxConfigurationShouldLogAndComplete : IDis
         _logger = factory.CreateLogger<Generators.OutboxGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_generating_without_outbox_configuration_should_log_and_complete()
     {
         // Arrange

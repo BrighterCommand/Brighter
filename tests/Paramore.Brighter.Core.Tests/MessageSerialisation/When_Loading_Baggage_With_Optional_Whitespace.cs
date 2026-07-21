@@ -1,6 +1,6 @@
 using System.Linq;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -11,8 +11,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 // surrounding whitespace must be trimmed before the key/value are validated.
 public class LoadBaggageWhitespaceTests
 {
-    [Fact]
-    public void When_Loading_Baggage_With_Optional_Whitespace_Around_Delimiters_The_Entries_Are_Parsed()
+    [Test]
+    public async Task When_Loading_Baggage_With_Optional_Whitespace_Around_Delimiters_The_Entries_Are_Parsed()
     {
         // Arrange — a real Sentry baggage header with OWS around '=' and ','
         const string sentryBaggage =
@@ -25,8 +25,8 @@ public class LoadBaggageWhitespaceTests
 
         // Assert — keys and values are trimmed of the optional whitespace
         var entries = baggage.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        Assert.Equal("5ad257b8d9100d1a5dd03b424db74400", entries["sentry-trace_id"]);
-        Assert.Equal("1457b9474f0a1771a57da2a09fda6cdc", entries["sentry-public_key"]);
-        Assert.Equal("true", entries["sentry-sampled"]);
+        await Assert.That(entries["sentry-trace_id"]).IsEqualTo("5ad257b8d9100d1a5dd03b424db74400");
+        await Assert.That(entries["sentry-public_key"]).IsEqualTo("1457b9474f0a1771a57da2a09fda6cdc");
+        await Assert.That(entries["sentry-sampled"]).IsEqualTo("true");
     }
 }

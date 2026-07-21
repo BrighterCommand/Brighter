@@ -1,22 +1,22 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
-[Trait("Category", "PostgresSql")]
-public class OrderTestAsync : IAsyncDisposable, IDisposable
+[Category("PostgresSql")]
+public class OrderTestAsync : IAsyncDisposable
 {
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topicName = Guid.NewGuid().ToString();
-    private readonly IAmAProducerRegistry _producerRegistry;
-    private readonly IAmAMessageConsumerAsync _consumer;
+    private IAmAProducerRegistry _producerRegistry;
+    private IAmAMessageConsumerAsync _consumer;
 
-    public OrderTestAsync()
+    [Before(Test)]
+    public async Task Setup()
     {
         var testHelper = new PostgresSqlTestHelper();
         testHelper.SetupDatabase();
@@ -28,15 +28,15 @@ public class OrderTestAsync : IAsyncDisposable, IDisposable
             new ChannelName(_topicName), routingKey,
             messagePumpType: MessagePumpType.Proactor);
 
-        _producerRegistry = new PostgresProducerRegistryFactory(
+        _producerRegistry = await new PostgresProducerRegistryFactory(
             new PostgresMessagingGatewayConnection(testHelper.Configuration),
             [new PostgresPublication { Topic = routingKey }]
-        ).CreateAsync().GetAwaiter().GetResult();
-            
+        ).CreateAsync();
+
         _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration)).CreateAsync(sub);
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_message_is_sent_keep_order()
     {
         //Send a sequence of messages to postgres 
@@ -49,23 +49,23 @@ public class OrderTestAsync : IAsyncDisposable, IDisposable
 
         var firstMessage = await ConsumeMessagesAsync(_consumer);
         var message = firstMessage.First();
-        Assert.False(message.IsEmpty);
-        Assert.Equal(msgId, message.Id);
+        await Assert.That(message.IsEmpty).IsFalse();
+        await Assert.That(message.Id).IsEqualTo(msgId);
 
         var secondMessage = await ConsumeMessagesAsync(_consumer);
         message = secondMessage.First();
-        Assert.False(message.IsEmpty);
-        Assert.Equal(msgId2, message.Id);
+        await Assert.That(message.IsEmpty).IsFalse();
+        await Assert.That(message.Id).IsEqualTo(msgId2);
 
         var thirdMessages = await ConsumeMessagesAsync(_consumer);
         message = thirdMessages.First();
-        Assert.False(message.IsEmpty);
-        Assert.Equal(msgId3, message.Id);
+        await Assert.That(message.IsEmpty).IsFalse();
+        await Assert.That(message.Id).IsEqualTo(msgId3);
 
         var fourthMessage = await ConsumeMessagesAsync(_consumer);
         message = fourthMessage.First();
-        Assert.False(message.IsEmpty);
-        Assert.Equal(msgId4, message.Id);
+        await Assert.That(message.IsEmpty).IsFalse();
+        await Assert.That(message.Id).IsEqualTo(msgId4);
     }
 
     private async Task<string> SendMessageAsync()
@@ -104,7 +104,8 @@ public class OrderTestAsync : IAsyncDisposable, IDisposable
         return messages;
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         _producerRegistry.Dispose();
         ((IAmAMessageConsumerSync)_consumer).Dispose();

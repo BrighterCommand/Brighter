@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -38,7 +37,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 // stays in the backend default schema (public) — exactly today's behaviour for operators who set
 // SchemaName but never opted into PerSchema. This regression guard locks the FR1/FR4 interaction:
 // a defect that placed history per-schema whenever SchemaName was set would fail here.
-public class PostgreSqlGlobalScopeHistoryPlacementTests : IAsyncLifetime
+public class PostgreSqlGlobalScopeHistoryPlacementTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -69,7 +68,7 @@ public class PostgreSqlGlobalScopeHistoryPlacementTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_global_scope_is_used_with_a_non_default_schema_it_should_keep_history_in_public()
     {
         //Arrange — operator pre-creates the (folded) schema; pre-drop a per-schema history table so
@@ -80,26 +79,20 @@ public class PostgreSqlGlobalScopeHistoryPlacementTests : IAsyncLifetime
         await DropAnyExistingTableAsync("__BrighterMigrationHistory", _foldedSchema);
 
         //Act — fresh-install run under Global with a non-default SchemaName.
-        var exception = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert — the box table lands in the configured (folded) schema (F1 behaviour, unchanged).
-        Assert.Null(exception);
-        Assert.True(
-            await TableExistsInSchemaAsync(_tableName, _foldedSchema),
-            $"Box table must be created in the configured schema '{_foldedSchema}'.");
+        await Assert.That(exception).IsNull();
+        await Assert.That(await TableExistsInSchemaAsync(_tableName, _foldedSchema)).IsTrue().Because($"Box table must be created in the configured schema '{_foldedSchema}'.");
 
         //Assert — history is NOT inferred per-schema from SchemaName: no per-schema history table.
-        Assert.False(
-            await TableExistsInSchemaAsync("__BrighterMigrationHistory", _foldedSchema),
-            $"History table must NOT be created in '{_foldedSchema}' under Global scope.");
-        Assert.Equal(0, await GetHistoryRowCountInSchemaAsync(_foldedSchema));
+        await Assert.That(await TableExistsInSchemaAsync("__BrighterMigrationHistory", _foldedSchema)).IsFalse().Because($"History table must NOT be created in '{_foldedSchema}' under Global scope.");
+        await Assert.That(await GetHistoryRowCountInSchemaAsync(_foldedSchema)).IsEqualTo(0);
 
         //Assert — history lives in the backend default schema (public), recording this tenant's
         //configured SchemaName on the row but physically resident in public.
-        Assert.True(
-            await TableExistsInSchemaAsync("__BrighterMigrationHistory", "public"),
-            "public.__BrighterMigrationHistory must exist.");
-        Assert.Equal(1, await GetHistoryRowCountInSchemaAsync("public"));
+        await Assert.That(await TableExistsInSchemaAsync("__BrighterMigrationHistory", "public")).IsTrue().Because("public.__BrighterMigrationHistory must exist.");
+        await Assert.That(await GetHistoryRowCountInSchemaAsync("public")).IsEqualTo(1);
     }
 
     private async Task EnsureSchemaExistsAsync(string schemaName)
@@ -156,8 +149,10 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @BoxSchemaName";
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

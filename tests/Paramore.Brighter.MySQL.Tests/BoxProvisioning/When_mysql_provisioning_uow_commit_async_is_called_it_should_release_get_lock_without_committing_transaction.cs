@@ -30,11 +30,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkCommitTests
 {
     // Per ADR 0058 §B.1 / ADR 0057 §5a / §5b: MySQL is the transactionless backend in the
     // relational family; CommitAsync's only meaningful side-effect is to release the
@@ -61,15 +60,16 @@ public class MySqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
     // here uses the bool? = true outcome so no Warning is expected, but this test does NOT
     // assert "no warning" since that is more naturally the responsibility of 5.3.c's
     // tri-state pin.
-
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
     private readonly FakeMySqlAdvisoryLock _advisoryLock = new(releaseResult: true);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mysql_provisioning_uow_commit_async_is_called_it_should_release_get_lock_without_committing_transaction()
     {
         // Arrange — UoW under test, BeginAsync acquires lock per 5.3.a contract
@@ -84,10 +84,10 @@ public class MySqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         await uow.CommitAsync(CancellationToken.None);
 
         // Assert: RELEASE_LOCK was issued with the same key BeginAsync used.
-        Assert.Equal("test_lock_resource", _advisoryLock.ReleasedKey);
+        await Assert.That(_advisoryLock.ReleasedKey).IsEqualTo("test_lock_resource");
         // Assert: no transaction was opened or committed — Transaction stays null. Per ADR
         // 0057 §5a the MySQL UoW never opens a transaction; CommitAsync's job is lock
         // release only.
-        Assert.Null(uow.Transaction);
+        await Assert.That(uow.Transaction).IsNull();
     }
 }

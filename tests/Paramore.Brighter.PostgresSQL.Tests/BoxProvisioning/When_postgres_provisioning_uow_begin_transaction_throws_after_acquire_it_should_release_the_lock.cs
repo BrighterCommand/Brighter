@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -59,12 +58,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// nested/concurrent transactions aren't supported."), which is the same surface a real
 /// driver/server failure would present at this seam.
 /// </remarks>
-public class PostgreSqlProvisioningUnitOfWorkBeginTransactionThrowsTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkBeginTransactionThrowsTests
 {
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
     private NpgsqlTransaction? _blockingTransaction;
 
+    [Before(Test)]
     public async Task InitializeAsync()
     {
         await _connection.OpenAsync();
@@ -73,13 +73,14 @@ public class PostgreSqlProvisioningUnitOfWorkBeginTransactionThrowsTests : IAsyn
         _blockingTransaction = await _connection.BeginTransactionAsync();
     }
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         if (_blockingTransaction is not null) await _blockingTransaction.DisposeAsync();
         await _connection.DisposeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_begin_transaction_throws_after_acquire_it_should_release_the_lock()
     {
         const string lockKey = "test_lock_resource_begintx_failure";
@@ -87,21 +88,21 @@ public class PostgreSqlProvisioningUnitOfWorkBeginTransactionThrowsTests : IAsyn
         await using var uow = new PostgreSqlProvisioningUnitOfWork(
             _connection, _advisoryLock, NullLogger.Instance);
 
-        var thrown = await Record.ExceptionAsync(() => uow.BeginAsync(
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.BeginAsync(
             lockResource: lockKey,
             lockTimeout: TimeSpan.FromSeconds(5),
             cancellationToken: CancellationToken.None));
 
         // Original BeginTransactionAsync exception propagates unwrapped (§B.3 contract).
-        Assert.IsType<InvalidOperationException>(thrown);
+        await Assert.That(thrown).IsTypeOf<InvalidOperationException>();
 
         // AcquireAsync ran first per §B.1 ordering — pin it so the test fails clearly if
         // the ordering ever regresses to "BeginTransaction first".
-        Assert.Equal(lockKey, _advisoryLock.AcquiredKey);
+        await Assert.That(_advisoryLock.AcquiredKey).IsEqualTo(lockKey);
 
         // The cleanup contract: BeginAsync released the lock before propagating the
         // transaction exception. Without this fix, the session-scoped lock would leak to
         // connection close — bounded but messy.
-        Assert.Equal(lockKey, _advisoryLock.ReleasedKey);
+        await Assert.That(_advisoryLock.ReleasedKey).IsEqualTo(lockKey);
     }
 }

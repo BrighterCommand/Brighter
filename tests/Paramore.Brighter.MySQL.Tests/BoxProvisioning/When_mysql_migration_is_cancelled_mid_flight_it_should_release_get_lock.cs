@@ -28,16 +28,15 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlMigrationCancellationTests : IAsyncLifetime
+public class MySqlMigrationCancellationTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mysql_migration_is_cancelled_mid_flight_it_should_release_get_lock()
     {
         //Arrange — the cancelling runner's RunFreshPathAsync override blocks on Task.Delay so
@@ -55,17 +54,16 @@ public class MySqlMigrationCancellationTests : IAsyncLifetime
 
         //Act — caller's CancellationToken is signalled while the runner is mid-flight inside
         // the (substituted) fresh-path hook.
-        var thrown = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancellingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token));
+        var thrown = await Assert.That(() => cancellingRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token)).Throws<OperationCanceledException>();
 
         //Assert — the original OperationCanceledException propagates to the caller (per ADR §B.3).
-        Assert.NotNull(thrown);
+        await Assert.That(thrown).IsNotNull();
 
         //Assert — RollbackAsync IS invoked after the mid-flight cancellation.
         var spy = cancellingRunner.LastUnitOfWork;
-        Assert.NotNull(spy);
-        Assert.True(spy!.RollbackInvoked,
-            "RollbackAsync should have been invoked after the mid-flight cancellation per ADR §B.3.");
+        await Assert.That(spy).IsNotNull();
+        await Assert.That(spy!.RollbackInvoked).IsTrue().Because("RollbackAsync should have been invoked after the mid-flight cancellation per ADR §B.3.");
 
         //Assert — the CancellationToken passed to RollbackAsync is CancellationToken.None, NOT
         // the caller's signalled token. MySQL makes this assertion load-bearing: the explicit
@@ -73,9 +71,8 @@ public class MySqlMigrationCancellationTests : IAsyncLifetime
         // there is no transaction-bound implicit release). If the catch had passed the cancelled
         // token, MySqlCommand would throw OCE before RELEASE_LOCK executed and GET_LOCK would
         // persist until the connection itself was closed.
-        Assert.False(spy.RollbackToken.IsCancellationRequested,
-            "RollbackAsync should receive CancellationToken.None to ensure RELEASE_LOCK completes.");
-        Assert.Equal(CancellationToken.None, spy.RollbackToken);
+        await Assert.That(spy.RollbackToken.IsCancellationRequested).IsFalse().Because("RollbackAsync should receive CancellationToken.None to ensure RELEASE_LOCK completes.");
+        await Assert.That(spy.RollbackToken).IsEqualTo(CancellationToken.None);
 
         //Assert — the MySQL connection-scoped GET_LOCK IS released. A fresh runner whose
         // BeginAsync calls GET_LOCK on the same per-table lock resource completes the migration
@@ -85,8 +82,7 @@ public class MySqlMigrationCancellationTests : IAsyncLifetime
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
-        Assert.True(await TableExistsAsync(),
-            "Subsequent migration should have created the outbox table after the lock was released.");
+        await Assert.That(await TableExistsAsync()).IsTrue().Because("Subsequent migration should have created the outbox table after the lock was released.");
     }
 
     private async Task<bool> TableExistsAsync()
@@ -102,8 +98,10 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @TableName";
         return count > 0;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

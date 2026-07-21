@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,25 +6,20 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
-[Collection("Kafka")] //Kafka doesn't like multiple consumers of a partition
+[Category("Kafka")]
+[Property("Fragile", "CI")]
 public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaMessageConsumerUpdateOffsetAsync(ITestOutputHelper output)
+    public KafkaMessageConsumerUpdateOffsetAsync()
     {
-        _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration { Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" } },
             [
@@ -40,8 +35,8 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
             ]).Create();
     }
 
-    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
-    [Fact]
+    //[Test, Skip("As it has to wait for the messages to flush, only tends to run well in debug")]
+    [Test]
     public async Task When_a_message_is_acknowledged_update_offset()
     {
         //Let topic propagate in the broker
@@ -77,16 +72,16 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         ((KafkaMessageProducer)producerAsync).Flush();
 
         //check we sent everything
-        Assert.DoesNotContain(sentMessages, dr => dr.Value == false);
+        await Assert.That((sentMessages).Any(dr => dr.Value == false)).IsFalse();
 
         //This will create, then dispose the consumer (flushing offsets)
         Message[] messages = await ConsumeMessagesAsync(groupId, batchLimit: 5);
 
         //check we read the first 5 messages
-        Assert.Equal(5, messages.Length);
+        await Assert.That(messages.Length).IsEqualTo(5);
         for (int i = 0; i < 5; i++)
         {
-            Assert.Equal(sentMessageIds[i], messages[i].Id);
+            await Assert.That(messages[i].Id).IsEqualTo(sentMessageIds[i]);
         }
 
         //allow time for committed offsets to propagate in the broker
@@ -96,10 +91,10 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         Message[] newMessages = await ConsumeMessagesAsync(groupId, batchLimit: 5);
 
         //check we read the next 5 messages
-        Assert.Equal(5, newMessages.Length);
+        await Assert.That(newMessages.Length).IsEqualTo(5);
         for (int i = 0; i < 5; i++)
         {
-            Assert.Equal(sentMessageIds[i + 5], newMessages[i].Id);
+            await Assert.That(newMessages[i].Id).IsEqualTo(sentMessageIds[i + 5]);
         }
     }
 
@@ -144,7 +139,7 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                 catch (ChannelFailureException cfx)
                 {
                     //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
-                    _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                    Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                     await Task.Delay(1000);
                 }
             } while (maxTries <= 10);
@@ -174,3 +169,4 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         _producerRegistry.Dispose();
     }
 }
+

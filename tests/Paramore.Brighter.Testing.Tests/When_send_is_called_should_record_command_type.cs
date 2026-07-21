@@ -23,8 +23,6 @@ THE SOFTWARE. */
 
 using Paramore.Brighter;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -42,18 +40,18 @@ public class SpyCommandProcessorCommandTypeTests
         _spy.Send(command);
     }
 
-    [Fact]
-    public void Then_commands_should_contain_send()
+    [Test]
+    public async Task Then_commands_should_contain_send()
     {
         //Assert
-        _spy.Commands.ShouldContain(CommandType.Send);
+        await Assert.That(_spy.Commands).Contains(CommandType.Send);
     }
 
-    [Fact]
-    public void Then_commands_should_have_single_entry()
+    [Test]
+    public async Task Then_commands_should_have_single_entry()
     {
         //Assert
-        _spy.Commands.Count.ShouldBe(1);
+        await Assert.That(_spy.Commands.Count).IsEqualTo(1);
     }
 
     private sealed class TestCommand() : Command(Id.Random());

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Producer;
 
@@ -52,18 +51,19 @@ public class SchedulerNotConfiguredTests
         _delay = TimeSpan.FromSeconds(30);
     }
 
-    [Fact]
-    public void When_sending_with_delay_and_no_scheduler_should_throw_exception()
+    [Test]
+    public Task When_sending_with_delay_and_no_scheduler_should_throw_exception()
     {
         // Assert
-        Assert.Throws<ConfigurationException>(() =>
+        Assert.ThrowsExactly<ConfigurationException>(() =>
         {
             // Act
             _producer.SendWithDelay(_message, _delay);
         });
+        return Task.CompletedTask;
     }
 
-    [Fact]
+    [Test]
     public async Task When_sending_async_with_delay_and_no_scheduler_should_throw_exception()
     {
         // Assert

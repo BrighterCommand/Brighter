@@ -24,13 +24,12 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.Specification.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.Specification.Tests;
 
 public class MissingSpecificationTests
 {
-    [Fact]
+    [Test]
     public void When_no_specification_is_registered_should_throw_configuration_exception()
     {
         //Arrange

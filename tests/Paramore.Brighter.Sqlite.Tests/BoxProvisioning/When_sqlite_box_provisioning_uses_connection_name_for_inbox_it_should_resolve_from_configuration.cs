@@ -8,11 +8,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class InboxConnectionNameResolutionTests : IAsyncLifetime
+public class InboxConnectionNameResolutionTests
 {
     private readonly string _dbPath;
     private readonly string _connectionString;
@@ -25,7 +24,7 @@ public class InboxConnectionNameResolutionTests : IAsyncLifetime
         _tableName = $"test_inbox_{Guid.NewGuid():N}";
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_box_provisioning_uses_connection_name_for_inbox_it_should_resolve_from_configuration()
     {
         //Arrange
@@ -51,7 +50,7 @@ public class InboxConnectionNameResolutionTests : IAsyncLifetime
         var provisioners = provider.GetServices<IAmABoxProvisioner>().ToList();
 
         //Act
-        Assert.Single(provisioners);
+        await Assert.That(provisioners).HasSingleItem();
         await provisioners[0].ProvisionAsync();
 
         //Assert
@@ -62,11 +61,13 @@ public class InboxConnectionNameResolutionTests : IAsyncLifetime
         tableCheck.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name = @TableName";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
         var tableCount = Convert.ToInt64(await tableCheck.ExecuteScalarAsync());
-        Assert.Equal(1, tableCount);
+        await Assert.That(tableCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

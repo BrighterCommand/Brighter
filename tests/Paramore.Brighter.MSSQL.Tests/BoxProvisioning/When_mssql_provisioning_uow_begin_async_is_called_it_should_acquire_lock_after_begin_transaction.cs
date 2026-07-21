@@ -30,11 +30,10 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkBeginTests
 {
     // Per ADR 0058 §B.1: MSSQL uses sp_getapplock with @LockOwner='Transaction'. The lock is
     // bound to the surrounding transaction's lifetime, so BeginAsync MUST call BeginTransaction
@@ -46,15 +45,16 @@ public class MsSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
     // that captured transaction and the UoW's Transaction property. Only an implementation
     // that opens the transaction first and threads the same instance into AcquireAsync can
     // satisfy both Same-arguments — so this single assertion pins the §B.1 ordering contract.
-
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_mssql_provisioning_uow_begin_async_is_called_it_should_acquire_lock_after_begin_transaction()
     {
         // Arrange
@@ -68,8 +68,8 @@ public class MsSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
 
         // Assert: BeginTransaction ran before AcquireAsync — the spy captured a non-null
         // transaction and it is the same instance now exposed by the UoW.
-        Assert.NotNull(uow.Transaction);
-        Assert.NotNull(_advisoryLock.CapturedTransaction);
-        Assert.Same(uow.Transaction, _advisoryLock.CapturedTransaction);
+        await Assert.That(uow.Transaction).IsNotNull();
+        await Assert.That(_advisoryLock.CapturedTransaction).IsNotNull();
+        await Assert.That(_advisoryLock.CapturedTransaction).IsSameReferenceAs(uow.Transaction);
     }
 }

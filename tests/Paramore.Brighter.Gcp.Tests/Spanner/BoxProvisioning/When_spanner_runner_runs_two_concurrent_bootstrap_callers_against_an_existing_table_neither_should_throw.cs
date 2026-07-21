@@ -27,14 +27,13 @@ using Google.Api.Gax;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.BoxProvisioning.Spanner;
 using Paramore.Brighter.Outbox.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
-[Trait("Category", "Spanner")]
-public class SpannerConcurrentBootstrapTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class SpannerConcurrentBootstrapTests
 {
     private readonly string _tableName;
     private readonly string _connectionString;
@@ -50,7 +49,7 @@ public class SpannerConcurrentBootstrapTests : IAsyncLifetime
             outBoxTableName: _tableName);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_not_throw_when_two_concurrent_bootstrap_callers_race_on_history_insert()
     {
         //Arrange — pre-create a Brighter-shaped outbox table without any history rows
@@ -86,10 +85,10 @@ public class SpannerConcurrentBootstrapTests : IAsyncLifetime
         var act = async () => await Task.WhenAll(
             provisionerA.ProvisionAsync(),
             provisionerB.ProvisionAsync());
-        var ex = await Record.ExceptionAsync(act);
+        var ex = await TestExceptionRecorder.CaptureAsync(act);
 
         //Assert — neither replica should surface the benign-race AlreadyExists.
-        Assert.Null(ex);
+        await Assert.That(ex).IsNull();
 
         //Assert — exactly one bootstrap row was stamped at V_latest with the bootstrap
         //description (proves the loser's insert was absorbed cleanly, not silently
@@ -108,14 +107,16 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
             });
 
         using var reader = await historyQuery.ExecuteReaderAsync();
-        Assert.True(await reader.ReadAsync(), "expected exactly one history row at V_latest");
+        await Assert.That(await reader.ReadAsync()).IsTrue().Because("expected exactly one history row at V_latest");
         var description = reader.GetString(0);
-        Assert.StartsWith("bootstrap: spanner-assumed-current", description);
-        Assert.False(await reader.ReadAsync(), "expected no second history row at V_latest");
+        await Assert.That(description).StartsWith("bootstrap: spanner-assumed-current");
+        await Assert.That(await reader.ReadAsync()).IsFalse().Because("expected no second history row at V_latest");
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

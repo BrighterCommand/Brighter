@@ -2,11 +2,10 @@ using System;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlInboxProvisionerFreshDatabaseTests : IAsyncLifetime
+public class PostgreSqlInboxProvisionerFreshDatabaseTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName;
@@ -28,7 +27,7 @@ public class PostgreSqlInboxProvisionerFreshDatabaseTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgresql_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table()
     {
         //Arrange
@@ -47,7 +46,7 @@ SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = @TableName)";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
         var tableExists = (bool)(await tableCheck.ExecuteScalarAsync())!;
-        Assert.True(tableExists);
+        await Assert.That(tableExists).IsTrue();
 
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
@@ -56,11 +55,13 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public' AND ""Migra
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

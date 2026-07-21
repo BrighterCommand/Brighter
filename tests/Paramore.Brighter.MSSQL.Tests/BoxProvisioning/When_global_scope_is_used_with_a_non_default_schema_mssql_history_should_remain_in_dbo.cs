@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // stays in the backend default schema (dbo) — exactly today's behaviour for operators who set
 // SchemaName but never opted into PerSchema. This regression guard locks the FR1/FR4 interaction:
 // a defect that placed history per-schema whenever SchemaName was set would fail here.
-public class MsSqlGlobalScopeHistoryPlacementTests : IAsyncLifetime
+public class MsSqlGlobalScopeHistoryPlacementTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -61,7 +60,7 @@ public class MsSqlGlobalScopeHistoryPlacementTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_global_scope_is_used_with_a_non_default_schema_it_should_keep_history_in_dbo()
     {
         //Arrange — operator pre-creates the schema; pre-drop a per-schema history table so its
@@ -72,24 +71,20 @@ public class MsSqlGlobalScopeHistoryPlacementTests : IAsyncLifetime
         DropAnyExistingTable("__BrighterMigrationHistory", _schemaName);
 
         //Act — fresh-install run under Global with a non-default SchemaName.
-        var exception = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert — the box table lands in the configured schema (F1 behaviour, unchanged).
-        Assert.Null(exception);
-        Assert.True(
-            TableExistsInSchema(_tableName, _schemaName),
-            $"Box table must be created in the configured schema '{_schemaName}'.");
+        await Assert.That(exception).IsNull();
+        await Assert.That(TableExistsInSchema(_tableName, _schemaName)).IsTrue().Because($"Box table must be created in the configured schema '{_schemaName}'.");
 
         //Assert — history is NOT inferred per-schema from SchemaName: no per-schema history table.
-        Assert.False(
-            TableExistsInSchema("__BrighterMigrationHistory", _schemaName),
-            $"History table must NOT be created in '{_schemaName}' under Global scope.");
-        Assert.Equal(0, GetHistoryRowCountInSchema(_schemaName));
+        await Assert.That(TableExistsInSchema("__BrighterMigrationHistory", _schemaName)).IsFalse().Because($"History table must NOT be created in '{_schemaName}' under Global scope.");
+        await Assert.That(GetHistoryRowCountInSchema(_schemaName)).IsEqualTo(0);
 
         //Assert — history lives in the backend default schema (dbo), recording this tenant's
         //configured SchemaName on the row but physically resident in dbo.
-        Assert.True(DboHistoryTableExists(), "[dbo].[__BrighterMigrationHistory] must exist.");
-        Assert.Equal(1, GetHistoryRowCountInSchema("dbo"));
+        await Assert.That(DboHistoryTableExists()).IsTrue().Because("[dbo].[__BrighterMigrationHistory] must exist.");
+        await Assert.That(GetHistoryRowCountInSchema("dbo")).IsEqualTo(1);
     }
 
     private void EnsureSchemaExists(string schemaName) =>
@@ -155,8 +150,10 @@ IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = '{schemaName}')
         command.ExecuteNonQuery();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public Task DisposeAsync()
     {
         try

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,24 +22,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 public class SourceReferenceRoundTripTests
 {
-    [Fact]
-    public void When_a_source_reference_is_created_from_a_string_it_should_expose_the_value()
+    [Test]
+    public async Task When_a_source_reference_is_created_from_a_string_it_should_expose_the_value()
     {
         //Arrange
         SourceReference r = "a1b2c3d / #4039";
 
         //Act + Assert
-        Assert.Equal("a1b2c3d / #4039", r.Value);
+        await Assert.That(r.Value).IsEqualTo("a1b2c3d / #4039");
     }
 
-    [Fact]
-    public void When_a_source_reference_is_implicitly_converted_to_string_it_should_yield_the_original()
+    [Test]
+    public async Task When_a_source_reference_is_implicitly_converted_to_string_it_should_yield_the_original()
     {
         //Arrange
         SourceReference r = "a1b2c3d / #4039";
@@ -47,33 +47,33 @@ public class SourceReferenceRoundTripTests
         string? s = r;
 
         //Assert
-        Assert.Equal("a1b2c3d / #4039", s);
+        await Assert.That(s).IsEqualTo("a1b2c3d / #4039");
     }
 
-    [Fact]
-    public void When_to_string_is_called_on_a_source_reference_it_should_return_the_value()
+    [Test]
+    public async Task When_to_string_is_called_on_a_source_reference_it_should_return_the_value()
     {
         //Arrange
         SourceReference r = new("a1b2c3d / #4039");
 
         //Act + Assert
-        Assert.Equal("a1b2c3d / #4039", r.ToString());
+        await Assert.That(r.ToString()).IsEqualTo("a1b2c3d / #4039");
     }
 
-    [Fact]
-    public void When_two_source_references_have_the_same_string_they_should_be_equal()
+    [Test]
+    public async Task When_two_source_references_have_the_same_string_they_should_be_equal()
     {
         //Arrange
         var a = new SourceReference("a1b2c3d / #4039");
         var b = (SourceReference)"a1b2c3d / #4039";
 
         //Act + Assert
-        Assert.Equal(a, b);
-        Assert.True(a == b);
+        await Assert.That(b).IsEqualTo(a);
+        await Assert.That(a == b).IsTrue();
     }
 
-    [Fact]
-    public void When_source_reference_is_used_as_nullable_null_should_be_legal()
+    [Test]
+    public async Task When_source_reference_is_used_as_nullable_null_should_be_legal()
     {
         //Arrange — V1 migrations carry no source reference; null is a valid value (FR-7, D6)
         SourceReference? r = null;
@@ -82,34 +82,34 @@ public class SourceReferenceRoundTripTests
         string? s = r;
 
         //Assert
-        Assert.Null(r);
-        Assert.Null(s);
+        await Assert.That(r).IsNull();
+        await Assert.That(s).IsNull();
     }
 
-    [Fact]
-    public void When_source_reference_is_null_or_empty_is_called_with_null_it_should_return_true()
+    [Test]
+    public async Task When_source_reference_is_null_or_empty_is_called_with_null_it_should_return_true()
     {
         //Act + Assert
-        Assert.True(SourceReference.IsNullOrEmpty(null));
+        await Assert.That(SourceReference.IsNullOrEmpty(null)).IsTrue();
     }
 
-    [Fact]
-    public void When_source_reference_is_null_or_empty_is_called_with_empty_string_it_should_return_true()
+    [Test]
+    public async Task When_source_reference_is_null_or_empty_is_called_with_empty_string_it_should_return_true()
     {
         //Arrange
         var empty = (SourceReference)"";
 
         //Act + Assert
-        Assert.True(SourceReference.IsNullOrEmpty(empty));
+        await Assert.That(SourceReference.IsNullOrEmpty(empty)).IsTrue();
     }
 
-    [Fact]
-    public void When_source_reference_is_null_or_empty_is_called_with_non_empty_string_it_should_return_false()
+    [Test]
+    public async Task When_source_reference_is_null_or_empty_is_called_with_non_empty_string_it_should_return_false()
     {
         //Arrange
         var r = (SourceReference)"a1b2c3d / #4039";
 
         //Act + Assert
-        Assert.False(SourceReference.IsNullOrEmpty(r));
+        await Assert.That(SourceReference.IsNullOrEmpty(r)).IsFalse();
     }
 }

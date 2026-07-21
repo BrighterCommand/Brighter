@@ -27,14 +27,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class ValidatePipelinesProducerTransformTests
 {
-    [Fact]
-    public void When_publication_wrap_transform_unresolvable_through_di_should_surface_warning()
+    [Test]
+    public async Task When_publication_wrap_transform_unresolvable_through_di_should_surface_warning()
     {
         // Arrange — a publication whose resolved mapper (MyDescribableCommandMessageMapper) declares a wrap
         // transform (MyDescribableTransform) that is NOT registered as a transformer, so the probe built from
@@ -66,11 +66,11 @@ public class ValidatePipelinesProducerTransformTests
 
         // Assert — an (A) Warning surfaces naming the request, transformer, topic, and AutoFromAssemblies;
         // warnings never block (IsValid stays true)
-        Assert.True(result.IsValid);
-        Assert.Contains(result.Warnings, w =>
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That(result.Warnings.Any(w =>
             w.Message.Contains(nameof(MyDescribableCommand))
             && w.Message.Contains(nameof(MyDescribableTransform))
             && w.Message.Contains("greeting")
-            && w.Message.Contains("AutoFromAssemblies"));
+            && w.Message.Contains("AutoFromAssemblies"))).IsTrue();
     }
 }

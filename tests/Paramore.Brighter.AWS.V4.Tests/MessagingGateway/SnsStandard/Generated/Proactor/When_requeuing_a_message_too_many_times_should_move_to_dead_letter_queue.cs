@@ -5,13 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsStandard.Proactor;
 
-[Trait("Category", "Sns")]
-[Collection("Sns")]
-public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync : IAsyncLifetime
+[Property("Category", "Sns")]
+[NotInParallel("Sns")]
+public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -32,22 +33,26 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
         _messageAssertion = new AwsMessageAssertion();
     }
 
+    [Before(Test)]
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
+
+    [After(Test)]
 
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
-        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
+        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
             OnMissingChannel.Create,
             true);
@@ -68,12 +73,12 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
         }
 
         received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
-        Assert.Equal(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
 
         // Act
         received = await _messageGatewayProvider.GetMessageFromDeadLetterQueueAsync(_subscription);
 
         // Assert
-        _messageAssertion.Assert(message, received);
+        await _messageAssertion.AssertAsync(message, received);
     }
 }

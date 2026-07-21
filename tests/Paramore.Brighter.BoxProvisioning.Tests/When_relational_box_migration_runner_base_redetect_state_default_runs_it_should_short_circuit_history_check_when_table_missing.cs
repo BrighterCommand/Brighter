@@ -29,7 +29,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -49,7 +48,7 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// </summary>
 public class SqlBoxMigrationRunnerRedetectStateDefaultTests
 {
-    [Fact]
+    [Test]
     public async Task When_table_does_not_exist_default_redetect_should_skip_history_check_and_return_false_false()
     {
         //Arrange
@@ -69,12 +68,12 @@ public class SqlBoxMigrationRunnerRedetectStateDefaultTests
             tableState: new BoxTableState(false, false, 0));
 
         //Assert
-        Assert.Equal(1, detectionHelper.DoesTableExistCallCount);
-        Assert.Equal(0, detectionHelper.DoesHistoryExistCallCount);
-        Assert.Equal("RunFreshPath", runner.PathInvoked);
+        await Assert.That(detectionHelper.DoesTableExistCallCount).IsEqualTo(1);
+        await Assert.That(detectionHelper.DoesHistoryExistCallCount).IsEqualTo(0);
+        await Assert.That(runner.PathInvoked).IsEqualTo("RunFreshPath");
     }
 
-    [Fact]
+    [Test]
     public async Task When_table_exists_with_history_default_redetect_should_call_both_and_return_true_true()
     {
         //Arrange
@@ -94,12 +93,12 @@ public class SqlBoxMigrationRunnerRedetectStateDefaultTests
             tableState: new BoxTableState(true, true, 0));
 
         //Assert
-        Assert.Equal(1, detectionHelper.DoesTableExistCallCount);
-        Assert.Equal(1, detectionHelper.DoesHistoryExistCallCount);
-        Assert.Equal("RunNormalPath", runner.PathInvoked);
+        await Assert.That(detectionHelper.DoesTableExistCallCount).IsEqualTo(1);
+        await Assert.That(detectionHelper.DoesHistoryExistCallCount).IsEqualTo(1);
+        await Assert.That(runner.PathInvoked).IsEqualTo("RunNormalPath");
     }
 
-    [Fact]
+    [Test]
     public async Task When_table_exists_without_history_default_redetect_should_call_both_and_return_true_false()
     {
         //Arrange
@@ -119,9 +118,9 @@ public class SqlBoxMigrationRunnerRedetectStateDefaultTests
             tableState: new BoxTableState(true, false, 0));
 
         //Assert
-        Assert.Equal(1, detectionHelper.DoesTableExistCallCount);
-        Assert.Equal(1, detectionHelper.DoesHistoryExistCallCount);
-        Assert.Equal("RunBootstrapPath", runner.PathInvoked);
+        await Assert.That(detectionHelper.DoesTableExistCallCount).IsEqualTo(1);
+        await Assert.That(detectionHelper.DoesHistoryExistCallCount).IsEqualTo(1);
+        await Assert.That(runner.PathInvoked).IsEqualTo("RunBootstrapPath");
     }
 
     /// <summary>

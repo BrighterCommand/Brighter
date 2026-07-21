@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Producer;
 
@@ -55,38 +54,38 @@ public class When_sending_with_zero_delay_should_send_immediately_without_schedu
             new MessageBody("test content"));
     }
 
-    [Fact]
-    public void Should_send_message_directly_to_bus_when_delay_is_zero()
+    [Test]
+    public async Task Should_send_message_directly_to_bus_when_delay_is_zero()
     {
         // Act
         _producer.SendWithDelay(_message, TimeSpan.Zero);
 
         // Assert
         var messagesOnBus = _bus.Stream(_routingKey);
-        Assert.Single(messagesOnBus);
-        Assert.Equal(_message.Id, messagesOnBus.First().Id);
+        await Assert.That(messagesOnBus).HasSingleItem();
+        await Assert.That(messagesOnBus.First().Id).IsEqualTo(_message.Id);
     }
 
-    [Fact]
-    public void Should_send_message_directly_to_bus_when_delay_is_null()
+    [Test]
+    public async Task Should_send_message_directly_to_bus_when_delay_is_null()
     {
         // Act
         _producer.SendWithDelay(_message, null);
 
         // Assert
         var messagesOnBus = _bus.Stream(_routingKey);
-        Assert.Single(messagesOnBus);
-        Assert.Equal(_message.Id, messagesOnBus.First().Id);
+        await Assert.That(messagesOnBus).HasSingleItem();
+        await Assert.That(messagesOnBus.First().Id).IsEqualTo(_message.Id);
     }
 
-    [Fact]
-    public void Should_not_invoke_scheduler_when_delay_is_zero()
+    [Test]
+    public async Task Should_not_invoke_scheduler_when_delay_is_zero()
     {
         // Act
         _producer.SendWithDelay(_message, TimeSpan.Zero);
 
         // Assert
-        Assert.False(_scheduler.ScheduleCalled, "Scheduler should NOT have been called for zero delay");
+        await Assert.That(_scheduler.ScheduleCalled).IsFalse();
     }
 
     /// <summary>

@@ -25,13 +25,12 @@ THE SOFTWARE. */
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Confirmation;
 
 public class ContextCaptureBeforeEnqueueTests
 {
-    [Fact]
+    [Test]
     public async Task When_sending_should_capture_publish_context_before_enqueue()
     {
         // Arrange — establish an active publish span before Send
@@ -44,7 +43,7 @@ public class ContextCaptureBeforeEnqueueTests
         ActivitySource.AddActivityListener(listener);
 
         using var publishActivity = activitySource.StartActivity("publish");
-        Assert.NotNull(publishActivity); // sampling must be active for the test to be meaningful
+        await Assert.That(publishActivity).IsNotNull(); // sampling must be active for the test to be meaningful
 
         var capturedContext = publishActivity.Context; // what we expect to arrive in the confirmation
 
@@ -69,8 +68,8 @@ public class ContextCaptureBeforeEnqueueTests
         var result = await confirmed.Task.WaitAsync(System.TimeSpan.FromSeconds(5));
 
         // Assert — the publish span context captured at send time flows through to the confirmation
-        Assert.NotNull(result.PublishSpanContext);
-        Assert.Equal(capturedContext.TraceId, result.PublishSpanContext.Value.TraceId);
-        Assert.Equal(capturedContext.SpanId, result.PublishSpanContext.Value.SpanId);
+        await Assert.That(result.PublishSpanContext).IsNotNull();
+        await Assert.That(result.PublishSpanContext.Value.TraceId).IsEqualTo(capturedContext.TraceId);
+        await Assert.That(result.PublishSpanContext.Value.SpanId).IsEqualTo(capturedContext.SpanId);
     }
 }

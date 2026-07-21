@@ -26,14 +26,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles;
-using Xunit;
 using global::FluentValidation;
 
 namespace Paramore.Brighter.Validation.FluentValidation.Tests
 {
     public class ValidationCancellationTests
     {
-        [Fact]
+        [Test]
         public async Task When_validation_is_cancelled_async_should_throw_operation_cancelled()
         {
             //Arrange
@@ -45,8 +44,7 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests
             cancellationSource.Cancel();
 
             //Act //Assert
-            await Assert.ThrowsAnyAsync<System.OperationCanceledException>(
-                () => handler.HandleAsync(command, cancellationSource.Token));
+            await Assert.That(() => handler.HandleAsync(command, cancellationSource.Token)).Throws<System.OperationCanceledException>();
         }
     }
 }

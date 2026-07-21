@@ -6,15 +6,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
-public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync : IAsyncLifetime
+[Property("Category", "Kafka")]
+[NotInParallel("Kafka")]
+public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -35,22 +36,26 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
         _messageAssertion = new KafkaMessageAssertion();
     }
 
+    [Before(Test)]
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
+
+    [After(Test)]
 
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
     public async Task When_confirming_posting_a_message_should_receive_publish_confirmation_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
-        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
+        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
             OnMissingChannel.Create);
 
@@ -75,6 +80,6 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
             await Task.Delay(100);
         }
 
-        Assert.True(messageSent);
+        await Assert.That(messageSent).IsTrue();
     }
 }

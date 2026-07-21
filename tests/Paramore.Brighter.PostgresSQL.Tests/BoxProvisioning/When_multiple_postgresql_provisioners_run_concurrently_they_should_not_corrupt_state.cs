@@ -2,11 +2,10 @@ using System;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlConcurrentProvisionersStateTests : IAsyncLifetime
+public class PostgreSqlConcurrentProvisionersStateTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName;
@@ -16,7 +15,7 @@ public class PostgreSqlConcurrentProvisionersStateTests : IAsyncLifetime
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
     }
 
-    [Fact]
+    [Test]
     public async Task When_multiple_postgresql_provisioners_run_concurrently_they_should_not_corrupt_state()
     {
         //Arrange
@@ -54,7 +53,7 @@ SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = @TableName)";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
         var tableExists = (bool)(await tableCheck.ExecuteScalarAsync())!;
-        Assert.True(tableExists);
+        await Assert.That(tableExists).IsTrue();
 
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
@@ -63,11 +62,13 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public' AND ""Migra
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

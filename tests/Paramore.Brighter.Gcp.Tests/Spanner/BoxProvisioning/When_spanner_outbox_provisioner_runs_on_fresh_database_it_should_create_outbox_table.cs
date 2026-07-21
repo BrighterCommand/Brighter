@@ -4,14 +4,13 @@ using Google.Api.Gax;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.BoxProvisioning.Spanner;
 using Paramore.Brighter.Gcp.Tests.Helper;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
-[Trait("Category", "Spanner")]
-public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class OutboxProvisionerFreshDatabaseTests
 {
     private readonly string _tableName;
     private readonly string _connectionString;
@@ -33,7 +32,7 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_create_outbox_table()
     {
         // Act
@@ -48,7 +47,7 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
             "SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName",
             new SpannerParameterCollection { { "TableName", SpannerDbType.String, _tableName } });
         var tableCount = (long)(await tableCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, tableCount);
+        await Assert.That(tableCount).IsEqualTo(1);
 
         // Verify migration history
         using var historyCheck = connection.CreateSelectCommand(
@@ -60,11 +59,13 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion",
                 { "ExpectedVersion", SpannerDbType.Int64, (long)ExpectedMigrationVersions.OutboxLatest }
             });
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

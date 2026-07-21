@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.DynamoDb.V4;
 using Paramore.Brighter.DynamoDB.V4.Tests.Outbox.Async;
@@ -14,13 +13,21 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
 {
     private string _tableName = "";
 
-    public IAmAnOutboxSync<Message, TransactWriteItemsRequest> CreateOutbox()
+    public async Task CreateStoreAsync()
+    {
+        _tableName = await DynamoDbOutboxTable.EnsureTableIsCreatedAsync(Const.DynamoDbClient);
+    }
+
+    public void CreateStore()
     {
         _tableName = DynamoDbOutboxTable
             .EnsureTableIsCreatedAsync(Const.DynamoDbClient)
             .GetAwaiter()
             .GetResult();
+    }
 
+    public IAmAnOutboxSync<Message, TransactWriteItemsRequest> CreateOutbox()
+    {
         return new DynamoDbOutbox(
             Const.DynamoDbClient,
             new DynamoDbConfiguration { TableName = _tableName }
@@ -29,32 +36,15 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
 
     public IAmAnOutboxAsync<Message, TransactWriteItemsRequest> CreateOutboxAsync()
     {
-        _tableName = DynamoDbOutboxTable
-            .EnsureTableIsCreatedAsync(Const.DynamoDbClient)
-            .GetAwaiter()
-            .GetResult();
-
         return new DynamoDbOutbox(
             Const.DynamoDbClient,
             new DynamoDbConfiguration { TableName = _tableName }
         );
     }
 
-    public void CreateStore() { }
-
-    public Task CreateStoreAsync()
-    {
-        return Task.CompletedTask;
-    }
-
     public IAmABoxTransactionProvider<TransactWriteItemsRequest> CreateTransactionProvider()
     {
         return new DynamoDbUnitOfWork(Const.DynamoDbClient);
-    }
-
-    public void DeleteStore(IEnumerable<Message> messages)
-    {
-        DeleteStoreAsync(messages).GetAwaiter().GetResult();
     }
 
     public async Task DeleteStoreAsync(IEnumerable<Message> messages)
@@ -76,14 +66,13 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
             }
             catch
             {
-                // Ignoring any error during delete, it's not important at this point
             }
         }
     }
 
-    public IEnumerable<Message> GetAllMessages()
+    public void DeleteStore(IEnumerable<Message> messages)
     {
-        return GetAllMessagesAsync().GetAwaiter().GetResult();
+        DeleteStoreAsync(messages).GetAwaiter().GetResult();
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
@@ -92,7 +81,7 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
 
         var outbox = new DynamoDbOutbox(
             Const.DynamoDbClient,
-            new DynamoDbConfiguration { TableName = _tableName! }
+            new DynamoDbConfiguration { TableName = _tableName }
         );
 
         var client = Const.DynamoDbClient;
@@ -105,7 +94,7 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
                     TableName = _tableName,
                     AttributesToGet = [nameof(MessageItem.MessageId)],
                     ExclusiveStartKey = lastKey,
-                    Select = Select.SPECIFIC_ATTRIBUTES,
+                    Select = Amazon.DynamoDBv2.Select.SPECIFIC_ATTRIBUTES,
                 }
             );
 
@@ -120,5 +109,10 @@ public class DynamoDBOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvid
         } while (lastKey != null && lastKey.Keys.Count != 0);
 
         return receivedMessages;
+    }
+
+    public IEnumerable<Message> GetAllMessages()
+    {
+        return GetAllMessagesAsync().GetAwaiter().GetResult();
     }
 }

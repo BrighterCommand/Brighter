@@ -36,14 +36,14 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
 {
     public class MessageHeaderCorrelationIdObservabilityTests
     {
         private const string ChannelName = "myChannel";
-        private readonly RoutingKey _routingKey = new("MyTopic");
+        private readonly RoutingKey _routingKey = new(nameof(MessageHeaderCorrelationIdObservabilityTests));
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
@@ -110,12 +110,15 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             );
 
             channel.Enqueue(_message);
-            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey("MyTopic"));
+            var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
         }
 
-        [Fact]
-        public void When_a_message_with_a_correlation_id_is_dispatched_both_spans_share_one_header()
+        [After(Test)]
+        public void DisposeTraceProvider() => _traceProvider.Dispose();
+
+        [Test]
+        public async Task When_a_message_with_a_correlation_id_is_dispatched_both_spans_share_one_header()
         {
             // Act
             _messagePump.Run();
@@ -125,26 +128,26 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             var receiveSpan = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}"
                 && a.TagObjects.Any(to => to is { Value: not null, Key: BrighterSemanticConventions.MessageType } && Enum.Parse<MessageType>(to.Value.ToString() ?? string.Empty) == MessageType.MT_EVENT));
-            Assert.NotNull(receiveSpan);
+            await Assert.That(receiveSpan).IsNotNull();
 
             var processSpan = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Process.ToSpanName()}"
                 && a.TagObjects.Any(to => to is { Value: not null, Key: BrighterSemanticConventions.MessageType } && Enum.Parse<MessageType>(to.Value.ToString() ?? string.Empty) == MessageType.MT_EVENT));
-            Assert.NotNull(processSpan);
+            await Assert.That(processSpan).IsNotNull();
 
             var receiveHeaderJson = (string?)receiveSpan!.TagObjects.Single(to => to.Key == BrighterSemanticConventions.MessageHeaders).Value;
             var processHeaderJson = (string?)processSpan!.TagObjects.Single(to => to.Key == BrighterSemanticConventions.MessageHeaders).Value;
 
             //the correlation id is carried in the serialized header as the top-level CorrelationId field
-            Assert.Contains(CorrelationId, receiveHeaderJson);
-            Assert.Contains(CorrelationId, processHeaderJson);
+            await Assert.That(receiveHeaderJson).Contains(CorrelationId);
+            await Assert.That(processHeaderJson).Contains(CorrelationId);
 
             //both spans share one serialized header (Assert.Same: a never-interned string, so equal references prove reuse)
-            Assert.Equal(receiveHeaderJson, processHeaderJson);
-            Assert.Same(receiveHeaderJson, processHeaderJson);
+            await Assert.That(processHeaderJson).IsEqualTo(receiveHeaderJson);
+            await Assert.That(processHeaderJson).IsSameReferenceAs(receiveHeaderJson);
 
-            Assert.Equal(CorrelationId, receiveSpan.TagObjects.Single(to => to.Key == BrighterSemanticConventions.ConversationId).Value);
-            Assert.Equal(CorrelationId, processSpan.TagObjects.Single(to => to.Key == BrighterSemanticConventions.ConversationId).Value);
+            await Assert.That(receiveSpan.TagObjects.Single(to => to.Key == BrighterSemanticConventions.ConversationId).Value).IsEqualTo(CorrelationId);
+            await Assert.That(processSpan.TagObjects.Single(to => to.Key == BrighterSemanticConventions.ConversationId).Value).IsEqualTo(CorrelationId);
         }
     }
 }

@@ -27,7 +27,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -42,10 +41,9 @@ public class MsSqlAdvisoryLockTimeoutValidationTests
     // MsSqlBoxMigrationRunner — is protected. The boundary value (int.MaxValue ms ≈ 24.85 days)
     // is the largest value that fits sp_getapplock's INT @LockTimeout argument without
     // overflow and must be accepted by the validation guard.
-
     private readonly string _connectionString = Configuration.DefaultConnectingString;
 
-    [Fact]
+    [Test]
     public async Task When_lock_timeout_exceeds_int_max_milliseconds_acquire_should_throw()
     {
         //Arrange
@@ -64,7 +62,7 @@ public class MsSqlAdvisoryLockTimeoutValidationTests
                 connection, transaction, "any_resource", overflowingTimeout, default));
     }
 
-    [Fact]
+    [Test]
     public async Task When_lock_timeout_is_negative_acquire_should_throw()
     {
         //Arrange
@@ -83,7 +81,7 @@ public class MsSqlAdvisoryLockTimeoutValidationTests
                 connection, transaction, "any_resource", negativeTimeout, default));
     }
 
-    [Fact]
+    [Test]
     public async Task When_lock_timeout_is_at_int_max_milliseconds_acquire_should_succeed()
     {
         //Arrange — the inclusive upper bound (~24.85 days) is the largest value that fits
@@ -101,13 +99,12 @@ public class MsSqlAdvisoryLockTimeoutValidationTests
         var advisoryLock = new MsSqlAdvisoryLock();
 
         //Act
-        var ex = await Record.ExceptionAsync(() =>
+        var ex = await TestExceptionRecorder.CaptureAsync(() =>
             advisoryLock.AcquireAsync(
                 connection, transaction, lockResource, boundaryTimeout, default));
 
         //Assert — boundary must not be rejected by the validation guard.
-        Assert.IsNotType<ArgumentOutOfRangeException>(ex);
-        Assert.Null(ex);
+        await Assert.That(ex).IsNull();
 
         //Cleanup — release the transaction-scoped lock by rolling back.
         await transaction.RollbackAsync();

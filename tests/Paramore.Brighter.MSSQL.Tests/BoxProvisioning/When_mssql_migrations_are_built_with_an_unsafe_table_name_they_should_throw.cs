@@ -22,7 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -35,11 +35,11 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
 public class MsSqlMigrationsUnsafeIdentifierTests
 {
-    [Theory]
-    [InlineData("O'Brien")]    // single quote — would break inlined string predicates
-    [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
-    [InlineData("my-outbox")]  // hyphen — would need bracket-quoting to be legal
-    public void When_mssql_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
+    [Test]
+    [Arguments("O'Brien")]    // single quote — would break inlined string predicates
+    [Arguments("1Outbox")]    // leading digit — invalid as bare identifier
+    [Arguments("my-outbox")]  // hyphen — would need bracket-quoting to be legal
+    public async Task When_mssql_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -48,14 +48,14 @@ public class MsSqlMigrationsUnsafeIdentifierTests
 
         //Act + Assert
         var ex = Assert.Throws<ConfigurationException>(() => new MsSqlOutboxMigrationCatalog().All(config));
-        Assert.Contains(unsafeTable, ex.Message);
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 
-    [Theory]
-    [InlineData("O'Brien")]
-    [InlineData("1Inbox")]
-    [InlineData("my-inbox")]
-    public void When_mssql_inbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
+    [Test]
+    [Arguments("O'Brien")]
+    [Arguments("1Inbox")]
+    [Arguments("my-inbox")]
+    public async Task When_mssql_inbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -64,11 +64,11 @@ public class MsSqlMigrationsUnsafeIdentifierTests
 
         //Act + Assert
         var ex = Assert.Throws<ConfigurationException>(() => new MsSqlInboxMigrationCatalog().All(config));
-        Assert.Contains(unsafeTable, ex.Message);
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 
-    [Fact]
-    public void When_mssql_outbox_migrations_are_built_with_an_unsafe_schema_name_it_should_throw()
+    [Test]
+    public async Task When_mssql_outbox_migrations_are_built_with_an_unsafe_schema_name_it_should_throw()
     {
         //Arrange — schema overrides the safe "dbo" default; an unsafe schema name interpolates
         //into the V2+ ALTER TABLE up-scripts at AddColumns(schema, table, ...) so it must be
@@ -80,6 +80,6 @@ public class MsSqlMigrationsUnsafeIdentifierTests
 
         //Act + Assert
         var ex = Assert.Throws<ConfigurationException>(() => new MsSqlOutboxMigrationCatalog().All(config));
-        Assert.Contains("bad-schema", ex.Message);
+        await Assert.That(ex.Message).Contains("bad-schema");
     }
 }

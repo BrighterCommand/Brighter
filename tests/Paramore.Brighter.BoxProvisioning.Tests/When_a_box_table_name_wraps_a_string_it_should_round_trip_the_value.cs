@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,24 +22,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
 public class BoxTableNameRoundTripTests
 {
-    [Fact]
-    public void When_a_box_table_name_is_created_from_a_string_it_should_expose_the_value()
+    [Test]
+    public async Task When_a_box_table_name_is_created_from_a_string_it_should_expose_the_value()
     {
         //Arrange
         BoxTableName tableName = "Outbox";
 
         //Act + Assert
-        Assert.Equal("Outbox", tableName.Value);
+        await Assert.That(tableName.Value).IsEqualTo("Outbox");
     }
 
-    [Fact]
-    public void When_a_box_table_name_is_implicitly_converted_to_string_it_should_yield_the_original()
+    [Test]
+    public async Task When_a_box_table_name_is_implicitly_converted_to_string_it_should_yield_the_original()
     {
         //Arrange
         BoxTableName tableName = "Outbox";
@@ -47,29 +47,29 @@ public class BoxTableNameRoundTripTests
         string? s = tableName;
 
         //Assert
-        Assert.Equal("Outbox", s);
+        await Assert.That(s).IsEqualTo("Outbox");
     }
 
-    [Fact]
-    public void When_to_string_is_called_on_a_box_table_name_it_should_return_the_value()
+    [Test]
+    public async Task When_to_string_is_called_on_a_box_table_name_it_should_return_the_value()
     {
         //Arrange
         BoxTableName tableName = new("Outbox");
 
         //Act + Assert
-        Assert.Equal("Outbox", tableName.ToString());
+        await Assert.That(tableName.ToString()).IsEqualTo("Outbox");
     }
 
-    [Fact]
-    public void When_two_box_table_names_have_the_same_string_they_should_be_equal()
+    [Test]
+    public async Task When_two_box_table_names_have_the_same_string_they_should_be_equal()
     {
         //Arrange
         var a = new BoxTableName("Outbox");
         var b = (BoxTableName)"Outbox";
 
         //Act + Assert
-        Assert.Equal(a, b);
-        Assert.True(a == b);
+        await Assert.That(b).IsEqualTo(a);
+        await Assert.That(a == b).IsTrue();
     }
 
     // NOTE: type isolation (FR-13, D1) — new BoxTableName("dbo") == new SchemaName("dbo")

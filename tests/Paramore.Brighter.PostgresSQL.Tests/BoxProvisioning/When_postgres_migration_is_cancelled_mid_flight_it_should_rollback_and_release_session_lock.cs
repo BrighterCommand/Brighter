@@ -28,16 +28,15 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlMigrationCancellationTests : IAsyncLifetime
+public class PostgreSqlMigrationCancellationTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_postgres_migration_is_cancelled_mid_flight_it_should_rollback_and_release_session_lock()
     {
         //Arrange — fresh database; the cancelling runner's RunFreshPathAsync override blocks on
@@ -58,26 +57,24 @@ public class PostgreSqlMigrationCancellationTests : IAsyncLifetime
 
         //Act — caller's CancellationToken is signalled while the runner is mid-flight inside
         // the (substituted) fresh-path hook.
-        var thrown = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancellingRunner.MigrateAsync(
-            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token));
+        var thrown = await Assert.That(() => cancellingRunner.MigrateAsync(
+            _tableName, schemaName: null, BoxType.Outbox, staleHint, cts.Token)).Throws<OperationCanceledException>();
 
         //Assert — the original OperationCanceledException propagates to the caller (per ADR §B.3).
-        Assert.NotNull(thrown);
+        await Assert.That(thrown).IsNotNull();
 
         //Assert — RollbackAsync IS invoked after the mid-flight cancellation.
         var spy = cancellingRunner.LastUnitOfWork;
-        Assert.NotNull(spy);
-        Assert.True(spy!.RollbackInvoked,
-            "RollbackAsync should have been invoked after the mid-flight cancellation per ADR §B.3.");
+        await Assert.That(spy).IsNotNull();
+        await Assert.That(spy!.RollbackInvoked).IsTrue().Because("RollbackAsync should have been invoked after the mid-flight cancellation per ADR §B.3.");
 
         //Assert — the CancellationToken passed to RollbackAsync is CancellationToken.None, NOT
         // the caller's signalled token. Postgres makes this assertion load-bearing: the explicit
         // pg_advisory_unlock call lives inside RollbackAsync. If the catch had passed the
         // cancelled token, NpgsqlCommand would throw OCE before pg_advisory_unlock executed and
         // the session-scoped lock would persist until the connection itself was closed.
-        Assert.False(spy.RollbackToken.IsCancellationRequested,
-            "RollbackAsync should receive CancellationToken.None to ensure pg_advisory_unlock completes.");
-        Assert.Equal(CancellationToken.None, spy.RollbackToken);
+        await Assert.That(spy.RollbackToken.IsCancellationRequested).IsFalse().Because("RollbackAsync should receive CancellationToken.None to ensure pg_advisory_unlock completes.");
+        await Assert.That(spy.RollbackToken).IsEqualTo(CancellationToken.None);
 
         //Assert — the Postgres session-scoped advisory lock IS released. A fresh runner whose
         // BeginAsync calls pg_advisory_lock on the same per-table lock resource completes the
@@ -87,8 +84,7 @@ public class PostgreSqlMigrationCancellationTests : IAsyncLifetime
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
-        Assert.True(await TableExistsAsync(),
-            "Subsequent migration should have created the outbox table after the lock was released.");
+        await Assert.That(await TableExistsAsync()).IsTrue().Because("Subsequent migration should have created the outbox table after the lock was released.");
     }
 
     private async Task<bool> TableExistsAsync()
@@ -103,8 +99,10 @@ WHERE TABLE_SCHEMA = 'public' AND TABLE_NAME = @TableName)";
         return (bool)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

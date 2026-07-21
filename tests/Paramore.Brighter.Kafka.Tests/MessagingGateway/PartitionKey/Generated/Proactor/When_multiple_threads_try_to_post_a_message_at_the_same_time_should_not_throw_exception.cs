@@ -5,13 +5,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.PartitionKey.Proactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
-public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExceptionAsync : IAsyncLifetime
+[Property("Category", "Kafka")]
+[NotInParallel("Kafka")]
+public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExceptionAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
 
@@ -24,17 +25,21 @@ public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExce
         _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaPartitionKeyMessageGatewayProvider();
     }
 
+    [Before(Test)]
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
+
+    [After(Test)]
 
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, null, []);
     }
 
-    [Fact]
+    [Test]
     public async Task When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception_async()
     {
         // Arrange
@@ -50,6 +55,6 @@ public class WhenMultipleThreadsTryToPostAMessageAtTheSameTimeShouldNotThrowExce
         });
 
         // Assert
-        Assert.True(true);
+        await Assert.That(true).IsTrue();
     }
 }

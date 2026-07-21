@@ -19,119 +19,90 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
-
 using System.Linq;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Specifications;
-
 public class ValidationResultCollectorGraphTests
 {
-    [Fact]
-    public void When_ValidationResult_Ok_should_have_success_true_and_no_error()
+    [Test]
+    public async Task When_ValidationResult_Ok_should_have_success_true_and_no_error()
     {
         // Act
         var result = ValidationResult.Ok();
-
         // Assert
-        Assert.True(result.Success);
-        Assert.Null(result.Error);
+        await Assert.That(result.Success).IsTrue();
+        await Assert.That(result.Error).IsNull();
     }
 
-    [Fact]
-    public void When_ValidationResult_Fail_should_carry_the_error()
+    [Test]
+    public async Task When_ValidationResult_Fail_should_carry_the_error()
     {
         // Arrange
         var error = new ValidationError(ValidationSeverity.Warning, "MySource", "something wrong");
-
         // Act
         var result = ValidationResult.Fail(error);
-
         // Assert
-        Assert.False(result.Success);
-        Assert.NotNull(result.Error);
-        Assert.Equal(ValidationSeverity.Warning, result.Error.Severity);
-        Assert.Equal("MySource", result.Error.Source);
-        Assert.Equal("something wrong", result.Error.Message);
+        await Assert.That(result.Success).IsFalse();
+        await Assert.That(result.Error).IsNotNull();
+        await Assert.That(result.Error.Severity).IsEqualTo(ValidationSeverity.Warning);
+        await Assert.That(result.Error.Source).IsEqualTo("MySource");
+        await Assert.That(result.Error.Message).IsEqualTo("something wrong");
     }
 
-    [Fact]
-    public void When_collector_visits_or_specification_graph_should_collect_from_both_children()
+    [Test]
+    public async Task When_collector_visits_or_specification_graph_should_collect_from_both_children()
     {
         // Arrange — Or: both children fail, collector should collect from both
-        var left = new Specification<int>(
-            n => n > 100,
-            n => new ValidationError(ValidationSeverity.Error, "Left", "too small"));
-        var right = new Specification<int>(
-            n => n < 0,
-            n => new ValidationError(ValidationSeverity.Error, "Right", "not negative"));
-
+        var left = new Specification<int>(n => n > 100, n => new ValidationError(ValidationSeverity.Error, "Left", "too small"));
+        var right = new Specification<int>(n => n < 0, n => new ValidationError(ValidationSeverity.Error, "Right", "not negative"));
         var combined = left.Or(right);
         var collector = new ValidationResultCollector<int>();
-
         // Act — 5 fails both (not > 100, not < 0)
         var satisfied = combined.IsSatisfiedBy(5);
         var results = combined.Accept(collector).ToList();
-
         // Assert
-        Assert.False(satisfied);
+        await Assert.That(satisfied).IsFalse();
         var failures = results.Where(r => !r.Success).ToList();
-        Assert.Equal(2, failures.Count);
-        Assert.Contains(failures, r => r.Error?.Source == "Left");
-        Assert.Contains(failures, r => r.Error?.Source == "Right");
+        await Assert.That(failures.Count).IsEqualTo(2);
+        await Assert.That((failures).Any(r => r.Error?.Source == "Left")).IsTrue();
+        await Assert.That((failures).Any(r => r.Error?.Source == "Right")).IsTrue();
     }
 
-    [Fact]
-    public void When_collector_visits_not_specification_with_error_should_collect_negation_error()
+    [Test]
+    public async Task When_collector_visits_not_specification_with_error_should_collect_negation_error()
     {
         // Arrange — Not with error factory: inner passes, so Not fails
-        var inner = new Specification<string>(
-            s => s.Length > 2,
-            s => new ValidationError(ValidationSeverity.Error, "Inner", "too short"));
-
-        var negated = inner.Not(
-            s => new ValidationError(ValidationSeverity.Error, "Negation", "should be short but was long"));
+        var inner = new Specification<string>(s => s.Length > 2, s => new ValidationError(ValidationSeverity.Error, "Inner", "too short"));
+        var negated = inner.Not(s => new ValidationError(ValidationSeverity.Error, "Negation", "should be short but was long"));
         var collector = new ValidationResultCollector<string>();
-
         // Act — "hello" satisfies inner (length > 2), so Not fails
         var satisfied = negated.IsSatisfiedBy("hello");
         var results = negated.Accept(collector).ToList();
-
         // Assert
-        Assert.False(satisfied);
-        Assert.Single(results);
-        Assert.Equal("Negation", results[0].Error!.Source);
+        await Assert.That(satisfied).IsFalse();
+        await Assert.That(results).HasSingleItem();
+        await Assert.That(results[0].Error!.Source).IsEqualTo("Negation");
     }
 
-    [Fact]
-    public void When_collector_visits_nested_and_or_graph_should_collect_all_leaf_failures()
+    [Test]
+    public async Task When_collector_visits_nested_and_or_graph_should_collect_all_leaf_failures()
     {
         // Arrange — (A AND B) OR C, where A and C fail, B passes
-        var specA = new Specification<int>(
-            n => n > 10,
-            n => new ValidationError(ValidationSeverity.Error, "A", "not > 10"));
-        var specB = new Specification<int>(
-            n => n > 0,
-            n => new ValidationError(ValidationSeverity.Error, "B", "not > 0"));
-        var specC = new Specification<int>(
-            n => n < 0,
-            n => new ValidationError(ValidationSeverity.Error, "C", "not < 0"));
-
+        var specA = new Specification<int>(n => n > 10, n => new ValidationError(ValidationSeverity.Error, "A", "not > 10"));
+        var specB = new Specification<int>(n => n > 0, n => new ValidationError(ValidationSeverity.Error, "B", "not > 0"));
+        var specC = new Specification<int>(n => n < 0, n => new ValidationError(ValidationSeverity.Error, "C", "not < 0"));
         // (A AND B) OR C
         var combined = specA.And(specB).Or(specC);
         var collector = new ValidationResultCollector<int>();
-
         // Act — 5: A fails (not > 10), B passes (> 0), C fails (not < 0)
         var satisfied = combined.IsSatisfiedBy(5);
         var results = combined.Accept(collector).ToList();
-
         // Assert — collector traverses full tree, finds A and C failures
-        Assert.False(satisfied);
+        await Assert.That(satisfied).IsFalse();
         var failures = results.Where(r => !r.Success).ToList();
-        Assert.Equal(2, failures.Count);
-        Assert.Contains(failures, r => r.Error?.Source == "A");
-        Assert.Contains(failures, r => r.Error?.Source == "C");
+        await Assert.That(failures.Count).IsEqualTo(2);
+        await Assert.That((failures).Any(r => r.Error?.Source == "A")).IsTrue();
+        await Assert.That((failures).Any(r => r.Error?.Source == "C")).IsTrue();
     }
 }

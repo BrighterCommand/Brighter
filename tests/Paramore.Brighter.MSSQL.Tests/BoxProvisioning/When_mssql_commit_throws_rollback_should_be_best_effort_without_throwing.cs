@@ -31,16 +31,15 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
+public class MsSqlCommitThrowsBestEffortRollbackTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mssql_commit_throws_rollback_should_be_best_effort_without_throwing()
     {
         //Arrange — wire a runner whose UoW spy first commits the inner real SqlTransaction
@@ -78,7 +77,7 @@ public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
         // runner's catch-path RollbackAsync threw and replaced the original exception (which
         // would happen if the UoW didn't swallow the finalised-tx IOE), Assert.Same would fail
         // even though Assert.ThrowsAsync<InvalidOperationException> would still pass.
-        Assert.Same(commitFailure, thrown);
+        await Assert.That(thrown).IsSameReferenceAs(commitFailure);
 
         //Assert — the spy observed the runner's catch-path actually call RollbackAsync. This
         // pins "RollbackAsync runs" — the contract under test. Without this, a regression where
@@ -86,19 +85,18 @@ public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
         // exception-identity assertions only by coincidence (it wouldn't log the Warning, but
         // the test author might miss why).
         var spy = commitThrowingRunner.LastUnitOfWork;
-        Assert.NotNull(spy);
-        Assert.True(spy!.RollbackInvoked,
-            "The runner's catch-path MUST call RollbackAsync after CommitAsync throws (per ADR §B.3 best-effort unwind).");
+        await Assert.That(spy).IsNotNull();
+        await Assert.That(spy!.RollbackInvoked).IsTrue().Because("The runner's catch-path MUST call RollbackAsync after CommitAsync throws (per ADR §B.3 best-effort unwind).");
 
         //Assert — a Warning was logged by MsSqlProvisioningUnitOfWork.RollbackAsync's catch
         // block (the only Warning emitted on the box-provisioning code path). The captured
         // exception is the rollback's swallowed InvalidOperationException ("transaction
         // completed; no longer usable") — distinct from commitFailure by reference, since the
         // rollback IOE is constructed by the SqlTransaction itself, not by the test.
-        Assert.Contains(capturingLogger.Entries, entry =>
+        await Assert.That(capturingLogger.Entries.Any(entry =>
             entry.Level == LogLevel.Warning
             && entry.Exception is InvalidOperationException
-            && !ReferenceEquals(entry.Exception, commitFailure));
+            && !ReferenceEquals(entry.Exception, commitFailure))).IsTrue();
 
         //Assert — the inner real CommitAsync DID succeed before the spy threw, so the migration
         // was actually applied to the database despite MigrateAsync throwing. This proves the
@@ -106,8 +104,7 @@ public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
         // committing wouldn't transition the SqlTransaction to "completed", and RollbackAsync
         // would succeed cleanly without logging the Warning — the test would silently
         // characterise the wrong scenario).
-        Assert.True(TableExists(),
-            "The spy must commit the inner transaction before throwing — otherwise the SqlTransaction is not in the finalised state and the contract being tested is not actually exercised.");
+        await Assert.That(TableExists()).IsTrue().Because("The spy must commit the inner transaction before throwing — otherwise the SqlTransaction is not in the finalised state and the contract being tested is not actually exercised.");
     }
 
     private bool TableExists()
@@ -121,8 +118,10 @@ public class MsSqlCommitThrowsBestEffortRollbackTests : IAsyncLifetime
         return (int)command.ExecuteScalar()! > 0;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

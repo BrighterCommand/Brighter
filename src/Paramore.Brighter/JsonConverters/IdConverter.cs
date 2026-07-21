@@ -30,7 +30,17 @@ namespace Paramore.Brighter.JsonConverters;
 
 public class IdConverter : JsonConverter<Id>
 {
-    public override Id Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => new(reader.GetString()!);
+    public override bool HandleNull => true;
+
+    public override Id? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Null)
+        {
+            return null;
+        }
+
+        return new Id(reader.GetString()!);
+    }
 
     public override void Write(Utf8JsonWriter writer, Id? value, JsonSerializerOptions options)
     {

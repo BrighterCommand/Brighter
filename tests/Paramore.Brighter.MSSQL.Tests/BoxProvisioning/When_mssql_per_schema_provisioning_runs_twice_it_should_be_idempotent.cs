@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // count is unchanged and no duplicate rows appear. Asserting the AppliedAt timestamp is also
 // unchanged proves the existing row was not deleted-and-reinserted (a count check alone would
 // not distinguish that from a true no-op).
-public class MsSqlPerSchemaIdempotencyTests : IAsyncLifetime
+public class MsSqlPerSchemaIdempotencyTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -61,7 +60,7 @@ public class MsSqlPerSchemaIdempotencyTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_per_schema_provisioning_runs_twice_it_should_apply_no_migrations_and_not_duplicate_history()
     {
         //Arrange — operator pre-creates the schema; runner does not create schemas itself.
@@ -71,21 +70,21 @@ public class MsSqlPerSchemaIdempotencyTests : IAsyncLifetime
         DropAnyExistingTable("__BrighterMigrationHistory", _schemaName);
 
         //Act — first fresh-install run under PerSchema.
-        var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var firstException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert — one history row written to the per-schema table; capture its AppliedAt.
-        Assert.Null(firstException);
-        Assert.Equal(1, GetHistoryRowCount());
+        await Assert.That(firstException).IsNull();
+        await Assert.That(GetHistoryRowCount()).IsEqualTo(1);
         var appliedAtAfterFirstRun = GetSingleHistoryAppliedAt();
 
         //Act — second run re-detects from the per-schema history; should apply nothing.
-        var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var secondException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert — idempotent: still exactly one row, and the original row is untouched (same
         //AppliedAt), proving no migration was re-applied and no row was rewritten.
-        Assert.Null(secondException);
-        Assert.Equal(1, GetHistoryRowCount());
-        Assert.Equal(appliedAtAfterFirstRun, GetSingleHistoryAppliedAt());
+        await Assert.That(secondException).IsNull();
+        await Assert.That(GetHistoryRowCount()).IsEqualTo(1);
+        await Assert.That(GetSingleHistoryAppliedAt()).IsEqualTo(appliedAtAfterFirstRun);
     }
 
     private void EnsureSchemaExists(string schemaName) =>
@@ -136,8 +135,10 @@ IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = '{schemaName}')
         command.ExecuteNonQuery();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public Task DisposeAsync()
     {
         try

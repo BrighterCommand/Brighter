@@ -31,7 +31,6 @@ using Paramore.Brighter;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Extensions;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
@@ -90,7 +89,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             new MessageHeader(new Id(Guid.NewGuid().ToString()), topic, MessageType.MT_EVENT),
             new MessageBody("test"));
 
-        [Fact]
+        [Test]
         public async Task When_bulk_dispatching_a_confirming_producer_dispatches_via_confirmation()
         {
             // Arrange: two outstanding messages on one topic, so the bulk sweep forms a single batch.
@@ -109,8 +108,8 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
 
             // Assert: the batch was sent and each message marked dispatched via its confirmation.
             var dispatched = _outbox.DispatchedMessages(TimeSpan.Zero, _requestContext).ToList();
-            Assert.Contains(dispatched, m => m.Id == first.Id);
-            Assert.Contains(dispatched, m => m.Id == second.Id);
+            await Assert.That((dispatched).Any(m => m.Id == first.Id)).IsTrue();
+            await Assert.That((dispatched).Any(m => m.Id == second.Id)).IsTrue();
         }
     }
 }

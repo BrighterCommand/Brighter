@@ -24,8 +24,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Testing;
-using Shouldly;
-using Xunit;
 
 namespace Paramore.Brighter.Testing.Tests;
 
@@ -35,19 +33,19 @@ public class SpyCommandProcessorOutboxTests
     private readonly MyCommand _command1 = new() { Value = "first" };
     private readonly MyCommand _command2 = new() { Value = "second" };
 
-    [Fact]
-    public void Should_not_be_observable_before_clear()
+    [Test]
+    public Task Should_not_be_observable_before_clear()
     {
         // Arrange
         _spy.DepositPost(_command1);
 
         // Act & Assert - request is NOT in observation queue yet
-        var observeAction = () => _spy.Observe<MyCommand>();
-        observeAction.ShouldThrow<InvalidOperationException>();
+        Assert.ThrowsExactly<InvalidOperationException>(() => _spy.Observe<MyCommand>());
+        return Task.CompletedTask;
     }
 
-    [Fact]
-    public void Should_be_observable_after_clear()
+    [Test]
+    public async Task Should_be_observable_after_clear()
     {
         // Arrange
         var id = _spy.DepositPost(_command1);
@@ -57,11 +55,11 @@ public class SpyCommandProcessorOutboxTests
 
         // Assert - request IS now in observation queue
         var observed = _spy.Observe<MyCommand>();
-        observed.ShouldBe(_command1);
+        await Assert.That(observed).IsEqualTo(_command1);
     }
 
-    [Fact]
-    public void Should_clear_multiple_requests()
+    [Test]
+    public async Task Should_clear_multiple_requests()
     {
         // Arrange
         var id1 = _spy.DepositPost(_command1);
@@ -71,12 +69,12 @@ public class SpyCommandProcessorOutboxTests
         _spy.ClearOutbox([id1, id2]);
 
         // Assert - both requests are now observable in order
-        _spy.Observe<MyCommand>().ShouldBe(_command1);
-        _spy.Observe<MyCommand>().ShouldBe(_command2);
+        await Assert.That(_spy.Observe<MyCommand>()).IsEqualTo(_command1);
+        await Assert.That(_spy.Observe<MyCommand>()).IsEqualTo(_command2);
     }
 
-    [Fact]
-    public void Should_record_clear_command_type()
+    [Test]
+    public async Task Should_record_clear_command_type()
     {
         // Arrange
         var id = _spy.DepositPost(_command1);
@@ -85,10 +83,10 @@ public class SpyCommandProcessorOutboxTests
         _spy.ClearOutbox([id]);
 
         // Assert
-        _spy.WasCalled(CommandType.Clear).ShouldBeTrue();
+        await Assert.That(_spy.WasCalled(CommandType.Clear)).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task Should_work_with_async_clear()
     {
         // Arrange
@@ -98,8 +96,8 @@ public class SpyCommandProcessorOutboxTests
         await _spy.ClearOutboxAsync([id]);
 
         // Assert
-        _spy.Observe<MyCommand>().ShouldBe(_command1);
-        _spy.WasCalled(CommandType.ClearAsync).ShouldBeTrue();
+        await Assert.That(_spy.Observe<MyCommand>()).IsEqualTo(_command1);
+        await Assert.That(_spy.WasCalled(CommandType.ClearAsync)).IsTrue();
     }
 
     private sealed class MyCommand : Command

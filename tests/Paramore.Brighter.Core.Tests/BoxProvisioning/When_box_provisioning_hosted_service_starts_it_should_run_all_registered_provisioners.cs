@@ -4,13 +4,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.Core.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.BoxProvisioning;
 
 public class When_box_provisioning_hosted_service_starts_it_should_run_all_registered_provisioners
 {
-    [Fact]
+    [Test]
     public async Task Should_run_all_registered_provisioners()
     {
         //Arrange
@@ -27,7 +26,7 @@ public class When_box_provisioning_hosted_service_starts_it_should_run_all_regis
         await hostedService.StartAsync(CancellationToken.None);
 
         //Assert
-        Assert.True(outboxProvisioner.WasProvisioned, "Outbox provisioner should have been called");
-        Assert.True(inboxProvisioner.WasProvisioned, "Inbox provisioner should have been called");
+        await Assert.That(outboxProvisioner.WasProvisioned).IsTrue().Because("Outbox provisioner should have been called");
+        await Assert.That(inboxProvisioner.WasProvisioned).IsTrue().Because("Inbox provisioner should have been called");
     }
 }

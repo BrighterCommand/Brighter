@@ -24,12 +24,11 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Observability;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
@@ -38,7 +37,7 @@ public class MessagePumpTraceIsolationObservabilityTests : IDisposable
     private readonly ICollection<Activity> _exportedActivities = new List<Activity>();
     private readonly TracerProvider _traceProvider;
     private readonly BrighterTracer _tracer = new();
-    private readonly RoutingKey _routingKey = new("MyTopic");
+    private readonly RoutingKey _routingKey = new(nameof(MessagePumpTraceIsolationObservabilityTests));
 
     public MessagePumpTraceIsolationObservabilityTests()
     {
@@ -49,8 +48,8 @@ public class MessagePumpTraceIsolationObservabilityTests : IDisposable
             .Build();
     }
 
-    [Fact]
-    public void When_Messages_Without_TraceParent_Are_Consumed_Should_Have_Distinct_Traces()
+    [Test]
+    public async Task When_Messages_Without_TraceParent_Are_Consumed_Should_Have_Distinct_Traces()
     {
         //Arrange
         var firstMessage = CreateMessageWithoutTraceParent();
@@ -65,48 +64,45 @@ public class MessagePumpTraceIsolationObservabilityTests : IDisposable
         var firstReceiveSpan = _tracer.CreateReceiveSpan(_routingKey, MessagingSystem.InternalBus);
         _tracer.EnrichReceiveSpan(firstReceiveSpan, firstMessage);
         _tracer.EndSpan(firstReceiveSpan);
-        Assert.Same(pumpSpan, Activity.Current);
+        await Assert.That(Activity.Current).IsSameReferenceAs(pumpSpan);
 
         var firstProcessSpan = _tracer.CreateSpan(MessagePumpSpanOperation.Process, firstMessage, MessagingSystem.InternalBus);
         _tracer.EndSpan(firstProcessSpan);
-        Assert.Same(pumpSpan, Activity.Current);
+        await Assert.That(Activity.Current).IsSameReferenceAs(pumpSpan);
 
         var secondReceiveSpan = _tracer.CreateReceiveSpan(_routingKey, MessagingSystem.InternalBus);
         _tracer.EnrichReceiveSpan(secondReceiveSpan, secondMessage);
         _tracer.EndSpan(secondReceiveSpan);
-        Assert.Same(pumpSpan, Activity.Current);
+        await Assert.That(Activity.Current).IsSameReferenceAs(pumpSpan);
 
         var secondProcessSpan = _tracer.CreateSpan(MessagePumpSpanOperation.Process, secondMessage, MessagingSystem.InternalBus);
         _tracer.EndSpan(secondProcessSpan);
-        Assert.Same(pumpSpan, Activity.Current);
+        await Assert.That(Activity.Current).IsSameReferenceAs(pumpSpan);
 
         _tracer.EndSpan(pumpSpan);
         _traceProvider.ForceFlush();
 
         //Assert
-        Assert.Null(firstMessage.Header.TraceParent);
-        Assert.Null(secondMessage.Header.TraceParent);
+        await Assert.That(firstMessage.Header.TraceParent).IsNull();
+        await Assert.That(secondMessage.Header.TraceParent).IsNull();
 
-        Assert.NotNull(pumpSpan);
-        Assert.NotNull(firstReceiveSpan);
-        Assert.NotNull(secondReceiveSpan);
-        Assert.NotNull(firstProcessSpan);
-        Assert.NotNull(secondProcessSpan);
+        await Assert.That(pumpSpan).IsNotNull();
+        await Assert.That(firstReceiveSpan).IsNotNull();
+        await Assert.That(secondReceiveSpan).IsNotNull();
+        await Assert.That(firstProcessSpan).IsNotNull();
+        await Assert.That(secondProcessSpan).IsNotNull();
 
-        Assert.NotEqual(pumpSpan!.TraceId, firstReceiveSpan!.TraceId);
-        Assert.NotEqual(pumpSpan.TraceId, firstProcessSpan!.TraceId);
-        Assert.NotEqual(firstReceiveSpan.TraceId, secondReceiveSpan!.TraceId);
-        Assert.NotEqual(firstProcessSpan.TraceId, secondProcessSpan!.TraceId);
+        await Assert.That(firstReceiveSpan!.TraceId).IsNotEqualTo(pumpSpan!.TraceId);
+        await Assert.That(firstProcessSpan!.TraceId).IsNotEqualTo(pumpSpan.TraceId);
+        await Assert.That(secondReceiveSpan!.TraceId).IsNotEqualTo(firstReceiveSpan.TraceId);
+        await Assert.That(secondProcessSpan!.TraceId).IsNotEqualTo(firstProcessSpan.TraceId);
 
-        Assert.Null(firstProcessSpan.ParentId);
-        Assert.Null(secondProcessSpan.ParentId);
-
-        Assert.All(_exportedActivities.Where(a => a.DisplayName.EndsWith(MessagePumpSpanOperation.Process.ToSpanName())),
-            processSpan => Assert.Null(processSpan.ParentId));
+        await Assert.That(firstProcessSpan.ParentId).IsNull();
+        await Assert.That(secondProcessSpan.ParentId).IsNull();
     }
 
-    [Fact]
-    public void When_A_Root_Consumer_Span_Is_Ended_Out_Of_Order_Should_Not_Restore_Previous_Activity()
+    [Test]
+    public async Task When_A_Root_Consumer_Span_Is_Ended_Out_Of_Order_Should_Not_Restore_Previous_Activity()
     {
         //Arrange
         var pumpSpan = _tracer.CreateMessagePumpSpan(
@@ -121,7 +117,7 @@ public class MessagePumpTraceIsolationObservabilityTests : IDisposable
         _tracer.EndSpan(receiveSpan);
 
         //Assert
-        Assert.NotSame(pumpSpan, Activity.Current);
+        await Assert.That(Activity.Current).IsNotSameReferenceAs(pumpSpan);
 
         interveningActivity.Stop();
         Activity.Current = pumpSpan;

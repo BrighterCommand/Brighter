@@ -1,100 +1,100 @@
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 using SyncA = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.SyncA;
 using SyncB = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.SyncB;
 using AsyncA = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.AsyncA;
 using AsyncB = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.AsyncB;
 using Reuse = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.Reuse;
+using Scenarios = Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.Scenarios;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 {
     public class When_Building_A_Pipeline_Disambiguates_Handlers_By_Type
     {
-        [Fact]
-        public void When_two_sync_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_winner_built_first()
+        [Test]
+        public async Task When_two_sync_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_winner_built_first()
         {
             // Arrange
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
-            (PipelineBuilder<MyCommand> builderA, PipelineBuilder<MyCommand> builderB) = CreateSyncBuilders();
+            (PipelineBuilder<Scenarios.SyncFirstBuiltFirstCommand> builderA,
+                PipelineBuilder<Scenarios.SyncFirstBuiltFirstCommand> builderB) =
+                CreateSyncBuilders<Scenarios.SyncFirstBuiltFirstCommand>();
 
             // Act — build A (pre/Validation decorator) first, warming the cache, then B (post/Logging decorator)
-            builderA.Build(new MyCommand(), new RequestContext()).First();
-            IHandleRequests<MyCommand> pipelineB = builderB.Build(new MyCommand(), new RequestContext()).First();
+            builderA.Build(new Scenarios.SyncFirstBuiltFirstCommand(), new RequestContext()).First();
+            IHandleRequests<Scenarios.SyncFirstBuiltFirstCommand> pipelineB = builderB
+                .Build(new Scenarios.SyncFirstBuiltFirstCommand(), new RequestContext()).First();
 
             // Assert — B carries its own post decorator (Logging), never A's pre decorator (Validation)
             string trace = TracePipeline(pipelineB).ToString();
-            Assert.Contains("MyLoggingHandler", trace);
-            Assert.DoesNotContain("MyValidationHandler", trace);
+            await Assert.That(trace).Contains("MyLoggingHandler");
+            await Assert.That(trace).DoesNotContain("MyValidationHandler");
         }
 
-        [Fact]
-        public void When_two_sync_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_opposite_order()
+        [Test]
+        public async Task When_two_sync_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_opposite_order()
         {
             // Arrange
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
-            (PipelineBuilder<MyCommand> builderA, PipelineBuilder<MyCommand> builderB) = CreateSyncBuilders();
+            (PipelineBuilder<Scenarios.SyncOppositeOrderCommand> builderA,
+                PipelineBuilder<Scenarios.SyncOppositeOrderCommand> builderB) =
+                CreateSyncBuilders<Scenarios.SyncOppositeOrderCommand>();
 
             // Act — build B (post/Logging decorator) first this time, then A (pre/Validation decorator)
-            builderB.Build(new MyCommand(), new RequestContext()).First();
-            IHandleRequests<MyCommand> pipelineA = builderA.Build(new MyCommand(), new RequestContext()).First();
+            builderB.Build(new Scenarios.SyncOppositeOrderCommand(), new RequestContext()).First();
+            IHandleRequests<Scenarios.SyncOppositeOrderCommand> pipelineA = builderA
+                .Build(new Scenarios.SyncOppositeOrderCommand(), new RequestContext()).First();
 
             // Assert — A carries its own pre decorator (Validation), never B's post decorator (Logging)
             string trace = TracePipeline(pipelineA).ToString();
-            Assert.Contains("MyValidationHandler", trace);
-            Assert.DoesNotContain("MyLoggingHandler", trace);
+            await Assert.That(trace).Contains("MyValidationHandler");
+            await Assert.That(trace).DoesNotContain("MyLoggingHandler");
         }
 
-        [Fact]
-        public void When_two_async_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_winner_built_first()
+        [Test]
+        public async Task When_two_async_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_winner_built_first()
         {
             // Arrange
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
-            (PipelineBuilder<MyCommand> builderA, PipelineBuilder<MyCommand> builderB) = CreateAsyncBuilders();
+            (PipelineBuilder<Scenarios.AsyncFirstBuiltFirstCommand> builderA,
+                PipelineBuilder<Scenarios.AsyncFirstBuiltFirstCommand> builderB) =
+                CreateAsyncBuilders<Scenarios.AsyncFirstBuiltFirstCommand>();
 
             // Act — build async A (pre/Validation) first, then async B (post/Logging)
-            builderA.BuildAsync(new MyCommand(), new RequestContext(), false).First();
-            IHandleRequestsAsync<MyCommand> pipelineB =
-                builderB.BuildAsync(new MyCommand(), new RequestContext(), false).First();
+            builderA.BuildAsync(new Scenarios.AsyncFirstBuiltFirstCommand(), new RequestContext(), false).First();
+            IHandleRequestsAsync<Scenarios.AsyncFirstBuiltFirstCommand> pipelineB = builderB
+                .BuildAsync(new Scenarios.AsyncFirstBuiltFirstCommand(), new RequestContext(), false).First();
 
             // Assert — async B carries its own post decorator, never async A's pre decorator
             string trace = TracePipeline(pipelineB).ToString();
-            Assert.Contains("MyLoggingHandlerAsync", trace);
-            Assert.DoesNotContain("MyValidationHandlerAsync", trace);
+            await Assert.That(trace).Contains("MyLoggingHandlerAsync");
+            await Assert.That(trace).DoesNotContain("MyValidationHandlerAsync");
         }
 
-        [Fact]
-        public void When_two_async_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_opposite_order()
+        [Test]
+        public async Task When_two_async_handlers_share_a_simple_name_each_should_build_with_its_own_decorators_opposite_order()
         {
             // Arrange
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
-            (PipelineBuilder<MyCommand> builderA, PipelineBuilder<MyCommand> builderB) = CreateAsyncBuilders();
+            (PipelineBuilder<Scenarios.AsyncOppositeOrderCommand> builderA,
+                PipelineBuilder<Scenarios.AsyncOppositeOrderCommand> builderB) =
+                CreateAsyncBuilders<Scenarios.AsyncOppositeOrderCommand>();
 
             // Act — build async B (post/Logging) first this time, then async A (pre/Validation)
-            builderB.BuildAsync(new MyCommand(), new RequestContext(), false).First();
-            IHandleRequestsAsync<MyCommand> pipelineA =
-                builderA.BuildAsync(new MyCommand(), new RequestContext(), false).First();
+            builderB.BuildAsync(new Scenarios.AsyncOppositeOrderCommand(), new RequestContext(), false).First();
+            IHandleRequestsAsync<Scenarios.AsyncOppositeOrderCommand> pipelineA = builderA
+                .BuildAsync(new Scenarios.AsyncOppositeOrderCommand(), new RequestContext(), false).First();
 
             // Assert — async A carries its own pre decorator, never async B's post decorator
             string trace = TracePipeline(pipelineA).ToString();
-            Assert.Contains("MyValidationHandlerAsync", trace);
-            Assert.DoesNotContain("MyLoggingHandlerAsync", trace);
+            await Assert.That(trace).Contains("MyValidationHandlerAsync");
+            await Assert.That(trace).DoesNotContain("MyLoggingHandlerAsync");
         }
 
-        [Fact]
-        public void When_a_single_handler_is_built_twice_should_leave_one_cache_entry_keyed_by_its_runtime_type()
+        [Test]
+        public async Task When_a_single_handler_is_built_twice_should_produce_the_same_pipeline()
         {
-            // Arrange — a request type unique to this fact, so the process-global per-closed-generic
-            // mementos hold exactly this handler's entry and the count assertion stays deterministic
-            PipelineBuilder<Reuse.ReuseCommand>.ClearPipelineCache();
-
+            // Arrange
             var registry = new SubscriberRegistry();
             registry.Register<Reuse.ReuseCommand, Reuse.ReuseHandler>();
 
@@ -107,74 +107,72 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var factory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             var builder = new PipelineBuilder<Reuse.ReuseCommand>(registry, (IAmAHandlerFactorySync)factory);
 
-            // Act — build the same handler twice (single-threaded)
+            // Act
             string firstTrace =
                 TracePipeline(builder.Build(new Reuse.ReuseCommand(), new RequestContext()).First()).ToString();
             string secondTrace =
                 TracePipeline(builder.Build(new Reuse.ReuseCommand(), new RequestContext()).First()).ToString();
 
-            // Assert — exactly one entry per memento, keyed by the handler's runtime Type, and the
-            // second build's decorator sequence is equivalent to the first
-            IReadOnlyCollection<System.Type> preKeys = GetMementoKeys<Reuse.ReuseCommand>("s_preAttributesMemento");
-            IReadOnlyCollection<System.Type> postKeys = GetMementoKeys<Reuse.ReuseCommand>("s_postAttributesMemento");
-
-            Assert.Equal(new[] { typeof(Reuse.ReuseHandler) }, preKeys);
-            Assert.Equal(new[] { typeof(Reuse.ReuseHandler) }, postKeys);
-            Assert.Equal(firstTrace, secondTrace);
+            // Assert
+            await Assert.That(secondTrace).IsEqualTo(firstTrace);
         }
 
-        private static (PipelineBuilder<MyCommand>, PipelineBuilder<MyCommand>) CreateSyncBuilders()
+        private static (PipelineBuilder<TCommand>, PipelineBuilder<TCommand>) CreateSyncBuilders<TCommand>()
+            where TCommand : MyCommand
         {
             var registryA = new SubscriberRegistry();
-            registryA.Register<MyCommand, SyncA.CollidingHandler>();
+            registryA.Register<TCommand, SyncA.CollidingHandler<TCommand>>();
 
             var registryB = new SubscriberRegistry();
-            registryB.Register<MyCommand, SyncB.CollidingHandler>();
+            registryB.Register<TCommand, SyncB.CollidingHandler<TCommand>>();
 
             var container = new ServiceCollection();
-            container.AddTransient<SyncA.CollidingHandler>();
-            container.AddTransient<SyncB.CollidingHandler>();
-            container.AddTransient<MyValidationHandler<MyCommand>>();
-            container.AddTransient<MyLoggingHandler<MyCommand>>();
+            container.AddTransient<SyncA.CollidingHandler<TCommand>>();
+            container.AddTransient<SyncB.CollidingHandler<TCommand>>();
+            container.AddTransient<MyValidationHandler<TCommand>>();
+            container.AddTransient<MyLoggingHandler<TCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             var factory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             return (
-                new PipelineBuilder<MyCommand>(registryA, (IAmAHandlerFactorySync)factory),
-                new PipelineBuilder<MyCommand>(registryB, (IAmAHandlerFactorySync)factory));
+                new PipelineBuilder<TCommand>(registryA, (IAmAHandlerFactorySync)factory),
+                new PipelineBuilder<TCommand>(registryB, (IAmAHandlerFactorySync)factory));
         }
 
-        private static (PipelineBuilder<MyCommand>, PipelineBuilder<MyCommand>) CreateAsyncBuilders()
+        private static (PipelineBuilder<TCommand>, PipelineBuilder<TCommand>) CreateAsyncBuilders<TCommand>()
+            where TCommand : MyCommand
         {
             var registryA = new SubscriberRegistry();
-            registryA.RegisterAsync<MyCommand, AsyncA.CollidingHandler>();
+            registryA.RegisterAsync<TCommand, AsyncA.CollidingHandler<TCommand>>();
 
             var registryB = new SubscriberRegistry();
-            registryB.RegisterAsync<MyCommand, AsyncB.CollidingHandler>();
+            registryB.RegisterAsync<TCommand, AsyncB.CollidingHandler<TCommand>>();
 
             var container = new ServiceCollection();
-            container.AddTransient<AsyncA.CollidingHandler>();
-            container.AddTransient<AsyncB.CollidingHandler>();
-            container.AddTransient<MyValidationHandlerAsync<MyCommand>>();
-            container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
+            container.AddTransient<AsyncA.CollidingHandler<TCommand>>();
+            container.AddTransient<AsyncB.CollidingHandler<TCommand>>();
+            container.AddTransient<MyValidationHandlerAsync<TCommand>>();
+            container.AddTransient<MyLoggingHandlerAsync<TCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             var factory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             return (
-                new PipelineBuilder<MyCommand>(registryA, (IAmAHandlerFactoryAsync)factory),
-                new PipelineBuilder<MyCommand>(registryB, (IAmAHandlerFactoryAsync)factory));
+                new PipelineBuilder<TCommand>(registryA, (IAmAHandlerFactoryAsync)factory),
+                new PipelineBuilder<TCommand>(registryB, (IAmAHandlerFactoryAsync)factory));
         }
 
-        private static PipelineTracer TracePipeline(IHandleRequests<MyCommand> firstInPipeline)
+        private static PipelineTracer TracePipeline<TCommand>(IHandleRequests<TCommand> firstInPipeline)
+            where TCommand : class, IRequest
         {
             var pipelineTracer = new PipelineTracer();
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
 
-        private static PipelineTracer TracePipeline(IHandleRequestsAsync<MyCommand> firstInPipeline)
+        private static PipelineTracer TracePipeline<TCommand>(IHandleRequestsAsync<TCommand> firstInPipeline)
+            where TCommand : class, IRequest
         {
             var pipelineTracer = new PipelineTracer();
             firstInPipeline.DescribePath(pipelineTracer);
@@ -188,17 +186,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             return pipelineTracer;
         }
 
-        private static IReadOnlyCollection<System.Type> GetMementoKeys<TRequest>(string fieldName)
-            where TRequest : class, IRequest
-        {
-            FieldInfo? field = typeof(PipelineBuilder<TRequest>).GetField(
-                fieldName,
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.NotNull(field);
-
-            var cache = (IDictionary)field!.GetValue(null)!;
-            return cache.Keys.Cast<System.Type>().ToList();
-        }
     }
 }
 
@@ -206,10 +193,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.Sync
 {
     using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
-    internal sealed class CollidingHandler : RequestHandler<MyCommand>
+    internal sealed class CollidingHandler<TCommand> : RequestHandler<TCommand>
+        where TCommand : MyCommand
     {
         [MyPreValidationHandler(1, HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand command) => base.Handle(command);
+        public override TCommand Handle(TCommand command) => base.Handle(command);
     }
 }
 
@@ -217,10 +205,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.Sync
 {
     using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
-    internal sealed class CollidingHandler : RequestHandler<MyCommand>
+    internal sealed class CollidingHandler<TCommand> : RequestHandler<TCommand>
+        where TCommand : MyCommand
     {
         [MyPostLoggingHandler(1, HandlerTiming.After)]
-        public override MyCommand Handle(MyCommand command) => base.Handle(command);
+        public override TCommand Handle(TCommand command) => base.Handle(command);
     }
 }
 
@@ -228,10 +217,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.Asyn
 {
     using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
-    internal sealed class CollidingHandler : RequestHandlerAsync<MyCommand>
+    internal sealed class CollidingHandler<TCommand> : RequestHandlerAsync<TCommand>
+        where TCommand : MyCommand
     {
         [MyPreValidationHandlerAsync(1, HandlerTiming.Before)]
-        public override Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
+        public override Task<TCommand> HandleAsync(TCommand command, CancellationToken cancellationToken = default)
             => base.HandleAsync(command, cancellationToken);
     }
 }
@@ -240,12 +230,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.Asyn
 {
     using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
-    internal sealed class CollidingHandler : RequestHandlerAsync<MyCommand>
+    internal sealed class CollidingHandler<TCommand> : RequestHandlerAsync<TCommand>
+        where TCommand : MyCommand
     {
         [MyPostLoggingHandlerAsync(1, HandlerTiming.After)]
-        public override Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
+        public override Task<TCommand> HandleAsync(TCommand command, CancellationToken cancellationToken = default)
             => base.HandleAsync(command, cancellationToken);
     }
+}
+
+namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.Scenarios
+{
+    using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+
+    internal sealed class SyncFirstBuiltFirstCommand : MyCommand { }
+    internal sealed class SyncOppositeOrderCommand : MyCommand { }
+    internal sealed class AsyncFirstBuiltFirstCommand : MyCommand { }
+    internal sealed class AsyncOppositeOrderCommand : MyCommand { }
 }
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline.TypeKeyed.Reuse

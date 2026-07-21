@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
@@ -73,65 +72,65 @@ public class InMemoryConsumerRequeueWithDelayTests
         _consumer.Receive();
     }
 
-    [Fact]
-    public void Should_not_have_message_immediately_available_after_requeue_with_delay()
+    [Test]
+    public async Task Should_not_have_message_immediately_available_after_requeue_with_delay()
     {
         // Act - handler defers the message (simulated by calling Requeue with delay)
-        _consumer.Requeue(_message, _delay);
+        await _consumer.RequeueAsync(_message, _delay);
 
         // Assert - message should NOT be immediately available on bus (scheduler holds it)
         var messagesOnBus = _bus.Stream(_routingKey);
-        Assert.Empty(messagesOnBus);
+        await Assert.That(messagesOnBus).IsEmpty();
     }
 
-    [Fact]
-    public void Should_have_message_available_after_delay_expires()
+    [Test]
+    public async Task Should_have_message_available_after_delay_expires()
     {
         // Act - handler defers the message
-        _consumer.Requeue(_message, _delay);
+        await _consumer.RequeueAsync(_message, _delay);
 
         // Advance time past the delay
         _timeProvider.Advance(_delay + TimeSpan.FromSeconds(1));
 
         // Assert - message should now be available on bus
         var messagesOnBus = _bus.Stream(_routingKey);
-        Assert.Single(messagesOnBus);
+        await Assert.That(messagesOnBus).HasSingleItem();
     }
 
-    [Fact]
-    public void Should_be_able_to_receive_message_again_after_delay()
+    [Test]
+    public async Task Should_be_able_to_receive_message_again_after_delay()
     {
         // Act - handler defers the message
-        _consumer.Requeue(_message, _delay);
+        await _consumer.RequeueAsync(_message, _delay);
 
         // Advance time past the delay
         _timeProvider.Advance(_delay + TimeSpan.FromSeconds(1));
 
         // Receive the message again
-        var receivedMessages = _consumer.Receive();
+        var receivedMessages = await _consumer.ReceiveAsync();
 
         // Assert - should receive the same message
-        Assert.Single(receivedMessages);
-        Assert.Equal(_message.Id, receivedMessages.First().Id);
+        await Assert.That(receivedMessages).HasSingleItem();
+        await Assert.That(receivedMessages.First().Id).IsEqualTo(_message.Id);
     }
 
-    [Fact]
-    public void Should_preserve_message_content_through_delayed_requeue()
+    [Test]
+    public async Task Should_preserve_message_content_through_delayed_requeue()
     {
         // Act - handler defers the message
-        _consumer.Requeue(_message, _delay);
+        await _consumer.RequeueAsync(_message, _delay);
 
         // Advance time past the delay
         _timeProvider.Advance(_delay + TimeSpan.FromSeconds(1));
 
         // Receive the message again
-        var receivedMessages = _consumer.Receive();
+        var receivedMessages = await _consumer.ReceiveAsync();
 
         // Assert - message content should be preserved through the scheduler flow
-        Assert.Single(receivedMessages);
-        Assert.Equal(_message.Body.Value, receivedMessages.First().Body.Value);
-        Assert.Equal(_message.Header.Topic, receivedMessages.First().Header.Topic);
-        Assert.Equal(_message.Header.MessageType, receivedMessages.First().Header.MessageType);
+        await Assert.That(receivedMessages).HasSingleItem();
+        await Assert.That(receivedMessages.First().Body.Value).IsEqualTo(_message.Body.Value);
+        await Assert.That(receivedMessages.First().Header.Topic).IsEqualTo(_message.Header.Topic);
+        await Assert.That(receivedMessages.First().Header.MessageType).IsEqualTo(_message.Header.MessageType);
     }
 
     /// <summary>

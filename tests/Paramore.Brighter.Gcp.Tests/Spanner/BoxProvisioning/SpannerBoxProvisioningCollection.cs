@@ -1,4 +1,3 @@
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -6,5 +5,5 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 /// Serializes Spanner box provisioning tests to avoid concurrent DDL operations,
 /// which the Spanner emulator rejects.
 /// </summary>
-[CollectionDefinition("SpannerBoxProvisioning", DisableParallelization = true)]
+[System.Obsolete]
 public class SpannerBoxProvisioningCollection;

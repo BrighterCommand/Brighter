@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,8 +26,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor;
 
@@ -36,15 +34,14 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor;
 /// via a lazily-created producer. Previously RequeueAsync returned false (not implemented); now it delegates
 /// to the producer so that requeued messages are actually redelivered.
 /// </summary>
-[Trait("Category", "MQTT")]
-[Collection("MQTT")]
-public class MqttConsumerRequeueAsyncTests(ITestOutputHelper testOutputHelper)
-    : MqttTestClassBase<MqttConsumerRequeueAsyncTests>(ClientId, TopicPrefix, testOutputHelper)
+[Category("MQTT")]
+public class MqttConsumerRequeueAsyncTests()
+    : MqttTestClassBase<MqttConsumerRequeueAsyncTests>(ClientId, TopicPrefix)
 {
     private const string ClientId = "BrighterIntegrationTests-RequeueAsync";
     private const string TopicPrefix = "BrighterIntegrationTests/RequeueAsyncTests";
 
-    [Fact]
+    [Test]
     public async Task When_requeuing_async_should_publish_message_via_producer()
     {
         // Arrange - send a message and receive it
@@ -60,13 +57,13 @@ public class MqttConsumerRequeueAsyncTests(ITestOutputHelper testOutputHelper)
         var result = await MessageConsumerAsync.RequeueAsync(received);
 
         // Assert - requeue should return true (was returning false)
-        Assert.True(result, "RequeueAsync should succeed by publishing via producer");
+        await Assert.That(result).IsTrue();
 
         // Note: HandledCount is incremented by the message pump, not by the consumer requeue
 
         // Assert - message should be available again on the topic (published via producer)
         var requeued = await ReceiveMessageAsync();
-        Assert.Equal(message.Body.Value, requeued.Body.Value);
+        await Assert.That(requeued.Body.Value).IsEqualTo(message.Body.Value);
     }
 
     private async Task<Message> ReceiveMessageAsync()
@@ -86,3 +83,4 @@ public class MqttConsumerRequeueAsyncTests(ITestOutputHelper testOutputHelper)
         throw new Exception($"Failed to receive message after {maxTries} attempts");
     }
 }
+

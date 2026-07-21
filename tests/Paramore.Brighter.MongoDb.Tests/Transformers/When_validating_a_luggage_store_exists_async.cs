@@ -1,15 +1,14 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transformers.MongoGridFS;
 using Paramore.Brighter.Transforms.Storage;
-using Xunit;
 
 namespace Paramore.Brighter.MongoDb.Tests.Transformers;
 
-[Trait("Category", "MongoDb")]
+[Category("MongoDb")]
 public class LuggageStoreExistsAsyncTests 
 {
-    [Fact]
+    [Test]
     public async Task When_checking_store_that_does_not_exist_async()
     {
         //act
@@ -27,7 +26,7 @@ public class LuggageStoreExistsAsyncTests
                  await luggageStore.EnsureStoreExistsAsync();
              });
 
-         Assert.NotNull(doesNotExist);
-         Assert.True(doesNotExist is InvalidOperationException);
+         await Assert.That(doesNotExist).IsNotNull();
+         await Assert.That(doesNotExist is InvalidOperationException).IsTrue();
     }
 }

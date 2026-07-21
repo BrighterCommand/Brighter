@@ -30,11 +30,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkBeginTests
 {
     // Per ADR 0058 §B.1: Postgres uses pg_advisory_lock, which is session-scoped — the lock
     // outlives any transaction on the same connection and is released either by an explicit
@@ -48,16 +47,17 @@ public class PostgreSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
     // AcquireAsync is invoked — it attempts NpgsqlConnection.BeginTransactionAsync and watches
     // for the InvalidOperationException Npgsql throws when a transaction is already active.
     // Probe succeeds → no tx yet → AcquireAsync ran before BeginTransactionAsync.
-
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock =
         new(releaseResult: true, senseTransactionStateAtAcquire: true);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_begin_async_is_called_it_should_acquire_lock_before_begin_transaction()
     {
         // Arrange
@@ -73,8 +73,8 @@ public class PostgreSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
         // Assert: at the moment AcquireAsync was called, no transaction was yet active on the
         // connection — proves AcquireAsync ran before BeginTransactionAsync. (Stays null if
         // AcquireAsync was never called, in which case Assert.False(null) also fails.)
-        Assert.False(_advisoryLock.TransactionWasActiveAtAcquireTime);
+        await Assert.That(_advisoryLock.TransactionWasActiveAtAcquireTime).IsFalse();
         // Assert: BeginTransactionAsync was also called — the UoW now exposes a non-null tx.
-        Assert.NotNull(uow.Transaction);
+        await Assert.That(uow.Transaction).IsNotNull();
     }
 }

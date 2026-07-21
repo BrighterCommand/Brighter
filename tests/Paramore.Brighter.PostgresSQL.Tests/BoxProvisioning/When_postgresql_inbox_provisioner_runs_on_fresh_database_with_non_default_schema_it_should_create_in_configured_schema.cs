@@ -27,7 +27,6 @@ using System;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -35,7 +34,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 // Per PR #4039 reviewer item M4-1 (F1b): PostgreSqlInboxBuilder.GetDDL is now schema-aware
 // via an optional schemaName parameter, and PostgreSqlInboxMigrationCatalog.FreshInstallDdl
 // threads configuration.SchemaName through to it.
-public class PostgreSqlInboxNonDefaultSchemaTests : IAsyncLifetime
+public class PostgreSqlInboxNonDefaultSchemaTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_inbox_{Guid.NewGuid():N}";
@@ -57,7 +56,7 @@ public class PostgreSqlInboxNonDefaultSchemaTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgresql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
         //Arrange
@@ -67,23 +66,21 @@ public class PostgreSqlInboxNonDefaultSchemaTests : IAsyncLifetime
         await DropAnyExistingTableAsync(_tableName, "public");
 
         //Act — first fresh-install run
-        var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var firstException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert
-        Assert.Null(firstException);
-        Assert.True(
-            await TableExistsInSchemaAsync(_tableName, _nonDefaultSchema),
-            $"Inbox table '{_tableName}' must exist in '{_nonDefaultSchema}' after fresh install.");
-        Assert.False(await TableExistsInSchemaAsync(_tableName, "public"));
-        Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultSchema, _tableName));
+        await Assert.That(firstException).IsNull();
+        await Assert.That(await TableExistsInSchemaAsync(_tableName, _nonDefaultSchema)).IsTrue().Because($"Inbox table '{_tableName}' must exist in '{_nonDefaultSchema}' after fresh install.");
+        await Assert.That(await TableExistsInSchemaAsync(_tableName, "public")).IsFalse();
+        await Assert.That(await GetHistoryRowCountAsync(_nonDefaultSchema, _tableName)).IsEqualTo(1);
 
         //Act — idempotent second run
-        var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var secondException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert
-        Assert.Null(secondException);
-        Assert.True(await TableExistsInSchemaAsync(_tableName, _nonDefaultSchema));
-        Assert.Equal(1, await GetHistoryRowCountAsync(_nonDefaultSchema, _tableName));
+        await Assert.That(secondException).IsNull();
+        await Assert.That(await TableExistsInSchemaAsync(_tableName, _nonDefaultSchema)).IsTrue();
+        await Assert.That(await GetHistoryRowCountAsync(_nonDefaultSchema, _tableName)).IsEqualTo(1);
     }
 
     private async Task EnsureSchemaExistsAsync(string schemaName)
@@ -130,8 +127,10 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = @SchemaName";
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

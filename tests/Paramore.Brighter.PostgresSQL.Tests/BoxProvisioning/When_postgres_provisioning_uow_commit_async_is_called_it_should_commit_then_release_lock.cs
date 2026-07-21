@@ -30,11 +30,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkCommitTests
 {
     // Per ADR 0058 §B.1: Postgres pg_advisory_lock is session-scoped — it is NOT released
     // implicitly when the surrounding transaction commits (unlike MSSQL's
@@ -53,15 +52,16 @@ public class PostgreSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
     //     records the lock key whenever ReleaseAsync is invoked. After CommitAsync, that
     //     property must equal the lock resource passed to BeginAsync. A CommitAsync that
     //     forgets to release the lock would leave ReleasedKey null.
-
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_postgres_provisioning_uow_commit_async_is_called_it_should_commit_then_release_lock()
     {
         // Arrange
@@ -81,6 +81,6 @@ public class PostgreSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
         // this second Commit() would succeed silently.
         Assert.Throws<InvalidOperationException>(() => capturedTx.Commit());
         // Assert: pg_advisory_unlock was called explicitly with the same lock resource.
-        Assert.Equal("test_lock_resource", _advisoryLock.ReleasedKey);
+        await Assert.That(_advisoryLock.ReleasedKey).IsEqualTo("test_lock_resource");
     }
 }

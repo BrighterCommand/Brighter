@@ -36,7 +36,7 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 public class MessagePumpProcessSpanObservabilityTests
 {
     private const string ChannelName = "myChannel";
-    private readonly RoutingKey _routingKey = new("MyTopic");
+    private readonly RoutingKey _routingKey = new(nameof(MessagePumpProcessSpanObservabilityTests));
     private readonly InternalBus _bus = new();
     private readonly FakeTimeProvider _timeProvider = new();
     private readonly IAmAMessagePump _messagePump;
@@ -118,8 +118,11 @@ public class MessagePumpProcessSpanObservabilityTests
         channel.Enqueue(MessageFactory.CreateQuitMessage(_routingKey));
     }
 
-    [Fact]
-    public void When_A_Message_Is_Processed_A_Process_Span_Is_Created()
+    [After(Test)]
+    public void DisposeTraceProvider() => _traceProvider.Dispose();
+
+    [Test]
+    public async Task When_A_Message_Is_Processed_A_Process_Span_Is_Created()
     {
         _messagePump.Run();
 
@@ -135,19 +138,19 @@ public class MessagePumpProcessSpanObservabilityTests
             && a.TagObjects.Any(t => t is { Key: BrighterSemanticConventions.MessageType }
                                      && Enum.Parse<MessageType>(t.Value!.ToString()!) == MessageType.MT_EVENT));
 
-        Assert.NotNull(receiveSpan);
-        Assert.NotNull(processSpan);
+        await Assert.That(receiveSpan).IsNotNull();
+        await Assert.That(processSpan).IsNotNull();
 
         // receive span carries the operation=receive tag for metrics routing
-        Assert.Contains(receiveSpan!.Tags, t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "receive" });
+        await Assert.That((receiveSpan!.Tags).Any(t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "receive" })).IsTrue();
 
         // process span carries the operation=process tag for metrics routing — feeds messaging.process.duration histogram
-        Assert.Contains(processSpan!.Tags, t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "process" });
+        await Assert.That((processSpan!.Tags).Any(t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "process" })).IsTrue();
 
         // process span inherits producer trace context (parent = producer's traceparent), so handler spans descend from producer
-        Assert.Equal(_message.Header.TraceParent?.Value, processSpan.ParentId);
+        await Assert.That(processSpan.ParentId).IsEqualTo(_message.Header.TraceParent?.Value);
 
         // receive span is local, not the producer - receive measures broker call only
-        Assert.NotEqual(_message.Header.TraceParent?.Value, receiveSpan.ParentId);
+        await Assert.That(receiveSpan.ParentId).IsNotEqualTo(_message.Header.TraceParent?.Value);
     }
 }

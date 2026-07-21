@@ -31,11 +31,10 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlProvisioningUnitOfWorkRollbackTriStateTests : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkRollbackTriStateTests
 {
     // Per spec 0027 Item M / ADR 0057 §5b / ADR 0058 §B.3: MySQL's RELEASE_LOCK has three
     // outcomes — 1 (released by this session), 0 (lock held by another session — diagnostic
@@ -60,22 +59,23 @@ public class MySqlProvisioningUnitOfWorkRollbackTriStateTests : IAsyncLifetime
     // The current 5.3.a/5.3.b stub — `Task RollbackAsync(...) => Task.CompletedTask` —
     // never calls ReleaseAsync, so all three arms fail RED on the ReleasedKey assertion
     // before any Warning-content assertion can run.
-
     private readonly MySqlConnection _connection = new(Const.DefaultConnectingString);
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
-    [Fact]
+    [Test]
     public async Task When_release_returns_true_it_should_complete_with_no_warning() =>
         await AssertRollbackBehavior(releaseResult: true, expectWarning: false, expectedMarker: null);
 
-    [Fact]
+    [Test]
     public async Task When_release_returns_false_it_should_log_warning_with_marker_zero() =>
         await AssertRollbackBehavior(releaseResult: false, expectWarning: true, expectedMarker: "0");
 
-    [Fact]
+    [Test]
     public async Task When_release_returns_null_it_should_log_warning_with_marker_null() =>
         await AssertRollbackBehavior(releaseResult: null, expectWarning: true, expectedMarker: "NULL");
 
@@ -94,15 +94,15 @@ public class MySqlProvisioningUnitOfWorkRollbackTriStateTests : IAsyncLifetime
 
         // Act — RollbackAsync must complete normally for ALL three outcomes per the
         // disposal-style "MUST NOT throw" contract on IAmAProvisioningUnitOfWork.RollbackAsync.
-        var thrown = await Record.ExceptionAsync(() => uow.RollbackAsync(CancellationToken.None));
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => uow.RollbackAsync(CancellationToken.None));
 
         // Assert — RollbackAsync did not throw, regardless of release outcome.
-        Assert.Null(thrown);
+        await Assert.That(thrown).IsNull();
 
         // Assert — RollbackAsync ALWAYS calls ReleaseAsync (lock release is the unwind's
         // primary purpose; the tri-state diagnostic is a side-channel observation on the
         // result, not a gate on whether to release).
-        Assert.Equal("test_lock_resource", advisoryLock.ReleasedKey);
+        await Assert.That(advisoryLock.ReleasedKey).IsEqualTo("test_lock_resource");
 
         // Assert — Warning emission matches the tri-state contract.
         var warnings = logger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
@@ -111,15 +111,15 @@ public class MySqlProvisioningUnitOfWorkRollbackTriStateTests : IAsyncLifetime
             // Exactly one Warning per non-true outcome, naming the lock resource and the
             // marker that disambiguates "0" (lock held by another session) from "NULL"
             // (lock did not exist) — preserving the spec 0027 Item M distinction.
-            Assert.Single(warnings);
-            Assert.Contains("test_lock_resource", warnings[0].Message, StringComparison.Ordinal);
-            Assert.Contains(expectedMarker!, warnings[0].Message, StringComparison.Ordinal);
-            Assert.Null(warnings[0].Exception);
+            await Assert.That(warnings).HasSingleItem();
+            await Assert.That(warnings[0].Message).Contains("test_lock_resource");
+            await Assert.That(warnings[0].Message).Contains(expectedMarker!);
+            await Assert.That(warnings[0].Exception).IsNull();
         }
         else
         {
             // Happy-path RELEASE_LOCK = 1: no Warning entry — silence is the success signal.
-            Assert.Empty(warnings);
+            await Assert.That(warnings).IsEmpty();
         }
     }
 }

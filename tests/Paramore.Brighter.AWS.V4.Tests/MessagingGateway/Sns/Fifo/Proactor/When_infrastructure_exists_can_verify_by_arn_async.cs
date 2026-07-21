@@ -7,22 +7,22 @@ using Paramore.Brighter.AWS.V4.Tests.Helpers;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
-using Xunit;
 using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Fifo.Proactor;
 
-[Trait("Category", "AWS")]
-public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDisposable
+[Category("AWS")]
+public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable
 {
-    private readonly Message _message;
-    private readonly IAmAMessageConsumerAsync _consumer;
-    private readonly SnsMessageProducer _messageProducer;
-    private readonly ChannelFactory _channelFactory;
-    private readonly MyCommand _myCommand;
+    private Message _message;
+    private IAmAMessageConsumerAsync _consumer;
+    private SnsMessageProducer _messageProducer;
+    private ChannelFactory _channelFactory;
+    private MyCommand _myCommand;
 
-    public AwsValidateInfrastructureByArnTestsAsync()
+    [Before(Test)]
+    public async Task Setup()
     {
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
@@ -38,9 +38,9 @@ public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }), 
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: topicAttributes,
-            messagePumpType: MessagePumpType.Proactor, 
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -52,9 +52,9 @@ public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var awsConnection = GatewayFactory.CreateFactory();
 
         _channelFactory = new ChannelFactory(awsConnection);
-        var channel = _channelFactory.CreateAsyncChannel(subscription);
+        var channel = await _channelFactory.CreateAsyncChannelAsync(subscription);
 
-        var topicArn = FindTopicArn(awsConnection, routingKey.ToValidSNSTopicName(true)).Result;
+        var topicArn = await FindTopicArn(awsConnection, routingKey.ToValidSNSTopicName(true));
         var routingKeyArn = new RoutingKey(topicArn);
 
         subscription.MakeChannels = OnMissingChannel.Validate;
@@ -75,7 +75,7 @@ public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
     }
 
-    [Fact]
+    [Test]
     public async Task When_infrastructure_exists_can_verify_async()
     {
         await _messageProducer.SendAsync(_message);
@@ -85,7 +85,7 @@ public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
         var message = messages.First();
-        Assert.Equal(_myCommand.Id, message.Id);
+        await Assert.That(message.Id).IsEqualTo(_myCommand.Id);
 
         await _consumer.AcknowledgeAsync(message);
     }
@@ -97,13 +97,14 @@ public class AwsValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         return topicResponse.TopicArn;
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         //Clean up resources that we have created
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
         ((IAmAMessageConsumerSync)_consumer).Dispose();
-        _messageProducer.Dispose();
+        await _messageProducer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()

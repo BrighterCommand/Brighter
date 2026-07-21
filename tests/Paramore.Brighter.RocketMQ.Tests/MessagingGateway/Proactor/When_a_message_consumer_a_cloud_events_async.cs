@@ -1,29 +1,29 @@
-﻿using Paramore.Brighter.MessagingGateway.RocketMQ;
+using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RocketMQ")]
+[Category("RocketMQ")]
 public class BufferedConsumerCloudEventsTestsAsync : IAsyncDisposable 
 {
     private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
-    private readonly IAmAMessageConsumerAsync _consumer;
-    private readonly IAmAMessageProducerAsync _producer;
+    private IAmAMessageConsumerAsync _consumer;
+    private IAmAMessageProducerAsync _producer;
     private const int BatchSize = 3;
 
-    public BufferedConsumerCloudEventsTestsAsync()
+    [Before(Test)]
+    public async Task Setup()
     {
-        var connection = GatewayFactory.CreateConnection(); 
+        var connection = GatewayFactory.CreateConnection();
         var publication = new RocketMqPublication { Topic = "bt_mc_cloudevents_async" };
-        var consumer = GatewayFactory.CreateSimpleConsumer(connection, publication).GetAwaiter().GetResult();
-        var producer = GatewayFactory.CreateProducer(connection,  publication).GetAwaiter().GetResult();
+        var consumer = await GatewayFactory.CreateSimpleConsumer(connection, publication);
+        var producer = await GatewayFactory.CreateProducer(connection,  publication);
 
         _consumer = new RocketMessageConsumer(consumer, BatchSize, TimeSpan.FromSeconds(30));
         _producer = new RocketMqMessageProducer(connection, producer, publication);
     }
 
-    [Fact]
+    [Test]
     public async Task When_uses_cloud_events_async()
     {
         await _consumer.PurgeAsync();
@@ -46,13 +46,13 @@ public class BufferedConsumerCloudEventsTestsAsync : IAsyncDisposable
         var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
         //We should only have three messages
-        Assert.Single(messages);
+        await Assert.That(messages).HasSingleItem();
 
-        Assert.Equal(messageOne.Header.MessageId, messages[0].Header.MessageId);
-        Assert.Equal(messageOne.Header.Subject, messages[0].Header.Subject);
-        Assert.Equal(messageOne.Header.Type, messages[0].Header.Type);
-        Assert.Equal(messageOne.Header.Source, messages[0].Header.Source);
-        Assert.Equal(messageOne.Header.DataSchema, messages[0].Header.DataSchema);
+        await Assert.That(messages[0].Header.MessageId).IsEqualTo(messageOne.Header.MessageId);
+        await Assert.That(messages[0].Header.Subject).IsEqualTo(messageOne.Header.Subject);
+        await Assert.That(messages[0].Header.Type).IsEqualTo(messageOne.Header.Type);
+        await Assert.That(messages[0].Header.Source).IsEqualTo(messageOne.Header.Source);
+        await Assert.That(messages[0].Header.DataSchema).IsEqualTo(messageOne.Header.DataSchema);
     }
 
     public async ValueTask DisposeAsync()

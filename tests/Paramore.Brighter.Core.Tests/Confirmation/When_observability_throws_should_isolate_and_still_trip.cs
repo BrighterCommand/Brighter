@@ -33,7 +33,6 @@ using Paramore.Brighter.Extensions;
 using Polly.Registry;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
@@ -75,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new MessageBody("test"));
         }
 
-        [Fact]
+        [Test]
         public async Task When_observability_throws_should_isolate_and_still_trip()
         {
             using var context = TestCorrelator.CreateContext();
@@ -87,7 +86,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
 
             // Assert: the observability fault did not destabilise the failure handling — the breaker
             // still tripped the wire topic and the Warning was still logged (AC-14).
-            Assert.Contains(_topic, _circuitBreaker.TrippedTopics);
+            await Assert.That(_circuitBreaker.TrippedTopics).Contains(_topic);
 
             var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
 
@@ -95,11 +94,11 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 .Where(e => e.Level == LogEventLevel.Warning)
                 .Where(e => e.RenderMessage().Contains(_topic.Value))
                 .ToList();
-            Assert.Single(warnings);
+            await Assert.That(warnings).HasSingleItem();
 
             // Assert: the observability fault itself is logged at Warning, never Error — nothing is lost
             // (the message is safely in the Outbox for the Sweeper to retry), so NFR-1 applies (point 2).
-            Assert.DoesNotContain(logEvents, e => e.Level >= LogEventLevel.Error);
+            await Assert.That((logEvents).Any(e => e.Level >= LogEventLevel.Error)).IsFalse();
         }
     }
 }

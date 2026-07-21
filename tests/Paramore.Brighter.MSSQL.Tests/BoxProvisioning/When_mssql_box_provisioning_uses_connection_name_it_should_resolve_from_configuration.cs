@@ -6,11 +6,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlConnectionNameResolutionTests : IAsyncLifetime
+public class MsSqlConnectionNameResolutionTests
 {
     private readonly string _connectionString;
     private readonly string _tableName;
@@ -25,7 +24,7 @@ public class MsSqlConnectionNameResolutionTests : IAsyncLifetime
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_box_provisioning_uses_connection_name_it_should_resolve_from_configuration()
     {
         //Arrange
@@ -54,7 +53,7 @@ public class MsSqlConnectionNameResolutionTests : IAsyncLifetime
         var provisioners = provider.GetServices<IAmABoxProvisioner>().ToList();
 
         //Act
-        Assert.Single(provisioners);
+        await Assert.That(provisioners).HasSingleItem();
         await provisioners[0].ProvisionAsync();
 
         //Assert
@@ -68,11 +67,13 @@ INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
 WHERE t.name = @TableName AND s.name = 'dbo'";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
         var tableCount = (int)tableCheck.ExecuteScalar()!;
-        Assert.Equal(1, tableCount);
+        await Assert.That(tableCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

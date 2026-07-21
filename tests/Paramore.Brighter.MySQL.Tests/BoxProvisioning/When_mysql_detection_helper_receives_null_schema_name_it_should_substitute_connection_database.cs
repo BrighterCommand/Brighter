@@ -26,16 +26,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlDetectionHelperNullSchemaTests : IAsyncLifetime
+public class MySqlDetectionHelperNullSchemaTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly List<string> _tablesToCleanup = [];
 
-    [Fact]
+    [Test]
     public async Task When_mysql_detection_helper_receives_null_schema_name_it_should_substitute_connection_database()
     {
         // Arrange — a box-shaped table in the connection's default database and a history row
@@ -59,27 +58,27 @@ public class MySqlDetectionHelperNullSchemaTests : IAsyncLifetime
         // Act + Assert — DoesTableExistAsync: null and connection.Database must agree.
         var existsWithDatabase = await helper.DoesTableExistAsync(connection, tableName, databaseName);
         var existsWithNull = await helper.DoesTableExistAsync(connection, tableName, schemaName: null);
-        Assert.True(existsWithDatabase);
-        Assert.True(existsWithNull);
+        await Assert.That(existsWithDatabase).IsTrue();
+        await Assert.That(existsWithNull).IsTrue();
 
         // Act + Assert — DoesHistoryExistAsync: null must locate the row recorded against the database.
         // historySchema is ignored on MySQL (history lives in connection.Database); pass null.
         var historyWithDatabase = await helper.DoesHistoryExistAsync(connection, tableName, databaseName, historySchema: null);
         var historyWithNull = await helper.DoesHistoryExistAsync(connection, tableName, schemaName: null, historySchema: null);
-        Assert.True(historyWithDatabase);
-        Assert.True(historyWithNull);
+        await Assert.That(historyWithDatabase).IsTrue();
+        await Assert.That(historyWithNull).IsTrue();
 
         // Act + Assert — GetMaxVersionAsync: null must read the same version recorded under the database.
         var maxWithDatabase = await helper.GetMaxVersionAsync(connection, tableName, databaseName, historySchema: null);
         var maxWithNull = await helper.GetMaxVersionAsync(connection, tableName, schemaName: null, historySchema: null);
-        Assert.Equal(3, maxWithDatabase);
-        Assert.Equal(3, maxWithNull);
+        await Assert.That(maxWithDatabase).IsEqualTo(3);
+        await Assert.That(maxWithNull).IsEqualTo(3);
 
         // Act + Assert — GetTableColumnsAsync: null must return the same column set as the database.
         var colsWithDatabase = await helper.GetTableColumnsAsync(connection, tableName, databaseName);
         var colsWithNull = await helper.GetTableColumnsAsync(connection, tableName, schemaName: null);
-        Assert.Contains("HeaderBag", colsWithDatabase);
-        Assert.Contains("HeaderBag", colsWithNull);
+        await Assert.That(colsWithDatabase).Contains("HeaderBag");
+        await Assert.That(colsWithNull).Contains("HeaderBag");
     }
 
     private async Task ExecuteDdl(string sql)
@@ -131,8 +130,10 @@ VALUES (@MigrationVersion, @SchemaName, @BoxTableName, @Description)";
         return builder.Database;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

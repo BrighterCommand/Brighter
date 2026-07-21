@@ -25,13 +25,12 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.Specification.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Validation.Specification.Tests;
 
 public class NullRequestSpecificationTests
 {
-    [Fact]
+    [Test]
     public void When_a_null_request_is_validated_should_throw_argument_null()
     {
         //Arrange

@@ -33,7 +33,6 @@ using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.BoxProvisioning.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
-using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
@@ -47,10 +46,10 @@ namespace Paramore.Brighter.BoxProvisioning.Tests;
 /// span and had to fall back to scattered logs.
 /// <para/>
 /// These tests pin the contract that bootstrap failures land on the migration span:
-/// status = Error AND the thrown exception is attached as an event. One [Fact] per
+/// status = Error AND the thrown exception is attached as an event. One [Test] per
 /// bootstrap call site so the regression points are individually addressable.
 /// </summary>
-[Collection("BoxProvisioningObservability")]
+[NotInParallel]
 public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposable
 {
     private readonly List<Activity> _exportedActivities = new();
@@ -72,7 +71,7 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
         _tracer.Dispose();
     }
 
-    [Fact]
+    [Test]
     public async Task When_open_connection_async_throws_it_should_record_error_status_and_exception_on_activity()
     {
         //Arrange — OpenConnectionAsync is the first bootstrap call after StartMigrationActivity.
@@ -87,17 +86,17 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
                 schemaName: "dbo",
                 boxType: BoxType.Outbox,
                 tableState: new BoxTableState(false, false, 0)));
-        Assert.Same(thrown, caught);
+        await Assert.That(caught).IsSameReferenceAs(thrown);
 
         _tracerProvider.ForceFlush();
 
         //Assert — exactly one span exported, status = Error, exception recorded as an event.
-        var span = Assert.Single(_exportedActivities);
-        Assert.Equal(ActivityStatusCode.Error, span.Status);
-        Assert.Contains(span.Events, e => e.Name == "exception");
+        var span = await Assert.That(_exportedActivities).HasSingleItem();
+        await Assert.That(span.Status).IsEqualTo(ActivityStatusCode.Error);
+        await Assert.That((span.Events).Any(e => e.Name == "exception")).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_create_unit_of_work_async_throws_it_should_record_error_status_and_exception_on_activity()
     {
         //Arrange — CreateUnitOfWorkAsync runs after OpenConnectionAsync. A factory failure
@@ -112,17 +111,17 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
                 schemaName: "dbo",
                 boxType: BoxType.Outbox,
                 tableState: new BoxTableState(false, false, 0)));
-        Assert.Same(thrown, caught);
+        await Assert.That(caught).IsSameReferenceAs(thrown);
 
         _tracerProvider.ForceFlush();
 
         //Assert
-        var span = Assert.Single(_exportedActivities);
-        Assert.Equal(ActivityStatusCode.Error, span.Status);
-        Assert.Contains(span.Events, e => e.Name == "exception");
+        var span = await Assert.That(_exportedActivities).HasSingleItem();
+        await Assert.That(span.Status).IsEqualTo(ActivityStatusCode.Error);
+        await Assert.That((span.Events).Any(e => e.Name == "exception")).IsTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task When_begin_async_throws_it_should_record_error_status_and_exception_on_activity()
     {
         //Arrange — BeginAsync is documented in ADR 0058 §B.3 as the lock-acquisition step:
@@ -137,14 +136,14 @@ public class SqlBoxMigrationRunnerBootstrapFailureObservabilityTests : IDisposab
                 schemaName: "dbo",
                 boxType: BoxType.Outbox,
                 tableState: new BoxTableState(false, false, 0)));
-        Assert.Same(thrown, caught);
+        await Assert.That(caught).IsSameReferenceAs(thrown);
 
         _tracerProvider.ForceFlush();
 
         //Assert
-        var span = Assert.Single(_exportedActivities);
-        Assert.Equal(ActivityStatusCode.Error, span.Status);
-        Assert.Contains(span.Events, e => e.Name == "exception");
+        var span = await Assert.That(_exportedActivities).HasSingleItem();
+        await Assert.That(span.Status).IsEqualTo(ActivityStatusCode.Error);
+        await Assert.That((span.Events).Any(e => e.Name == "exception")).IsTrue();
     }
 
     private sealed class ThrowingBootstrapRunner : SqlBoxMigrationRunner<FakeDbConnection, FakeDbTransaction>

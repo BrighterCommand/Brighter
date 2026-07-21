@@ -28,11 +28,10 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlRunnerNonMonotonicMigrationsTests : IAsyncLifetime
+public class MySqlRunnerNonMonotonicMigrationsTests
 {
     // The runner validates that the supplied migrations list is contiguous and strictly
     // ascending (each V_{i+1} == V_i + 1) at MigrateAsync entry — before path branching, so
@@ -41,19 +40,18 @@ public class MySqlRunnerNonMonotonicMigrationsTests : IAsyncLifetime
     // lists double-apply DDL or stamp history rows in the wrong sequence. Rejecting these
     // up-front turns silent corruption into an actionable ConfigurationException naming the
     // offending pair.
-
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public Task When_versions_contain_a_duplicate_it_should_throw() =>
         AssertMigrationListRejected(BuildList(0, 0), expectedMarker: "V1 followed by V1");
 
-    [Fact]
+    [Test]
     public Task When_versions_have_a_gap_it_should_throw() =>
         AssertMigrationListRejected(BuildList(0, 2), expectedMarker: "V1 followed by V3");
 
-    [Fact]
+    [Test]
     public Task When_versions_are_not_strictly_ascending_it_should_throw() =>
         // [V1, V2, V3, V2] — valid prefix isolates the V3→V2 descent as the sole violation.
         AssertMigrationListRejected(BuildList(0, 1, 2, 1), expectedMarker: "V3 followed by V2");
@@ -77,10 +75,10 @@ public class MySqlRunnerNonMonotonicMigrationsTests : IAsyncLifetime
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => runner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint));
 
-        Assert.Contains(expectedMarker, ex.Message, StringComparison.Ordinal);
+        await Assert.That(ex.Message).Contains(expectedMarker);
 
         //Assert — guard fired before any DDL: the box table was not created.
-        Assert.Equal(0, await GetTableCount());
+        await Assert.That(await GetTableCount()).IsEqualTo(0);
     }
 
     private sealed class MalformedListCatalog : IAmABoxMigrationCatalog
@@ -103,8 +101,10 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @TableName";
         return Convert.ToInt32(await command.ExecuteScalarAsync());
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

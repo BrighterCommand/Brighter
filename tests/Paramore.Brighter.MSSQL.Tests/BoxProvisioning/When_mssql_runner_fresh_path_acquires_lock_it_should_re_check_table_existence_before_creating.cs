@@ -27,11 +27,10 @@ using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlRunnerFreshPathRecheckTests : IAsyncLifetime
+public class MsSqlRunnerFreshPathRecheckTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -44,7 +43,7 @@ public class MsSqlRunnerFreshPathRecheckTests : IAsyncLifetime
         _runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating()
     {
         //Arrange — simulate the TOCTOU race: another instance created the V_latest-shape outbox
@@ -66,15 +65,15 @@ public class MsSqlRunnerFreshPathRecheckTests : IAsyncLifetime
             BoxType.Outbox,
             staleState);
 
-        var ex = await Record.ExceptionAsync(act);
+        var ex = await TestExceptionRecorder.CaptureAsync(act);
 
         //Assert — no exception, ≥1 history row was inserted (proves bootstrap branch ran), and
         //the seeded marker row survived (no DROP/recreate happened). Specific Version values and
         //synthetic-row description text are deliberately not asserted here — Tasks 1.5 and 1.6
         //own those concerns. This test catches only the "fresh path didn't TOCTOU re-check" bug.
-        Assert.Null(ex);
-        Assert.True(GetHistoryRowCount() >= 1, "Bootstrap branch should have inserted at least one history row");
-        Assert.Equal(1, GetMarkerRowCount());
+        await Assert.That(ex).IsNull();
+        await Assert.That(GetHistoryRowCount() >= 1).IsTrue().Because("Bootstrap branch should have inserted at least one history row");
+        await Assert.That(GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private void SeedMarkerRow()
@@ -109,8 +108,10 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = 'dbo'";
         return (int)command.ExecuteScalar()!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

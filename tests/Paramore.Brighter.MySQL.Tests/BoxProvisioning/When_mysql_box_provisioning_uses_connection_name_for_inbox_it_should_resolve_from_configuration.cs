@@ -7,11 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlInboxConnectionNameResolutionTests : IAsyncLifetime
+public class MySqlInboxConnectionNameResolutionTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName;
@@ -21,7 +20,7 @@ public class MySqlInboxConnectionNameResolutionTests : IAsyncLifetime
         _tableName = $"test_inbox_{Guid.NewGuid():N}";
     }
 
-    [Fact]
+    [Test]
     public async Task When_mysql_box_provisioning_uses_connection_name_for_inbox_it_should_resolve_from_configuration()
     {
         //Arrange
@@ -47,7 +46,7 @@ public class MySqlInboxConnectionNameResolutionTests : IAsyncLifetime
         var provisioners = provider.GetServices<IAmABoxProvisioner>().ToList();
 
         //Act
-        Assert.Single(provisioners);
+        await Assert.That(provisioners).HasSingleItem();
         await provisioners[0].ProvisionAsync();
 
         //Assert
@@ -60,11 +59,13 @@ SELECT COUNT(*) FROM information_schema.tables
 WHERE table_name = @TableName AND table_schema = DATABASE()";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
         var tableCount = Convert.ToInt64(await tableCheck.ExecuteScalarAsync());
-        Assert.Equal(1, tableCount);
+        await Assert.That(tableCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

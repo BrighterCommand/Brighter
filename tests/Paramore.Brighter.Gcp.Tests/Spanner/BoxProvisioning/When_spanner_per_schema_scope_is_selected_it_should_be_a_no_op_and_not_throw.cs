@@ -6,7 +6,6 @@ using Google.Cloud.Spanner.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -17,14 +16,14 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // BrighterMigrationHistory table, and the D3 "PerSchema + null SchemaName" guard MUST NOT fire.
 // These characterization tests pin that no-op for both a non-null SchemaName (accepted and ignored
 // by Spanner) and a null SchemaName.
-[Collection("SpannerBoxProvisioning")]
-[Trait("Category", "Spanner")]
-public class SpannerPerSchemaNoOpTests : IAsyncLifetime
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class SpannerPerSchemaNoOpTests
 {
     private readonly string _connectionString = Const.ConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_per_schema_is_selected_with_a_non_null_schema_it_should_be_a_no_op_and_not_throw()
     {
         //Arrange — operator selects PerSchema and configures a non-null SchemaName. Spanner ignores both.
@@ -35,15 +34,15 @@ public class SpannerPerSchemaNoOpTests : IAsyncLifetime
         var provisioner = BuildProvisioner(config);
 
         //Act
-        var exception = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert — no throw and the table + single history table exist (no placement change).
-        Assert.Null(exception);
-        Assert.Equal(1, await TableCountAsync(_tableName));
-        Assert.Equal(1, await HistoryRowCountAsync());
+        await Assert.That(exception).IsNull();
+        await Assert.That(await TableCountAsync(_tableName)).IsEqualTo(1);
+        await Assert.That(await HistoryRowCountAsync()).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_per_schema_is_selected_with_a_null_schema_it_should_be_a_no_op_and_not_throw()
     {
         //Arrange — operator selects PerSchema with a null SchemaName. On a placement backend this
@@ -55,12 +54,12 @@ public class SpannerPerSchemaNoOpTests : IAsyncLifetime
         var provisioner = BuildProvisioner(config);
 
         //Act
-        var exception = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var exception = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert — no ConfigurationException (D3 guard is gated off for Spanner).
-        Assert.Null(exception);
-        Assert.Equal(1, await TableCountAsync(_tableName));
-        Assert.Equal(1, await HistoryRowCountAsync());
+        await Assert.That(exception).IsNull();
+        await Assert.That(await TableCountAsync(_tableName)).IsEqualTo(1);
+        await Assert.That(await HistoryRowCountAsync()).IsEqualTo(1);
     }
 
     // Wire the provisioner through the DI registration with the operator-facing PerSchema option set —
@@ -103,8 +102,10 @@ public class SpannerPerSchemaNoOpTests : IAsyncLifetime
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

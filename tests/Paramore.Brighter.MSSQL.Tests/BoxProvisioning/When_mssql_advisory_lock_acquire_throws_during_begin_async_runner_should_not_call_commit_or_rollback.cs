@@ -30,16 +30,15 @@ using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests : IAsyncLifetime
+public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mssql_advisory_lock_acquire_throws_during_begin_async_runner_should_not_call_commit_or_rollback()
     {
         //Arrange — fake IMsSqlAdvisoryLock whose AcquireAsync throws MigrationLockDeadlockException
@@ -70,25 +69,23 @@ public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests : IAsyncLifetime
         //Assert — the original deadlock exception propagates unwrapped (per spec 0027 Item N
         // distinguishable-exception contract — the operator must see the typed exception so
         // they can choose retry-with-backoff vs deployment failure).
-        Assert.Same(deadlock, thrown);
+        await Assert.That(thrown).IsSameReferenceAs(deadlock);
 
         //Assert — the runner DID construct the UoW (BeginAsync is called on it; the throw comes
         // from inside BeginAsync itself, not before it), so the spy is observable.
         var spy = spyingRunner.LastUnitOfWork;
-        Assert.NotNull(spy);
+        await Assert.That(spy).IsNotNull();
 
         //Assert — CommitAsync was NEVER called: the runner only commits inside its try-block,
         // and the throw from BeginAsync prevents the try-block from being entered.
-        Assert.False(spy!.CommitInvoked,
-            "CommitAsync must NOT be called when BeginAsync throws — the runner's try-block never executed.");
+        await Assert.That(spy!.CommitInvoked).IsFalse().Because("CommitAsync must NOT be called when BeginAsync throws — the runner's try-block never executed.");
 
         //Assert — RollbackAsync was NEVER called: the runner's catch-path RollbackAsync is the
         // unwind for failures INSIDE the try-block (after BeginAsync succeeds). A throw from
         // BeginAsync itself happens before the try is entered, so the catch is never hit. The
         // partially-initialised transaction (BeginTransaction succeeded, AcquireAsync threw) is
         // released via DisposeAsync on the implicit rollback that SqlTransaction.Dispose performs.
-        Assert.False(spy.RollbackInvoked,
-            "RollbackAsync must NOT be called when BeginAsync throws — the catch-block guards the try-block, not BeginAsync.");
+        await Assert.That(spy.RollbackInvoked).IsFalse().Because("RollbackAsync must NOT be called when BeginAsync throws — the catch-block guards the try-block, not BeginAsync.");
 
         //Assert — DisposeAsync IS called via the `await using uow = ...` declaration sitting
         // OUTSIDE the runner's try-block. This is the contract that releases the partial-init
@@ -96,8 +93,7 @@ public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests : IAsyncLifetime
         // to the SqlTransaction's lifetime; SqlTransaction.Dispose implicitly rolls back, which
         // in turn releases any application lock state — though in this scenario AcquireAsync
         // threw before any lock was registered).
-        Assert.True(spy.DisposeInvoked,
-            "DisposeAsync MUST run via `await using` even when BeginAsync throws — otherwise the partial-init transaction leaks.");
+        await Assert.That(spy.DisposeInvoked).IsTrue().Because("DisposeAsync MUST run via `await using` even when BeginAsync throws — otherwise the partial-init transaction leaks.");
 
         //Assert — a fresh runner (no fake lock) immediately succeeds against the same lock
         // resource, proving the failed acquire left no lingering server-side state. If the
@@ -107,8 +103,7 @@ public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests : IAsyncLifetime
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint, CancellationToken.None);
 
-        Assert.True(TableExists(),
-            "A fresh runner with no failing lock must complete the migration against the same resource after the failed acquire was cleaned up.");
+        await Assert.That(TableExists()).IsTrue().Because("A fresh runner with no failing lock must complete the migration against the same resource after the failed acquire was cleaned up.");
     }
 
     private bool TableExists()
@@ -122,8 +117,10 @@ public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests : IAsyncLifetime
         return (int)command.ExecuteScalar()! > 0;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

@@ -4,12 +4,12 @@ using Confluent.Kafka;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]
+[Property("Category", "Kafka")]
+[System.Obsolete]
 public class When_a_non_fatal_producer_error_follows_a_fatal_error_should_log_as_non_fatal : IDisposable
 {
     private readonly KafkaMessageProducer _producer;
@@ -30,8 +30,8 @@ public class When_a_non_fatal_producer_error_follows_a_fatal_error_should_log_as
         // needs to contact a broker for this test.
     }
 
-    [Fact]
-    public void When_the_non_fatal_error_arrives_after_the_fatal_error_it_is_logged_as_non_fatal()
+    [Test]
+    public async Task When_the_non_fatal_error_arrives_after_the_fatal_error_it_is_logged_as_non_fatal()
     {
         using var context = TestCorrelator.CreateContext();
 
@@ -44,7 +44,7 @@ public class When_a_non_fatal_producer_error_follows_a_fatal_error_should_log_as
         //Assert - the non-fatal error was logged at Warning (NonFatalProducerError), not Error (FatalProducerError)
         var nonFatalEvent = TestCorrelator.GetLogEventsFromCurrentContext()
             .Single(e => e.RenderMessage().Contains("an idle socket non fatal timeout"));
-        Assert.Equal(LogEventLevel.Warning, nonFatalEvent.Level);
+        await Assert.That(nonFatalEvent.Level).IsEqualTo(LogEventLevel.Warning);
     }
 
     public void Dispose()

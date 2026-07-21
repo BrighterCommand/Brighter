@@ -4,25 +4,20 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
-[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
+[Category("Kafka")]
+[Property("Fragile", "CI")]
 public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly string _groupId = Guid.NewGuid().ToString();
 
-    public KafkaMessageConsumerCommitRevokeConcurrency(ITestOutputHelper output)
+    public KafkaMessageConsumerCommitRevokeConcurrency()
     {
-        _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
@@ -55,9 +50,9 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
     /// This test is inherently timing-dependent — it maximises the chance of overlap between background
     /// commits and the revoke handler by using commitBatchSize: 1 and rapid message acknowledgement.
     /// </summary>
-    [Theory]
-    [InlineData(PartitionAssignmentStrategy.RoundRobin)]
-    [InlineData(PartitionAssignmentStrategy.CooperativeSticky)]
+    [Test]
+    [Arguments(PartitionAssignmentStrategy.RoundRobin)]
+    [Arguments(PartitionAssignmentStrategy.CooperativeSticky)]
     public async Task When_committing_offsets_during_revoke_should_not_race_with_background_commit(
         PartitionAssignmentStrategy partitionAssignmentStrategy)
     {
@@ -87,50 +82,50 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
         //consume a few messages to get consumer A established
         for (int j = 0; j < 5; j++)
         {
-            var msg = ReadMessage(consumerA);
+            var msg = await ReadMessage(consumerA);
             if (msg.Header.MessageType != MessageType.MT_NONE)
             {
-                consumerA.Acknowledge(msg);
+                await consumerA.AcknowledgeAsync(msg);
             }
         }
 
-        _output.WriteLine("Consumer A established, starting rapid consume + acknowledge");
+        Console.WriteLine("Consumer A established, starting rapid consume + acknowledge");
 
         //now start a rapid consume-acknowledge cycle while simultaneously triggering a rebalance
         //by adding consumer B to the group
         Exception? caughtException = null;
 
-        var consumeTask = Task.Run(() =>
+        var consumeTask = Task.Run(async () =>
         {
             try
             {
                 for (int j = 0; j < 20; j++)
                 {
-                    var msg = ReadMessage(consumerA);
+                    var msg = await ReadMessage(consumerA);
                     if (msg.Header.MessageType != MessageType.MT_NONE)
                     {
                         //each acknowledge fires a background commit (batch size = 1)
-                        consumerA.Acknowledge(msg);
+                        await consumerA.AcknowledgeAsync(msg);
                     }
                 }
             }
             catch (Exception ex)
             {
                 caughtException = ex;
-                _output.WriteLine($"Consumer A exception during consume: {ex.Message}");
+                Console.WriteLine($"Consumer A exception during consume: {ex.Message}");
             }
         });
 
         //give consumer A a moment to start consuming, then trigger rebalance
         await Task.Delay(500);
 
-        _output.WriteLine("Adding consumer B to trigger rebalance");
+        Console.WriteLine("Adding consumer B to trigger rebalance");
         using var consumerB = CreateConsumer(commitBatchSize: 10, partitionAssignmentStrategy: partitionAssignmentStrategy);
 
         //consumer B polls to join the group and trigger rebalance
         try
         {
-            _ = consumerB.Receive(TimeSpan.FromMilliseconds(5000));
+            _ = await consumerB.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
         }
         catch (ChannelFailureException)
         {
@@ -140,12 +135,12 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
         await consumeTask;
 
         //the key assertion: consumer A should not have thrown during the rebalance
-        Assert.Null(caughtException);
+        await Assert.That(caughtException).IsNull();
 
         //consumer A should still be functional after the rebalance
-        _ = consumerA.Receive(TimeSpan.FromMilliseconds(2000));
+        _ = await consumerA.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
 
-        _output.WriteLine("Test completed - no race condition errors");
+        Console.WriteLine("Test completed - no race condition errors");
     }
 
     private KafkaMessageConsumer CreateConsumer(int commitBatchSize,
@@ -171,7 +166,7 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
             ));
     }
 
-    private Message ReadMessage(KafkaMessageConsumer consumer)
+    private async Task<Message> ReadMessage(KafkaMessageConsumer consumer)
     {
         Message[] messages = [new Message()];
         int maxTries = 0;
@@ -180,7 +175,7 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
             try
             {
                 maxTries++;
-                messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
+                messages = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {
@@ -189,8 +184,8 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
             }
             catch (ChannelFailureException cfx)
             {
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
-                Task.Delay(500).GetAwaiter().GetResult();
+                Console.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                await Task.Delay(500);
             }
         } while (maxTries <= 10);
 
@@ -202,3 +197,4 @@ public class KafkaMessageConsumerCommitRevokeConcurrency : IDisposable
         _producerRegistry?.Dispose();
     }
 }
+

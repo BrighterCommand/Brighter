@@ -35,14 +35,13 @@ using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.BoxProvisioning.Spanner;
 using Paramore.Brighter.Inbox.Spanner;
 using Paramore.Brighter.Outbox.Spanner;
-using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
-[Trait("Category", "Spanner")]
-public class SpannerOutboxNormalPathTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class SpannerOutboxNormalPathTests
 {
     private const string SeededDescription = "spec 0023 fresh install";
 
@@ -66,7 +65,7 @@ public class SpannerOutboxNormalPathTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_be_a_no_op_when_history_max_equals_v_latest()
     {
         // Arrange — V_latest-shape outbox + history seeded at V_latest
@@ -84,24 +83,21 @@ public class SpannerOutboxNormalPathTests : IAsyncLifetime
             connection, _tableName, ExpectedMigrationVersions.OutboxLatest);
         var totalAcrossVersions = await ReadTotalRowCountAsync(connection, _tableName);
 
-        Assert.Equal(1, totalCount);
-        Assert.Equal(SeededDescription, description);
-        Assert.Equal(1, totalAcrossVersions);
+        await Assert.That(totalCount).IsEqualTo(1);
+        await Assert.That(description).IsEqualTo(SeededDescription);
+        await Assert.That(totalAcrossVersions).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_throw_configuration_exception_when_history_max_exceeds_v_latest()
     {
         // Arrange — V_latest-shape outbox + history seeded at V=99 (out-of-sync)
         await CreateBoxAndSeedHistoryAsync(99, "speculative future migration");
 
         // Act / Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(
-            () => _provisioner.ProvisionAsync());
+        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => _provisioner.ProvisionAsync());
 
-        Assert.Contains(
-            "migration list out of sync", exception.Message,
-            StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("migration list out of sync");
     }
 
     private async Task CreateBoxAndSeedHistoryAsync(int seedVersion, string description)
@@ -172,8 +168,10 @@ WHERE `BoxTableName` = @BoxTableName",
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try
@@ -205,10 +203,10 @@ WHERE `BoxTableName` = @BoxTableName",
     }
 }
 
-[Trait("Category", "Spanner")]
-[Collection("SpannerBoxProvisioning")]
-[Trait("Category", "Spanner")]
-public class SpannerInboxNormalPathTests : IAsyncLifetime
+[Property("Category", "Spanner")]
+[NotInParallel]
+[Property("Category", "Spanner")]
+public class SpannerInboxNormalPathTests
 {
     private const string SeededDescription = "spec 0023 fresh install";
 
@@ -232,7 +230,7 @@ public class SpannerInboxNormalPathTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_be_a_no_op_when_history_max_equals_v_latest()
     {
         // Arrange — V_latest-shape inbox + history seeded at V_latest
@@ -250,24 +248,21 @@ public class SpannerInboxNormalPathTests : IAsyncLifetime
             connection, _tableName, ExpectedMigrationVersions.InboxLatest);
         var totalAcrossVersions = await ReadTotalRowCountAsync(connection, _tableName);
 
-        Assert.Equal(1, totalCount);
-        Assert.Equal(SeededDescription, description);
-        Assert.Equal(1, totalAcrossVersions);
+        await Assert.That(totalCount).IsEqualTo(1);
+        await Assert.That(description).IsEqualTo(SeededDescription);
+        await Assert.That(totalAcrossVersions).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task Should_throw_configuration_exception_when_history_max_exceeds_v_latest()
     {
         // Arrange — V_latest-shape inbox + history seeded at V=99 (out-of-sync)
         await CreateBoxAndSeedHistoryAsync(99, "speculative future migration");
 
         // Act / Assert
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(
-            () => _provisioner.ProvisionAsync());
+        var exception = await Assert.ThrowsAsync<ConfigurationException>(() => _provisioner.ProvisionAsync());
 
-        Assert.Contains(
-            "migration list out of sync", exception.Message,
-            StringComparison.OrdinalIgnoreCase);
+        await Assert.That(exception.Message).Contains("migration list out of sync");
     }
 
     private async Task CreateBoxAndSeedHistoryAsync(int seedVersion, string description)
@@ -338,8 +333,10 @@ WHERE `BoxTableName` = @BoxTableName",
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

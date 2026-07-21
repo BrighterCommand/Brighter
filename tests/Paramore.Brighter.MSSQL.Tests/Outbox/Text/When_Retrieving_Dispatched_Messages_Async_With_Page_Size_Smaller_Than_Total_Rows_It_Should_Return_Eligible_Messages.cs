@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text;
 
@@ -43,7 +42,6 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text;
 /// computed only over the eligible set.
 /// </summary>
 public class WhenRetrievingDispatchedMessagesAsyncWithPageSizeSmallerThanTotalRowsItShouldReturnEligibleMessages
-    : IAsyncLifetime
 {
     private readonly MSSQLTextOutboxProvider _outboxProvider;
     private readonly DefaultMessageFactory _messageFactory;
@@ -55,17 +53,19 @@ public class WhenRetrievingDispatchedMessagesAsyncWithPageSizeSmallerThanTotalRo
         _messageFactory = new DefaultMessageFactory();
     }
 
+    [Before(Test)]
     public async Task InitializeAsync()
     {
         await _outboxProvider.CreateStoreAsync();
     }
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         await _outboxProvider.DeleteStoreAsync(_createdMessages);
     }
 
-    [Fact]
+    [Test]
     public async Task When_Page_Size_Is_Smaller_Than_Total_Row_Count_Dispatched_Messages_Should_Still_Be_Returned_Async()
     {
         // Arrange
@@ -104,7 +104,7 @@ public class WhenRetrievingDispatchedMessagesAsyncWithPageSizeSmallerThanTotalRo
 
         // Assert — both eligible dispatched messages must be returned regardless of how many
         // undispatched rows exist in the table
-        Assert.Contains(dispatchedOld1.Id, results.Select(m => m.Id));
-        Assert.Contains(dispatchedOld2.Id, results.Select(m => m.Id));
+        await Assert.That(results.Select(m => m.Id)).Contains(dispatchedOld1.Id);
+        await Assert.That(results.Select(m => m.Id)).Contains(dispatchedOld2.Id);
     }
 }

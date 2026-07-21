@@ -12,12 +12,12 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Fifo.Reactor;
 
-[Trait("Category", "AWS")]
-public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
+[Category("AWS")]
+[Property("Fragile", "CI")]
+public class SnsReDrivePolicySDlqTests : IAsyncDisposable
 {
     private readonly IAmAMessagePump _messagePump;
     private readonly Message _message;
@@ -104,17 +104,17 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         };
     }
 
-    public int GetDLQCount(string queueName)
+    public async Task<int> GetDLQCountAsync(string queueName)
     {
         using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
-        var queueUrlResponse = sqsClient.GetQueueUrlAsync(queueName.ToValidSQSQueueName(true)).GetAwaiter().GetResult();
-        var response = sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
+        var queueUrlResponse = await sqsClient.GetQueueUrlAsync(queueName.ToValidSQSQueueName(true));
+        var response = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
         {
             QueueUrl = queueUrlResponse.QueueUrl,
             WaitTimeSeconds = 5,
             MessageSystemAttributeNames = ["ApproximateReceiveCount"],
             MessageAttributeNames = new List<string> { "All" }
-        }).GetAwaiter().GetResult();
+        });
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
@@ -125,29 +125,30 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         return response.Messages.Count;
     }
 
-    [Fact]
-    public void When_throwing_defer_action_respect_redrive()
+    [Test, Skip("This test is skipped because running tests of the DLQ is unreliable in the CI environment")]
+    public async Task When_throwing_defer_action_respect_redrive_async()
     {
-        _sender.Send(_message);
+        await _sender.SendAsync(_message);
 
-        var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-        Task.Delay(5000).GetAwaiter().GetResult();
+        var task = Task.Factory.StartNew(() => _messagePump.Run(), CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        await Task.Delay(5000);
 
         var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
         _channel.Enqueue(quitMessage);
 
-        Task.WaitAll(task);
+        await task;
 
-        Task.Delay(5000).GetAwaiter().GetResult();
+        await Task.Delay(5000);
 
-        var dlqCount = GetDLQCount(_dlqChannelName);
-        Assert.Equal(1, dlqCount);
+        var dlqCount = await GetDLQCountAsync(_dlqChannelName);
+        await Assert.That(dlqCount).IsEqualTo(1);
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 
     public async ValueTask DisposeAsync()

@@ -32,13 +32,12 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Validation;
 
 public class ValidatePipelinesNonBlockingWarningsTests
 {
-    [Fact]
+    [Test]
     public async Task When_throw_on_error_true_with_transform_and_provider_triggers_should_not_block_and_surface_both_warnings()
     {
         // Arrange — an (A) producer trigger (publication whose custom mapper declares an unresolvable wrap
@@ -72,8 +71,8 @@ public class ValidatePipelinesNonBlockingWarningsTests
         var result = provider.GetRequiredService<IAmAPipelineValidator>().Validate();
 
         // Assert — the host started (no throw), result is valid (warnings only), and both warnings surfaced
-        Assert.True(result.IsValid);
-        Assert.Contains(result.Warnings, w => w.Message.Contains(nameof(MyDescribableTransform)));
-        Assert.Contains(result.Warnings, w => w.Message.Contains("UseFluentValidation"));
+        await Assert.That(result.IsValid).IsTrue();
+        await Assert.That((result.Warnings).Any(w => w.Message.Contains(nameof(MyDescribableTransform)))).IsTrue();
+        await Assert.That((result.Warnings).Any(w => w.Message.Contains("UseFluentValidation"))).IsTrue();
     }
 }

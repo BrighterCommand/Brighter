@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading.Tasks;
+
 using System.Net.Mime;
 using Paramore.Brighter;
 
@@ -40,26 +42,26 @@ public class AwsMessageAssertion : IAmAMessageAssertion
     /// </summary>
     /// <param name="expected">The expected message.</param>
     /// <param name="actual">The actual message to compare.</param>
-    public void Assert(Message expected, Message actual)
+    public async Task AssertAsync(Message expected, Message actual)
     {
-       Xunit.Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-       Xunit.Assert.Equal(new ContentType("text/plain; charset=utf-8"), actual.Header.ContentType);
-       Xunit.Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-       Xunit.Assert.Equal(expected.Header.DataSchema, actual.Header.DataSchema);
-       Xunit.Assert.Equal(expected.Header.MessageId, actual.Header.MessageId);
-       Xunit.Assert.Equal(expected.Header.PartitionKey, actual.Header.PartitionKey);
-       Xunit.Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-       Xunit.Assert.Equal(expected.Header.Subject, actual.Header.Subject);
-       Xunit.Assert.Equal(expected.Header.SpecVersion, actual.Header.SpecVersion);
-       Xunit.Assert.Equal(expected.Header.Source, actual.Header.Source);
-       Xunit.Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-       Xunit.Assert.Equal(expected.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), actual.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
-       Xunit.Assert.Equal(expected.Header.Type, actual.Header.Type);
-       Xunit.Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
-       Xunit.Assert.Equal(System.TimeSpan.Zero, actual.Header.Delayed);
-       Xunit.Assert.Equal(expected.Body.Value, actual.Body.Value);
-       Xunit.Assert.Equal(expected.Header.TraceParent, actual.Header.TraceParent);
-       Xunit.Assert.Equal(expected.Header.TraceState, actual.Header.TraceState);
-       Xunit.Assert.Equal(expected.Header.Baggage, actual.Header.Baggage);
+       await Assert.That(actual.Header.MessageType).IsEqualTo(expected.Header.MessageType);
+       await Assert.That(actual.Header.ContentType).IsEqualTo(new ContentType("text/plain; charset=utf-8"));
+       await Assert.That(actual.Header.CorrelationId).IsEqualTo(expected.Header.CorrelationId);
+       await Assert.That(actual.Header.DataSchema).IsEqualTo(expected.Header.DataSchema);
+       await Assert.That(actual.Header.MessageId).IsEqualTo(expected.Header.MessageId);
+       await Assert.That(actual.Header.PartitionKey).IsEqualTo(expected.Header.PartitionKey);
+       await Assert.That(actual.Header.ReplyTo).IsEqualTo(expected.Header.ReplyTo);
+       await Assert.That(actual.Header.Subject).IsEqualTo(expected.Header.Subject);
+       await Assert.That(actual.Header.SpecVersion).IsEqualTo(expected.Header.SpecVersion);
+       await Assert.That(actual.Header.Source).IsEqualTo(expected.Header.Source);
+       await Assert.That(actual.Header.Topic).IsEqualTo(expected.Header.Topic);
+       await Assert.That(actual.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss")).IsEqualTo(expected.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
+       await Assert.That(actual.Header.Type).IsEqualTo(expected.Header.Type);
+       await Assert.That(actual.Header.HandledCount).IsEqualTo(expected.Header.HandledCount);
+       await Assert.That(actual.Header.Delayed).IsEqualTo(System.TimeSpan.Zero);
+       await Assert.That(actual.Body.Value).IsEqualTo(expected.Body.Value);
+       await Assert.That(actual.Header.TraceParent).IsEqualTo(expected.Header.TraceParent);
+       await Assert.That(actual.Header.TraceState).IsEqualTo(expected.Header.TraceState);
+       await Assert.That(actual.Header.Baggage).IsEqualTo(expected.Header.Baggage);
     }
 }

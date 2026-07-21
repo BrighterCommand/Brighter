@@ -1,20 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Mime;
 using Confluent.Kafka;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "Kafka")]
-[Collection("Kafka")]   //
+[Category("Kafka")]
 public class KafkaHeaderToBrighterTests  
 {
-    [Fact]
-    public void When_converting_kafkaheader_to_brighterheader()
+    [Test]
+    public async Task When_converting_kafkaheader_to_brighterheader()
     {
         //arrange
         
@@ -58,22 +56,23 @@ public class KafkaHeaderToBrighterTests
         var readMessage = new KafkaMessageCreator().CreateMessage(result);
 
         //assert
-        Assert.Equal(message.Id, readMessage.Id);
-        Assert.Equal(message.Header.MessageType, readMessage.Header.MessageType);
-        Assert.Equal(message.Header.MessageId, readMessage.Header.MessageId);
-        Assert.Equal(message.Header.CorrelationId, readMessage.Header.CorrelationId);
-        Assert.Equal(message.Header.ContentType, readMessage.Header.ContentType);
-        Assert.Equal(message.Header.Topic, readMessage.Header.Topic);
-        Assert.Equal(message.Header.Delayed, readMessage.Header.Delayed);
-        Assert.Equal(message.Header.HandledCount, readMessage.Header.HandledCount);
-        Assert.Equal(message.Header.TimeStamp, readMessage.Header.TimeStamp, TimeSpan.FromSeconds(5));
+        await Assert.That(readMessage.Id).IsEqualTo(message.Id);
+        await Assert.That(readMessage.Header.MessageType).IsEqualTo(message.Header.MessageType);
+        await Assert.That(readMessage.Header.MessageId).IsEqualTo(message.Header.MessageId);
+        await Assert.That(readMessage.Header.CorrelationId).IsEqualTo(message.Header.CorrelationId);
+        await Assert.That(readMessage.Header.ContentType).IsEqualTo(message.Header.ContentType);
+        await Assert.That(readMessage.Header.Topic).IsEqualTo(message.Header.Topic);
+        await Assert.That(readMessage.Header.Delayed).IsEqualTo(message.Header.Delayed);
+        await Assert.That(readMessage.Header.HandledCount).IsEqualTo(message.Header.HandledCount);
+        await Assert.That(readMessage.Header.TimeStamp).IsEqualTo(message.Header.TimeStamp).Within(TimeSpan.FromSeconds(5));
 
         //NOTE: Because we can only coerce the byte[] to a string for a unknown bag key, coercing to a specific
         //type has to be done by the user of the bag.
-        Assert.Equal(bag["myguid"].ToString(), readMessage.Header.Bag["myguid"]);
-        Assert.Equal(bag["mystring"].ToString(), readMessage.Header.Bag["mystring"]);
-        Assert.Equal(bag["myint"].ToString(), readMessage.Header.Bag["myint"]);
-        Assert.Equal(bag["mydouble"].ToString(), readMessage.Header.Bag["mydouble"]);
-        Assert.Equal(((DateTime)bag["mydatetime"]).ToString(CultureInfo.InvariantCulture), readMessage.Header.Bag["mydatetime"]);
+        await Assert.That(readMessage.Header.Bag["myguid"]).IsEqualTo(bag["myguid"].ToString());
+        await Assert.That(readMessage.Header.Bag["mystring"]).IsEqualTo(bag["mystring"].ToString());
+        await Assert.That(readMessage.Header.Bag["myint"]).IsEqualTo(bag["myint"].ToString());
+        await Assert.That(readMessage.Header.Bag["mydouble"]).IsEqualTo(bag["mydouble"].ToString());
+        await Assert.That(readMessage.Header.Bag["mydatetime"]).IsEqualTo(((DateTime)bag["mydatetime"]).ToString(CultureInfo.InvariantCulture));
     }
 }
+

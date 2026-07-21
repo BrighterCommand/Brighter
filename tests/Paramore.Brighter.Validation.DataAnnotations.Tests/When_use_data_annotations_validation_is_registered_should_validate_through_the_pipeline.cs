@@ -26,14 +26,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.DataAnnotations.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.DataAnnotations.Tests;
 
 public class UseDataAnnotationsRegistrationTests
 {
-    [Fact]
-    public void When_use_data_annotations_validation_is_registered_should_validate_through_the_pipeline()
+    [Test]
+    public async Task When_use_data_annotations_validation_is_registered_should_validate_through_the_pipeline()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -47,6 +47,6 @@ public class UseDataAnnotationsRegistrationTests
         var exception = Assert.Throws<RequestValidationException>(() => commandProcessor.Send(invalidRequest));
 
         //Assert
-        Assert.NotEmpty(exception.Errors);
+        await Assert.That(exception.Errors).IsNotEmpty();
     }
 }

@@ -8,7 +8,6 @@ using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
@@ -73,22 +72,22 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             _channel.Stop(_routingKey);
         }
 
-        [Fact]
-        public void When_A_Message_Fails_To_Be_Mapped_To_A_Request_Should_Reject()
+        [Test]
+        public async Task When_A_Message_Fails_To_Be_Mapped_To_A_Request_Should_Reject()
         {
             _messagePump.Run();
             _traceProvider.ForceFlush();
 
             // Message was routed to the invalid message topic — Reject(Unacceptable) was called
-            Assert.Single(_bus.Stream(_invalidMessageKey));
-            Assert.Empty(_bus.Stream(_routingKey));
+            await Assert.That((_bus.Stream(_invalidMessageKey)).Count()).IsEqualTo(1);
+            await Assert.That((_bus.Stream(_routingKey)).Any()).IsFalse();
 
             // Process span should reflect the mapping failure
             var processActivity = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Process.ToSpanName()}");
-            Assert.NotNull(processActivity);
-            Assert.Equal(ActivityStatusCode.Error, processActivity!.Status);
-            Assert.Contains(_messageId, processActivity.StatusDescription);
+            await Assert.That(processActivity).IsNotNull();
+            await Assert.That(processActivity!.Status).IsEqualTo(ActivityStatusCode.Error);
+            await Assert.That(processActivity.StatusDescription).Contains(_messageId);
         }
     }
 }

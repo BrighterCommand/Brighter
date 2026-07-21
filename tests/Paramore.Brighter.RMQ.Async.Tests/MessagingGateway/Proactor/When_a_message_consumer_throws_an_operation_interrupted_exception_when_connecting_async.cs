@@ -27,24 +27,24 @@ using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
-[Trait("Category", "RMQ")]
-public class AsyncRmqMessageConsumerOperationInterruptedTestsAsync : IAsyncDisposable, IDisposable
+[Category("RMQ")]
+public class AsyncRmqMessageConsumerOperationInterruptedTestsAsync : IAsyncDisposable
 {
-    private readonly IAmAMessageProducerAsync _sender;
-    private readonly IAmAMessageConsumerAsync _receiver;
-    private readonly IAmAMessageConsumerAsync _badReceiver;
+    private IAmAMessageProducerAsync _sender;
+    private IAmAMessageConsumerAsync _receiver;
+    private IAmAMessageConsumerAsync _badReceiver;
+    private Message _sentMessage;
 
     public AsyncRmqMessageConsumerOperationInterruptedTestsAsync()
     {
-        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), 
+        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(),
             new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
 
         messageHeader.UpdateHandledCount();
-        Message sentMessage = new(messageHeader, new MessageBody("test content"));
+        _sentMessage = new Message(messageHeader, new MessageBody("test content"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
         {
@@ -53,13 +53,17 @@ public class AsyncRmqMessageConsumerOperationInterruptedTestsAsync : IAsyncDispo
         };
 
         _sender = new RmqMessageProducer(rmqConnection);
-        _receiver = new RmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), sentMessage.Header.Topic, false, false);
-        _badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), sentMessage.Header.Topic, false, 1, false);
-
-        _sender.SendAsync(sentMessage).GetAwaiter().GetResult();
+        _receiver = new RmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), _sentMessage.Header.Topic, false, false);
+        _badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), _sentMessage.Header.Topic, false, 1, false);
     }
 
-    [Fact]
+    [Before(Test)]
+    public async Task Setup()
+    {
+        await _sender.SendAsync(_sentMessage);
+    }
+
+    [Test]
     public async Task  When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting()
     {
         bool exceptionHappened = false;
@@ -70,13 +74,14 @@ public class AsyncRmqMessageConsumerOperationInterruptedTestsAsync : IAsyncDispo
         catch (ChannelFailureException cfe)
         {
             exceptionHappened = true;
-            Assert.True((cfe.InnerException) is OperationInterruptedException);
+            await Assert.That((cfe.InnerException) is OperationInterruptedException).IsTrue();
         }
             
-        Assert.True(exceptionHappened);
+        await Assert.That(exceptionHappened).IsTrue();
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
         ((IAmAMessageProducerSync)_sender).Dispose();
         ((IAmAMessageConsumerSync)_receiver).Dispose();

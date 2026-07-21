@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
@@ -9,8 +8,8 @@ public class ConsumerConfigHookTests
 {
     private bool _callbackCalled = false;
     
-    [Fact]
-    public void When_using_a_consumer_config_hook()
+    [Test]
+    public async Task When_using_a_consumer_config_hook()
     {
         //arrange
         var subscription = new KafkaSubscription<MyCommand>(
@@ -38,7 +37,7 @@ public class ConsumerConfigHookTests
             );
         
         //assert
-        Assert.NotNull(consumer);
-        Assert.True(_callbackCalled, "The consumer config hook should have been called.");
+        await Assert.That(consumer).IsNotNull();
+        await Assert.That(_callbackCalled).IsTrue();
     }
 }

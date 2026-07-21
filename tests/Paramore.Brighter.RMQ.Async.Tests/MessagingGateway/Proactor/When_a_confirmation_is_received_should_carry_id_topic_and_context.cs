@@ -26,7 +26,6 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 // both handlers. Only the ack path is deterministically reachable against a real broker, so the
 // enrichment is asserted there. The nack-branch enrichment is therefore verified indirectly: the
 // failure raise reads the very same PendingConfirmation, so it carries the same id/topic/context.
-[Trait("Category", "RMQ")]
+[Property("Category", "RMQ")]
 public class RmqConfirmationCarriesIdTopicAndContextAsyncTests : IDisposable
 {
     private readonly RmqMessageProducer _messageProducer;
@@ -78,27 +77,27 @@ public class RmqConfirmationCarriesIdTopicAndContextAsyncTests : IDisposable
             .GetResult();
     }
 
-    [Fact]
+    [Test]
     public async Task When_a_confirmation_is_received_should_carry_id_topic_and_context()
     {
         // Arrange — an Activity is current at the moment of send, so the producer can capture its context.
         using var publishActivity = _activitySource.StartActivity("publish");
-        Assert.NotNull(publishActivity);
+        await Assert.That(publishActivity).IsNotNull();
 
         // Act
         await _messageProducer.SendAsync(_message);
 
         var confirmed = await Task.WhenAny(_confirmation.Task, Task.Delay(TimeSpan.FromSeconds(5)));
-        Assert.True(ReferenceEquals(confirmed, _confirmation.Task), "Timed out waiting for the broker confirmation");
+        await Assert.That(ReferenceEquals(confirmed, _confirmation.Task)).IsTrue().Because("Timed out waiting for the broker confirmation");
         var result = await _confirmation.Task;
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(_message.Id, result.MessageId);
-        Assert.Equal(_message.Header.Topic, result.Topic);
-        Assert.NotNull(result.PublishSpanContext);
-        Assert.Equal(publishActivity!.TraceId, result.PublishSpanContext!.Value.TraceId);
-        Assert.Equal(publishActivity.SpanId, result.PublishSpanContext.Value.SpanId);
+        await Assert.That(result.Success).IsTrue();
+        await Assert.That(result.MessageId).IsEqualTo(_message.Id);
+        await Assert.That(result.Topic).IsEqualTo(_message.Header.Topic);
+        await Assert.That(result.PublishSpanContext).IsNotNull();
+        await Assert.That(result.PublishSpanContext!.Value.TraceId).IsEqualTo(publishActivity!.TraceId);
+        await Assert.That(result.PublishSpanContext.Value.SpanId).IsEqualTo(publishActivity.SpanId);
     }
 
     public void Dispose()

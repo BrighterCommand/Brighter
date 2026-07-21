@@ -28,11 +28,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class DistinctLockKeyIdentityTests : IAsyncLifetime
+public class DistinctLockKeyIdentityTests
 {
     // Distinct Brighter lock keys must derive distinct 64-bit advisory-lock keys, so two migrations
     // for different schemas acquire on different advisory-lock identities and never block one
@@ -40,7 +39,6 @@ public class DistinctLockKeyIdentityTests : IAsyncLifetime
     // — the high and low 32 bits of the bigint. Acquiring two schema-distinct keys on two separate
     // backend sessions and observing two different (classid, objid) pairs, with neither acquire
     // timing out, demonstrates the distinctness and the absence of contention.
-
     // Pooling is disabled so each session is a fresh backend with no residual advisory locks,
     // making the per-session pg_locks observation deterministic.
     private readonly string _connectionString =
@@ -53,7 +51,7 @@ public class DistinctLockKeyIdentityTests : IAsyncLifetime
     private NpgsqlConnection? _sessionA;
     private NpgsqlConnection? _sessionB;
 
-    [Fact]
+    [Test]
     public async Task When_two_distinct_lock_keys_are_acquired_they_should_occupy_distinct_advisory_lock_identities()
     {
         // Arrange — ensure the database exists and open two independent backend sessions, each of
@@ -81,13 +79,13 @@ public class DistinctLockKeyIdentityTests : IAsyncLifetime
         var identityB = await SingleAdvisoryLockIdentity(_sessionB);
 
         // Assert — both used the single-arg bigint overload and the two derived identities differ.
-        Assert.Equal(1, identityA.Objsubid);
-        Assert.Equal(1, identityB.Objsubid);
-        Assert.NotEqual((identityA.Classid, identityA.Objid), (identityB.Classid, identityB.Objid));
+        await Assert.That(identityA.Objsubid).IsEqualTo(1);
+        await Assert.That(identityB.Objsubid).IsEqualTo(1);
+        await Assert.That((identityB.Classid, identityB.Objid)).IsNotEqualTo((identityA.Classid, identityA.Objid));
 
         // Act + Assert — both release cleanly using their own keys.
-        Assert.True(await advisoryLock.ReleaseAsync(_sessionA, lockKeyA, CancellationToken.None));
-        Assert.True(await advisoryLock.ReleaseAsync(_sessionB, lockKeyB, CancellationToken.None));
+        await Assert.That(await advisoryLock.ReleaseAsync(_sessionA, lockKeyA, CancellationToken.None)).IsTrue();
+        await Assert.That(await advisoryLock.ReleaseAsync(_sessionB, lockKeyB, CancellationToken.None)).IsTrue();
     }
 
     private static async Task<(long Classid, long Objid, int Objsubid)> SingleAdvisoryLockIdentity(
@@ -99,14 +97,16 @@ public class DistinctLockKeyIdentityTests : IAsyncLifetime
             "SELECT classid::bigint, objid::bigint, objsubid FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid()";
 
         await using var reader = await command.ExecuteReaderAsync();
-        Assert.True(await reader.ReadAsync(), "Expected one advisory lock held on this session.");
+        await Assert.That(await reader.ReadAsync()).IsTrue().Because("Expected one advisory lock held on this session.");
         var identity = (reader.GetInt64(0), reader.GetInt64(1), reader.GetInt32(2));
-        Assert.False(await reader.ReadAsync(), "Expected exactly one advisory lock on this session.");
+        await Assert.That(await reader.ReadAsync()).IsFalse().Because("Expected exactly one advisory lock on this session.");
         return identity;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

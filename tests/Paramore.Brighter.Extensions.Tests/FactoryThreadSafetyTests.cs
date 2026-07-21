@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
@@ -37,7 +36,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// </summary>
 public class FactoryThreadSafetyTests
 {
-    [Fact]
+    [Test]
     public async Task ConcurrentSingletonResolution_ReturnsSameInstance()
     {
         // Arrange
@@ -68,10 +67,10 @@ public class FactoryThreadSafetyTests
 
         // Assert - All should be the same instance
         var distinctHandlers = handlers.Distinct().ToList();
-        Assert.Single(distinctHandlers);
+        await Assert.That(distinctHandlers).HasSingleItem();
     }
 
-    [Fact]
+    [Test]
     public async Task ConcurrentScopedResolution_SameScopeReturnsSameInstance()
     {
         // Arrange
@@ -102,10 +101,10 @@ public class FactoryThreadSafetyTests
 
         // Assert - All should be the same instance (same scope)
         var distinctHandlers = handlers.Distinct().ToList();
-        Assert.Single(distinctHandlers);
+        await Assert.That(distinctHandlers).HasSingleItem();
     }
 
-    [Fact]
+    [Test]
     public async Task ConcurrentTransientResolution_ReturnsDifferentInstances()
     {
         // Arrange
@@ -136,10 +135,10 @@ public class FactoryThreadSafetyTests
 
         // Assert - All should be different instances
         var distinctHandlers = handlers.Distinct().ToList();
-        Assert.Equal(50, distinctHandlers.Count);
+        await Assert.That(distinctHandlers.Count).IsEqualTo(50);
     }
 
-    [Fact]
+    [Test]
     public async Task ConcurrentSingletonResolution_OnlyCreatesOneInstance()
     {
         // Arrange - Use a handler that tracks instantiation count
@@ -173,8 +172,8 @@ public class FactoryThreadSafetyTests
         await Task.WhenAll(tasks);
 
         // Assert - Only ONE instance should have been created
-        Assert.Equal(1, CountingHandler.InstanceCount);
-        Assert.Single(handlers.Distinct());
+        await Assert.That(CountingHandler.InstanceCount).IsEqualTo(1);
+        await Assert.That(handlers.Distinct()).HasSingleItem();
     }
 
     private class ThreadSafetyTestHandler : RequestHandler<ThreadSafetyTestCommand>

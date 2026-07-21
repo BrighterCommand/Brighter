@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             if (cancellationToken.IsCancellationRequested)
                 return command;
 
-            _receivedMessages.Add(nameof(MyEventHandlerAsync), command.Id);
+            _receivedMessages[nameof(MyEventHandlerAsync)] = command.Id;
 
             await Task.Delay(0, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 

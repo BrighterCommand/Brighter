@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Paramore.Brighter.JsonConverters;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
@@ -14,8 +14,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 // (tracked separately) — this test stays on serialisation only.
 public class MessageHeaderCustomPropertyParityTests
 {
-    [Fact]
-    public void When_Message_Header_Is_Serialised_The_Custom_Properties_Are_Identical_On_Both_Stacks()
+    [Test]
+    public async Task When_Message_Header_Is_Serialised_The_Custom_Properties_Are_Identical_On_Both_Stacks()
     {
         var header = new MessageHeader(
             messageId: "id-1",
@@ -46,11 +46,11 @@ public class MessageHeaderCustomPropertyParityTests
         {
             var stjToken = stj[stjName];
             var newtonsoftToken = newtonsoft[newtonsoftName];
-            Assert.NotNull(stjToken);
-            Assert.NotNull(newtonsoftToken);
-            Assert.Equal(JTokenType.String, stjToken!.Type);
-            Assert.Equal(JTokenType.String, newtonsoftToken!.Type);
-            Assert.Equal(stjToken.Value<string>(), newtonsoftToken.Value<string>());
+            await Assert.That(stjToken).IsNotNull();
+            await Assert.That(newtonsoftToken).IsNotNull();
+            await Assert.That(stjToken!.Type).IsEqualTo(JTokenType.String);
+            await Assert.That(newtonsoftToken!.Type).IsEqualTo(JTokenType.String);
+            await Assert.That(newtonsoftToken.Value<string>()).IsEqualTo(stjToken.Value<string>());
         }
     }
 }

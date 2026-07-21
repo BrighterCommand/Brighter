@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
 using Neuroglia.AsyncApi.v3;
-using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
 {
@@ -56,7 +55,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             };
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Generate_Send_Operation_For_Publication_With_RequestType()
         {
             var publications = new[]
@@ -67,20 +66,20 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Channels);
-            Assert.True(result.Channels.ContainsKey("order_created"));
-            Assert.Equal("order.created", result.Channels["order_created"].Address);
+            await Assert.That(result.Channels).IsNotNull();
+            await Assert.That(result.Channels.ContainsKey("order_created")).IsTrue();
+            await Assert.That(result.Channels["order_created"].Address).IsEqualTo("order.created");
 
-            Assert.NotNull(result.Operations);
-            Assert.True(result.Operations.ContainsKey("send_order_created"));
-            Assert.Equal(V3OperationAction.Send, result.Operations["send_order_created"].Action);
+            await Assert.That(result.Operations).IsNotNull();
+            await Assert.That(result.Operations.ContainsKey("send_order_created")).IsTrue();
+            await Assert.That(result.Operations["send_order_created"].Action).IsEqualTo(V3OperationAction.Send);
 
-            Assert.NotNull(result.Components?.Messages);
-            Assert.True(result.Components.Messages.ContainsKey("TestOrderEvent"));
-            Assert.Equal("TestOrderEvent", result.Components.Messages["TestOrderEvent"].Name);
+            await Assert.That(result.Components?.Messages).IsNotNull();
+            await Assert.That(result.Components.Messages.ContainsKey("TestOrderEvent")).IsTrue();
+            await Assert.That(result.Components.Messages["TestOrderEvent"].Name).IsEqualTo("TestOrderEvent");
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Generate_Placeholder_Message_When_RequestType_Is_Null()
         {
             var publications = new[]
@@ -91,11 +90,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Components?.Messages);
-            Assert.True(result.Components.Messages.ContainsKey("order_createdMessage"));
+            await Assert.That(result.Components?.Messages).IsNotNull();
+            await Assert.That(result.Components.Messages.ContainsKey("order_createdMessage")).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Skip_Publication_With_Null_Topic()
         {
             var publications = new[]
@@ -106,11 +105,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
             var result = await generator.GenerateAsync();
 
-            Assert.Empty(result.Channels);
-            Assert.Empty(result.Operations);
+            await Assert.That(result.Channels).IsEmpty();
+            await Assert.That(result.Operations).IsEmpty();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Skip_Publication_With_Empty_Topic()
         {
             var publications = new[]
@@ -121,21 +120,21 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, publications);
             var result = await generator.GenerateAsync();
 
-            Assert.Empty(result.Channels);
-            Assert.Empty(result.Operations);
+            await Assert.That(result.Channels).IsEmpty();
+            await Assert.That(result.Operations).IsEmpty();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Handle_Null_Publications()
         {
             var generator = new AsyncApiDocumentGenerator(_options, _schemaGenerator, null, null);
             var result = await generator.GenerateAsync();
 
-            Assert.Empty(result.Channels);
-            Assert.Empty(result.Operations);
+            await Assert.That(result.Channels).IsEmpty();
+            await Assert.That(result.Operations).IsEmpty();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Rewrite_Embedded_Schema_Refs_To_Message_Payload_Path()
         {
             using var schema = JsonDocument.Parse("""
@@ -169,11 +168,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var payload = (JsonElement)result.Components!.Messages!["TestOrderEvent"].Payload!.Schema;
             var rewrittenRef = payload.GetProperty("allOf")[0].GetProperty("$ref").GetString();
-            Assert.Equal("#/components/schemas/Event", rewrittenRef);
+            await Assert.That(rewrittenRef).IsEqualTo("#/components/schemas/Event");
 
-            Assert.False(payload.TryGetProperty("definitions", out _));
-            Assert.NotNull(result.Components.Schemas);
-            Assert.True(result.Components.Schemas!.ContainsKey("Event"));
+            await Assert.That(payload.TryGetProperty("definitions", out _)).IsFalse();
+            await Assert.That(result.Components.Schemas).IsNotNull();
+            await Assert.That(result.Components.Schemas!.ContainsKey("Event")).IsTrue();
         }
 
         public class TestOrderEvent : Event

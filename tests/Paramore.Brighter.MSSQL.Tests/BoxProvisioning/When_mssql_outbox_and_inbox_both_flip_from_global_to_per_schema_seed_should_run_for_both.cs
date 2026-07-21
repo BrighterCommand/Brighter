@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -49,14 +48,14 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // Test pins the bug + the fix: BOTH the outbox row AND the inbox row must arrive in the
 // per-schema history with their ORIGINAL Description (no "bootstrap:" rewrite) and ORIGINAL
 // AppliedAt (no fresh-timestamp restamp). A second run of both provisioners must be a true no-op.
-public class MsSqlMultiBoxGlobalToPerSchemaFlipTests : IAsyncLifetime
+public class MsSqlMultiBoxGlobalToPerSchemaFlipTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _outboxTableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly string _inboxTableName = $"test_inbox_{Guid.NewGuid():N}";
     private readonly string _schemaName = $"billing_multibox_flip_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mssql_outbox_and_inbox_both_flip_from_global_to_per_schema_it_should_seed_both_rows()
     {
         //Arrange — clean slate; operator pre-creates the schema (runner does not create schemas).
@@ -75,63 +74,61 @@ public class MsSqlMultiBoxGlobalToPerSchemaFlipTests : IAsyncLifetime
 
         // Sanity-check arranged precondition — exactly TWO tenant rows in dbo (one per box), no
         // per-schema history table yet (Global scope must not create it).
-        Assert.Equal(2, GetHistoryRowCountInSchema("dbo"));
-        Assert.False(TableExistsInSchema("__BrighterMigrationHistory", _schemaName));
-        var (legacyOutboxDescription, legacyOutboxAppliedAt) = GetSingleHistoryRow("dbo", _outboxTableName);
-        var (legacyInboxDescription, legacyInboxAppliedAt) = GetSingleHistoryRow("dbo", _inboxTableName);
-        Assert.Equal($"fresh install at V{ExpectedMigrationVersions.OutboxLatest}", legacyOutboxDescription);
-        Assert.Equal($"fresh install at V{ExpectedMigrationVersions.InboxLatest}", legacyInboxDescription);
+        await Assert.That(GetHistoryRowCountInSchema("dbo")).IsEqualTo(2);
+        await Assert.That(TableExistsInSchema("__BrighterMigrationHistory", _schemaName)).IsFalse();
+        var (legacyOutboxDescription, legacyOutboxAppliedAt) = await GetSingleHistoryRow("dbo", _outboxTableName);
+        var (legacyInboxDescription, legacyInboxAppliedAt) = await GetSingleHistoryRow("dbo", _inboxTableName);
+        await Assert.That(legacyOutboxDescription).IsEqualTo($"fresh install at V{ExpectedMigrationVersions.OutboxLatest}");
+        await Assert.That(legacyInboxDescription).IsEqualTo($"fresh install at V{ExpectedMigrationVersions.InboxLatest}");
 
         //Act — flip OUTBOX to PerSchema first. This creates the per-schema __BrighterMigrationHistory
         //table and seeds the outbox row.
-        var outboxFlipException = await Record.ExceptionAsync(
+        var outboxFlipException = await TestExceptionRecorder.CaptureAsync(
             () => BuildOutboxProvisioner(MigrationHistoryScope.PerSchema).ProvisionAsync());
-        Assert.Null(outboxFlipException);
-        Assert.True(
-            TableExistsInSchema("__BrighterMigrationHistory", _schemaName),
-            $"Per-schema history table must be created in '{_schemaName}' by the first flip.");
-        Assert.Equal(1, GetHistoryRowCountInSchema(_schemaName));
+        await Assert.That(outboxFlipException).IsNull();
+        await Assert.That(TableExistsInSchema("__BrighterMigrationHistory", _schemaName)).IsTrue().Because($"Per-schema history table must be created in '{_schemaName}' by the first flip.");
+        await Assert.That(GetHistoryRowCountInSchema(_schemaName)).IsEqualTo(1);
 
         //Act — flip INBOX to PerSchema. The per-schema history table now exists. With the BUG
         //(pre-fix), the table-level gate `perSchemaExisted=true` skips the seed; the inbox row
         //is never copied; the bootstrap path stamps a fresh "bootstrap: detected at V..." row.
         //With the FIX (no table-level gate, per-row NOT EXISTS PK guard only), the inbox row is
         //seeded from dbo and the original Description + AppliedAt are preserved.
-        var inboxFlipException = await Record.ExceptionAsync(
+        var inboxFlipException = await TestExceptionRecorder.CaptureAsync(
             () => BuildInboxProvisioner(MigrationHistoryScope.PerSchema).ProvisionAsync());
-        Assert.Null(inboxFlipException);
+        await Assert.That(inboxFlipException).IsNull();
 
         //Assert — per-schema history now contains BOTH rows.
-        Assert.Equal(2, GetHistoryRowCountInSchema(_schemaName));
+        await Assert.That(GetHistoryRowCountInSchema(_schemaName)).IsEqualTo(2);
 
         //Assert — BOTH rows preserve original Description AND AppliedAt (the bug surfaces as the
         //inbox row carrying "bootstrap: detected at V..." with a fresh timestamp; either
         //assertion alone would catch the regression, both together pin both signals).
         var (perSchemaOutboxDescription, perSchemaOutboxAppliedAt) =
-            GetSingleHistoryRow(_schemaName, _outboxTableName);
-        Assert.Equal(legacyOutboxDescription, perSchemaOutboxDescription);
-        Assert.Equal(legacyOutboxAppliedAt, perSchemaOutboxAppliedAt);
+            await GetSingleHistoryRow(_schemaName, _outboxTableName);
+        await Assert.That(perSchemaOutboxDescription).IsEqualTo(legacyOutboxDescription);
+        await Assert.That(perSchemaOutboxAppliedAt).IsEqualTo(legacyOutboxAppliedAt);
 
         var (perSchemaInboxDescription, perSchemaInboxAppliedAt) =
-            GetSingleHistoryRow(_schemaName, _inboxTableName);
-        Assert.Equal(legacyInboxDescription, perSchemaInboxDescription);
-        Assert.Equal(legacyInboxAppliedAt, perSchemaInboxAppliedAt);
+            await GetSingleHistoryRow(_schemaName, _inboxTableName);
+        await Assert.That(perSchemaInboxDescription).IsEqualTo(legacyInboxDescription);
+        await Assert.That(perSchemaInboxAppliedAt).IsEqualTo(legacyInboxAppliedAt);
 
         //Act — re-run both PerSchema provisioners. Idempotency (NOT EXISTS PK guard + runner
         //short-circuit on already-applied state) must hold for repeated flips.
-        var rerunOutboxException = await Record.ExceptionAsync(
+        var rerunOutboxException = await TestExceptionRecorder.CaptureAsync(
             () => BuildOutboxProvisioner(MigrationHistoryScope.PerSchema).ProvisionAsync());
-        var rerunInboxException = await Record.ExceptionAsync(
+        var rerunInboxException = await TestExceptionRecorder.CaptureAsync(
             () => BuildInboxProvisioner(MigrationHistoryScope.PerSchema).ProvisionAsync());
 
         //Assert — still exactly two rows; AppliedAts unchanged on both rows.
-        Assert.Null(rerunOutboxException);
-        Assert.Null(rerunInboxException);
-        Assert.Equal(2, GetHistoryRowCountInSchema(_schemaName));
-        var (_, perSchemaOutboxAppliedAtAfterRerun) = GetSingleHistoryRow(_schemaName, _outboxTableName);
-        var (_, perSchemaInboxAppliedAtAfterRerun) = GetSingleHistoryRow(_schemaName, _inboxTableName);
-        Assert.Equal(perSchemaOutboxAppliedAt, perSchemaOutboxAppliedAtAfterRerun);
-        Assert.Equal(perSchemaInboxAppliedAt, perSchemaInboxAppliedAtAfterRerun);
+        await Assert.That(rerunOutboxException).IsNull();
+        await Assert.That(rerunInboxException).IsNull();
+        await Assert.That(GetHistoryRowCountInSchema(_schemaName)).IsEqualTo(2);
+        var (_, perSchemaOutboxAppliedAtAfterRerun) = await GetSingleHistoryRow(_schemaName, _outboxTableName);
+        var (_, perSchemaInboxAppliedAtAfterRerun) = await GetSingleHistoryRow(_schemaName, _inboxTableName);
+        await Assert.That(perSchemaOutboxAppliedAtAfterRerun).IsEqualTo(perSchemaOutboxAppliedAt);
+        await Assert.That(perSchemaInboxAppliedAtAfterRerun).IsEqualTo(perSchemaInboxAppliedAt);
     }
 
     private MsSqlOutboxProvisioner BuildOutboxProvisioner(MigrationHistoryScope scope)
@@ -214,7 +211,7 @@ IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = '{schemaName}')
     // Reads one history row's Description + AppliedAt for a given (BoxTableName, SchemaName).
     // Equality of the per-schema row against the legacy row is what proves the seed copied rather
     // than re-stamped via the bootstrap path.
-    private (string Description, DateTime AppliedAt) GetSingleHistoryRow(string physicalSchema, string boxTableName)
+    private async Task<(string Description, DateTime AppliedAt)> GetSingleHistoryRow(string physicalSchema, string boxTableName)
     {
         using var connection = new SqlConnection(_connectionString);
         connection.Open();
@@ -225,12 +222,10 @@ IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = '{schemaName}')
         command.Parameters.AddWithValue("@BoxTableName", boxTableName);
         command.Parameters.AddWithValue("@SchemaName", _schemaName);
         using var reader = command.ExecuteReader();
-        Assert.True(reader.Read(),
-            $"Expected exactly one history row in [{physicalSchema}] for ({boxTableName}, {_schemaName}).");
+        await Assert.That(reader.Read()).IsTrue().Because($"Expected exactly one history row in [{physicalSchema}] for ({boxTableName}, {_schemaName}).");
         var description = reader.GetString(0);
         var appliedAt = reader.GetDateTime(1);
-        Assert.False(reader.Read(),
-            $"Expected exactly one history row in [{physicalSchema}] for ({boxTableName}, {_schemaName}); found more.");
+        await Assert.That(reader.Read()).IsFalse().Because($"Expected exactly one history row in [{physicalSchema}] for ({boxTableName}, {_schemaName}); found more.");
         return (description, appliedAt);
     }
 
@@ -249,8 +244,10 @@ IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = '{schemaName}')
         command.ExecuteNonQuery();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public Task DisposeAsync()
     {
         try

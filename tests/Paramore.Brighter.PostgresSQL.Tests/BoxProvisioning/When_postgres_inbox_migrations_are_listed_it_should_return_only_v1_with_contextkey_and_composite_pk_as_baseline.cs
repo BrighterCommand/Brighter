@@ -25,7 +25,7 @@ using System;
 using System.Collections.Generic;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Inbox.Postgres;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -34,8 +34,8 @@ public class PostgreSqlInboxMigrationsTests
     private static readonly string[] s_v1Columns =
         ["commandid", "commandtype", "commandbody", "timestamp", "contextkey"];
 
-    [Fact]
-    public void When_postgres_inbox_migrations_are_listed_it_should_return_only_v1_with_contextkey_and_composite_pk_as_baseline()
+    [Test]
+    public async Task When_postgres_inbox_migrations_are_listed_it_should_return_only_v1_with_contextkey_and_composite_pk_as_baseline()
     {
         //Arrange — Postgres inbox is V1-only by design (born with ContextKey + composite PK
         //in PR #1401, Feb 2021). No pre-ContextKey Postgres inbox ever shipped (ADR
@@ -52,15 +52,12 @@ public class PostgreSqlInboxMigrationsTests
 
         //Assert — exactly one migration, version 1, no SourceReference (no archaeology pointer
         //for V1 baseline — same convention as outbox V1).
-        Assert.Single(migrations);
-        Assert.Equal(1, migrations[0].Version.Value);
-        Assert.Null(migrations[0].SourceReference);
+        await Assert.That(migrations).HasSingleItem();
+        await Assert.That(migrations[0].Version.Value).IsEqualTo(1);
+        await Assert.That(migrations[0].SourceReference).IsNull();
 
         //Assert — V1 LogicalColumns are lowercase (ADR §1) and contextkey is part of V1.
-        Assert.True(
-            expectedV1.SetEquals(migrations[0].LogicalColumns),
-            $"V1 LogicalColumns mismatch — expected: [{string.Join(", ", expectedV1)}], " +
-            $"got: [{string.Join(", ", migrations[0].LogicalColumns)}]");
+        await Assert.That(expectedV1.SetEquals(migrations[0].LogicalColumns)).IsTrue();
 
         //Assert — V1 UpScript is the literal historical Postgres inbox DDL (Spec 0027 R1),
         //not the live builder DDL. The fresh-install fast path takes its DDL from
@@ -68,20 +65,15 @@ public class PostgreSqlInboxMigrationsTests
         //composite PRIMARY KEY (CommandId, ContextKey) that PR #2560 (Nov 2023) shipped is
         //asserted structurally — the historical literal is enclosed in the catalog and
         //should not be duplicated here.
-        Assert.Contains("CommandId", migrations[0].UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("ContextKey", migrations[0].UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(
-            "PRIMARY KEY (CommandId, ContextKey)",
-            migrations[0].UpScript,
-            StringComparison.OrdinalIgnoreCase);
+        await Assert.That(migrations[0].UpScript.Value).Contains("CommandId");
+        await Assert.That(migrations[0].UpScript.Value).Contains("ContextKey");
+        await Assert.That(migrations[0].UpScript.Value).Contains("PRIMARY KEY (CommandId, ContextKey)");
 
         //Assert — FreshInstallDdl now sources the live builder DDL (Spec 0027 R1 part 1
         //added this hook). This is the post-Part-1 contract: V1.UpScript is historical;
         //FreshInstallDdl is current.
         var expectedFreshInstallDdl =
             PostgreSqlInboxBuilder.GetDDL(tableName, config.BinaryMessagePayload);
-        Assert.Equal(
-            expectedFreshInstallDdl,
-            new PostgreSqlInboxMigrationCatalog().FreshInstallDdl(config));
+        await Assert.That(new PostgreSqlInboxMigrationCatalog().FreshInstallDdl(config)).IsEqualTo(expectedFreshInstallDdl);
     }
 }

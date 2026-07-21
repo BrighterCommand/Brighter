@@ -8,7 +8,6 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
@@ -81,7 +80,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             );
         }
 
-        [Fact]
+        [Test]
         public async Task When_Bulk_Dispatching_Reply_Messages_Async()
         {
             //arrange - deposit two replies whose mapper sets Header.Topic to the reply
@@ -102,14 +101,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             //Header.Topic (reply address) instead of the bag's ProducerTopic, LookupBy
             //would have thrown and nothing would arrive on the bus.
             var messages = _internalBus.Stream(_replyTopic).ToArray();
-            Assert.True(messages.Length == 2,
-                $"expected 2 reply messages on the bus after bulk dispatch, got {messages.Length} — bulk dispatch or producer lookup failed");
+            await Assert.That(messages.Length).IsEqualTo(2)
+                .Because($"expected 2 reply messages on the bus after bulk dispatch, got {messages.Length} — bulk dispatch or producer lookup failed");
 
             //assert - the ProducerTopic bag entry survives bulk dispatch so an InMemoryOutbox
             //(which holds the message by reference) keeps the producer hint for retries.
             //Wire-format stripping is the transport's responsibility (see MessageHeader.IsLocalHeader).
-            Assert.All(messages, m =>
-                Assert.True(m.Header.Bag.ContainsKey(Message.ProducerTopicHeaderName)));
+            foreach (var message in messages)
+            {
+                await Assert.That(message.Header.Bag.ContainsKey(Message.ProducerTopicHeaderName)).IsTrue();
+            }
         }
     }
 }

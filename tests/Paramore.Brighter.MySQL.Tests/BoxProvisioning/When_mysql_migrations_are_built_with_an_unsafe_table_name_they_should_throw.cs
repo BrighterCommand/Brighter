@@ -22,7 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.BoxProvisioning.MySql;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
@@ -41,11 +41,11 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
 public class MySqlMigrationsUnsafeIdentifierTests
 {
-    [Theory]
-    [InlineData("O'Brien")]    // single quote — exact injection vector at MySqlOutboxMigrationCatalog.cs:165
-    [InlineData("1Outbox")]    // leading digit — invalid as bare identifier
-    [InlineData("my-outbox")]  // hyphen — would need backtick-quoting to be legal
-    public void When_mysql_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
+    [Test]
+    [Arguments("O'Brien")]    // single quote — exact injection vector at MySqlOutboxMigrationCatalog.cs:165
+    [Arguments("1Outbox")]    // leading digit — invalid as bare identifier
+    [Arguments("my-outbox")]  // hyphen — would need backtick-quoting to be legal
+    public async Task When_mysql_outbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -54,14 +54,14 @@ public class MySqlMigrationsUnsafeIdentifierTests
 
         //Act + Assert
         var ex = Assert.Throws<ConfigurationException>(() => new MySqlOutboxMigrationCatalog().All(config));
-        Assert.Contains(unsafeTable, ex.Message);
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 
-    [Theory]
-    [InlineData("O'Brien")]
-    [InlineData("1Inbox")]
-    [InlineData("my-inbox")]
-    public void When_mysql_inbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
+    [Test]
+    [Arguments("O'Brien")]
+    [Arguments("1Inbox")]
+    [Arguments("my-inbox")]
+    public async Task When_mysql_inbox_migrations_are_built_with_an_unsafe_table_name_it_should_throw(string unsafeTable)
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration(
@@ -70,6 +70,6 @@ public class MySqlMigrationsUnsafeIdentifierTests
 
         //Act + Assert
         var ex = Assert.Throws<ConfigurationException>(() => new MySqlInboxMigrationCatalog().All(config));
-        Assert.Contains(unsafeTable, ex.Message);
+        await Assert.That(ex.Message).Contains(unsafeTable);
     }
 }

@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Paramore.Brighter.Transformers.JustSaying;
-using Xunit;
 
 namespace Paramore.Brighter.Transforms.Adaptors.Tests.JustSaying;
 
@@ -10,8 +9,8 @@ public class JustSayingTransformTest
 {
     private readonly JustSayingTransform _transform = new();
 
-    [Fact]
-    public void wrap_should_set_properties_when_it_missing()
+    [Test]
+    public async Task wrap_should_set_properties_when_it_missing()
     {
         var raisingComponent = $"RaisingComponent{Guid.NewGuid()}";
         var version = $"Version{Guid.NewGuid()}";
@@ -34,28 +33,28 @@ public class JustSayingTransformTest
                 new JsonNodeOptions { PropertyNameCaseInsensitive = true }, 
                 new JsonDocumentOptions { MaxDepth = 0 });
         
-        Assert.Equal(subject, message.Header.Subject);
+        await Assert.That(message.Header.Subject).IsEqualTo(subject);
         
-        Assert.NotNull(node);
+        await Assert.That(node).IsNotNull();
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.Id)]);
-        Assert.NotNull(node[nameof(IJustSayingRequest.TimeStamp)]);
+        await Assert.That(node[nameof(IJustSayingRequest.Id)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.TimeStamp)]).IsNotNull();
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.RaisingComponent)]);
-        Assert.Equal(raisingComponent, node[nameof(IJustSayingRequest.RaisingComponent)]!.GetValue<string>());
+        await Assert.That(node[nameof(IJustSayingRequest.RaisingComponent)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.RaisingComponent)]!.GetValue<string>()).IsEqualTo(raisingComponent);
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.Version)]);
-        Assert.Equal(version, node[nameof(IJustSayingRequest.Version)]!.GetValue<string>());
+        await Assert.That(node[nameof(IJustSayingRequest.Version)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.Version)]!.GetValue<string>()).IsEqualTo(version);
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.Tenant)]);
-        Assert.Equal(tenant, node[nameof(IJustSayingRequest.Tenant)]!.GetValue<string>());
+        await Assert.That(node[nameof(IJustSayingRequest.Tenant)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.Tenant)]!.GetValue<string>()).IsEqualTo(tenant);
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.Conversation)]);
-        Assert.Equal(correlationId, node[nameof(IJustSayingRequest.Conversation)]!.GetValue<string>());
+        await Assert.That(node[nameof(IJustSayingRequest.Conversation)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.Conversation)]!.GetValue<string>()).IsEqualTo(correlationId);
     }
     
-    [Fact]
-    public void wrap_should_set_properties_from_request_context_when_it_missing()
+    [Test]
+    public async Task wrap_should_set_properties_from_request_context_when_it_missing()
     {
         var raisingComponent = $"RaisingComponent{Guid.NewGuid()}";
         var version = $"Version{Guid.NewGuid()}";
@@ -84,25 +83,25 @@ public class JustSayingTransformTest
             new JsonDocumentOptions { MaxDepth = 0 });
         
         
-        Assert.NotNull(node);
+        await Assert.That(node).IsNotNull();
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.Id)]);
-        Assert.NotNull(node[nameof(IJustSayingRequest.Conversation)]);
-        Assert.NotNull(node[nameof(IJustSayingRequest.TimeStamp)]);
+        await Assert.That(node[nameof(IJustSayingRequest.Id)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.Conversation)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.TimeStamp)]).IsNotNull();
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.RaisingComponent)]);
-        Assert.Equal(raisingComponent, node[nameof(IJustSayingRequest.RaisingComponent)]!.GetValue<string>());
+        await Assert.That(node[nameof(IJustSayingRequest.RaisingComponent)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.RaisingComponent)]!.GetValue<string>()).IsEqualTo(raisingComponent);
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.Version)]);
-        Assert.Equal(version, node[nameof(IJustSayingRequest.Version)]!.GetValue<string>());
+        await Assert.That(node[nameof(IJustSayingRequest.Version)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.Version)]!.GetValue<string>()).IsEqualTo(version);
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.Tenant)]);
-        Assert.Equal(tenant, node[nameof(IJustSayingRequest.Tenant)]!.GetValue<string>());
+        await Assert.That(node[nameof(IJustSayingRequest.Tenant)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.Tenant)]!.GetValue<string>()).IsEqualTo(tenant);
         
     }
     
-    [Fact]
-    public void wrap_should_not_override_properties_when_it_is_in_payload()
+    [Test]
+    public async Task wrap_should_not_override_properties_when_it_is_in_payload()
     {
         var raisingComponent = $"RaisingComponent{Guid.NewGuid()}";
         var version = $"Version{Guid.NewGuid()}";
@@ -133,20 +132,20 @@ public class JustSayingTransformTest
             new JsonNodeOptions { PropertyNameCaseInsensitive = true }, 
             new JsonDocumentOptions { MaxDepth = 0 });
         
-        Assert.NotNull(node);
+        await Assert.That(node).IsNotNull();
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.Id)]);
-        Assert.NotNull(node[nameof(IJustSayingRequest.Conversation)]);
-        Assert.NotNull(node[nameof(IJustSayingRequest.TimeStamp)]);
+        await Assert.That(node[nameof(IJustSayingRequest.Id)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.Conversation)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.TimeStamp)]).IsNotNull();
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.RaisingComponent)]);
-        Assert.NotEqual(raisingComponent, node[nameof(IJustSayingRequest.RaisingComponent)]!.GetValue<string>());
+        await Assert.That(node[nameof(IJustSayingRequest.RaisingComponent)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.RaisingComponent)]!.GetValue<string>()).IsNotEqualTo(raisingComponent);
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.Version)]);
-        Assert.NotEqual(version, node[nameof(IJustSayingRequest.Version)]!.GetValue<string>());
+        await Assert.That(node[nameof(IJustSayingRequest.Version)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.Version)]!.GetValue<string>()).IsNotEqualTo(version);
         
-        Assert.NotNull(node[nameof(IJustSayingRequest.Tenant)]);
-        Assert.NotEqual(tenant, node[nameof(IJustSayingRequest.Tenant)]!.GetValue<string>());
+        await Assert.That(node[nameof(IJustSayingRequest.Tenant)]).IsNotNull();
+        await Assert.That(node[nameof(IJustSayingRequest.Tenant)]!.GetValue<string>()).IsNotEqualTo(tenant);
         
     }
 }

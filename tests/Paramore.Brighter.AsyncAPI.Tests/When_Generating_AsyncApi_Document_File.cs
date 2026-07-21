@@ -32,7 +32,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Neuroglia.AsyncApi.IO;
 using Neuroglia.AsyncApi.v3;
-using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
 {
@@ -67,7 +66,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             return host;
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Write_Json_File()
         {
             var document = new V3AsyncApiDocument
@@ -79,10 +78,10 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             await host.GenerateAsyncApiDocumentAsync(outputPath);
 
-            Assert.True(File.Exists(outputPath));
+            await Assert.That(File.Exists(outputPath)).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Write_Yaml_File_Alongside_Json()
         {
             var document = new V3AsyncApiDocument
@@ -95,10 +94,10 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             await host.GenerateAsyncApiDocumentAsync(outputPath);
 
             var yamlPath = Path.Combine(_tempDir, "asyncapi.yaml");
-            Assert.True(File.Exists(yamlPath));
+            await Assert.That(File.Exists(yamlPath)).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Write_Valid_Yaml_Content()
         {
             var document = new V3AsyncApiDocument
@@ -112,12 +111,12 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var yamlPath = Path.Combine(_tempDir, "asyncapi.yaml");
             var yaml = File.ReadAllText(yamlPath);
-            Assert.Contains("asyncapi:", yaml);
-            Assert.Contains("YAML Test", yaml);
-            Assert.Contains("2.0.0", yaml);
+            await Assert.That(yaml).Contains("asyncapi:");
+            await Assert.That(yaml).Contains("YAML Test");
+            await Assert.That(yaml).Contains("2.0.0");
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Create_Parent_Directory()
         {
             var document = new V3AsyncApiDocument
@@ -130,12 +129,12 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             await host.GenerateAsyncApiDocumentAsync(outputPath);
 
-            Assert.True(Directory.Exists(nestedDir));
-            Assert.True(File.Exists(outputPath));
-            Assert.True(File.Exists(Path.Combine(nestedDir, "asyncapi.yaml")));
+            await Assert.That(Directory.Exists(nestedDir)).IsTrue();
+            await Assert.That(File.Exists(outputPath)).IsTrue();
+            await Assert.That(File.Exists(Path.Combine(nestedDir, "asyncapi.yaml"))).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Return_Generated_Document()
         {
             var document = new V3AsyncApiDocument
@@ -147,11 +146,11 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var result = await host.GenerateAsyncApiDocumentAsync(outputPath);
 
-            Assert.Equal("My API", result.Info.Title);
-            Assert.Equal("2.0.0", result.Info.Version);
+            await Assert.That(result.Info.Title).IsEqualTo("My API");
+            await Assert.That(result.Info.Version).IsEqualTo("2.0.0");
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Throw_When_Not_Configured()
         {
             var services = new ServiceCollection();
@@ -164,7 +163,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
                 await host.GenerateAsyncApiDocumentAsync(outputPath));
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Write_Valid_Json()
         {
             var document = new V3AsyncApiDocument
@@ -180,10 +179,10 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             // Verify valid JSON
             using var parsed = JsonDocument.Parse(json);
-            Assert.True(parsed.RootElement.TryGetProperty("asyncapi", out _));
+            await Assert.That(parsed.RootElement.TryGetProperty("asyncapi", out _)).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Produce_File_Matching_Returned_Document()
         {
             var document = new V3AsyncApiDocument
@@ -197,8 +196,8 @@ namespace Paramore.Brighter.AsyncAPI.Tests
 
             var json = File.ReadAllText(outputPath);
             using var parsed = JsonDocument.Parse(json);
-            Assert.Equal(result.Info.Title, parsed.RootElement.GetProperty("info").GetProperty("title").GetString());
-            Assert.Equal(result.Info.Version, parsed.RootElement.GetProperty("info").GetProperty("version").GetString());
+            await Assert.That(parsed.RootElement.GetProperty("info").GetProperty("title").GetString()).IsEqualTo(result.Info.Title);
+            await Assert.That(parsed.RootElement.GetProperty("info").GetProperty("version").GetString()).IsEqualTo(result.Info.Version);
         }
     }
 }

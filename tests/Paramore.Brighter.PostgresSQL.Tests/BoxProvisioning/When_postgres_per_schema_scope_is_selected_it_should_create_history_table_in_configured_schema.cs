@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
@@ -46,7 +45,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 // per-schema history table it created on the first. A regression where one side preserved case
 // (e.g. quoted "Billing") and the other lowercased would create in "billing" but read from
 // "Billing" (or vice versa), miss the row, and re-run the migration / duplicate history.
-public class PostgreSqlOutboxProvisionerSchemaTests : IAsyncLifetime
+public class PostgreSqlOutboxProvisionerSchemaTests
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -78,7 +77,7 @@ public class PostgreSqlOutboxProvisionerSchemaTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_per_schema_scope_is_selected_it_should_create_history_table_in_configured_schema()
     {
         //Arrange — operator pre-creates the (folded) schema; runner does not create schemas itself.
@@ -88,30 +87,28 @@ public class PostgreSqlOutboxProvisionerSchemaTests : IAsyncLifetime
         await DropAnyExistingTableAsync("__BrighterMigrationHistory", _foldedSchema);
 
         //Act — first fresh-install run under PerSchema
-        var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var firstException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert — history table lives in the configured (folded) schema.
-        Assert.Null(firstException);
-        Assert.True(
-            await TableExistsInSchemaAsync("__BrighterMigrationHistory", _foldedSchema),
-            $"History table must exist in '{_foldedSchema}' under PerSchema scope.");
+        await Assert.That(firstException).IsNull();
+        await Assert.That(await TableExistsInSchemaAsync("__BrighterMigrationHistory", _foldedSchema)).IsTrue().Because($"History table must exist in '{_foldedSchema}' under PerSchema scope.");
 
         //Assert — the box table and a history row recording its (folded) SchemaName are present per-schema.
-        Assert.True(await TableExistsInSchemaAsync(_tableName, _foldedSchema));
-        Assert.Equal(1, await GetHistoryRowCountAsync(_foldedSchema, _tableName));
+        await Assert.That(await TableExistsInSchemaAsync(_tableName, _foldedSchema)).IsTrue();
+        await Assert.That(await GetHistoryRowCountAsync(_foldedSchema, _tableName)).IsEqualTo(1);
 
         //Assert — no fall-back to public: this tenant wrote no row to the shared public history table.
         // (public.__BrighterMigrationHistory is a global table that may pre-exist from Global-scope
         // tests, so the meaningful check is row-level, not table existence.)
-        Assert.Equal(0, await GetHistoryRowCountAsync("public", _tableName));
+        await Assert.That(await GetHistoryRowCountAsync("public", _tableName)).IsEqualTo(0);
 
         //Act — second run re-detects from the per-schema history; identical folding finds the same
         // table, so no migration re-run.
-        var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var secondException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert — idempotent: still exactly one history row in the per-schema table.
-        Assert.Null(secondException);
-        Assert.Equal(1, await GetHistoryRowCountAsync(_foldedSchema, _tableName));
+        await Assert.That(secondException).IsNull();
+        await Assert.That(await GetHistoryRowCountAsync(_foldedSchema, _tableName)).IsEqualTo(1);
     }
 
     private async Task EnsureSchemaExistsAsync(string schemaName)
@@ -167,8 +164,10 @@ SELECT CASE WHEN EXISTS(SELECT 1 FROM information_schema.tables
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

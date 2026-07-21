@@ -28,7 +28,7 @@ using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.BoxProvisioning.Tests.Drift;
 using Paramore.Brighter.Inbox.Spanner;
 using Paramore.Brighter.Outbox.Spanner;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 
@@ -51,13 +51,13 @@ namespace Paramore.Brighter.Gcp.Tests.Spanner.BoxProvisioning;
 // `CreatedID` column, but Spanner's PRIMARY KEY clause lives OUTSIDE the column body (Spanner
 // declares the PK after the closing paren) so the column set is the logical model exactly.
 
-[Trait("Category", "Spanner")]
+[Property("Category", "Spanner")]
 public class SpannerOutboxBuilderDriftTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_spanner_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_spanner_outbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set(
         bool binaryMessagePayload)
     {
         // Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config so
@@ -81,18 +81,15 @@ public class SpannerOutboxBuilderDriftTests
             StringComparer.OrdinalIgnoreCase);
 
         // Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest LogicalColumns: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 }
 
-[Trait("Category", "Spanner")]
+[Property("Category", "Spanner")]
 public class SpannerInboxBuilderDriftTests
 {
-    [Fact]
-    public void When_spanner_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
+    [Test]
+    public async Task When_spanner_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
         // Arrange — Spanner inbox is fresh-install-only at V2-equivalent: the builder ships
         // CommandId + CommandType + CommandBody + Timestamp + ContextKey, which matches the
@@ -115,9 +112,6 @@ public class SpannerInboxBuilderDriftTests
             StringComparer.OrdinalIgnoreCase);
 
         // Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest LogicalColumns: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 }

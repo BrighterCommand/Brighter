@@ -5,13 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsStandard.Proactor;
 
-[Trait("Category", "Sqs")]
-[Collection("SqsStandard")]
-public class WhenRequeuingAFailedMessageWithDelayShouldReceiveMessageAgainAsync : IAsyncLifetime
+[Property("Category", "Sqs")]
+[NotInParallel("SqsStandard")]
+public class WhenRequeuingAFailedMessageWithDelayShouldReceiveMessageAgainAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -32,22 +33,26 @@ public class WhenRequeuingAFailedMessageWithDelayShouldReceiveMessageAgainAsync 
         _messageAssertion = new AwsMessageAssertion();
     }
 
+    [Before(Test)]
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
+
+    [After(Test)]
 
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
     public async Task When_requeuing_a_failed_message_with_delay_should_receive_message_again_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
-        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
+        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
             OnMissingChannel.Create);
 
@@ -62,13 +67,13 @@ public class WhenRequeuingAFailedMessageWithDelayShouldReceiveMessageAgainAsync 
 
         // Act
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
 
         await _channel.RequeueAsync(received);
 
         // Assert
         received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
         await _channel.AcknowledgeAsync(received);
-        _messageAssertion.Assert(message, received);
+        await _messageAssertion.AssertAsync(message, received);
     }
 }

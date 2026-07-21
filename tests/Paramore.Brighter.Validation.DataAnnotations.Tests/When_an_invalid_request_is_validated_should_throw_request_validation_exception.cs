@@ -25,14 +25,14 @@ THE SOFTWARE. */
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.RequestValidation;
 using Paramore.Brighter.Validation.DataAnnotations.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.DataAnnotations.Tests;
 
 public class InvalidRequestValidationTests
 {
-    [Fact]
-    public void When_an_invalid_request_is_validated_should_throw_request_validation_exception()
+    [Test]
+    public async Task When_an_invalid_request_is_validated_should_throw_request_validation_exception()
     {
         //Arrange
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
@@ -43,6 +43,6 @@ public class InvalidRequestValidationTests
         var exception = Assert.Throws<RequestValidationException>(() => handler.Handle(invalidRequest));
 
         //Assert
-        Assert.Contains(exception.Errors, error => error.PropertyName == nameof(RegisterUser.Name));
+        await Assert.That((exception.Errors).Any(error => error.PropertyName == nameof(RegisterUser.Name))).IsTrue();
     }
 }

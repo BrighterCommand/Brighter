@@ -200,8 +200,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value);
             //increment a counter to get the next message id
             var nextMsgId = await IncrementMessageCounterAsync(client, cancellationToken);
+            Console.WriteLine($"[RDX] producer SendAsync topic='{Topic}' messageId='{message.Id}' nextMsgId={nextMsgId} tid={Environment.CurrentManagedThreadId} pool={Pool.Value.GetHashCode()}");
             //store the message, against that id
             await StoreMessageAsync(client, redisMessage, nextMsgId);
+            Console.WriteLine($"[RDX] producer SET key='{Topic}.{nextMsgId}' bodyLen={redisMessage.Length}");
             //If there are subscriber queues, push the message to the subscriber queues
             var pushedTo = await PushToQueuesAsync(client, nextMsgId, cancellationToken);
             Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
@@ -227,6 +229,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 //First add to the queue itself
                 await client.AddItemToListAsync(queue, nextMsgId.ToString(), cancellationToken);
+                var contents = await client.GetAllItemsFromListAsync(queue, cancellationToken);
+                Console.WriteLine($"[RDX] producer post-RPUSH '{nextMsgId}' to queue='{queue}' contents=[{string.Join(",", contents)}] clientHash={client.GetHashCode()}");
             }
             return queues;
         }

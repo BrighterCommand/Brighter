@@ -1,34 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFrameworks>$(BrighterTestTargetFrameworks)</TargetFrameworks>
     <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="coverlet.collector">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="GitHubActionsTestLogger">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk"/>
     <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
-    <PackageReference Include="System.Text.Json"/>
-    <PackageReference Include="xunit"/>
-    <PackageReference Include="xunit.runner.visualstudio">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Polly.Extensions.Http"/>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Using Include="Xunit"/>
+    <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="TUnit" />
+    <PackageReference Include="Polly.Extensions.Http" />
   </ItemGroup>
 
   <ItemGroup>
@@ -53,5 +35,4 @@
          drift test can reuse the same column-extraction parser as the relational drift tests. -->
     <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning.Tests\Paramore.Brighter.BoxProvisioning.Tests.csproj" />
   </ItemGroup>
-
 </Project>

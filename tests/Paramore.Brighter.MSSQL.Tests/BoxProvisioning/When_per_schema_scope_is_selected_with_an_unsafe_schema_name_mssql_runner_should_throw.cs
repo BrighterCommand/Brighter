@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -37,7 +36,7 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // pins the catalog-factory entry (independent of scope); this test pins the runner-driven
 // PerSchema path end-to-end via ProvisionAsync, so a future contributor cannot bypass the
 // catalog and reach a per-schema DDL site without tripping a validation gate.
-public class MsSqlPerSchemaUnsafeSchemaNameTests : IAsyncLifetime
+public class MsSqlPerSchemaUnsafeSchemaNameTests
 {
     // Evident data: a SchemaName that, if interpolated raw into `CREATE SCHEMA [{schema}]`,
     // would close the bracket-quoted identifier and append further statements. Any of `]`,
@@ -48,7 +47,7 @@ public class MsSqlPerSchemaUnsafeSchemaNameTests : IAsyncLifetime
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _boxTableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_per_schema_scope_is_selected_with_an_unsafe_schema_name_mssql_runner_should_throw()
     {
         //Arrange — MigrationHistoryScope.PerSchema + the unsafe SchemaName. The operator-facing
@@ -70,17 +69,16 @@ public class MsSqlPerSchemaUnsafeSchemaNameTests : IAsyncLifetime
             runner);
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());
+        var thrown = await TestExceptionRecorder.CaptureAsync(() => provisioner.ProvisionAsync());
 
         //Assert — ConfigurationException is the documented contract (Identifiers.AssertSafe);
         //the message must echo the unsafe value so operators can see which configured identifier
         //was rejected; and no DDL with the raw literal was emitted — assert by absence of a
         //matching schema in sys.schemas (which would only exist if a CREATE SCHEMA had escaped
         //the validation gate).
-        var configEx = Assert.IsType<ConfigurationException>(thrown);
-        Assert.Contains(UnsafeSchemaName, configEx.Message);
-        Assert.False(SchemaExists(UnsafeSchemaName),
-            $"sys.schemas should not contain '{UnsafeSchemaName}' — validation must run before DDL.");
+        var configEx = await Assert.That(thrown).IsTypeOf<ConfigurationException>();
+        await Assert.That(configEx.Message).Contains(UnsafeSchemaName);
+        await Assert.That(SchemaExists(UnsafeSchemaName)).IsFalse().Because($"sys.schemas should not contain '{UnsafeSchemaName}' — validation must run before DDL.");
     }
 
     private bool SchemaExists(string schemaName)
@@ -93,8 +91,10 @@ public class MsSqlPerSchemaUnsafeSchemaNameTests : IAsyncLifetime
         return (int)command.ExecuteScalar()! > 0;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public Task DisposeAsync()
     {
         // No teardown needed: the validation gate throws before any DDL runs, so there is

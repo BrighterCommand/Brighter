@@ -1,5 +1,4 @@
 using FakeItEasy;
-using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
@@ -12,7 +11,6 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         private readonly ConfigurationCommandHandler _configurationCommandHandler;
         private readonly ConfigurationCommand _configurationCommand;
         private readonly IDispatcher _dispatcher;
-
         public ConfigurationCommandStopTests()
         {
             _dispatcher = A.Fake<IDispatcher>();
@@ -20,13 +18,12 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPCHANNEL, new SubscriptionName(SUBSCRIPTION_NAME));
         }
 
-        [Fact]
-        public void When_receiving_a_stop_message_for_a_connection()
+        [Test]
+        public async Task When_receiving_a_stop_message_for_a_connection()
         {
             _configurationCommandHandler.Handle(_configurationCommand);
-
             //_should_call_stop_for_the_given_connection
-            A.CallTo(() => _dispatcher.Shut( new SubscriptionName(SUBSCRIPTION_NAME)));
+            A.CallTo(() => _dispatcher.Shut(new SubscriptionName(SUBSCRIPTION_NAME)));
         }
     }
 }

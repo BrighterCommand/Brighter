@@ -1,5 +1,4 @@
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
@@ -21,19 +20,19 @@ public class When_kafka_channel_factory_has_scheduler_should_pass_to_consumers
         makeChannels: OnMissingChannel.Assume
     );
 
-    [Fact]
-    public void Should_implement_channel_factory_with_scheduler()
+    [Test]
+    public async Task Should_implement_channel_factory_with_scheduler()
     {
         // Arrange
         var consumerFactory = new KafkaMessageConsumerFactory(_configuration);
         var channelFactory = new ChannelFactory(consumerFactory);
 
         // Assert
-        Assert.IsAssignableFrom<IAmAChannelFactoryWithScheduler>(channelFactory);
+        await Assert.That(channelFactory).IsAssignableTo<IAmAChannelFactoryWithScheduler>();
     }
 
-    [Fact]
-    public void Should_create_sync_channel_when_scheduler_set()
+    [Test]
+    public async Task Should_create_sync_channel_when_scheduler_set()
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
@@ -45,12 +44,12 @@ public class When_kafka_channel_factory_has_scheduler_should_pass_to_consumers
         var channel = channelFactory.CreateSyncChannel(_subscription);
 
         // Assert
-        Assert.NotNull(channel);
-        Assert.IsType<Channel>(channel);
+        await Assert.That(channel).IsNotNull();
+        await Assert.That(channel).IsTypeOf<Channel>();
     }
 
-    [Fact]
-    public void Should_create_async_channel_when_scheduler_set()
+    [Test]
+    public async Task Should_create_async_channel_when_scheduler_set()
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
@@ -59,15 +58,15 @@ public class When_kafka_channel_factory_has_scheduler_should_pass_to_consumers
         ((IAmAChannelFactoryWithScheduler)channelFactory).Scheduler = scheduler;
 
         // Act
-        var channel = channelFactory.CreateAsyncChannel(_subscription);
+        var channel = await channelFactory.CreateAsyncChannelAsync(_subscription);
 
         // Assert
-        Assert.NotNull(channel);
-        Assert.IsType<ChannelAsync>(channel);
+        await Assert.That(channel).IsNotNull();
+        await Assert.That(channel).IsTypeOf<ChannelAsync>();
     }
 
-    [Fact]
-    public void Should_create_channel_without_scheduler_for_backward_compat()
+    [Test]
+    public async Task Should_create_channel_without_scheduler_for_backward_compat()
     {
         // Arrange — no scheduler set
         var consumerFactory = new KafkaMessageConsumerFactory(_configuration);
@@ -77,8 +76,8 @@ public class When_kafka_channel_factory_has_scheduler_should_pass_to_consumers
         var channel = channelFactory.CreateSyncChannel(_subscription);
 
         // Assert
-        Assert.NotNull(channel);
-        Assert.IsType<Channel>(channel);
+        await Assert.That(channel).IsNotNull();
+        await Assert.That(channel).IsTypeOf<Channel>();
     }
 
     private class StubMessageScheduler : IAmAMessageScheduler;

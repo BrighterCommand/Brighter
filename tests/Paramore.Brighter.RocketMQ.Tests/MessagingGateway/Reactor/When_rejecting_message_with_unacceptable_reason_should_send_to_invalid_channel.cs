@@ -30,20 +30,20 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
-using Xunit;
 
 namespace Paramore.Brighter.RocketMQ.Tests.MessagingGateway.Reactor;
 
-[Trait("Category", "RocketMQ")]
+[Category("RocketMQ")]
 public class RocketMqUnacceptableInvalidChannelTests : IDisposable
 {
-    private readonly RocketMqMessageProducer _producer;
-    private readonly IAmAMessageConsumerSync _consumer;
-    private readonly IAmAMessageConsumerSync _invalidConsumer;
-    private readonly IAmAMessageConsumerSync _dlqConsumer;
-    private readonly Message _message;
+    private RocketMqMessageProducer _producer;
+    private IAmAMessageConsumerSync _consumer;
+    private IAmAMessageConsumerSync _invalidConsumer;
+    private IAmAMessageConsumerSync _dlqConsumer;
+    private Message _message;
 
-    public RocketMqUnacceptableInvalidChannelTests()
+    [Before(Test)]
+    public async Task Setup()
     {
         var sourceTopic = new RoutingKey("rmq_dlq_source");
         var dlqTopic = new RoutingKey("rmq_dlq_target");
@@ -55,7 +55,7 @@ public class RocketMqUnacceptableInvalidChannelTests : IDisposable
         var publication = new RocketMqPublication { Topic = sourceTopic };
         _producer = new RocketMqMessageProducer(
             connection,
-            GatewayFactory.CreateProducer(connection, publication).GetAwaiter().GetResult(),
+            await GatewayFactory.CreateProducer(connection, publication),
             publication);
 
         // Source topic consumer with both DLQ and invalid message routing keys
@@ -98,14 +98,14 @@ public class RocketMqUnacceptableInvalidChannelTests : IDisposable
                 (object)new MyCommand { Value = "Test Invalid" }, JsonSerialisationOptions.Options)));
     }
 
-    [Fact]
-    public void When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel()
+    [Test]
+    public async Task When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel()
     {
         // Arrange - send a message and consume it from the source topic
         _consumer.Purge();
         _invalidConsumer.Purge();
         _dlqConsumer.Purge();
-        _producer.Send(_message);
+        await _producer.SendAsync(_message);
         var receivedMessage = ConsumeMessage(_consumer);
 
         // Act - reject with Unacceptable reason
@@ -113,22 +113,21 @@ public class RocketMqUnacceptableInvalidChannelTests : IDisposable
             new MessageRejectionReason(RejectionReason.Unacceptable, "Message failed validation"));
 
         // Assert - reject returns true
-        Assert.True(result);
+        await Assert.That(result).IsTrue();
 
         // Assert - message should appear on the invalid message channel
         var invalidMessage = ConsumeMessage(_invalidConsumer);
-        Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
-        Assert.Equal(_message.Body.Value, invalidMessage.Body.Value);
+        await Assert.That(invalidMessage.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await Assert.That(invalidMessage.Body.Value).IsEqualTo(_message.Body.Value);
 
         // Assert - rejection metadata present
-        Assert.True(invalidMessage.Header.Bag.ContainsKey("originalTopic"));
-        Assert.True(invalidMessage.Header.Bag.ContainsKey("rejectionReason"));
-        Assert.Equal(RejectionReason.Unacceptable.ToString(),
-            invalidMessage.Header.Bag["rejectionReason"].ToString());
+        await Assert.That(invalidMessage.Header.Bag.ContainsKey("originalTopic")).IsTrue();
+        await Assert.That(invalidMessage.Header.Bag.ContainsKey("rejectionReason")).IsTrue();
+        await Assert.That(invalidMessage.Header.Bag["rejectionReason"].ToString()).IsEqualTo(RejectionReason.Unacceptable.ToString());
 
         // Assert - DLQ should be empty (message went to invalid, not DLQ)
         var dlqMessage = ConsumeMessage(_dlqConsumer);
-        Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
+        await Assert.That(dlqMessage.Header.MessageType).IsEqualTo(MessageType.MT_NONE);
     }
 
     private static Message ConsumeMessage(IAmAMessageConsumerSync consumer)

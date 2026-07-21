@@ -1,10 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.OutboxGenerator;
 
@@ -22,7 +21,7 @@ public class WhenMultipleOutboxesMissingPrefixShouldUseKeyAsPrefix : IDisposable
         _logger = factory.CreateLogger<Generators.OutboxGenerator>();
     }
 
-    [Fact]
+    [Test]
     public async Task When_multiple_outboxes_missing_prefix_should_use_key_as_prefix()
     {
         // Arrange
@@ -49,7 +48,7 @@ public class WhenMultipleOutboxesMissingPrefixShouldUseKeyAsPrefix : IDisposable
         await generator.GenerateAsync(configuration);
 
         // Assert - prefix should be derived from key
-        Assert.Equal(".SqlServer", configuration.Outboxes["SqlServer"].Prefix);
+        await Assert.That(configuration.Outboxes["SqlServer"].Prefix).IsEqualTo(".SqlServer");
     }
 
     public void Dispose()

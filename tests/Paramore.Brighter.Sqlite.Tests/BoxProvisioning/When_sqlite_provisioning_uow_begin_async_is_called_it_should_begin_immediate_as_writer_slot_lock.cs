@@ -31,11 +31,10 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.BoxProvisioning.Sqlite;
-using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
+public class ProvisioningUnitOfWorkBeginTests
 {
     // Per ADR 0057 §4 / ADR 0058 §B.1: SQLite has no advisory-lock primitive — the writer slot
     // acquired by BEGIN IMMEDIATE is itself the lock. The SQLite UoW is therefore the
@@ -58,7 +57,6 @@ public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
     // before each call, overwriting the PRAGMA. DefaultTimeout=0 is interpreted by the driver
     // as "no timeout / wait forever" rather than "fail immediately", so the smallest positive
     // value is used.
-
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_uow_begin_{Guid.NewGuid():N}.db");
 
@@ -71,8 +69,10 @@ public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
         _connection = new SqliteConnection(_connectionString);
     }
 
+    [Before(Test)]
     public async Task InitializeAsync() => await _connection.OpenAsync();
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         await _connection.DisposeAsync();
@@ -87,7 +87,7 @@ public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
         }
     }
 
-    [Fact]
+    [Test]
     public async Task When_sqlite_provisioning_uow_begin_async_is_called_it_should_begin_immediate_as_writer_slot_lock()
     {
         // Arrange — SqliteProvisioningUnitOfWork ctor takes only (SqliteConnection, ILogger).
@@ -105,7 +105,7 @@ public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
         // Assert — Transaction property non-null after BeginAsync. BEGIN IMMEDIATE opens a
         // transaction atomically with acquiring the writer slot; the runner needs that handle
         // to thread into command.Transaction for the migration DDL.
-        Assert.NotNull(uow.Transaction);
+        await Assert.That(uow.Transaction).IsNotNull();
 
         // Assert — a sibling connection's BEGIN IMMEDIATE fails fast with SQLITE_BUSY (errno 5)
         // because the UoW holds the database-wide RESERVED writer slot. DefaultTimeout=1 caps
@@ -116,9 +116,16 @@ public class ProvisioningUnitOfWorkBeginTests : IAsyncLifetime
         sibling.DefaultTimeout = 1;
         await sibling.OpenAsync();
 
-        var siblingException = Record.Exception(
-            () => sibling.BeginTransaction(IsolationLevel.Serializable, deferred: false));
-        var sqliteException = Assert.IsType<SqliteException>(siblingException);
-        Assert.Equal(5, sqliteException.SqliteErrorCode);
+        Exception? siblingException = null;
+        try
+        {
+            sibling.BeginTransaction(IsolationLevel.Serializable, deferred: false);
+        }
+        catch (Exception e)
+        {
+            siblingException = e;
+        }
+        var sqliteException = await Assert.That(siblingException).IsTypeOf<SqliteException>();
+        await Assert.That(sqliteException.SqliteErrorCode).IsEqualTo(5);
     }
 }

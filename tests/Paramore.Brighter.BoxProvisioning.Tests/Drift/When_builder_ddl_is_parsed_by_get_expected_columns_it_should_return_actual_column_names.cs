@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests.Drift;
 
 public class DdlColumnExtractorTests
 {
-    [Fact]
-    public void When_mssql_ddl_with_constraint_is_parsed_should_return_six_logical_columns()
+    [Test]
+    public async Task When_mssql_ddl_with_constraint_is_parsed_should_return_six_logical_columns()
     {
         //Arrange — six bracketed columns plus a CONSTRAINT line that must be filtered out.
         //Schema-qualified table name ([dbo].[outbox_test]) must not contribute a spurious column.
@@ -30,14 +30,12 @@ CREATE TABLE [dbo].[outbox_test] (
         var columns = DdlColumnExtractor.GetExpectedColumns(ddl, QuoteStyle.MsSql);
 
         //Assert
-        Assert.Equal(6, columns.Count);
-        Assert.True(
-            expected.SetEquals(columns),
-            $"Expected: [{string.Join(", ", expected)}], got: [{string.Join(", ", columns)}]");
+        await Assert.That(columns.Count).IsEqualTo(6);
+        await Assert.That(expected.SetEquals(columns)).IsTrue().Because($"Expected: [{string.Join(", ", expected)}], got: [{string.Join(", ", columns)}]");
     }
 
-    [Fact]
-    public void When_postgres_ddl_with_unquoted_identifiers_is_parsed_should_return_six_logical_columns()
+    [Test]
+    public async Task When_postgres_ddl_with_unquoted_identifiers_is_parsed_should_return_six_logical_columns()
     {
         //Arrange — Postgres convention is unquoted PascalCase identifiers; the engine folds them
         //to lowercase but the DDL source text preserves the original case. The extractor reads
@@ -61,14 +59,12 @@ CREATE TABLE outbox_test (
         var columns = DdlColumnExtractor.GetExpectedColumns(ddl, QuoteStyle.Postgres);
 
         //Assert
-        Assert.Equal(6, columns.Count);
-        Assert.True(
-            expected.SetEquals(columns),
-            $"Expected: [{string.Join(", ", expected)}], got: [{string.Join(", ", columns)}]");
+        await Assert.That(columns.Count).IsEqualTo(6);
+        await Assert.That(expected.SetEquals(columns)).IsTrue().Because($"Expected: [{string.Join(", ", expected)}], got: [{string.Join(", ", columns)}]");
     }
 
-    [Fact]
-    public void When_mysql_ddl_with_table_level_primary_key_is_parsed_should_ignore_pk_line()
+    [Test]
+    public async Task When_mysql_ddl_with_table_level_primary_key_is_parsed_should_ignore_pk_line()
     {
         //Arrange — MySQL backticked identifiers; the trailing PRIMARY KEY (`col`) is a
         //table-level constraint that must not contribute a column name.
@@ -91,14 +87,12 @@ CREATE TABLE `outbox_test` (
         var columns = DdlColumnExtractor.GetExpectedColumns(ddl, QuoteStyle.MySql);
 
         //Assert
-        Assert.Equal(6, columns.Count);
-        Assert.True(
-            expected.SetEquals(columns),
-            $"Expected: [{string.Join(", ", expected)}], got: [{string.Join(", ", columns)}]");
+        await Assert.That(columns.Count).IsEqualTo(6);
+        await Assert.That(expected.SetEquals(columns)).IsTrue().Because($"Expected: [{string.Join(", ", expected)}], got: [{string.Join(", ", columns)}]");
     }
 
-    [Fact]
-    public void When_sqlite_ddl_with_collate_nocase_is_parsed_should_strip_collate_clause()
+    [Test]
+    public async Task When_sqlite_ddl_with_collate_nocase_is_parsed_should_strip_collate_clause()
     {
         //Arrange — SQLite frequently emits `COLLATE NOCASE` after the type specifier; the
         //extractor must read only the leading identifier and discard the trailing modifiers
@@ -121,9 +115,7 @@ CREATE TABLE [outbox_test] (
         var columns = DdlColumnExtractor.GetExpectedColumns(ddl, QuoteStyle.Sqlite);
 
         //Assert
-        Assert.Equal(6, columns.Count);
-        Assert.True(
-            expected.SetEquals(columns),
-            $"Expected: [{string.Join(", ", expected)}], got: [{string.Join(", ", columns)}]");
+        await Assert.That(columns.Count).IsEqualTo(6);
+        await Assert.That(expected.SetEquals(columns)).IsTrue().Because($"Expected: [{string.Join(", ", expected)}], got: [{string.Join(", ", columns)}]");
     }
 }

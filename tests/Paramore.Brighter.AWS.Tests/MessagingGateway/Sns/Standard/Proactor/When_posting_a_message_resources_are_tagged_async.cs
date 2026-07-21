@@ -10,12 +10,11 @@ using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor;
 
-[Trait("Category", "AWS")]
-public class SqsMessageProducerResourcesAreTaggedAsyncTests : IAsyncDisposable, IDisposable
+[Category("AWS")]
+public class SqsMessageProducerResourcesAreTaggedAsyncTests : IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
@@ -70,7 +69,7 @@ public class SqsMessageProducerResourcesAreTaggedAsyncTests : IAsyncDisposable, 
             });
     }
 
-    [Fact]
+    [Test]
     public async Task When_posting_a_message_resources_are_tagged_async()
     {
         //arrange
@@ -89,18 +88,19 @@ public class SqsMessageProducerResourcesAreTaggedAsyncTests : IAsyncDisposable, 
             new ListQueueTagsRequest { QueueUrl = queueUrlResponse.QueueUrl });
 
         //assert - topic has Environment=Test tag
-        Assert.Contains(topicTagsResponse.Tags, t => t.Key == "Environment" && t.Value == "Test");
+        await Assert.That((topicTagsResponse.Tags).Any(t => t.Key == "Environment" && t.Value == "Test")).IsTrue();
 
         //assert - queue has Environment=Test tag
-        Assert.True(queueTagsResponse.Tags.ContainsKey("Environment"));
-        Assert.Equal("Test", queueTagsResponse.Tags["Environment"]);
+        await Assert.That(queueTagsResponse.Tags.ContainsKey("Environment")).IsTrue();
+        await Assert.That(queueTagsResponse.Tags["Environment"]).IsEqualTo("Test");
     }
 
-    public void Dispose()
+    [After(Test)]
+    public async Task Cleanup()
     {
-        _channelFactory.DeleteTopicAsync().Wait();
-        _channelFactory.DeleteQueueAsync().Wait();
-        _messageProducer.Dispose();
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
+        await _messageProducer.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()

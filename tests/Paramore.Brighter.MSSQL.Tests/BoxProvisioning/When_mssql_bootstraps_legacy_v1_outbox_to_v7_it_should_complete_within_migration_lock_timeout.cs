@@ -28,11 +28,10 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.Legacy;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlLegacyV1ToV7BootstrapTimingTests : IAsyncLifetime
+public class MsSqlLegacyV1ToV7BootstrapTimingTests
 {
     private const int SeedVersion = 1;
     private static readonly TimeSpan MigrationLockTimeout = TimeSpan.FromSeconds(30);
@@ -41,7 +40,7 @@ public class MsSqlLegacyV1ToV7BootstrapTimingTests : IAsyncLifetime
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_mssql_bootstraps_legacy_v1_outbox_to_v7_it_should_complete_within_migration_lock_timeout()
     {
         //Arrange — seed a V1-shaped outbox (the heaviest bootstrap path: stamps V1 + applies V2..V7).
@@ -63,18 +62,15 @@ public class MsSqlLegacyV1ToV7BootstrapTimingTests : IAsyncLifetime
         stopwatch.Stop();
 
         //Assert — completes well under the NFR-3 lock timeout (30s); 5s gives CI noise headroom.
-        Assert.True(
-            stopwatch.Elapsed < Nfr3Budget,
-            $"V1→V7 bootstrap took {stopwatch.Elapsed.TotalMilliseconds:F0}ms, " +
-            $"NFR-3 budget is {Nfr3Budget.TotalMilliseconds:F0}ms.");
+        await Assert.That(stopwatch.Elapsed < Nfr3Budget).IsTrue();
 
         //Sanity — make sure we actually exercised the bootstrap path (not a no-op):
         // table reaches V7 shape and history shows synthetic V1 + applied V2..V7.
-        Assert.Contains("DataRef", GetTableColumns());
+        await Assert.That(GetTableColumns()).Contains("DataRef");
         var rowsByVersion = GetHistoryRowsByVersion();
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest, rowsByVersion.Count);
-        Assert.Contains(SeedVersion, rowsByVersion);
-        Assert.StartsWith($"bootstrap: detected at V{SeedVersion}", rowsByVersion[SeedVersion]);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest);
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion)).IsTrue();
+        await Assert.That(rowsByVersion[SeedVersion]).StartsWith($"bootstrap: detected at V{SeedVersion}");
     }
 
     private HashSet<string> GetTableColumns()
@@ -116,8 +112,10 @@ ORDER BY [MigrationVersion]";
         return rows;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

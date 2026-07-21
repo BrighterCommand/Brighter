@@ -27,11 +27,10 @@ using Npgsql;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.Outbox.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
+public class PostgreSqlRunnerFreshPathRecheckTests
 {
     private const string MarkerMessageId = "marker-row-must-survive";
 
@@ -46,7 +45,7 @@ public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
         _runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
     }
 
-    [Fact]
+    [Test]
     public async Task When_postgres_runner_fresh_path_acquires_advisory_lock_it_should_re_check_table_existence_before_creating()
     {
         //Arrange — simulate the TOCTOU race: another instance created the V_latest-shape outbox
@@ -68,13 +67,13 @@ public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
             BoxType.Outbox,
             staleState);
 
-        var ex = await Record.ExceptionAsync(act);
+        var ex = await TestExceptionRecorder.CaptureAsync(act);
 
         //Assert — no exception, ≥1 history row was inserted (proves bootstrap branch ran), and
         //the seeded marker row survived (no DROP/recreate happened).
-        Assert.Null(ex);
-        Assert.True(await GetHistoryRowCount() >= 1, "Bootstrap branch should have inserted at least one history row");
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(ex).IsNull();
+        await Assert.That(await GetHistoryRowCount() >= 1).IsTrue().Because("Bootstrap branch should have inserted at least one history row");
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private async Task ExecuteDdl(string sql)
@@ -118,8 +117,10 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

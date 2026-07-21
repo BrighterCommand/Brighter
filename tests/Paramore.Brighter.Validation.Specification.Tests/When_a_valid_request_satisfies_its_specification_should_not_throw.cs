@@ -24,14 +24,14 @@ THE SOFTWARE. */
 
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation.Specification.Tests.TestDoubles;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Validation.Specification.Tests;
 
 public class ValidSpecificationValidationTests
 {
-    [Fact]
-    public void When_a_valid_request_satisfies_its_specification_should_not_throw()
+    [Test]
+    public async Task When_a_valid_request_satisfies_its_specification_should_not_throw()
     {
         //Arrange
         var services = new ServiceCollection();
@@ -40,9 +40,17 @@ public class ValidSpecificationValidationTests
         var validRequest = new PlaceOrder { Sku = "SKU-1", Quantity = 5 };
 
         //Act
-        var exception = Record.Exception(() => handler.Handle(validRequest));
+        Exception? exception = null;
+        try
+        {
+            handler.Handle(validRequest);
+        }
+        catch (Exception e)
+        {
+            exception = e;
+        }
 
         //Assert
-        Assert.Null(exception);
+        await Assert.That(exception).IsNull();
     }
 }

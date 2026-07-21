@@ -29,10 +29,8 @@ using Paramore.Brighter.Mediator;
 
 namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    internal class MyEventHandlerAsync(Scheduler<WorkflowTestData>? scheduler) : RequestHandlerAsync<MyEvent>
+    internal class MyEventHandlerAsync(Scheduler<WorkflowTestData>? scheduler, WorkflowExecutionLog executionLog) : RequestHandlerAsync<MyEvent>
     {
-        public static List<MyEvent> ReceivedEvents { get;  } = [];
-
         public override async Task<MyEvent> HandleAsync(MyEvent @event, CancellationToken cancellationToken = default)
         {
             LogEvent(@event);
@@ -42,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
         
         private void LogEvent(MyEvent request)
         {
-            ReceivedEvents.Add(request);
+            executionLog.Events.Add(request);
         }
     }
 }

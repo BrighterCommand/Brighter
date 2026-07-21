@@ -4,11 +4,10 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class MsSqlOutboxProvisionerBootstrapTests : IAsyncLifetime
+public class MsSqlOutboxProvisionerBootstrapTests
 {
     private readonly string _connectionString;
     private readonly string _tableName;
@@ -35,7 +34,7 @@ public class MsSqlOutboxProvisionerBootstrapTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
     {
         //Arrange
@@ -60,7 +59,7 @@ WHERE [BoxTableName] = @BoxTableName AND [SchemaName] = 'dbo' AND [MigrationVers
         historyCheck.Parameters.AddWithValue("@BoxTableName", _tableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.OutboxLatest);
         var historyCount = (int)historyCheck.ExecuteScalar()!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
 
         // Verify the outbox table still exists (wasn't recreated)
         using var tableCheck = connection.CreateCommand();
@@ -70,11 +69,13 @@ INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
 WHERE t.name = @TableName AND s.name = 'dbo'";
         tableCheck.Parameters.AddWithValue("@TableName", _tableName);
         var tableCount = (int)tableCheck.ExecuteScalar()!;
-        Assert.Equal(1, tableCount);
+        await Assert.That(tableCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

@@ -36,15 +36,15 @@ using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
-using Xunit;
 using Baggage = OpenTelemetry.Baggage;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
 {
     public class MessageHeaderSerializationObservabilityTests
     {
         private const string ChannelName = "myChannel";
-        private readonly RoutingKey _routingKey = new("MyTopic");
+        private readonly RoutingKey _routingKey = new(nameof(MessageHeaderSerializationObservabilityTests));
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
@@ -109,12 +109,15 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             );
 
             channel.Enqueue(_message);
-            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey("MyTopic"));
+            var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
         }
 
-        [Fact]
-        public void When_a_message_is_dispatched_the_header_is_serialized_once_for_both_spans()
+        [After(Test)]
+        public void DisposeTraceProvider() => _traceProvider.Dispose();
+
+        [Test]
+        public async Task When_a_message_is_dispatched_the_header_is_serialized_once_for_both_spans()
         {
             // Act
             _messagePump.Run();
@@ -124,21 +127,21 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             var receiveSpan = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}"
                 && a.TagObjects.Any(to => to is { Value: not null, Key: BrighterSemanticConventions.MessageType } && Enum.Parse<MessageType>(to.Value.ToString() ?? string.Empty) == MessageType.MT_EVENT));
-            Assert.NotNull(receiveSpan);
+            await Assert.That(receiveSpan).IsNotNull();
 
             var processSpan = _exportedActivities.FirstOrDefault(a =>
                 a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Process.ToSpanName()}"
                 && a.TagObjects.Any(to => to is { Value: not null, Key: BrighterSemanticConventions.MessageType } && Enum.Parse<MessageType>(to.Value.ToString() ?? string.Empty) == MessageType.MT_EVENT));
-            Assert.NotNull(processSpan);
+            await Assert.That(processSpan).IsNotNull();
 
             var expectedHeaderJson = JsonSerializer.Serialize(_message.Header, JsonSerialisationOptions.Options);
             var receiveHeaderJson = receiveSpan!.TagObjects.Single(to => to.Key == BrighterSemanticConventions.MessageHeaders).Value;
             var processHeaderJson = processSpan!.TagObjects.Single(to => to.Key == BrighterSemanticConventions.MessageHeaders).Value;
-            Assert.Equal(expectedHeaderJson, receiveHeaderJson);
-            Assert.Equal(expectedHeaderJson, processHeaderJson);
+            await Assert.That(receiveHeaderJson).IsEqualTo(expectedHeaderJson);
+            await Assert.That(processHeaderJson).IsEqualTo(expectedHeaderJson);
 
             //both spans share one serialized header (Assert.Same: a never-interned string, so equal references prove reuse)
-            Assert.Same(receiveHeaderJson, processHeaderJson);
+            await Assert.That(processHeaderJson).IsSameReferenceAs(receiveHeaderJson);
         }
     }
 }

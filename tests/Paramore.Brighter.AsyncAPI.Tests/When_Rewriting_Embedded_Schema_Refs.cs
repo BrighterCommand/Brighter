@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FakeItEasy;
 using Neuroglia.AsyncApi.v3;
-using Xunit;
 
 namespace Paramore.Brighter.AsyncAPI.Tests
 {
@@ -62,7 +61,7 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             return schemaGenerator;
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Rewrite_Definitions_Refs_To_Resolve_Inside_Payload()
         {
             var schemaJson = """
@@ -98,22 +97,22 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Components?.Messages);
+            await Assert.That(result.Components?.Messages).IsNotNull();
             var message = result.Components.Messages["OrderWithAddress"];
-            Assert.NotNull(message.Payload);
+            await Assert.That(message.Payload).IsNotNull();
 
             // Shared definitions are hoisted to components.schemas; the message's $ref points
             // to the hoisted location and the inline definitions block is removed.
             var payload = (JsonElement)message.Payload.Schema;
             var addressRef = payload.GetProperty("properties").GetProperty("Address").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/schemas/AddressInfo", addressRef);
-            Assert.False(payload.TryGetProperty("definitions", out _));
+            await Assert.That(addressRef).IsEqualTo("#/components/schemas/AddressInfo");
+            await Assert.That(payload.TryGetProperty("definitions", out _)).IsFalse();
 
-            Assert.NotNull(result.Components.Schemas);
-            Assert.True(result.Components.Schemas!.ContainsKey("AddressInfo"));
+            await Assert.That(result.Components.Schemas).IsNotNull();
+            await Assert.That(result.Components.Schemas!.ContainsKey("AddressInfo")).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Rewrite_Defs_Refs_To_Resolve_Inside_Payload()
         {
             var schemaJson = """
@@ -148,20 +147,20 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Components?.Messages);
+            await Assert.That(result.Components?.Messages).IsNotNull();
             var message = result.Components.Messages["OrderWithContact"];
-            Assert.NotNull(message.Payload);
+            await Assert.That(message.Payload).IsNotNull();
 
             var payload = (JsonElement)message.Payload.Schema;
             var contactRef = payload.GetProperty("properties").GetProperty("Contact").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/schemas/ContactInfo", contactRef);
-            Assert.False(payload.TryGetProperty("$defs", out _));
+            await Assert.That(contactRef).IsEqualTo("#/components/schemas/ContactInfo");
+            await Assert.That(payload.TryGetProperty("$defs", out _)).IsFalse();
 
-            Assert.NotNull(result.Components.Schemas);
-            Assert.True(result.Components.Schemas!.ContainsKey("ContactInfo"));
+            await Assert.That(result.Components.Schemas).IsNotNull();
+            await Assert.That(result.Components.Schemas!.ContainsKey("ContactInfo")).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Not_Change_Payload_Without_Refs()
         {
             var schemaJson = """
@@ -189,16 +188,16 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Components?.Messages);
+            await Assert.That(result.Components?.Messages).IsNotNull();
             var message = result.Components.Messages["SimpleEvent"];
-            Assert.NotNull(message.Payload);
+            await Assert.That(message.Payload).IsNotNull();
 
             var payload = (JsonElement)message.Payload.Schema;
-            Assert.Equal("string", payload.GetProperty("properties").GetProperty("Name").GetProperty("type").GetString());
-            Assert.Equal("integer", payload.GetProperty("properties").GetProperty("Age").GetProperty("type").GetString());
+            await Assert.That(payload.GetProperty("properties").GetProperty("Name").GetProperty("type").GetString()).IsEqualTo("string");
+            await Assert.That(payload.GetProperty("properties").GetProperty("Age").GetProperty("type").GetString()).IsEqualTo("integer");
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Rewrite_Deeply_Nested_Refs()
         {
             var schemaJson = """
@@ -246,35 +245,35 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Components?.Messages);
+            await Assert.That(result.Components?.Messages).IsNotNull();
             var message = result.Components.Messages["ComplexOrder"];
-            Assert.NotNull(message.Payload);
+            await Assert.That(message.Payload).IsNotNull();
 
             var payload = (JsonElement)message.Payload.Schema;
 
             // Top-level property ref now points at the hoisted schema.
             var billingRef = payload.GetProperty("properties").GetProperty("Billing").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/schemas/BillingInfo", billingRef);
+            await Assert.That(billingRef).IsEqualTo("#/components/schemas/BillingInfo");
 
             // The local definitions block is removed from the message; the nested refs now
             // live inside the hoisted BillingInfo schema under components.schemas.
-            Assert.False(payload.TryGetProperty("definitions", out _));
+            await Assert.That(payload.TryGetProperty("definitions", out _)).IsFalse();
 
-            Assert.NotNull(result.Components.Schemas);
+            await Assert.That(result.Components.Schemas).IsNotNull();
             var schemas = result.Components.Schemas!;
-            Assert.True(schemas.ContainsKey("BillingInfo"));
-            Assert.True(schemas.ContainsKey("AddressInfo"));
-            Assert.True(schemas.ContainsKey("CardInfo"));
+            await Assert.That(schemas.ContainsKey("BillingInfo")).IsTrue();
+            await Assert.That(schemas.ContainsKey("AddressInfo")).IsTrue();
+            await Assert.That(schemas.ContainsKey("CardInfo")).IsTrue();
 
             var billing = (JsonElement)schemas["BillingInfo"].Schema;
             var addressRef = billing.GetProperty("properties").GetProperty("Address").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/schemas/AddressInfo", addressRef);
+            await Assert.That(addressRef).IsEqualTo("#/components/schemas/AddressInfo");
 
             var cardRef = billing.GetProperty("properties").GetProperty("Card").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/schemas/CardInfo", cardRef);
+            await Assert.That(cardRef).IsEqualTo("#/components/schemas/CardInfo");
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Rewrite_Refs_In_Array_Items()
         {
             var schemaJson = """
@@ -308,20 +307,20 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, schemaGenerator, null, publications);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Components?.Messages);
+            await Assert.That(result.Components?.Messages).IsNotNull();
             var message = result.Components.Messages["OrderWithItems"];
-            Assert.NotNull(message.Payload);
+            await Assert.That(message.Payload).IsNotNull();
 
             var payload = (JsonElement)message.Payload.Schema;
             var itemsRef = payload.GetProperty("properties").GetProperty("Items")
                 .GetProperty("items").GetProperty("$ref").GetString();
-            Assert.Equal("#/components/schemas/LineItem", itemsRef);
+            await Assert.That(itemsRef).IsEqualTo("#/components/schemas/LineItem");
 
-            Assert.NotNull(result.Components.Schemas);
-            Assert.True(result.Components.Schemas!.ContainsKey("LineItem"));
+            await Assert.That(result.Components.Schemas).IsNotNull();
+            await Assert.That(result.Components.Schemas!.ContainsKey("LineItem")).IsTrue();
         }
 
-        [Fact]
+        [Test]
         public async Task It_Should_Not_Rewrite_Non_Definition_Refs()
         {
             var schemaJson = """
@@ -348,13 +347,13 @@ namespace Paramore.Brighter.AsyncAPI.Tests
             var generator = new AsyncApiDocumentGenerator(_options, schemaGenerator, subscriptions, null);
             var result = await generator.GenerateAsync();
 
-            Assert.NotNull(result.Components?.Messages);
+            await Assert.That(result.Components?.Messages).IsNotNull();
             var message = result.Components.Messages["ExternalRefEvent"];
-            Assert.NotNull(message.Payload);
+            await Assert.That(message.Payload).IsNotNull();
 
             var payload = (JsonElement)message.Payload.Schema;
             var externalRef = payload.GetProperty("properties").GetProperty("External").GetProperty("$ref").GetString();
-            Assert.Equal("https://example.com/schemas/external.json", externalRef);
+            await Assert.That(externalRef).IsEqualTo("https://example.com/schemas/external.json");
         }
 
         // Test types

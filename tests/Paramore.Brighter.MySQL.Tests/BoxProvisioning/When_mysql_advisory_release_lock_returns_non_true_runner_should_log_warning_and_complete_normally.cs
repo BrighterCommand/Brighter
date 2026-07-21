@@ -31,11 +31,10 @@ using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.MySQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
+public class MySqlAdvisoryReleaseLockNonTrueTests
 {
     // MySQL RELEASE_LOCK has three outcomes: 1 (released by this session — true), 0 (lock
     // exists but held by another session — false), NULL (lock did not exist). The runner
@@ -44,11 +43,10 @@ public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
     // lock key, and the result code, then continue normally — the chain has already
     // committed by the time release runs. Per ADR 0057 §5b, this contract is the public
     // boundary between the runner and its IMySqlAdvisoryLock collaborator.
-
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_release_returns_false_it_should_log_one_warning_and_complete_migration()
     {
         await AssertSingleWarningAndMigrationCompletes(
@@ -56,7 +54,7 @@ public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
             expectedResultMarker: "0");
     }
 
-    [Fact]
+    [Test]
     public async Task When_release_returns_null_it_should_log_one_warning_and_complete_migration()
     {
         await AssertSingleWarningAndMigrationCompletes(
@@ -64,7 +62,7 @@ public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
             expectedResultMarker: "NULL");
     }
 
-    [Fact]
+    [Test]
     public async Task When_release_returns_true_it_should_complete_migration_with_no_warning()
     {
         //Arrange — happy-path fake returns 1 (released by us).
@@ -82,8 +80,8 @@ public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
             _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert — migration committed normally and no warning was emitted.
-        Assert.Equal(1, await GetBoxTableCount());
-        Assert.DoesNotContain(capturingLogger.Entries, e => e.Level == LogLevel.Warning);
+        await Assert.That(await GetBoxTableCount()).IsEqualTo(1);
+        await Assert.That((capturingLogger.Entries).Any(e => e.Level == LogLevel.Warning)).IsFalse();
     }
 
     private async Task AssertSingleWarningAndMigrationCompletes(bool? releaseResult, string expectedResultMarker)
@@ -105,7 +103,7 @@ public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
             _tableName, schemaName: null, BoxType.Outbox, freshHint);
 
         //Assert — migration committed normally: box table created.
-        Assert.Equal(1, await GetBoxTableCount());
+        await Assert.That(await GetBoxTableCount()).IsEqualTo(1);
 
         //Assert — fake observed acquire and release under the expected lock key
         //         (derived via the existing public MySqlMigrationLockName.For helper).
@@ -113,17 +111,17 @@ public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
         //bound database — "BrighterTests" here) in the runner, and the lock key folds the schema
         //in to keep same-named tables in different schemas from sharing a lock. See Item O.
         var expectedLockKey = MySqlMigrationLockName.For("BrighterTests", _tableName);
-        Assert.Equal(expectedLockKey, fakeLock.AcquiredKey);
-        Assert.Equal(expectedLockKey, fakeLock.ReleasedKey);
+        await Assert.That(fakeLock.AcquiredKey).IsEqualTo(expectedLockKey);
+        await Assert.That(fakeLock.ReleasedKey).IsEqualTo(expectedLockKey);
 
         //Assert — exactly one Warning entry whose message names the table name, lock key,
         //         and result-code marker, with no exception attached (diagnostic only).
         var warnings = capturingLogger.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
-        Assert.Single(warnings);
-        Assert.Contains(_tableName, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Contains(expectedLockKey, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Contains(expectedResultMarker, warnings[0].Message, StringComparison.Ordinal);
-        Assert.Null(warnings[0].Exception);
+        await Assert.That(warnings).HasSingleItem();
+        await Assert.That(warnings[0].Message).Contains(_tableName);
+        await Assert.That(warnings[0].Message).Contains(expectedLockKey);
+        await Assert.That(warnings[0].Message).Contains(expectedResultMarker);
+        await Assert.That(warnings[0].Exception).IsNull();
     }
 
     private async Task<int> GetBoxTableCount()
@@ -138,8 +136,10 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @TableName";
         return Convert.ToInt32(await command.ExecuteScalarAsync());
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

@@ -28,16 +28,16 @@ using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.BoxProvisioning.Tests.Drift;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MSSQL.Tests.BoxProvisioning.Drift;
-using Xunit;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
 public class MsSqlInboxBuilderDriftTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_mssql_inbox_builder_is_compared_to_v2_migration_columns_it_should_have_identical_expected_column_set(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_mssql_inbox_builder_is_compared_to_v2_migration_columns_it_should_have_identical_expected_column_set(
         bool hasBinaryMessagePayload)
     {
         //Arrange — drive the builder DDL and the V_latest LogicalColumns from the same config
@@ -61,16 +61,13 @@ public class MsSqlInboxBuilderDriftTests
         migrationColumns.UnionWith(MsSqlInboxHousekeeping.V1);
 
         //Assert
-        Assert.True(
-            builderColumns.SetEquals(migrationColumns),
-            $"Builder columns: [{string.Join(", ", builderColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}], " +
-            $"V_latest ∪ housekeeping: [{string.Join(", ", migrationColumns.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))}]");
+        await Assert.That(builderColumns.SetEquals(migrationColumns)).IsTrue();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_mssql_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_mssql_inbox_v1_upscript_is_inspected_it_should_carry_born_past_v1_historical_baseline_with_contextkey(
         bool hasBinaryMessagePayload)
     {
         //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
@@ -89,15 +86,15 @@ public class MsSqlInboxBuilderDriftTests
         var migrations = new MsSqlInboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
-        Assert.Equal(1, v1.Version.Value);
-        Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
+        await Assert.That(v1.Version.Value).IsEqualTo(1);
+        await Assert.That(v1.UpScript.Value).Contains("ContextKey");
+        await Assert.That(v1.UpScript.Value).Contains("CommandBody");
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void When_mssql_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task When_mssql_inbox_fresh_install_ddl_is_inspected_it_should_match_live_builder(
         bool hasBinaryMessagePayload)
     {
         //Spec 0027 R1 Part 1 contract: FreshInstallDdl on the catalog is the canonical source
@@ -113,6 +110,6 @@ public class MsSqlInboxBuilderDriftTests
         var expected = SqlInboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
         var actual = new MsSqlInboxMigrationCatalog().FreshInstallDdl(config);
 
-        Assert.Equal(expected, actual);
+        await Assert.That(actual).IsEqualTo(expected);
     }
 }

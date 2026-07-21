@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,17 +8,16 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
 {
-    [Trait("Category", "InMemory")]
-    [Collection("CommandProcess")]
+    [Category("InMemory")]
+    [NotInParallel("CommandProcess")]
     public class SweeperTests
     {
         private const string MyTopic = "MyTopic";
 
-        [Fact]
+        [Test]
         public async Task When_outstanding_in_outbox_sweep_clears_them()
         {
             //Arrange
@@ -84,11 +83,11 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            Assert.Equal(3, internalBus.Stream(routingKey).Count());
-            Assert.Empty(await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext()));
+            await Assert.That(internalBus.Stream(routingKey).Count()).IsEqualTo(3);
+            await Assert.That(await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext())).IsEmpty();
         }
 
-        [Fact]
+        [Test]
         public async Task When_outstanding_in_outbox_sweep_clears_them_async()
         {
             //Arrange
@@ -155,11 +154,11 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            Assert.Equal(3, internalBus.Stream(routingKey).Count());
-            Assert.Empty((await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext())));
+            await Assert.That(internalBus.Stream(routingKey).Count()).IsEqualTo(3);
+            await Assert.That((await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext()))).IsEmpty();
         }
 
-        [Fact]
+        [Test]
         public async Task When_too_new_to_sweep_leaves_them()
         {
             //Arrange
@@ -233,11 +232,11 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            Assert.Single(internalBus.Stream(routingKey));
-            Assert.Equal(3, outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count());
+            await Assert.That(internalBus.Stream(routingKey)).HasSingleItem();
+            await Assert.That((await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext())).Count()).IsEqualTo(3);
         }
 
-        [Fact]
+        [Test]
         public async Task When_too_new_to_sweep_leaves_them_async()
         {
             //Arrange
@@ -308,8 +307,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            Assert.Single(internalBus.Stream(routingKey));
-            Assert.Equal(3, (await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext())).Count());
+            await Assert.That(internalBus.Stream(routingKey)).HasSingleItem();
+            await Assert.That((await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext())).Count()).IsEqualTo(3);
         }
     }
 }

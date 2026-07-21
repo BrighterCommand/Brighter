@@ -5,13 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using Xunit;
+using TUnit.Assertions;
+using TUnit.Core;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Proactor;
 
-[Trait("Category", "RMQ")]
-[Collection("Classic")]
-public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IAsyncLifetime
+[Property("Category", "RMQ")]
+[NotInParallel("Classic")]
+public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -32,22 +33,26 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
         _messageAssertion = new RmqMessageAssertion();
     }
 
+    [Before(Test)]
+
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
+
+    [After(Test)]
 
     public async Task DisposeAsync()
     {
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Test]
     public async Task When_posting_a_message_via_the_messaging_gateway_should_be_received_async()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
-        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
+        _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
             OnMissingChannel.Create);
 
@@ -63,7 +68,7 @@ public class WhenPostingAMessageViaTheMessagingGatewayShouldBeReceivedAsync : IA
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(4000));
 
         // Assert
-        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
-        _messageAssertion.Assert(message, received);
+        await Assert.That(received.Header.MessageType).IsNotEqualTo(MessageType.MT_NONE);
+        await _messageAssertion.AssertAsync(message, received);
     }
 }

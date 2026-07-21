@@ -26,7 +26,6 @@ using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
@@ -35,7 +34,7 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // physically created in THAT schema (not dbo). Detection (existence + max version) and writes
 // (CREATE + INSERT) all target the same per-schema table, so a second run re-detects from the
 // per-schema history and does not re-run the migration.
-public class MsSqlOutboxProvisionerSchemaTests : IAsyncLifetime
+public class MsSqlOutboxProvisionerSchemaTests
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
@@ -60,7 +59,7 @@ public class MsSqlOutboxProvisionerSchemaTests : IAsyncLifetime
             runner);
     }
 
-    [Fact]
+    [Test]
     public async Task When_mssql_per_schema_scope_is_selected_it_should_create_history_table_in_configured_schema()
     {
         //Arrange — operator pre-creates the schema; runner does not create schemas itself.
@@ -70,29 +69,27 @@ public class MsSqlOutboxProvisionerSchemaTests : IAsyncLifetime
         DropAnyExistingTable("__BrighterMigrationHistory", _schemaName);
 
         //Act — first fresh-install run under PerSchema
-        var firstException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var firstException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert — history table lives in the configured schema.
-        Assert.Null(firstException);
-        Assert.True(
-            TableExistsInSchema("__BrighterMigrationHistory", _schemaName),
-            $"History table must exist in '{_schemaName}' under PerSchema scope.");
+        await Assert.That(firstException).IsNull();
+        await Assert.That(TableExistsInSchema("__BrighterMigrationHistory", _schemaName)).IsTrue().Because($"History table must exist in '{_schemaName}' under PerSchema scope.");
 
         //Assert — the box table and a history row recording its SchemaName are present per-schema.
-        Assert.True(TableExistsInSchema(_tableName, _schemaName));
-        Assert.Equal(1, GetHistoryRowCount(_schemaName, _tableName));
+        await Assert.That(TableExistsInSchema(_tableName, _schemaName)).IsTrue();
+        await Assert.That(GetHistoryRowCount(_schemaName, _tableName)).IsEqualTo(1);
 
         //Assert — no fall-back to dbo: this tenant wrote no row to the shared dbo history table.
         // (dbo.__BrighterMigrationHistory is a global table that may pre-exist from Global-scope
         // tests, so the meaningful check is row-level, not table existence.)
-        Assert.Equal(0, GetHistoryRowCount("dbo", _tableName));
+        await Assert.That(GetHistoryRowCount("dbo", _tableName)).IsEqualTo(0);
 
         //Act — second run re-detects from the per-schema history; no migration re-run.
-        var secondException = await Record.ExceptionAsync(() => _provisioner.ProvisionAsync());
+        var secondException = await TestExceptionRecorder.CaptureAsync(() => _provisioner.ProvisionAsync());
 
         //Assert — idempotent: still exactly one history row in the per-schema table.
-        Assert.Null(secondException);
-        Assert.Equal(1, GetHistoryRowCount(_schemaName, _tableName));
+        await Assert.That(secondException).IsNull();
+        await Assert.That(GetHistoryRowCount(_schemaName, _tableName)).IsEqualTo(1);
     }
 
     private void EnsureSchemaExists(string schemaName) =>
@@ -148,8 +145,10 @@ IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = '{schemaName}')
         command.ExecuteNonQuery();
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public Task DisposeAsync()
     {
         try

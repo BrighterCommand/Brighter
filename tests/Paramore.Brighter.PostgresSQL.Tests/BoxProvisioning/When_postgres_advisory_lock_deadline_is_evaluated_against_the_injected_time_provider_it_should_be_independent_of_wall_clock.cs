@@ -33,11 +33,10 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
+public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests
 {
     // PostgreSqlAdvisoryLock previously read DateTime.UtcNow to compute the timeout deadline.
     // A wall-clock jump (NTP correction during a long lock wait, leap-second smear, container
@@ -47,7 +46,6 @@ public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
     // advancing FakeTimeProvider by timeout + 1s while the lock is genuinely held by another
     // session must cause Acquire to throw TimeoutException — the wall clock barely moves,
     // proving the deadline check is driven by the injected provider, not DateTime.UtcNow.
-
     // Mirror the namespace constant in PostgreSqlAdvisoryLock so the holder session's lock collides
     // on the same derived bigint key the production code uses. DeriveLockKey is private in the
     // production class (ADR 0062, NFR-3), so the derivation is replicated inline below: the namespace
@@ -61,7 +59,7 @@ public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
     private NpgsqlConnection? _holderConnection;
     private NpgsqlConnection? _contenderConnection;
 
-    [Fact]
+    [Test]
     public async Task When_postgres_advisory_lock_deadline_is_evaluated_against_the_injected_time_provider_it_should_be_independent_of_wall_clock()
     {
         // Arrange — ensure database exists, then open two distinct sessions. The first
@@ -109,9 +107,8 @@ public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
         // Assert — message names the lock key, and the wall clock barely moved. The 5s ceiling
         //          is generous for a CI-loaded run; the real wall-clock budget is dominated by
         //          the 100-1000ms exponential-backoff Task.Delay between retries.
-        Assert.Contains(_lockKey, thrown.Message, StringComparison.Ordinal);
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
-            $"Wall-clock elapsed {stopwatch.Elapsed.TotalSeconds:F2}s — deadline should have fired against the fake provider, not the wall clock.");
+        await Assert.That(thrown.Message).Contains(_lockKey);
+        await Assert.That(stopwatch.Elapsed < TimeSpan.FromSeconds(5)).IsTrue().Because($"Wall-clock elapsed {stopwatch.Elapsed.TotalSeconds:F2}s — deadline should have fired against the fake provider, not the wall clock.");
     }
 
     // Replicates PostgreSqlAdvisoryLock.DeriveLockKey (private in production, ADR 0062) so the
@@ -123,8 +120,10 @@ public class PostgreSqlAdvisoryLockDeadlineTimeProviderTests : IAsyncLifetime
         return BinaryPrimitives.ReadInt64BigEndian(hash);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

@@ -28,11 +28,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlAdvisoryLockBigintOverloadTests : IAsyncLifetime
+public class PostgreSqlAdvisoryLockBigintOverloadTests
 {
     // PostgreSqlAdvisoryLock derives a SHA-256 64-bit key in C# and locks via the single-argument
     // pg_try_advisory_lock(bigint) / pg_advisory_unlock(bigint) overloads (ADR 0062). PostgreSQL
@@ -40,7 +39,6 @@ public class PostgreSqlAdvisoryLockBigintOverloadTests : IAsyncLifetime
     // objsubid = 1, whereas the legacy two-int4 overload (with hashtext) records objsubid = 2.
     // Observing objsubid = 1 from the same backend session while the lock is held therefore proves
     // the bigint overload was used and hashtext / the (int4, int4) form was not (AC-1, AC-2, AC-12).
-
     // Pooling is disabled so the test runs on a fresh backend with no residual advisory locks from
     // a recycled pooled session, making the pg_locks observation deterministic.
     private readonly string _connectionString =
@@ -50,7 +48,7 @@ public class PostgreSqlAdvisoryLockBigintOverloadTests : IAsyncLifetime
 
     private NpgsqlConnection? _connection;
 
-    [Fact]
+    [Test]
     public async Task When_postgres_advisory_lock_acquires_and_releases_it_should_use_the_single_arg_bigint_overload()
     {
         // Arrange — ensure the database exists and open a single backend session on which the
@@ -69,16 +67,16 @@ public class PostgreSqlAdvisoryLockBigintOverloadTests : IAsyncLifetime
         // Assert — exactly one advisory lock is held by this backend, and its objsubid is 1,
         //          proving the single-argument bigint overload (not the two-int4 / hashtext form).
         var heldObjsubid = await SingleAdvisoryLockObjsubidOrNull(_connection);
-        Assert.Equal(1, heldObjsubid);
+        await Assert.That(heldObjsubid).IsEqualTo(1);
 
         // Act — release the lock using the same key.
         var released = await advisoryLock.ReleaseAsync(_connection, _lockKey, CancellationToken.None);
 
         // Assert — release reports success and the advisory lock is gone from this session,
         //          confirming acquire and release named the same derived bigint key.
-        Assert.True(released);
+        await Assert.That(released).IsTrue();
         var objsubidAfterRelease = await SingleAdvisoryLockObjsubidOrNull(_connection);
-        Assert.Null(objsubidAfterRelease);
+        await Assert.That(objsubidAfterRelease).IsNull();
     }
 
     // Returns the objsubid of the single advisory lock held by this backend session, or null if
@@ -94,12 +92,14 @@ public class PostgreSqlAdvisoryLockBigintOverloadTests : IAsyncLifetime
         if (!await reader.ReadAsync()) return null;
 
         var objsubid = reader.GetInt32(0);
-        Assert.False(await reader.ReadAsync(), "Expected at most one advisory lock on this session.");
+        await Assert.That(await reader.ReadAsync()).IsFalse().Because("Expected at most one advisory lock on this session.");
         return objsubid;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

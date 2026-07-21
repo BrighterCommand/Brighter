@@ -30,7 +30,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Confirmation
 {
@@ -80,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new MessageBody("test"));
         }
 
-        [Fact]
+        [Test]
         public async Task When_a_confirmation_fails_should_not_dispatch_or_bubble()
         {
             // Arrange: the message is recorded in the outbox as outstanding (un-dispatched), as it
@@ -99,8 +98,8 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             var dispatched = _outbox.DispatchedMessages(TimeSpan.Zero, _requestContext).ToList();
             var outstanding = _outbox.OutstandingMessages(TimeSpan.Zero, _requestContext).ToList();
 
-            Assert.DoesNotContain(dispatched, m => m.Id == _message.Id);
-            Assert.Contains(outstanding, m => m.Id == _message.Id);
+            await Assert.That((dispatched).Any(m => m.Id == _message.Id)).IsFalse();
+            await Assert.That((outstanding).Any(m => m.Id == _message.Id)).IsTrue();
         }
     }
 }

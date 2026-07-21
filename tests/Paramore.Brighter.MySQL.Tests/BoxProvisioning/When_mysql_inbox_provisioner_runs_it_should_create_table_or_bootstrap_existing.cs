@@ -3,11 +3,10 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.BoxProvisioning.MySql;
 using Paramore.Brighter.Inbox.MySql;
-using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class InboxProvisionerTests : IAsyncLifetime
+public class InboxProvisionerTests
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _freshTableName;
@@ -19,7 +18,7 @@ public class InboxProvisionerTests : IAsyncLifetime
         _existingTableName = $"test_inbox_{Guid.NewGuid():N}";
     }
 
-    [Fact]
+    [Test]
     public async Task When_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table()
     {
         // Arrange
@@ -47,7 +46,7 @@ SELECT EXISTS(SELECT 1 FROM information_schema.tables
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = @TableName)";
         tableCheck.Parameters.AddWithValue("@TableName", _freshTableName);
         var tableExists = Convert.ToBoolean(await tableCheck.ExecuteScalarAsync());
-        Assert.True(tableExists);
+        await Assert.That(tableExists).IsTrue();
 
         using var historyCheck = connection.CreateCommand();
         historyCheck.CommandText = @"
@@ -56,10 +55,10 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _freshTableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public async Task When_inbox_provisioner_runs_against_existing_table_without_history_it_should_bootstrap_existing()
     {
         // Arrange — create inbox table directly (simulating pre-migration install)
@@ -97,11 +96,13 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         historyCheck.Parameters.AddWithValue("@BoxTableName", _existingTableName);
         historyCheck.Parameters.AddWithValue("@ExpectedVersion", ExpectedMigrationVersions.InboxLatest);
         var historyCount = (long)(await historyCheck.ExecuteScalarAsync())!;
-        Assert.Equal(1, historyCount);
+        await Assert.That(historyCount).IsEqualTo(1);
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

@@ -29,11 +29,10 @@ using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.PostgreSql;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.Legacy;
 using Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
+public class PostgreSqlRunnerMidChainFailureRollbackTests
 {
     private const int SeedVersion = 3;
     private const int BrokenVersion = 6;
@@ -44,7 +43,7 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
-    [Fact]
+    [Test]
     public async Task When_postgres_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically()
     {
         //Arrange — seed an outbox at V3 (no history) plus a marker row to prove preservation.
@@ -67,16 +66,16 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
             _tableName, schemaName: null, BoxType.Outbox, staleHint));
 
         //Assert — no history rows for this box (synthetic V3 + V4/V5 applied rows all rolled back).
-        Assert.Empty(await GetHistoryRowsByVersion());
+        await Assert.That(await GetHistoryRowsByVersion()).IsEmpty();
 
         //Assert — table still at V3 shape (V4 partitionkey ALTER rolled back; V5+ never reached).
         var columnsAfterFailure = await GetTableColumns();
-        Assert.Contains("contenttype", columnsAfterFailure); // V3 column present
-        Assert.DoesNotContain("partitionkey", columnsAfterFailure); // V4 column rolled back
-        Assert.DoesNotContain("source", columnsAfterFailure); // V5 column never applied
+        await Assert.That(columnsAfterFailure).Contains("contenttype"); // V3 column present
+        await Assert.That(columnsAfterFailure).DoesNotContain("partitionkey"); // V4 column rolled back
+        await Assert.That(columnsAfterFailure).DoesNotContain("source"); // V5 column never applied
 
         //Assert — seeded marker row preserved (no DROP/recreate happened).
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
 
         //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
         var realRunner = new PostgreSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
@@ -90,25 +89,25 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
 
         //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).
         var rowsByVersion = await GetHistoryRowsByVersion();
-        Assert.Equal(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1, rowsByVersion.Count);
+        await Assert.That(rowsByVersion.Count).IsEqualTo(ExpectedMigrationVersions.OutboxLatest - SeedVersion + 1);
 
-        var syntheticDescription = Assert.Contains(SeedVersion, rowsByVersion);
-        Assert.StartsWith($"bootstrap: detected at V{SeedVersion}", syntheticDescription);
+        await Assert.That(rowsByVersion.ContainsKey(SeedVersion)).IsTrue();
+
+        var syntheticDescription = rowsByVersion[SeedVersion];
+        await Assert.That(syntheticDescription).StartsWith($"bootstrap: detected at V{SeedVersion}");
 
         for (var v = SeedVersion + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
-            var appliedDescription = Assert.Contains(v, rowsByVersion);
-            Assert.False(
-                appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal),
-                $"V{v} should be an applied migration row, not a synthetic bootstrap row " +
-                $"(description was: '{appliedDescription}')");
+            await Assert.That(rowsByVersion.ContainsKey(v)).IsTrue();
+            var appliedDescription = rowsByVersion[v];
+            await Assert.That(appliedDescription.StartsWith("bootstrap:", StringComparison.Ordinal)).IsFalse();
         }
 
         //Assert — table now at V7 shape with marker row still present.
         var columnsAfterRetry = await GetTableColumns();
-        Assert.Contains("dataref", columnsAfterRetry); // V7 column
-        Assert.Contains("partitionkey", columnsAfterRetry); // V4 column applied on retry
-        Assert.Equal(1, await GetMarkerRowCount());
+        await Assert.That(columnsAfterRetry).Contains("dataref"); // V7 column
+        await Assert.That(columnsAfterRetry).Contains("partitionkey"); // V4 column applied on retry
+        await Assert.That(await GetMarkerRowCount()).IsEqualTo(1);
     }
 
     private async Task SeedMarkerRow()
@@ -177,8 +176,10 @@ ORDER BY ""MigrationVersion""";
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    [Before(Test)]
     public Task InitializeAsync() => Task.CompletedTask;
 
+    [After(Test)]
     public async Task DisposeAsync()
     {
         try

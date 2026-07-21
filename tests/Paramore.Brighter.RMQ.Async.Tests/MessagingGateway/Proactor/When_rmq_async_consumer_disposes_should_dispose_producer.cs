@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +27,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
@@ -35,7 +34,7 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 /// When the RMQ async consumer is disposed, it should also dispose any lazily created producer.
 /// If no producer was created, disposal should still succeed without error.
 /// </summary>
-[Trait("Category", "RMQ")]
+[Category("RMQ")]
 public class When_rmq_async_consumer_disposes_should_dispose_producer
 {
     private readonly RmqMessagingGatewayConnection _rmqConnection;
@@ -49,8 +48,8 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
         };
     }
 
-    [Fact]
-    public void When_disposing_without_producer_created_should_not_throw()
+    [Test]
+    public async Task When_disposing_without_producer_created_should_not_throw()
     {
         // Arrange - consumer that never requeued with delay (no producer created)
         var consumer = new RmqMessageConsumer(
@@ -60,11 +59,10 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
             isDurable: false);
 
         // Act & Assert - should not throw
-        var exception = Record.Exception(() => consumer.Dispose());
-        Assert.Null(exception);
+        await Assert.That(() => consumer.Dispose()).ThrowsNothing();
     }
 
-    [Fact]
+    [Test]
     public async Task When_disposing_after_delayed_requeue_should_not_throw()
     {
         // Arrange
@@ -93,17 +91,16 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
         // Send, receive, and requeue with delay to trigger producer creation
         await sendProducer.SendAsync(message);
         var received = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
-        Assert.NotEmpty(received);
+        await Assert.That(received).IsNotEmpty();
         await consumer.RequeueAsync(received[0], TimeSpan.FromSeconds(5));
 
         // Act & Assert - disposing consumer should also dispose the lazily created producer
-        var exception = Record.Exception(() => consumer.Dispose());
-        Assert.Null(exception);
+        await Assert.That(() => consumer.Dispose()).ThrowsNothing();
 
         sendProducer.Dispose();
     }
 
-    [Fact]
+    [Test]
     public async Task When_disposing_async_after_delayed_requeue_should_not_throw()
     {
         // Arrange
@@ -132,12 +129,11 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
         // Send, receive, and requeue with delay to trigger producer creation
         await sendProducer.SendAsync(message);
         var received = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
-        Assert.NotEmpty(received);
+        await Assert.That(received).IsNotEmpty();
         await consumer.RequeueAsync(received[0], TimeSpan.FromSeconds(5));
 
         // Act & Assert - async disposing consumer should also dispose the lazily created producer
-        var exception = await Record.ExceptionAsync(async () => await consumer.DisposeAsync());
-        Assert.Null(exception);
+        await Assert.That(async () => await consumer.DisposeAsync()).ThrowsNothing();
 
         await sendProducer.DisposeAsync();
     }

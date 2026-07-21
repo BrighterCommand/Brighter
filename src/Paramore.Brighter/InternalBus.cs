@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -48,11 +48,15 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
     public void Enqueue(Message message, TimeSpan? timeout = null)
     {
         timeout ??= TimeSpan.FromMilliseconds(-1);
-        
+
         ValidateMillisecondsTimeout(timeout.Value);
         
         var topic = message.Header.Topic;
 
+        // GetOrAdd guarantees we enqueue to the collection that's actually stored in
+        // the dictionary — the previous TryGetValue/TryAdd pair lost messages under
+        // concurrent first-write contention because the losing thread enqueued to its
+        // own dangling BlockingCollection.
         var blockingCollection = _messages.GetOrAdd(topic, _ => boundedCapacity > 0
             ? new BlockingCollection<Message>(boundedCapacity)
             : new BlockingCollection<Message>());

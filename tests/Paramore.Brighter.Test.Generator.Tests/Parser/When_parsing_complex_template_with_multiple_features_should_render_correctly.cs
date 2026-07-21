@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.Parser;
 
@@ -15,7 +14,7 @@ public class WhenParsingComplexTemplateWithMultipleFeaturesShouldRenderCorrectly
         Directory.CreateDirectory(_testDirectory);
     }
 
-    [Fact]
+    [Test]
     public async Task When_parsing_complex_template_with_multiple_features_should_render_correctly()
     {
         // Arrange
@@ -26,8 +25,8 @@ namespace {{ Namespace }}
     public class {{ Prefix }}TransactionTests
     {
         {% for test in Tests %}
-        [Fact]
-        public void {{ test }}() { }
+        [Test]
+        public async Task {{ test }}() { }
         {% endfor %}
     }
     {% endif %}
@@ -52,10 +51,10 @@ namespace {{ Namespace }}
 
         // Assert
         var result = await File.ReadAllTextAsync(outputPath);
-        Assert.Contains("namespace MyApp.Tests", result);
-        Assert.Contains("SqlServerTransactionTests", result);
-        Assert.Contains("Test1", result);
-        Assert.Contains("Test2", result);
+        await Assert.That(result).Contains("namespace MyApp.Tests");
+        await Assert.That(result).Contains("SqlServerTransactionTests");
+        await Assert.That(result).Contains("Test1");
+        await Assert.That(result).Contains("Test2");
     }
     
     public void Dispose()
