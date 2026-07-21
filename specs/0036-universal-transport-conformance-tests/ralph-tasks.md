@@ -61,7 +61,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~MessagingGatewayGenerator"`
   - **References**: requirements FR-1(1),(2),(3),(5),(6), AC-1; ADR 0066 "Architecture Overview" (interface sketch), "Read-member contract", "Implementation Approach → before→after"; the positional-`true` trap verified at line 48 of the Reactor exhaustion `.liquid`.
 
-- [ ] **Add the Shared/RejectionMetadataKeys template and once-per-config generation mode**
+- [x] **Add the Shared/RejectionMetadataKeys template and once-per-config generation mode**
   - **Behavior**: A new third template directory `Shared/` holds `RejectionMetadataKeys.cs.liquid`, a `sealed record RejectionMetadataKeys(string OriginalTopic, string OriginalType, string RejectionReason, string RejectionMessage, string RejectionTimestamp)`. The generator gains a generation mode that emits it **once per gateway configuration** (not once per variant) to `Generated/RejectionMetadataKeys.cs` in the parent namespace `{{ Namespace }}.MessagingGateway{{ Prefix }}` — a sibling of `Reactor/` and `Proactor/`, both of which already have the parent namespace in scope.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/MessagingGatewayGenerator/When_generating_gateway_should_emit_rejection_metadata_keys_once_per_config.cs`
   - **Test should verify**:

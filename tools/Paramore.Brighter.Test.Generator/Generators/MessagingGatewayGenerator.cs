@@ -66,6 +66,13 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
                 configuration.MessagingGateway,
                 filename => SkipTest(configuration.MessagingGateway, filename)
             );
+
+            await GenerateAsync(
+                configuration,
+                Path.Combine("MessagingGateway", prefix, "Generated"),
+                Path.Combine("MessagingGateway", "Shared"),
+                configuration.MessagingGateway
+            );
         }
         else if (configuration.MessagingGateways != null)
         {
@@ -94,6 +101,13 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
                     Path.Combine("MessagingGateway", "Proactor"),
                     messagingGatewayConfiguration,
                     filename => SkipTest(messagingGatewayConfiguration, filename)
+                );
+
+                await GenerateAsync(
+                    configuration,
+                    Path.Combine("MessagingGateway", prefix, "Generated"),
+                    Path.Combine("MessagingGateway", "Shared"),
+                    messagingGatewayConfiguration
                 );
             }
         }
