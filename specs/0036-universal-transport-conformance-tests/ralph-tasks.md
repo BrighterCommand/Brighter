@@ -211,7 +211,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-22, FR-15 (scoping), AC-25, NFR-1, NFR-2, AC-20; ADR 0066 "Delete the broken template" (no-delay canonical templates are legitimate).
 
-- [ ] **Canonical requeue-with-delay (FR-2, before-D / after-D arms)**
+- [x] **Canonical requeue-with-delay (FR-2, before-D / after-D arms)**
   - **Behavior**: Generate a canonical test proving that after `channel.Requeue(M, 5s)`: `Requeue` returns `true`; an immediate single bounded receive (before 5s) yields `MT_NONE` (the lower-bound arm); and a receive within the bounded retry loop after the delay yields a message with `M`'s body. No mechanism assertion. This is the arm GCP ×4 fail (immediate redelivery) and that RocketMQ passes-before / fails-after (no-op held by invisibility timeout).
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_requeue_with_delay_should_emit_before_and_after_arms_both_variants.cs`
   - **Test should verify**:
