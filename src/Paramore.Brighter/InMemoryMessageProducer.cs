@@ -29,6 +29,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
@@ -38,13 +40,15 @@ namespace Paramore.Brighter
     /// The in-memory producer is mainly intended for usage with tests. It allows you to send messages to a bus and
     /// then inspect the messages that have been sent.
     /// </summary>
-    public sealed class InMemoryMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync, ISupportPublishConfirmation
+    public sealed partial class InMemoryMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync, ISupportPublishConfirmation, ISupportPublishConfirmationAsync
     {
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryMessageProducer>();
         private readonly IAmABus _bus;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly System.Threading.Channels.Channel<WorkItem> _channel =
             System.Threading.Channels.Channel.CreateUnbounded<WorkItem>(new UnboundedChannelOptions { SingleReader = true });
         private readonly List<Task> _raiseTasks = new(); // drain worker is single-threaded; read only after worker completes
+        private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
         // volatile so a DisposeAsync on another thread sees the worker the CAS winner publishes (NFR-3)
         private volatile Task? _worker;
         private int _pumpStarted; // 0 = not started, 1 = started; CAS guard
@@ -125,6 +129,12 @@ namespace Paramore.Brighter
         /// What action should we take on confirmation that a message has been published to a broker
         /// </summary>
         public event Action<PublishConfirmationResult>? OnMessagePublished;
+
+        event Func<PublishConfirmationResult, Task> ISupportPublishConfirmationAsync.OnMessagePublishedAsync
+        {
+            add => _onMessagePublishedAsync += value;
+            remove => _onMessagePublishedAsync -= value;
+        }
 
         /// <summary>
         /// Dispose of the producer. Blocks until any in-flight async pump has fully drained
@@ -239,6 +249,9 @@ namespace Paramore.Brighter
 
         private void Enqueue(Message message)
         {
+            // The awaited event fires only on the deferred pump (UseAsyncPublishConfirmation true);
+            // the synchronous path raises the fire-and-forget event only, preserving its non-blocking
+            // send contract.
             if (PublishFailurePredicate?.Invoke(message) == true)
             {
                 OnMessagePublished?.Invoke(new PublishConfirmationResult(false, message.Id, message.Header.Topic, null));
@@ -250,22 +263,50 @@ namespace Paramore.Brighter
 
         private async Task DrainAsync()
         {
+            // External Action subscribers remain fire-and-forget; mediator confirmations use the awaited event.
             await foreach (var item in _channel.Reader.ReadAllAsync(CancellationToken.None))
             {
                 if (PublishFailurePredicate?.Invoke(item.Message) == true)
                 {
                     var failResult = new PublishConfirmationResult(false, item.Message.Id, item.Message.Header.Topic, item.Context);
-                    _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(failResult)));
+                    RaiseActionSubscribers(failResult);
+                    await RaiseConfirmationCallbacksAsync(failResult);
                     continue;
                 }
                 _bus.Enqueue(item.Message);
                 var successResult = new PublishConfirmationResult(true, item.Message.Id, item.Message.Header.Topic, item.Context);
-                // NOTE: when the subscriber is an async-void callback (as the mediator's success branch is, which
-                // awaits MarkDispatchedAsync), Invoke returns at its first await — so this raise Task completes, and
-                // DisposeAsync's drain therefore awaits, only up to that first await, NOT the whole callback. Do not
-                // rely on DisposeAsync having flushed a success-path MarkDispatched. The failure path has no await
-                // before TripTopic, so it does drain to completion (which the trip/isolation tests depend on).
-                _raiseTasks.Add(Task.Run(() => OnMessagePublished?.Invoke(successResult)));
+                RaiseActionSubscribers(successResult);
+                await RaiseConfirmationCallbacksAsync(successResult);
+            }
+        }
+
+        private void RaiseActionSubscribers(PublishConfirmationResult result) =>
+            // Isolated like the awaited path: a throwing Action subscriber would otherwise fault its
+            // raise task and re-surface out of DisposeAsync's Task.WhenAll over _raiseTasks.
+            _raiseTasks.Add(Task.Run(() =>
+            {
+                try
+                {
+                    OnMessagePublished?.Invoke(result);
+                }
+                catch (Exception ex)
+                {
+                    Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
+                }
+            }));
+
+        private async Task RaiseConfirmationCallbacksAsync(PublishConfirmationResult result)
+        {
+            // A faulting subscriber must not fault the drain worker: that would strand the remaining
+            // queued items and re-surface out of DisposeAsync's await of the worker. Mirrors the
+            // broker producers' per-confirmation isolation.
+            try
+            {
+                await _onMessagePublishedAsync.InvokeAllAsync(result);
+            }
+            catch (Exception ex)
+            {
+                Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
             }
         }
 
@@ -324,7 +365,13 @@ namespace Paramore.Brighter
                 return;
             }
 
-            throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
+            throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration.");
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Confirmation callback for message {MessageId} faulted; remaining confirmations continue")]
+            public static partial void ConfirmationCallbackFault(ILogger logger, string messageId, Exception exception);
         }
     }
 }
