@@ -43,7 +43,7 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — rejection metadata stamping not yet conformant for Kafka / PartitionKey (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_should_include_metadata_async()
     {
         // Arrange
@@ -89,7 +89,7 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
 
         // OriginalType — a provider key of string.Empty fails as genuine non-conformance (FR-8, AC-8)
         Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalType));
-        Assert.Equal("MT_COMMAND", dlqMessage.Header.Bag[keys.OriginalType].ToString());
+        Assert.Equal(message.Header.MessageType.ToString(), dlqMessage.Header.Bag[keys.OriginalType].ToString());
 
         // RejectionReason — a provider key of string.Empty fails as genuine non-conformance (FR-8, AC-8)
         Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));

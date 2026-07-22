@@ -112,7 +112,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
     }
 
     [Fact]
-    public async Task When_generating_metadata_test_reactor_should_assert_original_type_equals_mt_command()
+    public async Task When_generating_metadata_test_reactor_should_assert_original_type_matches_sent_message()
     {
         // Arrange
         var ledger = PassLedger();
@@ -122,14 +122,14 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — OriginalType key read via keys.OriginalType and asserted equal to "MT_COMMAND" (AC-8)
+        // Assert — OriginalType read via keys.OriginalType and asserted equal to the sent message's own type (AC-8)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.OriginalType", content);
-        Assert.Contains("\"MT_COMMAND\"", content);
+        Assert.Contains("message.Header.MessageType.ToString()", content);
     }
 
     [Fact]
-    public async Task When_generating_metadata_test_proactor_should_assert_original_type_equals_mt_command()
+    public async Task When_generating_metadata_test_proactor_should_assert_original_type_matches_sent_message()
     {
         // Arrange
         var ledger = PassLedger();
@@ -139,10 +139,10 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — OriginalType key read via keys.OriginalType (AC-8, FR-14)
+        // Assert — OriginalType read via keys.OriginalType and asserted equal to the sent message's own type (AC-8, FR-14)
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.OriginalType", content);
-        Assert.Contains("\"MT_COMMAND\"", content);
+        Assert.Contains("message.Header.MessageType.ToString()", content);
     }
 
     [Fact]

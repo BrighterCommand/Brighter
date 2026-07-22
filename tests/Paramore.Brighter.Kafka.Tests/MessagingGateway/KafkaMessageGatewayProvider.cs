@@ -51,6 +51,15 @@ public class KafkaMessageGatewayProvider
     };
     private readonly List<IAmAProducerRegistry> _producerRegistries = [];
 
+    // Rejection-channel read hooks (FR-4/5/6/8/17): fresh Earliest consumers over the
+    // subscription's DLQ / invalid-message topics, created lazily and reused across the
+    // conformance test's bounded poll loop so offsets advance instead of re-reading from start.
+    private IAmAMessageConsumerSync? _deadLetterConsumer;
+    private IAmAMessageConsumerSync? _invalidChannelConsumer;
+    private IAmAMessageConsumerAsync? _deadLetterConsumerAsync;
+    private IAmAMessageConsumerAsync? _invalidChannelConsumerAsync;
+    private readonly List<string> _rejectionTopics = [];
+
     public void CleanUp(
         IAmAMessageProducerSync? producer,
         IAmAChannelSync? channel,
@@ -62,7 +71,10 @@ public class KafkaMessageGatewayProvider
         Dispose(channel);
         DisposeRegistries();
         Dispose(producer);
+        Dispose(_deadLetterConsumer);
+        Dispose(_invalidChannelConsumer);
 
+        topics.AddRange(_rejectionTopics);
         DeleteTopics(topics);
 
         static void Dispose(object? disposable)
@@ -92,7 +104,10 @@ public class KafkaMessageGatewayProvider
         await DisposeAsync(channel);
         DisposeRegistries();
         await DisposeAsync(producer);
+        await DisposeAsync(_deadLetterConsumerAsync);
+        await DisposeAsync(_invalidChannelConsumerAsync);
 
+        topics.AddRange(_rejectionTopics);
         DeleteTopics(topics);
 
         static async ValueTask DisposeAsync(object? disposable)
@@ -218,12 +233,20 @@ public class KafkaMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
-        return Task.FromResult(Message.Empty);
+        if (!TryGetRejectionTopic(subscription.DeadLetterRoutingKey, out var topic))
+            return Task.FromResult(Message.Empty);
+
+        _deadLetterConsumerAsync ??= CreateRejectionConsumerAsync(topic);
+        return ReceiveOneAsync(_deadLetterConsumerAsync, cancellationToken);
     }
 
     public Message GetMessageFromDeadLetterQueue(KafkaSubscription subscription)
     {
-        return Message.Empty;
+        if (!TryGetRejectionTopic(subscription.DeadLetterRoutingKey, out var topic))
+            return Message.Empty;
+
+        _deadLetterConsumer ??= CreateRejectionConsumer(topic);
+        return ReceiveOne(_deadLetterConsumer);
     }
 
     public Task<Message> GetMessageFromInvalidChannelAsync(
@@ -231,12 +254,90 @@ public class KafkaMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
-        return Task.FromResult(Message.Empty);
+        if (!TryGetRejectionTopic(subscription.InvalidMessageRoutingKey, out var topic))
+            return Task.FromResult(Message.Empty);
+
+        _invalidChannelConsumerAsync ??= CreateRejectionConsumerAsync(topic);
+        return ReceiveOneAsync(_invalidChannelConsumerAsync, cancellationToken);
     }
 
     public Message GetMessageFromInvalidChannel(KafkaSubscription subscription)
     {
-        return Message.Empty;
+        if (!TryGetRejectionTopic(subscription.InvalidMessageRoutingKey, out var topic))
+            return Message.Empty;
+
+        _invalidChannelConsumer ??= CreateRejectionConsumer(topic);
+        return ReceiveOne(_invalidChannelConsumer);
+    }
+
+    private static bool TryGetRejectionTopic(RoutingKey? routingKey, out RoutingKey topic)
+    {
+        topic = routingKey ?? RoutingKey.Empty;
+        return !RoutingKey.IsNullOrEmpty(routingKey);
+    }
+
+    private IAmAMessageConsumerSync CreateRejectionConsumer(RoutingKey topic)
+    {
+        _rejectionTopics.Add(topic.Value);
+        return new KafkaMessageConsumerFactory(_configuration).Create(
+            CreateRejectionSubscription(topic)
+        );
+    }
+
+    private IAmAMessageConsumerAsync CreateRejectionConsumerAsync(RoutingKey topic)
+    {
+        _rejectionTopics.Add(topic.Value);
+        return new KafkaMessageConsumerFactory(_configuration).CreateAsync(
+            CreateRejectionSubscription(topic)
+        );
+    }
+
+    private static KafkaSubscription CreateRejectionSubscription(RoutingKey topic)
+    {
+        return new KafkaSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(Uuid.NewAsString()),
+            channelName: new ChannelName($"Reader{Uuid.New():N}"),
+            routingKey: topic,
+            groupId: Guid.NewGuid().ToString(),
+            offsetDefault: AutoOffsetReset.Earliest,
+            commitBatchSize: 1,
+            numOfPartitions: 1,
+            replicationFactor: 1,
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create
+        );
+    }
+
+    private static Message ReceiveOne(IAmAMessageConsumerSync consumer)
+    {
+        try
+        {
+            var messages = consumer.Receive(TimeSpan.FromMilliseconds(500));
+            return messages.Length > 0 ? messages[0] : Message.Empty;
+        }
+        catch (ChannelFailureException)
+        {
+            return Message.Empty;
+        }
+    }
+
+    private static async Task<Message> ReceiveOneAsync(
+        IAmAMessageConsumerAsync consumer,
+        CancellationToken cancellationToken
+    )
+    {
+        try
+        {
+            var messages = await consumer.ReceiveAsync(
+                TimeSpan.FromMilliseconds(500),
+                cancellationToken
+            );
+            return messages.Length > 0 ? messages[0] : Message.Empty;
+        }
+        catch (ChannelFailureException)
+        {
+            return Message.Empty;
+        }
     }
 
     public RejectionMetadataKeys RejectionMetadataKeys =>
