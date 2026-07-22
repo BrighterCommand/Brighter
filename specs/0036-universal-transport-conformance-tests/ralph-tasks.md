@@ -198,7 +198,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-21, AC-24, FR-13, AC-13; ADR 0067 "generate everywhere immediately … each carrying an audited deferral marker for every configuration not yet known to conform" (lines 156-168), "the marker is deleted in the same PR as the gateway fix" (interpreted as ledger-flip + regenerate); the conformance ledger is the single source of truth (FR-21).
 
-- [ ] **Canonical plain requeue (FR-22)**
+- [x] **Canonical plain requeue (FR-22)**
   - **Behavior**: Generate a canonical test proving a message requeued with no delay (`channel.Requeue(M)` / `RequeueAsync(M)`, equivalently `Requeue(M, null)`) returns `true` and is redelivered within a bounded retry loop. May migrate from the legacy `When_requeuing_a_failed_message_should_receive_message_again` template. Owns the no-delay call in both its spellings (omitted and explicit-null are the same call).
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_plain_requeue_should_emit_bounded_redelivery_both_variants.cs`
   - **Test should verify**:

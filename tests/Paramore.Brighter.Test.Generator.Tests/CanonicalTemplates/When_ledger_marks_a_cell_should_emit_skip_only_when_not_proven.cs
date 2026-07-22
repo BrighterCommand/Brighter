@@ -33,6 +33,7 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
     private readonly string _testDirectory;
     private readonly ILogger<Generators.MessagingGatewayGenerator> _logger;
     private readonly string _canonicalTemplatePath;
+    private readonly string? _canonicalTemplateOriginalContent;
     private readonly string _nonCanonicalTemplatePath;
 
     public WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven()
@@ -50,8 +51,12 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
 
         // Canonical template that uses the {% if Skip != empty %} pattern; the generator
         // should emit ", Skip = "..."" when the ledger cell is not Pass/Fixed.
+        // Back up the original file (the real canonical template) so Dispose can restore it.
         _canonicalTemplatePath = Path.Combine(
             reactorTemplatesDir, $"{CANONICAL_TEMPLATE_NAME}.cs.liquid");
+        _canonicalTemplateOriginalContent = File.Exists(_canonicalTemplatePath)
+            ? File.ReadAllText(_canonicalTemplatePath)
+            : null;
         File.WriteAllText(_canonicalTemplatePath,
             "[Fact{%- if Skip != empty -%}, Skip = \"{{ Skip }}\"{%- endif -%}]\n" +
             $"public void {CANONICAL_TEMPLATE_NAME}() {{ }}\n");
@@ -254,7 +259,12 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
         if (Directory.Exists(_testDirectory))
             Directory.Delete(_testDirectory, true);
 
-        if (File.Exists(_canonicalTemplatePath))
+        // Restore the original canonical template (the real template may have existed before
+        // this test overwrote it with a minimal stub). If the file was absent originally,
+        // delete the stub so later tests do not run against it.
+        if (_canonicalTemplateOriginalContent != null)
+            File.WriteAllText(_canonicalTemplatePath, _canonicalTemplateOriginalContent);
+        else if (File.Exists(_canonicalTemplatePath))
             File.Delete(_canonicalTemplatePath);
 
         if (File.Exists(_nonCanonicalTemplatePath))
