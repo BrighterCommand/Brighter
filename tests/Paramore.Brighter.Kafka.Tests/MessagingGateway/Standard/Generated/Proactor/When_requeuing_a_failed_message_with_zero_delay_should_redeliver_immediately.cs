@@ -43,7 +43,7 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediatelyA
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — explicit zero-delay requeue not yet conformant for Kafka / Standard (maintainer sign-off)")]
+    [Fact(Skip = "Deferred: #4240 — explicit zero-delay requeue not yet conformant for Kafka / Standard (maintainer sign-off)")]
     public async Task When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately_async()
     {
         // Arrange

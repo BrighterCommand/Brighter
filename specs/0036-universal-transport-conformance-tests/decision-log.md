@@ -242,3 +242,41 @@ FR-12 originally read "after deletion, no messaging-gateway template may call `R
 plain-requeue template, which calls `Requeue` with no argument, and FR-15 *requires* a test calling
 `Requeue(M, null)`. AC-12 was unsatisfiable as written. The prohibition is now scoped to templates
 that exercise *delayed* requeue, with those two exempt.
+
+---
+
+## Deferred: Phase 2 Kafka reference — both rows Deferred -> #4240 (infra block)
+
+**Recorded 2026-07-22, Phase 2 (ralph task 28).** The Kafka reference task ran the generated
+canonical suite for `Kafka / Standard` and `Kafka / PartitionKey` (both variants) against a local
+single-broker Kafka via `docker compose`. It did **not** produce a reliable full-green gate, so
+both rows are `Deferred -> #4240 (sign-off: @maintainer)` across all 11 columns — flag-and-move-on
+per ADR 0067 "CI-infrastructure inability is a first-class deferral ground" and spec ruling 0a
+(infra block → Deferred, **not** `[!]` FAILED).
+
+**What was established (keep for the follow-up).** The generate→ledger-driven-Skip mechanism works
+end-to-end: flipping cells and regenerating un-skips/re-skips the canonical tests by construction,
+and the suite executes and yields correct per-behaviour signal. Two distinct classes of
+non-conformance were observed:
+
+- **Deterministic Kafka gaps** — on a *fresh* broker, FR-2, FR-4, FR-5, FR-6, FR-8, FR-9, FR-17
+  failed every time (reject/DLQ routing + delayed redelivery; Kafka has no native DLQ and no
+  delayed-redelivery primitive — cf. ADR `0046`). These are genuine conformance work, not infra.
+- **Broker flakiness under load** — FR-7, FR-15, FR-16, FR-22 *passed* on the fresh broker, but on
+  a re-run under full-suite load they failed alongside the most basic pre-existing hand-written
+  gateway tests (`When_posting_a_message_via_the_messaging_gateway_should_be_received`,
+  `…reads_multiple_messages…`, `KafkaMessageConsumerUpdateOffset` — the last passed in isolation yet
+  failed in-suite). Non-deterministic results against a single dev broker → cannot certify `Pass`
+  (FR-14 requires *reliable* green in both variants), hence Deferred rather than Pass.
+
+**A speculative gateway change was reverted.** An in-progress sub-agent had changed
+`KafkaMessageCreator.cs:252` from `DateTimeStyles.AssumeUniversal` to
+`AssumeUniversal | AdjustToUniversal`. It is a real latent bug (the parsed UTC timestamp is
+converted to local time), but it was **not** proven to bring any canonical behaviour to conformance
+and it *regressed* the hand-written `KafkaMessageConsumerUpdateOffset` test (green in isolation only
+after the revert). Out of scope for this task; reverted. If pursued, it belongs in its own bugfix,
+not the conformance ledger.
+
+**Follow-up (#4240).** Re-run Phase 2 against a stable CI Kafka to (a) certify FR-7/15/16/22 as
+`Pass`, and (b) triage the seven deterministic gaps into `Fixed` (localized gateway work) vs a
+signed-off `Deferred` with a real issue number. Phase 6 reconciles `#4240` → the real issue.

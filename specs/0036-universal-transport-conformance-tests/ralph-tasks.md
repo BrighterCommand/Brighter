@@ -358,7 +358,7 @@
 
 ### Phase 2 — Prove the reference (Kafka) (ADR 0067 step 3)
 
-- [ ] **Prove the canonical suite against Kafka Standard and PartitionKey**
+- [x] **Prove the canonical suite against Kafka Standard and PartitionKey**
   - **Behavior**: Bring up the Kafka broker and run the generated canonical suite for both Kafka configurations in both variants against the running broker. When both variants of a behaviour pass for a configuration, flip that cell to `Pass` in the ledger and regenerate — the ledger-driven mechanism (Phase 1 task 1) drops that cell's `Deferred: #NNNN` marker by construction. If the broker/CI is blocked, apply flag-and-move-on: set the affected cells to `Deferred -> #NNNN (sign-off: @maintainer)` and regenerate so the marker carries the issue number, then continue.
   - **Test file**: `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/Standard/Generated/Reactor/*.cs` (generated canonical suite being exercised)
   - **Test should verify**:
