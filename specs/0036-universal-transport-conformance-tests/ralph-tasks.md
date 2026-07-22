@@ -296,7 +296,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-17, AC-18, AC-20; ADR `0047-message-rejection-routing-strategy`; Kafka reference `..._unknown_reason_should_send_to_dlq`.
 
-- [ ] **Canonical rejection-metadata stamping (FR-8)**
+- [x] **Canonical rejection-metadata stamping (FR-8)**
   - **Behavior**: Generate a canonical test proving a message rejected to the DLQ carries the universal rejection-metadata semantic set in `Header.Bag`, read via `provider.RejectionMetadataKeys.*` (never hard-coded key strings): original topic (= data topic), original message type (`"MT_COMMAND"`), rejection reason (`"DeliveryError"`), rejection message (= description passed to `Reject`), and a parseable ISO-8601 timestamp within the last minute. A field whose provider key is `string.Empty` fails as a genuine non-conformance.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_metadata_test_should_read_via_provider_keys_both_variants.cs`
   - **Test should verify**:
