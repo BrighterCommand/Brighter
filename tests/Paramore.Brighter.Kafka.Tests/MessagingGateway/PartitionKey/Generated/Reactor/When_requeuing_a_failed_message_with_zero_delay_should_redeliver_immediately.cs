@@ -37,7 +37,7 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediately 
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — explicit zero-delay requeue not yet conformant for Kafka / PartitionKey (maintainer sign-off)")]
+    [Fact]
     public void When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately()
     {
         // Arrange

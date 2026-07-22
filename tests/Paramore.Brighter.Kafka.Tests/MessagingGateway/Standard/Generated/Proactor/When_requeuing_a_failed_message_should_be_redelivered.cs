@@ -43,7 +43,7 @@ public class WhenRequeuingAFailedMessageShouldBeRedeliveredAsync : IAsyncLifetim
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — canonical plain requeue not yet conformant for Kafka / Standard (maintainer sign-off)")]
+    [Fact]
     public async Task When_requeuing_a_failed_message_should_be_redelivered_async()
     {
         // Arrange

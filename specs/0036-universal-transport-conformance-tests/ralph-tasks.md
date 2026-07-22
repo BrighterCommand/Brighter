@@ -388,7 +388,7 @@
 > legitimate external residual; an unread failure or an un-done hook is not); (vi) regenerate so
 > markers match. A sub-agent/run that times out or blows context is **re-run**, not deferred.
 
-- [ ] **Kafka — requeue/redeliver class (FR-22, FR-15, FR-16), both configs, both variants**
+- [x] **Kafka — requeue/redeliver class (FR-22, FR-15, FR-16), both configs, both variants**
   - **Behavior**: Prove plain requeue (FR-22), zero-delay requeue (FR-15) and nack→redelivered (FR-16) for `Kafka / Standard` and `Kafka / PartitionKey`. No harness hook needed (broker-basic). These passed on a *fresh* broker but flaked under full-suite load — so run them **in isolation on a freshly-reset broker** (`docker compose -f docker-compose-kafka.yaml down -v && up -d`) one behaviour at a time; a flake that survives isolation is a legitimate external (broker) residual → `Deferred` with evidence, otherwise `Pass`.
   - **Test should verify**: FR-22/15/16 columns of both Kafka rows resolve to `Pass` (both variants) or an evidence-backed `Deferred`; no `Unknown`.
   - **Implementation files**: `specs/0036-…/conformance-status.md` (FR-22/15/16 cells, both Kafka rows); `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/**/Generated/**` (regenerate).
