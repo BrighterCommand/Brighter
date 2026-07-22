@@ -13,7 +13,8 @@
 - **Container runtime is Podman**, so the broker command is `docker compose` (two words) — never `docker-compose`. Per-transport compose files live at the repo root: `docker-compose-kafka.yaml`, `docker-compose-redis.yaml`, `docker-compose-postgres.yaml`, `docker-compose-mssql.yaml`, `docker-compose-rmq.yaml`, `docker-compose-rocketmq.yaml`, `docker-compose-aws.yaml` / `docker-compose-localstack.yaml`, `docker-compose-mqtt.yaml`. There is **no** `docker-compose-gcp.yaml` and **no** ASB compose file (GCP uses its Pub/Sub emulator/project; ASB is a cloud service). **The task agent starts the container itself** — every per-transport conformance/onboarding task's RALPH-VERIFY begins by bringing the broker up.
 - **Flag-and-move-on rule (from ADR 0067 + owner rulings).** A per-transport conformance/onboarding task must NOT stall the loop when a broker/emulator/CI-infrastructure/upstream dependency blocks it (e.g. RocketMQ's upstream client, ASB cloud CI). Its completion condition then includes the fallback: (1) set that configuration's ledger cell(s) in `specs/0036-universal-transport-conformance-tests/conformance-status.md` to `Deferred -> #NNNN (sign-off: @maintainer)`; (2) add the greppable in-code marker to the deferred generated test(s), `Skip = "Deferred: #NNNN — <behaviour> not yet conformant for <transport> (maintainer sign-off)"` (ADR 0067); (3) continue.
 - **`#NNNN` is a documented pre-audit placeholder.** Deferred ledger cells and Skip markers carry the literal token `#NNNN` through Phases 1–5. It is reconciled to a real linked issue number by the FIRST task of Phase 6 ("Raise follow-up issues …"), which runs BEFORE the two Phase 6 audit tasks — so by the time the audit asserts the `Deferred: #<digits>` pattern, every marker carries real digits. Do not expect `#NNNN` to be a real issue number until that reconciliation task has run.
-- **Generator build/regenerate.** Build: `dotnet build tools/Paramore.Brighter.Test.Generator`. Regenerate one project (CWD is the output root): `cd tests/<Project> && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator`. Regenerate all: `./generate-test.sh`. **The generator never deletes stale generated files** — every template deletion needs a paired manual sweep of `tests/Paramore.Brighter.*.Tests/**/Generated/`.
+- **Generator build/regenerate.** Build: `dotnet build tools/Paramore.Brighter.Test.Generator`. Regenerate one project (CWD is the output root): `cd tests/<Project> && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0`. Regenerate all: `./generate-test.sh`. **The generator never deletes stale generated files** — every template deletion needs a paired manual sweep of `tests/Paramore.Brighter.*.Tests/**/Generated/`.
+- **The `--framework net10.0` on the regenerate `dotnet run` is mandatory, not optional.** The generator project multi-targets (`<TargetFrameworks>$(BrighterToolTargetFrameworks)</TargetFrameworks>`), so a bare `dotnet run --no-build --project …` aborts with *"Your project targets multiple frameworks. Specify which framework to run using '--framework'."* and regenerates nothing. `generate-test.sh` already pins `--framework net10.0`; every per-project RALPH-VERIFY below now does too. (Learned during Phase 0 rollout — the tasks originally omitted the flag.)
 - **Do NOT run `./generate-test.sh` during Phase 0** until every provider has migrated (a full regenerate would break un-migrated projects against the new FR-1 signature). Regenerate per project, in the migration task for that project.
 - Generator-behaviour TDD home: `tests/Paramore.Brighter.Test.Generator.Tests/`.
 - **TDD in ralph mode — owner-sanctioned exception to the interactive `/test-first` gate.** CLAUDE.md's interactive `/test-first` workflow (write test → STOP for human IDE approval → implement) assumes a human in the loop. This spec's behaviour is produced by Liquid templates and asserted by the generator test project against the emitted `.cs` content, and it runs unattended — so the human approval checkpoint is intentionally not used here. TDD is still enforced structurally: each behavioural task names its failing test (a generator xUnit test asserting emitted content, or the audit tests in Phase 6) and its RALPH-VERIFY runs it. This deviation from the interactive gate is deliberate and recorded, not a silent skip.
@@ -85,7 +86,7 @@
     - `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/KafkaMessageGatewayProvider.cs` - implement new members; migrate `CreateSubscription`.
     - `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/KafkaPartitionKeyMessageGatewayProvider.cs` - same.
     - `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/**/Generated/**` - regenerate (interface copies, RejectionMetadataKeys.cs, exhaustion copies).
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Kafka.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.Kafka.Tests`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Kafka.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.Kafka.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "Key Components" (per-transport providers), Kafka key names in `src/Paramore.Brighter.MessagingGateway.Kafka/HeaderNames.cs`; regenerate steps in `.agent_instructions/generated_tests.md`.
 
 - [x] **Migrate the AWS (V3) providers to the FR-1 surface and regenerate AWS**
@@ -98,7 +99,7 @@
   - **Implementation files**:
     - `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/{SnsStandard,SnsFifo,SqsStandard,SqsFifo}MessageGatewayProvider.cs` - implement new members; migrate `CreateSubscription`.
     - `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/**/Generated/**` - regenerate.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.AWS.Tests`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.AWS.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "What a provider returns for a field its gateway does not stamp"; SQS keys via `SqsMessageConsumer.RefreshMetadata` in `src/Paramore.Brighter.MessagingGateway.AWSSQS`.
 
 - [x] **Migrate the AWS.V4 providers to the FR-1 surface and regenerate AWS.V4**
@@ -109,7 +110,7 @@
   - **Implementation files**:
     - `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/{SnsStandard,SnsFifo,SqsStandard,SqsFifo}MessageGatewayProvider.cs` - migrate.
     - `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/**/Generated/**` - regenerate.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.AWS.V4.Tests`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.AWS.V4.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "Key Components".
 
 - [x] **Migrate the GCP providers to the FR-1 surface and regenerate GCP**
@@ -120,7 +121,7 @@
   - **Implementation files**:
     - `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Gcp{Pull,PullOrdering,Stream,StreamOrdering}MessageGatewayProvider.cs` - migrate.
     - `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/**/Generated/**` - regenerate.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.Gcp.Tests`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.Gcp.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "Key Components", "Why there is no scheduler member" (GCP delay behaviour, for Phase 4 context).
 
 - [x] **Migrate the MSSQL provider to the FR-1 surface and regenerate MSSQL**
@@ -131,7 +132,7 @@
   - **Implementation files**:
     - `tests/Paramore.Brighter.MSSQL.Tests/MessagingGateway/MsSqlMessageGatewayProvider.cs` - migrate.
     - `tests/Paramore.Brighter.MSSQL.Tests/MessagingGateway/Generated/**` - regenerate.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MSSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.MSSQL.Tests`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MSSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.MSSQL.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "Implementation Approach" (explicit DLQ key removes hidden naming knowledge); ADR `0040-mssql-dlq-brighter-managed`.
 
 - [x] **Migrate the PostgresSQL provider to the FR-1 surface and regenerate PostgresSQL**
@@ -142,7 +143,7 @@
   - **Implementation files**:
     - `tests/Paramore.Brighter.PostgresSQL.Tests/MessagingGateway/PostgresMessageGatewayProvider.cs` - migrate.
     - `tests/Paramore.Brighter.PostgresSQL.Tests/MessagingGateway/Generated/**` - regenerate.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.PostgresSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.PostgresSQL.Tests`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.PostgresSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.PostgresSQL.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR `0041-postgres-dlq-brighter-managed`.
 
 - [x] **Migrate the Redis provider to the FR-1 surface and regenerate Redis**
@@ -154,7 +155,7 @@
   - **Implementation files**:
     - `tests/Paramore.Brighter.Redis.Tests/MessagingGateway/RedisMessageGatewayProvider.cs` - migrate.
     - `tests/Paramore.Brighter.Redis.Tests/MessagingGateway/Generated/**` - regenerate.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Redis.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.Redis.Tests`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Redis.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.Redis.Tests`
   - **References**: requirements FR-1(6), AC-1; Redis keys via `RedisMessageConsumer.RefreshMetadata`; ADR `0039-redis-dlq-brighter-managed`.
 
 - [x] **Migrate the RMQ.Async providers to the FR-1 surface and regenerate RMQ.Async**
@@ -165,7 +166,7 @@
   - **Implementation files**:
     - `tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway/Rmq{Classic,Quorum}MessageGatewayProvider.cs` - migrate.
     - `tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway/**/Generated/**` - regenerate.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Async.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.RMQ.Async.Tests`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Async.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.RMQ.Async.Tests`
   - **References**: requirements FR-1(6), AC-1; ADR 0066 "Key Components".
 
 - [x] **Migrate the RocketMQ provider to the FR-1 surface and regenerate RocketMQ**
@@ -176,7 +177,7 @@
   - **Implementation files**:
     - `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/RocketMqMessageGatewayProvider.cs` - migrate.
     - `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Generated/**` - regenerate.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RocketMQ.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.RocketMQ.Tests && ! grep -rn setupDeadLetterQueue tests tools`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RocketMQ.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.RocketMQ.Tests && ! grep -rn setupDeadLetterQueue tests tools`
   - **References**: requirements FR-1(6), AC-1; ADR `0042-rocketmq-dlq-brighter-managed`.
 
 ### Phase 1 — Canonical templates (each behaviour, both variants, ungated by construction)
@@ -365,7 +366,7 @@
   - **Implementation files**:
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - set both Kafka rows to `Pass` (or `Deferred` per fallback).
     - `tests/Paramore.Brighter.Kafka.Tests/MessagingGateway/**/Generated/**` - regenerate after flipping the Kafka cells to `Pass`, so the markers drop by construction.
-  - **RALPH-VERIFY** (also asserts the two Kafka ledger rows carry no `Unknown` — the suite run and the ledger update must agree): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Kafka.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-kafka.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.Kafka.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'Kafka /' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'Kafka /' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY** (also asserts the two Kafka ledger rows carry no `Unknown` — the suite run and the ledger update must agree): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Kafka.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-kafka.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.Kafka.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'Kafka /' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'Kafka /' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 "Implementation Approach" step 3 (Kafka mis-declared gates irrelevant), "Infra reality" (`Pass` = actually ran); requirements FR-21, AC-24, FR-14 (both variants).
 
 ### Phase 3 — DLQ-ADR transports (ADR 0067 step 4)
@@ -376,7 +377,7 @@
 >
 > **Method for every task below:** bring up the broker; run the project's generated canonical suite (a fresh un-skip only happens after the cell flips to `Pass`/`Fixed` and the project is regenerated, so unproven configurations stay skipped and the suite passes); for each non-conformant behaviour of THIS configuration apply the fix-to-conform boundary — a localized low-risk gateway fix → set the cell `Fixed (#PR)`; otherwise flag-and-move-on to a signed-off `Deferred` row; then **regenerate this project** so the markers for now-`Pass`/`Fixed` cells drop and the marker for any `Deferred` cell carries its issue number. Resolve every cell of this configuration's row (no `Unknown` left). Flag-and-move-on (Deferred cell + Skip marker + continue) is the completion fallback whenever a broker/emulator/CI/upstream dependency blocks the task.
 >
-> **Every RALPH-VERIFY below** therefore (1) regenerates the project (`dotnet build tools/… && (cd tests/<Project> && dotnet run --no-build --project ../../tools/…)`) so the marker state matches the just-updated ledger, (2) brings up the broker **best-effort** and runs the suite, and (3) asserts the configuration's row **exists and** carries no `Unknown` (`grep -q -- '<row>' … && ! (grep -- '<row>' … | grep -q Unknown)`), so the suite run and the ledger update cannot silently drift apart (review findings #1, #3, #4). For multi-configuration transports, do `SqsStandard` first as the reference configuration, then the rest.
+> **Every RALPH-VERIFY below** therefore (1) regenerates the project (`dotnet build tools/… && (cd tests/<Project> && dotnet run --no-build --project ../../tools/… --framework net10.0)` — the `--framework net10.0` is required because the generator multi-targets; a bare `dotnet run` aborts with *"targets multiple frameworks"*) so the marker state matches the just-updated ledger, (2) brings up the broker **best-effort** and runs the suite, and (3) asserts the configuration's row **exists and** carries no `Unknown` (`grep -q -- '<row>' … && ! (grep -- '<row>' … | grep -q Unknown)`), so the suite run and the ledger update cannot silently drift apart (review findings #1, #3, #4). For multi-configuration transports, do `SqsStandard` first as the reference configuration, then the rest.
 >
 > **Broker-up is decoupled from the gate (`{ docker compose … up -d || true; }`).** Because CI-infrastructure inability is itself a first-class deferral ground (flag-and-move-on), a broker that genuinely cannot be stood up must still let the task reach its deferral path, not fail the `&&` chain at `docker compose`. The generator build/regenerate BEFORE the brace group still hard-gate (they must succeed); the brace group always returns success so the run continues to `dotnet test` + the no-`Unknown` grep, which remain the real gate — deferred/skipped tests keep the run green.
 >
@@ -391,7 +392,7 @@
     - `src/Paramore.Brighter.MessagingGateway.AWSSQS/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `AWS / SqsStandard` row.
     - `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/SqsStandard/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.Tests --filter "FullyQualifiedName~MessagingGateway.SqsStandard." && grep -q -- 'AWS / SqsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS / SqsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.Tests --filter "FullyQualifiedName~MessagingGateway.SqsStandard." && grep -q -- 'AWS / SqsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS / SqsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4, "size/risk fix-to-conform boundary"; ADR `0038-aws-sqs-dlq-direct-send`; requirements FR-13, AC-13, FR-21.
 
 - [ ] **Bring AWS (V3) / SqsFifo to conformance**
@@ -403,7 +404,7 @@
     - `src/Paramore.Brighter.MessagingGateway.AWSSQS/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `AWS / SqsFifo` row.
     - `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/SqsFifo/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.Tests --filter "FullyQualifiedName~MessagingGateway.SqsFifo." && grep -q -- 'AWS / SqsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS / SqsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.Tests --filter "FullyQualifiedName~MessagingGateway.SqsFifo." && grep -q -- 'AWS / SqsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS / SqsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0038-aws-sqs-dlq-direct-send`; requirements FR-13, AC-13, FR-21.
 
 - [ ] **Bring AWS (V3) / SnsStandard to conformance**
@@ -415,7 +416,7 @@
     - `src/Paramore.Brighter.MessagingGateway.AWSSQS/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `AWS / SnsStandard` row.
     - `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/SnsStandard/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.Tests --filter "FullyQualifiedName~MessagingGateway.SnsStandard." && grep -q -- 'AWS / SnsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS / SnsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.Tests --filter "FullyQualifiedName~MessagingGateway.SnsStandard." && grep -q -- 'AWS / SnsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS / SnsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0038-aws-sqs-dlq-direct-send`; requirements FR-13, AC-13, FR-21.
 
 - [ ] **Bring AWS (V3) / SnsFifo to conformance**
@@ -427,7 +428,7 @@
     - `src/Paramore.Brighter.MessagingGateway.AWSSQS/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `AWS / SnsFifo` row.
     - `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/SnsFifo/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.Tests --filter "FullyQualifiedName~MessagingGateway.SnsFifo." && grep -q -- 'AWS / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.Tests --filter "FullyQualifiedName~MessagingGateway.SnsFifo." && grep -q -- 'AWS / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0038-aws-sqs-dlq-direct-send`; requirements FR-13, AC-13, FR-21.
 
 - [ ] **Bring AWS.V4 / SqsStandard to conformance**
@@ -439,7 +440,7 @@
     - `src/Paramore.Brighter.MessagingGateway.AWSSQS.V4/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `AWS.V4 / SqsStandard` row.
     - `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/SqsStandard/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.V4.Tests --filter "FullyQualifiedName~MessagingGateway.SqsStandard." && grep -q -- 'AWS.V4 / SqsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS.V4 / SqsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.V4.Tests --filter "FullyQualifiedName~MessagingGateway.SqsStandard." && grep -q -- 'AWS.V4 / SqsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS.V4 / SqsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0038-aws-sqs-dlq-direct-send`; requirements FR-13, FR-21.
 
 - [ ] **Bring AWS.V4 / SqsFifo to conformance**
@@ -451,7 +452,7 @@
     - `src/Paramore.Brighter.MessagingGateway.AWSSQS.V4/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `AWS.V4 / SqsFifo` row.
     - `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/SqsFifo/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.V4.Tests --filter "FullyQualifiedName~MessagingGateway.SqsFifo." && grep -q -- 'AWS.V4 / SqsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS.V4 / SqsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.V4.Tests --filter "FullyQualifiedName~MessagingGateway.SqsFifo." && grep -q -- 'AWS.V4 / SqsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS.V4 / SqsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0038-aws-sqs-dlq-direct-send`; requirements FR-13, FR-21.
 
 - [ ] **Bring AWS.V4 / SnsStandard to conformance**
@@ -463,7 +464,7 @@
     - `src/Paramore.Brighter.MessagingGateway.AWSSQS.V4/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `AWS.V4 / SnsStandard` row.
     - `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/SnsStandard/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.V4.Tests --filter "FullyQualifiedName~MessagingGateway.SnsStandard." && grep -q -- 'AWS.V4 / SnsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS.V4 / SnsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.V4.Tests --filter "FullyQualifiedName~MessagingGateway.SnsStandard." && grep -q -- 'AWS.V4 / SnsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS.V4 / SnsStandard' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0038-aws-sqs-dlq-direct-send`; requirements FR-13, FR-21.
 
 - [ ] **Bring AWS.V4 / SnsFifo to conformance**
@@ -475,7 +476,7 @@
     - `src/Paramore.Brighter.MessagingGateway.AWSSQS.V4/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `AWS.V4 / SnsFifo` row.
     - `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/SnsFifo/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.V4.Tests --filter "FullyQualifiedName~MessagingGateway.SnsFifo." && grep -q -- 'AWS.V4 / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS.V4 / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.V4.Tests --filter "FullyQualifiedName~MessagingGateway.SnsFifo." && grep -q -- 'AWS.V4 / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS.V4 / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0038-aws-sqs-dlq-direct-send`; requirements FR-13, FR-21.
 
 - [ ] **Bring Redis to conformance**
@@ -487,7 +488,7 @@
     - `src/Paramore.Brighter.MessagingGateway.Redis/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - update the Redis row.
     - `tests/Paramore.Brighter.Redis.Tests/MessagingGateway/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Redis.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-redis.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.Redis.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'Redis / RedisMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'Redis / RedisMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Redis.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-redis.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.Redis.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'Redis / RedisMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'Redis / RedisMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0039-redis-dlq-brighter-managed`; requirements FR-13, FR-21.
 
 - [ ] **Bring MSSQL to conformance**
@@ -499,7 +500,7 @@
     - `src/Paramore.Brighter.MessagingGateway.MsSql/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - update the MSSQL row.
     - `tests/Paramore.Brighter.MSSQL.Tests/MessagingGateway/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MSSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-mssql.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.MSSQL.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'MSSQL / MSSQLMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'MSSQL / MSSQLMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MSSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-mssql.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.MSSQL.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'MSSQL / MSSQLMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'MSSQL / MSSQLMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0040-mssql-dlq-brighter-managed`; requirements FR-13, FR-21.
 
 - [ ] **Bring PostgresSQL to conformance**
@@ -511,7 +512,7 @@
     - `src/Paramore.Brighter.MessagingGateway.Postgres/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - update the PostgresSQL row.
     - `tests/Paramore.Brighter.PostgresSQL.Tests/MessagingGateway/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.PostgresSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-postgres.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.PostgresSQL.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'PostgresSQL / PostgresMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'PostgresSQL / PostgresMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.PostgresSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-postgres.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.PostgresSQL.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'PostgresSQL / PostgresMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'PostgresSQL / PostgresMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0041-postgres-dlq-brighter-managed`; requirements FR-13, FR-21.
 
 - [ ] **Bring RMQ.Async / Classic to conformance**
@@ -523,7 +524,7 @@
     - `src/Paramore.Brighter.MessagingGateway.RMQ.Async/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `RMQ.Async / Classic` row.
     - `tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway/Classic/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Async.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-rmq.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.RMQ.Async.Tests --filter "FullyQualifiedName~MessagingGateway.Classic." && grep -q -- 'RMQ.Async / Classic' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'RMQ.Async / Classic' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Async.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-rmq.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.RMQ.Async.Tests --filter "FullyQualifiedName~MessagingGateway.Classic." && grep -q -- 'RMQ.Async / Classic' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'RMQ.Async / Classic' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4 (RMQ.Async native DLX, larger fix), Architecture Overview stage (ii); ADR `0047-message-rejection-routing-strategy`, `0045-provide-dlq-where-missing`; requirements FR-13, FR-21.
 
 - [ ] **Bring RMQ.Async / Quorum to conformance**
@@ -535,7 +536,7 @@
     - `src/Paramore.Brighter.MessagingGateway.RMQ.Async/...` - localized fixes where in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `RMQ.Async / Quorum` row.
     - `tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway/Quorum/Generated/**` - drop markers for fixed behaviours.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Async.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-rmq.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.RMQ.Async.Tests --filter "FullyQualifiedName~MessagingGateway.Quorum." && grep -q -- 'RMQ.Async / Quorum' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'RMQ.Async / Quorum' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Async.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-rmq.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.RMQ.Async.Tests --filter "FullyQualifiedName~MessagingGateway.Quorum." && grep -q -- 'RMQ.Async / Quorum' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'RMQ.Async / Quorum' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4 (RMQ.Async native DLX, larger fix), Architecture Overview stage (ii); ADR `0047-message-rejection-routing-strategy`, `0045-provide-dlq-where-missing`; requirements FR-13, FR-21.
 
 - [ ] **Bring RocketMQ to conformance (expected FR-2 signed-off Deferred)**
@@ -548,7 +549,7 @@
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - update the RocketMQ row (FR-2 Deferred).
     - `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Generated/**` - keep FR-2 Skip markers; drop markers for any fixed behaviours.
     - `src/Paramore.Brighter.MessagingGateway.RocketMQ/...` - localized non-FR-2 fixes where in-boundary.
-  - **RALPH-VERIFY** (the RocketMQ row must have no `Unknown` — FR-2 resolved to a signed-off `Deferred`, the rest `Pass`/`Fixed`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RocketMQ.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-rocketmq.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.RocketMQ.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'RocketMQ / RocketMQMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'RocketMQ / RocketMQMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY** (the RocketMQ row must have no `Unknown` — FR-2 resolved to a signed-off `Deferred`, the rest `Pass`/`Fixed`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RocketMQ.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-rocketmq.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.RocketMQ.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'RocketMQ / RocketMQMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'RocketMQ / RocketMQMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4 + "known FR-2 non-conformances" (RocketMQ upstream block); ADR 0066 "Why there is no scheduler member" (RocketMQ invisibility timeout); requirements FR-21 (seeded non-conformance).
 
 ### Phase 4 — Known-gap transports (ADR 0067 step 5)
@@ -564,7 +565,7 @@
     - `src/Paramore.Brighter.MessagingGateway.GcpPubSub/...` - FR-2 delay fix if in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `GCP / Pull` row.
     - `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull/Generated/**` - drop/keep markers accordingly.
-  - **RALPH-VERIFY** (provision the emulator/project first; there is no `docker-compose-gcp.yaml`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.Pull." && grep -qE 'GCP / Pull[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / Pull[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY** (provision the emulator/project first; there is no `docker-compose-gcp.yaml`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.Pull." && grep -qE 'GCP / Pull[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / Pull[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 5 + "known FR-2 non-conformances" (GCP immediate redelivery); ADR 0066 "Why there is no scheduler member"; requirements FR-2, AC-2, FR-13, FR-21 (seeded non-conformance).
 
 - [ ] **Decide/attempt the GCP / PullOrdering FR-2 fix**
@@ -576,7 +577,7 @@
     - `src/Paramore.Brighter.MessagingGateway.GcpPubSub/...` - FR-2 delay fix if in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `GCP / PullOrdering` row.
     - `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/PullOrdering/Generated/**` - drop/keep markers accordingly.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.PullOrdering." && grep -qE 'GCP / PullOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / PullOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.PullOrdering." && grep -qE 'GCP / PullOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / PullOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 5 + "known FR-2 non-conformances"; ADR 0066 "Why there is no scheduler member"; requirements FR-2, AC-2, FR-13, FR-21.
 
 - [ ] **Decide/attempt the GCP / Stream FR-2 fix**
@@ -588,7 +589,7 @@
     - `src/Paramore.Brighter.MessagingGateway.GcpPubSub/...` - FR-2 delay fix if in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `GCP / Stream` row.
     - `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream/Generated/**` - drop/keep markers accordingly.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.Stream." && grep -qE 'GCP / Stream[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / Stream[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.Stream." && grep -qE 'GCP / Stream[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / Stream[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 5 + "known FR-2 non-conformances"; ADR 0066 "Why there is no scheduler member"; requirements FR-2, AC-2, FR-13, FR-21.
 
 - [ ] **Decide/attempt the GCP / StreamOrdering FR-2 fix**
@@ -600,7 +601,7 @@
     - `src/Paramore.Brighter.MessagingGateway.GcpPubSub/...` - FR-2 delay fix if in-boundary.
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - resolve the `GCP / StreamOrdering` row.
     - `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/StreamOrdering/Generated/**` - drop/keep markers accordingly.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.StreamOrdering." && grep -qE 'GCP / StreamOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / StreamOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.StreamOrdering." && grep -qE 'GCP / StreamOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / StreamOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 5 + "known FR-2 non-conformances"; ADR 0066 "Why there is no scheduler member"; requirements FR-2, AC-2, FR-13, FR-21.
 
 - [ ] **Onboard MQTT: config + both providers (FR-20 step 1-2)**
@@ -613,7 +614,7 @@
     - `tests/Paramore.Brighter.MQTT.Tests/test-configuration.json` - new (no `HasSupportTo*` gate keys).
     - `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway/MqttMessageGatewayProvider.cs` - new provider (both interfaces).
     - `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway/**/Generated/**` - regenerate.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MQTT.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.MQTT.Tests`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MQTT.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.MQTT.Tests`
   - **References**: requirements FR-20(1),(2), AC-23, FR-13 mapping (`MQTT`→`MQTT`); ADR 0066 "provider implementations FR-20 adds"; ADR `0043-mqtt-dlq-brighter-managed`.
 
 - [ ] **Onboard MQTT: run against a broker and record the ledger (FR-20 step 3)**
@@ -625,7 +626,7 @@
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - replace MQTT placeholder with per-config rows.
     - `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway/**/Generated/**` - drop/keep markers accordingly.
     - `src/Paramore.Brighter.MessagingGateway.MQTT/...` - localized fixes where in-boundary.
-  - **RALPH-VERIFY** (the placeholder row is gone and every replacement MQTT row has no `Unknown`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MQTT.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-mqtt.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.MQTT.Tests --filter "FullyQualifiedName~MessagingGateway" && ! grep -q 'MQTT / (not yet declared)' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! grep -- 'MQTT /' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown`
+  - **RALPH-VERIFY** (the placeholder row is gone and every replacement MQTT row has no `Unknown`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MQTT.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-mqtt.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.MQTT.Tests --filter "FullyQualifiedName~MessagingGateway" && ! grep -q 'MQTT / (not yet declared)' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! grep -- 'MQTT /' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown`
   - **References**: requirements FR-20(3), AC-23 (must run, not just compile), FR-21; ADR 0067 step 5, "Infra reality".
 
 - [ ] **Onboard RMQ.Sync: config + both providers (FR-20 step 1-2)**
@@ -637,7 +638,7 @@
     - `tests/Paramore.Brighter.RMQ.Sync.Tests/test-configuration.json` - new (no gate keys).
     - `tests/Paramore.Brighter.RMQ.Sync.Tests/MessagingGateway/RmqSyncMessageGatewayProvider.cs` - new provider (both interfaces).
     - `tests/Paramore.Brighter.RMQ.Sync.Tests/MessagingGateway/**/Generated/**` - regenerate.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Sync.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.RMQ.Sync.Tests`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Sync.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.RMQ.Sync.Tests`
   - **References**: requirements FR-20(1),(2), AC-23, FR-13 mapping (`RMQ.Sync`→`RMQ.Sync`); ADR 0066 "provider implementations FR-20 adds".
 
 - [ ] **Onboard RMQ.Sync: run against a broker and record the ledger (FR-20 step 3)**
@@ -649,7 +650,7 @@
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - replace RMQ.Sync placeholder with per-config rows.
     - `tests/Paramore.Brighter.RMQ.Sync.Tests/MessagingGateway/**/Generated/**` - drop/keep markers accordingly.
     - `src/Paramore.Brighter.MessagingGateway.RMQ.Sync/...` - localized fixes where in-boundary.
-  - **RALPH-VERIFY** (the placeholder row is gone and every replacement RMQ.Sync row has no `Unknown`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Sync.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && { docker compose -f docker-compose-rmq.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.RMQ.Sync.Tests --filter "FullyQualifiedName~MessagingGateway" && ! grep -q 'RMQ.Sync / (not yet declared)' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! grep -- 'RMQ.Sync /' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown`
+  - **RALPH-VERIFY** (the placeholder row is gone and every replacement RMQ.Sync row has no `Unknown`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Sync.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-rmq.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.RMQ.Sync.Tests --filter "FullyQualifiedName~MessagingGateway" && ! grep -q 'RMQ.Sync / (not yet declared)' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! grep -- 'RMQ.Sync /' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown`
   - **References**: requirements FR-20(3), AC-23, FR-21; ADR 0067 step 5, "Infra reality".
 
 - [ ] **Onboard AzureServiceBus: config + both providers (FR-20 step 1-2)**
@@ -661,7 +662,7 @@
     - `tests/Paramore.Brighter.AzureServiceBus.Tests/test-configuration.json` - new (no gate keys).
     - `tests/Paramore.Brighter.AzureServiceBus.Tests/MessagingGateway/AzureServiceBusMessageGatewayProvider.cs` - new provider (both interfaces).
     - `tests/Paramore.Brighter.AzureServiceBus.Tests/MessagingGateway/**/Generated/**` - regenerate.
-  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AzureServiceBus.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.AzureServiceBus.Tests`
+  - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AzureServiceBus.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.AzureServiceBus.Tests`
   - **References**: requirements FR-20(1),(2), AC-23, FR-13 mapping + the `Azure.Tests` trap; ADR 0066 "provider implementations FR-20 adds".
 
 - [ ] **Onboard AzureServiceBus: run against a broker or record a signed-off Deferred (FR-20 step 3)**
@@ -673,7 +674,7 @@
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - replace ASB placeholder with per-config rows.
     - `tests/Paramore.Brighter.AzureServiceBus.Tests/MessagingGateway/**/Generated/**` - keep/drop markers accordingly.
     - `src/Paramore.Brighter.MessagingGateway.AzureServiceBus/...` - localized fixes only if a broker is available and in-boundary.
-  - **RALPH-VERIFY** (no repo-root ASB compose file; if no broker is available, apply flag-and-move-on and the deferred behaviours carry Skip markers, so the run passes with them skipped — the placeholder row must still be gone and no replacement ASB row may read `Unknown`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AzureServiceBus.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator) && dotnet build tests/Paramore.Brighter.AzureServiceBus.Tests && dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests --filter "FullyQualifiedName~MessagingGateway" && ! grep -q 'AzureServiceBus / (not yet declared)' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! grep -- 'AzureServiceBus /' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown`
+  - **RALPH-VERIFY** (no repo-root ASB compose file; if no broker is available, apply flag-and-move-on and the deferred behaviours carry Skip markers, so the run passes with them skipped — the placeholder row must still be gone and no replacement ASB row may read `Unknown`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AzureServiceBus.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.AzureServiceBus.Tests && dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests --filter "FullyQualifiedName~MessagingGateway" && ! grep -q 'AzureServiceBus / (not yet declared)' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! grep -- 'AzureServiceBus /' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown`
   - **References**: requirements FR-20(3), AC-23 ("Inability to provide CI infrastructure is a valid ground for deferral"), FR-21 placeholder rules; ADR 0067 "Negative" (ASB likely lands Deferred), step 5.
 
 ### Phase 5 — Terminal cleanup (ADR 0067 step 6 — GATED on the ledger having no Unknown cells)
@@ -741,7 +742,7 @@
   - **Implementation files**:
     - `specs/0036-universal-transport-conformance-tests/conformance-status.md` - finalize real issue numbers.
     - `tests/Paramore.Brighter.*.Tests/**/Generated/**` - align Skip marker issue numbers with the raised issues (regenerate if the markers are template-driven).
-  - **RALPH-VERIFY**: `! grep -rn '#NNNN' specs/0036-universal-transport-conformance-tests/conformance-status.md tests --include=*.cs && for n in $(grep -ohE "#[0-9]+" specs/0036-universal-transport-conformance-tests/conformance-status.md | tr -d '#' | sort -u); do gh issue view "$n" >/dev/null 2>&1 || { echo "MISSING #$n"; exit 1; }; done`
+  - **RALPH-VERIFY** (the `#NNNN` grep excludes `**/ConformanceAudit/**` — those audit tests legitimately embed the literal `#NNNN` as a negative fixture, and a naïve repo-wide substring grep would false-positive on them, exactly as `grep -rn setupDeadLetterQueue` did on the FR-1 interface meta-test's `Assert.DoesNotContain("setupDeadLetterQueue", …)` lines in Phase 0; the check targets the ledger and the generated Skip markers, not the audit fixtures that describe them): `! { grep -rn '#NNNN' specs/0036-universal-transport-conformance-tests/conformance-status.md tests --include=*.cs | grep -vE '/ConformanceAudit/' | grep -q '#NNNN'; } && for n in $(grep -ohE "#[0-9]+" specs/0036-universal-transport-conformance-tests/conformance-status.md | tr -d '#' | sort -u); do gh issue view "$n" >/dev/null 2>&1 || { echo "MISSING #$n"; exit 1; }; done`
   - **References**: requirements FR-13 (named, linked, signed-off follow-up), FR-21; ADR 0067 "Risks and Mitigations" (deferral list owned/audited), OOS-2 follow-up (scheduler-delegation tests).
 
 - [ ] **Enforce the greppable linked-issue Skip convention**

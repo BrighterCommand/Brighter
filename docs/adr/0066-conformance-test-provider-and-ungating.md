@@ -522,6 +522,40 @@ provider interfaces — the async members return `Task`/`Task<...>` and take a
 `CancellationToken`, matching the existing dual layout. Parity here exercises the distinct sync
 vs async gateway code paths; it is not pump re-testing.
 
+### Implementation notes (learned during Phase 0 rollout)
+
+These are mechanical facts the design assumes but did not originally spell out; they cost real time
+during the first implementation pass, so they are recorded here for future implementors. None of
+them changes a decision above.
+
+- **Regenerating a single project requires `--framework net10.0`.** The generator project
+  multi-targets (`<TargetFrameworks>$(BrighterToolTargetFrameworks)</TargetFrameworks>`), so the
+  regenerate step `cd tests/<Project> && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator`
+  aborts with *"Your project targets multiple frameworks. Specify which framework to run using
+  '--framework'."* and regenerates nothing unless the framework is pinned. `generate-test.sh`
+  already pins `--framework net10.0`; any ad-hoc per-project regenerate (and every per-project
+  RALPH-VERIFY) must do the same.
+
+- **The generator-test project must disable xUnit parallelization.** The generator reads its
+  Liquid templates from the *shared* build-output directory `AppContext.BaseDirectory/Templates/…`.
+  A generator test that injects a template into that directory to exercise `SkipTest`/emit paths
+  (e.g. the closed-legacy-list test) mutates the same directory that every other test's
+  `GenerateAsync` enumerates. Under xUnit's default cross-class parallelism, one test's
+  create/delete races another's directory enumeration and throws an intermittent
+  `FileNotFoundException` (observed only on one TFM, which makes it look like a TFM bug rather than
+  a race). The fix is one line — `[assembly: Xunit.CollectionBehavior(DisableTestParallelization = true)]`
+  in an `AssemblyInfo.cs` — and it is load-bearing for every Phase 1 canonical-template test that
+  runs the generator.
+
+- **Repo-wide substring greps that assert a token's *absence* collide with meta-tests that *name*
+  the token.** A verify such as `! grep -rn setupDeadLetterQueue tests tools` (Phase 0 RocketMQ) or
+  `! grep -rn '#NNNN' … tests` (Phase 6 reconciliation) false-positives on the very tests written to
+  assert the token is gone — `Assert.DoesNotContain("setupDeadLetterQueue", …)` in the FR-1
+  interface meta-test, or a `#NNNN` negative fixture in the `ConformanceAudit` tests. Scope such
+  greps to the artifacts that must actually be clean (providers, generated copies, the ledger,
+  templates) and exclude the meta-test/audit sources (e.g. pipe through `grep -vE '/ConformanceAudit/'`),
+  or the invariant can never be satisfied while the guarding test exists.
+
 ## Consequences
 
 ### Positive
