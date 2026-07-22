@@ -236,7 +236,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-15, AC-16, NFR-2; ADR 0066 "Delete the broken template" (zero-boundary template is legitimate no-delay).
 
-- [ ] **Canonical reject with delivery error → DLQ (FR-4)**
+- [x] **Canonical reject with delivery error → DLQ (FR-4)**
   - **Behavior**: Generate a canonical test proving `channel.Reject(M, new MessageRejectionReason(RejectionReason.DeliveryError, "..."))` on a channel with a dead-letter routing key routes `M` to the DLQ, carrying original-topic (equal to the data topic) and a rejection-reason entry. DLQ arrival is asserted inside the bounded retry loop via `GetMessageFromDeadLetterQueue`.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_delivery_error_reject_should_emit_dlq_routing_both_variants.cs`
   - **Test should verify**:
