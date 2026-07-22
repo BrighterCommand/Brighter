@@ -224,7 +224,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-2, AC-2, NFR-2, AC-20, AC-21; ADR 0066 "Why there is no scheduler member" (GCP vs RocketMQ failure modes).
 
-- [ ] **Canonical explicit-zero requeue (FR-15)**
+- [x] **Canonical explicit-zero requeue (FR-15)**
   - **Behavior**: Generate a canonical test proving `channel.Requeue(M, TimeSpan.Zero)` behaves as an immediate plain requeue: `Requeue` returns `true`, the message is received on the **first** iteration of the plain-requeue bounded retry loop, and elapsed time from the call to receipt is less than 5s. Proves `TimeSpan.Zero` is neither special-cased into error/unbounded wait nor treated as a positive delay. Scoped to the explicit `TimeSpan.Zero` argument only.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_zero_delay_requeue_should_emit_first_iteration_receipt_both_variants.cs`
   - **Test should verify**:
