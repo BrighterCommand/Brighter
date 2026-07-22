@@ -284,7 +284,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-7, AC-7, NFR-1; Kafka reference `..._no_channels_configured_should_acknowledge_and_log`.
 
-- [ ] **Canonical reject None/unspecified → DLQ, not invalid (FR-17)**
+- [x] **Canonical reject None/unspecified → DLQ, not invalid (FR-17)**
   - **Behavior**: Generate a canonical test proving `channel.Reject(M, new MessageRejectionReason(RejectionReason.None, "..."))` on a channel with a dead-letter routing key routes `M` to the DLQ (default arm of the fallback ladder) with reason `"None"` and original-topic = data topic, and NOT to the invalid channel (single bounded `MT_NONE` receive of the invalid channel).
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_none_reason_reject_should_emit_dlq_default_both_variants.cs`
   - **Test should verify**:
