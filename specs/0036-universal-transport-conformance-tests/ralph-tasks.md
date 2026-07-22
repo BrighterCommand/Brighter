@@ -260,7 +260,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-5, AC-5, AC-20; ADR 0066 "Read-member contract" (MT_NONE for absence); Kafka reference `..._unacceptable_reason_should_send_to_invalid_channel`.
 
-- [ ] **Canonical fallback: unacceptable, DLQ-only → DLQ (FR-6)**
+- [x] **Canonical fallback: unacceptable, DLQ-only → DLQ (FR-6)**
   - **Behavior**: Generate a canonical test proving that on a channel configured with a DLQ only (no invalid channel), `channel.Reject(M, Unacceptable)` routes `M` to the DLQ with rejection-reason still `"Unacceptable"`.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_unacceptable_dlq_only_should_emit_dlq_fallback_both_variants.cs`
   - **Test should verify**:
