@@ -272,7 +272,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-6, AC-6; ADR 0066 "Read-member contract"; ADR `0047-message-rejection-routing-strategy`.
 
-- [ ] **Canonical no channels configured → acknowledge and continue (FR-7)**
+- [x] **Canonical no channels configured → acknowledge and continue (FR-7)**
   - **Behavior**: Generate a canonical test proving that on a channel with neither DLQ nor invalid channel and two queued messages `M1`, `M2`: receive `M1`; `channel.Reject(M1, DeliveryError)` returns `true` (message removed, not redelivered); the next receive yields `M2` without blocking. The `_and_log` suffix is retained per NFR-1 but logging is not asserted.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_no_channels_reject_should_emit_ack_and_continue_both_variants.cs`
   - **Test should verify**:
