@@ -119,4 +119,18 @@ public class MessagingGatewayConfiguration
     /// Gets or sets the maximum time to wait for a message publish confirmation in milliseconds.
     /// </summary>
     public int MessageConfirmationTimeoutInMilliseconds { get; set; } = 1000;
+
+    /// <summary>
+    /// Gets or sets the conformance-ledger row key for this configuration,
+    /// e.g. "Kafka / Standard" or "RMQ.Async / Classic" (FR-21 / ADR 0067).
+    /// When null the ledger-driven Skip mechanism is skipped for this configuration.
+    /// </summary>
+    public string? LedgerKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the per-template Deferred Skip value computed from the conformance ledger.
+    /// Set by <see cref="Generators.MessagingGatewayGenerator"/> before each canonical template
+    /// render; empty when the ledger cell is Pass/Fixed (test runs without a Skip).
+    /// </summary>
+    public string? Skip { get; set; }
 }
