@@ -320,7 +320,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-9, AC-9, AC-20; ADR 0067 stage sequencing (delayed send is canonical).
 
-- [ ] **Canonical Nack redelivers, plus two-message variant (FR-16)**
+- [x] **Canonical Nack redelivers, plus two-message variant (FR-16)**
   - **Behavior**: Generate a canonical test proving `channel.Nack(M)` / `NackAsync(M)` releases a received message for redelivery on a subsequent receive (distinct from `Acknowledge` which removes, and `Reject` which routes). A second variant with two queued messages proves the nacked `M` is redelivered and then `M2` is received (not blocked behind it). Redelivery asserted inside the bounded retry loop.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_nack_test_should_emit_redelivery_and_two_message_variant_both_variants.cs`
   - **Test should verify**:
