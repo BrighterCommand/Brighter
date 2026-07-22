@@ -43,7 +43,7 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact{%- if Skip != empty -%}, Skip = "{{ Skip }}"{%- endif -%}]
+    [Fact{%- if Skip != empty -%}(Skip = "{{ Skip }}"){%- endif -%}]
     public async Task When_rejecting_message_should_include_metadata_async()
     {
         // Arrange

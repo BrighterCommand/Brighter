@@ -43,7 +43,7 @@ public class WhenRequeuingAFailedMessageShouldBeRedeliveredAsync : IAsyncLifetim
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact{%- if Skip != empty -%}, Skip = "{{ Skip }}"{%- endif -%}]
+    [Fact{%- if Skip != empty -%}(Skip = "{{ Skip }}"){%- endif -%}]
     public async Task When_requeuing_a_failed_message_should_be_redelivered_async()
     {
         // Arrange

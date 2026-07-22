@@ -37,7 +37,7 @@ public class WhenRequeuingAFailedMessageShouldBeRedelivered : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact{%- if Skip != empty -%}, Skip = "{{ Skip }}"{%- endif -%}]
+    [Fact{%- if Skip != empty -%}(Skip = "{{ Skip }}"){%- endif -%}]
     public void When_requeuing_a_failed_message_should_be_redelivered()
     {
         // Arrange

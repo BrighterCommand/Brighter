@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 using Xunit;
 
@@ -35,7 +36,7 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlq : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact{%- if Skip != empty -%}, Skip = "{{ Skip }}"{%- endif -%}]
+    [Fact{%- if Skip != empty -%}(Skip = "{{ Skip }}"){%- endif -%}]
     public void When_rejecting_message_with_unknown_reason_should_send_to_dlq()
     {
         // Arrange — both DLQ and invalid channel configured (FR-17, AC-18, FR-1(2))
@@ -70,7 +71,7 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlq : IDisposable
             {
                 break;
             }
-            Task.Delay(500).Wait();
+            Thread.Sleep(500);
         }
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);

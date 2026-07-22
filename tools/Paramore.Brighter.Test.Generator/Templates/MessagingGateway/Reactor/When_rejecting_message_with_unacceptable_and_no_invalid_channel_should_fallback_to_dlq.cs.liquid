@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 using Xunit;
 
@@ -35,7 +36,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact{%- if Skip != empty -%}, Skip = "{{ Skip }}"{%- endif -%}]
+    [Fact{%- if Skip != empty -%}(Skip = "{{ Skip }}"){%- endif -%}]
     public void When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
     {
         // Arrange — DLQ configured only; no invalid channel (FR-6, AC-6, FR-1(2))
@@ -69,7 +70,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
             {
                 break;
             }
-            Task.Delay(500).Wait();
+            Thread.Sleep(500);
         }
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);

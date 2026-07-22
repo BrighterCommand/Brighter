@@ -343,7 +343,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements "Coverage Reconciliation (Kafka reference surface)", OOS-2, OOS-3; ADR 0066 "Why there is no scheduler member".
 
-- [ ] **Generate the canonical suite into every wired project ("generate everywhere immediately")**
+- [x] **Generate the canonical suite into every wired project ("generate everywhere immediately")**
   - **Behavior**: With the canonical templates and the ledger-driven Skip mechanism in place, regenerate ALL twenty wired configurations so the canonical suite lands everywhere at once (ADR 0067 "generate everywhere immediately"). At this point every ledger cell is still `Unknown` (nothing proven yet except what Phase 2 will prove), so every generated canonical test lands **carrying its Deferred Skip** and the whole solution builds green with the canonical tests skipped. This is the baseline the fix phases then shed markers from — and it closes the gap where Phase 3/4 would otherwise `dotnet test` a project that has no canonical tests (review finding #1). Safe to `./generate-test.sh` now: all providers migrated (Phase 0 complete) and the legacy templates still gate via the narrowed `SkipTest`.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_everywhere_should_emit_skipped_canonical_suite_in_all_wired_projects.cs` (structural assertion) — solution build is the integration gate
   - **Test should verify**:

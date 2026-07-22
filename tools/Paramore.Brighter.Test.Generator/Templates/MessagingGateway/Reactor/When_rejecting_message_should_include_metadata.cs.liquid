@@ -37,7 +37,7 @@ public class WhenRejectingMessageShouldIncludeMetadata : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact{%- if Skip != empty -%}, Skip = "{{ Skip }}"{%- endif -%}]
+    [Fact{%- if Skip != empty -%}(Skip = "{{ Skip }}"){%- endif -%}]
     public void When_rejecting_message_should_include_metadata()
     {
         // Arrange

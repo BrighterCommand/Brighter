@@ -58,7 +58,7 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
             ? File.ReadAllText(_canonicalTemplatePath)
             : null;
         File.WriteAllText(_canonicalTemplatePath,
-            "[Fact{%- if Skip != empty -%}, Skip = \"{{ Skip }}\"{%- endif -%}]\n" +
+            "[Fact{%- if Skip != empty -%}(Skip = \"{{ Skip }}\"){%- endif -%}]\n" +
             $"public void {CANONICAL_TEMPLATE_NAME}() {{ }}\n");
 
         // Non-canonical placeholder template (not in the FR-column map) — verifies that
@@ -66,7 +66,7 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
         _nonCanonicalTemplatePath = Path.Combine(
             reactorTemplatesDir, $"{NON_CANONICAL_TEMPLATE_NAME}.cs.liquid");
         File.WriteAllText(_nonCanonicalTemplatePath,
-            "[Fact{%- if Skip != empty -%}, Skip = \"{{ Skip }}\"{%- endif -%}]\n" +
+            "[Fact{%- if Skip != empty -%}(Skip = \"{{ Skip }}\"){%- endif -%}]\n" +
             $"public void {NON_CANONICAL_TEMPLATE_NAME}() {{ }}\n");
     }
 
