@@ -395,7 +395,7 @@
   - **RALPH-VERIFY** (scoped + redirected; `$SCRATCH` = a temp dir): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Kafka.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-kafka.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.Kafka.Tests --framework net10.0 --filter "FullyQualifiedName~WhenRequeuingAFailedMessageShouldBeRedelivered|FullyQualifiedName~WhenRequeuingAFailedMessageWithZeroDelay|FullyQualifiedName~WhenNackingAMessage" > "$SCRATCH/kafka-requeue.log" 2>&1; echo EXIT=$? && grep -E "Passed!|Failed!|\.cs:line" "$SCRATCH/kafka-requeue.log" | tail -20 && grep -q -- 'Kafka /' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'Kafka /' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 3 + "Deferral preconditions"; FR-21, AC-24, FR-14 (both variants).
 
-- [ ] **Kafka — no-channel acknowledge-and-log (FR-7), both configs, both variants**
+- [x] **Kafka — no-channel acknowledge-and-log (FR-7), both configs, both variants**
   - **Behavior**: Prove reject-with-no-channels-configured → acknowledge and log (FR-7). Standalone, no harness hook. Resolve FR-7 for both Kafka rows.
   - **Test should verify**: FR-7 column of both Kafka rows resolves to `Pass` (both variants) or evidence-backed `Deferred`; no `Unknown`.
   - **Implementation files**: `specs/0036-…/conformance-status.md` (FR-7, both rows); regenerate the Kafka project.
