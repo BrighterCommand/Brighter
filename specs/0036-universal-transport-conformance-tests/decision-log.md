@@ -259,9 +259,24 @@ end-to-end: flipping cells and regenerating un-skips/re-skips the canonical test
 and the suite executes and yields correct per-behaviour signal. Two distinct classes of
 non-conformance were observed:
 
-- **Deterministic Kafka gaps** — on a *fresh* broker, FR-2, FR-4, FR-5, FR-6, FR-8, FR-9, FR-17
-  failed every time (reject/DLQ routing + delayed redelivery; Kafka has no native DLQ and no
-  delayed-redelivery primitive — cf. ADR `0046`). These are genuine conformance work, not infra.
+- **Deterministic failures — but test-harness gaps, not transport limitations.** On a *fresh*
+  broker, FR-2, FR-4, FR-5, FR-6, FR-8, FR-9, FR-17 failed every time. Reading the *actual* errors
+  (not inferring from test names) shows the cause is the harness, not Kafka:
+  - **FR-4/5/6/8/17 (reject → DLQ / invalid-channel)** fail at the DLQ-read assertion because
+    `KafkaMessageGatewayProvider.GetMessageFromDeadLetterQueue()` /
+    `GetMessageFromInvalidChannel()` (and the async variants, in *both* the Standard and PartitionKey
+    providers) are **stubs that `return Message.Empty`** — i.e. `MT_NONE`. The harness never consumes
+    the `<topic>.DLQ` topic, so `Assert.NotEqual(MT_NONE, dlqMessage…)` (line ~74) can never pass.
+    This says **nothing** about whether Kafka's reject path routes to a DLQ (native or universal
+    fallback) — the behaviour is simply never observed. Fixable in the harness.
+  - **FR-2/FR-9 (delayed requeue / delayed send)** fail with
+    `ConfigurationException: KafkaMessageProducer: delay … requested but no scheduler is configured`.
+    The harness `CreateProducer` wires **no `MessageSchedulerFactory`**, though Kafka implements the
+    scheduler seam (`IAmAChannelFactoryWithScheduler`; cf. hand-written
+    `When_kafka_channel_factory_forwards_scheduler_to_consumers`). Fixable in the harness/config.
+
+  An earlier draft of this note wrongly attributed these to "no native DLQ / delayed-redelivery
+  primitive." That was inference from the test names before the errors were read; it is retracted.
 - **Broker flakiness under load** — FR-7, FR-15, FR-16, FR-22 *passed* on the fresh broker, but on
   a re-run under full-suite load they failed alongside the most basic pre-existing hand-written
   gateway tests (`When_posting_a_message_via_the_messaging_gateway_should_be_received`,
@@ -277,6 +292,46 @@ and it *regressed* the hand-written `KafkaMessageConsumerUpdateOffset` test (gre
 after the revert). Out of scope for this task; reverted. If pursued, it belongs in its own bugfix,
 not the conformance ledger.
 
-**Follow-up (#4240).** Re-run Phase 2 against a stable CI Kafka to (a) certify FR-7/15/16/22 as
-`Pass`, and (b) triage the seven deterministic gaps into `Fixed` (localized gateway work) vs a
-signed-off `Deferred` with a real issue number. Phase 6 reconciles `#4240` → the real issue.
+**Follow-up (#4240).** (1) Implement the Kafka test-harness hooks that are currently stubbed —
+`GetMessageFromDeadLetterQueue`/`GetMessageFromInvalidChannel` (+ async, both providers) must
+actually consume the `<topic>.DLQ` / invalid-channel topic; and wire a `MessageSchedulerFactory`
+into the delayed-producer path. (2) Re-run Phase 2 against a stable CI Kafka to certify
+FR-7/15/16/22 as `Pass` and to see how many of FR-2/4/5/6/8/9/17 flip to `Pass`/`Fixed` once the
+harness observes the behaviour. Only what still fails *after* the harness is complete is a genuine
+transport gap to triage `Fixed` (localized gateway work) vs signed-off `Deferred`. Phase 6
+reconciles `#4240` → the real issue. NB: the `manual-test-plan.md` runbook drives exactly this.
+
+---
+
+## Strengthened: deferral governance + split-task execution (after the Phase 2 Kafka run)
+
+**Recorded 2026-07-22.** The Phase 2 Kafka run exposed a governance hole: the flag-and-move-on
+clause had **no preconditions**, so three unrelated outcomes all drained into `Deferred` — a genuine
+external block (legitimate), missing in-scope implementation (the stubbed harness hooks), and a
+sub-agent that timed out / blew its context (not a result at all). The task was closed `[x]` on the
+strength of "tests fail + a belief it was infrastructure", which laundered "we didn't finish" into
+"infrastructure blocked us". The mitigation we *had* added (context-discipline instructions to the
+sub-agent) did not make the flow more reliable — a second sub-agent died the same way — because the
+broker-heavy suite is a structural mismatch for one-sub-agent-per-task (16 min/TFM, output
+overflows context).
+
+**Two changes (owner-approved):**
+1. **Deferral preconditions** — `Deferred` is now earned, not defaulted-to: (a) evidence, not
+   inference (root cause read from the actual error, recorded); (b) implementation attempted, where
+   in-scope explicitly includes completing the test-harness hooks a behaviour needs to be
+   *observable*; (c) residual blocker genuinely external or beyond the size/risk boundary. A
+   timed-out/context-blown run is **re-run**, never deferred; missing in-scope implementation is work
+   to do, not a dependency. Codified in ADR 0067 "Deferral preconditions" (post-acceptance amendment)
+   and `ralph-tasks.md` Execution Notes.
+2. **Split broker-heavy conformance tasks into behaviour-class sub-runs** — orchestrator-scoped,
+   single-TFM, output redirected to a log with only summaries read. Standard classes:
+   requeue/redeliver (FR-22/15/16), reject→DLQ/invalid+metadata (FR-4/5/6/8/17, needs the read
+   hooks), delay (FR-2/9, needs a scheduler), no-channel ack (FR-7). Each unit does its harness
+   prerequisite first, keeping it under the tool/context ceiling and making precondition (b)
+   impossible to skip.
+
+**Consequence:** the Phase 2 Kafka task was **reopened** (its `[x]` was invalid under the new rule)
+and re-expressed as four behaviour-class sub-tasks. The commit `97c9be7b9` and the all-`Deferred`
+ledger remain the honest starting point; the sub-tasks flip columns to `Pass`/`Fixed` as each is
+genuinely proven. ADR 0067's rollout *decision* is unchanged — only its deferral *governance* is
+tightened.

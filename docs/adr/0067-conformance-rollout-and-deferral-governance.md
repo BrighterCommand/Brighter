@@ -21,6 +21,13 @@ Date: 2026-07-18
 
 Accepted
 
+**Amended 2026-07-22** (post-acceptance, non-substantive to the decision): the deferral governance
+was strengthened after the Phase 2 Kafka run exposed that the original wording let three distinct
+outcomes — a genuine external block, missing in-scope implementation, and a timed-out/context-blown
+sub-agent — all drain into `Deferred`. Added the explicit **Deferral preconditions** (Key
+Components) and the split-into-behaviour-class execution model. The rollout decision itself is
+unchanged. See `specs/0036-…/decision-log.md`.
+
 ## Context
 
 Sibling ADR [0066](0066-conformance-test-provider-and-ungating.md) extends the generated provider
@@ -292,6 +299,28 @@ against the ledger so neither can drift from the other.
   issues for anything needing a new subsystem or runtime API change (`Deferred` rows). Those ADRs
   are cited by slug in References; note that ADR *numbers* 0038–0043 are each reused in this
   repository, so a bare number or a numeric range does not identify them.
+- **Deferral preconditions — a deferral is *earned*, not defaulted-to.** `Deferred -> #issue` is a
+  last resort, permitted only when **all three** preconditions hold; setting a cell `Deferred`
+  without them is a governance violation, not an audited deferral:
+  1. **Evidence, not inference.** The failure has been reproduced and its root cause read from the
+     **actual error / stack-trace** and recorded (commit + decision-log). A cell may never be
+     `Deferred` on a cause guessed from a test name or symptom.
+  2. **Implementation attempted.** Every in-scope remedy has been tried and the failure *survives*
+     it. In-scope explicitly **includes completing the test-harness provider hooks a behaviour
+     needs to be observable** — a real dead-letter/invalid-channel read, wiring a
+     `MessageSchedulerFactory` — as well as the localized gateway fix. **A behaviour that fails only
+     because the harness cannot yet observe it is not deferrable**; the harness is completed first.
+  3. **Residual blocker is genuinely external, or beyond the size/risk boundary.** A
+     broker/emulator/CI environment that cannot be stood up, a cloud-only service, an upstream
+     client bug, or a fix that requires a new subsystem or runtime-API change (C-1).
+
+  Explicitly **not** deferral grounds: **(a) a tooling failure** — a sub-agent or run that timed
+  out, blew its context, or hit an API limit — is **not a task result**; it is re-run (scoped,
+  output redirected) to a root-caused outcome. **(b) missing in-scope implementation** is work to
+  complete, not a dependency to defer around. If the preconditions are unmet and the work is not
+  done, the cell stays `Unknown` and the task is **not** closed via the fallback (leave it open, or
+  fail it for a human) — a premature `Deferred` launders "we didn't finish" into "infrastructure
+  blocked us", which is exactly what the ledger exists to prevent.
 
 ### Technology Choices
 
@@ -332,12 +361,17 @@ against the ledger so neither can drift from the other.
 4. **Bring the DLQ-ADR transports to conformance.** For each of **AWS**, **AWS.V4**, **Redis**,
    **MSSQL**, **PostgresSQL** and **RocketMQ** (DLQ-ADR slugs in References) — and **RMQ.Async**,
    which has no per-transport DLQ ADR and whose reject/DLQ conformance may be a larger fix — run the
-   generated suite; for each non-conformant behaviour, apply the fix-to-conform boundary. If
-   localized and low-risk (add a lazy DLQ/invalid producer, forward the scheduler to consumers, stamp
-   the metadata semantic set under the transport's own keys), fix inline, **remove that
-   configuration's deferral marker in the same PR**, and record `Fixed (#PR)`. Otherwise open a
-   follow-up issue, obtain maintainer sign-off, leave the `Deferred: #NNNN` Skip in place, and record
-   `Deferred -> #issue`.
+   generated suite; for each non-conformant behaviour, **read its actual failure, then** apply the
+   fix-to-conform boundary. If localized and low-risk (add a lazy DLQ/invalid producer, forward the
+   scheduler to consumers, stamp the metadata semantic set under the transport's own keys), or if the
+   behaviour is merely **not yet observable by the harness** (an unimplemented dead-letter/invalid
+   read, an unwired scheduler — complete it, since observability is in-scope), fix/complete it inline,
+   **remove that configuration's deferral marker in the same PR**, and record `Fixed (#PR)` (or `Pass`
+   if it then conforms unchanged). Only once the **deferral preconditions** (Key Components) are all
+   met — evidence read, in-scope harness completion *and* localized fix attempted, residual blocker
+   genuinely external — open a follow-up issue, obtain maintainer sign-off, leave the
+   `Deferred: #NNNN` Skip in place, and record `Deferred -> #issue`. A run or sub-agent that timed out
+   or blew its context is re-run, never deferred.
 5. **Close the known-gap transports last.** First GCP (no canonical coverage; `Requeue` ignores the
    delay), then the three FR-20 onboardings — AzureServiceBus, MQTT, RMQ.Sync — each needing a
    `test-configuration.json`, provider implementation(s) and CI infrastructure before it can generate
