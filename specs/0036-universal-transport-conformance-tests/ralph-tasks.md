@@ -248,7 +248,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-4, AC-4, NFR-1, NFR-2; ADR `0047-message-rejection-routing-strategy` (fallback ladder); Kafka reference `..._delivery_error_should_send_to_dlq`.
 
-- [ ] **Canonical reject unacceptable → invalid channel, not DLQ (FR-5)**
+- [x] **Canonical reject unacceptable → invalid channel, not DLQ (FR-5)**
   - **Behavior**: Generate a canonical test proving `channel.Reject(M, Unacceptable)` on a channel configured with BOTH routing keys routes `M` to the invalid channel (reason `"Unacceptable"`, original-topic = data topic) and NOT to the DLQ. The "not on DLQ" arm is a single bounded receive of the DLQ asserting `MT_NONE` (AC-20 exemption); the invalid-channel arrival stays inside the retry loop.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_unacceptable_reject_should_emit_invalid_channel_routing_both_variants.cs`
   - **Test should verify**:
