@@ -308,7 +308,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-8, AC-8, FR-1(5); ADR 0066 "RejectionMetadataKeys", "What a provider returns for a field its gateway does not stamp"; Kafka reference `..._rejecting_message_should_include_metadata` (Reactor-only today).
 
-- [ ] **Canonical delayed send (FR-9)**
+- [x] **Canonical delayed send (FR-9)**
   - **Behavior**: Generate a canonical test proving `producer.SendWithDelay(M, 5s)` is not receivable before the delay (single bounded `MT_NONE` receive) and is receivable after it (bounded retry loop). May migrate from the legacy `When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery` template; the canonical template — not the legacy one — satisfies FR-9.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_delayed_send_should_emit_before_and_after_arms_both_variants.cs`
   - **Test should verify**:
