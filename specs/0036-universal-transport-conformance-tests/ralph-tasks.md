@@ -332,7 +332,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~CanonicalTemplates"`
   - **References**: requirements FR-16, AC-17, NFR-2, AC-20; Kafka reference `When_nacking_a_message_it_should_be_redelivered` (+ two-message).
 
-- [ ] **Reconcile the canonical set against the Kafka hand-written suite**
+- [x] **Reconcile the canonical set against the Kafka hand-written suite**
   - **Behavior**: Verify every behavioural row of the Kafka reference surface maps to a canonical template (FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-17, FR-16, FR-22/FR-9), and that the mechanism-only Kafka test (`..._requeues_with_delay_should_use_scheduler`) and transport-internal tests are deliberately NOT reproduced (OOS-2/OOS-3). This is a coverage checkpoint before proving the reference transport.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_reconciling_canonical_set_should_cover_kafka_reference_surface.cs`
   - **Test should verify**:
