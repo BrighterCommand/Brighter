@@ -4,19 +4,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-
-using Xunit;
+using System.Threading;
 
 using Paramore.Brighter.Extensions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
+using Xunit;
+
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Consumer.Reactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]
-public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync : IAsyncLifetime
+public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmation : IDisposable
 {
-    private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
+    private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
     private readonly IAmAMessageAssertion _messageAssertion;
 
@@ -25,28 +25,23 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
     private Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription? _subscription;
     private Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication? _publication;
 
-    private IAmAMessageProducerAsync? _producer;
-    private IAmAChannelAsync? _channel;
+    private IAmAMessageProducerSync? _producer;
+    private IAmAChannelSync? _channel;
 
-    public WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync()
+    public WhenConfirmingPostingAMessageShouldReceivePublishConfirmation()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
+        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaConsumerMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
         _messageAssertion = new KafkaMessageAssertion();
     }
 
-    public Task InitializeAsync()
+    public void Dispose()
     {
-        return Task.CompletedTask;
-    }
-
-    public async Task DisposeAsync()
-    {
-        await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
+        _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
     [Fact]
-    public async Task When_confirming_posting_a_message_should_receive_publish_confirmation_async()
+    public void When_confirming_posting_a_message_should_receive_publish_confirmation()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -54,8 +49,8 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
             _messageGatewayProvider.GetOrCreateChannelName(),
             OnMissingChannel.Create);
 
-        _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
-        _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
+        _producer = _messageGatewayProvider.CreateProducer(_publication);
+        _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
         var confirmation = (ISupportPublishConfirmation)_producer;
 
@@ -64,15 +59,15 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
 
         var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
         _sentMessages.Add(message);
-
+        
         // Act
-        await _producer.SendAsync(message);
-
+        _producer.Send(message);
+        
         // Assert
         var timeout = DateTime.UtcNow.Add(TimeSpan.FromMilliseconds(1000));
         while (!messageSent && DateTime.UtcNow < timeout)
         {
-            await Task.Delay(100);
+            Thread.Sleep(100);
         }
 
         Assert.True(messageSent);

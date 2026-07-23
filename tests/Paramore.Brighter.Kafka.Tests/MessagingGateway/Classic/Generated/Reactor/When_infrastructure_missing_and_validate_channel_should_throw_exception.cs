@@ -7,11 +7,11 @@ using System.Threading;
 
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Classic.Reactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]
-public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException 
+public class WhenInfrastructureMissingAndValidateChannelShouldThrowException 
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
@@ -24,14 +24,14 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException
     private IAmAMessageProducerSync? _producer;
     private IAmAChannelSync? _channel;
 
-    public WhenInfrastructureMissingAndAssumeChannelShouldThrowException()
+    public WhenInfrastructureMissingAndValidateChannelShouldThrowException()
     {
-        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaMessageGatewayProvider();
+        _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaClassicMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
     }
 
     [Fact]
-    public void When_infrastructure_missing_and_assume_channel_should_throw_exception()
+    public void When_infrastructure_missing_and_validate_channel_should_throw_exception()
     {
         try
         {
@@ -39,7 +39,7 @@ public class WhenInfrastructureMissingAndAssumeChannelShouldThrowException
             _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey(), OnMissingChannel.Assume);
             _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!, 
                 _messageGatewayProvider.GetOrCreateChannelName(),
-                OnMissingChannel.Assume);
+                OnMissingChannel.Validate);
 
             _producer = _messageGatewayProvider.CreateProducer(_publication);
             _channel = _messageGatewayProvider.CreateChannel(_subscription);

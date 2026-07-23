@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Consumer.Proactor;
 
 /// <summary>
 /// Defines a provider for creating and managing asynchronous messaging gateway components for testing.

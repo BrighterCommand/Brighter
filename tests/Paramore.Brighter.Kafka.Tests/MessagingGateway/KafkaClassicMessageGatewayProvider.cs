@@ -32,14 +32,14 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Proactor;
-using Paramore.Brighter.Kafka.Tests.MessagingGateway.Standard.Reactor;
+using Paramore.Brighter.Kafka.Tests.MessagingGateway.Classic.Proactor;
+using Paramore.Brighter.Kafka.Tests.MessagingGateway.Classic.Reactor;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
-public class KafkaMessageGatewayProvider
+public class KafkaClassicMessageGatewayProvider
     : IAmAMessageGatewayProactorProvider,
         IAmAMessageGatewayReactorProvider
 {

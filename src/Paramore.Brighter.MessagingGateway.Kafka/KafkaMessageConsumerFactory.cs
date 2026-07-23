@@ -82,6 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 invalidMessageRoutingKey = invalidSupport.InvalidMessageRoutingKey;
             }
 
+#pragma warning disable CS0618
             return new KafkaMessageConsumer(
                 configuration: _configuration,
                 routingKey:kafkaSubscription.RoutingKey, //topic
@@ -102,8 +103,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 invalidMessageRoutingKey: invalidMessageRoutingKey,
                 timeProvider: kafkaSubscription.TimeProvider,
-                scheduler: _scheduler
-                );
+                scheduler: _scheduler,
+                groupProtocol: kafkaSubscription.GroupProtocol);
+#pragma warning restore CS0618
         }
 
         public IAmAMessageConsumerAsync CreateAsync(Subscription subscription) => (IAmAMessageConsumerAsync)Create(subscription);
