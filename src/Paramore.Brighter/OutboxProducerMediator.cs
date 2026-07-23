@@ -81,7 +81,10 @@ namespace Paramore.Brighter
         private readonly Dictionary<string, object> _outBoxBag;
         private readonly IAmABrighterTracer? _tracer;
         private readonly TimeProvider _timeProvider;
-
+        
+        /// <inheritdoc />
+        public IAmAnOutbox? Outbox => (IAmAnOutbox?)_outBox ?? _asyncOutbox;
+        
         /// <summary>
         /// Creates an instance of the Outbox Producer Mediator
         /// </summary>

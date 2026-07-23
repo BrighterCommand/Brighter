@@ -114,23 +114,30 @@ namespace Paramore.Brighter
             foreach (var handlerType in handlerTypes)
             {
                 var handlerMethod = HandlerMethodDiscovery.FindHandlerMethod(handlerType, requestType);
-                var attributes = handlerMethod.GetOtherHandlersInPipeline();
+                var isAsync = HandlerMethodDiscovery.IsAsyncHandler(handlerType);
 
-                var beforeSteps = attributes
+                var otherHandlers = handlerMethod.GetOtherHandlersInPipeline().ToList();
+
+                var beforeAttributes = otherHandlers
                     .Where(a => a.Timing == HandlerTiming.Before)
+                    .ToList();
+
+                var globalInbox = TryCreateGlobalInboxAttribute(handlerMethod, handlerType, isAsync);
+                if (globalInbox is not null)
+                    beforeAttributes.Add(globalInbox);
+
+                var beforeSteps = beforeAttributes
                     .OrderByDescending(a => a.Step)
-                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing))
+                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing) { Attribute = a })
                     .ToList()
                     .AsReadOnly();
 
-                var afterSteps = attributes
+                var afterSteps = otherHandlers
                     .Where(a => a.Timing == HandlerTiming.After)
                     .OrderByDescending(a => a.Step)
-                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing))
+                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing) { Attribute = a })
                     .ToList()
                     .AsReadOnly();
-
-                var isAsync = HandlerMethodDiscovery.IsAsyncHandler(handlerType);
 
                 yield return new HandlerPipelineDescription(requestType, handlerType, isAsync, beforeSteps, afterSteps);
             }
@@ -345,6 +352,38 @@ namespace Paramore.Brighter
             AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
             Log.NewAsyncHandlerPipelineCreated(s_logger, TracePipeline(firstInPipeline).ToString());
             return firstInPipeline;
+        }
+
+        /// <summary>
+        /// Reflection-only counterpart to <see cref="AddGlobalInboxAttributes"/> used by <see cref="Describe(Type)"/>.
+        /// Returns the global inbox attribute that <see cref="Build"/> would inject for this handler, or null
+        /// when no global inbox applies. Uses the same guards as the build path so the description does not drift.
+        /// </summary>
+        private RequestHandlerAttribute? TryCreateGlobalInboxAttribute(System.Reflection.MethodInfo handlerMethod, Type handlerType, bool isAsync)
+        {
+            if (_inboxConfiguration == null
+                || handlerMethod.HasNoInboxAttributesInPipeline()
+                || handlerMethod.HasExistingUseInboxAttributesInPipeline())
+                return null;
+
+            if (_inboxConfiguration.Context is null)
+                throw new ArgumentException("Inbox Configuration must be set");
+
+            var contextKey = _inboxConfiguration.Context(handlerType);
+
+            return isAsync
+                ? new UseInboxAsyncAttribute(
+                    step: 0,
+                    contextKey: contextKey,
+                    onceOnly: _inboxConfiguration.OnceOnly,
+                    timing: HandlerTiming.Before,
+                    onceOnlyAction: _inboxConfiguration.ActionOnExists)
+                : new UseInboxAttribute(
+                    step: 0,
+                    contextKey: contextKey,
+                    onceOnly: _inboxConfiguration.OnceOnly,
+                    timing: HandlerTiming.Before,
+                    onceOnlyAction: _inboxConfiguration.ActionOnExists);
         }
 
         private void AddGlobalInboxAttributes(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandler<TRequest> implicitHandler)

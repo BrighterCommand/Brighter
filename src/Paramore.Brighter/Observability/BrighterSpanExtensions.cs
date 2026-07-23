@@ -59,6 +59,7 @@ public static class BrighterSpanExtensions
        BoxDbOperation.OutStandingMessages => "retrieve.outstanding_messages",
        BoxDbOperation.OutStandingMessageCount => "count.outstanding_messages",
        BoxDbOperation.Exists => "message.exists",
+       BoxDbOperation.Replay => "replay.causation",
        _ => throw new ArgumentOutOfRangeException(nameof(span), span, null)
    };
    

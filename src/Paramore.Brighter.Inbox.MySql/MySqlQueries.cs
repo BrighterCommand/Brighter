@@ -25,12 +25,18 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Inbox.MySql
 {
-    public class MySqlQueries : IRelationalDatabaseInboxQueries
+    public class MySqlQueries : IRelationalDatabaseInboxQueries, IRelationalDatabaseInboxCausationQueries
     {
         public string AddCommand { get; } = "INSERT INTO {0} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) VALUES (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
 
         public string ExistsCommand { get; } = "SELECT CommandID FROM {0} WHERE CommandID = @CommandID AND ContextKey = @ContextKey LIMIT 1";
 
         public string GetCommand { get; } = "SELECT * FROM {0} where CommandID = @CommandID AND ContextKey = @ContextKey";
+
+        public string AddCausationCommand { get; } = "INSERT INTO {0} (CommandID, CommandType, CommandBody, Timestamp, ContextKey, CausationId) VALUES (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey, @CausationId)";
+
+        public string GetCausationIdCommand { get; } = "SELECT CausationId FROM {0} WHERE CommandID = @CommandID AND ContextKey = @ContextKey LIMIT 1";
+
+        public string CausationColumnExistsCommand { get; } = "SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = '{0}' AND column_name = 'CausationId'";
     }
 }

@@ -42,7 +42,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public class DynamoDbOutbox :
         IAmAnOutboxSync<Message, TransactWriteItemsRequest>,
-        IAmAnOutboxAsync<Message, TransactWriteItemsRequest>
+        IAmAnOutboxAsync<Message, TransactWriteItemsRequest>,
+        IAmACausationTrackingOutbox
     {
         private readonly DynamoDbConfiguration _configuration;
         private readonly IAmazonDynamoDB _client;
@@ -173,7 +174,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             {
                 var shard = GetShardNumber(message.Header.PartitionKey);
                 var expiresAt = GetExpirationTime();
-                var messageToStore = new MessageItem(message, shard, expiresAt);
+                var messageToStore = new MessageItem(message, shard, expiresAt)
+                {
+                    CausationId = ReadCausationId(requestContext)
+                };
 
                 if (transactionProvider != null)
                 {
@@ -542,6 +546,146 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 .GetAwaiter()
                 .GetResult();
         }
+
+        /// <summary>
+        /// Memoized result of the live probe for the <c>Causation</c> Global Secondary Index. Null until
+        /// the first probe; a concurrent race is harmless (both observers see the same table state).
+        /// Access is deliberately not synchronised: a stale-null read on a weak memory model just triggers
+        /// one extra idempotent probe that resolves to the same value, so the cached answer never changes
+        /// once written. (<c>volatile</c> is not applicable to a nullable value type, hence this note.)
+        /// </summary>
+        private bool? _causationIndexExists;
+
+        /// <inheritdoc />
+        public bool SupportsCausationTracking()
+            => SupportsCausationTrackingAsync()
+                .ConfigureAwait(ContinueOnCapturedContext)
+                .GetAwaiter()
+                .GetResult();
+
+        /// <inheritdoc />
+        public async Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+        {
+            if (_causationIndexExists is { } cached)
+                return cached;
+
+            // ReplayCausationAsync queries the Causation GSI; a table provisioned before the Replay
+            // feature does not have it. Probe the live table so the capability is reported honestly
+            // (AC11) rather than statically claiming support and failing at replay time.
+            var describeResponse = await _client
+                .DescribeTableAsync(new DescribeTableRequest { TableName = _configuration.TableName }, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+
+            // Null-guard GlobalSecondaryIndexes: it is an empty list under the SDK default
+            // (AWSConfigs.InitializeCollections = true), but an app that disables that default gets
+            // null for a table with no GSIs — treat that as "index absent" rather than NRE.
+            var exists = describeResponse.Table.GlobalSecondaryIndexes?
+                .Any(gsi => gsi.IndexName == _configuration.CausationIndexName) ?? false;
+
+            _causationIndexExists = exists;
+            return exists;
+        }
+
+        /// <inheritdoc />
+        public bool ReplayCausation(string causationId, RequestContext? requestContext, Dictionary<string, object>? args = null)
+        {
+            // Sync-over-async: the DynamoDB SDK is async-only, so the sync IAmACausationTrackingOutbox
+            // entry point (used by the sync UseInboxHandler) must block on the async path. This matches
+            // the sync-over-async convention already used throughout this class (e.g. OutstandingMessages,
+            // SupportsCausationTracking). Callers on a sync pipeline carry the usual deadlock caveat.
+            return ReplayCausationAsync(causationId, requestContext, args)
+                .ConfigureAwait(ContinueOnCapturedContext)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> ReplayCausationAsync(string causationId, RequestContext? requestContext,
+            Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
+        {
+            // Mirror the relational no-op for the "inbox migrated, outbox not yet" mixed state (AC10): a table
+            // provisioned before the Replay feature has no Causation GSI, so querying that index would throw a
+            // ValidationException that unwinds the handler pipeline on every duplicate. Degrade to a no-op
+            // instead. SupportsCausationTrackingAsync probes and memoizes live index existence. Return false so
+            // the caller does not report a successful replay for this no-op.
+            if (!await SupportsCausationTrackingAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                return false;
+
+            var span = Tracer?.CreateDbSpan(
+                new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.Replay, _configuration.TableName),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                Dictionary<string, AttributeValue>? lastEvaluatedKey = null;
+                do
+                {
+                    var queryRequest = new QueryRequest
+                    {
+                        TableName = _configuration.TableName,
+                        IndexName = _configuration.CausationIndexName,
+                        KeyConditionExpression = "CausationId = :causationId",
+                        ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                        {
+                            { ":causationId", new AttributeValue { S = causationId } }
+                        },
+                        ProjectionExpression = "MessageId",
+                        ExclusiveStartKey = lastEvaluatedKey
+                    };
+
+                    var queryResponse = await _client.QueryAsync(queryRequest, cancellationToken)
+                        .ConfigureAwait(ContinueOnCapturedContext);
+
+                    foreach (var item in queryResponse.Items)
+                    {
+                        if (!item.TryGetValue("MessageId", out var messageId))
+                            continue;
+
+                        // Restore the outstanding marker (from the still-present CreatedTime) and clear the
+                        // dispatched state so the sweeper resends the message.
+                        var updateItemRequest = new UpdateItemRequest
+                        {
+                            TableName = _configuration.TableName,
+                            Key = new Dictionary<string, AttributeValue>
+                            {
+                                { "MessageId", new AttributeValue { S = messageId.S } }
+                            },
+                            UpdateExpression = "SET OutstandingCreatedTime = CreatedTime REMOVE DeliveryTime, DeliveredAt",
+                            ConditionExpression = "attribute_exists(MessageId)"
+                        };
+
+                        try
+                        {
+                            await _client.UpdateItemAsync(updateItemRequest, cancellationToken)
+                                .ConfigureAwait(ContinueOnCapturedContext);
+                        }
+                        catch (ConditionalCheckFailedException)
+                        {
+                            // The Causation GSI is eventually consistent, so it can list a MessageId whose base
+                            // item was swept / TTL-deleted / concurrently deleted since the index last updated.
+                            // Skip the vanished item and keep re-dispatching the rest of the causation rather than
+                            // let the exception unwind the pagination loop (mirrors MarkDispatchedAsync).
+                        }
+                    }
+
+                    lastEvaluatedKey = queryResponse.LastEvaluatedKey is { Count: > 0 }
+                        ? queryResponse.LastEvaluatedKey
+                        : null;
+                } while (lastEvaluatedKey != null);
+
+                return true;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
+        }
+
+        private static string? ReadCausationId(RequestContext? requestContext)
+            => requestContext?.Bag.TryGetValue(RequestContextBagNames.CausationId, out var value) == true
+                ? value as string
+                : null;
 
         /// <summary>
         /// Returns messages that have yet to be dispatched

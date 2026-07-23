@@ -17,7 +17,8 @@ tools/Paramore.Brighter.Test.Generator/
 │   ├── IAmAMessageAssertion.cs.liquid      ← Message assertion interface
 │   ├── Outbox/
 │   │   ├── Sync/       ← 13 Liquid templates for sync outbox tests (12 tests + 1 interface)
-│   │   └── Async/      ← 13 Liquid templates for async outbox tests (12 tests + 1 interface)
+│   │   ├── Async/      ← 13 Liquid templates for async outbox tests (12 tests + 1 interface)
+│   │   └── Causation/  ← Liquid template for causation-tracking outbox tests (subclass of CausationTrackingOutboxBaseTests)
 │   └── MessagingGateway/
 │       ├── Reactor/    ← 13 Liquid templates for sync messaging gateway tests (12 tests + 1 interface)
 │       └── Proactor/   ← 13 Liquid templates for async messaging gateway tests (12 tests + 1 interface)
@@ -37,7 +38,8 @@ tests/Paramore.Brighter.*.Tests/
 ├── Outbox/
 │   └── [Prefix]/Generated/      ← Output directory (do not hand-edit)
 │       ├── Sync/*.cs
-│       └── Async/*.cs
+│       ├── Async/*.cs
+│       └── Causation/*.cs
 └── MessagingGateway/
     └── [Prefix]/Generated/      ← Output directory (do not hand-edit)
         ├── Reactor/*.cs

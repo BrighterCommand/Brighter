@@ -58,9 +58,11 @@ namespace Paramore.Brighter.Outbox.MySql
                 `Baggage`  TEXT NULL,
                 `DataRef` VARCHAR(255) NULL,
                 `SpecVersion` VARCHAR(255) NULL,
+                `CausationId` VARCHAR(255) NULL,
                 `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
                 `CreatedID` INT(11) NOT NULL AUTO_INCREMENT,
                 UNIQUE(`CreatedID`),
+                KEY `idx_CausationId` (`CausationId`),
                 PRIMARY KEY (`MessageId`)
             ) ENGINE = InnoDB;
             """;
@@ -90,9 +92,11 @@ namespace Paramore.Brighter.Outbox.MySql
                 `Baggage`  TEXT NULL,
                 `DataRef` VARCHAR(255) NULL,
                 `SpecVersion` VARCHAR(255) NULL,
+                `CausationId` VARCHAR(255) NULL,
                 `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
                 `CreatedID` INT(11) NOT NULL AUTO_INCREMENT,
                 UNIQUE(`CreatedID`),
+                KEY `idx_CausationId` (`CausationId`),
                 PRIMARY KEY (`MessageId`)
             ) ENGINE = InnoDB;
             """;

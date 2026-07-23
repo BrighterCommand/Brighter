@@ -26,6 +26,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 
@@ -99,7 +100,22 @@ namespace Paramore.Brighter
         /// Gets the Span [Activity] associated with the request
         /// </summary>
         Activity? Span { get; set; }
-        
+
+        /// <summary>
+        /// Gets the <see cref="InstrumentationOptions"/> that were configured for the pipeline that created this context.
+        /// </summary>
+        /// <remarks>
+        /// This is the same value the <see cref="CommandProcessor"/> used when it created the <see cref="Span"/>, so
+        /// middleware handlers can gate their own telemetry on it (for example on <see cref="InstrumentationOptions.Brighter"/>)
+        /// without taking a dependency on how the processor was configured. Defaults to <see cref="InstrumentationOptions.All"/>.
+        /// </remarks>
+        /// <remarks>
+        /// Added in the Replay-outbox feature (Spec 0027). As there is no default interface implementation, adding this
+        /// member is a source- and binary-breaking change for any external type that implements <see cref="IRequestContext"/>
+        /// directly; it should ship in a minor-version bump. The in-box <see cref="RequestContext"/> already provides it.
+        /// </remarks>
+        InstrumentationOptions InstrumentationOptions { get; set; }
+
         /// <summary>
         /// Create a new copy of the Request Context
         /// </summary>

@@ -34,4 +34,11 @@ namespace Paramore.Brighter.Validation;
 /// <param name="HandlerType">The handler type returned by <see cref="RequestHandlerAttribute.GetHandlerType"/>.</param>
 /// <param name="Step">The step number from the attribute.</param>
 /// <param name="Timing">Whether this step runs before or after the main handler.</param>
-public record PipelineStepDescription(Type AttributeType, Type HandlerType, int Step, HandlerTiming Timing);
+public record PipelineStepDescription(Type AttributeType, Type HandlerType, int Step, HandlerTiming Timing)
+{
+    /// <summary>
+    /// The attribute instance that declared this step, when available. Lets validation rules inspect
+    /// attribute properties (e.g. <c>OnceOnlyAction</c> on <c>UseInboxAttribute</c>) beyond just the type.
+    /// </summary>
+    public RequestHandlerAttribute? Attribute { get; init; }
+}

@@ -41,6 +41,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                 CommandBody TEXT NULL ,
                 Timestamp timestamptz  NULL ,
                 ContextKey VARCHAR(256) NULL,
+                CausationId VARCHAR(256) NULL,
                 PRIMARY KEY (CommandId, ContextKey)
             );
             """;
@@ -54,6 +55,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                 CommandBody BYTEA NULL ,
                 Timestamp timestamptz  NULL ,
                 ContextKey VARCHAR(256) NULL,
+                CausationId VARCHAR(256) NULL,
                 PRIMARY KEY (CommandId, ContextKey)
             );
             """;
@@ -67,6 +69,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                 CommandBody JSON NULL ,
                 Timestamp timestamptz  NULL ,
                 ContextKey VARCHAR(256) NULL,
+                CausationId VARCHAR(256) NULL,
                 PRIMARY KEY (CommandId, ContextKey)
             );
             """;
@@ -80,6 +83,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                 CommandBody JSONB NULL ,
                 Timestamp timestamptz  NULL ,
                 ContextKey VARCHAR(256) NULL,
+                CausationId VARCHAR(256) NULL,
                 PRIMARY KEY (CommandId, ContextKey)
             );
             """;

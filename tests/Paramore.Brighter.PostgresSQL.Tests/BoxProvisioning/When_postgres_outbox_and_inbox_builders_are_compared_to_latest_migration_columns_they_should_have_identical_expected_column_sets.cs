@@ -123,14 +123,32 @@ public class PostgreSqlOutboxBuilderDriftTests
 
         Assert.Equal(expected, actual);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void When_postgres_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
+        bool binaryMessagePayload)
+    {
+        //The drift test above compares columns only; the new causationid replay index (Spec 0027,
+        //#2541) is asserted separately here per AC9. The builder appends a CREATE INDEX IF NOT
+        //EXISTS after the CREATE TABLE so a fresh install lands the same index a V8 migration does.
+        const string tableName = "outbox_test";
+        var ddl = PostgreSqlOutboxBuilder.GetDDL(tableName, binaryMessagePayload);
+
+        Assert.Contains("CREATE INDEX IF NOT EXISTS", ddl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"idx_{tableName}_causationid", ddl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("(causationid)", ddl, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public class PostgreSqlInboxBuilderDriftTests
 {
     [Fact]
-    public void When_postgres_inbox_builder_is_compared_to_v1_migration_columns_it_should_have_identical_expected_column_set()
+    public void When_postgres_inbox_builder_is_compared_to_v_latest_migration_columns_it_should_have_identical_expected_column_set()
     {
-        //Arrange — Postgres inbox is V1-only (born with ContextKey + composite PK in Feb 2021).
+        //Arrange — Postgres inbox V1 was born with ContextKey + composite PK (Feb 2021); Spec 0027
+        //(#2541) adds a V2 that introduces CausationId. The builder must match the V_latest set.
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Host=ignored;Database=ignored;Username=ignored;Password=ignored",
@@ -163,11 +181,11 @@ public class PostgreSqlInboxBuilderDriftTests
         //V1.UpScript is the literal historical first-shipped DDL (Spec 0027 R1, commit
         //1cdc04b60, November 2023). The Postgres inbox is one of the five "born past V1"
         //backends and is the most extreme case: it shipped with ContextKey AND a composite
-        //primary key on (CommandId, ContextKey) from the first commit. Postgres inbox is
-        //therefore V1-only — there is no Postgres V2 (ADR "Alternatives → E" — the
-        //speculative composite-PK rebuild migration was rejected because no pre-ContextKey
-        //Postgres inbox ever shipped). This tripwire prevents a future "helpful" rewrite from
-        //dropping either the ContextKey column or the composite PK.
+        //primary key on (CommandId, ContextKey) from the first commit. There is no pre-ContextKey
+        //Postgres inbox V1→V2 ContextKey catch-up (ADR "Alternatives → E" — the speculative
+        //composite-PK rebuild migration was rejected because no pre-ContextKey Postgres inbox ever
+        //shipped); Spec 0027's V2 instead adds CausationId. This tripwire asserts the V1 baseline
+        //still carries the ContextKey column and composite PK and must not be rewritten away.
         const string tableName = "inbox_test";
         var config = new RelationalDatabaseConfiguration(
             "Host=ignored;Database=ignored;Username=ignored;Password=ignored",
