@@ -207,21 +207,34 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
     }
 
     [Fact]
-    public async Task When_ledger_is_loaded_from_repo_root_unknown_cells_emit_skip()
+    public async Task When_ledger_is_loaded_from_repo_root_it_matches_an_independently_parsed_ledger()
     {
-        // Arrange — no injected ledger; the generator must locate the real
-        // conformance-status.md by walking up from AppContext.BaseDirectory.
-        // Every cell in the real ledger is Unknown, so the canonical template
-        // must carry the Deferred #NNNN Skip.
-        var configuration = BuildConfiguration(ledgerKey: "Kafka / Standard");
+        // Arrange — no injected ledger; the generator must locate the real conformance-status.md
+        // by walking up from AppContext.BaseDirectory. The expected Skip is computed from the SAME
+        // real ledger (parsed independently) so this test tracks the chosen cell's state as the
+        // rollout proves behaviours, rather than assuming every cell is Unknown. The chosen row is
+        // one that is currently Unknown, so today it also exercises the #NNNN emission path.
+        const string REAL_LEDGER_ROW = "Redis / RedisMessagingGateway";
+        const string FR22_BEHAVIOUR = "canonical plain requeue"; // generator's label for FR-22
+
+        var ledgerPath = ConformanceLedger.FindLedgerPath(AppContext.BaseDirectory);
+        Assert.NotNull(ledgerPath);
+        var expectedSkip = new ConformanceLedger(ledgerPath!)
+            .GetSkip(REAL_LEDGER_ROW, FR_COLUMN, FR22_BEHAVIOUR);
+
+        var configuration = BuildConfiguration(ledgerKey: REAL_LEDGER_ROW);
         var generator = new Generators.MessagingGatewayGenerator(_logger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — the real ledger was found and the Unknown cell produced a Skip.
+        // Assert — the generator's real-ledger output agrees with the independently-parsed ledger:
+        // a proven (Pass/Fixed) cell emits no Skip; an Unknown/Deferred cell emits the exact Skip.
         var generatedContent = await ReadGeneratedCanonicalFile(configuration);
-        Assert.Contains("Skip = \"Deferred: #NNNN", generatedContent);
+        if (expectedSkip.Length == 0)
+            Assert.DoesNotContain("Skip = \"Deferred:", generatedContent);
+        else
+            Assert.Contains(expectedSkip, generatedContent);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
