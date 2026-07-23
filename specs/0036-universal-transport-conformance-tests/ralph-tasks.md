@@ -430,7 +430,7 @@
 >
 > **Each multi-configuration task's `dotnet test` is scoped to that configuration's generated namespace** (`--filter "FullyQualifiedName~MessagingGateway.<Config>."`, e.g. `~MessagingGateway.SqsStandard.` — the trailing dot keeps `Pull` from also matching `PullOrdering` etc.). This isolates the row's task from sibling configurations and pre-existing hand-written gateway tests (whose namespaces differ, e.g. `MessagingGateway.Sqs.Standard`), so a sibling flake cannot fail this row. Single-configuration transports (Redis, MSSQL, PostgresSQL, RocketMQ) have no sibling generated configs, so they run the project's gateway suite (`~MessagingGateway`).
 
-- [ ] **Bring AWS (V3) / SqsStandard to conformance**
+- [x] **Bring AWS (V3) / SqsStandard to conformance**
   - **Behavior**: Per the Phase 3 method, resolve the `AWS / SqsStandard` row against LocalStack/AWS, both variants. Localized reject/DLQ/metadata fixes in `src/Paramore.Brighter.MessagingGateway.AWSSQS` (e.g. lazy DLQ/invalid producer, stamp the metadata semantic set under SQS keys) → `Fixed (#PR)`; otherwise flag-and-move-on to a signed-off `Deferred`. This is the AWS reference configuration — do it first.
   - **Test file**: `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/SqsStandard/Generated/Reactor/*.cs`
   - **Test should verify**:
