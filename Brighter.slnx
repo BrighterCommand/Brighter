@@ -223,6 +223,7 @@
     <Project Path="tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.NATS.Tests/Paramore.Brighter.NATS.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj" />
@@ -290,6 +291,7 @@
   <Project Path="src/Paramore.Brighter.MessagingGateway.GcpPubSub/Paramore.Brighter.MessagingGateway.GcpPubSub.csproj" />
   <Project Path="src/Paramore.Brighter.MessagingGateway.Kafka/Paramore.Brighter.MessagingGateway.Kafka.csproj" />
   <Project Path="src/Paramore.Brighter.MessagingGateway.MQTT/Paramore.Brighter.MessagingGateway.MQTT.csproj" />
+  <Project Path="src/Paramore.Brighter.MessagingGateway.NATS/Paramore.Brighter.MessagingGateway.NATS.csproj" />
   <Project Path="src/Paramore.Brighter.MessagingGateway.MsSql/Paramore.Brighter.MessagingGateway.MsSql.csproj" />
   <Project Path="src/Paramore.Brighter.MessagingGateway.Postgres/Paramore.Brighter.MessagingGateway.Postgres.csproj" />
   <Project Path="src/Paramore.Brighter.MessagingGateway.Redis/Paramore.Brighter.MessagingGateway.Redis.csproj" />

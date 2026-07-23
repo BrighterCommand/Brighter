@@ -1,6 +1,7 @@
 #region Licence
+
 /* The MIT License (MIT)
-Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2026 Rafael Andrade
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -19,26 +20,27 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
-namespace Paramore.Brighter.Observability;
+namespace Paramore.Brighter.MessagingGateway.NATS;
 
-/// <summary>
-/// The messaging system used to send a message
-/// </summary>
-public enum MessagingSystem
+// JetStream stream and durable consumer names appear in API subjects, so they cannot contain
+// whitespace, '.', '*', '>', or path separators. Producers and consumers must derive the same
+// name from the same topic or type, so the rule lives here, shared by both sides.
+internal static class NatsNameSanitizer
 {
-    ActiveMQ = 0,
-    AWSSQS,
-    EventGrid,
-    EventHubs,
-    InternalBus,
-    JMS,
-    Kafka,
-    Nats,
-    PubSub,
-    RabbitMQ,
-    RocketMQ,
-    ServiceBus
-}
+    public static string Sanitize(string name)
+    {
+        var chars = name.ToCharArray();
+        for (var i = 0; i < chars.Length; i++)
+        {
+            if (!char.IsLetterOrDigit(chars[i]) && chars[i] != '-' && chars[i] != '_')
+            {
+                chars[i] = '-';
+            }
+        }
 
+        return new string(chars);
+    }
+}

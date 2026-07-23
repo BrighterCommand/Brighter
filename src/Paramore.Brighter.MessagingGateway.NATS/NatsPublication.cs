@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -21,32 +21,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-
-namespace Paramore.Brighter.Observability;
+namespace Paramore.Brighter.MessagingGateway.NATS;
 
 /// <summary>
-/// Provide a helper method to turn span attributes into strings (lowercase)
+/// Publication configuration for publishing to a core NATS subject.
 /// </summary>
-public static class MessagingSystemExtensions
+/// <remarks>
+/// The publication topic is used as the NATS subject. Core NATS is at-most-once; use
+/// <see cref="NatsStreamPublication"/> to persist messages in a JetStream stream.
+/// </remarks>
+public class NatsPublication : Publication;
+
+/// <summary>
+/// Represents a publication for NATS, associating a specific message type with the publication.
+/// </summary>
+/// <typeparam name="TRequest">The type of request that this publication handles.</typeparam>
+public class NatsPublication<TRequest> : NatsPublication
+    where TRequest : class, IRequest
 {
-    ///<summary>
-    /// Provide a string representation of the messaging system
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NatsPublication{T}"/> class.
     /// </summary>
-    public static string ToMessagingSystemName(this MessagingSystem messagingSystem) => messagingSystem switch
+    public NatsPublication()
     {
-        MessagingSystem.ActiveMQ => "activemq",
-        MessagingSystem.AWSSQS => "aws_sqs",
-        MessagingSystem.EventGrid => "eventgrid",
-        MessagingSystem.EventHubs => "eventhubs",
-        MessagingSystem.InternalBus => "internal_bus",
-        MessagingSystem.JMS => "jms",
-        MessagingSystem.Kafka => "kafka",
-        MessagingSystem.Nats => "nats",
-        MessagingSystem.PubSub => "gcp_pubsub",
-        MessagingSystem.RabbitMQ => "rabbitmq",
-        MessagingSystem.RocketMQ => "rocketmq",
-        MessagingSystem.ServiceBus => "servicebus",
-        _ => throw new ArgumentOutOfRangeException(nameof(messagingSystem), messagingSystem, null)
-    };
+        RequestType = typeof(TRequest);
+    }
 }
