@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Description>Source generators for Brighter — emits handler/mapper/transform registrations at compile time so consumers can avoid AutoFromAssemblies reflection scanning.</Description>
+    <PackageTags>SourceGenerator;Brighter;Paramore.Brighter</PackageTags>
+    <IsPackable>false</IsPackable>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <Nullable>enable</Nullable>
+    <!-- Generator assemblies do not need ref assemblies and shouldn't ship XML docs -->
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      A source generator is loaded by the CONSUMER's compiler, so it only runs where Roslyn is at
+      least the version it was built against. Pin to 4.8.0 (the first .NET 8 Roslyn) — the oldest
+      modern .NET still in support — overriding the repo-wide version, to maximise the range of
+      consuming SDKs. PrivateAssets="all" keeps it out of the package's dependencies.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.8.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Analyzer release tracking for the BRGEN0xx diagnostics (satisfies RS2008). -->
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pack the props into build/ so it applies only to direct PackageReferences (not transitive). -->
+    <None Include="build\Paramore.Brighter.SourceGenerators.props" Pack="true" PackagePath="build\" />
+  </ItemGroup>
+
+</Project>

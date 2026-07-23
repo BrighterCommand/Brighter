@@ -235,6 +235,21 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return this;
         }
+
+        /// <summary>
+        /// Register transforms with the built-in transformer registry.
+        /// </summary>
+        /// <param name="registerTransforms">A callback to register transforms</param>
+        /// <returns>This builder, allows chaining calls</returns>
+        public IBrighterBuilder Transforms(Action<ServiceCollectionTransformerRegistry> registerTransforms)
+        {
+            if (registerTransforms == null)
+                throw new ArgumentNullException(nameof(registerTransforms));
+
+            registerTransforms(_transformerRegistry);
+
+            return this;
+        }
         
         private void RegisterHandlersFromAssembly(Type interfaceType, IEnumerable<Assembly> assemblies, Assembly assembly, IEnumerable<Type>? excludeDynamicHandlerTypes)
         {
