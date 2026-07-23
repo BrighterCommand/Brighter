@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// an Async operation.
     /// </remarks>
     /// </summary>
-    public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
+    public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation, ISupportPublishConfirmationAsync
     {
         private readonly InstrumentationOptions _instrumentationOptions;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
@@ -58,12 +58,27 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly ConcurrentDictionary<ulong, PendingConfirmation> _pendingConfirmations = new ConcurrentDictionary<ulong, PendingConfirmation>();
         private bool _confirmsSelected;
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
+        private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
+        // The ack/nack handlers run on the client's connection loop, which must never block on a
+        // subscriber, so awaited callbacks run on worker tasks. The tracker lets Dispose wait for
+        // them — including the awaited Outbox mark-dispatched — after WaitForConfirms has drained
+        // the broker acks themselves.
+        private readonly InFlightCallbackTracker _confirmationCallbacks = new();
 
         /// <summary>
         /// Action taken when a message is published, following receipt of a confirmation from the broker
         /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
         /// </summary>
         public event Action<PublishConfirmationResult>? OnMessagePublished;
+
+        /// <inheritdoc cref="ISupportPublishConfirmationAsync.UseAsyncPublishConfirmation"/>
+        bool ISupportPublishConfirmationAsync.UseAsyncPublishConfirmation => true;
+
+        event Func<PublishConfirmationResult, Task> ISupportPublishConfirmationAsync.OnMessagePublishedAsync
+        {
+            add => _onMessagePublishedAsync += value;
+            remove => _onMessagePublishedAsync -= value;
+        }
 
         /// <summary>
         /// The publication configuration for this producer
@@ -208,12 +223,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             GC.SuppressFinalize(this);
         }
         
-        public  ValueTask DisposeAsync()
+        public ValueTask DisposeAsync()
         {
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            // The sync client has no async teardown, so dispose runs synchronously here; returning
+            // default gives the caller a completed ValueTask. (Previously this returned a
+            // TaskCompletionSource task that was never completed, so awaiting it hung forever.)
             Dispose(true);
             GC.SuppressFinalize(this);
-            return new ValueTask(tcs.Task);
+            return default;
         }
 
         protected override void Dispose(bool disposing)
@@ -228,6 +245,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     if (timedOut)
                         Log.FailedToAwaitPublisherConfirms(s_logger);
                 }
+
+                // WaitForConfirms drains the broker acks; the callbacks those acks spawned (including
+                // the awaited Outbox mark-dispatched) run on worker tasks, so wait for them too.
+                WaitForConfirmationCallbacks();
             }
 
             base.Dispose(disposing);
@@ -237,7 +258,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out PendingConfirmation confirmation))
             {
-                OnMessagePublished?.Invoke(new PublishConfirmationResult(false, confirmation.MessageId, confirmation.Topic, confirmation.Context));
+                RaisePublishConfirmation(new PublishConfirmationResult(false, confirmation.MessageId, confirmation.Topic, confirmation.Context));
                 _pendingConfirmations.TryRemove(e.DeliveryTag, out PendingConfirmation _);
                 Log.FailedToPublishMessage(s_logger, confirmation.MessageId.Value);
             }
@@ -247,10 +268,50 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out PendingConfirmation confirmation))
             {
-                OnMessagePublished?.Invoke(new PublishConfirmationResult(true, confirmation.MessageId, confirmation.Topic, confirmation.Context));
+                RaisePublishConfirmation(new PublishConfirmationResult(true, confirmation.MessageId, confirmation.Topic, confirmation.Context));
                 _pendingConfirmations.TryRemove(e.DeliveryTag, out PendingConfirmation _);
                 Log.PublishedMessageInformation(s_logger, confirmation.MessageId.Value);
             }
+        }
+
+        private void RaisePublishConfirmation(PublishConfirmationResult result)
+        {
+            // The sync event stays on the connection loop thread, matching its long-standing behavior.
+            OnMessagePublished?.Invoke(result);
+
+            var handlers = _onMessagePublishedAsync;
+            if (handlers is null)
+                return;
+
+            // Awaited callbacks must not block the connection loop (WaitForConfirms depends on it to
+            // process acks), so they run on a worker task; Dispose waits on the in-flight tracker,
+            // which must be released on every path or that wait would hang until its timeout.
+            _confirmationCallbacks.Begin();
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await handlers.InvokeAllAsync(result);
+                }
+                catch (Exception ex)
+                {
+                    Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
+                }
+                finally
+                {
+                    _confirmationCallbacks.End();
+                }
+            });
+        }
+
+        private void WaitForConfirmationCallbacks()
+        {
+            // Timeout 0 means the user opted out of confirm waits at shutdown; honor that here too.
+            if (_waitForConfirmsTimeOutInMilliseconds == 0)
+                return;
+
+            if (!_confirmationCallbacks.TryWait(TimeSpan.FromMilliseconds(_waitForConfirmsTimeOutInMilliseconds), out int stillInFlight))
+                Log.FailedToAwaitConfirmationCallbacks(s_logger, stillInFlight, _waitForConfirmsTimeOutInMilliseconds);
         }
 
         private static partial class Log
@@ -275,6 +336,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             [LoggerMessage(LogLevel.Information, "Published message: {MessageId}")]
             public static partial void PublishedMessageInformation(ILogger logger, string? messageId);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to await {CallbackCount} confirmation callbacks after {TimeoutMs}ms when shutting down")]
+            public static partial void FailedToAwaitConfirmationCallbacks(ILogger logger, int callbackCount, int timeoutMs);
+
+            [LoggerMessage(LogLevel.Warning, "Confirmation callback for message {MessageId} faulted; remaining confirmations continue")]
+            public static partial void ConfirmationCallbackFault(ILogger logger, string messageId, Exception exception);
         }
     }
 
