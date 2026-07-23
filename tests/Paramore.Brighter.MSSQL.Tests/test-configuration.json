@@ -1,5 +1,21 @@
 {
   "Namespace": "Paramore.Brighter.MSSQL.Tests",
+  "Inboxes": {
+    "Text": {
+      "InboxProvider": "MSSQLTextInboxProvider",
+      "InboxProviderAsync": "MSSQLTextInboxProvider",
+      "Category": "MSSQL",
+      "CollectionName": "MSSQLTextInbox",
+      "Prefix": "MSSQLText"
+    },
+    "Binary": {
+      "InboxProvider": "MSSQLBinaryInboxProvider",
+      "InboxProviderAsync": "MSSQLBinaryInboxProvider",
+      "Category": "MSSQL",
+      "CollectionName": "MSSQLBinaryInbox",
+      "Prefix": "MSSQLBinary"
+    }
+  },
   "Outboxes": {
     "Text": {
       "Transaction": "System.Data.Common.DbTransaction",
