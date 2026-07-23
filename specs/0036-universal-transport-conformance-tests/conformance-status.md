@@ -28,6 +28,12 @@ cell remains `Unknown`.
   ahead of any generation run rather than discovered late.
 - The cleanup gate is evaluated over all twelve targeted transports, not over whichever rows happen
   to exist.
+- `AWS / SqsFifo` FR-9 (delayed send) is `Deferred -> #4240`: SQS **FIFO queues do not support
+  per-message delay** — `SendMessage` with `DelaySeconds` returns `AmazonSQSException: … not valid
+  for this queue type`. Delayed send is proven natively for `AWS / SqsStandard`; on FIFO it would
+  require an external scheduler (re-publish after the delay, as wired for Kafka), which is beyond this
+  configuration's localized fix boundary. Requeue-with-delay (FR-2) conforms on FIFO because it uses
+  `ChangeMessageVisibility`, which FIFO does support.
 
 ## Conformance Matrix
 
@@ -36,7 +42,7 @@ cell remains `Unknown`.
 | AWS / SnsStandard | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | AWS / SnsFifo | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| AWS / SqsFifo | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass |
 | AWS.V4 / SnsStandard | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | AWS.V4 / SnsFifo | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | AWS.V4 / SqsStandard | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |

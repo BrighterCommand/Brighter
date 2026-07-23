@@ -37,7 +37,7 @@ public class WhenRejectingMessageShouldIncludeMetadata : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — rejection metadata stamping not yet conformant for AWS / SqsFifo (maintainer sign-off)")]
+    [Fact]
     public void When_rejecting_message_should_include_metadata()
     {
         // Arrange
