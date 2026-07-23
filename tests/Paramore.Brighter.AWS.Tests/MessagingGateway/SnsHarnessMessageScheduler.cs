@@ -54,12 +54,22 @@ internal sealed class SnsHarnessMessageScheduler
         IDisposable
 {
     private readonly AWSMessagingGatewayConnection _connection;
+    private readonly SnsAttributes? _topicAttributes;
     private readonly List<Timer> _timers = [];
     private readonly List<SnsMessageProducer> _producers = [];
     private readonly object _lock = new();
 
-    public SnsHarnessMessageScheduler(AWSMessagingGatewayConnection connection) =>
+    // topicAttributes is supplied for a FIFO topic (Type = Fifo) so the re-publish targets the
+    // existing FIFO topic; left null for a standard topic. The delayed message already carries its
+    // FIFO MessageGroupId/MessageDeduplicationId (stamped by FifoMetadataProducer before the delay),
+    // so the re-publish preserves them.
+    public SnsHarnessMessageScheduler(
+        AWSMessagingGatewayConnection connection,
+        SnsAttributes? topicAttributes = null)
+    {
         _connection = connection;
+        _topicAttributes = topicAttributes;
+    }
 
     public string Schedule(Message message, TimeSpan delay)
     {
@@ -121,6 +131,11 @@ internal sealed class SnsHarnessMessageScheduler
                 Topic = message.Header.Topic,
                 MakeChannels = OnMissingChannel.Create,
             };
+
+            if (_topicAttributes != null)
+            {
+                publication.TopicAttributes = _topicAttributes;
+            }
 
             var producer = new SnsMessageProducer(_connection, publication);
             lock (_lock)

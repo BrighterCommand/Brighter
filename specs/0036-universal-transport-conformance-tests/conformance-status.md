@@ -44,13 +44,24 @@ cell remains `Unknown`.
   wall-clock and re-publishes to the SNS topic once it elapses. Requeue-with-delay (FR-2) is `Pass`
   natively — it is consumer-side `ChangeMessageVisibility` on the subscribed SQS queue, not an SNS
   publish, so it needs no scheduler.
+- `AWS / SnsFifo` FR-9 (delayed send) is `Fixed (#4240)` — and, unlike `AWS / SqsFifo`, it is **not**
+  deferred. SqsFifo's deferral was because SQS FIFO **rejects native per-message `DelaySeconds`**; SNS
+  FIFO never uses that path — the SNS producer delegates the delay to the `Scheduler` seam, so the FIFO
+  platform limit does not apply. The `SnsHarnessMessageScheduler` re-publishes to the FIFO topic after
+  the delay, and the delayed message keeps the FIFO `MessageGroupId`/`MessageDeduplicationId` that
+  `FifoMetadataProducer` stamped, so the re-publish is a valid FIFO publish. Reuses the same
+  `SnsMessageProducer` sync `SendWithDelay` src fix as `AWS / SnsStandard` (hence `Fixed`). FR-2 is
+  `Pass` natively (consumer-side `ChangeMessageVisibility`, which FIFO supports). The SqsFifo dedup
+  trap (a reused `DefaultMessageBuilder` yielding byte-identical messages) applies to SnsFifo too and is
+  handled by the shared `FifoMetadataProducer` (constant group id + a unique dedup id per send, with
+  content-based deduplication disabled on both the FIFO topic and queue so the explicit ids govern).
 
 ## Conformance Matrix
 
 | Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass |
-| AWS / SnsFifo | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass |
 | AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass |
 | AWS.V4 / SnsStandard | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |

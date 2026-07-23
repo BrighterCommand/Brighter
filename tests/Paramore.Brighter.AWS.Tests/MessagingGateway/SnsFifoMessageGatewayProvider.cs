@@ -15,6 +15,23 @@ public class SnsFifoMessageGatewayProvider
       SnsFifo.Reactor.IAmAMessageGatewayReactorProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection = GatewayFactory.CreateFactory();
+    private SnsHarnessMessageScheduler? _scheduler;
+
+    // SNS has no native delayed publish; the producer delegates a requested delay to this seam, which
+    // honours it by wall-clock and re-publishes to the (FIFO) SNS topic once the delay elapses (FR-9).
+    // The message keeps the FIFO MessageGroupId/MessageDeduplicationId the FifoMetadataProducer stamped.
+    private SnsHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new SnsHarnessMessageScheduler(
+            _awsConnection,
+            new SnsAttributes(type: SqsType.Fifo, contentBasedDeduplication: false));
+
+    // A FIFO queue name must end in ".fifo" and otherwise use only alphanumerics/hyphens/underscores.
+    // The canonical dotted DLQ/invalid keys ("<topic>.DLQ", where <topic> already ends ".fifo") break
+    // both rules, so flatten every dot to a hyphen and re-apply the required ".fifo" suffix.
+    private static RoutingKey? ToValidFifoName(RoutingKey? routingKey) =>
+        routingKey is null
+            ? null
+            : new RoutingKey(routingKey.Value.Replace(".", "-") + ".fifo");
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
@@ -32,7 +49,10 @@ public class SnsFifoMessageGatewayProvider
         {
             Topic = routingKey,
             MakeChannels = makeChannels,
-            TopicAttributes = new SnsAttributes { Type = SqsType.Fifo },
+            // Disable content-based dedup on the FIFO topic: the canonical suite sends look-alike
+            // messages, so FifoMetadataProducer supplies a unique MessageDeduplicationId per send
+            // instead — otherwise identical bodies collapse to one and "receive the next message" fails.
+            TopicAttributes = new SnsAttributes(type: SqsType.Fifo, contentBasedDeduplication: false),
         };
     }
 
@@ -43,6 +63,13 @@ public class SnsFifoMessageGatewayProvider
         RoutingKey? deadLetterRoutingKey = null,
         RoutingKey? invalidMessageRoutingKey = null)
     {
+        // The DLQ/invalid channels are SQS FIFO queues (point-to-point); their names must end ".fifo"
+        // and use only alphanumerics/hyphens/underscores, but the canonical "<topic>.DLQ" convention
+        // uses dots. Adapt to valid FIFO names — the read hooks below read from
+        // subscription.DeadLetterRoutingKey/InvalidMessageRoutingKey, so they stay consistent.
+        deadLetterRoutingKey = ToValidFifoName(deadLetterRoutingKey);
+        invalidMessageRoutingKey = ToValidFifoName(invalidMessageRoutingKey);
+
         if (deadLetterRoutingKey != null)
         {
             var deadLetterChannelName = new ChannelName(deadLetterRoutingKey.Value);
@@ -55,9 +82,10 @@ public class SnsFifoMessageGatewayProvider
                 makeChannels: makeChannel,
                 queueAttributes: new SqsAttributes(
                     type: SqsType.Fifo,
+                    contentBasedDeduplication: false,
                     redrivePolicy: new RedrivePolicy(deadLetterChannelName, 3)
                 ),
-                topicAttributes: new SnsAttributes { Type = SqsType.Fifo },
+                topicAttributes: new SnsAttributes(type: SqsType.Fifo, contentBasedDeduplication: false),
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 invalidMessageRoutingKey: invalidMessageRoutingKey,
                 requeueCount: 3
@@ -71,22 +99,61 @@ public class SnsFifoMessageGatewayProvider
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: makeChannel,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo),
-            topicAttributes: new SnsAttributes { Type = SqsType.Fifo },
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo, contentBasedDeduplication: false),
+            topicAttributes: new SnsAttributes(type: SqsType.Fifo, contentBasedDeduplication: false),
             invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
 
     public Message GetMessageFromInvalidChannel(SqsSubscription subscription)
     {
-        return Message.Empty;
+        return GetMessageFromInvalidChannelAsync(subscription).GetAwaiter().GetResult();
     }
 
-    public Task<Message> GetMessageFromInvalidChannelAsync(
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
         SqsSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(Message.Empty);
+        var invalidSubscription = new SqsSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(subscription.InvalidMessageRoutingKey!.Value),
+            channelName: new ChannelName(subscription.InvalidMessageRoutingKey!.Value),
+            channelType: ChannelType.PointToPoint,
+            routingKey: subscription.InvalidMessageRoutingKey!,
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Assume,
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo)
+        );
+
+        IAmAChannelAsync? invalidChannel = null;
+        try
+        {
+            invalidChannel = await new ChannelFactory(_awsConnection)
+                .CreateAsyncChannelAsync(invalidSubscription, cancellationToken);
+
+            for (var i = 0; i < 10; i++)
+            {
+                var message = await invalidChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    await invalidChannel.AcknowledgeAsync(message, cancellationToken);
+                    return message;
+                }
+
+                await Task.Delay(1000, cancellationToken);
+            }
+
+            return new Message();
+        }
+        catch (Amazon.SQS.Model.QueueDoesNotExistException)
+        {
+            // The invalid channel is created lazily on first send; if nothing was ever routed
+            // there the queue does not exist, which is equivalent to it being empty (MT_NONE).
+            return new Message();
+        }
+        finally
+        {
+            invalidChannel?.Dispose();
+        }
     }
 
     public RejectionMetadataKeys RejectionMetadataKeys =>
@@ -110,6 +177,7 @@ public class SnsFifoMessageGatewayProvider
         }
 
         producer?.Dispose();
+        _scheduler?.Dispose();
     }
 
     public async Task CleanUpAsync(
@@ -127,6 +195,8 @@ public class SnsFifoMessageGatewayProvider
         {
             await producer.DisposeAsync();
         }
+
+        _scheduler?.Dispose();
     }
 
     public IAmAChannelSync CreateChannel(SqsSubscription subscription)
@@ -167,7 +237,8 @@ public class SnsFifoMessageGatewayProvider
         }
 
         var producer = new SnsMessageProducer(connection, publication);
-        return producer;
+        producer.Scheduler = Scheduler;
+        return new FifoMetadataProducer(producer);
     }
 
     public Task<IAmAMessageProducerAsync> CreateProducerAsync(
@@ -182,7 +253,8 @@ public class SnsFifoMessageGatewayProvider
         }
 
         var producer = new SnsMessageProducer(connection, publication);
-        return Task.FromResult<IAmAMessageProducerAsync>(producer);
+        producer.Scheduler = Scheduler;
+        return Task.FromResult<IAmAMessageProducerAsync>(new FifoMetadataProducer(producer));
     }
 
     public async Task<Message> GetMessageFromDeadLetterQueueAsync(
