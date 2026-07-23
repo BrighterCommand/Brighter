@@ -127,6 +127,8 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
+    <PackageVersion Include="Oracle.ManagedDataAccess" Version="23.26.200" />
+    <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.26.200" />
     <PackageVersion Include="Paramore.Darker" Version="4.1.1" />
     <PackageVersion Include="Paramore.Darker.AspNetCore" Version="4.1.1" />
     <PackageVersion Include="Paramore.Darker.Policies" Version="4.1.1" />

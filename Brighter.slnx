@@ -223,6 +223,7 @@
     <Project Path="tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Oracle.Tests/Paramore.Brighter.Oracle.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj" />
@@ -250,6 +251,7 @@
   <Project Path="src/Paramore.Brighter.BoxProvisioning/Paramore.Brighter.BoxProvisioning.csproj" />
   <Project Path="src/Paramore.Brighter.BoxProvisioning.MsSql/Paramore.Brighter.BoxProvisioning.MsSql.csproj" />
   <Project Path="src/Paramore.Brighter.BoxProvisioning.MySql/Paramore.Brighter.BoxProvisioning.MySql.csproj" />
+  <Project Path="src/Paramore.Brighter.BoxProvisioning.Oracle/Paramore.Brighter.BoxProvisioning.Oracle.csproj" />
   <Project Path="src/Paramore.Brighter.BoxProvisioning.PostgreSql/Paramore.Brighter.BoxProvisioning.PostgreSql.csproj" />
   <Project Path="src/Paramore.Brighter.BoxProvisioning.Sqlite/Paramore.Brighter.BoxProvisioning.Sqlite.csproj" />
   <Project Path="src/Paramore.Brighter.BoxProvisioning.Spanner/Paramore.Brighter.BoxProvisioning.Spanner.csproj" />
@@ -266,6 +268,7 @@
   <Project Path="src/Paramore.Brighter.Inbox.MongoDb/Paramore.Brighter.Inbox.MongoDb.csproj" />
   <Project Path="src/Paramore.Brighter.Inbox.MsSql/Paramore.Brighter.Inbox.MsSql.csproj" />
   <Project Path="src/Paramore.Brighter.Inbox.MySql/Paramore.Brighter.Inbox.MySql.csproj" />
+  <Project Path="src/Paramore.Brighter.Inbox.Oracle/Paramore.Brighter.Inbox.Oracle.csproj" />
   <Project Path="src/Paramore.Brighter.Inbox.Postgres/Paramore.Brighter.Inbox.Postgres.csproj" />
   <Project Path="src/Paramore.Brighter.Inbox.Spanner/Paramore.Brighter.Inbox.Spanner.csproj" />
   <Project Path="src/Paramore.Brighter.Inbox.Sqlite/Paramore.Brighter.Inbox.Sqlite.csproj" />
@@ -276,6 +279,7 @@
   <Project Path="src/Paramore.Brighter.Locking.MongoDb/Paramore.Brighter.Locking.MongoDb.csproj" />
   <Project Path="src/Paramore.Brighter.Locking.MsSql/Paramore.Brighter.Locking.MsSql.csproj" />
   <Project Path="src/Paramore.Brighter.Locking.MySql/Paramore.Brighter.Locking.MySql.csproj" />
+  <Project Path="src/Paramore.Brighter.Locking.Oracle/Paramore.Brighter.Locking.Oracle.csproj" />
   <Project Path="src/Paramore.Brighter.Locking.PostgresSql/Paramore.Brighter.Locking.PostgresSql.csproj" />
   <Project Path="src/Paramore.Brighter.Mediator/Paramore.Brighter.Mediator.csproj" />
   <Project Path="src/Paramore.Brighter.MessageScheduler.AWS.V4/Paramore.Brighter.MessageScheduler.AWS.V4.csproj" />
@@ -303,6 +307,7 @@
   <Project Path="src/Paramore.Brighter.MsSql/Paramore.Brighter.MsSql.csproj" />
   <Project Path="src/Paramore.Brighter.MySql.EntityFrameworkCore/Paramore.Brighter.MySql.EntityFrameworkCore.csproj" />
   <Project Path="src/Paramore.Brighter.MySql/Paramore.Brighter.MySql.csproj" />
+  <Project Path="src/Paramore.Brighter.Oracle/Paramore.Brighter.Oracle.csproj" />
   <Project Path="src/Paramore.Brighter.Outbox.DynamoDB.V4/Paramore.Brighter.Outbox.DynamoDB.V4.csproj" />
   <Project Path="src/Paramore.Brighter.Outbox.DynamoDB/Paramore.Brighter.Outbox.DynamoDB.csproj" />
   <Project Path="src/Paramore.Brighter.Outbox.Firestore/Paramore.Brighter.Outbox.Firestore.csproj" />
@@ -310,6 +315,7 @@
   <Project Path="src/Paramore.Brighter.Outbox.MongoDb/Paramore.Brighter.Outbox.MongoDb.csproj" />
   <Project Path="src/Paramore.Brighter.Outbox.MsSql/Paramore.Brighter.Outbox.MsSql.csproj" />
   <Project Path="src/Paramore.Brighter.Outbox.MySql/Paramore.Brighter.Outbox.MySql.csproj" />
+  <Project Path="src/Paramore.Brighter.Outbox.Oracle/Paramore.Brighter.Outbox.Oracle.csproj" />
   <Project Path="src/Paramore.Brighter.Outbox.PostgreSql/Paramore.Brighter.Outbox.PostgreSql.csproj" />
   <Project Path="src/Paramore.Brighter.Outbox.Spanner/Paramore.Brighter.Outbox.Spanner.csproj" />
   <Project Path="src/Paramore.Brighter.Outbox.Sqlite/Paramore.Brighter.Outbox.Sqlite.csproj" />

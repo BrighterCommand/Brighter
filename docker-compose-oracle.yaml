@@ -1,0 +1,17 @@
+# Oracle Database Free (gvenzl/oracle-free)
+#
+# First startup may take a few minutes while the database is initialized.
+# Connection string (ODP.NET):
+#   Data Source=//localhost:1521/FREEPDB1;User Id=system;Password=BrighterTests1!;
+
+services:
+  oracle:
+    image: gvenzl/oracle-free:slim
+    ports:
+      - "1521:1521"
+    volumes:
+      - ./docker/oracle-init:/container-entrypoint-initdb.d
+    environment:
+      ORACLE_RANDOM_PASSWORD: true
+      APP_USER: brighter
+      APP_USER_PASSWORD: BrighterTests1!

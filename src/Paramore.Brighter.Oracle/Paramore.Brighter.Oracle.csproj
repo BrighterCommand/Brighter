@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Oracle Database provider for Paramore.Brighter Command Processor. Provides common components for connecting to Oracle, including connection and transaction management for inbox, outbox, and messaging gateway implementations.</Description>
+    <Authors>Rafael Andrade</Authors>
+    <TargetFrameworks>$(BrighterMongoTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Oracle;Oracle Database;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0' OR '$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="Oracle.ManagedDataAccess.Core"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <PackageReference Include="Oracle.ManagedDataAccess"/>
+  </ItemGroup>
+</Project>

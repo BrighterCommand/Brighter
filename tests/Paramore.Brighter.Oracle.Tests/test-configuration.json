@@ -1,0 +1,17 @@
+{
+  "Namespace": "Paramore.Brighter.Oracle.Tests",
+  "Outboxes": {
+    "Text": {
+      "Transaction": "System.Data.Common.DbTransaction",
+      "OutboxProvider": "OracleTextOutboxProvider",
+      "Category": "Oracle",
+      "CollectionName": "OracleTextOutbox"
+    },
+    "Binary": {
+      "Transaction": "System.Data.Common.DbTransaction",
+      "OutboxProvider": "OracleBinaryOutboxProvider",
+      "Category": "Oracle",
+      "CollectionName": "OracleBinaryOutbox"
+    }
+  }
+}

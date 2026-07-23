@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Oracle Database inbox provider for Paramore.Brighter Command Processor. Enables inbox pattern implementation for idempotent command and event handling using Oracle as the persistence layer.</Description>
+    <Authors>Rafael Andrade</Authors>
+    <TargetFrameworks>$(BrighterMongoTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Oracle;Oracle Database;Database;Inbox;Idempotent;Command;Event;Command Processor;Relational Database;Brighter</PackageTags>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.Oracle\Paramore.Brighter.Oracle.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+  </ItemGroup>
+
+</Project>
