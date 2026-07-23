@@ -43,7 +43,7 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — rejection metadata stamping not yet conformant for AWS.V4 / SqsStandard (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_should_include_metadata_async()
     {
         // Arrange

@@ -478,7 +478,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.Tests --filter "FullyQualifiedName~MessagingGateway.SnsFifo." && grep -q -- 'AWS / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0038-aws-sqs-dlq-direct-send`; requirements FR-13, AC-13, FR-21.
 
-- [ ] **Bring AWS.V4 / SqsStandard to conformance**
+- [x] **Bring AWS.V4 / SqsStandard to conformance**
   - **Behavior**: Per the Phase 3 method, resolve the `AWS.V4 / SqsStandard` row against LocalStack/AWS, both variants. Localized fixes in `src/Paramore.Brighter.MessagingGateway.AWSSQS.V4` → `Fixed (#PR)`; otherwise a signed-off `Deferred`. AWS.V4 reference configuration — do it first.
   - **Test file**: `tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/SqsStandard/Generated/Reactor/*.cs`
   - **Test should verify**:

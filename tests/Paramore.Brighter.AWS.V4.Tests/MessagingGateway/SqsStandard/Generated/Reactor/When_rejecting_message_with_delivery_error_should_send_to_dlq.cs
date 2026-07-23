@@ -35,7 +35,7 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlq : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — reject with delivery error to DLQ not yet conformant for AWS.V4 / SqsStandard (maintainer sign-off)")]
+    [Fact]
     public void When_rejecting_message_with_delivery_error_should_send_to_dlq()
     {
         // Arrange
