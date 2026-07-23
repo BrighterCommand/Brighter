@@ -107,14 +107,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         /// <summary>
         /// Creates a transient instance in its own short-lived <see cref="IServiceScope"/>.
-        /// The scope is tracked by instance and disposed when <see cref="Release"/> is called,
-        /// which drops the DI container's reference and prevents unbounded memory growth.
+        /// The scope is tracked by instance only when the instance implements <see cref="IDisposable"/>;
+        /// in that case <see cref="Release"/> must be called to dispose the scope and prevent unbounded
+        /// memory growth. For non-disposable instances the scope is disposed immediately so that no
+        /// reference accumulates between calls.
         /// </summary>
         private T? GetTransient<T>(Type objectType) where T : class
         {
             var scope = _serviceProvider.CreateScope();
             var instance = (T?)scope.ServiceProvider.GetService(objectType);
-            if (instance != null)
+            if (instance is IDisposable)
                 _transientScopes[instance] = scope;
             else
                 scope.Dispose();
