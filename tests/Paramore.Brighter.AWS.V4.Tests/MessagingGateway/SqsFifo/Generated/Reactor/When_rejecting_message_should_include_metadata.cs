@@ -83,7 +83,7 @@ public class WhenRejectingMessageShouldIncludeMetadata : IDisposable
 
         // OriginalType — a provider key of string.Empty fails as genuine non-conformance (FR-8, AC-8)
         Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalType));
-        Assert.Equal("MT_COMMAND", dlqMessage.Header.Bag[keys.OriginalType].ToString());
+        Assert.Equal(message.Header.MessageType.ToString(), dlqMessage.Header.Bag[keys.OriginalType].ToString());
 
         // RejectionReason — a provider key of string.Empty fails as genuine non-conformance (FR-8, AC-8)
         Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));

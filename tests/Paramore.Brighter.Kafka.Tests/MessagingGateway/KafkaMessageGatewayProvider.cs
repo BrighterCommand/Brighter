@@ -60,6 +60,14 @@ public class KafkaMessageGatewayProvider
     private IAmAMessageConsumerAsync? _invalidChannelConsumerAsync;
     private readonly List<string> _rejectionTopics = [];
 
+    // Delay hook (FR-2/9): Kafka has no native delayed delivery, so the gateway delegates a
+    // requested delay to the producer's scheduler seam. The harness supplies a wall-clock scheduler
+    // (shared across the producer and consumer paths) that re-publishes after the delay elapses.
+    private KafkaHarnessMessageScheduler? _scheduler;
+
+    private KafkaHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new KafkaHarnessMessageScheduler(_configuration);
+
     public void CleanUp(
         IAmAMessageProducerSync? producer,
         IAmAChannelSync? channel,
@@ -73,6 +81,7 @@ public class KafkaMessageGatewayProvider
         Dispose(producer);
         Dispose(_deadLetterConsumer);
         Dispose(_invalidChannelConsumer);
+        Dispose(_scheduler);
 
         topics.AddRange(_rejectionTopics);
         DeleteTopics(topics);
@@ -106,6 +115,7 @@ public class KafkaMessageGatewayProvider
         await DisposeAsync(producer);
         await DisposeAsync(_deadLetterConsumerAsync);
         await DisposeAsync(_invalidChannelConsumerAsync);
+        await DisposeAsync(_scheduler);
 
         topics.AddRange(_rejectionTopics);
         DeleteTopics(topics);
@@ -133,7 +143,7 @@ public class KafkaMessageGatewayProvider
     public IAmAChannelSync CreateChannel(KafkaSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new KafkaMessageConsumerFactory(_configuration)
+            new KafkaMessageConsumerFactory(_configuration, Scheduler)
         ).CreateSyncChannel(subscription);
 
         return new RetryableChannelSync(channel);
@@ -145,7 +155,7 @@ public class KafkaMessageGatewayProvider
     )
     {
         var channel = await new ChannelFactory(
-            new KafkaMessageConsumerFactory(_configuration)
+            new KafkaMessageConsumerFactory(_configuration, Scheduler)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         return new RetryableChannelAsync(channel);
@@ -160,7 +170,9 @@ public class KafkaMessageGatewayProvider
 
         _producerRegistries.Add(producerRegistry);
 
-        return (IAmAMessageProducerSync)producerRegistry.LookupBy(publication.Topic!);
+        var producer = (IAmAMessageProducerSync)producerRegistry.LookupBy(publication.Topic!);
+        producer.Scheduler = Scheduler;
+        return producer;
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
@@ -175,7 +187,9 @@ public class KafkaMessageGatewayProvider
 
         _producerRegistries.Add(producerRegistry);
 
-        return (IAmAMessageProducerAsync)producerRegistry.LookupBy(publication.Topic!);
+        var producer = (IAmAMessageProducerAsync)producerRegistry.LookupBy(publication.Topic!);
+        producer.Scheduler = Scheduler;
+        return producer;
     }
 
     public KafkaPublication CreatePublication(
