@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -39,6 +41,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceLifetime _lifetime;
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _singletonInstances = new();
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _scopedInstances = new();
+        private readonly ConcurrentDictionary<object, IServiceScope> _transientScopes =
+            new(InstanceComparer.Default);
         private IServiceScope? _scope;
         private bool _disposed;
 
@@ -91,33 +95,49 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         /// <summary>
         /// Gets or creates a scoped instance. Thread-safe using Lazy&lt;T&gt;.
-        /// Scoped instances are shared within this scope.
+        /// Scoped instances are shared within this scope and disposed when the scope is disposed.
         /// </summary>
         private T? GetOrCreateScoped<T>(Type objectType) where T : class
         {
+            _scope ??= _serviceProvider.CreateScope();
             var lazy = _scopedInstances.GetOrAdd(objectType, _ =>
-                new Lazy<object?>(() => GetTransient<T>(objectType)));
+                new Lazy<object?>(() => (T?)_scope.ServiceProvider.GetService(objectType)));
             return (T?)lazy.Value;
         }
 
         /// <summary>
-        /// Creates a transient instance from a scoped service provider.
-        /// Using a scope ensures proper disposal of transient instances.
+        /// Creates a transient instance in its own short-lived <see cref="IServiceScope"/>.
+        /// The scope is tracked by instance and disposed when <see cref="Release"/> is called,
+        /// which drops the DI container's reference and prevents unbounded memory growth.
         /// </summary>
         private T? GetTransient<T>(Type objectType) where T : class
         {
-            _scope ??= _serviceProvider.CreateScope();
-            return (T?)_scope.ServiceProvider.GetService(objectType);
+            var scope = _serviceProvider.CreateScope();
+            var instance = (T?)scope.ServiceProvider.GetService(objectType);
+            if (instance != null)
+                _transientScopes[instance] = scope;
+            else
+                scope.Dispose();
+            return instance;
         }
 
         /// <summary>
         /// Releases an object. For singleton lifetime, does nothing as singletons
-        /// are managed by the container. For scoped/transient, disposes if IDisposable.
+        /// are managed by the container. For transient lifetime, disposes the per-instance
+        /// scope so the DI container drops its reference and the instance is disposed exactly
+        /// once. For scoped lifetime, disposes the instance directly if it is <see cref="IDisposable"/>.
         /// </summary>
         /// <param name="instance">The object to release</param>
         public void Release(object? instance)
         {
             if (_lifetime == ServiceLifetime.Singleton) return;
+
+            if (_lifetime == ServiceLifetime.Transient && instance != null
+                && _transientScopes.TryRemove(instance, out var scope))
+            {
+                scope.Dispose();
+                return;
+            }
 
             if (instance is IDisposable disposal)
                 disposal.Dispose();
@@ -130,11 +150,24 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (_disposed) return;
 
+            foreach (var scope in _transientScopes.Values)
+                scope.Dispose();
+            _transientScopes.Clear();
+
             _scope?.Dispose();
             _scopedInstances.Clear();
             // Note: Don't clear singleton instances as they may be shared
 
             _disposed = true;
+        }
+
+        private sealed class InstanceComparer : IEqualityComparer<object>
+        {
+            internal static readonly InstanceComparer Default = new();
+
+            bool IEqualityComparer<object>.Equals(object? x, object? y) => ReferenceEquals(x, y);
+
+            int IEqualityComparer<object>.GetHashCode(object obj) => RuntimeHelpers.GetHashCode(obj);
         }
     }
 }
