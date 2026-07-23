@@ -34,12 +34,22 @@ cell remains `Unknown`.
   require an external scheduler (re-publish after the delay, as wired for Kafka), which is beyond this
   configuration's localized fix boundary. Requeue-with-delay (FR-2) conforms on FIFO because it uses
   `ChangeMessageVisibility`, which FIFO does support.
+- `AWS / SnsStandard` FR-9 (delayed send) is `Fixed (#4240)`: SNS has **no native delayed publish** —
+  `SnsMessageProducer.SendWithDelay` delegates a non-zero delay to the `IAmAMessageProducer.Scheduler`
+  seam (as Kafka does). Two changes were needed: (1) a localized `src` fix — the **sync**
+  `SnsMessageProducer.SendWithDelay` dropped its `delay` argument (passed `TimeSpan.Zero` to the inner
+  overload), so the Reactor path published immediately regardless of the requested delay; it now
+  forwards `delay`, matching the async path and `SqsMessageProducer`. (2) A wired harness scheduler
+  (`SnsHarnessMessageScheduler`, in-scope per the deferral preconditions) that honours the delay by
+  wall-clock and re-publishes to the SNS topic once it elapses. Requeue-with-delay (FR-2) is `Pass`
+  natively — it is consumer-side `ChangeMessageVisibility` on the subscribed SQS queue, not an SNS
+  publish, so it needs no scheduler.
 
 ## Conformance Matrix
 
 | Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| AWS / SnsStandard | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass |
 | AWS / SnsFifo | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass |

@@ -43,7 +43,7 @@ public class WhenSendingADelayedMessageShouldDeliverAfterDelayAsync : IAsyncLife
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — delayed send not yet conformant for AWS / SnsStandard (maintainer sign-off)")]
+    [Fact]
     public async Task When_sending_a_delayed_message_should_deliver_after_delay_async()
     {
         // Arrange
