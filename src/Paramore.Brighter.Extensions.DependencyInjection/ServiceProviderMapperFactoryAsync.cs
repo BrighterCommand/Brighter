@@ -58,6 +58,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
+        /// Releases a mapper created by this factory, disposing the per-instance
+        /// <see cref="Microsoft.Extensions.DependencyInjection.IServiceScope"/> a transient mapper was
+        /// resolved from. Without this the scope — and any <see cref="IDisposable"/> mapper it holds —
+        /// is retained until the factory is disposed at shutdown.
+        /// </summary>
+        /// <param name="mapper">The mapper to release</param>
+        public void Release(IAmAMessageMapperAsync mapper)
+        {
+            _lifetimeScope.Release(mapper);
+        }
+
+        /// <summary>
         /// Disposes of the factory and its lifetime scope.
         /// </summary>
         public void Dispose()

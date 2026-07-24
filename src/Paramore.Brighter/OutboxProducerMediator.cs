@@ -504,17 +504,16 @@ namespace Paramore.Brighter
         {
             if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
-                request = _transformPipelineBuilderAsync
-                    .BuildUnwrapPipeline<TRequest>()
+                using var pipeline = _transformPipelineBuilderAsync.BuildUnwrapPipeline<TRequest>();
+                request = pipeline
                     .UnwrapAsync(message, requestContext)
                     .GetAwaiter()
                     .GetResult();
             }
             else if (_transformPipelineBuilder.HasPipeline<TRequest>())
             {
-                request = _transformPipelineBuilder
-                    .BuildUnwrapPipeline<TRequest>()
-                    .Unwrap(message, requestContext);
+                using var pipeline = _transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
+                request = pipeline.Unwrap(message, requestContext);
             }
             else
             {
@@ -1167,9 +1166,8 @@ namespace Paramore.Brighter
             Message message;
             if (_transformPipelineBuilder.HasPipeline<TRequest>())
             {
-                message = _transformPipelineBuilder
-                    .BuildWrapPipeline<TRequest>()
-                    .Wrap(request, requestContext, publication);
+                using var pipeline = _transformPipelineBuilder.BuildWrapPipeline<TRequest>();
+                message = pipeline.Wrap(request, requestContext, publication);
             }
             else
             {
@@ -1195,9 +1193,8 @@ namespace Paramore.Brighter
             Message message;
             if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
-                message = await _transformPipelineBuilderAsync
-                    .BuildWrapPipeline<TRequest>()
-                    .WrapAsync(request, requestContext, publication, cancellationToken);
+                using var pipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<TRequest>();
+                message = await pipeline.WrapAsync(request, requestContext, publication, cancellationToken);
             }
             else
             {

@@ -42,6 +42,16 @@ namespace Paramore.Brighter
         /// <returns>IAmAMessageMapper&lt;T&gt;.</returns>
         IAmAMessageMapper<T>? Get<T>() where T : class, IRequest;
         /// <summary>
+        /// Releases a mapper obtained from <see cref="Get{T}"/> back to the factory that created it.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Get{T}"/> creates an instance on every call, so every caller must release what it
+        /// obtains once it has finished with it — including a caller that only wanted to know whether a
+        /// mapper exists.
+        /// </remarks>
+        /// <param name="mapper">The mapper to release.</param>
+        void Release(IAmAMessageMapper mapper);
+        /// <summary>
         /// Registers this instance.
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>

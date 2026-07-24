@@ -41,11 +41,13 @@ namespace Paramore.Brighter
         /// <param name="transforms">The transforms that run before the mapper</param>
         /// <param name="messageTransformerFactory">The factory used to create transforms</param>
         /// <param name="messageMapper">The message mapper that forms the pipeline sink</param>
+        /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
         public UnwrapPipeline(
-            IEnumerable<IAmAMessageTransform> transforms, 
-            IAmAMessageTransformerFactory messageTransformerFactory, 
-            IAmAMessageMapper<TRequest> messageMapper
-            ) : base(messageMapper, transforms)
+            IEnumerable<IAmAMessageTransform> transforms,
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmAMessageMapper<TRequest> messageMapper,
+            IAmAMessageMapperRegistry? mapperRegistry = null
+            ) : base(messageMapper, transforms, mapperRegistry)
         {
             if (messageTransformerFactory != null)
             {
