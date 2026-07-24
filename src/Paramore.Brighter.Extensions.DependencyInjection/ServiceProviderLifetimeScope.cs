@@ -115,11 +115,34 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 var created = _serviceProvider.CreateScope();
                 if (Interlocked.CompareExchange(ref _scope, created, null) is not null)
+                {
+                    //lost the publish race — dispose the scope we created
                     DisposeScope(created);
+                }
+                else if (_disposed)
+                {
+                    //won the publish, but a Dispose that read _scope before our CompareExchange published
+                    //it drained nothing and left our scope orphaned — the create-vs-Dispose mirror of the
+                    //two-creators race above. Reclaim it: if _scope is still the scope we published (Dispose
+                    //has not since claimed it), take it back and dispose it, so it is not orphaned. Then
+                    //throw, because the scope this resolution needed is gone. Dispose claims _scope with the
+                    //same atomic swap, so the scope is disposed exactly once whichever side wins.
+                    if (Interlocked.CompareExchange(ref _scope, null, created) == created)
+                        DisposeScope(created);
+                    ThrowIfDisposed();
+                }
             }
 
             var lazy = _scopedInstances.GetOrAdd(objectType, _ =>
-                new Lazy<object?>(() => (T?)_scope.ServiceProvider.GetService(objectType)));
+                new Lazy<object?>(() =>
+                {
+                    //a concurrent Dispose nulls _scope as it claims it; surface that as an
+                    //ObjectDisposedException rather than dereferencing null
+                    var scope = _scope;
+                    if (scope is null)
+                        throw new ObjectDisposedException(nameof(ServiceProviderLifetimeScope));
+                    return (T?)scope.ServiceProvider.GetService(objectType);
+                }));
             return (T?)lazy.Value;
         }
 
@@ -347,8 +370,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     DisposeScope(scope);
             _transientScopes.Clear();
 
-            if (_scope != null)
-                DisposeScope(_scope);
+            //claim _scope with an atomic swap: a resolution that publishes its first scope concurrently
+            //re-checks _disposed and reclaims what it published, so the scope is disposed exactly once
+            //whichever side wins. Also collapses the double-read of _scope (check-then-use) that let two
+            //concurrent disposals both dispose it.
+            var rootScope = Interlocked.Exchange(ref _scope, null);
+            if (rootScope != null)
+                DisposeScope(rootScope);
             _scopedInstances.Clear();
             // Note: Don't clear singleton instances as they may be shared
         }
