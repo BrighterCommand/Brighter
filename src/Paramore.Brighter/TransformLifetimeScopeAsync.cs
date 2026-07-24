@@ -37,7 +37,14 @@ namespace Paramore.Brighter
 
         ~TransformLifetimeScopeAsync()
         {
-            ReleaseTrackedObjects();
+            //a finalizer must never let an exception escape — that terminates the process. Releasing a
+            //transform whose scope holds an IAsyncDisposable-only service through the synchronous path can
+            //throw (MS DI's sync scope Dispose throws for an async-only service), as can a user Dispose.
+            //Finalization order is non-deterministic, so this scope can be finalized before its owning
+            //pipeline disposes it. Release best-effort here and swallow; an explicit Dispose/DisposeAsync
+            //still surfaces the exception to the owner.
+            try { ReleaseTrackedObjects(); }
+            catch { /* swallowed: a finalizer must not throw */ }
         }
 
         public void Add(IAmAMessageTransformAsync instance)

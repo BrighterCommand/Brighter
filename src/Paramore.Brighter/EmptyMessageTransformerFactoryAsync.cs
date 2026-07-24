@@ -38,7 +38,20 @@ namespace Paramore.Brighter
 
         public void Release(IAmAMessageTransformAsync transformer) { transformer.Dispose(); }
 
-        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer) { transformer.Dispose(); return default; }
+        public async ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer)
+        {
+            //symmetry with the real async transformer factory: await async disposal when the transform
+            //offers it, falling back to synchronous Dispose. The default EmptyMessageTransformAsync is
+            //IDisposable only, so this is behaviour-preserving today and faithful for any async-disposable
+            //transform released through this null-object factory.
+            if (transformer is IAsyncDisposable asyncDisposable)
+            {
+                await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                return;
+            }
+
+            transformer.Dispose();
+        }
     }
 
     /// <summary>
