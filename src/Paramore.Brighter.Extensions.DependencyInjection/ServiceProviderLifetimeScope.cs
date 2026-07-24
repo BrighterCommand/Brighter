@@ -177,6 +177,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// non-disposable transient), is a safe no-op — nothing is disposed more than once.
         /// </para>
         /// </summary>
+        /// <remarks>
+        /// Release is synchronous by the factory release contract, and the instance's scope is drained
+        /// synchronously through <see cref="DisposeScope"/> — including an <see cref="IAsyncDisposable"/>-only
+        /// mapper or transform, whose <c>DisposeAsync</c> is awaited on the releasing (for the Proactor,
+        /// the message-pump) thread. See <see cref="DisposeScope"/> for why a mapper/transform
+        /// <c>DisposeAsync</c> must not perform real I/O.
+        /// </remarks>
         /// <param name="instance">The object to release</param>
         public void Release(object? instance)
         {
@@ -215,6 +222,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// is awaited synchronously. It completes inline unless a user's <c>DisposeAsync</c> performs
         /// real I/O. On <c>netstandard2.0</c> <see cref="IAsyncDisposable"/> is not a visible type and
         /// the synchronous path is the only one available.
+        /// <para>
+        /// <b>Guidance for mapper/transform authors:</b> a message mapper or transform is disposed on
+        /// the thread that releases it — for the Proactor that is the message-pump thread, which
+        /// disposes the async pipeline synchronously. An <see cref="IAsyncDisposable"/>-only mapper or
+        /// transform therefore drains through this synchronous await, so a <c>DisposeAsync</c> that
+        /// performs <b>real asynchronous I/O</b> (network, disk, a database round-trip) blocks the pump
+        /// thread for its whole duration and stalls message processing. A mapper/transform
+        /// <c>DisposeAsync</c> should release only in-memory state and complete synchronously; perform
+        /// any genuine I/O elsewhere, never in disposal.
+        /// </para>
         /// </remarks>
         /// <param name="scope">The scope to dispose</param>
         private static void DisposeScope(IServiceScope scope)
