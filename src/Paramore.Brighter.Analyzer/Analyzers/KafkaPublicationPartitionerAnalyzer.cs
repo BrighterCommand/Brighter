@@ -40,7 +40,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         title: "Missing Partitioner",
         messageFormat: "Partitioner assignment is missing from {0}. Consider setting it explicitly.",
         category: PartitionerCategory,
-        defaultSeverity: DiagnosticSeverity.Info,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
     );
 
@@ -48,7 +48,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         id: DiagnosticsIds.ConsistentRandomPartitioner,
         title: "ConsistentRandom Partitioner Used",
         messageFormat:
-        "Prefer 'Murmur2Random' over 'ConsistentRandom' for new KafkaPublications. (Existing publications can safely ignore this warning).",
+        "Prefer 'Murmur2Random' over 'ConsistentRandom' for new KafkaPublications to keep key distribution even and avoid hot partitions. Existing publications can keep 'ConsistentRandom' to preserve their current partition assignment.",
         category: PartitionerCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
@@ -58,7 +58,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         id: DiagnosticsIds.ConsistentPartitioner,
         title: "Consistent Partitioner Used",
         messageFormat:
-        "Prefer 'Murmur2' over 'Consistent' for new KafkaPublications. (Existing publications can safely ignore this warning).",
+        "Prefer 'Murmur2' over 'Consistent' for new KafkaPublications to keep key distribution even and avoid hot partitions. Existing publications can keep 'Consistent' to preserve their current partition assignment.",
         category: PartitionerCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
