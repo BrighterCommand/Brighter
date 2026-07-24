@@ -538,8 +538,11 @@ namespace Paramore.Brighter.ServiceActivator
 
                 // The pipeline owns the message mapper and any transforms; releasing them back to their
                 // factories is deterministic rather than left to the finalizer. TransformPipelineAsync<T>
-                // implements IDisposable non-generically, so we do not need to know TRequest here.
-                using var pipelineLifetime = pipeline as IDisposable;
+                // implements IAsyncDisposable non-generically, so we do not need to know TRequest here.
+                // Release asynchronously: this runs on the single-threaded pump context, so an
+                // IAsyncDisposable mapper/transform must be awaited, not blocked on, or a continuation it
+                // posts back to the pump could deadlock.
+                await using var pipelineLifetime = pipeline as IAsyncDisposable;
 
                 // Call UnwrapAsync on the pipeline
                 var unwrapMethod = pipeline!.GetType().GetMethod("UnwrapAsync");

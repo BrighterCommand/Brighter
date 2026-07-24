@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -65,6 +66,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public void Release(IAmAMessageTransformAsync transformer)
         {
             _lifetimeScope.Release(transformer);
+        }
+
+        /// <summary>
+        /// Releases a transformer asynchronously, awaiting disposal of the per-instance
+        /// <see cref="IServiceScope"/> a transient transformer was resolved from. Preferred over
+        /// <see cref="Release"/> on the Proactor pump thread: awaiting an <see cref="IAsyncDisposable"/>
+        /// transform's disposal does not block the single-threaded synchronization context.
+        /// </summary>
+        /// <param name="transformer">The transformer to release</param>
+        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer)
+        {
+            return _lifetimeScope.ReleaseAsync(transformer);
         }
 
         /// <summary>

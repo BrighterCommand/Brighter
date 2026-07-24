@@ -170,7 +170,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                if (messageMapper is not null) _mapperRegistryAsync.ReleaseAsync(messageMapper);
+                if (messageMapper is not null) _mapperRegistryAsync.Release(messageMapper);
             }
         }
 
@@ -241,7 +241,7 @@ namespace Paramore.Brighter
             }
 
             if (transforms is not null) ReleaseTransforms(transforms);
-            if (messageMapper is not null) _mapperRegistryAsync.ReleaseAsync(messageMapper);
+            if (messageMapper is not null) _mapperRegistryAsync.Release(messageMapper);
         }
 
         public static void ClearPipelineCache()

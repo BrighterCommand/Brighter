@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -44,7 +45,25 @@ namespace Paramore.Brighter
         /// <summary>
         /// Releases the specified transformer.
         /// </summary>
+        /// <remarks>
+        /// Synchronous; used by the pipeline finalizer fallback and build-failure cleanup. On a thread
+        /// owned by the Proactor's single-threaded synchronization context prefer <see cref="ReleaseAsync"/>.
+        /// </remarks>
         /// <param name="transformer">The transformer</param>
-        void Release(IAmAMessageTransformAsync transformer); 
+        void Release(IAmAMessageTransformAsync transformer);
+
+        /// <summary>
+        /// Releases the specified transformer asynchronously, awaiting its disposal.
+        /// </summary>
+        /// <remarks>
+        /// The asynchronous counterpart of <see cref="Release"/>, called from the async pipeline's
+        /// <c>DisposeAsync</c>. Awaiting an <see cref="IAsyncDisposable"/> transform's disposal rather
+        /// than blocking on it keeps the Proactor pump thread free to run any continuation the
+        /// transform's <c>DisposeAsync</c> posts back to its single-threaded synchronization context. A
+        /// factory that hands out a shared instance, or holds no resources, should make this a no-op
+        /// returning <c>default</c>.
+        /// </remarks>
+        /// <param name="transformer">The transformer</param>
+        ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer);
     }
 }

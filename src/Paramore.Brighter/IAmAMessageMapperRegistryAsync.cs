@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -47,11 +48,26 @@ namespace Paramore.Brighter
         /// <remarks>
         /// <see cref="GetAsync{T}"/> creates an instance on every call, so every caller must release what
         /// it obtains once it has finished with it — including a caller that only wanted to know whether a
-        /// mapper exists. Synchronous, like <see cref="GetAsync{T}"/>; the <c>Async</c> suffix marks the
-        /// async mapper variant, not an awaitable result.
+        /// mapper exists. Synchronous; use it from a synchronous drain (the pipeline finalizer fallback,
+        /// build-failure cleanup). On a thread owned by the Proactor's single-threaded synchronization
+        /// context prefer <see cref="ReleaseAsync"/>, which can await an <see cref="IAsyncDisposable"/>
+        /// mapper's disposal instead of blocking the pump.
         /// </remarks>
         /// <param name="mapper">The mapper to release.</param>
-        void ReleaseAsync(IAmAMessageMapperAsync mapper);
+        void Release(IAmAMessageMapperAsync mapper);
+
+        /// <summary>
+        /// Releases a mapper obtained from <see cref="GetAsync{T}"/> back to the factory that created it,
+        /// awaiting its disposal.
+        /// </summary>
+        /// <remarks>
+        /// The asynchronous counterpart of <see cref="Release"/>, called from the async pipeline's
+        /// <c>DisposeAsync</c> (<c>await using</c>). Awaiting — rather than blocking on — an
+        /// <see cref="IAsyncDisposable"/> mapper's disposal is what keeps a continuation it posts back to
+        /// the Proactor's single-threaded synchronization context from deadlocking the pump thread.
+        /// </remarks>
+        /// <param name="mapper">The mapper to release.</param>
+        ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper);
         /// <summary>
         /// Registers this instance.
         /// </summary>

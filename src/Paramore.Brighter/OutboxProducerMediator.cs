@@ -1193,7 +1193,10 @@ namespace Paramore.Brighter
             Message message;
             if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
-                using var pipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<TRequest>();
+                //release asynchronously: when a handler drives this from the Proactor pump the dispose
+                //runs on the single-threaded pump context, so an IAsyncDisposable mapper/transform must be
+                //awaited rather than blocked on
+                await using var pipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<TRequest>();
                 message = await pipeline.WrapAsync(request, requestContext, publication, cancellationToken);
             }
             else

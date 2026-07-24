@@ -154,6 +154,7 @@ public class TransformPipelineBuilderFailureReleaseTests
     {
         public IAmAMessageTransformAsync? Create(Type transformerType) => null;
         public void Release(IAmAMessageTransformAsync transformer) { }
+        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer) => default;
     }
 
     // Wraps the real IServiceScopeFactory and counts every scope disposal

@@ -26,6 +26,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -178,23 +180,57 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </para>
         /// </summary>
         /// <remarks>
-        /// Release is synchronous by the factory release contract, and the instance's scope is drained
-        /// synchronously through <see cref="DisposeScope"/> — including an <see cref="IAsyncDisposable"/>-only
-        /// mapper or transform, whose <c>DisposeAsync</c> is awaited on the releasing (for the Proactor,
-        /// the message-pump) thread. See <see cref="DisposeScope"/> for why a mapper/transform
-        /// <c>DisposeAsync</c> must not perform real I/O.
+        /// Synchronous by the factory release contract, so the instance's scope is drained synchronously
+        /// through <see cref="DisposeScope"/>. Prefer <see cref="ReleaseAsync"/> where the caller can
+        /// await — on a thread owned by a single-threaded <see cref="SynchronizationContext"/> (the
+        /// Proactor message pump) the async path lets an <see cref="IAsyncDisposable"/> mapper/transform
+        /// <c>DisposeAsync</c> complete without blocking the pump; this synchronous path can only offload
+        /// the wait (see <see cref="DisposeScope"/>). See <see cref="DisposeScope"/> for why a
+        /// mapper/transform <c>DisposeAsync</c> should still avoid real I/O.
         /// </remarks>
         /// <param name="instance">The object to release</param>
         public void Release(object? instance)
         {
-            if (_lifetime != ServiceLifetime.Transient) return;
-            if (instance == null) return;
+            foreach (var scope in CollectScopesToRelease(instance))
+                DisposeScope(scope);
+        }
 
-            if (!_transientScopes.TryGetValue(instance, out var scopes)) return;
+        /// <summary>
+        /// Releases an object back to the scope that owns it, draining that scope asynchronously.
+        /// </summary>
+        /// <remarks>
+        /// The asynchronous counterpart of <see cref="Release"/>, called from the async pipeline's
+        /// <c>DisposeAsync</c> (<c>await using</c>). Awaiting the scope's <c>DisposeAsync</c> — rather
+        /// than blocking on it — is what keeps an <see cref="IAsyncDisposable"/> mapper/transform from
+        /// deadlocking the single-threaded <see cref="SynchronizationContext"/> of the Proactor pump: a
+        /// continuation the user's <c>DisposeAsync</c> posts back to that context can run because the
+        /// pump thread is suspended at the <c>await</c>, not blocked. The same idempotency and race
+        /// handling as <see cref="Release"/> applies — both share <see cref="CollectScopesToRelease"/>.
+        /// </remarks>
+        /// <param name="instance">The object to release</param>
+        public async ValueTask ReleaseAsync(object? instance)
+        {
+            foreach (var scope in CollectScopesToRelease(instance))
+                await DisposeScopeAsync(scope).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Shared bookkeeping for <see cref="Release"/> and <see cref="ReleaseAsync"/>: pops one scope per
+        /// release (matching the push in <see cref="GetTransient{T}"/>) and, once the instance's stack is
+        /// empty, stops retaining it as a key. Yields the scopes to dispose so the caller drains them
+        /// synchronously or asynchronously; only a transient, tracked instance yields anything, so a
+        /// double release or a never-tracked instance is a safe no-op.
+        /// </summary>
+        private IEnumerable<IServiceScope> CollectScopesToRelease(object? instance)
+        {
+            if (_lifetime != ServiceLifetime.Transient) yield break;
+            if (instance == null) yield break;
+
+            if (!_transientScopes.TryGetValue(instance, out var scopes)) yield break;
 
             //dispose one scope per Release, matching the push in GetTransient
             if (scopes.TryPop(out var scope))
-                DisposeScope(scope);
+                yield return scope;
 
             //once the last scope for this instance is drained, stop retaining the instance as a key.
             //Remove only this exact (now-empty) stack; if a concurrent GetTransient pushed onto it in
@@ -205,32 +241,40 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     .Remove(new KeyValuePair<object, ConcurrentStack<IServiceScope>>(instance, scopes)))
             {
                 while (scopes.TryPop(out var raced))
-                    DisposeScope(raced);
+                    yield return raced;
             }
         }
 
         /// <summary>
-        /// Disposes a service scope, preferring <see cref="IAsyncDisposable"/> when the scope offers it.
+        /// Disposes a service scope synchronously, preferring <see cref="IAsyncDisposable"/> when the
+        /// scope offers it.
         /// </summary>
         /// <remarks>
         /// Microsoft's <c>ServiceProviderEngineScope.Dispose()</c> throws
         /// <see cref="InvalidOperationException"/> if it holds a service that implements only
         /// <see cref="IAsyncDisposable"/>, so a scope holding such an instance can only be drained
-        /// through <c>DisposeAsync</c>. Both callers — <see cref="Release"/> and <see cref="Dispose"/> —
-        /// are bound to synchronous signatures by the factory release contract and
-        /// <see cref="IDisposable.Dispose"/>, so the returned <see cref="System.Threading.Tasks.ValueTask"/>
-        /// is awaited synchronously. It completes inline unless a user's <c>DisposeAsync</c> performs
-        /// real I/O. On <c>netstandard2.0</c> <see cref="IAsyncDisposable"/> is not a visible type and
-        /// the synchronous path is the only one available.
+        /// through <c>DisposeAsync</c>. This method is bound to synchronous signatures
+        /// (<see cref="Release"/>, <see cref="Dispose"/>, the pipeline finalizer fallback), so the
+        /// returned <see cref="ValueTask"/> is awaited synchronously.
         /// <para>
-        /// <b>Guidance for mapper/transform authors:</b> a message mapper or transform is disposed on
-        /// the thread that releases it — for the Proactor that is the message-pump thread, which
-        /// disposes the async pipeline synchronously. An <see cref="IAsyncDisposable"/>-only mapper or
-        /// transform therefore drains through this synchronous await, so a <c>DisposeAsync</c> that
-        /// performs <b>real asynchronous I/O</b> (network, disk, a database round-trip) blocks the pump
-        /// thread for its whole duration and stalls message processing. A mapper/transform
-        /// <c>DisposeAsync</c> should release only in-memory state and complete synchronously; perform
-        /// any genuine I/O elsewhere, never in disposal.
+        /// The hazard is a caller running on a thread a single-threaded
+        /// <see cref="SynchronizationContext"/> owns — the Proactor's
+        /// <c>BrighterSynchronizationContext</c> — where a user <c>DisposeAsync</c> that awaits without
+        /// <c>ConfigureAwait(false)</c> posts its continuation back to that context; blocking here would
+        /// then deadlock, because the one thread that could run the continuation is the one we blocked.
+        /// So when a <see cref="SynchronizationContext"/> is current we run the whole disposal on a pool
+        /// thread that has none, letting those continuations resume off-context. When no context is
+        /// current (the Reactor, a finalizer, factory shutdown) we keep the cheaper inline path and only
+        /// fall back to a blocking wait if the disposal does not complete synchronously. Either way this
+        /// still blocks the caller for the disposal's duration — prefer <see cref="ReleaseAsync"/> where
+        /// the caller can await.
+        /// </para>
+        /// <para>
+        /// <b>Guidance for mapper/transform authors:</b> a <c>DisposeAsync</c> that performs <b>real
+        /// asynchronous I/O</b> (network, disk, a database round-trip) still stalls the releasing thread
+        /// for its whole duration whenever release runs synchronously. A mapper/transform
+        /// <c>DisposeAsync</c> should release only in-memory state and complete quickly; perform any
+        /// genuine I/O elsewhere, never in disposal.
         /// </para>
         /// </remarks>
         /// <param name="scope">The scope to dispose</param>
@@ -239,11 +283,38 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 #if !NETSTANDARD2_0
             if (scope is IAsyncDisposable asyncScope)
             {
+                //a captured single-threaded context (BrighterSynchronizationContext) would deadlock a
+                //blocking wait, so start the disposal on a pool thread with no captured context; the
+                //user's DisposeAsync continuations then resume off-context and the wait can complete
+                if (SynchronizationContext.Current is not null)
+                {
+                    Task.Run(() => asyncScope.DisposeAsync().AsTask()).GetAwaiter().GetResult();
+                    return;
+                }
+
                 var pending = asyncScope.DisposeAsync();
                 if (pending.IsCompleted)
                     pending.GetAwaiter().GetResult();
                 else
                     pending.AsTask().GetAwaiter().GetResult();
+                return;
+            }
+#endif
+            scope.Dispose();
+        }
+
+        /// <summary>
+        /// Disposes a service scope asynchronously, preferring <see cref="IAsyncDisposable"/> when the
+        /// scope offers it. Used by <see cref="ReleaseAsync"/> so an <see cref="IAsyncDisposable"/>
+        /// mapper/transform is awaited rather than blocked on.
+        /// </summary>
+        /// <param name="scope">The scope to dispose</param>
+        private static async ValueTask DisposeScopeAsync(IServiceScope scope)
+        {
+#if !NETSTANDARD2_0
+            if (scope is IAsyncDisposable asyncScope)
+            {
+                await asyncScope.DisposeAsync().ConfigureAwait(false);
                 return;
             }
 #endif

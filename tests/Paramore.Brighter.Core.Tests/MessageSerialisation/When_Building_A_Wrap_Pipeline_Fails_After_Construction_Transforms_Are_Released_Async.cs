@@ -73,5 +73,7 @@ public class AsyncTransformPipelinePostConstructionFailureReleaseTests
         }
 
         public void Release(IAmAMessageTransformAsync transformer) => Released.Add(transformer);
+
+        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer) { Released.Add(transformer); return default; }
     }
 }

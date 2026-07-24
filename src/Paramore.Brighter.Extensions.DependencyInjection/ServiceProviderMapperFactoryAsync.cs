@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -67,6 +68,19 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public void Release(IAmAMessageMapperAsync mapper)
         {
             _lifetimeScope.Release(mapper);
+        }
+
+        /// <summary>
+        /// Releases a mapper created by this factory asynchronously, awaiting disposal of the per-instance
+        /// <see cref="Microsoft.Extensions.DependencyInjection.IServiceScope"/> a transient mapper was
+        /// resolved from. Preferred over <see cref="Release"/> on the Proactor pump thread: awaiting an
+        /// <see cref="IAsyncDisposable"/> mapper's disposal does not block the single-threaded
+        /// synchronization context a continuation may need.
+        /// </summary>
+        /// <param name="mapper">The mapper to release</param>
+        public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper)
+        {
+            return _lifetimeScope.ReleaseAsync(mapper);
         }
 
         /// <summary>

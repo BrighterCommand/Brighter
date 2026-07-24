@@ -37,6 +37,8 @@ namespace Paramore.Brighter
         public IAmAMessageTransformAsync Create(Type transformerType) { return new EmptyMessageTransformAsync(); }
 
         public void Release(IAmAMessageTransformAsync transformer) { transformer.Dispose(); }
+
+        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer) { transformer.Dispose(); return default; }
     }
 
     /// <summary>

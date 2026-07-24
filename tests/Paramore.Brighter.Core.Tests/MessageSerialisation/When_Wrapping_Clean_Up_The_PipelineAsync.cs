@@ -58,6 +58,12 @@ public class AsyncMessageWrapCleanupTests
 
             s_released += "|" + transformer.GetType().Name;
         }
+
+        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer)
+        {
+            Release(transformer);
+            return default;
+        }
     }
 
 }

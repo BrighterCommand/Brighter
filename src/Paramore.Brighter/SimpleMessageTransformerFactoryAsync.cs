@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -48,6 +49,11 @@ namespace Paramore.Brighter
         public void Release(IAmAMessageTransformAsync transformer)
         {
             return;
+        }
+
+        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer)
+        {
+            return default;
         }
     }
 }

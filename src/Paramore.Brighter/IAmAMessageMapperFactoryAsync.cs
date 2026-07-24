@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -51,9 +52,25 @@ namespace Paramore.Brighter
         /// — and, for an IoC container, the scope the mapper was resolved from — is retained until the
         /// factory itself is disposed at shutdown. A factory that hands out a shared instance, or whose
         /// instances it does not own, should make this a no-op.
-        /// This is synchronous, mirroring <see cref="IAmAMessageTransformerFactoryAsync.Release"/>.
+        /// This is synchronous, mirroring <see cref="IAmAMessageTransformerFactoryAsync.Release"/>. On a
+        /// thread owned by the Proactor's single-threaded synchronization context prefer
+        /// <see cref="ReleaseAsync"/>.
         /// </remarks>
         /// <param name="mapper">The mapper to release.</param>
         void Release(IAmAMessageMapperAsync mapper);
+
+        /// <summary>
+        /// Releases the specified message mapper asynchronously, awaiting its disposal.
+        /// </summary>
+        /// <remarks>
+        /// The asynchronous counterpart of <see cref="Release"/>, called from the async pipeline's
+        /// <c>DisposeAsync</c>. Awaiting an <see cref="IAsyncDisposable"/> mapper's disposal rather than
+        /// blocking on it keeps the Proactor pump thread free to run any continuation the mapper's
+        /// <c>DisposeAsync</c> posts back to its single-threaded synchronization context. A factory that
+        /// hands out a shared instance, or holds no resources, should make this a no-op returning
+        /// <c>default</c>.
+        /// </remarks>
+        /// <param name="mapper">The mapper to release.</param>
+        ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper);
     }
 }

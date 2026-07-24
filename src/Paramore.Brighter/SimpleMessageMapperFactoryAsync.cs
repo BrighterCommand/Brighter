@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -62,6 +63,16 @@ namespace Paramore.Brighter
         /// <param name="mapper">The mapper to release.</param>
         public void Release(IAmAMessageMapperAsync mapper)
         {
+        }
+
+        /// <summary>
+        /// Releases the specified message mapper asynchronously. A no-op for the same reason as
+        /// <see cref="Release"/>: the caller's factory method owns whatever it returns.
+        /// </summary>
+        /// <param name="mapper">The mapper to release.</param>
+        public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper)
+        {
+            return default;
         }
     }
 }
