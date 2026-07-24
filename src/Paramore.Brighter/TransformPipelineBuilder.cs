@@ -92,9 +92,10 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>() where TRequest : class, IRequest
         {
+            IAmAMessageMapper<TRequest>? messageMapper = null;
             try
             {
-                var messageMapper = FindMessageMapper<TRequest>();
+                messageMapper = FindMessageMapper<TRequest>();
 
                 var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
@@ -112,6 +113,9 @@ namespace Paramore.Brighter
             }
             catch (Exception e)
             {
+                //we never returned a pipeline to take ownership of the mapper, so release it here; a
+                //release that the pipeline has already made is a safe no-op
+                if (messageMapper is not null) _mapperRegistry.Release(messageMapper);
                 throw new ConfigurationException("Error building wrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -124,9 +128,10 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>() where TRequest : class, IRequest
         {
+            IAmAMessageMapper<TRequest>? messageMapper = null;
             try
             {
-                var messageMapper = FindMessageMapper<TRequest>();
+                messageMapper = FindMessageMapper<TRequest>();
 
                 var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
 
@@ -144,6 +149,9 @@ namespace Paramore.Brighter
             }
             catch (Exception e)
             {
+                //we never returned a pipeline to take ownership of the mapper, so release it here; a
+                //release that the pipeline has already made is a safe no-op
+                if (messageMapper is not null) _mapperRegistry.Release(messageMapper);
                 throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
             }
         }

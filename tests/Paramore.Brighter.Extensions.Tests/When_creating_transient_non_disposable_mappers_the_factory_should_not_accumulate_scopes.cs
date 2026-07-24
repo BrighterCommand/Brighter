@@ -24,16 +24,45 @@ public class TransientMapperScopeAccumulationTests
 
         using var factory = new ServiceProviderMapperFactory(trackingProvider);
 
-        // Act — simulate N messages; the mapper factory has no Release method, so scopes must
-        // not accumulate; each scope for a non-IDisposable instance must be disposed immediately
+        // Act — simulate N messages, releasing each mapper as the pipeline that owns it finishes.
+        // Release is the signal that the instance is done with; it is what drains the scope.
         for (var i = 0; i < messageCount; i++)
-            factory.Create(typeof(NonDisposableMapper));
+        {
+            var mapper = factory.Create(typeof(NonDisposableMapper));
+            factory.Release(mapper!);
+        }
 
         var disposedAfterCreates = scopeTracker.DisposedCount;
 
-        // Assert — all N scopes disposed before factory.Dispose() is ever called
-        // Before the fix: disposedAfterCreates == 0 (scopes pile up in _transientScopes)
+        // Assert — all N scopes disposed before factory.Dispose() is ever called, so nothing is
+        // retained from one message to the next
         Assert.Equal(messageCount, disposedAfterCreates);
+    }
+
+    [Fact]
+    public void When_creating_a_transient_mapper_the_scope_should_survive_until_release()
+    {
+        // Arrange
+        var collection = new ServiceCollection();
+        collection.AddTransient<NonDisposableMapper>();
+        collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
+        var rootProvider = collection.BuildServiceProvider();
+
+        var scopeTracker = new ScopeTracker(rootProvider.GetRequiredService<IServiceScopeFactory>());
+        var trackingProvider = new TrackingServiceProvider(rootProvider, scopeTracker);
+
+        using var factory = new ServiceProviderMapperFactory(trackingProvider);
+
+        // Act — the counterpart to the test above, and the reason the scope cannot simply be disposed
+        // as soon as Create returns: an instance may still need services from the scope it came from
+        var mapper = factory.Create(typeof(NonDisposableMapper));
+        var disposedBeforeRelease = scopeTracker.DisposedCount;
+
+        factory.Release(mapper!);
+
+        // Assert
+        Assert.Equal(0, disposedBeforeRelease);
+        Assert.Equal(1, scopeTracker.DisposedCount);
     }
 
     private sealed class MinimalCommand : Command

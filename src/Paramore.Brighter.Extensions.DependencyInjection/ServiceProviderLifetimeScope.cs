@@ -106,20 +106,27 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Creates a transient instance in its own short-lived <see cref="IServiceScope"/>.
-        /// The scope is tracked by instance only when the instance implements <see cref="IDisposable"/>;
-        /// in that case <see cref="Release"/> must be called to dispose the scope and prevent unbounded
-        /// memory growth. For non-disposable instances the scope is disposed immediately so that no
-        /// reference accumulates between calls.
+        /// Creates a transient instance in its own short-lived <see cref="IServiceScope"/>. The scope
+        /// is tracked against the instance, and <see cref="Release"/> must be called to dispose it —
+        /// without that call the scope is retained until this lifetime scope itself is disposed.
         /// </summary>
+        /// <remarks>
+        /// Every instance is tracked, not just a disposable one. The scope owns more than the instance:
+        /// it also owns whatever that instance captured from it — including the scope's own
+        /// <see cref="IServiceProvider"/>, which the .NET container injects when a constructor asks for
+        /// one. Disposing the scope while the instance is still alive hands the instance a disposed
+        /// provider, so scope lifetime has to follow instance lifetime rather than the instance's
+        /// disposability. Only an unresolved (null) instance leaves nothing to release, so only then is
+        /// the scope disposed here.
+        /// </remarks>
         private T? GetTransient<T>(Type objectType) where T : class
         {
             var scope = _serviceProvider.CreateScope();
             var instance = (T?)scope.ServiceProvider.GetService(objectType);
-            if (instance is IDisposable)
+            if (instance != null)
                 _transientScopes[instance] = scope;
             else
-                scope.Dispose();
+                DisposeScope(scope);
             return instance;
         }
 
@@ -143,7 +150,38 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (_lifetime != ServiceLifetime.Transient) return;
 
             if (instance != null && _transientScopes.TryRemove(instance, out var scope))
-                scope.Dispose();
+                DisposeScope(scope);
+        }
+
+        /// <summary>
+        /// Disposes a service scope, preferring <see cref="IAsyncDisposable"/> when the scope offers it.
+        /// </summary>
+        /// <remarks>
+        /// Microsoft's <c>ServiceProviderEngineScope.Dispose()</c> throws
+        /// <see cref="InvalidOperationException"/> if it holds a service that implements only
+        /// <see cref="IAsyncDisposable"/>, so a scope holding such an instance can only be drained
+        /// through <c>DisposeAsync</c>. Both callers — <see cref="Release"/> and <see cref="Dispose"/> —
+        /// are bound to synchronous signatures by the factory release contract and
+        /// <see cref="IDisposable.Dispose"/>, so the returned <see cref="System.Threading.Tasks.ValueTask"/>
+        /// is awaited synchronously. It completes inline unless a user's <c>DisposeAsync</c> performs
+        /// real I/O. On <c>netstandard2.0</c> <see cref="IAsyncDisposable"/> is not a visible type and
+        /// the synchronous path is the only one available.
+        /// </remarks>
+        /// <param name="scope">The scope to dispose</param>
+        private static void DisposeScope(IServiceScope scope)
+        {
+#if !NETSTANDARD2_0
+            if (scope is IAsyncDisposable asyncScope)
+            {
+                var pending = asyncScope.DisposeAsync();
+                if (pending.IsCompleted)
+                    pending.GetAwaiter().GetResult();
+                else
+                    pending.AsTask().GetAwaiter().GetResult();
+                return;
+            }
+#endif
+            scope.Dispose();
         }
 
         /// <summary>
@@ -154,7 +192,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (_disposed) return;
 
             foreach (var scope in _transientScopes.Values)
-                scope.Dispose();
+                DisposeScope(scope);
             _transientScopes.Clear();
 
             _scope?.Dispose();

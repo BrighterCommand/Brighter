@@ -438,15 +438,127 @@ release would be wrong. Mirrors `SimpleMessageTransformerFactory.cs:42`, whose `
 a no-op. (Contrast `EmptyMessageTransformerFactory.cs:38`, which *does* dispose — safe only because
 it owns what it created.) Document the no-op in XML comments so implementers understand the contract.
 
+### Follow-up (b) — `IAsyncDisposable`-only instances throw in `GetTransient` — FIXED, folded in
+
+Originally recorded here as deferred. Folded into this bugfix at the user's direction once it was
+shown that the candidate one-line fix was **not sufficient**.
+
+**Confirmed.** 0006's guard is `instance is IDisposable` (`:119`); an `IAsyncDisposable`-only
+instance falls to the `else` and the scope is disposed **synchronously**. MS DI's
+`ServiceProviderEngineScope.Dispose()` throws `InvalidOperationException` ("only implements
+IAsyncDisposable. Use DisposeAsync to dispose the container.") when it holds such a service — so an
+`IAsyncDisposable`-only mapper or transform under `Transient` threw on every `Create`. Verified
+directly against `Microsoft.Extensions.DependencyInjection` on net9.0, and reproduced by the
+regression test below failing at `ServiceProviderLifetimeScope.cs:122`.
+
+**Why the candidate fix was insufficient.** Widening `:119` to
+`instance is IDisposable or IAsyncDisposable` only moves the instance onto the *tracked* path. The
+scope it is tracked with is then disposed at `Release` (`:146`) and at factory shutdown (`:157`) —
+both of which called `scope.Dispose()` and so threw the identical `InvalidOperationException`, just
+later. All three call sites had to change together.
+
+**Fix applied.** New `private static void DisposeScope(IServiceScope)` prefers `IAsyncDisposable` on
+the *scope* (MS DI's scope implements it on every TFM where the instance can), falling back to
+`scope.Dispose()`. It awaits the `ValueTask` synchronously — `Release` and `IDisposable.Dispose` are
+both `void` by contract, so there is no async signature to reach for; the `ValueTask` completes inline
+unless a user's `DisposeAsync` performs real I/O. The `netstandard2.0` `#if` lives here: that TFM has
+no `Microsoft.Bcl.AsyncInterfaces` reference in
+`Paramore.Brighter.Extensions.DependencyInjection.csproj`, so `IAsyncDisposable` is not a visible type
+and the synchronous path is the only one available. All three `scope.Dispose()` sites — the
+`GetTransient` `else`, `Release`, and `Dispose` — route through it.
+
+> **Superseded detail.** (b) initially also widened the `GetTransient` tracking guard to
+> `instance is IDisposable or IAsyncDisposable` under an `#if NETSTANDARD2_0`. Follow-up (c) below
+> then replaced that guard with `instance != null` outright, so the type check — and its `#if` — no
+> longer exist. `DisposeScope` and its `#if !NETSTANDARD2_0` remain, and are still required: `Release`
+> and `Dispose` drain scopes that may hold `IAsyncDisposable`-only instances.
+
+**Deliberately NOT changed:** `_scope?.Dispose()` in `Dispose()` (the *Scoped*-lifetime scope). It
+has the same latent failure for an `IAsyncDisposable`-only scoped instance, but no test covers it
+and it is outside the agreed scope. Recorded below as a still-open adjacent defect.
+
+Test: `tests/Paramore.Brighter.Extensions.Tests/When_releasing_a_transient_async_disposable_only_mapper_should_dispose_it.cs`
+— class `TransientAsyncDisposableMapperReleaseTests`, two facts pinning the `Release` and factory
+`Dispose` sites respectively. RED (both failing at `:122`) → GREEN.
+
+### Follow-up (c) — 0006 regression: `Transient` instances get a disposed `IServiceProvider` — FIXED
+
+Found while verifying (b). Fixed here rather than deferred, because (b) and (c) touch the same method
+and shipping (b) alone would have left the branch in a worse state than it started.
+
+**Confirmed by bisect over this branch** — `tests/Paramore.Brighter.Validation.FluentValidation.Tests`:
+
+| Commit | Result |
+|---|---|
+| `c73e93221` (before the bugfix series) | 12 passed |
+| `e6a6d4aa0` | 12 passed |
+| **`2d5a9c1c5`** — 0006 Part A, *"dispose transient scope immediately for non-IDisposable instances"* | **6 failed** |
+
+```
+ObjectDisposedException : Cannot access a disposed object. Object name: 'IServiceProvider'.
+  at FluentValidationRequestHandler`1.Validate(TRequest) in FluentValidationRequestHandler.cs:line 52
+```
+
+**Root cause.** `FluentValidationRequestHandler<TRequest>(IServiceProvider serviceProvider)`
+(`FluentValidationRequestHandler.cs:45`) captures the *scoped* provider by constructor injection and
+resolves the validator from it lazily in `Validate()` (`:52`). The handler is not `IDisposable`, so
+0006 Part A's `else` branch disposed its scope at `Create`, killing the captured provider before first
+use. This generalises to **any `Transient` handler, mapper, or transform that holds anything from its
+own scope beyond `Create`** — a far wider blast radius than the FluentValidation package.
+
+**Why Part A was wrong in the first place.** Its premise was *"mappers have no `Release`, so dispose
+their scope eagerly."* But the guard lives in `ServiceProviderLifetimeScope`, shared by all three
+factories — so it also applied to *handlers*, which have had a working `Release` all along
+(`ServiceProviderHandlerFactory.Release` → `ReleaseLifetimeScope` → `scope.Dispose()`). And Part B
+(this bugfix) then gave mappers a `Release` too, dissolving the premise entirely. A DI scope owns more
+than the instance — it owns whatever the instance captured from it — so scope lifetime must follow
+*instance* lifetime, not the instance's disposability.
+
+**Fix.** Revert Part A: `GetTransient`'s guard goes from `instance is IDisposable` back to
+`instance != null`. Every transient instance is tracked; only an unresolved (null) instance has
+nothing to release and disposes its scope immediately. Release coverage is now complete, which is what
+makes this safe:
+
+| Consumer | Release path | Bounded by |
+|---|---|---|
+| Handlers | `ServiceProviderHandlerFactory.Release` → `ReleaseLifetimeScope` | per-`IAmALifetime` (request) |
+| Mappers | `TransformPipeline.cs:47`, `TransformPipelineBuilder.cs:161` → `MessageMapperRegistry.cs:123` → factory `Release` | pipeline disposal (Part B) |
+| Transformers | `TransformLifetimeScope.ReleaseTrackedObjects` → factory `Release` | pipeline disposal |
+
+**0006's regression test was rewritten**, deliberately. `TransientMapperScopeAccumulationTests`
+asserted 10 `Create` calls → 10 disposals *with no `Release`* — the exact premise being reverted. It
+now drives 10 `Create`+`Release` pairs → 10 disposals, preserving its intent (nothing retained between
+messages) under the contract Part B established, plus a second fact
+(`When_creating_a_transient_mapper_the_scope_should_survive_until_release`) pinning the other half:
+the scope must *not* be disposed before `Release`.
+
+Test: `tests/Paramore.Brighter.Extensions.Tests/When_a_transient_handler_captures_the_service_provider_should_resolve_after_create.cs`
+— class `TransientHandlerCapturedProviderTests`. Reproduces the failure against
+`ServiceProviderHandlerFactory` alone, with no FluentValidation dependency. RED → GREEN.
+
+### Follow-up (d) — mapper leaked on the `Build*Pipeline` exception path — FIXED
+
+Previously deferred (see the last line of the Verification section). Restoring full tracking in (c)
+turned it from masked into live: if `BuildTransformPipeline` throws after `FindMessageMapper` has
+succeeded (`TransformPipelineBuilder.cs:97-99`), no pipeline is ever constructed to take ownership of
+the mapper, so its scope was retained until factory disposal.
+
+**Fix.** Hoist `messageMapper` out of the `try` and release it in the `catch` before wrapping the
+exception, at all four sites: `BuildWrapPipeline` / `BuildUnwrapPipeline` in both
+`TransformPipelineBuilder` and `TransformPipelineBuilderAsync`. Releasing a mapper the pipeline has
+already released is a safe no-op (`_transientScopes.TryRemove` simply misses), so the ordering is not
+delicate.
+
+Test: `tests/Paramore.Brighter.Extensions.Tests/When_building_a_pipeline_throws_should_release_the_mapper.cs`
+— class `TransformPipelineBuilderFailureReleaseTests`, four facts (one per site), each driving a
+mapper whose transform attribute names a type the transformer factory refuses to create, and asserting
+via `ScopeTracker` that the scope was disposed. All four RED (0 disposed, expected 1) → GREEN.
+
 ### Adjacent defects found — deferred, NOT part of this fix
 
-- **`IAsyncDisposable`-only instances throw at `ServiceProviderLifetimeScope.cs:122`.** 0006's guard
-  is `instance is IDisposable` (`:119`); an `IAsyncDisposable`-only instance falls to the `else` and
-  the scope is disposed **synchronously**. MS DI's `ServiceProviderEngineScope.Dispose()` throws
-  `InvalidOperationException` ("only implements IAsyncDisposable; use DisposeAsync") when it holds
-  such a service — so an `IAsyncDisposable`-only mapper or transform under `Transient` throws on
-  every `Create` today. Candidate fix: widen `:119` to `instance is IDisposable or IAsyncDisposable`.
-  Separate bug.
+- **`_scope?.Dispose()` in `ServiceProviderLifetimeScope.Dispose()` is not async-aware.** Same family
+  as follow-up (b), but on the `Scoped` path rather than `Transient`; a scoped `IAsyncDisposable`-only
+  instance will throw at factory shutdown. Untested, left alone deliberately.
 - **`MessageMapperRegistry.ResolveMapperInfo`'s `IsDefault` flag goes stale.** `Get`/`GetAsync` write
   the resolved default mapper type into `_messageMappers`/`_asyncMessageMappers` (`:81`, `:103`);
   afterwards `ResolveMapperInfo` hits the first branch (`:119-120`) and reports `IsDefault: false`
@@ -584,7 +696,61 @@ Full-solution build clean apart from 32
 pre-existing `CS0579` errors in an untracked stray `tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests/obj/`
 build artifact, unrelated to this change.
 
-**Deliberately not done** (recorded in Scope Notes as separate bugs): the `IAsyncDisposable`-only
-throw at `ServiceProviderLifetimeScope.cs:122`; the stale `ResolveMapperInfo.IsDefault` flag; the
-`ServiceProviderHandlerFactory` double-dispose wart; the `_disposed` guard against `Create` racing
-`Dispose`; and the mapper leak on the exception path inside `Build*Pipeline`'s `try`.
+**Deliberately not done** (recorded in Scope Notes as separate bugs): the stale
+`ResolveMapperInfo.IsDefault` flag; the `ServiceProviderHandlerFactory` double-dispose wart; and the
+`_disposed` guard against `Create` racing `Dispose`. (The `IAsyncDisposable`-only throw, the 0006
+`IServiceProvider` regression, and the `Build*Pipeline` exception-path mapper leak were all
+subsequently folded in — see follow-ups (b), (c), (d).)
+
+---
+
+## Follow-ups (b), (c), (d) — verification
+
+Three follow-ups, verified together because (b) and (c) touch the same method and (c) activates (d).
+
+**Source changed**
+- `src/Paramore.Brighter.Extensions.DependencyInjection/ServiceProviderLifetimeScope.cs` — new
+  `DisposeScope` helper with the `#if !NETSTANDARD2_0` async-aware path, used at all three
+  `scope.Dispose()` sites; `GetTransient` guard reverted to `instance != null`.
+- `src/Paramore.Brighter/TransformPipelineBuilder.cs`,
+  `src/Paramore.Brighter/TransformPipelineBuilderAsync.cs` — mapper released in the `catch` of
+  `BuildWrapPipeline` / `BuildUnwrapPipeline` (4 sites).
+
+**Tests added**
+- `When_releasing_a_transient_async_disposable_only_mapper_should_dispose_it.cs` — (b), 2 facts
+- `When_a_transient_handler_captures_the_service_provider_should_resolve_after_create.cs` — (c), 1 fact
+- `When_building_a_pipeline_throws_should_release_the_mapper.cs` — (d), 4 facts
+
+**Test rewritten**
+- `When_creating_transient_non_disposable_mappers_the_factory_should_not_accumulate_scopes.cs` — 0006's
+  regression test, moved to the `Create`+`Release` contract, plus a new survives-until-release fact.
+
+**RED evidence**
+
+| Follow-up | Failure before the fix |
+|---|---|
+| (b) | `InvalidOperationException: 'AsyncDisposableOnlyMapper' type only implements IAsyncDisposable. Use DisposeAsync to dispose the container.` at `ServiceProviderLifetimeScope.cs:122` — 2 failed |
+| (c) | `ObjectDisposedException: Cannot access a disposed object.` at `HandlerCapturingServiceProvider.ResolveDependency()` — 1 failed |
+| (d) | `Assert.Equal() Failure: Values differ` — 0 scopes disposed, 1 expected — 4 failed |
+
+**GREEN — every container-free suite, both TFMs**
+
+| Project | net9.0 | net10.0 |
+|---|---|---|
+| `Paramore.Brighter.Core.Tests` | 863 passed / 7 skipped | 863 passed / 7 skipped |
+| `Paramore.Brighter.Extensions.Tests` | 117 passed | 117 passed |
+| `Paramore.Brighter.InMemory.Tests` | 144 passed | 144 passed |
+| `Paramore.Brighter.Testing.Tests` | 85 passed | 85 passed |
+| `Paramore.Brighter.AsyncAPI.Tests` | 46 passed | 46 passed |
+| `Paramore.Brighter.Transforms.Adaptors.Tests` | 30 passed | 30 passed |
+| `Paramore.Brighter.Validation.FluentValidation.Tests` | **12 passed** (was 6/12) | **12 passed** |
+| `Paramore.Brighter.Validation.DataAnnotations.Tests` | 10 passed | 10 passed |
+
+`Extensions.Tests` goes 109 → 117: +2 (b), +1 (c), +4 (d), +1 the new survives-until-release fact.
+
+The `netstandard2.0` `#if` branch in `DisposeScope` has no test coverage (test TFMs are
+`net9.0;net10.0` per `tests/Directory.Build.props:4`), so it is proven by compilation instead: the DI
+project builds clean on **all four** TFMs — `netstandard2.0`, `net8.0`, `net9.0`, `net10.0` — with
+zero CS warnings.
+
+**Not run**: transport/backend integration suites requiring a container runtime.

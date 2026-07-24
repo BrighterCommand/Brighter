@@ -110,6 +110,15 @@ Both net9.0 and net10.0 fail as expected.
 
 **File changed**: `src/Paramore.Brighter.Extensions.DependencyInjection/ServiceProviderLifetimeScope.cs`
 
+> ⚠️ **Part A was later REVERTED.** See follow-up (c) in
+> `bugfixes/0007-mapper-factory-release-disposable-mapper/bugfix.md`. The guard below caused a
+> regression: it also applied to *handlers* and *transforms*, disposing the DI scope of any
+> non-`IDisposable` `Transient` instance at `Create` — which breaks anything that captured something
+> from that scope, such as an injected `IServiceProvider`
+> (`ObjectDisposedException` in `FluentValidationRequestHandler`). Part A's premise ("mappers have no
+> `Release`") was dissolved by Part B, which gave mappers a release path; `GetTransient` is now back to
+> `instance != null` and the accumulation this bugfix reports is prevented by `Release` instead.
+
 **Change**: In `GetTransient<T>` (line 117), replaced `if (instance != null)` with `if (instance is IDisposable)`.
 
 Non-disposable instances now have their scope disposed immediately rather than accumulated in
