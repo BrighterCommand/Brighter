@@ -242,6 +242,7 @@
   <Folder Name="/tools/">
     <Project Path="tools/Paramore.Brighter.Test.Generator/Paramore.Brighter.Test.Generator.csproj" />
   </Folder>
+  <Project Path="src/Paramore.Brighter.Analyzer.CodeFixes/Paramore.Brighter.Analyzer.CodeFixes.csproj" />
   <Project Path="src/Paramore.Brighter.Analyzer.Package/Paramore.Brighter.Analyzer.Package.csproj" />
   <Project Path="src/Paramore.Brighter.Analyzer/Paramore.Brighter.Analyzer.csproj" />
   <Project Path="src/Paramore.Brighter.Archive.Azure/Paramore.Brighter.Archive.Azure.csproj" />

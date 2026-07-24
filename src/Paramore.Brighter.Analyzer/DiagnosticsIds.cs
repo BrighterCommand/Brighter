@@ -22,15 +22,16 @@ THE SOFTWARE. */
 
 #endregion
 
+namespace Paramore.Brighter.Analyzer;
 
-namespace Paramore.Brighter.Analyzer
+public static class DiagnosticsIds
 {
-    public static class DiagnosticsIds
-    {
-        public const string RequestTypeMissing = "BRT001";
-        public const string WrongRequestType = "BRT002";
-        public const string MessagePumpMissing = "BRT003";
-        public const string WrapWithAttribute = "BRT004";
-        public const string UnWrapWithAttribute = "BRT005";
-    }
+    public const string RequestTypeMissing = "BRT001";
+    public const string WrongRequestType = "BRT002";
+    public const string MessagePumpMissing = "BRT003";
+    public const string WrapWithAttribute = "BRT004";
+    public const string UnWrapWithAttribute = "BRT005";
+    public const string MissingPartitioner = "BRT006";
+    public const string ConsistentRandomPartitioner = "BRT007";
+    public const string ConsistentPartitioner = "BRT008";
 }

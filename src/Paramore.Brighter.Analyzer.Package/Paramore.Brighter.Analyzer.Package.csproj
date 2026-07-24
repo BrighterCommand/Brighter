@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.Analyzer\Paramore.Brighter.Analyzer.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.Analyzer.CodeFixes\Paramore.Brighter.Analyzer.CodeFixes.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,6 +30,7 @@
   <Target Name="_AddAnalyzersToOutput">
     <ItemGroup>
       <TfmSpecificPackageFile Include="$(OutputPath)\Paramore.Brighter.Analyzer.dll" PackagePath="analyzers/dotnet/cs" />
+      <TfmSpecificPackageFile Include="$(OutputPath)\Paramore.Brighter.Analyzer.CodeFixes.dll" PackagePath="analyzers/dotnet/cs" />
     </ItemGroup>
   </Target>
 
