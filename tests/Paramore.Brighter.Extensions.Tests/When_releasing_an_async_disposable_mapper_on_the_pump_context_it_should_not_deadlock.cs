@@ -28,6 +28,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// If either path regresses, the enclosing <see cref="BrighterAsyncContext.Run(Func{Task})"/> never
 /// returns and the <c>Wait</c> below times out.
 /// </summary>
+[Collection(PumpContextDeadlockCollection.Name)]
 public class ReleaseAsyncDisposableMapperOnPumpContextTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
