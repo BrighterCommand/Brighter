@@ -536,6 +536,11 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 object? pipeline = MakeUnwrapPipeline(requestType);
 
+                // The pipeline owns the message mapper and any transforms; releasing them back to their
+                // factories is deterministic rather than left to the finalizer. TransformPipelineAsync<T>
+                // implements IDisposable non-generically, so we do not need to know TRequest here.
+                using var pipelineLifetime = pipeline as IDisposable;
+
                 // Call UnwrapAsync on the pipeline
                 var unwrapMethod = pipeline!.GetType().GetMethod("UnwrapAsync");
                 var task = (Task)unwrapMethod!.Invoke(pipeline, [message, requestContext, cancellationToken])!;

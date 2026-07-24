@@ -110,6 +110,34 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Releases a mapper obtained from <see cref="Get{TRequest}"/> back to the factory that created it.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Get{TRequest}"/> creates an instance per call, so an unreleased mapper leaves the
+        /// factory holding it — and, for an IoC-backed factory, the scope it was resolved from — until
+        /// the factory is disposed at shutdown.
+        /// </remarks>
+        /// <param name="mapper">The mapper to release.</param>
+        public void Release(IAmAMessageMapper mapper)
+        {
+            _messageMapperFactory?.Release(mapper);
+        }
+
+        /// <summary>
+        /// Releases a mapper obtained from <see cref="GetAsync{TRequest}"/> back to the factory that
+        /// created it.
+        /// </summary>
+        /// <remarks>
+        /// Synchronous, like <see cref="GetAsync{TRequest}"/>; the <c>Async</c> suffix marks the async
+        /// mapper variant, not an awaitable result.
+        /// </remarks>
+        /// <param name="mapper">The mapper to release.</param>
+        public void ReleaseAsync(IAmAMessageMapperAsync mapper)
+        {
+            _messageMapperFactoryAsync?.Release(mapper);
+        }
+
+        /// <summary>
         /// Resolves the sync mapper type for a given request type without creating an instance.
         /// </summary>
         /// <param name="requestType">The request type to look up.</param>

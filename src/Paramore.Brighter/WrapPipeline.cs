@@ -49,12 +49,14 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactory">Factory for transforms, required to release</param>
         /// <param name="transforms">The transforms applied after the message mapper</param>
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+        /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
         public WrapPipeline(
-            IAmAMessageMapper<TRequest> messageMapper, 
-            IAmAMessageTransformerFactory? messageTransformerFactory, 
+            IAmAMessageMapper<TRequest> messageMapper,
+            IAmAMessageTransformerFactory? messageTransformerFactory,
             IEnumerable<IAmAMessageTransform> transforms,
-            InstrumentationOptions instrumentationOptions
-            ) : base(messageMapper, transforms)
+            InstrumentationOptions instrumentationOptions,
+            IAmAMessageMapperRegistry? mapperRegistry = null
+            ) : base(messageMapper, transforms, mapperRegistry)
         {
             _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactory != null)

@@ -53,5 +53,15 @@ namespace Paramore.Brighter
         {
             return _factoryMethod(messageMapperType);
         }
+
+        /// <summary>
+        /// Releases the specified message mapper. A no-op: the factory method supplied by the caller
+        /// owns whatever it returns — it may legitimately hand back a shared instance — so this factory
+        /// must not dispose it.
+        /// </summary>
+        /// <param name="mapper">The mapper to release.</param>
+        public void Release(IAmAMessageMapperAsync mapper)
+        {
+        }
     }
 }

@@ -42,5 +42,17 @@ namespace Paramore.Brighter
         /// <param name="messageMapperType">Type of the message mapper.</param>
         /// <returns>IAmAMessageMapper.</returns>
         IAmAMessageMapper? Create(Type messageMapperType);
+
+        /// <summary>
+        /// Releases the specified message mapper once the pipeline that owns it has finished with it.
+        /// </summary>
+        /// <remarks>
+        /// A factory that creates a mapper per message must release it, or any resource the mapper holds
+        /// — and, for an IoC container, the scope the mapper was resolved from — is retained until the
+        /// factory itself is disposed at shutdown. A factory that hands out a shared instance, or whose
+        /// instances it does not own, should make this a no-op.
+        /// </remarks>
+        /// <param name="mapper">The mapper to release.</param>
+        void Release(IAmAMessageMapper mapper);
     }
 }

@@ -42,6 +42,17 @@ namespace Paramore.Brighter
         /// <returns>IAmAMessageMapperAsync&lt;T&gt;.</returns>
         IAmAMessageMapperAsync<T>? GetAsync<T>() where T : class, IRequest;
         /// <summary>
+        /// Releases a mapper obtained from <see cref="GetAsync{T}"/> back to the factory that created it.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="GetAsync{T}"/> creates an instance on every call, so every caller must release what
+        /// it obtains once it has finished with it — including a caller that only wanted to know whether a
+        /// mapper exists. Synchronous, like <see cref="GetAsync{T}"/>; the <c>Async</c> suffix marks the
+        /// async mapper variant, not an awaitable result.
+        /// </remarks>
+        /// <param name="mapper">The mapper to release.</param>
+        void ReleaseAsync(IAmAMessageMapperAsync mapper);
+        /// <summary>
         /// Registers this instance.
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>

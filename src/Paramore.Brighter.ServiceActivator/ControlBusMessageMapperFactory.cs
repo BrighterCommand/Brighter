@@ -51,5 +51,14 @@ namespace Paramore.Brighter.ServiceActivator
             }
             throw new ConfigurationException(string.Format("Message Mapper for type {0} not registered with ControBusMessageMapperFactory", messageMapperType.FullName));
         }
+
+        /// <summary>
+        /// Releases the specified message mapper. A no-op: the control bus mappers are plain objects
+        /// holding no resources, so there is nothing to release.
+        /// </summary>
+        /// <param name="mapper">The mapper to release.</param>
+        public void Release(IAmAMessageMapper mapper)
+        {
+        }
     }
 }

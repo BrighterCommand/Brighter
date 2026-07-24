@@ -98,7 +98,7 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
-                var pipeline = new WrapPipelineAsync<TRequest>(messageMapper, _messageTransformerFactoryAsync, transforms, _instrumentationOptions);
+                var pipeline = new WrapPipelineAsync<TRequest>(messageMapper, _messageTransformerFactoryAsync, transforms, _instrumentationOptions, _mapperRegistryAsync);
 
                 Log.NewWrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 
@@ -130,7 +130,7 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
 
-                var pipeline = new UnwrapPipelineAsync<TRequest>(transforms, _messageTransformerFactoryAsync, messageMapper);
+                var pipeline = new UnwrapPipelineAsync<TRequest>(transforms, _messageTransformerFactoryAsync, messageMapper, _mapperRegistryAsync);
 
                 Log.NewUnwrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
 
@@ -150,7 +150,16 @@ namespace Paramore.Brighter
         
         public bool HasPipeline<TRequest>() where TRequest : class, IRequest
         {
-            return _mapperRegistryAsync.GetAsync<TRequest>() != null;
+            //GetAsync creates an instance to answer the question, so release it again; no pipeline owns it
+            var messageMapper = _mapperRegistryAsync.GetAsync<TRequest>();
+            try
+            {
+                return messageMapper is not null;
+            }
+            finally
+            {
+                if (messageMapper is not null) _mapperRegistryAsync.ReleaseAsync(messageMapper);
+            }
         }
 
         private IEnumerable<IAmAMessageTransformAsync> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)

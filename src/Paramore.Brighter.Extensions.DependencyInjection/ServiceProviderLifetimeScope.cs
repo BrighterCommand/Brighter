@@ -124,25 +124,26 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Releases an object. For singleton lifetime, does nothing as singletons
-        /// are managed by the container. For transient lifetime, disposes the per-instance
-        /// scope so the DI container drops its reference and the instance is disposed exactly
-        /// once. For scoped lifetime, disposes the instance directly if it is <see cref="IDisposable"/>.
+        /// Releases an object back to the scope that owns it.
+        /// <para>
+        /// Only a transient instance has a scope of its own to drain: disposing that scope makes the
+        /// DI container drop its reference and dispose the instance exactly once. A singleton is owned
+        /// by the container, and a scoped instance is owned by <c>_scope</c> and stays cached in
+        /// <c>_scopedInstances</c> for reuse — disposing either here would hand out a disposed instance
+        /// on the next <see cref="GetOrCreate{T}"/>, so both are a no-op.
+        /// </para>
+        /// <para>
+        /// Releasing the same instance twice, or releasing an instance that was never tracked (a
+        /// non-disposable transient), is a safe no-op — nothing is disposed more than once.
+        /// </para>
         /// </summary>
         /// <param name="instance">The object to release</param>
         public void Release(object? instance)
         {
-            if (_lifetime == ServiceLifetime.Singleton) return;
+            if (_lifetime != ServiceLifetime.Transient) return;
 
-            if (_lifetime == ServiceLifetime.Transient && instance != null
-                && _transientScopes.TryRemove(instance, out var scope))
-            {
+            if (instance != null && _transientScopes.TryRemove(instance, out var scope))
                 scope.Dispose();
-                return;
-            }
-
-            if (instance is IDisposable disposal)
-                disposal.Dispose();
         }
 
         /// <summary>
