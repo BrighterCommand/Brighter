@@ -41,7 +41,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceLifetime _lifetime;
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _singletonInstances = new();
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _scopedInstances = new();
-        private readonly ConcurrentDictionary<object, IServiceScope> _transientScopes =
+        //one instance can back several transient scopes when the registration returns a shared
+        //reference (e.g. a singleton resolved under a Transient lifetime), so scopes are stacked
+        //per instance — a 1:1 map would overwrite and orphan the earlier scope
+        private readonly ConcurrentDictionary<object, ConcurrentStack<IServiceScope>> _transientScopes =
             new(InstanceComparer.Default);
         private IServiceScope? _scope;
         private volatile bool _disposed;
@@ -109,9 +112,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Creates a transient instance in its own short-lived <see cref="IServiceScope"/>. The scope
-        /// is tracked against the instance, and <see cref="Release"/> must be called to dispose it —
-        /// without that call the scope is retained until this lifetime scope itself is disposed.
+        /// Creates a transient instance in its own short-lived <see cref="IServiceScope"/>. Each call's
+        /// scope is stacked against the instance (a shared instance can back several), and
+        /// <see cref="Release"/> must be called once per creation to dispose them — without that call
+        /// the scope is retained until this lifetime scope itself is disposed.
         /// </summary>
         /// <remarks>
         /// Every instance is tracked, not just a disposable one. The scope owns more than the instance:
@@ -132,13 +136,20 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return null;
             }
 
-            _transientScopes[instance] = scope;
+            //stack rather than overwrite: if this instance is shared (a singleton resolved under a
+            //Transient lifetime) an indexer set would drop the earlier scope, leaking it
+            var scopes = _transientScopes.GetOrAdd(instance, static _ => new ConcurrentStack<IServiceScope>());
+            scopes.Push(scope);
 
-            //a Dispose that began after our guard would have drained _transientScopes before we added
-            //to it, so re-check: whoever sees the entry after the drain owns disposing it
-            if (_disposed && _transientScopes.TryRemove(instance, out var orphaned))
+            //a Dispose that began after our guard drains _transientScopes; had it run between the
+            //GetOrAdd and the Push it would have missed this scope. Re-check and drain the stack we
+            //just pushed to — a local reference, so the scope is reclaimed even once Dispose has
+            //removed the entry. TryPop is atomic, so each scope is disposed exactly once.
+            if (_disposed)
             {
-                DisposeScope(orphaned);
+                _transientScopes.TryRemove(instance, out _);
+                while (scopes.TryPop(out var orphaned))
+                    DisposeScope(orphaned);
                 ThrowIfDisposed();
             }
 
@@ -154,8 +165,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         /// Releases an object back to the scope that owns it.
         /// <para>
-        /// Only a transient instance has a scope of its own to drain: disposing that scope makes the
-        /// DI container drop its reference and dispose the instance exactly once. A singleton is owned
+        /// Only a transient instance has scopes of its own to drain: this disposes one — the scope from
+        /// a single matching creation — so the DI container drops its reference and disposes whatever
+        /// that scope owns exactly once. A singleton is owned
         /// by the container, and a scoped instance is owned by <c>_scope</c> and stays cached in
         /// <c>_scopedInstances</c> for reuse — disposing either here would hand out a disposed instance
         /// on the next <see cref="GetOrCreate{T}"/>, so both are a no-op.
@@ -169,9 +181,25 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public void Release(object? instance)
         {
             if (_lifetime != ServiceLifetime.Transient) return;
+            if (instance == null) return;
 
-            if (instance != null && _transientScopes.TryRemove(instance, out var scope))
+            if (!_transientScopes.TryGetValue(instance, out var scopes)) return;
+
+            //dispose one scope per Release, matching the push in GetTransient
+            if (scopes.TryPop(out var scope))
                 DisposeScope(scope);
+
+            //once the last scope for this instance is drained, stop retaining the instance as a key.
+            //Remove only this exact (now-empty) stack; if a concurrent GetTransient pushed onto it in
+            //the window after the emptiness check, the removed stack is non-empty, so re-drain to keep
+            //that scope from being orphaned by the removal
+            if (scopes.IsEmpty &&
+                ((ICollection<KeyValuePair<object, ConcurrentStack<IServiceScope>>>)_transientScopes)
+                    .Remove(new KeyValuePair<object, ConcurrentStack<IServiceScope>>(instance, scopes)))
+            {
+                while (scopes.TryPop(out var raced))
+                    DisposeScope(raced);
+            }
         }
 
         /// <summary>
@@ -216,8 +244,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //past, sees _disposed on its post-add re-check and cleans up the scope it just tracked
             _disposed = true;
 
-            foreach (var scope in _transientScopes.Values)
-                DisposeScope(scope);
+            foreach (var scopes in _transientScopes.Values)
+                while (scopes.TryPop(out var scope))
+                    DisposeScope(scope);
             _transientScopes.Clear();
 
             if (_scope != null)
