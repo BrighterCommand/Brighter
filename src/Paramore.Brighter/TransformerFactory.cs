@@ -38,8 +38,18 @@ namespace Paramore.Brighter
             var transformer = factory.Create(transformerType);
             if (transformer is null)
                 throw new ConfigurationException($"Could not create transformer {transformerType} from {factory}");
-            if (attribute is WrapWithAttribute) transformer.InitializeWrapFromAttributeParams(attribute.InitializerParams());
-            if (attribute is UnwrapWithAttribute) transformer.InitializeUnwrapFromAttributeParams(attribute.InitializerParams());
+            try
+            {
+                if (attribute is WrapWithAttribute) transformer.InitializeWrapFromAttributeParams(attribute.InitializerParams());
+                if (attribute is UnwrapWithAttribute) transformer.InitializeUnwrapFromAttributeParams(attribute.InitializerParams());
+            }
+            catch (Exception)
+            {
+                //the transformer was created but never returned to the caller, so we own it; release it
+                //to the factory rather than leak it before letting the initialization error propagate
+                factory.Release(transformer);
+                throw;
+            }
             return transformer;
         }
     }

@@ -93,13 +93,15 @@ namespace Paramore.Brighter
         public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>() where TRequest : class, IRequest
         {
             IAmAMessageMapper<TRequest>? messageMapper = null;
+            IEnumerable<IAmAMessageTransform>? transforms = null;
+            WrapPipeline<TRequest>? pipeline = null;
             try
             {
                 messageMapper = FindMessageMapper<TRequest>();
 
-                var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
+                transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
-                var pipeline = new WrapPipeline<TRequest>(messageMapper, _messageTransformerFactory, transforms, _instrumentationOptions, _mapperRegistry);
+                pipeline = new WrapPipeline<TRequest>(messageMapper, _messageTransformerFactory, transforms, _instrumentationOptions, _mapperRegistry);
 
                 Log.NewWrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 
@@ -113,9 +115,9 @@ namespace Paramore.Brighter
             }
             catch (Exception e)
             {
-                //we never returned a pipeline to take ownership of the mapper, so release it here; a
-                //release that the pipeline has already made is a safe no-op
-                if (messageMapper is not null) _mapperRegistry.Release(messageMapper);
+                //nothing was returned to the caller to take ownership of the mapper and transforms, so
+                //release them here rather than leak them
+                CleanUpAfterFailedBuild(pipeline, transforms, messageMapper);
                 throw new ConfigurationException("Error building wrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -129,13 +131,15 @@ namespace Paramore.Brighter
         public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>() where TRequest : class, IRequest
         {
             IAmAMessageMapper<TRequest>? messageMapper = null;
+            IEnumerable<IAmAMessageTransform>? transforms = null;
+            UnwrapPipeline<TRequest>? pipeline = null;
             try
             {
                 messageMapper = FindMessageMapper<TRequest>();
 
-                var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
+                transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
 
-                var pipeline = new UnwrapPipeline<TRequest>(transforms, _messageTransformerFactory, messageMapper, _mapperRegistry);
+                pipeline = new UnwrapPipeline<TRequest>(transforms, _messageTransformerFactory, messageMapper, _mapperRegistry);
 
                 Log.NewUnwrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
 
@@ -149,9 +153,9 @@ namespace Paramore.Brighter
             }
             catch (Exception e)
             {
-                //we never returned a pipeline to take ownership of the mapper, so release it here; a
-                //release that the pipeline has already made is a safe no-op
-                if (messageMapper is not null) _mapperRegistry.Release(messageMapper);
+                //nothing was returned to the caller to take ownership of the mapper and transforms, so
+                //release them here rather than leak them
+                CleanUpAfterFailedBuild(pipeline, transforms, messageMapper);
                 throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -185,22 +189,62 @@ namespace Paramore.Brighter
                 return transforms;
             }
 
-            transformAttributes.Each((attribute) =>
+            try
             {
-                var transformType = attribute.GetHandlerType();
-                var transformer = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer();
-                if (transformer is null)
+                transformAttributes.Each((attribute) =>
                 {
-                    throw new InvalidOperationException(string.Format("Message Transformer Factory could not create a transform of type {0}",
-                        transformType.Name));
-                }
-                else
-                {
-                    transforms.Add(transformer);
-                }
-            });
+                    var transformType = attribute.GetHandlerType();
+                    var transformer = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer();
+                    if (transformer is null)
+                    {
+                        throw new InvalidOperationException(string.Format("Message Transformer Factory could not create a transform of type {0}",
+                            transformType.Name));
+                    }
+                    else
+                    {
+                        transforms.Add(transformer);
+                    }
+                });
+            }
+            catch (Exception)
+            {
+                //a transform later in the pipeline failed to build; we own every transform created
+                //before it, so release them rather than leak them before the error propagates. No
+                //pipeline was constructed to take ownership of them.
+                ReleaseTransforms(transforms);
+                throw;
+            }
 
             return transforms;
+        }
+
+        //Releases transforms back to the factory. Used to clean up a partially-built pipeline; a no-op
+        //when no transformer factory was supplied (v9 compatibility), because none were created.
+        private void ReleaseTransforms(IEnumerable<IAmAMessageTransform> transforms)
+        {
+            if (_messageTransformerFactory is null) return;
+            transforms.Each(transform => _messageTransformerFactory.Release(transform));
+        }
+
+        //Releases the resources created for a pipeline whose build failed before it was returned to the
+        //caller. If the pipeline was constructed it owns the mapper and transforms, so disposing it
+        //releases both exactly once (and suppresses its finalizer); otherwise we release whatever we
+        //built directly. BuildTransformPipeline releases its own partial list when it throws, so
+        //transforms is only non-null here when it returned successfully.
+        private void CleanUpAfterFailedBuild<TRequest>(
+            TransformPipeline<TRequest>? pipeline,
+            IEnumerable<IAmAMessageTransform>? transforms,
+            IAmAMessageMapper<TRequest>? messageMapper)
+            where TRequest : class, IRequest
+        {
+            if (pipeline is not null)
+            {
+                pipeline.Dispose();
+                return;
+            }
+
+            if (transforms is not null) ReleaseTransforms(transforms);
+            if (messageMapper is not null) _mapperRegistry.Release(messageMapper);
         }
 
         /// <summary>
