@@ -137,9 +137,17 @@ namespace Paramore.Brighter
         /// <remarks>
         /// Synchronous; used by the pipeline finalizer fallback and build-failure cleanup. On a thread
         /// owned by the Proactor's single-threaded synchronization context prefer <see cref="ReleaseAsync"/>.
+        /// <para>
+        /// Implemented explicitly so it is not part of the concrete <see cref="MessageMapperRegistry"/>
+        /// surface: a mapper that supports both Reactor and Proactor (e.g. <c>JsonMessageMapper&lt;T&gt;</c>)
+        /// implements both <see cref="IAmAMessageMapper"/> and <see cref="IAmAMessageMapperAsync"/>, so if
+        /// both <c>Release</c> overloads were public a caller holding the concrete registry could not pick
+        /// one (CS0121). Only the synchronous <see cref="Release(IAmAMessageMapper)"/> is public; release an
+        /// async mapper through <see cref="IAmAMessageMapperRegistryAsync"/> or <see cref="ReleaseAsync"/>.
+        /// </para>
         /// </remarks>
         /// <param name="mapper">The mapper to release.</param>
-        public void Release(IAmAMessageMapperAsync mapper)
+        void IAmAMessageMapperRegistryAsync.Release(IAmAMessageMapperAsync mapper)
         {
             _messageMapperFactoryAsync?.Release(mapper);
         }
@@ -149,7 +157,7 @@ namespace Paramore.Brighter
         /// created it, awaiting its disposal.
         /// </summary>
         /// <remarks>
-        /// The asynchronous counterpart of <see cref="Release(IAmAMessageMapperAsync)"/>, called from the
+        /// The asynchronous counterpart of <see cref="IAmAMessageMapperRegistryAsync.Release(IAmAMessageMapperAsync)"/>, called from the
         /// async pipeline's <c>DisposeAsync</c>. Awaiting an <see cref="IAsyncDisposable"/> mapper's
         /// disposal rather than blocking on it keeps the Proactor pump thread free to run a continuation
         /// the mapper's <c>DisposeAsync</c> posts back to its single-threaded synchronization context.
