@@ -107,7 +107,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         private T? GetOrCreateScoped<T>(Type objectType) where T : class
         {
-            _scope ??= _serviceProvider.CreateScope();
+            //publish the first scope atomically: a plain `_scope ??= CreateScope()` lets two threads racing
+            //the first scoped resolution each create a scope, and the loser's assignment is overwritten and
+            //never disposed (neither Dispose nor Release drains a scope that is not _scope). CompareExchange
+            //keeps the winner and the loser disposes the scope it created.
+            if (_scope is null)
+            {
+                var created = _serviceProvider.CreateScope();
+                if (Interlocked.CompareExchange(ref _scope, created, null) is not null)
+                    DisposeScope(created);
+            }
+
             var lazy = _scopedInstances.GetOrAdd(objectType, _ =>
                 new Lazy<object?>(() => (T?)_scope.ServiceProvider.GetService(objectType)));
             return (T?)lazy.Value;
