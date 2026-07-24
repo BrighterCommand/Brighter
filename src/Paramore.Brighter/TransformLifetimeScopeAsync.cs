@@ -55,17 +55,27 @@ namespace Paramore.Brighter
 
         private void ReleaseTrackedObjects()
         {
-              _trackedObjects.Each((trackedItem) =>
-              {
-                  _factory.Release(trackedItem);
-                  Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
-              });
+            //drain as we go — see TransformLifetimeScope.ReleaseTrackedObjects: removing each transform
+            //before releasing it stops a throwing Release from skipping the rest on a finalizer retry or
+            //re-releasing an already-released transform. This synchronous path backs the finalizer.
+            while (_trackedObjects.Count > 0)
+            {
+                var trackedItem = _trackedObjects[0];
+                _trackedObjects.RemoveAt(0);
+                _factory.Release(trackedItem);
+                Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+            }
         }
 
         private async ValueTask ReleaseTrackedObjectsAsync()
         {
-            foreach (var trackedItem in _trackedObjects)
+            //drain as we go, same reasoning as the synchronous path: a ReleaseAsync that throws must not
+            //skip the remaining transforms on a retry, nor let an already-released transform be released
+            //again when DisposeAsync is followed by the finalizer's synchronous release
+            while (_trackedObjects.Count > 0)
             {
+                var trackedItem = _trackedObjects[0];
+                _trackedObjects.RemoveAt(0);
                 await _factory.ReleaseAsync(trackedItem).ConfigureAwait(false);
                 Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
             }
