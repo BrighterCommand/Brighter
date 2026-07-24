@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ConcurrentDictionary<object, IServiceScope> _transientScopes =
             new(InstanceComparer.Default);
         private IServiceScope? _scope;
-        private bool _disposed;
+        private volatile bool _disposed;
 
         /// <summary>
         /// Constructs a lifetime scope helper
@@ -71,8 +71,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <typeparam name="T">The interface type to cast the result to</typeparam>
         /// <param name="objectType">The concrete type to create</param>
         /// <returns>The created or cached instance, or null if not registered</returns>
+        /// <exception cref="ObjectDisposedException">Thrown when this scope has already been disposed</exception>
         public T? GetOrCreate<T>(Type objectType) where T : class
         {
+            ThrowIfDisposed();
+
             return _lifetime switch
             {
                 ServiceLifetime.Singleton => GetOrCreateSingleton<T>(objectType),
@@ -123,11 +126,29 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             var scope = _serviceProvider.CreateScope();
             var instance = (T?)scope.ServiceProvider.GetService(objectType);
-            if (instance != null)
-                _transientScopes[instance] = scope;
-            else
+            if (instance == null)
+            {
                 DisposeScope(scope);
+                return null;
+            }
+
+            _transientScopes[instance] = scope;
+
+            //a Dispose that began after our guard would have drained _transientScopes before we added
+            //to it, so re-check: whoever sees the entry after the drain owns disposing it
+            if (_disposed && _transientScopes.TryRemove(instance, out var orphaned))
+            {
+                DisposeScope(orphaned);
+                ThrowIfDisposed();
+            }
+
             return instance;
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(ServiceProviderLifetimeScope));
         }
 
         /// <summary>
@@ -191,15 +212,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (_disposed) return;
 
+            //set before draining so a concurrent GetOrCreate either fails its guard or, if it slipped
+            //past, sees _disposed on its post-add re-check and cleans up the scope it just tracked
+            _disposed = true;
+
             foreach (var scope in _transientScopes.Values)
                 DisposeScope(scope);
             _transientScopes.Clear();
 
-            _scope?.Dispose();
+            if (_scope != null)
+                DisposeScope(_scope);
             _scopedInstances.Clear();
             // Note: Don't clear singleton instances as they may be shared
-
-            _disposed = true;
         }
 
         private sealed class InstanceComparer : IEqualityComparer<object>

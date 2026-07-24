@@ -42,6 +42,10 @@ namespace Paramore.Brighter
         private readonly IAmAMessageMapperFactoryAsync? _messageMapperFactoryAsync;
         private readonly ConcurrentDictionary<Type, Type> _messageMappers = new();
         private readonly ConcurrentDictionary<Type, Type> _asyncMessageMappers = new();
+        //resolved default mappers are cached apart from registered ones: a fallback to the default is
+        //not a registration, so it must not answer "is there a mapper registered for this type?"
+        private readonly ConcurrentDictionary<Type, Type> _resolvedDefaultMappers = new();
+        private readonly ConcurrentDictionary<Type, Type> _resolvedDefaultAsyncMappers = new();
         private readonly Type? _defaultMessageMapper;
         private readonly Type? _defaultMessageMapperAsync;
 
@@ -77,8 +81,9 @@ namespace Paramore.Brighter
 
             if (!_messageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapper != null)
             {
-                messageMapperType = _defaultMessageMapper.MakeGenericType(typeof(TRequest));
-                _messageMappers.TryAdd(typeof(TRequest), messageMapperType);
+                var defaultMessageMapper = _defaultMessageMapper;
+                messageMapperType = _resolvedDefaultMappers.GetOrAdd(
+                    typeof(TRequest), requestType => defaultMessageMapper.MakeGenericType(requestType));
             }
 
             if (messageMapperType is null)
@@ -99,8 +104,9 @@ namespace Paramore.Brighter
             
             if (!_asyncMessageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapperAsync != null)
             {
-                messageMapperType = _defaultMessageMapperAsync.MakeGenericType(typeof(TRequest));
-                _asyncMessageMappers.TryAdd(typeof(TRequest), messageMapperType);
+                var defaultMessageMapperAsync = _defaultMessageMapperAsync;
+                messageMapperType = _resolvedDefaultAsyncMappers.GetOrAdd(
+                    typeof(TRequest), requestType => defaultMessageMapperAsync.MakeGenericType(requestType));
             }
 
             if (messageMapperType is null)
