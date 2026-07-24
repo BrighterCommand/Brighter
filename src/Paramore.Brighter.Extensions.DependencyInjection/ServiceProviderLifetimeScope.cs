@@ -254,16 +254,22 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// synchronously or asynchronously; only a transient, tracked instance yields anything, so a
         /// double release or a never-tracked instance is a safe no-op.
         /// </summary>
-        private IEnumerable<IServiceScope> CollectScopesToRelease(object? instance)
+        private IReadOnlyList<IServiceScope> CollectScopesToRelease(object? instance)
         {
-            if (_lifetime != ServiceLifetime.Transient) yield break;
-            if (instance == null) yield break;
+            if (_lifetime != ServiceLifetime.Transient) return Array.Empty<IServiceScope>();
+            if (instance == null) return Array.Empty<IServiceScope>();
 
-            if (!_transientScopes.TryGetValue(instance, out var scopes)) yield break;
+            if (!_transientScopes.TryGetValue(instance, out var scopes)) return Array.Empty<IServiceScope>();
+
+            //do all the bookkeeping eagerly, before any scope is disposed: this ran as a lazy iterator, so
+            //a DisposeScope throw in the caller's foreach unwound it before the key-removal below and left
+            //the now-empty stack keyed by the instance — a strong reference retaining the mapper/transform
+            //until factory disposal, the exact retention this release path exists to prevent
+            var toDispose = new List<IServiceScope>(1);
 
             //dispose one scope per Release, matching the push in GetTransient
             if (scopes.TryPop(out var scope))
-                yield return scope;
+                toDispose.Add(scope);
 
             //once the last scope for this instance is drained, stop retaining the instance as a key.
             //Remove only this exact (now-empty) stack; if a concurrent GetTransient pushed onto it in
@@ -274,8 +280,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     .Remove(new KeyValuePair<object, ConcurrentStack<IServiceScope>>(instance, scopes)))
             {
                 while (scopes.TryPop(out var raced))
-                    yield return raced;
+                    toDispose.Add(raced);
             }
+
+            return toDispose;
         }
 
         /// <summary>
