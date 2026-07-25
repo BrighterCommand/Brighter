@@ -22,8 +22,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// Both disposal shapes must complete without deadlock:
 /// - <c>await using</c> (Part A) awaits the release, so the pump thread is suspended, not blocked, and
 ///   drains the posted continuation.
-/// - <c>using</c> (Part B) still blocks, but the scope's disposal is offloaded to a pool thread that has
-///   no captured context, so the mapper's continuation resumes off-pump and the wait completes.
+/// - <c>using</c> (Part B) still blocks, but the disposal suppresses the pump context first, so the
+///   mapper's continuation finds no captured context, resumes off-pump on the pool, and the wait completes.
 ///
 /// If either path regresses, the enclosing <see cref="BrighterAsyncContext.Run(Func{Task})"/> never
 /// returns and the <c>Wait</c> below times out.
@@ -32,16 +32,6 @@ namespace Paramore.Brighter.Extensions.Tests;
 public class ReleaseAsyncDisposableMapperOnPumpContextTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
-
-    static ReleaseAsyncDisposableMapperOnPumpContextTests()
-    {
-        //the synchronous-dispose case offloads the scope disposal to the thread pool (see
-        //ServiceProviderLifetimeScope.DisposeScope); give the pool a floor of ready worker threads so
-        //this measures deadlock-freedom rather than pool starvation when the whole suite runs in parallel.
-        //Raising the minimum only makes the pool more eager, so it cannot destabilise other tests.
-        ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
-        ThreadPool.SetMinThreads(Math.Max(workerThreads, 16), completionPortThreads);
-    }
 
     [Fact]
     public void When_releasing_an_async_disposable_mapper_via_await_using_it_should_not_deadlock()
@@ -67,8 +57,8 @@ public class ReleaseAsyncDisposableMapperOnPumpContextTests
         //arrange
         var probe = BuildPipelineFactory(out var builder);
 
-        //act — dispose synchronously (using) on the pump context; the offload in ServiceProviderLifetimeScope
-        //must keep this from deadlocking even though a blocking wait is unavoidable here
+        //act — dispose synchronously (using) on the pump context; suppressing the context in
+        //ServiceProviderLifetimeScope must keep this from deadlocking even though a blocking wait is unavoidable here
         RunOnPumpThread(() => BrighterAsyncContext.Run(async () =>
             {
                 using (builder.BuildUnwrapPipeline<MinimalEvent>())

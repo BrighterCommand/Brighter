@@ -231,8 +231,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// through <see cref="DisposeScope"/>. Prefer <see cref="ReleaseAsync"/> where the caller can
         /// await — on a thread owned by a single-threaded <see cref="SynchronizationContext"/> (the
         /// Proactor message pump) the async path lets an <see cref="IAsyncDisposable"/> mapper/transform
-        /// <c>DisposeAsync</c> complete without blocking the pump; this synchronous path can only offload
-        /// the wait (see <see cref="DisposeScope"/>). See <see cref="DisposeScope"/> for why a
+        /// <c>DisposeAsync</c> complete without blocking the pump; this synchronous path can only suppress
+        /// the pump context and block on the wait (see <see cref="DisposeScope"/>). See
+        /// <see cref="DisposeScope"/> for why a
         /// mapper/transform <c>DisposeAsync</c> should still avoid real I/O.
         /// </remarks>
         /// <param name="instance">The object to release</param>
@@ -317,12 +318,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <c>BrighterSynchronizationContext</c> — where a user <c>DisposeAsync</c> that awaits without
         /// <c>ConfigureAwait(false)</c> posts its continuation back to that context; blocking here would
         /// then deadlock, because the one thread that could run the continuation is the one we blocked.
-        /// So when a <see cref="SynchronizationContext"/> is current we run the whole disposal on a pool
-        /// thread that has none, letting those continuations resume off-context. When no context is
-        /// current (the Reactor, a finalizer, factory shutdown) we keep the cheaper inline path and only
-        /// fall back to a blocking wait if the disposal does not complete synchronously. Either way this
-        /// still blocks the caller for the disposal's duration — prefer <see cref="ReleaseAsync"/> where
-        /// the caller can await.
+        /// So when a <see cref="SynchronizationContext"/> is current we suppress it for the duration of
+        /// the disposal: the disposal still runs inline on this thread, but the user's continuations find
+        /// no captured context and resume on the thread pool instead of queueing behind our blocking wait.
+        /// When no context is current (the Reactor, a finalizer, factory shutdown) there is nothing to
+        /// suppress and the same inline path runs. Either way we only fall back to a blocking wait if the
+        /// disposal does not complete synchronously — an empty scope (the common case) completes inline as
+        /// a no-op, with no thread-pool hop. This still blocks the caller for the disposal's duration —
+        /// prefer <see cref="ReleaseAsync"/> where the caller can await.
         /// </para>
         /// <para>
         /// <b>Guidance for mapper/transform authors:</b> a <c>DisposeAsync</c> that performs <b>real
@@ -339,19 +342,27 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (scope is IAsyncDisposable asyncScope)
             {
                 //a captured single-threaded context (BrighterSynchronizationContext) would deadlock a
-                //blocking wait, so start the disposal on a pool thread with no captured context; the
-                //user's DisposeAsync continuations then resume off-context and the wait can complete
-                if (SynchronizationContext.Current is not null)
+                //blocking wait: a user DisposeAsync that awaits without ConfigureAwait(false) posts its
+                //continuation back to that context, and the pump thread we are about to block is the only
+                //one that could run it. Suppress the context for the duration so those continuations
+                //resume on the pool instead — no thread-pool hop for the scope itself, and an empty scope
+                //(the common case) still completes synchronously as a no-op.
+                var previousContext = SynchronizationContext.Current;
+                if (previousContext is not null)
+                    SynchronizationContext.SetSynchronizationContext(null);
+                try
                 {
-                    Task.Run(() => asyncScope.DisposeAsync().AsTask()).GetAwaiter().GetResult();
-                    return;
+                    var pending = asyncScope.DisposeAsync();
+                    if (pending.IsCompleted)
+                        pending.GetAwaiter().GetResult();
+                    else
+                        pending.AsTask().GetAwaiter().GetResult();
                 }
-
-                var pending = asyncScope.DisposeAsync();
-                if (pending.IsCompleted)
-                    pending.GetAwaiter().GetResult();
-                else
-                    pending.AsTask().GetAwaiter().GetResult();
+                finally
+                {
+                    if (previousContext is not null)
+                        SynchronizationContext.SetSynchronizationContext(previousContext);
+                }
                 return;
             }
 #endif

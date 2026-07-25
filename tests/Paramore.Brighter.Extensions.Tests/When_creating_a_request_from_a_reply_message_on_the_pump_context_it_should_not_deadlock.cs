@@ -14,10 +14,10 @@ namespace Paramore.Brighter.Extensions.Tests;
 
 /// <summary>
 /// Groups the pump-context deadlock tests into a collection that does not run in parallel with the rest of
-/// the suite. Each such test blocks a dedicated pump thread on an offloaded disposal that needs a free
-/// thread-pool thread to complete; letting them contend with the whole parallel suite for the pool can
-/// starve that offload and make the 30s deadlock guard trip spuriously. Serialising them removes the
-/// contention without weakening what they assert.
+/// the suite. Each such test blocks a dedicated pump thread while an async-disposable mapper's
+/// <c>DisposeAsync</c> continuation resumes on the thread pool; letting them contend with the whole
+/// parallel suite for the pool can delay that continuation and make the 30s deadlock guard trip
+/// spuriously. Serialising them removes the contention without weakening what they assert.
 /// </summary>
 [CollectionDefinition(PumpContextDeadlockCollection.Name, DisableParallelization = true)]
 public sealed class PumpContextDeadlockCollection
@@ -37,31 +37,22 @@ public sealed class PumpContextDeadlockCollection
 ///
 /// The <c>send</c> path (<c>Proactor.TranslateMessage</c>) is covered by
 /// <see cref="ReleaseAsyncDisposableMapperOnPumpContextTests"/>; this exercises the distinct <c>reply</c>
-/// call shape. Deadlock-freedom rides on the offload in <c>ServiceProviderLifetimeScope.DisposeScope</c>:
-/// the blocking wait is unavoidable here, but the scope's disposal is handed to a pool thread with no
-/// captured context, so the mapper's continuation resumes off-pump and the wait completes.
+/// call shape. Deadlock-freedom rides on the context suppression in
+/// <c>ServiceProviderLifetimeScope.DisposeScope</c>: the blocking wait is unavoidable here, but the scope's
+/// disposal suppresses the pump context first, so the mapper's continuation finds no captured context,
+/// resumes off-pump on the pool, and the wait completes.
 ///
-/// The unwrap itself is genuinely sync-over-async and is <b>not</b> protected by that offload, so the mapper
-/// keeps map/unwrap trivial (no continuation posted back to the pump) and confines the context-capturing
-/// await to <c>DisposeAsync</c>, isolating the disposal path under test.
+/// The unwrap itself is genuinely sync-over-async and is <b>not</b> protected by that suppression, so the
+/// mapper keeps map/unwrap trivial (no continuation posted back to the pump) and confines the
+/// context-capturing await to <c>DisposeAsync</c>, isolating the disposal path under test.
 ///
-/// If the offload regresses, the enclosing <see cref="BrighterAsyncContext.Run(Func{Task})"/> never returns
-/// and the <c>Join</c> below times out.
+/// If the suppression regresses, the enclosing <see cref="BrighterAsyncContext.Run(Func{Task})"/> never
+/// returns and the <c>Join</c> below times out.
 /// </summary>
 [Collection(PumpContextDeadlockCollection.Name)]
 public class CreateRequestFromReplyMessageOnPumpContextTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
-
-    static CreateRequestFromReplyMessageOnPumpContextTests()
-    {
-        //the disposal is offloaded to the thread pool (see ServiceProviderLifetimeScope.DisposeScope); give
-        //the pool a floor of ready worker threads so this measures deadlock-freedom rather than pool
-        //starvation when the whole suite runs in parallel. Raising the minimum only makes the pool more
-        //eager, so it cannot destabilise other tests.
-        ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
-        ThreadPool.SetMinThreads(Math.Max(workerThreads, 16), completionPortThreads);
-    }
 
     [Fact]
     public void When_creating_a_request_from_a_reply_message_on_the_pump_context_it_should_not_deadlock()
@@ -79,7 +70,7 @@ public class CreateRequestFromReplyMessageOnPumpContextTests
             }),
             "reply-path disposal deadlocked the single-threaded pump context");
 
-        //assert — the mapper was released on the pump (so the offloaded disposal path really ran, not a
+        //assert — the mapper was released on the pump (so the suppressed-context disposal path really ran, not a
         //no-op; the primary signal is that the pump above did not deadlock).
         //
         //The count is 2, not 1, because CreateRequestFromMessage resolves and releases a mapper TWICE:
