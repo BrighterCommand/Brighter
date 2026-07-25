@@ -164,7 +164,21 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private T? GetTransient<T>(Type objectType) where T : class
         {
             var scope = _serviceProvider.CreateScope();
-            var instance = (T?)scope.ServiceProvider.GetService(objectType);
+            T? instance;
+            try
+            {
+                instance = (T?)scope.ServiceProvider.GetService(objectType);
+            }
+            catch
+            {
+                //resolution threw before the scope was tracked (a common misconfiguration: the type
+                //is registered but a constructor dependency is not, so the container throws while
+                //activating it; the cast can also throw). The scope is not yet in _transientScopes, so
+                //neither Release nor Dispose could ever reclaim it — dispose it here before rethrowing
+                //so a failed resolution does not leak one scope per attempt.
+                DisposeScope(scope);
+                throw;
+            }
             if (instance == null)
             {
                 DisposeScope(scope);
