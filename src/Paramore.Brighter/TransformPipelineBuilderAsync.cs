@@ -116,8 +116,11 @@ namespace Paramore.Brighter
             catch (Exception e)
             {
                 //nothing was returned to the caller to take ownership of the mapper and transforms, so
-                //release them here rather than leak them
-                CleanUpAfterFailedBuild(pipeline, transforms, messageMapper);
+                //release them here rather than leak them. Cleanup can now throw (this PR lets Release/Dispose
+                //surface exceptions), so guard it: a disposal failure must not mask the configuration error
+                //the caller needs to see.
+                try { CleanUpAfterFailedBuild(pipeline, transforms, messageMapper); }
+                catch { /* swallowed: cleanup is best-effort; do not mask the build error rethrown below */ }
                 throw new ConfigurationException("Error building wrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -154,8 +157,11 @@ namespace Paramore.Brighter
             catch (Exception e)
             {
                 //nothing was returned to the caller to take ownership of the mapper and transforms, so
-                //release them here rather than leak them
-                CleanUpAfterFailedBuild(pipeline, transforms, messageMapper);
+                //release them here rather than leak them. Cleanup can now throw (this PR lets Release/Dispose
+                //surface exceptions), so guard it: a disposal failure must not mask the configuration error
+                //the caller needs to see.
+                try { CleanUpAfterFailedBuild(pipeline, transforms, messageMapper); }
+                catch { /* swallowed: cleanup is best-effort; do not mask the build error rethrown below */ }
                 throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -220,7 +226,22 @@ namespace Paramore.Brighter
         private void ReleaseTransforms(IEnumerable<IAmAMessageTransformAsync> transforms)
         {
             if (_messageTransformerFactoryAsync is null) return;
-            transforms.Each(transform => _messageTransformerFactoryAsync.Release(transform));
+
+            //Drain a materialised copy, releasing every transform even when one Release throws. This is the
+            //failed-build path: no pipeline was constructed to own these transforms and no finalizer will
+            //ever retry them (unlike TransformLifetimeScopeAsync, whose drain relies on a retry), so a
+            //Release that skipped the rest would leak their DI scopes permanently. Removing each before
+            //releasing keeps the list truthful, and swallowing a per-transform failure both keeps a later
+            //transform from being skipped and keeps the original build error — rethrown by the caller —
+            //from being masked by a disposal failure.
+            var remaining = transforms.ToList();
+            while (remaining.Count > 0)
+            {
+                var transform = remaining[0];
+                remaining.RemoveAt(0);
+                try { _messageTransformerFactoryAsync.Release(transform); }
+                catch { /* swallowed: best-effort cleanup must not skip the rest or mask the build error */ }
+            }
         }
 
         //Releases the resources created for a pipeline whose build failed before it was returned to the
