@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
@@ -72,10 +73,11 @@ public class TransientScopeKeyCollisionTests
             return new TrackingScope(scope, () => Interlocked.Increment(ref _disposedCount));
         }
 
-        private sealed class TrackingScope : IServiceScope
+        private sealed class TrackingScope : IServiceScope, IAsyncDisposable
         {
             private readonly IServiceScope _inner;
             private readonly Action _onDispose;
+            private int _disposed;
 
             public TrackingScope(IServiceScope inner, Action onDispose)
             {
@@ -87,8 +89,21 @@ public class TransientScopeKeyCollisionTests
 
             public void Dispose()
             {
-                _onDispose();
+                if (Interlocked.Exchange(ref _disposed, 1) == 0) _onDispose();
                 _inner.Dispose();
+            }
+
+            //Production on net8+ disposes an IAsyncDisposable scope through DisposeAsync — real MS DI scopes
+            //have implemented it since .NET Core 3.0 — so DisposeScope takes the async branch, not
+            //scope.Dispose(). Implement it here so the scope accounting runs against the branch a real app
+            //takes; count the disposal in whichever shape the caller uses.
+            public async ValueTask DisposeAsync()
+            {
+                if (Interlocked.Exchange(ref _disposed, 1) == 0) _onDispose();
+                if (_inner is IAsyncDisposable asyncInner)
+                    await asyncInner.DisposeAsync().ConfigureAwait(false);
+                else
+                    _inner.Dispose();
             }
         }
     }

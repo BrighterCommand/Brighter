@@ -34,7 +34,8 @@ namespace Paramore.Brighter
         {
             //a finalizer must never let an exception escape — that terminates the process. Releasing a
             //scope that holds an IAsyncDisposable-only mapper/transform through the synchronous path can
-            //throw (MS DI's sync scope Dispose throws for an async-only service), as can a user
+            //throw (netstandard2.0 only: MS DI's sync scope Dispose throws for an async-only service; net8+
+            //takes the async branch first), as can a user
             //Dispose/DisposeAsync. Release best-effort here and swallow; an explicit Dispose still
             //surfaces the exception to the caller who owns the pipeline.
             try { ReleaseUnmanagedResources(); }

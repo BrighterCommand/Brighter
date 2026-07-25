@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Reflection;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
@@ -67,7 +68,7 @@ public class ReleaseScopeDisposalThrowRetentionTests
 
         public IServiceScope CreateScope() => new ThrowingDisposeScope(_inner.CreateScope());
 
-        private sealed class ThrowingDisposeScope : IServiceScope
+        private sealed class ThrowingDisposeScope : IServiceScope, IAsyncDisposable
         {
             private readonly IServiceScope _inner;
 
@@ -78,6 +79,18 @@ public class ReleaseScopeDisposalThrowRetentionTests
             public void Dispose()
             {
                 _inner.Dispose();
+                throw new InvalidOperationException("scope disposal failed");
+            }
+
+            //Production on net8+ disposes an IAsyncDisposable scope through DisposeAsync, so the disposal
+            //failure the release path must tolerate has to surface here — not just from the synchronous
+            //Dispose that only netstandard2.0 consumers reach
+            public async ValueTask DisposeAsync()
+            {
+                if (_inner is IAsyncDisposable asyncInner)
+                    await asyncInner.DisposeAsync().ConfigureAwait(false);
+                else
+                    _inner.Dispose();
                 throw new InvalidOperationException("scope disposal failed");
             }
         }

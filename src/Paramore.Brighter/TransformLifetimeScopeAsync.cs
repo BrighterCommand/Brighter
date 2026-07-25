@@ -39,7 +39,8 @@ namespace Paramore.Brighter
         {
             //a finalizer must never let an exception escape — that terminates the process. Releasing a
             //transform whose scope holds an IAsyncDisposable-only service through the synchronous path can
-            //throw (MS DI's sync scope Dispose throws for an async-only service), as can a user Dispose.
+            //throw (netstandard2.0 only: MS DI's sync scope Dispose throws for an async-only service; net8+
+            //takes the async branch first), as can a user Dispose.
             //Finalization order is non-deterministic, so this scope can be finalized before its owning
             //pipeline disposes it. Release best-effort here and swallow; an explicit Dispose/DisposeAsync
             //still surfaces the exception to the owner.
