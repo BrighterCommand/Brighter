@@ -23,9 +23,9 @@ namespace Paramore.Brighter
         /// This is the synchronous fallback — the finalizer, or a caller that used <c>using</c> rather
         /// than <c>await using</c>. On a thread owned by the Proactor's single-threaded synchronization
         /// context prefer <see cref="DisposeAsync"/>: releasing an <see cref="IAsyncDisposable"/>
-        /// mapper/transform synchronously drains it through a blocking wait (offloaded to a pool thread to
-        /// avoid deadlock, but still a stall), whereas <see cref="DisposeAsync"/> awaits it without
-        /// blocking the pump.
+        /// mapper/transform synchronously drains it through a blocking wait (the pump context is suppressed
+        /// for the wait to avoid deadlock, but it is still a stall), whereas <see cref="DisposeAsync"/>
+        /// awaits it without blocking the pump.
         /// </para>
         /// </summary>
         public void Dispose()
