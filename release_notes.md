@@ -301,11 +301,25 @@ While applying the value-type pattern we corrected a latent null-safety bug in n
 
 ### Per-message factory scope leak fix; transient handler lifetime now isolates its DI scope (#4252, #4254)
 
-`ServiceProviderLifetimeScope` — the lifetime helper shared by the handler, mapper and transformer factories — previously created a **single** `IServiceScope` per factory and reused it for every transient resolution. For the app-lifetime mapper and transformer factories that scope was never released per message, so a transient (`MapperLifetime` / `TransformerLifetime = Transient`) mapper or transform accumulated one scope per message for the life of the process — the leak reported in #4252. `GetTransient` now creates a fresh `IServiceScope` per resolution, tracked by instance identity and disposed when the object is released, closing the leak.
+`ServiceProviderLifetimeScope` — the lifetime helper shared by the handler, mapper and transformer factories — previously created a **single** `IServiceScope` per factory and reused it for every transient resolution. For the app-lifetime mapper and transformer factories that scope was never released per message, so a transient mapper or transform accumulated one scope per message for the life of the process — the leak reported in #4252. Because `MapperLifetime` and `TransformerLifetime` both **default to `Transient`** (`ServiceLifetime.Transient`), this was the default code path, not an opt-in one. `GetTransient` now creates a fresh `IServiceScope` per resolution, tracked by instance identity and disposed when the object is released, closing the leak: each transient mapper/transform now gets and releases its own scope.
+
+#### Breaking change: `Release` added to five public factory / registry interfaces
+
+Closing the leak on the mapper path required a way to return a mapper to its factory (transformers already had one). `Release` — and, on the async side, `ReleaseAsync` — is therefore added to five public interfaces:
+
+* `IAmAMessageMapperFactory` — `void Release(IAmAMessageMapper mapper)`
+* `IAmAMessageMapperFactoryAsync` — `void Release(IAmAMessageMapperAsync mapper)` and `ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper)`
+* `IAmAMessageTransformerFactoryAsync` — `ValueTask ReleaseAsync(IAmAMessageTransformAsync transform)`
+* `IAmAMessageMapperRegistry` — `void Release(IAmAMessageMapper mapper)`
+* `IAmAMessageMapperRegistryAsync` — `void Release(...)` and `ValueTask ReleaseAsync(...)`
+
+`Paramore.Brighter` targets `netstandard2.0`, which has no runtime support for default interface members, so these ship without a default body — **any third-party implementation of these interfaces must add the new member** to compile. All in-tree implementations are updated; the `Func`-based `SimpleMessageMapperFactory` constructor is unchanged, so its call sites are unaffected.
+
+> **If you resolve a mapper or transform directly** — via `IAmAMessageMapperRegistry.Get<T>()` / `GetAsync<T>()` or a factory `Create` — you must now call `Release` (or `ReleaseAsync`) when finished, **even for a non-disposable mapper such as the default `JsonMessageMapper`**. `GetTransient` now allocates and retains an `IServiceScope` per resolution regardless of whether the instance is `IDisposable` (the scope can own the instance's injected dependencies and its own `IServiceProvider`), so skipping the release silently retains one empty scope per resolution until the factory is disposed. All in-tree call sites already release. Note that `SimpleMessageMapperFactory`'s `Release` is a deliberate no-op — the `Func` you supply owns what it returns — so a `Func` that news up a disposable mapper is not disposed for you.
 
 #### Behaviour change: transient handler lifetime isolates its DI scope per handler
 
-This is a deliberate, observable change on the **default** `HandlerLifetime` (`Transient`). It is called out here because it is invisible at compile time — there is no signature change and no exception; only the number of DI-`Scoped` instances a pipeline sees changes.
+The interface additions above are compile-time breaks. This one is the only **observable semantic** change, and it is invisible at compile time — no signature change and no exception; only the number of DI-`Scoped` instances a pipeline sees changes. It lands on the **default** `HandlerLifetime` (`Transient`).
 
 A handler pipeline for a single message resolves every handler in the chain — attribute/middleware handlers plus the target handler — through one `IAmALifetime`. Because all transient resolutions used to share that factory's single `IServiceScope`, a dependency **registered in DI as `Scoped`** (an EF Core `DbContext`, a unit of work, a transaction provider) was one shared instance across the whole chain for that message.
 
@@ -322,7 +336,7 @@ services.AddBrighter(options =>
 });
 ```
 
-Under `Scoped`, every handler in the pipeline shares one `IServiceScope`, so a `Scoped` dependency is a single instance for the message — the pre-fix sharing behaviour. `MapperLifetime` and `TransformerLifetime` are unaffected (both default to `Singleton`).
+Under `Scoped`, every handler in the pipeline shares one `IServiceScope`, so a `Scoped` dependency is a single instance for the message — the pre-fix sharing behaviour.
 
 ## Release 10.0.0
 
