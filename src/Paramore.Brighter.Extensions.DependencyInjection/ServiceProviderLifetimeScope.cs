@@ -347,6 +347,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 //one that could run it. Suppress the context for the duration so those continuations
                 //resume on the pool instead — no thread-pool hop for the scope itself, and an empty scope
                 //(the common case) still completes synchronously as a no-op.
+                //LOAD-BEARING INVARIANT: nulling the SynchronizationContext is sufficient only because a
+                //pump await captures nothing else. BrighterAsyncContext builds its TaskFactory with
+                //TaskCreationOptions/TaskContinuationOptions.HideScheduler, so TaskScheduler.Current is
+                //Default inside pump work. If that HideScheduler were dropped, an await would fall back to
+                //the cooperating BrighterTaskScheduler (same single pump thread) and this suppression would
+                //not prevent the deadlock. See BrighterAsyncContext's constructor for the matching note.
                 var previousContext = SynchronizationContext.Current;
                 if (previousContext is not null)
                     SynchronizationContext.SetSynchronizationContext(null);
