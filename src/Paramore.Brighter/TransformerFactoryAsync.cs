@@ -46,8 +46,11 @@ namespace Paramore.Brighter
             catch (Exception)
             {
                 //the transformer was created but never returned to the caller, so we own it; release it
-                //to the factory rather than leak it before letting the initialization error propagate
-                factory.Release(transformer);
+                //to the factory rather than leak it before letting the initialization error propagate.
+                //Release/Dispose can now throw (a user Release, or MS DI's sync scope Dispose on
+                //netstandard2.0 for an IAsyncDisposable-only transform); swallow it so it cannot mask
+                //the real initialization error being rethrown.
+                try { factory.Release(transformer); } catch { /* best-effort cleanup */ }
                 throw;
             }
             return transformer;
