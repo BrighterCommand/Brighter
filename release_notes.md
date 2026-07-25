@@ -299,6 +299,31 @@ While applying the value-type pattern we corrected a latent null-safety bug in n
 
 > Note: `Tenant` (in `Paramore.Brighter.Transformers.JustSaying`) is a `readonly record struct`, not a reference type — its receiver can never be null, so its `operator string` is intentionally left non-nullable.
 
+### Per-message factory scope leak fix; transient handler lifetime now isolates its DI scope (#4252, #4254)
+
+`ServiceProviderLifetimeScope` — the lifetime helper shared by the handler, mapper and transformer factories — previously created a **single** `IServiceScope` per factory and reused it for every transient resolution. For the app-lifetime mapper and transformer factories that scope was never released per message, so a transient (`MapperLifetime` / `TransformerLifetime = Transient`) mapper or transform accumulated one scope per message for the life of the process — the leak reported in #4252. `GetTransient` now creates a fresh `IServiceScope` per resolution, tracked by instance identity and disposed when the object is released, closing the leak.
+
+#### Behaviour change: transient handler lifetime isolates its DI scope per handler
+
+This is a deliberate, observable change on the **default** `HandlerLifetime` (`Transient`). It is called out here because it is invisible at compile time — there is no signature change and no exception; only the number of DI-`Scoped` instances a pipeline sees changes.
+
+A handler pipeline for a single message resolves every handler in the chain — attribute/middleware handlers plus the target handler — through one `IAmALifetime`. Because all transient resolutions used to share that factory's single `IServiceScope`, a dependency **registered in DI as `Scoped`** (an EF Core `DbContext`, a unit of work, a transaction provider) was one shared instance across the whole chain for that message.
+
+Now each transient handler is resolved in its **own** `IServiceScope`, so a DI-`Scoped` dependency is a **distinct instance per handler**. Two handlers in the same pipeline that both inject a `Scoped` `DbContext` now receive two contexts — and two transactions — where they previously received one.
+
+This aligns `Transient` with its DI meaning (a transient resolution is genuinely isolated) and is what allows a transient's scope to be its own to create and release, which is what closes the leak above.
+
+**If you rely on a DI-`Scoped` dependency being shared across the handlers in a pipeline** — the unit-of-work / one-transaction-per-message pattern — set the **handler** lifetime to `Scoped`:
+
+```csharp
+services.AddBrighter(options =>
+{
+    options.HandlerLifetime = ServiceLifetime.Scoped; // default is Transient
+});
+```
+
+Under `Scoped`, every handler in the pipeline shares one `IServiceScope`, so a `Scoped` dependency is a single instance for the message — the pre-fix sharing behaviour. `MapperLifetime` and `TransformerLifetime` are unaffected (both default to `Singleton`).
+
 ## Release 10.0.0
 
 With V10 we have made a number of significant changes to Brighter. There are breaking changes that you will need to be aware of. However, most of the changes required are straightforward to make. A summary of the most important changes:
