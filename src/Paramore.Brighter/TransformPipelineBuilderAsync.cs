@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
@@ -168,7 +169,10 @@ namespace Paramore.Brighter
         
         public bool HasPipeline<TRequest>() where TRequest : class, IRequest
         {
-            //GetAsync creates an instance to answer the question, so release it again; no pipeline owns it
+            //GetAsync creates an instance to answer the question, so release it again; no pipeline owns it.
+            //Synchronous release: this overload exists for the sync-over-async reply path
+            //(OutboxProducerMediator.CreateRequestFromMessage), which cannot await. Prefer HasPipelineAsync
+            //from an async caller so the probe mapper is released without blocking the pump.
             var messageMapper = _mapperRegistryAsync.GetAsync<TRequest>();
             try
             {
@@ -177,6 +181,24 @@ namespace Paramore.Brighter
             finally
             {
                 if (messageMapper is not null) _mapperRegistryAsync.Release(messageMapper);
+            }
+        }
+
+        public async ValueTask<bool> HasPipelineAsync<TRequest>() where TRequest : class, IRequest
+        {
+            //GetAsync creates an instance to answer the question, so release it again; no pipeline owns it.
+            //Release asynchronously so that, driven from the Proactor pump, an IAsyncDisposable probe mapper
+            //is awaited rather than drained through a blocking wait — the stall the synchronous HasPipeline
+            //pays on that thread.
+            var messageMapper = _mapperRegistryAsync.GetAsync<TRequest>();
+            try
+            {
+                return messageMapper is not null;
+            }
+            finally
+            {
+                if (messageMapper is not null)
+                    await _mapperRegistryAsync.ReleaseAsync(messageMapper).ConfigureAwait(false);
             }
         }
 
