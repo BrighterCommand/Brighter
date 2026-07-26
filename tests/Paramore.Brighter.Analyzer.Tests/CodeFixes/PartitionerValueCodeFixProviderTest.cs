@@ -22,10 +22,10 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = {|#0:new KafkaPublication
+            var publication = new KafkaPublication
             {
-                Partitioner = Partitioner.ConsistentRandom
-            }|};
+                {|#0:Partitioner = Partitioner.ConsistentRandom|}
+            };
         }
     }
 }
@@ -69,10 +69,10 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = {|#0:new KafkaPublication
+            var publication = new KafkaPublication
             {
-                Partitioner = Partitioner.Consistent
-            }|};
+                {|#0:Partitioner = Partitioner.Consistent|}
+            };
         }
     }
 }
@@ -117,10 +117,10 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = {|#0:new KafkaPublication
+            var publication = new KafkaPublication
             {
-                Partitioner = ConsistentRandom
-            }|};
+                {|#0:Partitioner = ConsistentRandom|}
+            };
         }
     }
 }
@@ -196,7 +196,7 @@ namespace ConsoleApplication1
         }
 
         [Fact]
-        public async Task When_Value_Is_Parenthesized_Should_Not_Offer_Fix()
+        public async Task When_Value_Is_Parenthesized_Should_Offer_Murmur2()
         {
             testContext.TestCode = /* lang=c#-test */ """
 using Paramore.Brighter;
@@ -208,10 +208,29 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = {|#0:new KafkaPublication
+            var publication = new KafkaPublication
             {
-                Partitioner = (Partitioner.Consistent)
-            }|};
+                {|#0:Partitioner = (Partitioner.Consistent)|}
+            };
+        }
+    }
+}
+""";
+
+            testContext.FixedCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new KafkaPublication
+            {
+                Partitioner = (Partitioner.Murmur2)
+            };
         }
     }
 }

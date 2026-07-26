@@ -134,5 +134,99 @@ namespace ConsoleApplication1
 
             await testContext.RunAsync();
         }
+
+        [Fact]
+        public async Task When_Partitioner_Is_Missing_Should_Append_After_Trailing_Comment()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = {|#0:new KafkaPublication
+            {
+                Topic = new RoutingKey("x"),
+                NumPartitions = 3 // one per shard
+            }|};
+        }
+    }
+}
+""";
+
+            testContext.FixedCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new KafkaPublication
+            {
+                Topic = new RoutingKey("x"),
+                NumPartitions = 3, // one per shard
+                Partitioner = Partitioner.Murmur2Random
+            };
+        }
+    }
+}
+""";
+
+            testContext.ExpectedDiagnostics.Add(
+                new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
+
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_Partitioner_Is_Missing_On_Target_Typed_New_Should_Add_Murmur2Random()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            KafkaPublication publication = {|#0:new()|};
+        }
+    }
+}
+""";
+
+            testContext.FixedCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            KafkaPublication publication = new()
+            {
+                Partitioner = Partitioner.Murmur2Random
+            };
+        }
+    }
+}
+""";
+
+            testContext.ExpectedDiagnostics.Add(
+                new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
+
+            await testContext.RunAsync();
+        }
     }
 }

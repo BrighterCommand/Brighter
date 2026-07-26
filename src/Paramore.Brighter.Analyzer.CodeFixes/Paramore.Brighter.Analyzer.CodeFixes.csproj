@@ -3,6 +3,9 @@
   <PropertyGroup>
     <TargetFrameworks>$(BrighterNetStandardTargetFrameworks)</TargetFrameworks>
     <IsPackable>false</IsPackable>
+    <!-- EnforceExtendedAnalyzerRules is deliberately not set here (unlike the analyzer
+         project): RS1038 would fire on the Microsoft.CodeAnalysis.CSharp.Workspaces
+         reference that a code-fix provider requires. -->
   </PropertyGroup>
 
   <ItemGroup>

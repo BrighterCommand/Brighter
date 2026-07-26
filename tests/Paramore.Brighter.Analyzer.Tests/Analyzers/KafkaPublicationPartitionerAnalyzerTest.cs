@@ -41,8 +41,8 @@ namespace ConsoleApplication1
 {
     class MyRequest : IRequest 
     { 
-        public System.Guid Id { get; set; }
-        public System.Guid SpanId { get; set; }
+        public Id Id { get; set; }
+        public Id? CorrelationId { get; set; }
     }
 
     class TypeName
@@ -72,10 +72,10 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = {|#0:new KafkaPublication
+            var publication = new KafkaPublication
             {
-                Partitioner = Partitioner.ConsistentRandom
-            }|};
+                {|#0:Partitioner = Partitioner.ConsistentRandom|}
+            };
         }
     }
 }
@@ -98,10 +98,10 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = {|#0:new KafkaPublication
+            var publication = new KafkaPublication
             {
-                Partitioner = Partitioner.Consistent
-            }|};
+                {|#0:Partitioner = Partitioner.Consistent|}
+            };
         }
     }
 }
@@ -182,10 +182,10 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var holder = new Holder({|#0:new KafkaPublication
+            var holder = new Holder(new KafkaPublication
             {
-                Partitioner = Partitioner.Consistent
-            }|});
+                {|#0:Partitioner = Partitioner.Consistent|}
+            });
         }
     }
 }
@@ -369,6 +369,112 @@ namespace ConsoleApplication1
 }
 """;
             testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("MyPublication"));
+
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_Partitioner_Is_Set_On_Field_After_Construction_Should_Not_Report()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        private KafkaPublication _publication;
+
+        public void Method()
+        {
+            _publication = new KafkaPublication();
+            _publication.Partitioner = Partitioner.Murmur2Random;
+        }
+    }
+}
+""";
+
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_Partitioner_Is_Set_Before_Construction_Should_Still_Report_Missing_Partitioner()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        private KafkaPublication _publication;
+
+        public void Method()
+        {
+            _publication.Partitioner = Partitioner.Murmur2Random;
+            _publication = {|#0:new KafkaPublication()|};
+        }
+    }
+}
+""";
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
+
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_KafkaPublication_Is_Created_With_Target_Typed_New_Without_Partitioner_Should_Report_Missing_Partitioner()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            KafkaPublication publication = {|#0:new()|};
+        }
+    }
+}
+""";
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
+
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_KafkaPublication_Generic_Is_Created_With_ConsistentRandom_Should_Report_Warning()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class MyRequest : IRequest 
+    { 
+        public Id Id { get; set; }
+        public Id? CorrelationId { get; set; }
+    }
+
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new KafkaPublication<MyRequest>
+            {
+                {|#0:Partitioner = Partitioner.ConsistentRandom|}
+            };
+        }
+    }
+}
+""";
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.ConsistentRandomPartitionerRule).WithLocation(0));
 
             await testContext.RunAsync();
         }

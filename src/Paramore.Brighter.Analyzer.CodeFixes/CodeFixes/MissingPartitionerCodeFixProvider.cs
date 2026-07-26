@@ -118,9 +118,14 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
         // after the last expression but before its trailing trivia, so the comma ends
         // up on the wrong line. Rewire the trivia by hand: the newline + indent that
         // follows an existing separator (or the open brace) leads the new expression,
-        // and the last expression's trailing trivia (e.g. the newline before the
-        // closing brace) moves behind the new expression.
+        // and the newline before the closing brace moves behind the new expression.
+        // Comments stay with the expression they document: anything before the final
+        // newline (e.g. "// one per shard") becomes the separator's trailing trivia.
         var lastExpression = initializer.Expressions.Last();
+        var trailingTrivia = lastExpression.GetTrailingTrivia();
+
+        var commentTrivia = trailingTrivia.TakeWhile(t => !t.IsKind(SyntaxKind.EndOfLineTrivia));
+        var endOfLineTrivia = trailingTrivia.SkipWhile(t => !t.IsKind(SyntaxKind.EndOfLineTrivia));
 
         var leadingTrivia = initializer.Expressions.Count > 1
             ? initializer.Expressions.GetSeparator(initializer.Expressions.Count - 2).TrailingTrivia
@@ -128,11 +133,20 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
 
         var newExpression = expression
             .WithLeadingTrivia(leadingTrivia)
-            .WithTrailingTrivia(lastExpression.GetTrailingTrivia());
+            .WithTrailingTrivia(endOfLineTrivia);
 
-        return initializer.WithExpressions(
-            initializer.Expressions
-                .Replace(lastExpression, lastExpression.WithoutTrailingTrivia())
-                .Add(newExpression));
+        var expressions = initializer.Expressions
+            .Replace(lastExpression, lastExpression.WithoutTrailingTrivia())
+            .Add(newExpression);
+
+        if (commentTrivia.Any())
+        {
+            var nodesAndTokens = expressions.GetWithSeparators();
+            var separator = nodesAndTokens[nodesAndTokens.Count - 2].AsToken().WithTrailingTrivia(commentTrivia);
+            nodesAndTokens = nodesAndTokens.Replace(nodesAndTokens[nodesAndTokens.Count - 2], separator);
+            expressions = SyntaxFactory.SeparatedList<ExpressionSyntax>(nodesAndTokens);
+        }
+
+        return initializer.WithExpressions(expressions);
     }
 }

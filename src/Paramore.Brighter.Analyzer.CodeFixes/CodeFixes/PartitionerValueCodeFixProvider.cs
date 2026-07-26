@@ -67,12 +67,12 @@ public class PartitionerValueCodeFixProvider : CodeFixProvider
                     _ => false
                 });
 
-            if (assignment == null ||
-                assignment.Right is not (MemberAccessExpressionSyntax or IdentifierNameSyntax))
+            if (assignment == null || !CanRewrite(assignment.Right))
             {
-                // Only a member access (Partitioner.Consistent) or a bare identifier
-                // (using static) can be rewritten safely; anything else (e.g. a cast)
-                // would not compile after the fix, so don't offer one.
+                // Only a member access (Partitioner.Consistent), a parenthesized
+                // member access, or a bare identifier (using static) can be
+                // rewritten safely; anything else (e.g. a cast) would not
+                // compile after the fix, so don't offer one.
                 continue;
             }
 
@@ -83,6 +83,13 @@ public class PartitionerValueCodeFixProvider : CodeFixProvider
                     equivalenceKey: $"{nameof(PartitionerValueCodeFixProvider)}:{target}"),
                 diagnostic);
         }
+    }
+
+    private static bool CanRewrite(ExpressionSyntax right)
+    {
+        return right is MemberAccessExpressionSyntax
+            or IdentifierNameSyntax
+            or ParenthesizedExpressionSyntax { Expression: MemberAccessExpressionSyntax };
     }
 
     private static async Task<Document> ReplacePartitionerValueAsync(
@@ -97,6 +104,8 @@ public class PartitionerValueCodeFixProvider : CodeFixProvider
         ExpressionSyntax newValue = assignment.Right switch
         {
             MemberAccessExpressionSyntax memberAccess => memberAccess.WithName(newName),
+            ParenthesizedExpressionSyntax { Expression: MemberAccessExpressionSyntax memberAccess } parenthesized =>
+                parenthesized.WithExpression(memberAccess.WithName(newName)),
             _ => newName
         };
 
