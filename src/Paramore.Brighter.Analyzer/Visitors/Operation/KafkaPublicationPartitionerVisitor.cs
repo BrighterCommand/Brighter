@@ -40,18 +40,27 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
     public bool IsConsistent { get; private set; }
     public string PublicationName { get; private set; }
 
+    // Type can be null for erroneous code in the IDE; treat it as no match.
+    internal static bool IsKafkaPublicationType(ITypeSymbol type)
+    {
+        return type != null && type.Accept(s_kafkaPublicationCheck);
+    }
+
     public override void VisitObjectCreation(IObjectCreationOperation operation)
     {
-        if (operation.Type!.Accept(s_kafkaPublicationCheck))
+        if (IsKafkaPublicationType(operation.Type))
         {
             PublicationName = operation.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
             IsKafkaPublication = true;
 
             // base walks the children (including the initializer), which drives
             // VisitSimpleAssignment for any Partitioner assignment. Only descend
-            // when this operation is the KafkaPublication itself; descending into
-            // unrelated object creations would pick up nested publications and
-            // report the diagnostic at the wrong location.
+            // when this operation is the KafkaPublication itself; reporting for
+            // unrelated object creations would attribute nested publications to
+            // the wrong location. Note this also descends into nested object
+            // creations, so a nested KafkaPublication carrying its own Partitioner
+            // would mark the outer one as assigned too — a contrived edge case
+            // accepted for simplicity.
             base.VisitObjectCreation(operation);
         }
     }
@@ -78,7 +87,7 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
         base.VisitSimpleAssignment(operation);
     }
 
-    private static string GetPartitionerValueName(IOperation value)
+    internal static string GetPartitionerValueName(IOperation value)
     {
         // Unwrap an implicit conversion (e.g. enum widening) if present.
         if (value is IConversionOperation conversion)

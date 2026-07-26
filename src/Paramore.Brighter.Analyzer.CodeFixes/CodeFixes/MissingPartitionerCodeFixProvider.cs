@@ -47,25 +47,32 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
     {
         var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
-
-        var objectCreation = root?.FindNode(context.Diagnostics[0].Location.SourceSpan)
-            .DescendantNodesAndSelf()
-            .OfType<BaseObjectCreationExpressionSyntax>()
-            .FirstOrDefault();
-
-        if (objectCreation == null)
+        if (root == null)
         {
             return;
         }
 
-        var target = BrighterAnalyzerGlobals.Murmur2RandomPartitionerValue;
+        foreach (var diagnostic in context.Diagnostics)
+        {
+            var objectCreation = root.FindNode(diagnostic.Location.SourceSpan)
+                .DescendantNodesAndSelf()
+                .OfType<BaseObjectCreationExpressionSyntax>()
+                .FirstOrDefault();
 
-        context.RegisterCodeFix(
-            CodeAction.Create(
-                title: $"Set 'Partitioner' to 'Partitioner.{target}'",
-                createChangedDocument: ct => AddPartitionerAsync(context.Document, objectCreation, target, ct),
-                equivalenceKey: nameof(MissingPartitionerCodeFixProvider)),
-            context.Diagnostics[0]);
+            if (objectCreation == null)
+            {
+                continue;
+            }
+
+            var target = BrighterAnalyzerGlobals.Murmur2RandomPartitionerValue;
+
+            context.RegisterCodeFix(
+                CodeAction.Create(
+                    title: $"Set 'Partitioner' to 'Partitioner.{target}'",
+                    createChangedDocument: ct => AddPartitionerAsync(context.Document, objectCreation, target, ct),
+                    equivalenceKey: nameof(MissingPartitionerCodeFixProvider)),
+                diagnostic);
+        }
     }
 
     private static async Task<Document> AddPartitionerAsync(
@@ -81,7 +88,7 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
             SyntaxFactory.IdentifierName(BrighterAnalyzerGlobals.PartitionerProperty),
             SyntaxFactory.MemberAccessExpression(
                     SyntaxKind.SimpleMemberAccessExpression,
-                    SyntaxFactory.ParseExpression($"{BrighterAnalyzerGlobals.KafkaMessagingGatewayAssembly}.{BrighterAnalyzerGlobals.PartitionerEnum}"),
+                    SyntaxFactory.ParseExpression($"{BrighterAnalyzerGlobals.KafkaNamespace}.{BrighterAnalyzerGlobals.PartitionerEnum}"),
                     SyntaxFactory.IdentifierName(target))
                 .WithAdditionalAnnotations(Simplifier.Annotation));
 
@@ -89,7 +96,7 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
             ? SyntaxFactory.InitializerExpression(
                 SyntaxKind.ObjectInitializerExpression,
                 SyntaxFactory.SingletonSeparatedList<ExpressionSyntax>(assignment))
-            : objectCreation.Initializer.AddExpressions(assignment);
+            : AddInitializerExpression(objectCreation.Initializer, assignment);
 
         var newObjectCreation = objectCreation
             .WithInitializer(initializer)
@@ -101,5 +108,31 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
         // Reduce the fully qualified Partitioner reference where the using is
         // already present; otherwise keep it qualified so the fix always compiles.
         return await Simplifier.ReduceAsync(formatted, Simplifier.Annotation, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    private static InitializerExpressionSyntax AddInitializerExpression(
+        InitializerExpressionSyntax initializer,
+        ExpressionSyntax expression)
+    {
+        // InitializerExpressionSyntax.AddExpressions inserts the separator comma right
+        // after the last expression but before its trailing trivia, so the comma ends
+        // up on the wrong line. Rewire the trivia by hand: the newline + indent that
+        // follows an existing separator (or the open brace) leads the new expression,
+        // and the last expression's trailing trivia (e.g. the newline before the
+        // closing brace) moves behind the new expression.
+        var lastExpression = initializer.Expressions.Last();
+
+        var leadingTrivia = initializer.Expressions.Count > 1
+            ? initializer.Expressions.GetSeparator(initializer.Expressions.Count - 2).TrailingTrivia
+            : initializer.OpenBraceToken.TrailingTrivia;
+
+        var newExpression = expression
+            .WithLeadingTrivia(leadingTrivia)
+            .WithTrailingTrivia(lastExpression.GetTrailingTrivia());
+
+        return initializer.WithExpressions(
+            initializer.Expressions
+                .Replace(lastExpression, lastExpression.WithoutTrailingTrivia())
+                .Add(newExpression));
     }
 }

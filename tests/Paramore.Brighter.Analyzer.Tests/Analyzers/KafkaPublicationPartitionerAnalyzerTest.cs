@@ -1,18 +1,15 @@
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
 using Xunit;
 using Paramore.Brighter.Analyzer.Analyzers;
 
 namespace Paramore.Brighter.Analyzer.Tests.Analyzers
 {
-    public class KafkaPublicationPartitionerAnalyzerTest : BaseAnalyzerTest<KafkaPublicationPartitionerAnalyzer>
+    public class KafkaPublicationPartitionerAnalyzerTest : BaseKafkaAnalyzerTest
     {
         [Fact]
         public async Task When_KafkaPublication_Is_Created_Without_Partitioner_Should_Report_Missing_Partitioner()
         {
-            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
-
             testContext.TestCode = /* lang=c#-test */ """
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -36,8 +33,6 @@ namespace ConsoleApplication1
         [Fact]
         public async Task When_KafkaPublication_Generic_Is_Created_Without_Partitioner_Should_Report_Missing_Partitioner()
         {
-            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
-
             testContext.TestCode = /* lang=c#-test */ """
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -67,8 +62,6 @@ namespace ConsoleApplication1
         [Fact]
         public async Task When_KafkaPublication_Is_Created_With_ConsistentRandom_Should_Report_Warning()
         {
-            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
-
             testContext.TestCode = /* lang=c#-test */ """
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -95,8 +88,6 @@ namespace ConsoleApplication1
         [Fact]
         public async Task When_KafkaPublication_Is_Created_With_Consistent_Should_Report_Warning()
         {
-            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
-
             testContext.TestCode = /* lang=c#-test */ """
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -123,8 +114,6 @@ namespace ConsoleApplication1
         [Fact]
         public async Task When_KafkaPublication_Is_Created_With_Murmur2Random_Should_Not_Report()
         {
-            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
-
             testContext.TestCode = /* lang=c#-test */ """
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -150,8 +139,6 @@ namespace ConsoleApplication1
         [Fact]
         public async Task When_KafkaPublication_Without_Partitioner_Is_Nested_In_Another_Object_Creation_Should_Report_Once_At_Publication()
         {
-            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
-
             testContext.TestCode = /* lang=c#-test */ """
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -180,8 +167,6 @@ namespace ConsoleApplication1
         [Fact]
         public async Task When_KafkaPublication_With_Consistent_Is_Nested_In_Another_Object_Creation_Should_Report_Once_At_Publication()
         {
-            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
-
             testContext.TestCode = /* lang=c#-test */ """
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -213,8 +198,6 @@ namespace ConsoleApplication1
         [Fact]
         public async Task When_KafkaPublication_Is_Created_With_Random_Should_Not_Report()
         {
-            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
-
             testContext.TestCode = /* lang=c#-test */ """
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -240,8 +223,6 @@ namespace ConsoleApplication1
         [Fact]
         public async Task When_Nested_Object_Has_Own_Partitioner_Property_Should_Still_Report_Missing_Partitioner()
         {
-            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
-
             testContext.TestCode = /* lang=c#-test */ """
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -276,8 +257,6 @@ namespace ConsoleApplication1
         [Fact]
         public async Task When_Partitioner_Is_Set_After_Construction_Should_Not_Report()
         {
-            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
-
             testContext.TestCode = /* lang=c#-test */ """
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -294,6 +273,102 @@ namespace ConsoleApplication1
     }
 }
 """;
+
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_Consistent_Is_Set_After_Construction_Should_Report_Warning_At_Assignment()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new KafkaPublication();
+            {|#0:publication.Partitioner = Partitioner.Consistent|};
+        }
+    }
+}
+""";
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.ConsistentPartitionerRule).WithLocation(0));
+
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_ConsistentRandom_Is_Set_After_Construction_Should_Report_Warning_At_Assignment()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new KafkaPublication();
+            {|#0:publication.Partitioner = Partitioner.ConsistentRandom|};
+        }
+    }
+}
+""";
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.ConsistentRandomPartitionerRule).WithLocation(0));
+
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_Plain_Publication_Is_Created_Should_Not_Report()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new Publication();
+        }
+    }
+}
+""";
+
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_KafkaPublication_Subclass_Is_Created_Without_Partitioner_Should_Report_Missing_Partitioner()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class MyPublication : KafkaPublication
+    {
+    }
+
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = {|#0:new MyPublication()|};
+        }
+    }
+}
+""";
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("MyPublication"));
 
             await testContext.RunAsync();
         }

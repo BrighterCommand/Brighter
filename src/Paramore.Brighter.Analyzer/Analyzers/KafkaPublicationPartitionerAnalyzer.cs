@@ -50,22 +50,22 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
     public static readonly DiagnosticDescriptor ConsistentRandomPartitionerRule = new(
         id: DiagnosticsIds.ConsistentRandomPartitioner,
         title: "ConsistentRandom Partitioner Used",
-        messageFormat:
-        "Prefer 'Murmur2Random' over 'ConsistentRandom' for new KafkaPublications to keep key distribution even and avoid hot partitions. Existing publications can keep 'ConsistentRandom' to preserve their current partition assignment.",
+        messageFormat: "Prefer 'Murmur2Random' over 'ConsistentRandom' for new KafkaPublications",
         category: PartitionerCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
+        description: "'ConsistentRandom' can produce uneven key distribution and hot partitions; 'Murmur2Random' keeps distribution even. Existing publications can keep 'ConsistentRandom' to preserve their current partition assignment.",
         helpLinkUri: "https://github.com/BrighterCommand/Brighter/blob/master/src/Paramore.Brighter.Analyzer/docs/BRT007.md"
     );
 
     public static readonly DiagnosticDescriptor ConsistentPartitionerRule = new(
         id: DiagnosticsIds.ConsistentPartitioner,
         title: "Consistent Partitioner Used",
-        messageFormat:
-        "Prefer 'Murmur2' over 'Consistent' for new KafkaPublications to keep key distribution even and avoid hot partitions. Existing publications can keep 'Consistent' to preserve their current partition assignment.",
+        messageFormat: "Prefer 'Murmur2' over 'Consistent' for new KafkaPublications",
         category: PartitionerCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
+        description: "'Consistent' can produce uneven key distribution and hot partitions; 'Murmur2' keeps distribution even. Existing publications can keep 'Consistent' to preserve their current partition assignment.",
         helpLinkUri: "https://github.com/BrighterCommand/Brighter/blob/master/src/Paramore.Brighter.Analyzer/docs/BRT008.md"
     );
 
@@ -75,25 +75,41 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterOperationAction(AnalyzerOperation, OperationKind.ObjectCreation);
+        context.RegisterCompilationStartAction(compilationContext =>
+        {
+            // Solutions that don't reference the Kafka gateway can never create a
+            // KafkaPublication; don't pay for an operation callback there at all.
+            if (compilationContext.Compilation.GetTypeByMetadataName(
+                    $"{BrighterAnalyzerGlobals.KafkaNamespace}.{BrighterAnalyzerGlobals.KafkaPublicationClassName}") == null)
+            {
+                return;
+            }
+
+            compilationContext.RegisterOperationAction(AnalyzerObjectCreation, OperationKind.ObjectCreation);
+            compilationContext.RegisterOperationAction(AnalyzeAssignment, OperationKind.SimpleAssignment);
+        });
     }
 
-    private static void AnalyzerOperation(OperationAnalysisContext context)
+    private static void AnalyzerObjectCreation(OperationAnalysisContext context)
     {
         var operation = (IObjectCreationOperation)context.Operation;
 
-        var visitor = new KafkaPublicationPartitionerVisitor();
-        operation.Accept(visitor);
-
-        if (!visitor.IsKafkaPublication)
+        // Cheap rejection before allocating the visitor; most object creations
+        // in a compilation are not KafkaPublications.
+        if (!KafkaPublicationPartitionerVisitor.IsKafkaPublicationType(operation.Type))
         {
             return;
         }
 
+        var visitor = new KafkaPublicationPartitionerVisitor();
+        operation.Accept(visitor);
+
         if (!visitor.IsPartitionerAssigned)
         {
-            if (IsPartitionerAssignedAfterConstruction(operation))
+            if (FindPartitionerAssignmentAfterConstruction(operation) != null)
             {
+                // The partitioner is set on the local after construction; any
+                // discouraged value is reported by AnalyzeAssignment instead.
                 return;
             }
 
@@ -116,12 +132,54 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    // Recognizes the common pattern where the partitioner is set on the new
-    // local right after construction, e.g.:
+    // Reports discouraged partitioner values assigned outside an object
+    // initializer, e.g.:
+    //     var publication = new KafkaPublication();
+    //     publication.Partitioner = Partitioner.Consistent;
+    // The diagnostic is reported from the assignment's own callback so it stays
+    // local to the analyzed operation.
+    private static void AnalyzeAssignment(OperationAnalysisContext context)
+    {
+        var assignment = (ISimpleAssignmentOperation)context.Operation;
+
+        // Initializer assignments (new KafkaPublication { Partitioner = ... }) are
+        // handled by AnalyzerObjectCreation. Their parent is an
+        // IObjectOrCollectionInitializerOperation; IMemberInitializerOperation
+        // only appears in `with` expressions.
+        if (assignment.Parent is IObjectOrCollectionInitializerOperation or IMemberInitializerOperation)
+        {
+            return;
+        }
+
+        if (assignment.Target is not IPropertyReferenceOperation propertyReference ||
+            propertyReference.Property.Name != BrighterAnalyzerGlobals.PartitionerProperty ||
+            !KafkaPublicationPartitionerVisitor.IsKafkaPublicationType(propertyReference.Property.ContainingType))
+        {
+            return;
+        }
+
+        switch (KafkaPublicationPartitionerVisitor.GetPartitionerValueName(assignment.Value))
+        {
+            case BrighterAnalyzerGlobals.ConsistentRandomPartitionerValue:
+                context.ReportDiagnostic(Diagnostic.Create(
+                    ConsistentRandomPartitionerRule,
+                    assignment.Syntax.GetLocation()));
+                break;
+            case BrighterAnalyzerGlobals.ConsistentPartitionerValue:
+                context.ReportDiagnostic(Diagnostic.Create(
+                    ConsistentPartitionerRule,
+                    assignment.Syntax.GetLocation()));
+                break;
+        }
+    }
+
+    // Finds a partitioner assignment made on the new local right after
+    // construction, e.g.:
     //     var publication = new KafkaPublication();
     //     publication.Partitioner = Partitioner.Murmur2Random;
-    // Assignments made elsewhere (helper methods, other blocks) are not tracked.
-    private static bool IsPartitionerAssignedAfterConstruction(IObjectCreationOperation operation)
+    // Returns null when there is no such assignment. Assignments made
+    // elsewhere (helper methods, other blocks) are not tracked.
+    private static ISimpleAssignmentOperation FindPartitionerAssignmentAfterConstruction(IObjectCreationOperation operation)
     {
         ILocalSymbol local = operation.Parent switch
         {
@@ -132,25 +190,31 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
 
         if (local == null)
         {
-            return false;
+            return null;
         }
 
-        for (var ancestor = operation.Parent; ancestor != null; ancestor = ancestor.Parent)
+        // Only the nearest enclosing block is searched; an assignment inside a
+        // nested block (e.g. an if) still triggers BRT006 — a documented
+        // limitation (see BRT006.md).
+        var ancestor = operation.Parent;
+        while (ancestor != null && ancestor is not IBlockOperation)
         {
-            if (ancestor is IBlockOperation block)
-            {
-                return block.Operations
-                    .OfType<IExpressionStatementOperation>()
-                    .Select(statement => statement.Operation)
-                    .OfType<ISimpleAssignmentOperation>()
-                    .Any(assignment =>
-                        assignment.Target is IPropertyReferenceOperation propertyReference &&
-                        propertyReference.Property.Name == BrighterAnalyzerGlobals.PartitionerProperty &&
-                        propertyReference.Instance is ILocalReferenceOperation instance &&
-                        SymbolEqualityComparer.Default.Equals(instance.Local, local));
-            }
+            ancestor = ancestor.Parent;
         }
 
-        return false;
+        if (ancestor is not IBlockOperation block)
+        {
+            return null;
+        }
+
+        return block.Operations
+            .OfType<IExpressionStatementOperation>()
+            .Select(statement => statement.Operation)
+            .OfType<ISimpleAssignmentOperation>()
+            .FirstOrDefault(assignment =>
+                assignment.Target is IPropertyReferenceOperation propertyReference &&
+                propertyReference.Property.Name == BrighterAnalyzerGlobals.PartitionerProperty &&
+                propertyReference.Instance is ILocalReferenceOperation instance &&
+                SymbolEqualityComparer.Default.Equals(instance.Local, local));
     }
 }

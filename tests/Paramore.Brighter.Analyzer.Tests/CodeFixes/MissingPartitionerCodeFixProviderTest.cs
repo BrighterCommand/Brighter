@@ -84,5 +84,55 @@ namespace ConsoleApplication1
 
             await testContext.RunAsync();
         }
+
+        [Fact]
+        public async Task When_Partitioner_Is_Missing_Should_Append_To_Existing_Initializer()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = {|#0:new KafkaPublication
+            {
+                Topic = new RoutingKey("x"),
+                NumPartitions = 3
+            }|};
+        }
+    }
+}
+""";
+
+            testContext.FixedCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new KafkaPublication
+            {
+                Topic = new RoutingKey("x"),
+                NumPartitions = 3,
+                Partitioner = Partitioner.Murmur2Random
+            };
+        }
+    }
+}
+""";
+
+            testContext.ExpectedDiagnostics.Add(
+                new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
+
+            await testContext.RunAsync();
+        }
     }
 }

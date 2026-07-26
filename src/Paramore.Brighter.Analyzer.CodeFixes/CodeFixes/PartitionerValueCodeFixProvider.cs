@@ -59,8 +59,13 @@ public class PartitionerValueCodeFixProvider : CodeFixProvider
             var assignment = root.FindNode(diagnostic.Location.SourceSpan)
                 .DescendantNodesAndSelf()
                 .OfType<AssignmentExpressionSyntax>()
-                .FirstOrDefault(a => a.Left is IdentifierNameSyntax id &&
-                                     id.Identifier.ValueText == BrighterAnalyzerGlobals.PartitionerProperty);
+                .FirstOrDefault(a => a.Left switch
+                {
+                    // Partitioner = ... (object initializer) or publication.Partitioner = ... (post-construction)
+                    IdentifierNameSyntax id => id.Identifier.ValueText == BrighterAnalyzerGlobals.PartitionerProperty,
+                    MemberAccessExpressionSyntax memberAccess => memberAccess.Name.Identifier.ValueText == BrighterAnalyzerGlobals.PartitionerProperty,
+                    _ => false
+                });
 
             if (assignment == null ||
                 assignment.Right is not (MemberAccessExpressionSyntax or IdentifierNameSyntax))
