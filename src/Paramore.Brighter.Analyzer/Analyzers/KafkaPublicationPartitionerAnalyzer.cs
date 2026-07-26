@@ -44,6 +44,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         category: PartitionerCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
+        description: "Setting the Partitioner explicitly makes the choice visible. Be aware that changing the partitioner re-partitions the topic; existing publications can keep the implicit default to preserve their current partition assignment.",
         helpLinkUri: "https://github.com/BrighterCommand/Brighter/blob/master/src/Paramore.Brighter.Analyzer/docs/BRT006.md"
     );
 
@@ -106,9 +107,9 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
 
         if (!visitor.IsPartitionerAssigned)
         {
-            if (FindPartitionerAssignmentAfterConstruction(operation) != null)
+            if (HasPartitionerAssignmentAfterConstruction(operation))
             {
-                // The partitioner is set on the local after construction; any
+                // The partitioner is set on the instance after construction; any
                 // discouraged value is reported by AnalyzeAssignment instead.
                 return;
             }
@@ -122,13 +123,13 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 ConsistentRandomPartitionerRule,
-                context.Operation.Syntax.GetLocation()));
+                visitor.PartitionerAssignmentLocation));
         }
         else if (visitor.IsConsistent)
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 ConsistentPartitionerRule,
-                context.Operation.Syntax.GetLocation()));
+                visitor.PartitionerAssignmentLocation));
         }
     }
 
@@ -173,24 +174,27 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    // Finds a partitioner assignment made on the new local right after
-    // construction, e.g.:
+    // Checks whether the partitioner is assigned on the just-created instance
+    // later in the same block, e.g.:
     //     var publication = new KafkaPublication();
     //     publication.Partitioner = Partitioner.Murmur2Random;
-    // Returns null when there is no such assignment. Assignments made
-    // elsewhere (helper methods, other blocks) are not tracked.
-    private static ISimpleAssignmentOperation FindPartitionerAssignmentAfterConstruction(IObjectCreationOperation operation)
+    // Works for locals, fields, properties and parameters. Assignments made
+    // before the construction, or elsewhere (helper methods, other blocks),
+    // are not tracked.
+    private static bool HasPartitionerAssignmentAfterConstruction(IObjectCreationOperation operation)
     {
-        ILocalSymbol local = operation.Parent switch
+        ISymbol symbol = operation.Parent switch
         {
             IVariableInitializerOperation { Parent: IVariableDeclaratorOperation declarator } => declarator.Symbol,
             ISimpleAssignmentOperation { Target: ILocalReferenceOperation localReference } => localReference.Local,
+            ISimpleAssignmentOperation { Target: IFieldReferenceOperation fieldReference } => fieldReference.Field,
+            ISimpleAssignmentOperation { Target: IPropertyReferenceOperation propertyReference } => propertyReference.Property,
             _ => null
         };
 
-        if (local == null)
+        if (symbol == null)
         {
-            return null;
+            return false;
         }
 
         // Only the nearest enclosing block is searched; an assignment inside a
@@ -204,17 +208,29 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
 
         if (ancestor is not IBlockOperation block)
         {
-            return null;
+            return false;
         }
 
         return block.Operations
             .OfType<IExpressionStatementOperation>()
             .Select(statement => statement.Operation)
             .OfType<ISimpleAssignmentOperation>()
-            .FirstOrDefault(assignment =>
+            .Any(assignment =>
+                assignment.Syntax.SpanStart > operation.Syntax.SpanStart &&
                 assignment.Target is IPropertyReferenceOperation propertyReference &&
                 propertyReference.Property.Name == BrighterAnalyzerGlobals.PartitionerProperty &&
-                propertyReference.Instance is ILocalReferenceOperation instance &&
-                SymbolEqualityComparer.Default.Equals(instance.Local, local));
+                IsReferenceTo(propertyReference.Instance, symbol));
+    }
+
+    private static bool IsReferenceTo(IOperation instance, ISymbol symbol)
+    {
+        return instance switch
+        {
+            ILocalReferenceOperation localReference => SymbolEqualityComparer.Default.Equals(localReference.Local, symbol),
+            IFieldReferenceOperation fieldReference => SymbolEqualityComparer.Default.Equals(fieldReference.Field, symbol),
+            IPropertyReferenceOperation propertyReference => SymbolEqualityComparer.Default.Equals(propertyReference.Property, symbol),
+            IParameterReferenceOperation parameterReference => SymbolEqualityComparer.Default.Equals(parameterReference.Parameter, symbol),
+            _ => false
+        };
     }
 }

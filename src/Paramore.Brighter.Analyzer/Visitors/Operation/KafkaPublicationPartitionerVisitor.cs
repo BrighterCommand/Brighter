@@ -34,11 +34,11 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
         BrighterAnalyzerGlobals.KafkaPublicationClassName,
         BrighterAnalyzerGlobals.KafkaMessagingGatewayAssembly);
 
-    public bool IsKafkaPublication { get; private set; }
     public bool IsPartitionerAssigned { get; private set; }
     public bool IsConsistentRandom { get; private set; }
     public bool IsConsistent { get; private set; }
     public string PublicationName { get; private set; }
+    public Location PartitionerAssignmentLocation { get; private set; }
 
     // Type can be null for erroneous code in the IDE; treat it as no match.
     internal static bool IsKafkaPublicationType(ITypeSymbol type)
@@ -51,7 +51,6 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
         if (IsKafkaPublicationType(operation.Type))
         {
             PublicationName = operation.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-            IsKafkaPublication = true;
 
             // base walks the children (including the initializer), which drives
             // VisitSimpleAssignment for any Partitioner assignment. Only descend
@@ -69,9 +68,10 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
     {
         if (operation.Target is IPropertyReferenceOperation propertyReference &&
             propertyReference.Property.Name == BrighterAnalyzerGlobals.PartitionerProperty &&
-            propertyReference.Property.ContainingType.Accept(s_kafkaPublicationCheck))
+            IsKafkaPublicationType(propertyReference.Property.ContainingType))
         {
             IsPartitionerAssigned = true;
+            PartitionerAssignmentLocation = operation.Syntax.GetLocation();
 
             switch (GetPartitionerValueName(operation.Value))
             {
