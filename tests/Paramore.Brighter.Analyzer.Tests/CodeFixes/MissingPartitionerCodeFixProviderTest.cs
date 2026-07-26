@@ -471,4 +471,108 @@ namespace ConsoleApplication1
 
         await testContext.RunAsync();
     }
+
+    [Fact]
+    public async Task When_Partitioner_Is_Missing_Should_Append_After_Single_Expression_Trailing_Comma()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new {|#0:KafkaPublication|} { Topic = new RoutingKey("x"), };
+        }
+    }
+}
+""";
+
+        testContext.FixedCode = /* lang=c#-test */
+            """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new KafkaPublication { Topic = new RoutingKey("x"), Partitioner = Partitioner.Murmur2Random };
+        }
+    }
+}
+""";
+
+        testContext.ExpectedDiagnostics.Add(
+            new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule)
+                .WithLocation(0)
+                .WithArguments("KafkaPublication")
+        );
+
+        await testContext.RunAsync();
+    }
+
+    [Fact]
+    public async Task When_Partitioner_Is_Missing_On_Generic_Should_Add_Murmur2Random()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class MyRequest : IRequest 
+    { 
+        public Id Id { get; set; }
+        public Id? CorrelationId { get; set; }
+    }
+
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new {|#0:KafkaPublication<MyRequest>|}();
+        }
+    }
+}
+""";
+
+        testContext.FixedCode = /* lang=c#-test */
+            """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class MyRequest : IRequest 
+    { 
+        public Id Id { get; set; }
+        public Id? CorrelationId { get; set; }
+    }
+
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new KafkaPublication<MyRequest>() { Partitioner = Partitioner.Murmur2Random };
+        }
+    }
+}
+""";
+
+        testContext.ExpectedDiagnostics.Add(
+            new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule)
+                .WithLocation(0)
+                .WithArguments("KafkaPublication<MyRequest>")
+        );
+
+        await testContext.RunAsync();
+    }
 }

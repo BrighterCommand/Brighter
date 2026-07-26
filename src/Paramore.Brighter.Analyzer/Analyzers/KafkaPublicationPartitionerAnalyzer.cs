@@ -291,6 +291,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
             ISimpleAssignmentOperation { Target: ILocalReferenceOperation localReference } => localReference.Local,
             ISimpleAssignmentOperation { Target: IFieldReferenceOperation fieldReference } => fieldReference.Field,
             ISimpleAssignmentOperation { Target: IPropertyReferenceOperation propertyReference } => propertyReference.Property,
+            ISimpleAssignmentOperation { Target: IParameterReferenceOperation parameterReference } => parameterReference.Parameter,
             _ => null
         };
 

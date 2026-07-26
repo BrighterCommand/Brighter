@@ -682,4 +682,85 @@ namespace ConsoleApplication1
 
         await testContext.RunAsync();
     }
+
+    [Fact]
+    public async Task When_Partitioner_Is_Set_On_Parameter_After_Construction_Should_Not_Report()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method(KafkaPublication publication)
+        {
+            publication = new KafkaPublication();
+            publication.Partitioner = Partitioner.Murmur2Random;
+        }
+    }
+}
+""";
+
+        await testContext.RunAsync();
+    }
+
+    [Fact]
+    public async Task When_Partitioner_Is_Set_On_Property_After_Construction_Should_Not_Report()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        private KafkaPublication Publication { get; set; }
+
+        public void Method()
+        {
+            Publication = new KafkaPublication();
+            Publication.Partitioner = Partitioner.Murmur2Random;
+        }
+    }
+}
+""";
+
+        await testContext.RunAsync();
+    }
+
+    [Fact]
+    public async Task When_Target_Typed_New_Is_Created_With_Consistent_Should_Report_Warning()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            KafkaPublication publication = new()
+            {
+                {|#0:Partitioner = Partitioner.Consistent|}
+            };
+        }
+    }
+}
+""";
+        testContext.ExpectedDiagnostics.Add(
+            new DiagnosticResult(
+                KafkaPublicationPartitionerAnalyzer.ConsistentPartitionerRule
+            ).WithLocation(0)
+        );
+
+        await testContext.RunAsync();
+    }
 }
