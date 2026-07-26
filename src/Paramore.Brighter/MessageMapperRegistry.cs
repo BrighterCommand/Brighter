@@ -37,10 +37,11 @@ namespace Paramore.Brighter
     /// registered via <see cref="IAmAMessageMapperRegistry"/>
     /// This is a default implementation of<see cref="IAmAMessageMapperRegistry"/> which is suitable for most usages, the interface is provided mainly for testing
     /// </summary>
-    public class MessageMapperRegistry : IAmAMessageMapperRegistry, IAmAMessageMapperRegistryAsync 
+    public class MessageMapperRegistry : IAmAMessageMapperRegistry, IAmAMessageMapperRegistryAsync, IDisposable
     {
         private readonly IAmAMessageMapperFactory? _messageMapperFactory;
         private readonly IAmAMessageMapperFactoryAsync? _messageMapperFactoryAsync;
+        private bool _disposed;
         private readonly ConcurrentDictionary<Type, Type> _messageMappers = new();
         private readonly ConcurrentDictionary<Type, Type> _asyncMessageMappers = new();
         //resolved default mappers are cached apart from registered ones: a fallback to the default is
@@ -261,6 +262,30 @@ namespace Paramore.Brighter
                 throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", request.Name));
 
             _asyncMessageMappers.TryAdd(request, mapper);
+        }
+
+        /// <summary>
+        /// Disposes the factories this registry was built from.
+        /// </summary>
+        /// <remarks>
+        /// The registry owns the mapper factories it was constructed with. For an IoC-backed factory each
+        /// mapper obtained from <see cref="Get{TRequest}"/>/<see cref="GetAsync{TRequest}"/> but not released
+        /// leaves the factory holding the <c>IServiceScope</c> it was resolved from, and nothing else
+        /// can reach those factories to dispose them. An owner (the outbox producer mediator, a pipeline
+        /// validator) disposes the registry at teardown so those scopes are drained rather than retained
+        /// until the process exits. Idempotent: a second call is a no-op so an owner and the container can
+        /// both dispose safely.
+        /// </remarks>
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+            _disposed = true;
+
+            (_messageMapperFactory as IDisposable)?.Dispose();
+            (_messageMapperFactoryAsync as IDisposable)?.Dispose();
+
+            GC.SuppressFinalize(this);
         }
     }
 }
