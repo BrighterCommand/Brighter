@@ -296,6 +296,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //has already returned to a live caller, so re-home them under the instance key for that
             //caller's own later Release — disposing them here would tear down state still in use (a
             //use-after-dispose), the one failure mode worse than the leak this removal guards against.
+            //This re-home is a SINGLE pass and narrows, but does not fully close, the window: a push that
+            //lands after this loop drains empty sits on a now-detached stack that nothing drains — a rare,
+            //bounded leak (only for a shared instance under Transient), traded for the worse
+            //use-after-dispose. A while(true) re-check loop would close it; not taken by decision. See
+            //bugfixes/0012-transient-release-redrain-use-after-dispose for the full residual-window note.
             if (scopes.IsEmpty &&
                 ((ICollection<KeyValuePair<object, ConcurrentStack<IServiceScope>>>)_transientScopes)
                     .Remove(new KeyValuePair<object, ConcurrentStack<IServiceScope>>(instance, scopes)))

@@ -108,6 +108,29 @@ A later `Release` of that concurrent resolution drains them — one dispose per 
 live caller still holds is torn down. For a genuine (distinct-per-resolution) transient the re-drain
 loop is a no-op (no concurrent push on the same key), so key removal still happens and the per-message
 retention this PR closes is unaffected. Lock-free; the pop, emptiness check, and key removal are
-unchanged. (A concurrent factory `Dispose()` racing between the `Remove` and the re-home `GetOrAdd`
-could leak one re-homed scope, but only at teardown — benign, and already the class's stance for the
-symmetric `GetTransient` teardown window.)
+unchanged.
+
+## Residual window — narrowed, not fully closed
+The re-home is a **single pass** over the detached stack, so it recovers only scopes a concurrent
+`GetTransient` pushed *before* that `while (scopes.TryPop(...))` loop observes the stack empty. Two
+narrower windows remain open by design:
+
+1. **Steady-state (raised in round-12 review, finding #3).** A concurrent `GetTransient` can capture
+   the old stack reference via `GetOrAdd(instance)` *before* the `Remove`, then `Push` onto it *after*
+   the re-home loop has already exited on an empty pop. That scope now sits on a stack detached from
+   `_transientScopes`: the concurrent caller's later `Release(instance)` does `TryGetValue` and finds
+   the re-homed stack, not the detached one, and `Dispose` iterates `_transientScopes.Values`, which no
+   longer contains it — so the scope is permanently leaked. This trades the original **use-after-dispose**
+   (the worse failure) for a much rarer **leak**, which is the intended direction, but it does not
+   eliminate the leak.
+2. **Teardown.** A concurrent factory `Dispose()` racing between the `Remove` and the re-home `GetOrAdd`
+   can likewise leak one re-homed scope — benign, and already the class's stance for the symmetric
+   `GetTransient` teardown window.
+
+Both are reachable only for a **shared** instance under a `Transient` lifetime (the case the
+`ConcurrentStack` exists for) under concurrent create/release; a genuine per-resolution transient never
+has a concurrent push on its key. A `while (true)` re-check loop around the re-home — re-`Remove` and
+re-drain until an emptiness snapshot holds across a full pass — would close window 1; it is **not**
+taken here because the residual is a rare, bounded leak rather than a correctness fault, and the extra
+retry complexity is not justified for it. Recorded so the next reader treats this method as *narrowed*,
+not *handled*.
