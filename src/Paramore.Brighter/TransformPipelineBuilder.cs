@@ -176,7 +176,19 @@ namespace Paramore.Brighter
             }
             finally
             {
-                if (messageMapper is not null) _mapperRegistry.Release(messageMapper);
+                //Releasing the probe mapper is best-effort: a throwing release must not propagate out of a
+                //predicate and be mistaken for a mapping failure by the caller. Log and swallow.
+                if (messageMapper is not null)
+                {
+                    try
+                    {
+                        _mapperRegistry.Release(messageMapper);
+                    }
+                    catch (Exception releaseException)
+                    {
+                        Log.FailedToReleaseProbeMapper(s_logger, releaseException, typeof(TRequest).Name);
+                    }
+                }
             }
         }
 
@@ -426,6 +438,9 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "No message transformer factory configured, so no transforms will be created but {TransformCount} configured")]
             public static partial void NoMessageTransformerFactoryConfigured(ILogger logger, int transformCount);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to release the probe mapper resolved by HasPipeline for {Request}; the answer is unaffected")]
+            public static partial void FailedToReleaseProbeMapper(ILogger logger, Exception ex, string request);
         }
     }
 }

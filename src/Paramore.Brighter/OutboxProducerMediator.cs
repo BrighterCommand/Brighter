@@ -522,16 +522,33 @@ namespace Paramore.Brighter
         {
             if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
-                using var pipeline = _transformPipelineBuilderAsync.BuildUnwrapPipeline<TRequest>();
-                request = pipeline
-                    .UnwrapAsync(message, requestContext)
-                    .GetAwaiter()
-                    .GetResult();
+                var pipeline = _transformPipelineBuilderAsync.BuildUnwrapPipeline<TRequest>();
+                try
+                {
+                    request = pipeline
+                        .UnwrapAsync(message, requestContext)
+                        .GetAwaiter()
+                        .GetResult();
+                }
+                finally
+                {
+                    //Release after the request is built. A throwing mapper/transform release must not abort
+                    //a reply whose request has already been unwrapped, so it is logged, not surfaced. This is
+                    //the sync-over-async Call path, so release synchronously through IDisposable.
+                    ReleasePipeline(pipeline, message.Id);
+                }
             }
             else if (_transformPipelineBuilder.HasPipeline<TRequest>())
             {
-                using var pipeline = _transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
-                request = pipeline.Unwrap(message, requestContext);
+                var pipeline = _transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
+                try
+                {
+                    request = pipeline.Unwrap(message, requestContext);
+                }
+                finally
+                {
+                    ReleasePipeline(pipeline, message.Id);
+                }
             }
             else
             {
@@ -1184,8 +1201,18 @@ namespace Paramore.Brighter
             Message message;
             if (_transformPipelineBuilder.HasPipeline<TRequest>())
             {
-                using var pipeline = _transformPipelineBuilder.BuildWrapPipeline<TRequest>();
-                message = pipeline.Wrap(request, requestContext, publication);
+                var pipeline = _transformPipelineBuilder.BuildWrapPipeline<TRequest>();
+                try
+                {
+                    message = pipeline.Wrap(request, requestContext, publication);
+                }
+                finally
+                {
+                    //Release the pipeline after the message is built. A throwing mapper/transform release
+                    //must not abort a send whose message has already been produced, so it is logged, not
+                    //surfaced to the caller.
+                    ReleasePipeline(pipeline, request.Id);
+                }
             }
             else
             {
@@ -1193,6 +1220,30 @@ namespace Paramore.Brighter
             }
 
             return message;
+        }
+
+        private static void ReleasePipeline(IDisposable pipeline, Id requestId)
+        {
+            try
+            {
+                pipeline.Dispose();
+            }
+            catch (Exception releaseException)
+            {
+                Log.FailedToReleasePipeline(s_logger, releaseException, requestId.Value);
+            }
+        }
+
+        private static async ValueTask ReleasePipelineAsync(IAsyncDisposable pipeline, Id requestId)
+        {
+            try
+            {
+                await pipeline.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception releaseException)
+            {
+                Log.FailedToReleasePipeline(s_logger, releaseException, requestId.Value);
+            }
         }
 
         private async Task<Message> MapMessageAsync<TRequest>(
@@ -1214,8 +1265,17 @@ namespace Paramore.Brighter
                 //release asynchronously: when a handler drives this from the Proactor pump the dispose
                 //runs on the single-threaded pump context, so an IAsyncDisposable mapper/transform must be
                 //awaited rather than blocked on — the probe in HasPipelineAsync releases the same way
-                await using var pipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<TRequest>();
-                message = await pipeline.WrapAsync(request, requestContext, publication, cancellationToken);
+                var pipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<TRequest>();
+                try
+                {
+                    message = await pipeline.WrapAsync(request, requestContext, publication, cancellationToken);
+                }
+                finally
+                {
+                    //Release after the message is built. A throwing mapper/transform release must not abort
+                    //a send whose message has already been produced, so it is logged, not surfaced.
+                    await ReleasePipelineAsync(pipeline, request.Id).ConfigureAwait(false);
+                }
             }
             else
             {
@@ -1340,6 +1400,9 @@ namespace Paramore.Brighter
         {
             [LoggerMessage(LogLevel.Information, "Found {NumberOfMessages} to clear out of amount {AmountToClear}")]
             public static partial void FoundMessagesToClear(ILogger logger, int numberOfMessages, int amountToClear);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to release the transform pipeline for request {Id}; the message was mapped successfully and is unaffected")]
+            public static partial void FailedToReleasePipeline(ILogger logger, Exception ex, string id);
             
             [LoggerMessage(LogLevel.Debug, "Time since last check is {SecondsSinceLastCheck} seconds")]
             public static partial void TimeSinceLastCheck(ILogger logger, double secondsSinceLastCheck);
