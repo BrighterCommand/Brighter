@@ -325,7 +325,9 @@ The IoC-backed mapper and transformer factories (`ServiceProviderMapperFactory`,
 * `OutboxProducerMediator.Dispose()` now disposes the `MessageMapperRegistry` (cascading to both mapper factories) and the two transformer factories, in addition to closing the producer registry.
 * `PipelineValidator` and `PipelineDiagnosticWriter` are now `IDisposable` and dispose the validation/diagnostic-time `MessageMapperRegistry` each builds.
 
-All of these owners are registered as container singletons, so the container disposes them — and therefore drains their factories — at host shutdown. Previously none were disposed, so a scope a direct resolver failed to release was held for the life of the process. These additions are source- and binary-compatible; they do not remove the release contract above.
+All of these owners are registered as container singletons, so the container disposes them — and therefore drains their factories — at host shutdown. Previously none were disposed, so a scope a direct resolver failed to release was held for the life of the process. These additions are source- and binary-compatible.
+
+**This shutdown disposal is a teardown backstop, not a substitute for `Release`.** It reclaims once, at host shutdown; it does nothing for a host that runs for days. Releasing each mapper/transform you resolve directly — as the pipeline does on every message — is what bounds retention *during* the run. Relying on owner disposal for reclamation along the way just reproduces the unbounded accumulation this fix closes.
 
 #### Behaviour change: transient handler lifetime isolates its DI scope per handler
 
