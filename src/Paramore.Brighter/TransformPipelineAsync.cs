@@ -30,8 +30,11 @@ namespace Paramore.Brighter
         /// </summary>
         public void Dispose()
         {
-            ReleaseUnmanagedResources();
-            GC.SuppressFinalize(this);
+            //SuppressFinalize in a finally: if the release throws (explicit Dispose still surfaces it),
+            //the object would otherwise stay registered for finalization, and the finalizer's retry only
+            //returns on the release-once guard — a wasted finalization
+            try { ReleaseUnmanagedResources(); }
+            finally { GC.SuppressFinalize(this); }
         }
 
         /// <summary>
@@ -47,23 +50,31 @@ namespace Paramore.Brighter
             //(in either form) must not release twice
             if (Interlocked.Exchange(ref _released, 1) != 0) return;
 
+            //SuppressFinalize in an outer finally so it runs even if the release throws (an explicit
+            //DisposeAsync still surfaces the exception); otherwise the object stays registered for
+            //finalization and the finalizer's retry only returns on the release-once guard — wasted work
             try
             {
-                if (InstanceScope is not null)
-                    await InstanceScope.DisposeAsync().ConfigureAwait(false);
+                try
+                {
+                    if (InstanceScope is not null)
+                        await InstanceScope.DisposeAsync().ConfigureAwait(false);
+                }
+                finally
+                {
+                    //the mapper is created per pipeline, so it is ours to return; released outside InstanceScope
+                    //because that scope only exists when a transformer factory was supplied. Released in a
+                    //finally so a throw from the transform-scope disposal above cannot orphan the mapper's own
+                    //scope — the release-once guard is already set, so no later dispose or the finalizer would
+                    //retry it, which is the exact leak this pipeline is meant to close.
+                    if (_mapperRegistry is not null)
+                        await _mapperRegistry.ReleaseAsync(MessageMapper).ConfigureAwait(false);
+                }
             }
             finally
             {
-                //the mapper is created per pipeline, so it is ours to return; released outside InstanceScope
-                //because that scope only exists when a transformer factory was supplied. Released in a
-                //finally so a throw from the transform-scope disposal above cannot orphan the mapper's own
-                //scope — the release-once guard is already set, so no later dispose or the finalizer would
-                //retry it, which is the exact leak this pipeline is meant to close.
-                if (_mapperRegistry is not null)
-                    await _mapperRegistry.ReleaseAsync(MessageMapper).ConfigureAwait(false);
+                GC.SuppressFinalize(this);
             }
-
-            GC.SuppressFinalize(this);
         }
 
         /// <summary>

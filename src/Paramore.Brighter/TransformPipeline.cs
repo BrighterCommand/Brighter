@@ -22,8 +22,11 @@ namespace Paramore.Brighter
         /// </summary>
         public void Dispose()
         {
-            ReleaseUnmanagedResources();
-            GC.SuppressFinalize(this);
+            //SuppressFinalize in a finally: if the release throws (explicit Dispose still surfaces it),
+            //the object would otherwise stay registered for finalization, and the finalizer's retry only
+            //returns on the release-once guard — a wasted finalization
+            try { ReleaseUnmanagedResources(); }
+            finally { GC.SuppressFinalize(this); }
         }
 
         /// <summary>

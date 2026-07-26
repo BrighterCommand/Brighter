@@ -49,7 +49,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ConcurrentDictionary<object, ConcurrentStack<IServiceScope>> _transientScopes =
             new(InstanceComparer.Default);
         private IServiceScope? _scope;
-        private volatile bool _disposed;
+        //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange,
+        //making the disposal body run exactly once even under concurrent Dispose; readers use Volatile.Read
+        private int _disposed;
 
         /// <summary>
         /// Constructs a lifetime scope helper
@@ -119,7 +121,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     //lost the publish race — dispose the scope we created
                     DisposeScope(created);
                 }
-                else if (_disposed)
+                else if (Volatile.Read(ref _disposed) != 0)
                 {
                     //won the publish, but a Dispose that read _scope before our CompareExchange published
                     //it drained nothing and left our scope orphaned — the create-vs-Dispose mirror of the
@@ -194,7 +196,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //GetOrAdd and the Push it would have missed this scope. Re-check and drain the stack we
             //just pushed to — a local reference, so the scope is reclaimed even once Dispose has
             //removed the entry. TryPop is atomic, so each scope is disposed exactly once.
-            if (_disposed)
+            if (Volatile.Read(ref _disposed) != 0)
             {
                 _transientScopes.TryRemove(instance, out _);
                 while (scopes.TryPop(out var orphaned))
@@ -207,7 +209,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         private void ThrowIfDisposed()
         {
-            if (_disposed)
+            if (Volatile.Read(ref _disposed) != 0)
                 throw new ObjectDisposedException(nameof(ServiceProviderLifetimeScope));
         }
 
@@ -402,11 +404,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         public void Dispose()
         {
-            if (_disposed) return;
-
-            //set before draining so a concurrent GetOrCreate either fails its guard or, if it slipped
-            //past, sees _disposed on its post-add re-check and cleans up the scope it just tracked
-            _disposed = true;
+            //claim disposal atomically so the body runs exactly once even if two threads race Dispose.
+            //The exchange also publishes _disposed before we drain, so a concurrent GetOrCreate either
+            //fails its guard or, if it slipped past, sees it on its post-add re-check and cleans up the
+            //scope it just tracked.
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
             foreach (var scopes in _transientScopes.Values)
                 while (scopes.TryPop(out var scope))
