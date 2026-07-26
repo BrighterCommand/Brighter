@@ -410,19 +410,38 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //scope it just tracked.
             if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
-            foreach (var scopes in _transientScopes.Values)
-                while (scopes.TryPop(out var scope))
-                    DisposeScope(scope);
-            _transientScopes.Clear();
-
-            //claim _scope with an atomic swap: a resolution that publishes its first scope concurrently
-            //re-checks _disposed and reclaims what it published, so the scope is disposed exactly once
-            //whichever side wins. Also collapses the double-read of _scope (check-then-use) that let two
-            //concurrent disposals both dispose it.
-            var rootScope = Interlocked.Exchange(ref _scope, null);
-            if (rootScope != null)
-                DisposeScope(rootScope);
-            _scopedInstances.Clear();
+            try
+            {
+                //drain every tracked transient scope even when one disposal throws (MS DI's scope Dispose
+                //throws for an IAsyncDisposable-only service, and a user Dispose may). This is the terminal
+                //cleanup — no finalizer will retry it, and under HandlerLifetime.Transient this runs once
+                //per message holding one scope per handler in the chain, so a skip-the-rest would leak the
+                //DI scopes of every other handler. Swallowing per scope both keeps a later scope from being
+                //skipped and keeps the root-scope disposal in the finally reachable; it mirrors the
+                //best-effort drain in TransformPipelineBuilder.ReleaseTransforms.
+                foreach (var scopes in _transientScopes.Values)
+                    while (scopes.TryPop(out var scope))
+                    {
+                        try { DisposeScope(scope); }
+                        catch { /* swallowed: best-effort cleanup must not skip the rest */ }
+                    }
+                _transientScopes.Clear();
+            }
+            finally
+            {
+                //claim _scope with an atomic swap: a resolution that publishes its first scope concurrently
+                //re-checks _disposed and reclaims what it published, so the scope is disposed exactly once
+                //whichever side wins. Also collapses the double-read of _scope (check-then-use) that let two
+                //concurrent disposals both dispose it. In the finally so a throwing transient drain above
+                //(were the swallow ever removed) still cannot strand this shared scope undisposed.
+                var rootScope = Interlocked.Exchange(ref _scope, null);
+                if (rootScope != null)
+                {
+                    try { DisposeScope(rootScope); }
+                    catch { /* swallowed: best-effort cleanup, same as the transient drain */ }
+                }
+                _scopedInstances.Clear();
+            }
             // Note: Don't clear singleton instances as they may be shared
         }
 
