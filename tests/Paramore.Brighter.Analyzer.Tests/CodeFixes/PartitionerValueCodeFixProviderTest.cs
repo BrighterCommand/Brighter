@@ -51,7 +51,7 @@ namespace ConsoleApplication1
 """;
 
             testContext.ExpectedDiagnostics.Add(
-                new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.s_consistentRandomPartitionerRule).WithLocation(0));
+                new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.ConsistentRandomPartitionerRule).WithLocation(0));
 
             await testContext.RunAsync();
         }
@@ -98,7 +98,7 @@ namespace ConsoleApplication1
 """;
 
             testContext.ExpectedDiagnostics.Add(
-                new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.s_consistentPartitionerRule).WithLocation(0));
+                new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.ConsistentPartitionerRule).WithLocation(0));
 
             await testContext.RunAsync();
         }

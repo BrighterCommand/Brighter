@@ -45,7 +45,7 @@ namespace ConsoleApplication1
 """;
 
             testContext.ExpectedDiagnostics.Add(
-                new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.s_missingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
+                new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
 
             await testContext.RunAsync();
         }

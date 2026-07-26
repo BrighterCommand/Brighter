@@ -35,7 +35,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
 {
     private const string PartitionerCategory = "Design";
 
-    public static readonly DiagnosticDescriptor s_missingPartitionerRule = new(
+    public static readonly DiagnosticDescriptor MissingPartitionerRule = new(
         id: DiagnosticsIds.MissingPartitioner,
         title: "Missing Partitioner",
         messageFormat: "Partitioner assignment is missing from {0}. Consider setting it explicitly.",
@@ -44,7 +44,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true
     );
 
-    public static readonly DiagnosticDescriptor s_consistentRandomPartitionerRule = new(
+    public static readonly DiagnosticDescriptor ConsistentRandomPartitionerRule = new(
         id: DiagnosticsIds.ConsistentRandomPartitioner,
         title: "ConsistentRandom Partitioner Used",
         messageFormat:
@@ -54,7 +54,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true
     );
 
-    public static readonly DiagnosticDescriptor s_consistentPartitionerRule = new(
+    public static readonly DiagnosticDescriptor ConsistentPartitionerRule = new(
         id: DiagnosticsIds.ConsistentPartitioner,
         title: "Consistent Partitioner Used",
         messageFormat:
@@ -64,7 +64,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true
     );
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [s_missingPartitionerRule, s_consistentRandomPartitionerRule, s_consistentPartitionerRule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [MissingPartitionerRule, ConsistentRandomPartitionerRule, ConsistentPartitionerRule];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -86,20 +86,20 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         if (!visitor.IsPartitionerAssigned)
         {
             context.ReportDiagnostic(Diagnostic.Create(
-                s_missingPartitionerRule,
+                MissingPartitionerRule,
                 context.Operation.Syntax.GetLocation(),
                 visitor.PublicationName));
         }
         else if (visitor.IsConsistentRandom)
         {
             context.ReportDiagnostic(Diagnostic.Create(
-                s_consistentRandomPartitionerRule,
+                ConsistentRandomPartitionerRule,
                 context.Operation.Syntax.GetLocation()));
         }
         else if (visitor.IsConsistent)
         {
             context.ReportDiagnostic(Diagnostic.Create(
-                s_consistentPartitionerRule,
+                ConsistentPartitionerRule,
                 context.Operation.Syntax.GetLocation()));
         }
     }

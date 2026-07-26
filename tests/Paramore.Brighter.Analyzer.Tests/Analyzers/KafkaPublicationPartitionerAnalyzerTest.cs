@@ -28,7 +28,7 @@ namespace ConsoleApplication1
     }
 }
 """;
-            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.s_missingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
 
             await testContext.RunAsync();
         }
@@ -59,7 +59,7 @@ namespace ConsoleApplication1
     }
 }
 """;
-            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.s_missingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
 
             await testContext.RunAsync();
         }
@@ -87,7 +87,7 @@ namespace ConsoleApplication1
     }
 }
 """;
-            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.s_consistentRandomPartitionerRule).WithLocation(0));
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.ConsistentRandomPartitionerRule).WithLocation(0));
 
             await testContext.RunAsync();
         }
@@ -115,7 +115,7 @@ namespace ConsoleApplication1
     }
 }
 """;
-            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.s_consistentPartitionerRule).WithLocation(0));
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.ConsistentPartitionerRule).WithLocation(0));
 
             await testContext.RunAsync();
         }
@@ -144,6 +144,69 @@ namespace ConsoleApplication1
 }
 """;
             
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_KafkaPublication_Without_Partitioner_Is_Nested_In_Another_Object_Creation_Should_Report_Once_At_Publication()
+        {
+            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
+
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class Holder
+    {
+        public Holder(KafkaPublication publication) { }
+    }
+
+    class TypeName
+    {
+        public void Method()
+        {
+            var holder = new Holder({|#0:new KafkaPublication()|});
+        }
+    }
+}
+""";
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
+
+            await testContext.RunAsync();
+        }
+
+        [Fact]
+        public async Task When_KafkaPublication_With_Consistent_Is_Nested_In_Another_Object_Creation_Should_Report_Once_At_Publication()
+        {
+            testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
+
+            testContext.TestCode = /* lang=c#-test */ """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class Holder
+    {
+        public Holder(KafkaPublication publication) { }
+    }
+
+    class TypeName
+    {
+        public void Method()
+        {
+            var holder = new Holder({|#0:new KafkaPublication
+            {
+                Partitioner = Partitioner.Consistent
+            }|});
+        }
+    }
+}
+""";
+            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.ConsistentPartitionerRule).WithLocation(0));
+
             await testContext.RunAsync();
         }
     }

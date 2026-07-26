@@ -33,6 +33,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Formatting;
+using Microsoft.CodeAnalysis.Simplification;
 
 namespace Paramore.Brighter.Analyzer.CodeFixes;
 
@@ -79,9 +80,10 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
             SyntaxKind.SimpleAssignmentExpression,
             SyntaxFactory.IdentifierName(BrighterAnalyzerGlobals.PartitionerProperty),
             SyntaxFactory.MemberAccessExpression(
-                SyntaxKind.SimpleMemberAccessExpression,
-                SyntaxFactory.IdentifierName(BrighterAnalyzerGlobals.PartitionerEnum),
-                SyntaxFactory.IdentifierName(target)));
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    SyntaxFactory.ParseName($"{BrighterAnalyzerGlobals.KafkaMessagingGatewayNamespace}.{BrighterAnalyzerGlobals.PartitionerEnum}"),
+                    SyntaxFactory.IdentifierName(target))
+                .WithAdditionalAnnotations(Simplifier.Annotation));
 
         var initializer = objectCreation.Initializer == null
             ? SyntaxFactory.InitializerExpression(
@@ -96,6 +98,8 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
         var newRoot = root!.ReplaceNode(objectCreation, newObjectCreation);
         var formatted = Formatter.Format(newRoot, Formatter.Annotation, document.Project.Solution.Workspace, cancellationToken: cancellationToken);
 
-        return document.WithSyntaxRoot(formatted);
+        // Reduce the fully qualified Partitioner reference where the using is
+        // already present; otherwise keep it qualified so the fix always compiles.
+        return await Simplifier.ReduceAsync(document.WithSyntaxRoot(formatted), Simplifier.Annotation, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

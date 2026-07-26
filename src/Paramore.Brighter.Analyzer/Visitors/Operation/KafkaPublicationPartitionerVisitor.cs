@@ -42,11 +42,14 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
         {
             PublicationName = operation.Type.Name;
             IsKafkaPublication = true;
-        }
 
-        // base walks the children (including the initializer), which drives
-        // VisitSimpleAssignment for any Partitioner assignment.
-        base.VisitObjectCreation(operation);
+            // base walks the children (including the initializer), which drives
+            // VisitSimpleAssignment for any Partitioner assignment. Only descend
+            // when this operation is the KafkaPublication itself; descending into
+            // unrelated object creations would pick up nested publications and
+            // report the diagnostic at the wrong location.
+            base.VisitObjectCreation(operation);
+        }
     }
 
     public override void VisitSimpleAssignment(ISimpleAssignmentOperation operation)

@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 /* The MIT License (MIT)
 Copyright © 2026 Aboubakr Nasef <aboubakrnasef@gmail.com>
 
@@ -30,6 +30,7 @@ public class BrighterAnalyzerGlobals
     public const string KafkaPublicationClassName = "KafkaPublication";
     public const string BrighterAssembly = "Paramore.Brighter";
     public const string KafkaMessagingGatewayAssembly = "Paramore.Brighter.MessagingGateway.Kafka";
+    public const string KafkaMessagingGatewayNamespace = "Paramore.Brighter.MessagingGateway.Kafka";
     public const string RequestTypeProperty = "RequestType";
     public const string PartitionerProperty = "Partitioner";
     public const string PartitionerEnum = "Partitioner";
