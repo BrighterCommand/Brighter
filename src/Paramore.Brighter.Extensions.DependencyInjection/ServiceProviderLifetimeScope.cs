@@ -287,15 +287,19 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 toDispose.Add(scope);
 
             //once the last scope for this instance is drained, stop retaining the instance as a key.
-            //Remove only this exact (now-empty) stack; if a concurrent GetTransient pushed onto it in
-            //the window after the emptiness check, the removed stack is non-empty, so re-drain to keep
-            //that scope from being orphaned by the removal
+            //Remove only this exact (now-empty) stack. A concurrent GetTransient can GetOrAdd this same
+            //still-keyed stack and push onto it in the window between the emptiness check and the Remove;
+            //Remove matches the entry by the stack's reference, not its emptiness, so it still succeeds and
+            //detaches a stack that is no longer empty. Those pushed scopes back a resolution GetTransient
+            //has already returned to a live caller, so re-home them under the instance key for that
+            //caller's own later Release — disposing them here would tear down state still in use (a
+            //use-after-dispose), the one failure mode worse than the leak this removal guards against.
             if (scopes.IsEmpty &&
                 ((ICollection<KeyValuePair<object, ConcurrentStack<IServiceScope>>>)_transientScopes)
                     .Remove(new KeyValuePair<object, ConcurrentStack<IServiceScope>>(instance, scopes)))
             {
                 while (scopes.TryPop(out var raced))
-                    toDispose.Add(raced);
+                    _transientScopes.GetOrAdd(instance, static _ => new ConcurrentStack<IServiceScope>()).Push(raced);
             }
 
             return toDispose;
