@@ -1,5 +1,10 @@
+is_global = true
+
 dotnet_diagnostic.BRT001.severity = none
 dotnet_diagnostic.BRT002.severity = none
 dotnet_diagnostic.BRT003.severity = none
 dotnet_diagnostic.BRT004.severity = none
 dotnet_diagnostic.BRT005.severity = none
+dotnet_diagnostic.BRT006.severity = none
+dotnet_diagnostic.BRT007.severity = none
+dotnet_diagnostic.BRT008.severity = none

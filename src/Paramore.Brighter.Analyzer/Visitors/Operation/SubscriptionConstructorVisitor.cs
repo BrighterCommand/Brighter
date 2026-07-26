@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 /* The MIT License (MIT)
 Copyright © 2026 Aboubakr Nasef <aboubakrnasef@gmail.com>
 
@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Analyzer.Visitors.Operation
     public class SubscriptionConstructorVisitor : OperationWalker
     {
         public bool IsMessagePumpDefault { get; private set; } = false;
-        public string SubscriptionName { get; private set; }
+        public string? SubscriptionName { get; private set; }
         public bool IsSubscriptionType { get; private set; }
 
         public override void VisitObjectCreation(IObjectCreationOperation operation)
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Analyzer.Visitors.Operation
         }
         public override void VisitArgument(IArgumentOperation operation)
         {
-            if (operation.Value.Type.Name == BrighterAnalyzerGlobals.MessagePumpTypeEnumName && operation.ArgumentKind == ArgumentKind.DefaultValue)
+            if (operation.Value.Type?.Name == BrighterAnalyzerGlobals.MessagePumpTypeEnumName && operation.ArgumentKind == ArgumentKind.DefaultValue)
             {
                 IsMessagePumpDefault = true;
             }

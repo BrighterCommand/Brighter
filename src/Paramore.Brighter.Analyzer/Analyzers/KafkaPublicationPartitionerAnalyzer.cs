@@ -177,7 +177,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
     // below KafkaPublication itself are considered; its own Partitioner default is
     // exactly what BRT006 flags as implicit.
     private static bool SetsPartitionerInConstructor(
-        ITypeSymbol type,
+        ITypeSymbol? type,
         INamedTypeSymbol kafkaPublicationSymbol,
         ConcurrentDictionary<INamedTypeSymbol, bool> constructorCheckCache,
         CancellationToken cancellationToken)
@@ -186,11 +186,9 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
              current != null && !SymbolEqualityComparer.Default.Equals(current.OriginalDefinition, kafkaPublicationSymbol);
              current = current.BaseType)
         {
-            if (!constructorCheckCache.TryGetValue(current, out var assigns))
-            {
-                assigns = current.InstanceConstructors.Any(constructor => ConstructorAssignsPartitioner(constructor, cancellationToken));
-                constructorCheckCache[current] = assigns;
-            }
+            var assigns = constructorCheckCache.GetOrAdd(
+                current,
+                symbol => symbol.InstanceConstructors.Any(constructor => ConstructorAssignsPartitioner(constructor, cancellationToken)));
 
             if (assigns)
             {
@@ -280,12 +278,12 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
     // later in the same block, e.g.:
     //     var publication = new KafkaPublication();
     //     publication.Partitioner = Partitioner.Murmur2Random;
-    // Works for locals, fields, properties and parameters. Assignments made
-    // before the construction, or elsewhere (helper methods, other blocks),
-    // are not tracked.
+    // Works for locals, fields, properties and parameters, and sees assignments
+    // inside nested blocks (if/else/loops). Assignments made before the
+    // construction, or elsewhere (helper methods, other blocks), are not tracked.
     private static bool HasPartitionerAssignmentAfterConstruction(IObjectCreationOperation operation)
     {
-        ISymbol symbol = operation.Parent switch
+        ISymbol? symbol = operation.Parent switch
         {
             IVariableInitializerOperation { Parent: IVariableDeclaratorOperation declarator } => declarator.Symbol,
             ISimpleAssignmentOperation { Target: ILocalReferenceOperation localReference } => localReference.Local,
@@ -300,9 +298,6 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
             return false;
         }
 
-        // Only the nearest enclosing block is searched; an assignment inside a
-        // nested block (e.g. an if) still triggers BRT006 — a documented
-        // limitation (see BRT006.md).
         var ancestor = operation.Parent;
         while (ancestor != null && ancestor is not IBlockOperation)
         {
@@ -314,9 +309,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
             return false;
         }
 
-        return block.Operations
-            .OfType<IExpressionStatementOperation>()
-            .Select(statement => statement.Operation)
+        return block.Descendants()
             .OfType<ISimpleAssignmentOperation>()
             // Field/property targets are compared by symbol, not instance: an
             // assignment through another object sharing the field (a.Pub vs b.Pub)
@@ -328,7 +321,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
                 IsReferenceTo(propertyReference.Instance, symbol));
     }
 
-    private static bool IsReferenceTo(IOperation instance, ISymbol symbol)
+    private static bool IsReferenceTo(IOperation? instance, ISymbol symbol)
     {
         return instance switch
         {

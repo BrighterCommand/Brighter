@@ -25,6 +25,10 @@
 
   <ItemGroup>
     <None Update="tools\*.ps1" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="" />
+    <!-- Ship the BrighterAnalysisMode switch: the props is auto-imported by NuGet
+         (must match the PackageId) and wires the global analyzer configs. -->
+    <None Include="build\Paramore.Brighter.Analyzer.Package.props" Pack="true" PackagePath="build" />
+    <None Include="configuration\*.editorconfig" Pack="true" PackagePath="configuration" />
   </ItemGroup>
 
   <Target Name="_AddAnalyzersToOutput">

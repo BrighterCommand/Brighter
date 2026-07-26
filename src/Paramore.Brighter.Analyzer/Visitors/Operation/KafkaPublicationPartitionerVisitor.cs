@@ -41,14 +41,14 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
     public bool IsPartitionerAssigned { get; private set; }
     public bool IsConsistentRandom { get; private set; }
     public bool IsConsistent { get; private set; }
-    public string PublicationName { get; private set; }
-    public Location PartitionerAssignmentLocation { get; private set; }
+    public string? PublicationName { get; private set; }
+    public Location? PartitionerAssignmentLocation { get; private set; }
 
     public override void VisitObjectCreation(IObjectCreationOperation operation)
     {
         if (IsKafkaPublicationType(operation.Type, _kafkaPublicationSymbol))
         {
-            PublicationName = operation.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+            PublicationName = operation.Type!.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
 
             // base walks the children (including the initializer), which drives
             // VisitSimpleAssignment for any Partitioner assignment. Only descend
@@ -86,7 +86,7 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
     }
 
     // Type can be null for erroneous code in the IDE; treat it as no match.
-    internal static bool IsKafkaPublicationType(ITypeSymbol type, INamedTypeSymbol kafkaPublicationSymbol)
+    internal static bool IsKafkaPublicationType(ITypeSymbol? type, INamedTypeSymbol kafkaPublicationSymbol)
     {
         for (var current = type; current != null; current = current.BaseType)
         {
@@ -99,7 +99,7 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
         return false;
     }
 
-    internal static string GetPartitionerValueName(IOperation value, INamedTypeSymbol partitionerEnumSymbol)
+    internal static string? GetPartitionerValueName(IOperation value, INamedTypeSymbol partitionerEnumSymbol)
     {
         // Unwrap an implicit conversion (e.g. enum widening) if present.
         if (value is IConversionOperation conversion)

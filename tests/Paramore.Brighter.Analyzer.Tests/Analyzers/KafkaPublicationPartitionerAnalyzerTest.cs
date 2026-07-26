@@ -763,4 +763,36 @@ namespace ConsoleApplication1
 
         await testContext.RunAsync();
     }
+
+    [Fact]
+    public async Task When_Consistent_Is_Set_In_Nested_Block_Should_Report_Only_Warning_At_Assignment()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method(bool legacy)
+        {
+            var publication = new KafkaPublication();
+            if (legacy)
+            {
+                {|#0:publication.Partitioner = Partitioner.Consistent|};
+            }
+        }
+    }
+}
+""";
+        testContext.ExpectedDiagnostics.Add(
+            new DiagnosticResult(
+                KafkaPublicationPartitionerAnalyzer.ConsistentPartitionerRule
+            ).WithLocation(0)
+        );
+
+        await testContext.RunAsync();
+    }
 }

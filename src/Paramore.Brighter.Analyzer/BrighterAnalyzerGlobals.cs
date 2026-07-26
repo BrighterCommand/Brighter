@@ -29,11 +29,6 @@ public class BrighterAnalyzerGlobals
     public const string PublicationClassName = "Publication";
     public const string KafkaPublicationClassName = "KafkaPublication";
     public const string BrighterAssembly = "Paramore.Brighter";
-    public const string KafkaMessagingGatewayAssembly = "Paramore.Brighter.MessagingGateway.Kafka";
-
-    // The Kafka namespace happens to equal the assembly name today; keep them as
-    // separate constants so renaming the assembly can't silently break code that
-    // needs the namespace (metadata names, generated qualified references).
     public const string KafkaNamespace = "Paramore.Brighter.MessagingGateway.Kafka";
     public const string RequestTypeProperty = "RequestType";
 

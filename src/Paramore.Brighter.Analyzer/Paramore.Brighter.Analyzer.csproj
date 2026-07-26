@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>$(BrighterNetStandardTargetFrameworks)</TargetFrameworks>
@@ -6,6 +6,7 @@
     <Description>Analyzers for the brighter library</Description>
     <PackageTags>Analyzer;Scheduler;Message Scheduling;Command Processor;Brighter</PackageTags>
     <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <developmentDependency>true</developmentDependency>
   </PropertyGroup>

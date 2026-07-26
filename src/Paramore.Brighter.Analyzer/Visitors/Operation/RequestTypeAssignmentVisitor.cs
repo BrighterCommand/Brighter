@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 /* The MIT License (MIT)
 Copyright © 2026 Aboubakr Nasef <aboubakrnasef@gmail.com>
 
@@ -34,10 +34,10 @@ namespace Paramore.Brighter.Analyzer.Visitors.Operation
     {
         public bool IsPublicationType { get; private set; }
         public bool IsRequestTypeAssigned { get; private set; }
-        public string PublicationName { get; private set; }
+        public string? PublicationName { get; private set; }
         public bool IsNotTypeOfIRequest { get; private set; }
-        public Location TypeOfLocation { get; private set; }
-        public string TypeOfName { get; private set; }
+        public Location? TypeOfLocation { get; private set; }
+        public string? TypeOfName { get; private set; }
 
         public override void VisitObjectCreation(IObjectCreationOperation operation)
         {
