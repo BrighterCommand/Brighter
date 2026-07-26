@@ -78,7 +78,7 @@ public class PartitionerValueCodeFixProvider : CodeFixProvider
 
             context.RegisterCodeFix(
                 CodeAction.Create(
-                    title: $"Use 'Partitioner.{target}'",
+                    title: $"Use 'Partitioner.{target}' (re-partitions the topic)",
                     createChangedDocument: ct => ReplacePartitionerValueAsync(context.Document, assignment, target, ct),
                     equivalenceKey: $"{nameof(PartitionerValueCodeFixProvider)}:{target}"),
                 diagnostic);

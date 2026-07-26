@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -53,7 +53,7 @@ builder.Services.AddBrighter(options =>
                         Topic = new RoutingKey("task.update"),
                         Type = new CloudEventsType("io.goparamore.task.created"),
                         // Murmur2Random is recommended: its MurmurHash2 hash spreads keys evenly across
-                        // partitions, avoiding hot partitions, and matches the standard Kafka client default
+                        // partitions, avoiding hot partitions
                         Partitioner = Partitioner.Murmur2Random,
                         NumPartitions = 3,
                         MessageSendMaxRetries = 3,
@@ -65,7 +65,7 @@ builder.Services.AddBrighter(options =>
                         Topic = new RoutingKey("task.update"),
                         Type = new CloudEventsType("io.goparamore.task.updated"),
                         // Murmur2Random is recommended: its MurmurHash2 hash spreads keys evenly across
-                        // partitions, avoiding hot partitions, and matches the standard Kafka client default
+                        // partitions, avoiding hot partitions
                         Partitioner = Partitioner.Murmur2Random,
                         NumPartitions = 3,
                         MessageSendMaxRetries = 3,

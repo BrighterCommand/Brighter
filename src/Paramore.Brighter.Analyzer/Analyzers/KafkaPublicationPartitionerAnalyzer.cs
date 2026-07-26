@@ -23,8 +23,10 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -91,8 +93,12 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
                 return;
             }
 
+            // Memoises the constructor inspection per type, so a subclass
+            // instantiated in many places is only walked once per compilation.
+            var constructorCheckCache = new ConcurrentDictionary<INamedTypeSymbol, bool>(SymbolEqualityComparer.Default);
+
             compilationContext.RegisterOperationAction(
-                operationContext => AnalyzerObjectCreation(operationContext, kafkaPublicationSymbol, partitionerEnumSymbol),
+                operationContext => AnalyzerObjectCreation(operationContext, kafkaPublicationSymbol, partitionerEnumSymbol, constructorCheckCache),
                 OperationKind.ObjectCreation);
             compilationContext.RegisterOperationAction(
                 operationContext => AnalyzeAssignment(operationContext, kafkaPublicationSymbol, partitionerEnumSymbol),
@@ -103,7 +109,8 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
     private static void AnalyzerObjectCreation(
         OperationAnalysisContext context,
         INamedTypeSymbol kafkaPublicationSymbol,
-        INamedTypeSymbol partitionerEnumSymbol)
+        INamedTypeSymbol partitionerEnumSymbol,
+        ConcurrentDictionary<INamedTypeSymbol, bool> constructorCheckCache)
     {
         var operation = (IObjectCreationOperation)context.Operation;
 
@@ -120,7 +127,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         if (!visitor.IsPartitionerAssigned)
         {
             if (HasPartitionerAssignmentAfterConstruction(operation) ||
-                SetsPartitionerInConstructor(operation.Type, kafkaPublicationSymbol))
+                SetsPartitionerInConstructor(operation.Type, kafkaPublicationSymbol, constructorCheckCache, context.CancellationToken))
             {
                 // The partitioner is set on the instance after construction or by
                 // the type's own constructor; any discouraged value is reported
@@ -130,7 +137,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
 
             context.ReportDiagnostic(Diagnostic.Create(
                 MissingPartitionerRule,
-                context.Operation.Syntax.GetLocation(),
+                GetCreationLocation(operation.Syntax),
                 visitor.PublicationName));
         }
         else if (visitor.IsConsistentRandom)
@@ -147,6 +154,19 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         }
     }
 
+    // Report on the type name (or the `new` keyword for a target-typed new)
+    // rather than the whole creation, so a large initializer isn't squiggled
+    // in full.
+    private static Location GetCreationLocation(SyntaxNode creationSyntax)
+    {
+        return creationSyntax switch
+        {
+            ObjectCreationExpressionSyntax objectCreation => objectCreation.Type.GetLocation(),
+            ImplicitObjectCreationExpressionSyntax implicitCreation => implicitCreation.NewKeyword.GetLocation(),
+            _ => creationSyntax.GetLocation()
+        };
+    }
+
     // A subclass can set the partitioner in its own constructor, e.g.:
     //     class OrdersPublication : KafkaPublication
     //     {
@@ -158,18 +178,23 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
     // exactly what BRT006 flags as implicit.
     private static bool SetsPartitionerInConstructor(
         ITypeSymbol type,
-        INamedTypeSymbol kafkaPublicationSymbol)
+        INamedTypeSymbol kafkaPublicationSymbol,
+        ConcurrentDictionary<INamedTypeSymbol, bool> constructorCheckCache,
+        CancellationToken cancellationToken)
     {
         for (var current = type as INamedTypeSymbol;
              current != null && !SymbolEqualityComparer.Default.Equals(current.OriginalDefinition, kafkaPublicationSymbol);
              current = current.BaseType)
         {
-            foreach (var constructor in current.InstanceConstructors)
+            if (!constructorCheckCache.TryGetValue(current, out var assigns))
             {
-                if (ConstructorAssignsPartitioner(constructor))
-                {
-                    return true;
-                }
+                assigns = current.InstanceConstructors.Any(constructor => ConstructorAssignsPartitioner(constructor, cancellationToken));
+                constructorCheckCache[current] = assigns;
+            }
+
+            if (assigns)
+            {
+                return true;
             }
         }
 
@@ -181,11 +206,11 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
     // In a KafkaPublication subclass constructor an unqualified `Partitioner` can
     // only bind to the inherited property or a local of the same name — the latter
     // is contrived and accepted.
-    private static bool ConstructorAssignsPartitioner(IMethodSymbol constructor)
+    private static bool ConstructorAssignsPartitioner(IMethodSymbol constructor, CancellationToken cancellationToken)
     {
         foreach (var syntaxReference in constructor.DeclaringSyntaxReferences)
         {
-            var assignsPartitioner = syntaxReference.GetSyntax()
+            var assignsPartitioner = syntaxReference.GetSyntax(cancellationToken)
                 .DescendantNodes()
                 .OfType<AssignmentExpressionSyntax>()
                 .Any(assignment => assignment.Left switch

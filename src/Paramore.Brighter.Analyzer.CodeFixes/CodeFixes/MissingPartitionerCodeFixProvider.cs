@@ -55,7 +55,7 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
         foreach (var diagnostic in context.Diagnostics)
         {
             var objectCreation = root.FindNode(diagnostic.Location.SourceSpan)
-                .DescendantNodesAndSelf()
+                .AncestorsAndSelf()
                 .OfType<BaseObjectCreationExpressionSyntax>()
                 .FirstOrDefault();
 
@@ -66,7 +66,7 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
 
             context.RegisterCodeFix(
                 CodeAction.Create(
-                    title: $"Set 'Partitioner' to 'Partitioner.{BrighterAnalyzerGlobals.Murmur2RandomPartitionerValue}'",
+                    title: $"Set 'Partitioner' to 'Partitioner.{BrighterAnalyzerGlobals.Murmur2RandomPartitionerValue}' (re-partitions the topic)",
                     createChangedDocument: ct => AddPartitionerAsync(context.Document, objectCreation, ct),
                     equivalenceKey: nameof(MissingPartitionerCodeFixProvider)),
                 diagnostic);
@@ -89,11 +89,23 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
                     SyntaxFactory.IdentifierName(BrighterAnalyzerGlobals.Murmur2RandomPartitionerValue))
                 .WithAdditionalAnnotations(Simplifier.Annotation));
 
-        var initializer = objectCreation.Initializer == null
-            ? SyntaxFactory.InitializerExpression(
+        InitializerExpressionSyntax initializer;
+        if (objectCreation.Initializer == null)
+        {
+            initializer = SyntaxFactory.InitializerExpression(
                 SyntaxKind.ObjectInitializerExpression,
-                SyntaxFactory.SingletonSeparatedList<ExpressionSyntax>(assignment))
-            : AddInitializerExpression(objectCreation.Initializer, assignment);
+                SyntaxFactory.SingletonSeparatedList<ExpressionSyntax>(assignment));
+        }
+        else if (objectCreation.Initializer.Expressions.Count == 0)
+        {
+            // new KafkaPublication { } — keep the existing (empty) braces and trivia.
+            initializer = objectCreation.Initializer.WithExpressions(
+                SyntaxFactory.SingletonSeparatedList<ExpressionSyntax>(assignment));
+        }
+        else
+        {
+            initializer = AddInitializerExpression(objectCreation.Initializer, assignment);
+        }
 
         var newObjectCreation = objectCreation
             .WithInitializer(initializer)
@@ -118,7 +130,24 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
         // and the newline before the closing brace moves behind the new expression.
         // Comments stay with the expression they document: anything before the final
         // newline (e.g. "// one per shard") becomes the separator's trailing trivia.
-        var lastExpression = initializer.Expressions.Last();
+        var expressions = initializer.Expressions;
+
+        // Fold a trailing comma ("{ A = 1, B = 2, }") away first: its trivia
+        // (typically the newline before the closing brace) moves onto the last
+        // expression so the branches below see a normal list.
+        var nodesAndTokens = expressions.GetWithSeparators();
+        if (nodesAndTokens.Count > 0 && nodesAndTokens[nodesAndTokens.Count - 1].IsToken)
+        {
+            var trailingSeparator = nodesAndTokens[nodesAndTokens.Count - 1].AsToken();
+            nodesAndTokens = nodesAndTokens.RemoveAt(nodesAndTokens.Count - 1);
+            nodesAndTokens = nodesAndTokens.Replace(
+                nodesAndTokens[nodesAndTokens.Count - 1],
+                ((ExpressionSyntax)nodesAndTokens[nodesAndTokens.Count - 1].AsNode())
+                    .WithTrailingTrivia(trailingSeparator.TrailingTrivia));
+            expressions = SyntaxFactory.SeparatedList<ExpressionSyntax>(nodesAndTokens);
+        }
+
+        var lastExpression = expressions.Last();
         var trailingTrivia = lastExpression.GetTrailingTrivia();
 
         var beforeEndOfLine = trailingTrivia.TakeWhile(t => !t.IsKind(SyntaxKind.EndOfLineTrivia)).ToList();
@@ -142,21 +171,21 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
         else
         {
             separatorTrailingTrivia = SyntaxFactory.TriviaList(beforeEndOfLine);
-            var leadingTrivia = initializer.Expressions.Count > 1
-                ? initializer.Expressions.GetSeparator(initializer.Expressions.Count - 2).TrailingTrivia
+            var leadingTrivia = expressions.Count > 1
+                ? expressions.GetSeparator(expressions.Count - 2).TrailingTrivia
                 : initializer.OpenBraceToken.TrailingTrivia;
             newExpression = expression
                 .WithLeadingTrivia(leadingTrivia)
                 .WithTrailingTrivia(fromEndOfLine);
         }
 
-        var expressions = initializer.Expressions
+        expressions = expressions
             .Replace(lastExpression, lastExpression.WithoutTrailingTrivia())
             .Add(newExpression);
 
         if (separatorTrailingTrivia.Count > 0)
         {
-            var nodesAndTokens = expressions.GetWithSeparators();
+            nodesAndTokens = expressions.GetWithSeparators();
             var separator = nodesAndTokens[nodesAndTokens.Count - 2].AsToken().WithTrailingTrivia(separatorTrailingTrivia);
             nodesAndTokens = nodesAndTokens.Replace(nodesAndTokens[nodesAndTokens.Count - 2], separator);
             expressions = SyntaxFactory.SeparatedList<ExpressionSyntax>(nodesAndTokens);

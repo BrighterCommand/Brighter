@@ -82,7 +82,7 @@ var host = new HostBuilder()
                     {
                         Topic = new RoutingKey("order.created"),
                         // Murmur2Random is recommended: its MurmurHash2 hash spreads keys evenly across
-                        // partitions, avoiding hot partitions, and matches the standard Kafka client default
+                        // partitions, avoiding hot partitions
                         Partitioner = Partitioner.Murmur2Random,
                         NumPartitions = 3,
                         MessageSendMaxRetries = 3,

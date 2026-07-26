@@ -1,4 +1,4 @@
-using Confluent.Kafka;
+﻿using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
@@ -98,7 +98,7 @@ public static class ConfigureTransport
                         Topic = new RoutingKey(typeof(T).Name),
                         RequestType = typeof(T),
                         // Murmur2Random is recommended: its MurmurHash2 hash spreads keys evenly across
-                        // partitions, avoiding hot partitions, and matches the standard Kafka client default
+                        // partitions, avoiding hot partitions
                         Partitioner = Paramore.Brighter.MessagingGateway.Kafka.Partitioner.Murmur2Random,
                         MessageSendMaxRetries = 3,
                         MessageTimeoutMs = 1000,

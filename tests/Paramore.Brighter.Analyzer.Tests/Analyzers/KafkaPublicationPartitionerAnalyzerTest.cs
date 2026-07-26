@@ -21,7 +21,7 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = {|#0:new KafkaPublication()|};
+            var publication = new {|#0:KafkaPublication|}();
         }
     }
 }
@@ -55,7 +55,7 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = {|#0:new KafkaPublication<MyRequest>()|};
+            var publication = new {|#0:KafkaPublication<MyRequest>|}();
         }
     }
 }
@@ -176,7 +176,7 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var holder = new Holder({|#0:new KafkaPublication()|});
+            var holder = new Holder(new {|#0:KafkaPublication|}());
         }
     }
 }
@@ -271,13 +271,13 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = {|#0:new KafkaPublication
+            var publication = new {|#0:KafkaPublication|}
             {
                 DefaultHeaders = new System.Collections.Generic.Dictionary<string, object>
                 {
                     ["key"] = new Config { Partitioner = 3 }
                 }
-            }|};
+            };
         }
     }
 }
@@ -413,7 +413,7 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = {|#0:new MyPublication()|};
+            var publication = new {|#0:MyPublication|}();
         }
     }
 }
@@ -470,7 +470,7 @@ namespace ConsoleApplication1
         public void Method()
         {
             _publication.Partitioner = Partitioner.Murmur2Random;
-            _publication = {|#0:new KafkaPublication()|};
+            _publication = new {|#0:KafkaPublication|}();
         }
     }
 }
@@ -498,7 +498,7 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            KafkaPublication publication = {|#0:new()|};
+            KafkaPublication publication = {|#0:new|}();
         }
     }
 }
