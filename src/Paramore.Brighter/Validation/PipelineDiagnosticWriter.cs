@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
@@ -43,13 +44,33 @@ public class PipelineDiagnosticWriter(
     PipelineBuilder<IRequest> pipelineBuilder,
     MessageMapperRegistry? mapperRegistry = null,
     IEnumerable<Publication>? publications = null,
-    IEnumerable<Subscription>? subscriptions = null) : IAmAPipelineDiagnosticWriter
+    IEnumerable<Subscription>? subscriptions = null) : IAmAPipelineDiagnosticWriter, IDisposable
 {
+    private bool _disposed;
     private readonly ILogger _logger = logger;
     private readonly PipelineBuilder<IRequest> _pipelineBuilder = pipelineBuilder;
     private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistry;
     private readonly IEnumerable<Publication>? _publications = publications;
     private readonly IEnumerable<Subscription>? _subscriptions = subscriptions;
+
+    /// <summary>
+    /// Disposes the mapper registry this writer built to describe publication transforms.
+    /// </summary>
+    /// <remarks>
+    /// The writer is a singleton that owns its diagnostic-time <see cref="MessageMapperRegistry"/>; the
+    /// container disposes the writer at shutdown. Cascading to the registry drains the mapper factory (and
+    /// any scope it holds) rather than retaining it until the process exits. Idempotent.
+    /// </remarks>
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        _mapperRegistry?.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
 
     /// <inheritdoc />
     public void Describe()

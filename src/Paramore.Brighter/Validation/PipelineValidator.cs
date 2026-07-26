@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -49,8 +50,9 @@ public class PipelineValidator(
     IEnumerable<ISpecification<Subscription>>? consumerSpecs = null,
     ValidationProviderRegistrations? providerRegistrations = null,
     MessageMapperRegistry? mapperRegistry = null,
-    IAmATransformerResolvabilityProbe? transformerProbe = null) : IAmAPipelineValidator
+    IAmATransformerResolvabilityProbe? transformerProbe = null) : IAmAPipelineValidator, IDisposable
 {
+    private bool _disposed;
     private readonly PipelineBuilder<IRequest> _pipelineBuilder = pipelineBuilder;
     private readonly IEnumerable<Publication>? _publications = publications;
     private readonly IEnumerable<Subscription>? _subscriptions = subscriptions;
@@ -58,6 +60,25 @@ public class PipelineValidator(
     private readonly ValidationProviderRegistrations? _providerRegistrations = providerRegistrations;
     private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistry;
     private readonly IAmATransformerResolvabilityProbe? _transformerProbe = transformerProbe;
+
+    /// <summary>
+    /// Disposes the mapper registry this validator built for the wrap-transform check.
+    /// </summary>
+    /// <remarks>
+    /// The validator is a singleton that owns its validation-time <see cref="MessageMapperRegistry"/>; the
+    /// container disposes the validator at shutdown. Cascading to the registry drains the mapper factory (and
+    /// any scope it holds) rather than retaining it until the process exits. Idempotent.
+    /// </remarks>
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        _mapperRegistry?.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
 
     /// <inheritdoc />
     public PipelineValidationResult Validate()
