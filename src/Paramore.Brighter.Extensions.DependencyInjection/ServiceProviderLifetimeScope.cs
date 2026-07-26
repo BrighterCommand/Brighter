@@ -224,8 +224,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// on the next <see cref="GetOrCreate{T}"/>, so both are a no-op.
         /// </para>
         /// <para>
-        /// Releasing the same instance twice, or releasing an instance that was never tracked (a
-        /// non-disposable transient), is a safe no-op — nothing is disposed more than once.
+        /// Call <see cref="Release"/> exactly <b>once per creation</b>, matching the contract stated on
+        /// <see cref="GetTransient{T}"/> ("Release must be called once per creation"). Releasing an
+        /// instance that was never tracked is a harmless no-op; so is a stray extra release of a genuine
+        /// per-resolution transient, whose single scope has already been drained. But a shared instance
+        /// resolved under a Transient lifetime (e.g. a DI-<c>Singleton</c> returned to every resolution)
+        /// stacks one scope per <see cref="GetTransient{T}"/>: a spurious second release for one creation
+        /// pops the scope of <em>another</em> still-outstanding resolution and disposes it beneath a caller
+        /// that is still holding the instance. Over-releasing is therefore not a safe no-op in the
+        /// shared-instance case — release once for each <see cref="GetTransient{T}"/>, no more.
         /// </para>
         /// </summary>
         /// <remarks>

@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.MessageMappers;
@@ -220,5 +221,40 @@ public class UnwrapTransformResolvableTests
         Assert.False(satisfied);
         Assert.Single(results);
         Assert.Contains(nameof(MyDescribableTransform), results[0].Error!.Message);
+    }
+
+    [Fact]
+    public void When_the_specification_is_disposed_it_disposes_the_registry_it_owns()
+    {
+        // Arrange — PR #4254 review finding 3. The DI registration hands this rule a MessageMapperRegistry
+        // created solely for it, and registers the returned specification as a container-owned singleton.
+        // The specification must own that registry and dispose it when the container disposes the singleton,
+        // so the registry's factories (and any scopes an IoC-backed factory resolved) are drained rather
+        // than retained until process exit.
+        var factory = new DisposeTrackingMapperFactory();
+        var registry = new MessageMapperRegistry(factory, null);
+        registry.Register<MyDescribableCommand, MyDescribableCommandMessageMapper>();
+        TransformPipelineBuilder.ClearPipelineCache();
+
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(
+            registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+
+        // Act — stand in for the container disposing the singleton specification at shutdown
+        var disposable = Assert.IsAssignableFrom<IDisposable>(spec);
+        disposable.Dispose();
+
+        // Assert — the owned registry was disposed, cascading into its factory
+        Assert.True(factory.Disposed, "the specification did not dispose the registry it was given to own");
+    }
+
+    private sealed class DisposeTrackingMapperFactory : IAmAMessageMapperFactory, IDisposable
+    {
+        public bool Disposed { get; private set; }
+
+        public IAmAMessageMapper Create(System.Type messageMapperType) => null!;
+
+        public void Release(IAmAMessageMapper mapper) { }
+
+        public void Dispose() => Disposed = true;
     }
 }
