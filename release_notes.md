@@ -338,6 +338,13 @@ services.AddBrighter(options =>
 
 Under `Scoped`, every handler in the pipeline shares one `IServiceScope`, so a `Scoped` dependency is a single instance for the message — the pre-fix sharing behaviour.
 
+#### Other observable changes
+
+Two smaller changes that are unlikely to affect you but are observable:
+
+* **`IAmAMessageMapperRegistry.Get<TRequest>()` no longer registers the default mapper it falls back to.** When no mapper is registered for `TRequest`, `Get<TRequest>()` / `GetAsync<TRequest>()` still returns the default mapper, but now records that resolution in a separate cache rather than writing it into the registration table. So a fallback no longer answers *"a mapper is registered for `TRequest`"*, and a subsequent `Register<TRequest, TMapper>()` for that type **succeeds** where it previously threw `ArgumentException("… already has a mapper")`. An explicit `Register` still always wins on a later `Get`.
+* **Resolving a mapper or transform after its factory is disposed now throws `ObjectDisposedException`.** `ServiceProviderMapperFactory` / `ServiceProviderTransformerFactory` (through `ServiceProviderLifetimeScope.GetOrCreate`) previously returned an instance from an already-disposed factory; they now throw. In practice this only surfaces if an in-flight message resolves a mapper during host shutdown, after the factory has been disposed.
+
 ## Release 10.0.0
 
 With V10 we have made a number of significant changes to Brighter. There are breaking changes that you will need to be aware of. However, most of the changes required are straightforward to make. A summary of the most important changes:
