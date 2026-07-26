@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2017 Wayne Hunsley <whunsley@gmail.com>
@@ -62,6 +62,9 @@ builder.Services.AddBrighter(options =>
                     {
                         Topic = new RoutingKey("greeting.event"),
                         RequestType = typeof(GreetingEvent),
+                        // Murmur2Random is recommended: its MurmurHash2 hash spreads keys evenly across
+                        // partitions, avoiding hot partitions, and matches the standard Kafka client default
+                        Partitioner = Partitioner.Murmur2Random,
                         MessageSendMaxRetries = 3,
                         MessageTimeoutMs = 1000,
                         MaxInFlightRequestsPerConnection = 1

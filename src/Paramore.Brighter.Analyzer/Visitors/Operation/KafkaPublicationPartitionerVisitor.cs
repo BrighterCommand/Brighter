@@ -24,15 +24,19 @@ THE SOFTWARE. */
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Operations;
-using Paramore.Brighter.Analyzer.Visitors.Symbol;
 
 namespace Paramore.Brighter.Analyzer.Visitors.Operation;
 
 public class KafkaPublicationPartitionerVisitor : OperationWalker
 {
-    private static readonly ChildOfVisitor s_kafkaPublicationCheck = new(
-        BrighterAnalyzerGlobals.KafkaPublicationClassName,
-        BrighterAnalyzerGlobals.KafkaMessagingGatewayAssembly);
+    private readonly INamedTypeSymbol _kafkaPublicationSymbol;
+    private readonly INamedTypeSymbol _partitionerEnumSymbol;
+
+    public KafkaPublicationPartitionerVisitor(INamedTypeSymbol kafkaPublicationSymbol, INamedTypeSymbol partitionerEnumSymbol)
+    {
+        _kafkaPublicationSymbol = kafkaPublicationSymbol;
+        _partitionerEnumSymbol = partitionerEnumSymbol;
+    }
 
     public bool IsPartitionerAssigned { get; private set; }
     public bool IsConsistentRandom { get; private set; }
@@ -40,15 +44,9 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
     public string PublicationName { get; private set; }
     public Location PartitionerAssignmentLocation { get; private set; }
 
-    // Type can be null for erroneous code in the IDE; treat it as no match.
-    internal static bool IsKafkaPublicationType(ITypeSymbol type)
-    {
-        return type != null && type.Accept(s_kafkaPublicationCheck);
-    }
-
     public override void VisitObjectCreation(IObjectCreationOperation operation)
     {
-        if (IsKafkaPublicationType(operation.Type))
+        if (IsKafkaPublicationType(operation.Type, _kafkaPublicationSymbol))
         {
             PublicationName = operation.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
 
@@ -68,12 +66,12 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
     {
         if (operation.Target is IPropertyReferenceOperation propertyReference &&
             propertyReference.Property.Name == BrighterAnalyzerGlobals.PartitionerProperty &&
-            IsKafkaPublicationType(propertyReference.Property.ContainingType))
+            IsKafkaPublicationType(propertyReference.Property.ContainingType, _kafkaPublicationSymbol))
         {
             IsPartitionerAssigned = true;
             PartitionerAssignmentLocation = operation.Syntax.GetLocation();
 
-            switch (GetPartitionerValueName(operation.Value))
+            switch (GetPartitionerValueName(operation.Value, _partitionerEnumSymbol))
             {
                 case BrighterAnalyzerGlobals.ConsistentRandomPartitionerValue:
                     IsConsistentRandom = true;
@@ -87,7 +85,21 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
         base.VisitSimpleAssignment(operation);
     }
 
-    internal static string GetPartitionerValueName(IOperation value)
+    // Type can be null for erroneous code in the IDE; treat it as no match.
+    internal static bool IsKafkaPublicationType(ITypeSymbol type, INamedTypeSymbol kafkaPublicationSymbol)
+    {
+        for (var current = type; current != null; current = current.BaseType)
+        {
+            if (SymbolEqualityComparer.Default.Equals(current.OriginalDefinition, kafkaPublicationSymbol))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static string GetPartitionerValueName(IOperation value, INamedTypeSymbol partitionerEnumSymbol)
     {
         // Unwrap an implicit conversion (e.g. enum widening) if present.
         if (value is IConversionOperation conversion)
@@ -95,6 +107,12 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
             value = conversion.Operand;
         }
 
-        return value is IFieldReferenceOperation fieldReference ? fieldReference.Field.Name : null;
+        // Only fields of the Kafka Partitioner enum itself count; a user field
+        // that merely shares a member name (e.g. `Defaults.Consistent`) must not
+        // be treated as the enum value.
+        return value is IFieldReferenceOperation fieldReference &&
+               SymbolEqualityComparer.Default.Equals(fieldReference.Field.ContainingType, partitionerEnumSymbol)
+            ? fieldReference.Field.Name
+            : null;
     }
 }

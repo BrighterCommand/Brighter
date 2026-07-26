@@ -2,16 +2,15 @@
 using Paramore.Brighter.Analyzer.Analyzers;
 using Paramore.Brighter.Analyzer.Tests.Analyzers;
 
-namespace Paramore.Brighter.Analyzer.Test.Analyzers
+namespace Paramore.Brighter.Analyzer.Test.Analyzers;
+
+public class WrapAttributeAnalyzerTest : BaseAnalyzerTest<WrapAttributeAnalyzer>
 {
-    public class WrapAttributeAnalyzerTest: BaseAnalyzerTest<WrapAttributeAnalyzer>
+    [Fact]
+    public async Task When_Adding_Attribute_To_MessageMapper()
     {
-
-        [Fact]
-        public async Task When_Adding_Attribute_To_MessageMapper()
-        {
-
-            testContext.TestCode = /* lang=c#-test */ """
+        testContext.TestCode = /* lang=c#-test */
+            """
              using Paramore.Brighter;
             using Paramore.Brighter.Transforms.Attributes;
             namespace TestNamespace
@@ -38,9 +37,16 @@ namespace Paramore.Brighter.Analyzer.Test.Analyzers
             }
 """;
 
-           testContext.ExpectedDiagnostics.Add(new DiagnosticResult(WrapAttributeAnalyzer.WrapAttributeRule ).WithLocation(0).WithArguments("CompressAttribute"));
-           testContext.ExpectedDiagnostics.Add(new DiagnosticResult(WrapAttributeAnalyzer.UnWrapWithAttributeRule ).WithLocation(1).WithArguments("DecompressAttribute"));
-            await testContext.RunAsync();
-        }
+        testContext.ExpectedDiagnostics.Add(
+            new DiagnosticResult(WrapAttributeAnalyzer.WrapAttributeRule)
+                .WithLocation(0)
+                .WithArguments("CompressAttribute")
+        );
+        testContext.ExpectedDiagnostics.Add(
+            new DiagnosticResult(WrapAttributeAnalyzer.UnWrapWithAttributeRule)
+                .WithLocation(1)
+                .WithArguments("DecompressAttribute")
+        );
+        await testContext.RunAsync();
     }
 }

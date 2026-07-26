@@ -64,12 +64,10 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
                 continue;
             }
 
-            var target = BrighterAnalyzerGlobals.Murmur2RandomPartitionerValue;
-
             context.RegisterCodeFix(
                 CodeAction.Create(
-                    title: $"Set 'Partitioner' to 'Partitioner.{target}'",
-                    createChangedDocument: ct => AddPartitionerAsync(context.Document, objectCreation, target, ct),
+                    title: $"Set 'Partitioner' to 'Partitioner.{BrighterAnalyzerGlobals.Murmur2RandomPartitionerValue}'",
+                    createChangedDocument: ct => AddPartitionerAsync(context.Document, objectCreation, ct),
                     equivalenceKey: nameof(MissingPartitionerCodeFixProvider)),
                 diagnostic);
         }
@@ -78,7 +76,6 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
     private static async Task<Document> AddPartitionerAsync(
         Document document,
         BaseObjectCreationExpressionSyntax objectCreation,
-        string target,
         CancellationToken cancellationToken)
     {
         var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
@@ -89,7 +86,7 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
             SyntaxFactory.MemberAccessExpression(
                     SyntaxKind.SimpleMemberAccessExpression,
                     SyntaxFactory.ParseExpression($"{BrighterAnalyzerGlobals.KafkaNamespace}.{BrighterAnalyzerGlobals.PartitionerEnum}"),
-                    SyntaxFactory.IdentifierName(target))
+                    SyntaxFactory.IdentifierName(BrighterAnalyzerGlobals.Murmur2RandomPartitionerValue))
                 .WithAdditionalAnnotations(Simplifier.Annotation));
 
         var initializer = objectCreation.Initializer == null
@@ -124,29 +121,52 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
         var lastExpression = initializer.Expressions.Last();
         var trailingTrivia = lastExpression.GetTrailingTrivia();
 
-        var commentTrivia = trailingTrivia.TakeWhile(t => !t.IsKind(SyntaxKind.EndOfLineTrivia));
-        var endOfLineTrivia = trailingTrivia.SkipWhile(t => !t.IsKind(SyntaxKind.EndOfLineTrivia));
+        var beforeEndOfLine = trailingTrivia.TakeWhile(t => !t.IsKind(SyntaxKind.EndOfLineTrivia)).ToList();
+        var fromEndOfLine = trailingTrivia.SkipWhile(t => !t.IsKind(SyntaxKind.EndOfLineTrivia)).ToList();
 
-        var leadingTrivia = initializer.Expressions.Count > 1
-            ? initializer.Expressions.GetSeparator(initializer.Expressions.Count - 2).TrailingTrivia
-            : initializer.OpenBraceToken.TrailingTrivia;
-
-        var newExpression = expression
-            .WithLeadingTrivia(leadingTrivia)
-            .WithTrailingTrivia(endOfLineTrivia);
+        SyntaxTriviaList separatorTrailingTrivia;
+        ExpressionSyntax newExpression;
+        if (fromEndOfLine.Count == 0)
+        {
+            // Single-line initializer ("{ Topic = x }"): keep it on one line,
+            // with single spaces around the new expression.
+            separatorTrailingTrivia = beforeEndOfLine.Any(IsComment)
+                ? SyntaxFactory.TriviaList(beforeEndOfLine)
+                : default;
+            newExpression = expression
+                .WithLeadingTrivia(SyntaxFactory.TriviaList(SyntaxFactory.Space))
+                .WithTrailingTrivia(separatorTrailingTrivia.Count > 0
+                    ? SyntaxFactory.TriviaList(SyntaxFactory.Space)
+                    : SyntaxFactory.TriviaList(beforeEndOfLine));
+        }
+        else
+        {
+            separatorTrailingTrivia = SyntaxFactory.TriviaList(beforeEndOfLine);
+            var leadingTrivia = initializer.Expressions.Count > 1
+                ? initializer.Expressions.GetSeparator(initializer.Expressions.Count - 2).TrailingTrivia
+                : initializer.OpenBraceToken.TrailingTrivia;
+            newExpression = expression
+                .WithLeadingTrivia(leadingTrivia)
+                .WithTrailingTrivia(fromEndOfLine);
+        }
 
         var expressions = initializer.Expressions
             .Replace(lastExpression, lastExpression.WithoutTrailingTrivia())
             .Add(newExpression);
 
-        if (commentTrivia.Any())
+        if (separatorTrailingTrivia.Count > 0)
         {
             var nodesAndTokens = expressions.GetWithSeparators();
-            var separator = nodesAndTokens[nodesAndTokens.Count - 2].AsToken().WithTrailingTrivia(commentTrivia);
+            var separator = nodesAndTokens[nodesAndTokens.Count - 2].AsToken().WithTrailingTrivia(separatorTrailingTrivia);
             nodesAndTokens = nodesAndTokens.Replace(nodesAndTokens[nodesAndTokens.Count - 2], separator);
             expressions = SyntaxFactory.SeparatedList<ExpressionSyntax>(nodesAndTokens);
         }
 
         return initializer.WithExpressions(expressions);
+    }
+
+    private static bool IsComment(SyntaxTrivia trivia)
+    {
+        return trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia);
     }
 }

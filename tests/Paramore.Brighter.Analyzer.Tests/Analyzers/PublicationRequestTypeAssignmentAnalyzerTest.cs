@@ -2,17 +2,16 @@
 using Paramore.Brighter.Analyzer.Analyzers;
 using Paramore.Brighter.Analyzer.Tests.Analyzers;
 
+namespace Paramore.Brighter.Analyzer.Test.Analyzers;
 
-namespace Paramore.Brighter.Analyzer.Test.Analyzers
+public class PublicationRequestTypeAssignmentAnalyzerTest
+    : BaseAnalyzerTest<PublicationRequestTypeAssignmentAnalyzer>
 {
-    public class PublicationRequestTypeAssignmentAnalyzerTest : BaseAnalyzerTest<PublicationRequestTypeAssignmentAnalyzer>
+    [Fact]
+    public async Task When_Initializing_Publication_WithOut_RequestType()
     {
-
-        [Fact]
-        public async Task When_Initializing_Publication_WithOut_RequestType()
-        {
-
-            testContext.TestCode = /* lang=c#-test */ """
+        testContext.TestCode = /* lang=c#-test */
+            """
 using Paramore.Brighter;
 namespace TestNamespace
 {
@@ -24,14 +23,19 @@ var publication = {|#0:new PublicationTest()|};
         }
 """;
 
-            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(PublicationRequestTypeAssignmentAnalyzer.RequestTypeMissingRule).WithLocation(0).WithArguments("PublicationTest"));
-            await testContext.RunAsync();
-        }
+        testContext.ExpectedDiagnostics.Add(
+            new DiagnosticResult(PublicationRequestTypeAssignmentAnalyzer.RequestTypeMissingRule)
+                .WithLocation(0)
+                .WithArguments("PublicationTest")
+        );
+        await testContext.RunAsync();
+    }
 
-        [Fact]
-        public async Task When_Initializing_Publication_With_Right_RequestType()
-        {
-            testContext.TestCode = /* lang=c#-test */ """
+    [Fact]
+    public async Task When_Initializing_Publication_With_Right_RequestType()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
 using Paramore.Brighter;
 namespace TestNamespace
 {
@@ -51,13 +55,14 @@ RequestType = typeof(EventSample)
 }
         }
 """;
-            await testContext.RunAsync();
-        }
+        await testContext.RunAsync();
+    }
 
-        [Fact]
-        public async Task When_Initializing_Publication_With_Wrong_RequestType()
-        {
-            testContext.TestCode = /* lang=c#-test */ """
+    [Fact]
+    public async Task When_Initializing_Publication_With_Wrong_RequestType()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
 using Paramore.Brighter;
 namespace TestNamespace
 {
@@ -71,15 +76,20 @@ RequestType = {|#0:typeof(EventSample)|}
     public class EventSample{}
         }
 """;
-            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(PublicationRequestTypeAssignmentAnalyzer.WrongRequestTypeRule).WithLocation(0).WithArguments("EventSample"));
+        testContext.ExpectedDiagnostics.Add(
+            new DiagnosticResult(PublicationRequestTypeAssignmentAnalyzer.WrongRequestTypeRule)
+                .WithLocation(0)
+                .WithArguments("EventSample")
+        );
 
-            await testContext.RunAsync();
-        }
+        await testContext.RunAsync();
+    }
 
-        [Fact]
-        public async Task When_Initializing_Non_Publication_Type()
-        {
-            testContext.TestCode = /* lang=c#-test */ """
+    [Fact]
+    public async Task When_Initializing_Non_Publication_Type()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
             using System.Collections.Generic;
             namespace TestNamespace
             {
@@ -92,7 +102,6 @@ RequestType = {|#0:typeof(EventSample)|}
                 }
             }
 """;
-            await testContext.RunAsync();
-        }
+        await testContext.RunAsync();
     }
 }

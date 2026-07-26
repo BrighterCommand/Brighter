@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 using Paramore.Brighter.Analyzer.Visitors.Operation;
@@ -55,7 +56,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         category: PartitionerCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "'ConsistentRandom' can produce uneven key distribution and hot partitions; 'Murmur2Random' keeps distribution even. Existing publications can keep 'ConsistentRandom' to preserve their current partition assignment.",
+        description: "'Murmur2Random' spreads keys more evenly across partitions than the CRC32-based 'ConsistentRandom', avoiding hot partitions. Existing publications can keep 'ConsistentRandom' to preserve their current partition assignment.",
         helpLinkUri: "https://github.com/BrighterCommand/Brighter/blob/master/src/Paramore.Brighter.Analyzer/docs/BRT007.md"
     );
 
@@ -66,7 +67,7 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         category: PartitionerCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "'Consistent' can produce uneven key distribution and hot partitions; 'Murmur2' keeps distribution even. Existing publications can keep 'Consistent' to preserve their current partition assignment.",
+        description: "'Murmur2' spreads keys more evenly across partitions than the CRC32-based 'Consistent', avoiding hot partitions. Existing publications can keep 'Consistent' to preserve their current partition assignment.",
         helpLinkUri: "https://github.com/BrighterCommand/Brighter/blob/master/src/Paramore.Brighter.Analyzer/docs/BRT008.md"
     );
 
@@ -80,37 +81,50 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         {
             // Solutions that don't reference the Kafka gateway can never create a
             // KafkaPublication; don't pay for an operation callback there at all.
-            if (compilationContext.Compilation.GetTypeByMetadataName(
-                    $"{BrighterAnalyzerGlobals.KafkaNamespace}.{BrighterAnalyzerGlobals.KafkaPublicationClassName}") == null)
+            // Resolve the symbols once and compare by symbol from here on.
+            var kafkaPublicationSymbol = compilationContext.Compilation.GetTypeByMetadataName(
+                $"{BrighterAnalyzerGlobals.KafkaNamespace}.{BrighterAnalyzerGlobals.KafkaPublicationClassName}");
+            var partitionerEnumSymbol = compilationContext.Compilation.GetTypeByMetadataName(
+                $"{BrighterAnalyzerGlobals.KafkaNamespace}.{BrighterAnalyzerGlobals.PartitionerEnum}");
+            if (kafkaPublicationSymbol == null || partitionerEnumSymbol == null)
             {
                 return;
             }
 
-            compilationContext.RegisterOperationAction(AnalyzerObjectCreation, OperationKind.ObjectCreation);
-            compilationContext.RegisterOperationAction(AnalyzeAssignment, OperationKind.SimpleAssignment);
+            compilationContext.RegisterOperationAction(
+                operationContext => AnalyzerObjectCreation(operationContext, kafkaPublicationSymbol, partitionerEnumSymbol),
+                OperationKind.ObjectCreation);
+            compilationContext.RegisterOperationAction(
+                operationContext => AnalyzeAssignment(operationContext, kafkaPublicationSymbol, partitionerEnumSymbol),
+                OperationKind.SimpleAssignment);
         });
     }
 
-    private static void AnalyzerObjectCreation(OperationAnalysisContext context)
+    private static void AnalyzerObjectCreation(
+        OperationAnalysisContext context,
+        INamedTypeSymbol kafkaPublicationSymbol,
+        INamedTypeSymbol partitionerEnumSymbol)
     {
         var operation = (IObjectCreationOperation)context.Operation;
 
         // Cheap rejection before allocating the visitor; most object creations
         // in a compilation are not KafkaPublications.
-        if (!KafkaPublicationPartitionerVisitor.IsKafkaPublicationType(operation.Type))
+        if (!KafkaPublicationPartitionerVisitor.IsKafkaPublicationType(operation.Type, kafkaPublicationSymbol))
         {
             return;
         }
 
-        var visitor = new KafkaPublicationPartitionerVisitor();
+        var visitor = new KafkaPublicationPartitionerVisitor(kafkaPublicationSymbol, partitionerEnumSymbol);
         operation.Accept(visitor);
 
         if (!visitor.IsPartitionerAssigned)
         {
-            if (HasPartitionerAssignmentAfterConstruction(operation))
+            if (HasPartitionerAssignmentAfterConstruction(operation) ||
+                SetsPartitionerInConstructor(operation.Type, kafkaPublicationSymbol))
             {
-                // The partitioner is set on the instance after construction; any
-                // discouraged value is reported by AnalyzeAssignment instead.
+                // The partitioner is set on the instance after construction or by
+                // the type's own constructor; any discouraged value is reported
+                // by AnalyzeAssignment instead.
                 return;
             }
 
@@ -133,33 +147,96 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         }
     }
 
+    // A subclass can set the partitioner in its own constructor, e.g.:
+    //     class OrdersPublication : KafkaPublication
+    //     {
+    //         public OrdersPublication() { Partitioner = Partitioner.Murmur2Random; }
+    //     }
+    // Don't report BRT006 for such a type — an initializer added by the code fix
+    // would override the subclass's deliberate choice. Only constructors declared
+    // below KafkaPublication itself are considered; its own Partitioner default is
+    // exactly what BRT006 flags as implicit.
+    private static bool SetsPartitionerInConstructor(
+        ITypeSymbol type,
+        INamedTypeSymbol kafkaPublicationSymbol)
+    {
+        for (var current = type as INamedTypeSymbol;
+             current != null && !SymbolEqualityComparer.Default.Equals(current.OriginalDefinition, kafkaPublicationSymbol);
+             current = current.BaseType)
+        {
+            foreach (var constructor in current.InstanceConstructors)
+            {
+                if (ConstructorAssignsPartitioner(constructor))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // Syntactic check (analyzers must not call Compilation.GetSemanticModel, RS1030):
+    // an assignment to `Partitioner` or `this.Partitioner` in the constructor body.
+    // In a KafkaPublication subclass constructor an unqualified `Partitioner` can
+    // only bind to the inherited property or a local of the same name — the latter
+    // is contrived and accepted.
+    private static bool ConstructorAssignsPartitioner(IMethodSymbol constructor)
+    {
+        foreach (var syntaxReference in constructor.DeclaringSyntaxReferences)
+        {
+            var assignsPartitioner = syntaxReference.GetSyntax()
+                .DescendantNodes()
+                .OfType<AssignmentExpressionSyntax>()
+                .Any(assignment => assignment.Left switch
+                {
+                    IdentifierNameSyntax id => id.Identifier.ValueText == BrighterAnalyzerGlobals.PartitionerProperty,
+                    MemberAccessExpressionSyntax { Expression: ThisExpressionSyntax } memberAccess =>
+                        memberAccess.Name.Identifier.ValueText == BrighterAnalyzerGlobals.PartitionerProperty,
+                    _ => false
+                });
+
+            if (assignsPartitioner)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // Reports discouraged partitioner values assigned outside an object
     // initializer, e.g.:
     //     var publication = new KafkaPublication();
     //     publication.Partitioner = Partitioner.Consistent;
     // The diagnostic is reported from the assignment's own callback so it stays
     // local to the analyzed operation.
-    private static void AnalyzeAssignment(OperationAnalysisContext context)
+    private static void AnalyzeAssignment(
+        OperationAnalysisContext context,
+        INamedTypeSymbol kafkaPublicationSymbol,
+        INamedTypeSymbol partitionerEnumSymbol)
     {
         var assignment = (ISimpleAssignmentOperation)context.Operation;
 
-        // Initializer assignments (new KafkaPublication { Partitioner = ... }) are
-        // handled by AnalyzerObjectCreation. Their parent is an
-        // IObjectOrCollectionInitializerOperation; IMemberInitializerOperation
-        // only appears in `with` expressions.
-        if (assignment.Parent is IObjectOrCollectionInitializerOperation or IMemberInitializerOperation)
+        // Assignments inside an object creation's initializer
+        // (new KafkaPublication { Partitioner = ... }) are handled by
+        // AnalyzerObjectCreation. Assignments in a nested member initializer
+        // (new Holder { Publication = { Partitioner = ... } }) — whose parent
+        // initializer hangs off an IMemberInitializerOperation, not a creation —
+        // ARE handled here.
+        if (assignment.Parent is IObjectOrCollectionInitializerOperation { Parent: not IMemberInitializerOperation })
         {
             return;
         }
 
         if (assignment.Target is not IPropertyReferenceOperation propertyReference ||
             propertyReference.Property.Name != BrighterAnalyzerGlobals.PartitionerProperty ||
-            !KafkaPublicationPartitionerVisitor.IsKafkaPublicationType(propertyReference.Property.ContainingType))
+            !KafkaPublicationPartitionerVisitor.IsKafkaPublicationType(propertyReference.Property.ContainingType, kafkaPublicationSymbol))
         {
             return;
         }
 
-        switch (KafkaPublicationPartitionerVisitor.GetPartitionerValueName(assignment.Value))
+        switch (KafkaPublicationPartitionerVisitor.GetPartitionerValueName(assignment.Value, partitionerEnumSymbol))
         {
             case BrighterAnalyzerGlobals.ConsistentRandomPartitionerValue:
                 context.ReportDiagnostic(Diagnostic.Create(
@@ -215,6 +292,9 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
             .OfType<IExpressionStatementOperation>()
             .Select(statement => statement.Operation)
             .OfType<ISimpleAssignmentOperation>()
+            // Field/property targets are compared by symbol, not instance: an
+            // assignment through another object sharing the field (a.Pub vs b.Pub)
+            // would also match — an accepted, contrived edge case.
             .Any(assignment =>
                 assignment.Syntax.SpanStart > operation.Syntax.SpanStart &&
                 assignment.Target is IPropertyReferenceOperation propertyReference &&
