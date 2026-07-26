@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Paramore.Brighter.Validation;
 
@@ -52,7 +53,9 @@ public class PipelineValidator(
     MessageMapperRegistry? mapperRegistry = null,
     IAmATransformerResolvabilityProbe? transformerProbe = null) : IAmAPipelineValidator, IDisposable
 {
-    private bool _disposed;
+    //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
+    //an owner and the container disposing concurrently then dispose the registry exactly once
+    private int _disposed;
     private readonly PipelineBuilder<IRequest> _pipelineBuilder = pipelineBuilder;
     private readonly IEnumerable<Publication>? _publications = publications;
     private readonly IEnumerable<Subscription>? _subscriptions = subscriptions;
@@ -71,9 +74,8 @@ public class PipelineValidator(
     /// </remarks>
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
-        _disposed = true;
 
         _mapperRegistry?.Dispose();
 

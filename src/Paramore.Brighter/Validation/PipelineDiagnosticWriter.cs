@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.Validation;
@@ -46,7 +47,9 @@ public class PipelineDiagnosticWriter(
     IEnumerable<Publication>? publications = null,
     IEnumerable<Subscription>? subscriptions = null) : IAmAPipelineDiagnosticWriter, IDisposable
 {
-    private bool _disposed;
+    //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
+    //an owner and the container disposing concurrently then dispose the registry exactly once
+    private int _disposed;
     private readonly ILogger _logger = logger;
     private readonly PipelineBuilder<IRequest> _pipelineBuilder = pipelineBuilder;
     private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistry;
@@ -63,9 +66,8 @@ public class PipelineDiagnosticWriter(
     /// </remarks>
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
-        _disposed = true;
 
         _mapperRegistry?.Dispose();
 

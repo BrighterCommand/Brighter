@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessageMappers;
 
@@ -41,7 +42,9 @@ namespace Paramore.Brighter
     {
         private readonly IAmAMessageMapperFactory? _messageMapperFactory;
         private readonly IAmAMessageMapperFactoryAsync? _messageMapperFactoryAsync;
-        private bool _disposed;
+        //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
+        //an owner and the container disposing concurrently then dispose the factories exactly once
+        private int _disposed;
         private readonly ConcurrentDictionary<Type, Type> _messageMappers = new();
         private readonly ConcurrentDictionary<Type, Type> _asyncMessageMappers = new();
         //resolved default mappers are cached apart from registered ones: a fallback to the default is
@@ -273,14 +276,14 @@ namespace Paramore.Brighter
         /// leaves the factory holding the <c>IServiceScope</c> it was resolved from, and nothing else
         /// can reach those factories to dispose them. An owner (the outbox producer mediator, a pipeline
         /// validator) disposes the registry at teardown so those scopes are drained rather than retained
-        /// until the process exits. Idempotent: a second call is a no-op so an owner and the container can
-        /// both dispose safely.
+        /// until the process exits. Idempotent and thread-safe: the disposed flag is claimed with a single
+        /// atomic <see cref="System.Threading.Interlocked.Exchange(ref int,int)"/>, so an owner and the
+        /// container can both dispose — even concurrently — and the factories are disposed exactly once.
         /// </remarks>
         public void Dispose()
         {
-            if (_disposed)
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
                 return;
-            _disposed = true;
 
             (_messageMapperFactory as IDisposable)?.Dispose();
             (_messageMapperFactoryAsync as IDisposable)?.Dispose();
