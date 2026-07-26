@@ -52,6 +52,9 @@ namespace Paramore.Brighter
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
         private readonly ResiliencePipelineRegistry<string> _resiliencePipelineRegistry;
+        private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
+        private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
+        private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
         private readonly TransformPipelineBuilder _transformPipelineBuilder;
         private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
         private readonly IAmAnOutboxSync<TMessage, TTransaction>? _outBox;
@@ -139,6 +142,10 @@ namespace Paramore.Brighter
             _timeProvider = timeProvider ?? TimeProvider.System;
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
 
+            _messageMapperRegistry = mapperRegistry;
+            _messageTransformerFactory = messageTransformerFactory;
+            _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, instrumentationOptions);
             _transformPipelineBuilderAsync =
                 new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync, instrumentationOptions);
@@ -177,7 +184,18 @@ namespace Paramore.Brighter
                 return;
 
             if (disposing)
+            {
                 _producerRegistry.CloseAll();
+
+                //the mediator is the sole owner of the runtime mapper/transform factories (built for it in
+                //ServiceCollectionExtensions and never registered in the container). Disposing the registry
+                //cascades to the two mapper factories it holds; the two transform factories are disposed
+                //directly. Without this the per-resolution IServiceScope each factory retains for a mapper or
+                //transform obtained but not released is held until the process exits, not at container teardown.
+                (_messageMapperRegistry as IDisposable)?.Dispose();
+                (_messageTransformerFactory as IDisposable)?.Dispose();
+                (_messageTransformerFactoryAsync as IDisposable)?.Dispose();
+            }
             _disposed = true;
         }
 
