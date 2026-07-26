@@ -22,8 +22,10 @@ public class TransformLifetimeScopeFinalizerReleaseTests
         //act
         CollectAndRunFinalizers();
 
-        //assert: reaching here means the finalizer swallowed the release exception instead of crashing
-        Assert.True(true);
+        //assert: the finalizer genuinely ran and attempted the release that throws (pinning that the GC
+        //actually collected the abandoned scope, not a vacuous pass), and reaching here means the
+        //exception was swallowed instead of escaping ~TransformLifetimeScope and crashing the process
+        Assert.Equal(1, ThrowingOnReleaseTransformerFactory.ReleaseAttempts);
     }
 
     [Fact]
@@ -36,8 +38,9 @@ public class TransformLifetimeScopeFinalizerReleaseTests
         //act
         CollectAndRunFinalizers();
 
-        //assert
-        Assert.True(true);
+        //assert: the async scope's finalizer genuinely ran the synchronous release that throws, and it was
+        //swallowed rather than escaping ~TransformLifetimeScopeAsync
+        Assert.Equal(1, ThrowingOnReleaseTransformerFactoryAsync.ReleaseAttempts);
     }
 
     private static void CollectAndRunFinalizers()
@@ -91,18 +94,34 @@ public class TransformLifetimeScopeFinalizerReleaseTests
     //a scope that holds an IAsyncDisposable-only transform through MS DI's throwing sync Dispose
     private sealed class ThrowingOnReleaseTransformerFactory : IAmAMessageTransformerFactory
     {
+        private static int s_releaseAttempts;
+
+        //recorded before the throw so the test can prove the finalizer genuinely reached the release
+        public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
+
         public IAmAMessageTransform? Create(Type transformerType) => null;
 
-        public void Release(IAmAMessageTransform transformer) =>
+        public void Release(IAmAMessageTransform transformer)
+        {
+            Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
+        }
     }
 
     private sealed class ThrowingOnReleaseTransformerFactoryAsync : IAmAMessageTransformerFactoryAsync
     {
+        private static int s_releaseAttempts;
+
+        //recorded before the throw so the test can prove the finalizer genuinely reached the release
+        public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
+
         public IAmAMessageTransformAsync? Create(Type transformerType) => null;
 
-        public void Release(IAmAMessageTransformAsync transformer) =>
+        public void Release(IAmAMessageTransformAsync transformer)
+        {
+            Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
+        }
 
         public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer) =>
             throw new InvalidOperationException("release failed");

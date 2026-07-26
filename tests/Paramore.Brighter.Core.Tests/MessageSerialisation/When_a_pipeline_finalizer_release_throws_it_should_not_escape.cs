@@ -24,9 +24,10 @@ public class TransformPipelineFinalizerReleaseTests
         //act: force the finalizer to run
         CollectAndRunFinalizers();
 
-        //assert: reaching here at all means the finalizer swallowed the release exception instead of
-        //crashing the process
-        Assert.True(true);
+        //assert: the finalizer genuinely ran and attempted the release that throws (pinning that the GC
+        //actually collected the abandoned pipeline, not a vacuous pass), and reaching here means the
+        //exception was swallowed instead of escaping ~TransformPipeline and crashing the process
+        Assert.Equal(1, ThrowingOnReleaseRegistry.ReleaseAttempts);
     }
 
     [Fact]
@@ -39,8 +40,9 @@ public class TransformPipelineFinalizerReleaseTests
         //act
         CollectAndRunFinalizers();
 
-        //assert
-        Assert.True(true);
+        //assert: the async pipeline's finalizer genuinely ran the synchronous release that throws, and it
+        //was swallowed rather than escaping ~TransformPipelineAsync
+        Assert.Equal(1, ThrowingOnReleaseRegistryAsync.ReleaseAttempts);
     }
 
     private static void CollectAndRunFinalizers()
@@ -103,10 +105,18 @@ public class TransformPipelineFinalizerReleaseTests
     //that holds an IAsyncDisposable-only mapper through MS DI's throwing sync Dispose
     private sealed class ThrowingOnReleaseRegistry : IAmAMessageMapperRegistry
     {
+        private static int s_releaseAttempts;
+
+        //recorded before the throw so the test can prove the finalizer genuinely reached the release
+        public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
+
         public IAmAMessageMapper<T>? Get<T>() where T : class, IRequest => null;
 
-        public void Release(IAmAMessageMapper mapper) =>
+        public void Release(IAmAMessageMapper mapper)
+        {
+            Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
+        }
 
         public void Register<TRequest, TMessageMapper>()
             where TRequest : class, IRequest
@@ -117,10 +127,18 @@ public class TransformPipelineFinalizerReleaseTests
 
     private sealed class ThrowingOnReleaseRegistryAsync : IAmAMessageMapperRegistryAsync
     {
+        private static int s_releaseAttempts;
+
+        //recorded before the throw so the test can prove the finalizer genuinely reached the release
+        public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
+
         public IAmAMessageMapperAsync<T>? GetAsync<T>() where T : class, IRequest => null;
 
-        public void Release(IAmAMessageMapperAsync mapper) =>
+        public void Release(IAmAMessageMapperAsync mapper)
+        {
+            Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
+        }
 
         public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper) =>
             throw new InvalidOperationException("release failed");
