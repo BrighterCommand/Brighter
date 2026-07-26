@@ -81,7 +81,7 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
             SyntaxFactory.IdentifierName(BrighterAnalyzerGlobals.PartitionerProperty),
             SyntaxFactory.MemberAccessExpression(
                     SyntaxKind.SimpleMemberAccessExpression,
-                    SyntaxFactory.ParseName($"{BrighterAnalyzerGlobals.KafkaMessagingGatewayNamespace}.{BrighterAnalyzerGlobals.PartitionerEnum}"),
+                    SyntaxFactory.ParseExpression($"{BrighterAnalyzerGlobals.KafkaMessagingGatewayAssembly}.{BrighterAnalyzerGlobals.PartitionerEnum}"),
                     SyntaxFactory.IdentifierName(target))
                 .WithAdditionalAnnotations(Simplifier.Annotation));
 
@@ -96,10 +96,10 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
             .WithAdditionalAnnotations(Formatter.Annotation);
 
         var newRoot = root!.ReplaceNode(objectCreation, newObjectCreation);
-        var formatted = Formatter.Format(newRoot, Formatter.Annotation, document.Project.Solution.Workspace, cancellationToken: cancellationToken);
+        var formatted = await Formatter.FormatAsync(document.WithSyntaxRoot(newRoot), Formatter.Annotation, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Reduce the fully qualified Partitioner reference where the using is
         // already present; otherwise keep it qualified so the fix always compiles.
-        return await Simplifier.ReduceAsync(document.WithSyntaxRoot(formatted), Simplifier.Annotation, cancellationToken: cancellationToken).ConfigureAwait(false);
+        return await Simplifier.ReduceAsync(formatted, Simplifier.Annotation, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

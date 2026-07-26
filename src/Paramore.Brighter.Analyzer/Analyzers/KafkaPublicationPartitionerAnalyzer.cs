@@ -24,8 +24,10 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 using Paramore.Brighter.Analyzer.Visitors.Operation;
 
 namespace Paramore.Brighter.Analyzer.Analyzers;
@@ -41,7 +43,8 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         messageFormat: "Partitioner assignment is missing from {0}. Consider setting it explicitly.",
         category: PartitionerCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/BrighterCommand/Brighter/blob/master/src/Paramore.Brighter.Analyzer/docs/BRT006.md"
     );
 
     public static readonly DiagnosticDescriptor ConsistentRandomPartitionerRule = new(
@@ -51,7 +54,8 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         "Prefer 'Murmur2Random' over 'ConsistentRandom' for new KafkaPublications to keep key distribution even and avoid hot partitions. Existing publications can keep 'ConsistentRandom' to preserve their current partition assignment.",
         category: PartitionerCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/BrighterCommand/Brighter/blob/master/src/Paramore.Brighter.Analyzer/docs/BRT007.md"
     );
 
     public static readonly DiagnosticDescriptor ConsistentPartitionerRule = new(
@@ -61,7 +65,8 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
         "Prefer 'Murmur2' over 'Consistent' for new KafkaPublications to keep key distribution even and avoid hot partitions. Existing publications can keep 'Consistent' to preserve their current partition assignment.",
         category: PartitionerCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true
+        isEnabledByDefault: true,
+        helpLinkUri: "https://github.com/BrighterCommand/Brighter/blob/master/src/Paramore.Brighter.Analyzer/docs/BRT008.md"
     );
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [MissingPartitionerRule, ConsistentRandomPartitionerRule, ConsistentPartitionerRule];
@@ -75,8 +80,10 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
 
     private static void AnalyzerOperation(OperationAnalysisContext context)
     {
+        var operation = (IObjectCreationOperation)context.Operation;
+
         var visitor = new KafkaPublicationPartitionerVisitor();
-        context.Operation.Accept(visitor);
+        operation.Accept(visitor);
 
         if (!visitor.IsKafkaPublication)
         {
@@ -85,6 +92,11 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
 
         if (!visitor.IsPartitionerAssigned)
         {
+            if (IsPartitionerAssignedAfterConstruction(operation))
+            {
+                return;
+            }
+
             context.ReportDiagnostic(Diagnostic.Create(
                 MissingPartitionerRule,
                 context.Operation.Syntax.GetLocation(),
@@ -102,5 +114,43 @@ public class KafkaPublicationPartitionerAnalyzer : DiagnosticAnalyzer
                 ConsistentPartitionerRule,
                 context.Operation.Syntax.GetLocation()));
         }
+    }
+
+    // Recognizes the common pattern where the partitioner is set on the new
+    // local right after construction, e.g.:
+    //     var publication = new KafkaPublication();
+    //     publication.Partitioner = Partitioner.Murmur2Random;
+    // Assignments made elsewhere (helper methods, other blocks) are not tracked.
+    private static bool IsPartitionerAssignedAfterConstruction(IObjectCreationOperation operation)
+    {
+        ILocalSymbol local = operation.Parent switch
+        {
+            IVariableInitializerOperation { Parent: IVariableDeclaratorOperation declarator } => declarator.Symbol,
+            ISimpleAssignmentOperation { Target: ILocalReferenceOperation localReference } => localReference.Local,
+            _ => null
+        };
+
+        if (local == null)
+        {
+            return false;
+        }
+
+        for (var ancestor = operation.Parent; ancestor != null; ancestor = ancestor.Parent)
+        {
+            if (ancestor is IBlockOperation block)
+            {
+                return block.Operations
+                    .OfType<IExpressionStatementOperation>()
+                    .Select(statement => statement.Operation)
+                    .OfType<ISimpleAssignmentOperation>()
+                    .Any(assignment =>
+                        assignment.Target is IPropertyReferenceOperation propertyReference &&
+                        propertyReference.Property.Name == BrighterAnalyzerGlobals.PartitionerProperty &&
+                        propertyReference.Instance is ILocalReferenceOperation instance &&
+                        SymbolEqualityComparer.Default.Equals(instance.Local, local));
+            }
+        }
+
+        return false;
     }
 }

@@ -2,11 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(BrighterNetStandardTargetFrameworks)</TargetFrameworks>
-    <Authors>Rafael Andrade</Authors>
-    <Description>Code fixes for the brighter library analyzers</Description>
-    <PackageTags>Analyzer;CodeFix;Command Processor;Brighter</PackageTags>
     <IsPackable>false</IsPackable>
-    <DevelopmentDependency>true</DevelopmentDependency>
   </PropertyGroup>
 
   <ItemGroup>

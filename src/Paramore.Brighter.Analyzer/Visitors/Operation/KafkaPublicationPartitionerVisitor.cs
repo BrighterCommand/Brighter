@@ -30,6 +30,10 @@ namespace Paramore.Brighter.Analyzer.Visitors.Operation;
 
 public class KafkaPublicationPartitionerVisitor : OperationWalker
 {
+    private static readonly ChildOfVisitor s_kafkaPublicationCheck = new(
+        BrighterAnalyzerGlobals.KafkaPublicationClassName,
+        BrighterAnalyzerGlobals.KafkaMessagingGatewayAssembly);
+
     public bool IsKafkaPublication { get; private set; }
     public bool IsPartitionerAssigned { get; private set; }
     public bool IsConsistentRandom { get; private set; }
@@ -38,9 +42,9 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
 
     public override void VisitObjectCreation(IObjectCreationOperation operation)
     {
-        if (operation.Type!.Accept(new ChildOfVisitor(BrighterAnalyzerGlobals.KafkaPublicationClassName, BrighterAnalyzerGlobals.KafkaMessagingGatewayAssembly)))
+        if (operation.Type!.Accept(s_kafkaPublicationCheck))
         {
-            PublicationName = operation.Type.Name;
+            PublicationName = operation.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
             IsKafkaPublication = true;
 
             // base walks the children (including the initializer), which drives
@@ -55,7 +59,8 @@ public class KafkaPublicationPartitionerVisitor : OperationWalker
     public override void VisitSimpleAssignment(ISimpleAssignmentOperation operation)
     {
         if (operation.Target is IPropertyReferenceOperation propertyReference &&
-            propertyReference.Property.Name == BrighterAnalyzerGlobals.PartitionerProperty)
+            propertyReference.Property.Name == BrighterAnalyzerGlobals.PartitionerProperty &&
+            propertyReference.Property.ContainingType.Accept(s_kafkaPublicationCheck))
         {
             IsPartitionerAssigned = true;
 

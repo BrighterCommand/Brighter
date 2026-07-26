@@ -19,10 +19,10 @@ namespace Paramore.Brighter.Analyzer.Tests.CodeFixes
             {
                 ReferenceAssemblies = ReferenceAssemblies.Net.Net90
             };
-            testContext.TestState.OutputKind = OutputKind.ConsoleApplication;
+            testContext.TestState.OutputKind = OutputKind.DynamicallyLinkedLibrary;
             testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Publication).Assembly.Location));
             testContext.TestState.AdditionalReferences.Add(MetadataReference.CreateFromFile(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location));
-            testContext.CompilerDiagnostics = CompilerDiagnostics.None;
+            testContext.CompilerDiagnostics = CompilerDiagnostics.Errors;
         }
     }
 }

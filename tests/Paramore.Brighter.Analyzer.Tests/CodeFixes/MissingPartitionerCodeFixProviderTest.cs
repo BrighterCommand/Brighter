@@ -49,5 +49,40 @@ namespace ConsoleApplication1
 
             await testContext.RunAsync();
         }
+
+        [Fact]
+        public async Task When_Kafka_Using_Is_Missing_Should_Add_Fully_Qualified_Partitioner()
+        {
+            testContext.TestCode = /* lang=c#-test */ """
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = {|#0:new Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication()|};
+        }
+    }
+}
+""";
+
+            testContext.FixedCode = /* lang=c#-test */ """
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication() { Partitioner = Paramore.Brighter.MessagingGateway.Kafka.Partitioner.Murmur2Random };
+        }
+    }
+}
+""";
+
+            testContext.ExpectedDiagnostics.Add(
+                new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule).WithLocation(0).WithArguments("KafkaPublication"));
+
+            await testContext.RunAsync();
+        }
     }
 }

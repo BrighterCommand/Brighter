@@ -62,8 +62,12 @@ public class PartitionerValueCodeFixProvider : CodeFixProvider
                 .FirstOrDefault(a => a.Left is IdentifierNameSyntax id &&
                                      id.Identifier.ValueText == BrighterAnalyzerGlobals.PartitionerProperty);
 
-            if (assignment == null)
+            if (assignment == null ||
+                assignment.Right is not (MemberAccessExpressionSyntax or IdentifierNameSyntax))
             {
+                // Only a member access (Partitioner.Consistent) or a bare identifier
+                // (using static) can be rewritten safely; anything else (e.g. a cast)
+                // would not compile after the fix, so don't offer one.
                 continue;
             }
 
