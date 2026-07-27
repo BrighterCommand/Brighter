@@ -242,18 +242,12 @@ namespace Paramore.Brighter
         {
             if (_messageTransformerFactory is null) return;
 
-            //Drain a materialised copy, releasing every transform even when one Release throws. This is the
-            //failed-build path: no pipeline was constructed to own these transforms and no finalizer will
-            //ever retry them (unlike TransformLifetimeScope, whose drain relies on a retry), so a Release
-            //that skipped the rest would leak their DI scopes permanently. Removing each before releasing
-            //keeps the list truthful, and swallowing a per-transform failure both keeps a later transform
-            //from being skipped and keeps the original build error — rethrown by the caller — from being
-            //masked by a disposal failure.
-            var remaining = transforms.ToList();
-            while (remaining.Count > 0)
+            //release every transform even when one Release throws: on the failed-build path no pipeline
+            //owns these transforms and no finalizer retries, so skipping the rest would leak their DI
+            //scopes permanently. Swallow each failure so it neither skips a later transform nor masks the
+            //build error the caller rethrows.
+            foreach (var transform in transforms)
             {
-                var transform = remaining[0];
-                remaining.RemoveAt(0);
                 try { _messageTransformerFactory.Release(transform); }
                 catch { /* swallowed: best-effort cleanup must not skip the rest or mask the build error */ }
             }
