@@ -228,11 +228,21 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <see cref="GetTransient{T}"/> ("Release must be called once per creation"). Releasing an
         /// instance that was never tracked is a harmless no-op; so is a stray extra release of a genuine
         /// per-resolution transient, whose single scope has already been drained. But a shared instance
-        /// resolved under a Transient lifetime (e.g. a DI-<c>Singleton</c> returned to every resolution)
-        /// stacks one scope per <see cref="GetTransient{T}"/>: a spurious second release for one creation
-        /// pops the scope of <em>another</em> still-outstanding resolution and disposes it beneath a caller
-        /// that is still holding the instance. Over-releasing is therefore not a safe no-op in the
-        /// shared-instance case — release once for each <see cref="GetTransient{T}"/>, no more.
+        /// resolved under a Transient lifetime stacks one scope per <see cref="GetTransient{T}"/>: a
+        /// spurious second release for one creation pops the scope of <em>another</em> still-outstanding
+        /// resolution and disposes it beneath a caller that is still holding the instance. Over-releasing
+        /// is therefore not a safe no-op in the shared-instance case — release once for each
+        /// <see cref="GetTransient{T}"/>, no more.
+        /// </para>
+        /// <para>
+        /// The shared-instance case arises when a mapper or transform is registered in DI as a
+        /// <c>Singleton</c> (or otherwise hands back one instance to every resolution) while its
+        /// <c>MapperLifetime</c> / <c>TransformerLifetime</c> is the default <c>Transient</c>, so each
+        /// resolution still opens its own scope over the same shared object. Besides the over-release
+        /// hazard above, concurrent releases of such a shared instance race: <see cref="CollectScopesToRelease"/>
+        /// re-homes a scope a parallel <see cref="GetTransient{T}"/> pushes mid-release, which narrows but
+        /// does not fully close a rare, bounded leak window. A per-request <c>Transient</c> or a
+        /// <c>Scoped</c> registration avoids the shared-instance case entirely.
         /// </para>
         /// </summary>
         /// <remarks>
