@@ -324,6 +324,20 @@ Both mirror `Get`/`GetAsync` (factory-aware, same default and generic-definition
 
 > **If you resolve a mapper or transform directly** — via `IAmAMessageMapperRegistry.Get<T>()` / `GetAsync<T>()` or a factory `Create` — you must now call `Release` (or `ReleaseAsync`) when finished, **even for a non-disposable mapper such as the default `JsonMessageMapper`**. `GetTransient` now allocates and retains an `IServiceScope` per resolution regardless of whether the instance is `IDisposable` (the scope can own the instance's injected dependencies and its own `IServiceProvider`). That scope is tracked keyed **by the resolved instance**, so the tracking dictionary holds a strong reference to the mapper/transform itself: skipping the release silently retains the instance *and* its scope per resolution. This is a change even for a non-disposable mapper — before the fix the factory's shared scope tracked only `IDisposable` instances, so a stock `JsonMessageMapper<T>` was collectable as soon as you dropped it; now it lives until you `Release` it. The factory is now disposed deterministically when its owner is disposed by the container at host shutdown (see *Deterministic factory disposal* below), so this retention is bounded by the host's lifetime rather than the process leak of #4252 — but a long-running host still accumulates one scope per un-released resolution between startup and shutdown, so you must still release. All in-tree call sites already release. Note that `SimpleMessageMapperFactory`'s `Release` is a deliberate no-op — the `Func` you supply owns what it returns — so a `Func` that news up a disposable mapper is not disposed for you.
 
+Both `Release` overloads on the concrete `MessageMapperRegistry` are **explicit interface implementations** — a deliberate choice, not an oversight. A mapper that implements both `IAmAMessageMapper` and `IAmAMessageMapperAsync` (the default `JsonMessageMapper<T>` does) would otherwise make an unqualified `registry.Release(mapper)` bind to whichever overload the compiler picks, silently routing a `GetAsync`-resolved mapper to the *synchronous* factory (a different `ServiceProviderLifetimeScope` than it was resolved from) and leaking. Making both explicit turns that mistake into a compile error. The consequence is that a caller holding the **concrete** registry — for example from the public `ServiceCollectionExtensions.MessageMapperRegistry(sp)` helper — must release through the interface that matches how it resolved the mapper:
+
+```csharp
+var registry = ServiceCollectionExtensions.MessageMapperRegistry(sp);
+
+var mapper = registry.Get<MyCommand>();                       // IAmAMessageMapperRegistry.Get
+((IAmAMessageMapperRegistry)registry).Release(mapper);        // release through the sync interface
+
+var asyncMapper = registry.GetAsync<MyCommand>();             // IAmAMessageMapperRegistryAsync.GetAsync
+((IAmAMessageMapperRegistryAsync)registry).Release(asyncMapper);   // ...or ReleaseAsync(asyncMapper)
+```
+
+If you already hold the registry through one of the interfaces (the usual case — that is how Brighter passes it around), no cast is needed.
+
 #### Deterministic factory disposal at host shutdown
 
 The IoC-backed mapper and transformer factories (`ServiceProviderMapperFactory`, `ServiceProviderMapperFactoryAsync`, `ServiceProviderTransformerFactory`, `ServiceProviderTransformerFactoryAsync`) are created for, and owned by, the objects that use them; they are not registered in the container. Those owners now dispose them, so every per-resolution `IServiceScope` they retain is drained at teardown instead of being held until the process exits:
