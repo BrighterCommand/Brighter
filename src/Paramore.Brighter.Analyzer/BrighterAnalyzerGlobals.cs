@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Analyzer;
 
-public class BrighterAnalyzerGlobals
+public static class BrighterAnalyzerGlobals
 {
     public const string PublicationClassName = "Publication";
     public const string KafkaPublicationClassName = "KafkaPublication";

@@ -1,4 +1,6 @@
+using System.IO;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
 using Paramore.Brighter.Analyzer.Analyzers;
 using Paramore.Brighter.Analyzer.CodeFixes;
@@ -40,7 +42,7 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = new KafkaPublication() { Partitioner = Partitioner.Murmur2Random };
+            var publication = new KafkaPublication { Partitioner = Partitioner.Murmur2Random };
         }
     }
 }
@@ -80,7 +82,7 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = new Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication() { Partitioner = Paramore.Brighter.MessagingGateway.Kafka.Partitioner.Murmur2Random };
+            var publication = new Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication { Partitioner = Paramore.Brighter.MessagingGateway.Kafka.Partitioner.Murmur2Random };
         }
     }
 }
@@ -332,8 +334,8 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var first = new KafkaPublication() { Partitioner = Partitioner.Murmur2Random };
-            var second = new KafkaPublication() { Partitioner = Partitioner.Murmur2Random };
+            var first = new KafkaPublication { Partitioner = Partitioner.Murmur2Random };
+            var second = new KafkaPublication { Partitioner = Partitioner.Murmur2Random };
         }
     }
 }
@@ -350,8 +352,8 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var first = new KafkaPublication() { Partitioner = Partitioner.Murmur2Random };
-            var second = new KafkaPublication() { Partitioner = Partitioner.Murmur2Random };
+            var first = new KafkaPublication { Partitioner = Partitioner.Murmur2Random };
+            var second = new KafkaPublication { Partitioner = Partitioner.Murmur2Random };
         }
     }
 }
@@ -561,7 +563,7 @@ namespace ConsoleApplication1
     {
         public void Method()
         {
-            var publication = new KafkaPublication<MyRequest>() { Partitioner = Partitioner.Murmur2Random };
+            var publication = new KafkaPublication<MyRequest> { Partitioner = Partitioner.Murmur2Random };
         }
     }
 }
@@ -571,6 +573,60 @@ namespace ConsoleApplication1
             new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule)
                 .WithLocation(0)
                 .WithArguments("KafkaPublication<MyRequest>")
+        );
+
+        await testContext.RunAsync();
+    }
+
+    [Fact]
+    public async Task When_Partitioner_Is_Ambiguous_With_Confluent_Should_Add_Fully_Qualified_Partitioner()
+    {
+        testContext.TestState.AdditionalReferences.Add(
+            MetadataReference.CreateFromFile(
+                Path.Combine(
+                    Path.GetDirectoryName(typeof(Paramore.Brighter.MessagingGateway.Kafka.KafkaPublication).Assembly.Location),
+                    "Confluent.Kafka.dll")));
+
+        testContext.TestCode = /* lang=c#-test */
+            """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+using Confluent.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new {|#0:KafkaPublication|}();
+        }
+    }
+}
+""";
+
+        testContext.FixedCode = /* lang=c#-test */
+            """
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.Kafka;
+using Confluent.Kafka;
+
+namespace ConsoleApplication1
+{
+    class TypeName
+    {
+        public void Method()
+        {
+            var publication = new KafkaPublication { Partitioner = Paramore.Brighter.MessagingGateway.Kafka.Partitioner.Murmur2Random };
+        }
+    }
+}
+""";
+
+        testContext.ExpectedDiagnostics.Add(
+            new DiagnosticResult(KafkaPublicationPartitionerAnalyzer.MissingPartitionerRule)
+                .WithLocation(0)
+                .WithArguments("KafkaPublication")
         );
 
         await testContext.RunAsync();

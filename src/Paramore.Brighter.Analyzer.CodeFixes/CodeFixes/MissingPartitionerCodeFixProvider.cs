@@ -107,9 +107,19 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
             initializer = AddInitializerExpression(objectCreation.Initializer, assignment);
         }
 
-        var newObjectCreation = objectCreation
-            .WithInitializer(initializer)
-            .WithAdditionalAnnotations(Formatter.Annotation);
+        var newObjectCreation = objectCreation.WithInitializer(initializer);
+
+        // Drop a now-redundant empty argument list: with an initializer present,
+        // new KafkaPublication { ... } reads better than new KafkaPublication() { ... }.
+        // Keep the argument list's trailing trivia (the space before the brace).
+        if (newObjectCreation is ObjectCreationExpressionSyntax { ArgumentList.Arguments.Count: 0 } explicitCreation)
+        {
+            newObjectCreation = explicitCreation
+                .WithType(explicitCreation.Type.WithTrailingTrivia(explicitCreation.ArgumentList.GetTrailingTrivia()))
+                .WithArgumentList(null);
+        }
+
+        newObjectCreation = newObjectCreation.WithAdditionalAnnotations(Formatter.Annotation);
 
         var newRoot = root!.ReplaceNode(objectCreation, newObjectCreation);
         var formatted = await Formatter.FormatAsync(document.WithSyntaxRoot(newRoot), Formatter.Annotation, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -137,11 +147,11 @@ public class MissingPartitionerCodeFixProvider : CodeFixProvider
             nodesAndTokens = nodesAndTokens.RemoveAt(nodesAndTokens.Count - 1);
             nodesAndTokens = nodesAndTokens.Replace(
                 nodesAndTokens[nodesAndTokens.Count - 1],
-                ((ExpressionSyntax)nodesAndTokens[nodesAndTokens.Count - 1].AsNode())
+                ((ExpressionSyntax)nodesAndTokens[nodesAndTokens.Count - 1].AsNode()!)
                     .WithTrailingTrivia(trailingComma.TrailingTrivia));
         }
 
-        var lastExpression = (ExpressionSyntax)nodesAndTokens[nodesAndTokens.Count - 1].AsNode();
+        var lastExpression = (ExpressionSyntax)nodesAndTokens[nodesAndTokens.Count - 1].AsNode()!;
         var trailingTrivia = lastExpression.GetTrailingTrivia();
         var beforeEndOfLine = trailingTrivia.TakeWhile(t => !t.IsKind(SyntaxKind.EndOfLineTrivia)).ToList();
         var fromEndOfLine = trailingTrivia.SkipWhile(t => !t.IsKind(SyntaxKind.EndOfLineTrivia)).ToList();
