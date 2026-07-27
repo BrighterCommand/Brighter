@@ -43,7 +43,7 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync 
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — requeue with delay not yet conformant for AWS.V4 / SnsFifo (maintainer sign-off)")]
+    [Fact]
     public async Task When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay_async()
     {
         // Arrange

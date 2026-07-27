@@ -41,7 +41,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — reject with unacceptable reason to invalid channel not yet conformant for AWS.V4 / SnsFifo (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel_async()
     {
         // Arrange

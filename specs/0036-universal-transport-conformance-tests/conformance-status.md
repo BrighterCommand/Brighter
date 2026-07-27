@@ -48,7 +48,8 @@ cell remains `Unknown`.
   delay by wall-clock and re-publishes to the SNS topic once it elapses (the V4 test project got its own
   copy). Requeue-with-delay (FR-2) is `Pass` natively — it is consumer-side `ChangeMessageVisibility` on
   the subscribed SQS queue, not an SNS publish, so it needs no scheduler.
-- `AWS / SnsFifo` FR-9 (delayed send) is `Fixed (#4240)` — and, unlike `AWS / SqsFifo`, it is **not**
+- `AWS / SnsFifo` **and `AWS.V4 / SnsFifo`** FR-9 (delayed send) are `Fixed (#4240)` — and, unlike
+  `AWS / SqsFifo` (+ `AWS.V4 / SqsFifo`), they are **not**
   deferred. SqsFifo's deferral was because SQS FIFO **rejects native per-message `DelaySeconds`**; SNS
   FIFO never uses that path — the SNS producer delegates the delay to the `Scheduler` seam, so the FIFO
   platform limit does not apply. The `SnsHarnessMessageScheduler` re-publishes to the FIFO topic after
@@ -69,7 +70,7 @@ cell remains `Unknown`.
 | AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass |
 | AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass |
-| AWS.V4 / SnsFifo | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass |
 | AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass |
 | GCP / Pull | Unknown (known FR-2 gap) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
