@@ -71,8 +71,6 @@ public class PipelineValidator(
             return;
 
         mapperRegistry?.Dispose();
-
-        GC.SuppressFinalize(this);
     }
 
     /// <inheritdoc />

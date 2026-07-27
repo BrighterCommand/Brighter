@@ -363,8 +363,6 @@ namespace Paramore.Brighter
             if (Interlocked.Exchange(ref _disposed, 1) != 0)
                 return;
 
-            GC.SuppressFinalize(this);
-
             //dispose both factories even when the first throws: a user-supplied IAmAMessageMapperFactory is
             //free to surface an exception from Dispose, and skipping the second would leak the per-resolution
             //IServiceScope it retains — the exact retention this Dispose exists to drain. The finally releases

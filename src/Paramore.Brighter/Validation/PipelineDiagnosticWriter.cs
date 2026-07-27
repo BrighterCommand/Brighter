@@ -65,8 +65,6 @@ public class PipelineDiagnosticWriter(
             return;
 
         mapperRegistry?.Dispose();
-
-        GC.SuppressFinalize(this);
     }
 
     /// <inheritdoc />
