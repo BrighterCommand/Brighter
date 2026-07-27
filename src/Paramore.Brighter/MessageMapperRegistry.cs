@@ -127,9 +127,19 @@ namespace Paramore.Brighter
         /// <see cref="Get{TRequest}"/> creates an instance per call, so an unreleased mapper leaves the
         /// factory holding it — and, for an IoC-backed factory, the scope it was resolved from — until
         /// the factory is disposed at shutdown.
+        /// <para>
+        /// Implemented explicitly, as is <see cref="IAmAMessageMapperRegistryAsync.Release(IAmAMessageMapperAsync)"/>:
+        /// a mapper that supports both Reactor and Proactor (e.g. <c>JsonMessageMapper&lt;T&gt;</c>)
+        /// implements both <see cref="IAmAMessageMapper"/> and <see cref="IAmAMessageMapperAsync"/>, so were
+        /// either overload public a caller holding the concrete registry could bind
+        /// <c>registry.Release(dualMapper)</c> to the wrong factory (or hit CS0121). Hiding both behind their
+        /// interfaces forces the caller to pick <see cref="IAmAMessageMapperRegistry"/> or
+        /// <see cref="IAmAMessageMapperRegistryAsync"/> explicitly, so releasing a mapper resolved from
+        /// <see cref="GetAsync{TRequest}"/> through the sync factory is a compile error, not a silent leak.
+        /// </para>
         /// </remarks>
         /// <param name="mapper">The mapper to release.</param>
-        public void Release(IAmAMessageMapper mapper)
+        void IAmAMessageMapperRegistry.Release(IAmAMessageMapper mapper)
         {
             _messageMapperFactory?.Release(mapper);
         }
@@ -142,12 +152,12 @@ namespace Paramore.Brighter
         /// Synchronous; used by the pipeline finalizer fallback and build-failure cleanup. On a thread
         /// owned by the Proactor's single-threaded synchronization context prefer <see cref="ReleaseAsync"/>.
         /// <para>
-        /// Implemented explicitly so it is not part of the concrete <see cref="MessageMapperRegistry"/>
-        /// surface: a mapper that supports both Reactor and Proactor (e.g. <c>JsonMessageMapper&lt;T&gt;</c>)
-        /// implements both <see cref="IAmAMessageMapper"/> and <see cref="IAmAMessageMapperAsync"/>, so if
-        /// both <c>Release</c> overloads were public a caller holding the concrete registry could not pick
-        /// one (CS0121). Only the synchronous <see cref="Release(IAmAMessageMapper)"/> is public; release an
-        /// async mapper through <see cref="IAmAMessageMapperRegistryAsync"/> or <see cref="ReleaseAsync"/>.
+        /// Implemented explicitly, as is <see cref="IAmAMessageMapperRegistry.Release(IAmAMessageMapper)"/>:
+        /// with both <c>Release</c> overloads hidden behind their interfaces a caller holding the concrete
+        /// registry must choose <see cref="IAmAMessageMapperRegistry"/> or
+        /// <see cref="IAmAMessageMapperRegistryAsync"/>, so a dual-interface mapper cannot silently bind to
+        /// the wrong factory. Release an async mapper through <see cref="IAmAMessageMapperRegistryAsync"/>
+        /// or <see cref="ReleaseAsync"/>.
         /// </para>
         /// </remarks>
         /// <param name="mapper">The mapper to release.</param>
