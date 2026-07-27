@@ -43,7 +43,7 @@ public class WhenRequeuingAFailedMessageShouldBeRedeliveredAsync : IAsyncLifetim
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — canonical plain requeue not yet conformant for AWS.V4 / SqsFifo (maintainer sign-off)")]
+    [Fact]
     public async Task When_requeuing_a_failed_message_should_be_redelivered_async()
     {
         // Arrange
