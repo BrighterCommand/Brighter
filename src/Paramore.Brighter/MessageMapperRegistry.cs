@@ -85,11 +85,7 @@ namespace Paramore.Brighter
                 return null;
 
             if (!_messageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapper != null)
-            {
-                var defaultMessageMapper = _defaultMessageMapper;
-                messageMapperType = _resolvedDefaultMappers.GetOrAdd(
-                    typeof(TRequest), requestType => defaultMessageMapper.MakeGenericType(requestType));
-            }
+                messageMapperType = ResolveClosedDefault(_resolvedDefaultMappers, _defaultMessageMapper, typeof(TRequest));
 
             if (messageMapperType is null)
                 return null;
@@ -108,11 +104,7 @@ namespace Paramore.Brighter
                 return null;
             
             if (!_asyncMessageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapperAsync != null)
-            {
-                var defaultMessageMapperAsync = _defaultMessageMapperAsync;
-                messageMapperType = _resolvedDefaultAsyncMappers.GetOrAdd(
-                    typeof(TRequest), requestType => defaultMessageMapperAsync.MakeGenericType(requestType));
-            }
+                messageMapperType = ResolveClosedDefault(_resolvedDefaultAsyncMappers, _defaultMessageMapperAsync, typeof(TRequest));
 
             if (messageMapperType is null)
                 return null;
@@ -208,7 +200,7 @@ namespace Paramore.Brighter
             if (!_defaultMessageMapper.IsGenericTypeDefinition)
                 return (null, true);
 
-            return (_defaultMessageMapper.MakeGenericType(requestType), true);
+            return (ResolveClosedDefault(_resolvedDefaultMappers, _defaultMessageMapper, requestType), true);
         }
 
         /// <summary>
@@ -237,7 +229,25 @@ namespace Paramore.Brighter
             if (!_defaultMessageMapperAsync.IsGenericTypeDefinition)
                 return (null, true);
 
-            return (_defaultMessageMapperAsync.MakeGenericType(requestType), true);
+            return (ResolveClosedDefault(_resolvedDefaultAsyncMappers, _defaultMessageMapperAsync, requestType), true);
+        }
+
+        /// <summary>
+        /// Closes <paramref name="defaultMapper"/> over <paramref name="requestType"/>, caching the result so a
+        /// repeated resolution — the hot path, since <c>HasPipeline</c> resolves the default mapper type per
+        /// message — pays neither <see cref="Type.MakeGenericType"/> nor a delegate allocation. The
+        /// <see cref="System.Collections.Concurrent.ConcurrentDictionary{TKey,TValue}.TryGetValue"/> fast path
+        /// returns before <c>GetOrAdd</c> so the closure that captures <paramref name="defaultMapper"/> is only
+        /// built on the (per-type, once) miss. Shared by <see cref="Get{TRequest}"/> and
+        /// <see cref="ResolveMapperInfo"/> so both answer from the same cache.
+        /// </summary>
+        private static Type ResolveClosedDefault(
+            ConcurrentDictionary<Type, Type> cache, Type defaultMapper, Type requestType)
+        {
+            if (cache.TryGetValue(requestType, out var closed))
+                return closed;
+
+            return cache.GetOrAdd(requestType, rt => defaultMapper.MakeGenericType(rt));
         }
 
         /// <summary>

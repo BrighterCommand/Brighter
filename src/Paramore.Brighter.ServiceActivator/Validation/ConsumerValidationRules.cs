@@ -131,15 +131,19 @@ public static class ConsumerValidationRules
     /// request type resolves to no mapper, or whose request type resolves to the default mapper (whose transforms
     /// are Brighter built-ins and out of scope) are skipped.
     /// </summary>
-    /// <param name="mapperRegistry">The mapper registry used to describe the subscription's transforms.
-    /// The returned specification takes <b>ownership</b> of this registry and disposes it (draining its
-    /// factories) when the specification is disposed — so pass a registry created solely for this rule.</param>
+    /// <param name="mapperRegistryFactory">Builds the mapper registry used to describe the subscription's
+    /// transforms. The rule invokes this once and takes <b>ownership</b> of the registry it returns, disposing
+    /// it (draining its factories) when the specification is disposed. Taking a factory rather than a live
+    /// instance keeps that ownership transfer explicit — the rule disposes only a registry it created — so a
+    /// caller cannot hand in a registry it still uses elsewhere and have it disposed underneath them.</param>
     /// <param name="probe">Answers whether a declared transformer type is resolvable, without instantiating it.</param>
-    /// <returns>A specification that reports a Warning per unresolvable unwrap transform, and that disposes
-    /// <paramref name="mapperRegistry"/> when the container disposes it.</returns>
+    /// <returns>A specification that reports a Warning per unresolvable unwrap transform, and that disposes the
+    /// registry <paramref name="mapperRegistryFactory"/> produced when the container disposes it.</returns>
     public static ISpecification<Subscription> UnwrapTransformResolvable(
-        MessageMapperRegistry mapperRegistry, IAmATransformerResolvabilityProbe probe)
-        => new DisposingSpecification<Subscription>(subscription =>
+        Func<MessageMapperRegistry> mapperRegistryFactory, IAmATransformerResolvabilityProbe probe)
+    {
+        var mapperRegistry = mapperRegistryFactory();
+        return new DisposingSpecification<Subscription>(subscription =>
         {
             if (subscription.RequestType is null)
                 return [];
@@ -160,6 +164,7 @@ public static class ConsumerValidationRules
                     "Is its assembly included in AutoFromAssemblies()?")))
                 .ToList();
         }, mapperRegistry);
+    }
 
     /// <summary>
     /// Checks whether <paramref name="handlerType"/> derives from <c>RequestHandlerAsync&lt;&gt;</c>.

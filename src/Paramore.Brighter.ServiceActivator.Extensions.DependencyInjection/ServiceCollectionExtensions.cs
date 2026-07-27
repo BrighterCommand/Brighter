@@ -222,7 +222,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                     return new Specification<Subscription>(_ => []);
 
                 return ConsumerValidationRules.UnwrapTransformResolvable(
-                    ServiceCollectionExtensions.MessageMapperRegistry(sp), probe);
+                    () => ServiceCollectionExtensions.MessageMapperRegistry(sp), probe);
             });
         }
     }
