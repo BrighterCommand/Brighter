@@ -117,7 +117,7 @@ namespace Paramore.Brighter
                 //exceptions), so guard it: a disposal failure must not mask the configuration error
                 //the caller needs to see.
                 try { CleanUpAfterFailedBuild(pipeline, transforms, messageMapper); }
-                catch { /* swallowed: cleanup is best-effort; do not mask the build error rethrown below */ }
+                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
                 throw new ConfigurationException("Error building wrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -158,7 +158,7 @@ namespace Paramore.Brighter
                 //exceptions), so guard it: a disposal failure must not mask the configuration error
                 //the caller needs to see.
                 try { CleanUpAfterFailedBuild(pipeline, transforms, messageMapper); }
-                catch { /* swallowed: cleanup is best-effort; do not mask the build error rethrown below */ }
+                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
                 throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -222,7 +222,7 @@ namespace Paramore.Brighter
             foreach (var transform in transforms)
             {
                 try { _messageTransformerFactoryAsync.Release(transform); }
-                catch { /* swallowed: best-effort cleanup must not skip the rest or mask the build error */ }
+                catch (Exception releaseException) { Log.FailedToReleaseTransform(s_logger, releaseException); }
             }
         }
 
@@ -314,6 +314,12 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "No message transformer factory configured, so no transforms will be created but {TransformCount} configured")]
             public static partial void NoMessageTransformerFactoryConfigured(ILogger logger, int transformCount);
+
+            [LoggerMessage(LogLevel.Debug, "Failed to release resources while cleaning up after a failed pipeline build; the build error is preserved and rethrown. A repeated failure here points at a mapper/transform Release or Dispose that throws.")]
+            public static partial void FailedToCleanUpAfterFailedBuild(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Debug, "Failed to release a transform while cleaning up a partially-built pipeline; releasing the remaining transforms. A repeated failure here points at a transform Release or Dispose that throws.")]
+            public static partial void FailedToReleaseTransform(ILogger logger, Exception exception);
         }
     }
 }
