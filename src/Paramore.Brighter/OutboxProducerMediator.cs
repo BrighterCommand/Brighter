@@ -77,7 +77,10 @@ namespace Paramore.Brighter
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
             
         private int _outStandingCount;
-        private bool _disposed;
+        //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
+        //an owner and the container disposing concurrently must run CloseAll() (broker I/O) and the factory
+        //disposals exactly once
+        private int _disposed;
         private readonly int _maxOutStandingMessages;
         private readonly TimeSpan _maxOutStandingCheckInterval;
         private readonly Dictionary<string, object> _outBoxBag;
@@ -179,13 +182,12 @@ namespace Paramore.Brighter
 
         private void Dispose(bool disposing)
         {
-            if (_disposed)
+            //claim disposed up front with a single atomic exchange: each step below is a teardown backstop
+            //that must run at most once. Interlocked closes the window two concurrent Dispose() callers (an
+            //owner and the container) would otherwise share — both reading false and both re-running CloseAll()
+            //broker I/O plus the factory disposals. A throw from any step must not leave the flag unclaimed.
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
                 return;
-
-            //claim disposed up front: each step below is a teardown backstop that must run at most once,
-            //and a throw from any of them (CloseAll does broker I/O) must not leave the flag false, or a
-            //second Dispose() from the container would re-run CloseAll() on an already-closed registry.
-            _disposed = true;
 
             if (disposing)
             {
