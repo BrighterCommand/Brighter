@@ -97,6 +97,9 @@ public static class ConfigureTransport
                     {
                         Topic = new RoutingKey(typeof(T).Name),
                         RequestType = typeof(T),
+                        // Murmur2Random is recommended: its MurmurHash2 hash spreads keys evenly across
+                        // partitions, avoiding hot partitions
+                        Partitioner = Paramore.Brighter.MessagingGateway.Kafka.Partitioner.Murmur2Random,
                         MessageSendMaxRetries = 3,
                         MessageTimeoutMs = 1000,
                         MaxInFlightRequestsPerConnection = 1,

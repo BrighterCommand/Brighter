@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(BrighterNetStandardTargetFrameworks)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <!-- EnforceExtendedAnalyzerRules is deliberately not set here (unlike the analyzer
+         project): RS1038 would fire on the Microsoft.CodeAnalysis.CSharp.Workspaces
+         reference that a code-fix provider requires. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.Analyzer\Paramore.Brighter.Analyzer.csproj" />
+  </ItemGroup>
+
+</Project>

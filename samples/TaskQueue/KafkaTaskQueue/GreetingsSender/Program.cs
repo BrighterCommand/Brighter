@@ -80,6 +80,9 @@ builder.Services.AddBrighter(options =>
                     {
                         Topic = new RoutingKey("greeting.event"),
                         RequestType = typeof(GreetingEvent),
+                        // Murmur2Random is recommended: its MurmurHash2 hash spreads keys evenly across
+                        // partitions, avoiding hot partitions
+                        Partitioner = Partitioner.Murmur2Random,
                         NumPartitions = 3,
                         MessageSendMaxRetries = 3,
                         MessageTimeoutMs = 1000,

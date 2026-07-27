@@ -20,15 +20,21 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.Analyzer\Paramore.Brighter.Analyzer.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.Analyzer.CodeFixes\Paramore.Brighter.Analyzer.CodeFixes.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Update="tools\*.ps1" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="" />
+    <!-- Ship the BrighterAnalysisMode switch: the props is auto-imported by NuGet
+         (must match the PackageId) and wires the global analyzer configs. -->
+    <None Include="build\Paramore.Brighter.Analyzer.Package.props" Pack="true" PackagePath="build" />
+    <None Include="configuration\*.editorconfig" Pack="true" PackagePath="configuration" />
   </ItemGroup>
 
   <Target Name="_AddAnalyzersToOutput">
     <ItemGroup>
       <TfmSpecificPackageFile Include="$(OutputPath)\Paramore.Brighter.Analyzer.dll" PackagePath="analyzers/dotnet/cs" />
+      <TfmSpecificPackageFile Include="$(OutputPath)\Paramore.Brighter.Analyzer.CodeFixes.dll" PackagePath="analyzers/dotnet/cs" />
     </ItemGroup>
   </Target>
 

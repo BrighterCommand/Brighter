@@ -1,5 +1,10 @@
+is_global = true
+
 dotnet_diagnostic.BRT001.severity = warning
 dotnet_diagnostic.BRT002.severity = warning
 dotnet_diagnostic.BRT003.severity = warning
 dotnet_diagnostic.BRT004.severity = warning
 dotnet_diagnostic.BRT005.severity = warning
+dotnet_diagnostic.BRT006.severity = warning
+dotnet_diagnostic.BRT007.severity = warning
+dotnet_diagnostic.BRT008.severity = warning

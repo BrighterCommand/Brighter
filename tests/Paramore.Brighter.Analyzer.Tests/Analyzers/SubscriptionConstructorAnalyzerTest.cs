@@ -2,15 +2,15 @@
 using Paramore.Brighter.Analyzer.Analyzers;
 using Paramore.Brighter.Analyzer.Tests.Analyzers;
 
-namespace Paramore.Brighter.Analyzer.Test.Analyzers
-{
-    public class SubscriptionConstructorAnalyzerTest : BaseAnalyzerTest<SubscriptionConstructorAnalyzer>
-    {
-        [Fact]
-        public async Task When_Initializing_Subscription_With_MessagePump()
-        {
+namespace Paramore.Brighter.Analyzer.Test.Analyzers;
 
-            testContext.TestCode = /* lang=c#-test */ """
+public class SubscriptionConstructorAnalyzerTest : BaseAnalyzerTest<SubscriptionConstructorAnalyzer>
+{
+    [Fact]
+    public async Task When_Initializing_Subscription_With_MessagePump()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
             using Paramore.Brighter;
             namespace TestNamespace
             {
@@ -25,14 +25,14 @@ namespace Paramore.Brighter.Analyzer.Test.Analyzers
                     }
 """;
 
-            await testContext.RunAsync();
-        }
+        await testContext.RunAsync();
+    }
 
-        [Fact]
-        public async Task When_Initializing_Subscription_WithOut_MessagePump()
-        {
-
-            testContext.TestCode = /* lang=c#-test */ """
+    [Fact]
+    public async Task When_Initializing_Subscription_WithOut_MessagePump()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
             using Paramore.Brighter;
             namespace TestNamespace
             {
@@ -47,14 +47,19 @@ namespace Paramore.Brighter.Analyzer.Test.Analyzers
                     }
 """;
 
-            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(SubscriptionConstructorAnalyzer.MessagePumpMissingRule).WithLocation(0).WithArguments("SubscriptionTest"));
-            await testContext.RunAsync();
-        }
-        [Fact]
-        public async Task When_Initializing_SubscriptionNested_WithOut_MessagePump()
-        {
+        testContext.ExpectedDiagnostics.Add(
+            new DiagnosticResult(SubscriptionConstructorAnalyzer.MessagePumpMissingRule)
+                .WithLocation(0)
+                .WithArguments("SubscriptionTest")
+        );
+        await testContext.RunAsync();
+    }
 
-            testContext.TestCode = /* lang=c#-test */ """
+    [Fact]
+    public async Task When_Initializing_SubscriptionNested_WithOut_MessagePump()
+    {
+        testContext.TestCode = /* lang=c#-test */
+            """
             using Paramore.Brighter;
             namespace TestNamespace
             {
@@ -75,9 +80,11 @@ namespace Paramore.Brighter.Analyzer.Test.Analyzers
                     }
 """;
 
-            testContext.ExpectedDiagnostics.Add(new DiagnosticResult(SubscriptionConstructorAnalyzer.MessagePumpMissingRule).WithLocation(0).WithArguments("SubscriptionTestNested"));
-            await testContext.RunAsync();
-        }
-
+        testContext.ExpectedDiagnostics.Add(
+            new DiagnosticResult(SubscriptionConstructorAnalyzer.MessagePumpMissingRule)
+                .WithLocation(0)
+                .WithArguments("SubscriptionTestNested")
+        );
+        await testContext.RunAsync();
     }
 }

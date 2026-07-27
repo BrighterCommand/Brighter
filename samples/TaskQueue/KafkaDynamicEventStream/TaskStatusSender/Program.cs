@@ -52,6 +52,9 @@ builder.Services.AddBrighter(options =>
                         //the same topic for both TaskCreated and TaskUpdated, but different cloud events types
                         Topic = new RoutingKey("task.update"),
                         Type = new CloudEventsType("io.goparamore.task.created"),
+                        // Murmur2Random is recommended: its MurmurHash2 hash spreads keys evenly across
+                        // partitions, avoiding hot partitions
+                        Partitioner = Partitioner.Murmur2Random,
                         NumPartitions = 3,
                         MessageSendMaxRetries = 3,
                         MessageTimeoutMs = 1000,
@@ -61,6 +64,9 @@ builder.Services.AddBrighter(options =>
                     {
                         Topic = new RoutingKey("task.update"),
                         Type = new CloudEventsType("io.goparamore.task.updated"),
+                        // Murmur2Random is recommended: its MurmurHash2 hash spreads keys evenly across
+                        // partitions, avoiding hot partitions
+                        Partitioner = Partitioner.Murmur2Random,
                         NumPartitions = 3,
                         MessageSendMaxRetries = 3,
                         MessageTimeoutMs = 1000,

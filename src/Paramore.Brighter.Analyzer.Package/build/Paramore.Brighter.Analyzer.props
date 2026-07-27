@@ -1,6 +1,0 @@
-<Project>
-  <ItemGroup>
-    <GlobalAnalyzerConfigFiles Condition="'$(BrighterAnalysisMode)' == 'None'" Include="$(MSBuildThisFileDirectory)\..\configuration\none.editorconfig" />
-    <GlobalAnalyzerConfigFiles Condition="'$(BrighterAnalysisMode)' == 'Default'"  Include="$(MSBuildThisFileDirectory)\..\configuration\default.editorconfig" />
-  </ItemGroup>
-</Project>

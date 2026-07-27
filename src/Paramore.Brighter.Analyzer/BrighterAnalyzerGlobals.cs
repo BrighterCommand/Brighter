@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 /* The MIT License (MIT)
 Copyright © 2026 Aboubakr Nasef <aboubakrnasef@gmail.com>
 
@@ -22,22 +22,33 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Analyzer
+namespace Paramore.Brighter.Analyzer;
+
+public static class BrighterAnalyzerGlobals
 {
-    public class BrighterAnalyzerGlobals
-    {
-        public const string PublicationClassName = "Publication";
-        public const string BrighterAssembly = "Paramore.Brighter";
-        public const string RequestTypeProperty = "RequestType";
-        public const string IRequestInterface = "IRequest";
+    public const string PublicationClassName = "Publication";
+    public const string KafkaPublicationClassName = "KafkaPublication";
+    public const string BrighterAssembly = "Paramore.Brighter";
+    public const string KafkaNamespace = "Paramore.Brighter.MessagingGateway.Kafka";
+    public const string RequestTypeProperty = "RequestType";
 
-        public const string MessagePumpTypeEnumName = "MessagePumpType";
-        public const string SubscriptionClassName = "Subscription";
+    // PartitionerProperty (the KafkaPublication property) and PartitionerEnum (the
+    // enum type) intentionally share the value "Partitioner" — they name different
+    // symbols and could diverge.
+    public const string PartitionerProperty = "Partitioner";
+    public const string PartitionerEnum = "Partitioner";
+    public const string ConsistentRandomPartitionerValue = "ConsistentRandom";
+    public const string ConsistentPartitionerValue = "Consistent";
+    public const string Murmur2RandomPartitionerValue = "Murmur2Random";
+    public const string Murmur2PartitionerValue = "Murmur2";
+    public const string IRequestInterface = "IRequest";
 
-        public const string MessageMapperInterface = "IAmAMessageMapper";
-        public const string UnwrapWithAttribute = "UnwrapWithAttribute";
-        public const string WrapWithAttribute = "WrapWithAttribute";
-        public const string MapToMessage = "MapToMessage";
-        public const string MapToRequest = "MapToRequest";
-    }
+    public const string MessagePumpTypeEnumName = "MessagePumpType";
+    public const string SubscriptionClassName = "Subscription";
+
+    public const string MessageMapperInterface = "IAmAMessageMapper";
+    public const string UnwrapWithAttribute = "UnwrapWithAttribute";
+    public const string WrapWithAttribute = "WrapWithAttribute";
+    public const string MapToMessage = "MapToMessage";
+    public const string MapToRequest = "MapToRequest";
 }
