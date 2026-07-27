@@ -172,11 +172,6 @@ namespace Paramore.Brighter
             //answers "is there a pipeline?", so there is nothing to release and no probe to leak
             => _mapperRegistryAsync.ResolveAsyncMapperInfo(typeof(TRequest)).MapperType is not null;
 
-        public ValueTask<bool> HasPipelineAsync<TRequest>() where TRequest : class, IRequest
-            //type-only resolution, so this no longer creates or releases a probe mapper; kept returning a
-            //ValueTask so async callers on the Proactor pump keep their existing call shape
-            => new ValueTask<bool>(_mapperRegistryAsync.ResolveAsyncMapperInfo(typeof(TRequest)).MapperType is not null);
-
         private IEnumerable<IAmAMessageTransformAsync> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
             where TRequest : class, IRequest
         {

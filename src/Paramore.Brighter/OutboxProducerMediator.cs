@@ -1260,11 +1260,11 @@ namespace Paramore.Brighter
             }
 
             Message message;
-            if (await _transformPipelineBuilderAsync.HasPipelineAsync<TRequest>())
+            if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
                 //release asynchronously: when a handler drives this from the Proactor pump the dispose
                 //runs on the single-threaded pump context, so an IAsyncDisposable mapper/transform must be
-                //awaited rather than blocked on — the probe in HasPipelineAsync releases the same way
+                //awaited rather than blocked on
                 var pipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<TRequest>();
                 try
                 {
