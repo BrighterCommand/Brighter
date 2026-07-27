@@ -182,20 +182,36 @@ namespace Paramore.Brighter
             if (_disposed)
                 return;
 
+            //claim disposed up front: each step below is a teardown backstop that must run at most once,
+            //and a throw from any of them (CloseAll does broker I/O) must not leave the flag false, or a
+            //second Dispose() from the container would re-run CloseAll() on an already-closed registry.
+            _disposed = true;
+
             if (disposing)
             {
-                _producerRegistry.CloseAll();
+                //guard every step independently: a failure in one must not skip the rest. Otherwise a throw
+                //from CloseAll() would leak the per-resolution IServiceScope each factory retains for a
+                //mapper or transform obtained but not released — the exact retention this owner exists to drain.
+                try { _producerRegistry.CloseAll(); }
+                catch (Exception e) { Log.FailedToCloseProducers(s_logger, e); }
 
                 //the mediator is the sole owner of the runtime mapper/transform factories (built for it in
                 //ServiceCollectionExtensions and never registered in the container). Disposing the registry
                 //cascades to the two mapper factories it holds; the two transform factories are disposed
                 //directly. Without this the per-resolution IServiceScope each factory retains for a mapper or
                 //transform obtained but not released is held until the process exits, not at container teardown.
-                (_messageMapperRegistry as IDisposable)?.Dispose();
-                (_messageTransformerFactory as IDisposable)?.Dispose();
-                (_messageTransformerFactoryAsync as IDisposable)?.Dispose();
+                DisposeQuietly(_messageMapperRegistry);
+                DisposeQuietly(_messageTransformerFactory);
+                DisposeQuietly(_messageTransformerFactoryAsync);
             }
-            _disposed = true;
+        }
+
+        //Disposes a member if it is IDisposable, swallowing and logging any failure so one factory's fault
+        //cannot skip the remaining disposals in the teardown chain.
+        private static void DisposeQuietly(object? member)
+        {
+            try { (member as IDisposable)?.Dispose(); }
+            catch (Exception e) { Log.FailedToDisposeOwnedResource(s_logger, member?.GetType().Name ?? "null", e); }
         }
 
         /// <summary>
@@ -1456,6 +1472,12 @@ namespace Paramore.Brighter
             
             [LoggerMessage(LogLevel.Debug, "Outbox outstanding message count is: {OutstandingMessageCount}")]
             public static partial void OutboxOutstandingMessageCount(ILogger logger, int outstandingMessageCount);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to close the producer registry while disposing the mediator; continuing to dispose the mapper and transform factories")]
+            public static partial void FailedToCloseProducers(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to dispose owned resource {ResourceType} while disposing the mediator; continuing with the remaining resources")]
+            public static partial void FailedToDisposeOwnedResource(ILogger logger, string resourceType, Exception exception);
         }
     }
 }
