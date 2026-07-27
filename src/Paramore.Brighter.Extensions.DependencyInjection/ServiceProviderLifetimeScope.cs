@@ -377,7 +377,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="scope">The scope to dispose</param>
         private static void DisposeScope(IServiceScope scope)
         {
-#if !NETSTANDARD2_0
             if (scope is IAsyncDisposable asyncScope)
             {
                 //a captured single-threaded context (BrighterSynchronizationContext) would deadlock a
@@ -410,7 +409,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 }
                 return;
             }
-#endif
             scope.Dispose();
         }
 
@@ -422,13 +420,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="scope">The scope to dispose</param>
         private static async ValueTask DisposeScopeAsync(IServiceScope scope)
         {
-#if !NETSTANDARD2_0
             if (scope is IAsyncDisposable asyncScope)
             {
                 await asyncScope.DisposeAsync().ConfigureAwait(false);
                 return;
             }
-#endif
             scope.Dispose();
         }
 
