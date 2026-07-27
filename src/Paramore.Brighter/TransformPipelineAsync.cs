@@ -10,11 +10,10 @@ namespace Paramore.Brighter
         IEnumerable<IAmAMessageTransformAsync> transforms,
         IAmAMessageMapperRegistryAsync? mapperRegistry = null)  : IDisposable, IAsyncDisposable where TRequest : class, IRequest
     {
-        protected IAmAMessageMapperAsync<TRequest> MessageMapper = messageMapper;
-        protected IEnumerable<IAmAMessageTransformAsync> Transforms = transforms;
+        protected readonly IAmAMessageMapperAsync<TRequest> MessageMapper = messageMapper;
+        protected readonly IEnumerable<IAmAMessageTransformAsync> Transforms = transforms;
         protected TransformLifetimeScopeAsync? InstanceScope;
 
-        private readonly IAmAMessageMapperRegistryAsync? _mapperRegistry = mapperRegistry;
         private int _released;
 
         /// <summary>
@@ -67,8 +66,8 @@ namespace Paramore.Brighter
                     //finally so a throw from the transform-scope disposal above cannot orphan the mapper's own
                     //scope — the release-once guard is already set, so no later dispose or the finalizer would
                     //retry it, which is the exact leak this pipeline is meant to close.
-                    if (_mapperRegistry is not null)
-                        await _mapperRegistry.ReleaseAsync(MessageMapper).ConfigureAwait(false);
+                    if (mapperRegistry is not null)
+                        await mapperRegistry.ReleaseAsync(MessageMapper).ConfigureAwait(false);
                 }
             }
             finally
@@ -109,7 +108,7 @@ namespace Paramore.Brighter
                 //finally so a throw from the transform-scope disposal above cannot orphan the mapper's own
                 //scope — the release-once guard is already set, so neither the finalizer nor a later Dispose
                 //would retry it, which is the exact leak this pipeline is meant to close.
-                _mapperRegistry?.Release(MessageMapper);
+                mapperRegistry?.Release(MessageMapper);
             }
         }
     }

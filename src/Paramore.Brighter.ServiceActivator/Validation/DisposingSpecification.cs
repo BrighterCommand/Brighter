@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Paramore.Brighter.Validation;
 
 namespace Paramore.Brighter.ServiceActivator.Validation;
 
@@ -42,15 +41,12 @@ namespace Paramore.Brighter.ServiceActivator.Validation;
 /// <c>Visit(Specification&lt;T&gt;)</c> overload) continues to work unchanged.
 /// </remarks>
 /// <typeparam name="T">The entity type to evaluate.</typeparam>
-internal sealed class DisposingSpecification<T> : Specification<T>, IDisposable
+internal sealed class DisposingSpecification<T>(
+    Func<T, IEnumerable<ValidationResult>> resultEvaluator,
+    IDisposable owned)
+    : Specification<T>(resultEvaluator), IDisposable
 {
-    private readonly IDisposable _owned;
-
-    public DisposingSpecification(Func<T, IEnumerable<ValidationResult>> resultEvaluator, IDisposable owned)
-        : base(resultEvaluator)
-    {
-        _owned = owned ?? throw new ArgumentNullException(nameof(owned));
-    }
+    private readonly IDisposable _owned = owned ?? throw new ArgumentNullException(nameof(owned));
 
     public void Dispose() => _owned.Dispose();
 }

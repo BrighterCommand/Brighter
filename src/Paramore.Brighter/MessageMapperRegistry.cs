@@ -130,12 +130,12 @@ namespace Paramore.Brighter
         /// <para>
         /// Implemented explicitly, as is <see cref="IAmAMessageMapperRegistryAsync.Release(IAmAMessageMapperAsync)"/>:
         /// a mapper that supports both Reactor and Proactor (e.g. <c>JsonMessageMapper&lt;T&gt;</c>)
-        /// implements both <see cref="IAmAMessageMapper"/> and <see cref="IAmAMessageMapperAsync"/>, so were
-        /// either overload public a caller holding the concrete registry could bind
-        /// <c>registry.Release(dualMapper)</c> to the wrong factory (or hit CS0121). Hiding both behind their
-        /// interfaces forces the caller to pick <see cref="IAmAMessageMapperRegistry"/> or
-        /// <see cref="IAmAMessageMapperRegistryAsync"/> explicitly, so releasing a mapper resolved from
-        /// <see cref="GetAsync{TRequest}"/> through the sync factory is a compile error, not a silent leak.
+        /// implements both <see cref="IAmAMessageMapper"/> and <see cref="IAmAMessageMapperAsync"/>, so
+        /// a caller holding the concrete registry could bind  <c>registry.Release(dualMapper)</c> to the wrong factory
+        /// (or hit CS0121). Hiding both behind their  interfaces forces the caller to
+        /// pick <see cref="IAmAMessageMapperRegistry"/> or  <see cref="IAmAMessageMapperRegistryAsync"/> explicitly,
+        /// so releasing a mapper resolved from  <see cref="GetAsync{TRequest}"/> through the sync factory is a
+        /// compile error, not a silent leak.
         /// </para>
         /// </remarks>
         /// <param name="mapper">The mapper to release.</param>

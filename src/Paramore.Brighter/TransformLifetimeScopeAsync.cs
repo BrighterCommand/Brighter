@@ -2,22 +2,16 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    public partial class TransformLifetimeScopeAsync : IAmATransformLifetimeAsync
+    public partial class TransformLifetimeScopeAsync(IAmAMessageTransformerFactoryAsync factory)
+        : IAmATransformLifetimeAsync
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScope>();
-        private readonly IAmAMessageTransformerFactoryAsync _factory;
         private readonly IList<IAmAMessageTransformAsync> _trackedObjects = new List<IAmAMessageTransformAsync>();
 
-        public TransformLifetimeScopeAsync(IAmAMessageTransformerFactoryAsync factory)
-        {
-            _factory = factory;
-        }
-        
         public void Dispose()
         {
             ReleaseTrackedObjects();
@@ -65,7 +59,7 @@ namespace Paramore.Brighter
                 var lastIndex = _trackedObjects.Count - 1;
                 var trackedItem = _trackedObjects[lastIndex];
                 _trackedObjects.RemoveAt(lastIndex);
-                _factory.Release(trackedItem);
+                factory.Release(trackedItem);
                 Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
             }
         }
@@ -81,7 +75,7 @@ namespace Paramore.Brighter
                 var lastIndex = _trackedObjects.Count - 1;
                 var trackedItem = _trackedObjects[lastIndex];
                 _trackedObjects.RemoveAt(lastIndex);
-                await _factory.ReleaseAsync(trackedItem).ConfigureAwait(false);
+                await factory.ReleaseAsync(trackedItem).ConfigureAwait(false);
                 Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
             }
         }

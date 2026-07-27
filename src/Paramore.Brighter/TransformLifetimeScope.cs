@@ -1,22 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    public partial class TransformLifetimeScope : IAmATransformLifetime
+    public partial class TransformLifetimeScope(IAmAMessageTransformerFactory factory) : IAmATransformLifetime
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScope>();
-        private readonly IAmAMessageTransformerFactory _factory;
         private readonly IList<IAmAMessageTransform> _trackedObjects = new List<IAmAMessageTransform>();
 
-        public TransformLifetimeScope(IAmAMessageTransformerFactory factory)
-        {
-            _factory = factory;
-        }
-        
         public void Dispose()
         {
             ReleaseTrackedObjects();
@@ -54,7 +47,7 @@ namespace Paramore.Brighter
                 var lastIndex = _trackedObjects.Count - 1;
                 var trackedItem = _trackedObjects[lastIndex];
                 _trackedObjects.RemoveAt(lastIndex);
-                _factory.Release(trackedItem);
+                factory.Release(trackedItem);
                 Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
             }
         }

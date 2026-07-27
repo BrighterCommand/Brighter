@@ -28,8 +28,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
@@ -55,11 +53,9 @@ namespace Paramore.Brighter
         private readonly InstrumentationOptions _instrumentationOptions;
 
         //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
-        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
-            new ConcurrentDictionary<Type, IOrderedEnumerable<WrapWithAttribute>>();
+        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento = new();
 
-        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento =
-            new ConcurrentDictionary<Type, IOrderedEnumerable<UnwrapWithAttribute>>();
+        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento = new();
 
         /// <summary>
         /// Creates an instance of a transform pipeline builder.

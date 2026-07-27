@@ -33,7 +33,6 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
-using Polly;
 using Polly.Registry;
 
 // ReSharper disable StaticMemberInGenericType

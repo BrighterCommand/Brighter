@@ -56,13 +56,6 @@ public class PipelineValidator(
     //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
     //an owner and the container disposing concurrently then dispose the registry exactly once
     private int _disposed;
-    private readonly PipelineBuilder<IRequest> _pipelineBuilder = pipelineBuilder;
-    private readonly IEnumerable<Publication>? _publications = publications;
-    private readonly IEnumerable<Subscription>? _subscriptions = subscriptions;
-    private readonly IEnumerable<ISpecification<Subscription>>? _consumerSpecs = consumerSpecs;
-    private readonly ValidationProviderRegistrations? _providerRegistrations = providerRegistrations;
-    private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistry;
-    private readonly IAmATransformerResolvabilityProbe? _transformerProbe = transformerProbe;
 
     /// <summary>
     /// Disposes the mapper registry this validator built for the wrap-transform check.
@@ -77,7 +70,7 @@ public class PipelineValidator(
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
-        _mapperRegistry?.Dispose();
+        mapperRegistry?.Dispose();
 
         GC.SuppressFinalize(this);
     }
@@ -99,7 +92,7 @@ public class PipelineValidator(
 
     private void ValidateHandlerPipelines(List<ValidationError> findings)
     {
-        var descriptions = _pipelineBuilder.Describe();
+        var descriptions = pipelineBuilder.Describe();
         var specs = new List<ISpecification<HandlerPipelineDescription>>
         {
             HandlerPipelineValidationRules.HandlerTypeVisibility(),
@@ -107,15 +100,15 @@ public class PipelineValidator(
             HandlerPipelineValidationRules.AttributeAsyncConsistency()
         };
 
-        if (_providerRegistrations is not null)
-            specs.Add(HandlerPipelineValidationRules.ValidationProviderRegistered(_providerRegistrations));
+        if (providerRegistrations is not null)
+            specs.Add(HandlerPipelineValidationRules.ValidationProviderRegistered(providerRegistrations));
 
         EvaluateSpecs(descriptions, specs, findings);
     }
 
     private void ValidateProducers(List<ValidationError> findings)
     {
-        if (_publications == null) return;
+        if (publications == null) return;
 
         var specs = new List<ISpecification<Publication>>
         {
@@ -123,17 +116,17 @@ public class PipelineValidator(
             ProducerValidationRules.PublicationRequestTypeImplementsIRequest()
         };
 
-        if (_mapperRegistry is not null && _transformerProbe is not null)
-            specs.Add(ProducerValidationRules.WrapTransformResolvable(_mapperRegistry, _transformerProbe));
+        if (mapperRegistry is not null && transformerProbe is not null)
+            specs.Add(ProducerValidationRules.WrapTransformResolvable(mapperRegistry, transformerProbe));
 
-        EvaluateSpecs(_publications, specs, findings);
+        EvaluateSpecs(publications, specs, findings);
     }
 
     private void ValidateConsumers(List<ValidationError> findings)
     {
-        if (_subscriptions == null || _consumerSpecs == null) return;
+        if (subscriptions == null || consumerSpecs == null) return;
 
-        EvaluateSpecs(_subscriptions, _consumerSpecs, findings);
+        EvaluateSpecs(subscriptions, consumerSpecs, findings);
     }
 
     private static void EvaluateSpecs<T>(
