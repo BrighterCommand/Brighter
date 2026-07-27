@@ -363,10 +363,20 @@ namespace Paramore.Brighter
             if (Interlocked.Exchange(ref _disposed, 1) != 0)
                 return;
 
-            (_messageMapperFactory as IDisposable)?.Dispose();
-            (_messageMapperFactoryAsync as IDisposable)?.Dispose();
-
             GC.SuppressFinalize(this);
+
+            //dispose both factories even when the first throws: a user-supplied IAmAMessageMapperFactory is
+            //free to surface an exception from Dispose, and skipping the second would leak the per-resolution
+            //IServiceScope it retains — the exact retention this Dispose exists to drain. The finally releases
+            //the async factory before the sync factory's exception (if any) propagates to the owner.
+            try
+            {
+                (_messageMapperFactory as IDisposable)?.Dispose();
+            }
+            finally
+            {
+                (_messageMapperFactoryAsync as IDisposable)?.Dispose();
+            }
         }
     }
 }
