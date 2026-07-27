@@ -40,19 +40,26 @@ namespace Paramore.Brighter.Validation;
 /// <param name="consumerSpecs">Optional consumer validation specifications.</param>
 /// <param name="providerRegistrations">Optional validation-provider registrations. When supplied, the
 /// validation-provider check runs over handler pipelines; null (the default) leaves it inert.</param>
-/// <param name="mapperRegistry">Optional mapper registry used to describe a publication's transforms.
-/// Together with <paramref name="transformerProbe"/> it enables the producer wrap-transform check.</param>
+/// <param name="mapperRegistryFactory">Optional factory that builds the mapper registry used to describe a
+/// publication's transforms. The validator invokes it once and takes ownership of the registry it returns,
+/// disposing it at teardown. Taking a factory rather than a live instance keeps that ownership transfer
+/// explicit — the validator disposes only a registry it created — so a caller cannot hand in a registry it
+/// still uses elsewhere and have it disposed underneath them. Together with <paramref name="transformerProbe"/>
+/// it enables the producer wrap-transform check.</param>
 /// <param name="transformerProbe">Optional probe answering whether a declared transformer type is resolvable.
-/// Together with <paramref name="mapperRegistry"/> it enables the producer wrap-transform check.</param>
+/// Together with <paramref name="mapperRegistryFactory"/> it enables the producer wrap-transform check.</param>
 public class PipelineValidator(
     PipelineBuilder<IRequest> pipelineBuilder,
     IEnumerable<Publication>? publications = null,
     IEnumerable<Subscription>? subscriptions = null,
     IEnumerable<ISpecification<Subscription>>? consumerSpecs = null,
     ValidationProviderRegistrations? providerRegistrations = null,
-    MessageMapperRegistry? mapperRegistry = null,
+    Func<MessageMapperRegistry>? mapperRegistryFactory = null,
     IAmATransformerResolvabilityProbe? transformerProbe = null) : IAmAPipelineValidator, IDisposable
 {
+    //invoked once at construction: the validator owns the registry it produced and disposes only that one.
+    private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistryFactory?.Invoke();
+
     //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
     //an owner and the container disposing concurrently then dispose the registry exactly once
     private int _disposed;
@@ -70,7 +77,7 @@ public class PipelineValidator(
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
-        mapperRegistry?.Dispose();
+        _mapperRegistry?.Dispose();
     }
 
     /// <inheritdoc />
@@ -114,8 +121,8 @@ public class PipelineValidator(
             ProducerValidationRules.PublicationRequestTypeImplementsIRequest()
         };
 
-        if (mapperRegistry is not null && transformerProbe is not null)
-            specs.Add(ProducerValidationRules.WrapTransformResolvable(mapperRegistry, transformerProbe));
+        if (_mapperRegistry is not null && transformerProbe is not null)
+            specs.Add(ProducerValidationRules.WrapTransformResolvable(_mapperRegistry, transformerProbe));
 
         EvaluateSpecs(publications, specs, findings);
     }

@@ -37,16 +37,23 @@ namespace Paramore.Brighter.Validation;
 /// </summary>
 /// <param name="logger">The logger to write diagnostic output to.</param>
 /// <param name="pipelineBuilder">The pipeline builder used to describe handler pipelines.</param>
-/// <param name="mapperRegistry">Optional mapper registry for resolving publication/subscription mapper info.</param>
+/// <param name="mapperRegistryFactory">Optional factory that builds the mapper registry used to resolve
+/// publication/subscription mapper info. The writer invokes it once and takes ownership of the registry it
+/// returns, disposing it at teardown. Taking a factory rather than a live instance keeps that ownership
+/// transfer explicit — the writer disposes only a registry it created — so a caller cannot hand in a registry
+/// it still uses elsewhere and have it disposed underneath them.</param>
 /// <param name="publications">Optional publications to describe.</param>
 /// <param name="subscriptions">Optional subscriptions to describe.</param>
 public class PipelineDiagnosticWriter(
     ILogger logger,
     PipelineBuilder<IRequest> pipelineBuilder,
-    MessageMapperRegistry? mapperRegistry = null,
+    Func<MessageMapperRegistry>? mapperRegistryFactory = null,
     IEnumerable<Publication>? publications = null,
     IEnumerable<Subscription>? subscriptions = null) : IAmAPipelineDiagnosticWriter, IDisposable
 {
+    //invoked once at construction: the writer owns the registry it produced and disposes only that one.
+    private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistryFactory?.Invoke();
+
     //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
     //an owner and the container disposing concurrently then dispose the registry exactly once
     private int _disposed;
@@ -64,7 +71,7 @@ public class PipelineDiagnosticWriter(
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
-        mapperRegistry?.Dispose();
+        _mapperRegistry?.Dispose();
     }
 
     /// <inheritdoc />
@@ -128,9 +135,9 @@ public class PipelineDiagnosticWriter(
             var topic = pub.Topic?.Value ?? "(no topic)";
             logger.LogDebug("  {RequestType} → {Topic}", requestTypeName, topic);
 
-            if (mapperRegistry != null && pub.RequestType != null)
+            if (_mapperRegistry != null && pub.RequestType != null)
             {
-                var transformDesc = TransformPipelineBuilder.DescribeTransforms(mapperRegistry, pub.RequestType);
+                var transformDesc = TransformPipelineBuilder.DescribeTransforms(_mapperRegistry, pub.RequestType);
                 if (transformDesc != null)
                 {
                     var mapperLabel = transformDesc.IsDefaultMapper ? "default" : "custom";

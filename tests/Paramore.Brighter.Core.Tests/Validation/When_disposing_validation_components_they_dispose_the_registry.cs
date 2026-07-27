@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.Validation
             var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
             PipelineBuilder<IRequest>.ClearPipelineCache();
 
-            var validator = new PipelineValidator(pipelineBuilder, mapperRegistry: mapperRegistry);
+            var validator = new PipelineValidator(pipelineBuilder, mapperRegistryFactory: () => mapperRegistry);
 
             //act — the validator is a singleton that owns the validation-time mapper registry it built.
             //The container disposes the validator at shutdown; it must cascade so the registry's factory
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.Validation
             PipelineBuilder<IRequest>.ClearPipelineCache();
 
             var writer = new PipelineDiagnosticWriter(
-                NullLogger.Instance, pipelineBuilder, mapperRegistry: mapperRegistry);
+                NullLogger.Instance, pipelineBuilder, mapperRegistryFactory: () => mapperRegistry);
 
             //act
             var disposable = writer as IDisposable;
