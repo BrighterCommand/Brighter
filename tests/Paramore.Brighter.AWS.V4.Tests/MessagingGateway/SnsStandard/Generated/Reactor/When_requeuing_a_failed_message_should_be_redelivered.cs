@@ -37,7 +37,7 @@ public class WhenRequeuingAFailedMessageShouldBeRedelivered : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — canonical plain requeue not yet conformant for AWS.V4 / SnsStandard (maintainer sign-off)")]
+    [Fact]
     public void When_requeuing_a_failed_message_should_be_redelivered()
     {
         // Arrange

@@ -15,11 +15,22 @@ public class SnsStandardMessageGatewayProvider
       SnsStandard.Reactor.IAmAMessageGatewayReactorProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
+    private SnsHarnessMessageScheduler? _scheduler;
 
     public SnsStandardMessageGatewayProvider()
     {
         _awsConnection = GatewayFactory.CreateFactory();
     }
+
+    // SNS has no native delayed publish; the producer delegates a requested delay to this seam,
+    // which honours it by wall-clock and re-publishes to the SNS topic once the delay elapses (FR-9).
+    private SnsHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new SnsHarnessMessageScheduler(_awsConnection);
+
+    // SQS queue names permit only alphanumerics, hyphens and underscores. Map the canonical
+    // dotted DLQ/invalid routing keys onto that alphabet so the queue can be created.
+    private static RoutingKey? ToValidSqsName(RoutingKey? routingKey) =>
+        routingKey is null ? null : new RoutingKey(routingKey.Value.Replace(".", "-"));
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
@@ -47,6 +58,13 @@ public class SnsStandardMessageGatewayProvider
         RoutingKey? deadLetterRoutingKey = null,
         RoutingKey? invalidMessageRoutingKey = null)
     {
+        // The DLQ/invalid channels are SQS queues (point-to-point), whose names allow only
+        // alphanumerics, hyphens and underscores; the canonical "<topic>.DLQ" / "<topic>.Invalid"
+        // convention uses dots. Adapt the universal naming to SQS's rules — the read hooks below
+        // read from subscription.DeadLetterRoutingKey/InvalidMessageRoutingKey, so they stay consistent.
+        deadLetterRoutingKey = ToValidSqsName(deadLetterRoutingKey);
+        invalidMessageRoutingKey = ToValidSqsName(invalidMessageRoutingKey);
+
         if (deadLetterRoutingKey != null)
         {
             var deadLetterChannelName = new ChannelName(deadLetterRoutingKey.Value);
@@ -79,14 +97,52 @@ public class SnsStandardMessageGatewayProvider
 
     public Message GetMessageFromInvalidChannel(SqsSubscription subscription)
     {
-        return Message.Empty;
+        return GetMessageFromInvalidChannelAsync(subscription).GetAwaiter().GetResult();
     }
 
-    public Task<Message> GetMessageFromInvalidChannelAsync(
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
         SqsSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(Message.Empty);
+        var invalidSubscription = new SqsSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(subscription.InvalidMessageRoutingKey!.Value),
+            channelName: new ChannelName(subscription.InvalidMessageRoutingKey!.Value),
+            channelType: ChannelType.PointToPoint,
+            routingKey: subscription.InvalidMessageRoutingKey!,
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Assume
+        );
+
+        IAmAChannelAsync? invalidChannel = null;
+        try
+        {
+            invalidChannel = await new ChannelFactory(_awsConnection)
+                .CreateAsyncChannelAsync(invalidSubscription, cancellationToken);
+
+            for (var i = 0; i < 10; i++)
+            {
+                var message = await invalidChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    await invalidChannel.AcknowledgeAsync(message, cancellationToken);
+                    return message;
+                }
+
+                await Task.Delay(1000, cancellationToken);
+            }
+
+            return new Message();
+        }
+        catch (Amazon.SQS.Model.QueueDoesNotExistException)
+        {
+            // The invalid channel is created lazily on first send; if nothing was ever routed
+            // there the queue does not exist, which is equivalent to it being empty (MT_NONE).
+            return new Message();
+        }
+        finally
+        {
+            invalidChannel?.Dispose();
+        }
     }
 
     public RejectionMetadataKeys RejectionMetadataKeys =>
@@ -110,6 +166,7 @@ public class SnsStandardMessageGatewayProvider
         }
 
         producer?.Dispose();
+        _scheduler?.Dispose();
     }
 
     public async Task CleanUpAsync(
@@ -127,6 +184,8 @@ public class SnsStandardMessageGatewayProvider
         {
             await producer.DisposeAsync();
         }
+
+        _scheduler?.Dispose();
     }
 
     public IAmAChannelSync CreateChannel(SqsSubscription subscription)
@@ -167,6 +226,7 @@ public class SnsStandardMessageGatewayProvider
         }
 
         var producer = new SnsMessageProducer(connection, publication);
+        producer.Scheduler = Scheduler;
         return producer;
     }
 
@@ -182,6 +242,7 @@ public class SnsStandardMessageGatewayProvider
         }
 
         var producer = new SnsMessageProducer(connection, publication);
+        producer.Scheduler = Scheduler;
         return producer;
     }
 

@@ -43,7 +43,7 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — Nack redelivers not yet conformant for AWS.V4 / SnsStandard (maintainer sign-off)")]
+    [Fact]
     public async Task When_nacking_a_message_it_should_be_redelivered_async()
     {
         // Arrange
@@ -82,7 +82,7 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         _messageAssertion.Assert(message, redelivered);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — Nack redelivers not yet conformant for AWS.V4 / SnsStandard (maintainer sign-off)")]
+    [Fact]
     public async Task When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second_async()
     {
         // Arrange — two queued messages: M1 is nacked and redelivered; M2 is not blocked (FR-16, AC-17)

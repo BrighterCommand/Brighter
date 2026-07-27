@@ -36,16 +36,18 @@ cell remains `Unknown`.
   boundary. The V4 gateway shares the same AWS SQS platform limit, so the deferral applies identically.
   Requeue-with-delay (FR-2) conforms on FIFO because it uses `ChangeMessageVisibility`, which FIFO does
   support.
-- `AWS / SnsStandard` FR-9 (delayed send) is `Fixed (#4240)`: SNS has **no native delayed publish** —
-  `SnsMessageProducer.SendWithDelay` delegates a non-zero delay to the `IAmAMessageProducer.Scheduler`
-  seam (as Kafka does). Two changes were needed: (1) a localized `src` fix — the **sync**
-  `SnsMessageProducer.SendWithDelay` dropped its `delay` argument (passed `TimeSpan.Zero` to the inner
-  overload), so the Reactor path published immediately regardless of the requested delay; it now
-  forwards `delay`, matching the async path and `SqsMessageProducer`. (2) A wired harness scheduler
-  (`SnsHarnessMessageScheduler`, in-scope per the deferral preconditions) that honours the delay by
-  wall-clock and re-publishes to the SNS topic once it elapses. Requeue-with-delay (FR-2) is `Pass`
-  natively — it is consumer-side `ChangeMessageVisibility` on the subscribed SQS queue, not an SNS
-  publish, so it needs no scheduler.
+- `AWS / SnsStandard` **and `AWS.V4 / SnsStandard`** FR-9 (delayed send) are `Fixed (#4240)`: SNS has
+  **no native delayed publish** — `SnsMessageProducer.SendWithDelay` delegates a non-zero delay to the
+  `IAmAMessageProducer.Scheduler` seam (as Kafka does). Two changes were needed: (1) a localized `src`
+  fix — the **sync** `SnsMessageProducer.SendWithDelay` dropped its `delay` argument (passed
+  `TimeSpan.Zero` to the inner overload), so the Reactor path published immediately regardless of the
+  requested delay; it now forwards `delay`, matching the async path and `SqsMessageProducer`. **The V4
+  gateway (`src/Paramore.Brighter.MessagingGateway.AWSSQS.V4/SnsMessageProducer.cs`) is a separate file
+  and carried the identical bug — the same one-line fix was applied there.** (2) A wired harness
+  scheduler (`SnsHarnessMessageScheduler`, in-scope per the deferral preconditions) that honours the
+  delay by wall-clock and re-publishes to the SNS topic once it elapses (the V4 test project got its own
+  copy). Requeue-with-delay (FR-2) is `Pass` natively — it is consumer-side `ChangeMessageVisibility` on
+  the subscribed SQS queue, not an SNS publish, so it needs no scheduler.
 - `AWS / SnsFifo` FR-9 (delayed send) is `Fixed (#4240)` — and, unlike `AWS / SqsFifo`, it is **not**
   deferred. SqsFifo's deferral was because SQS FIFO **rejects native per-message `DelaySeconds`**; SNS
   FIFO never uses that path — the SNS producer delegates the delay to the `Scheduler` seam, so the FIFO
@@ -66,7 +68,7 @@ cell remains `Unknown`.
 | AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass |
 | AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass |
-| AWS.V4 / SnsStandard | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass |
 | AWS.V4 / SnsFifo | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass |
