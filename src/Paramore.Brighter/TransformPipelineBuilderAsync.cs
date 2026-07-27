@@ -168,62 +168,14 @@ namespace Paramore.Brighter
         }
         
         public bool HasPipeline<TRequest>() where TRequest : class, IRequest
-        {
-            //GetAsync creates an instance to answer the question, so release it again; no pipeline owns it.
-            //Synchronous release: this overload exists for the sync-over-async reply path
-            //(OutboxProducerMediator.CreateRequestFromMessage), which cannot await. Prefer HasPipelineAsync
-            //from an async caller so the probe mapper is released without blocking the pump.
-            var messageMapper = _mapperRegistryAsync.GetAsync<TRequest>();
-            try
-            {
-                return messageMapper is not null;
-            }
-            finally
-            {
-                //Releasing the probe mapper is best-effort: a throwing release must not propagate out of a
-                //predicate and be mistaken for a mapping failure by the caller. Log and swallow.
-                if (messageMapper is not null)
-                {
-                    try
-                    {
-                        _mapperRegistryAsync.Release(messageMapper);
-                    }
-                    catch (Exception releaseException)
-                    {
-                        Log.FailedToReleaseProbeMapper(s_logger, releaseException, typeof(TRequest).Name);
-                    }
-                }
-            }
-        }
+            //resolve the mapper type rather than create an instance: this runs once per message and only
+            //answers "is there a pipeline?", so there is nothing to release and no probe to leak
+            => _mapperRegistryAsync.ResolveAsyncMapperInfo(typeof(TRequest)).MapperType is not null;
 
-        public async ValueTask<bool> HasPipelineAsync<TRequest>() where TRequest : class, IRequest
-        {
-            //GetAsync creates an instance to answer the question, so release it again; no pipeline owns it.
-            //Release asynchronously so that, driven from the Proactor pump, an IAsyncDisposable probe mapper
-            //is awaited rather than drained through a blocking wait — the stall the synchronous HasPipeline
-            //pays on that thread.
-            var messageMapper = _mapperRegistryAsync.GetAsync<TRequest>();
-            try
-            {
-                return messageMapper is not null;
-            }
-            finally
-            {
-                //Releasing the probe mapper is best-effort: a throwing release must not propagate out of a
-                //predicate and be mistaken for a mapping failure by the caller. Log and swallow.
-                if (messageMapper is not null)
-                {
-                    try
-                    {
-                        await _mapperRegistryAsync.ReleaseAsync(messageMapper).ConfigureAwait(false);
-                    }
-                    catch (Exception releaseException)
-                    {
-                        Log.FailedToReleaseProbeMapper(s_logger, releaseException, typeof(TRequest).Name);
-                    }
-                }
-            }
-        }
+        public ValueTask<bool> HasPipelineAsync<TRequest>() where TRequest : class, IRequest
+            //type-only resolution, so this no longer creates or releases a probe mapper; kept returning a
+            //ValueTask so async callers on the Proactor pump keep their existing call shape
+            => new ValueTask<bool>(_mapperRegistryAsync.ResolveAsyncMapperInfo(typeof(TRequest)).MapperType is not null);
 
         private IEnumerable<IAmAMessageTransformAsync> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
             where TRequest : class, IRequest
@@ -371,9 +323,6 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "No message transformer factory configured, so no transforms will be created but {TransformCount} configured")]
             public static partial void NoMessageTransformerFactoryConfigured(ILogger logger, int transformCount);
-
-            [LoggerMessage(LogLevel.Warning, "Failed to release the probe mapper resolved by HasPipeline for {Request}; the answer is unaffected")]
-            public static partial void FailedToReleaseProbeMapper(ILogger logger, Exception ex, string request);
         }
     }
 }

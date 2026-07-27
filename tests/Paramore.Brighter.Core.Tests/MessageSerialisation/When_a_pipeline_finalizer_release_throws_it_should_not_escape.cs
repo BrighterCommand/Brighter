@@ -112,6 +112,8 @@ public class TransformPipelineFinalizerReleaseTests
 
         public IAmAMessageMapper<T>? Get<T>() where T : class, IRequest => null;
 
+        public (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType) => (null, false);
+
         public void Release(IAmAMessageMapper mapper)
         {
             Interlocked.Increment(ref s_releaseAttempts);
@@ -133,6 +135,8 @@ public class TransformPipelineFinalizerReleaseTests
         public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
 
         public IAmAMessageMapperAsync<T>? GetAsync<T>() where T : class, IRequest => null;
+
+        public (Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType) => (null, false);
 
         public void Release(IAmAMessageMapperAsync mapper)
         {

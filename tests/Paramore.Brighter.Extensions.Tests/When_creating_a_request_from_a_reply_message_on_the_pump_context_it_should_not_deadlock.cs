@@ -73,15 +73,10 @@ public class CreateRequestFromReplyMessageOnPumpContextTests
         //assert — the mapper was released on the pump (so the suppressed-context disposal path really ran, not a
         //no-op; the primary signal is that the pump above did not deadlock).
         //
-        //The count is 2, not 1, because CreateRequestFromMessage resolves and releases a mapper TWICE:
-        // 1. HasPipeline<TRequest>() resolves a throwaway mapper purely to answer "is there a pipeline?"
-        //    and releases it (TransformPipelineBuilderAsync.HasPipeline).
-        // 2. BuildUnwrapPipeline<TRequest>() resolves a second mapper for the actual pipeline, which the
-        //    `using` disposes.
-        //Both are transient IAsyncDisposable instances, so both increment the probe. If a future refactor
-        //removes the HasPipeline probe allocation (tracked as the deferred outbox hot-path change), this
-        //will drop to 1 — that is the signal to update this expectation, not a regression.
-        Assert.Equal(2, probe.DisposedCount);
+        //The count is 1: HasPipeline resolves the mapper TYPE only (no instance), so the sole transient
+        //IAsyncDisposable mapper is the one BuildUnwrapPipeline creates for the actual pipeline, which the
+        //`using` disposes on the pump thread.
+        Assert.Equal(1, probe.DisposedCount);
     }
 
     // Hosts the pump on a dedicated thread (not the thread pool) so a genuine deadlock is detected by a

@@ -315,6 +315,13 @@ Closing the leak on the mapper path required a way to return a mapper to its fac
 
 `Paramore.Brighter` targets `netstandard2.0`, which has no runtime support for default interface members, so these ship without a default body — **any third-party implementation of these interfaces must add the new member** to compile. All in-tree implementations are updated; the `Func`-based `SimpleMessageMapperFactory` constructor is unchanged, so its call sites are unaffected.
 
+The two mapper-registry interfaces also gain a type-resolution member so a caller can ask *"is a mapper registered for this request?"* without creating (and then having to release) one:
+
+* `IAmAMessageMapperRegistry` — `(Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType)`
+* `IAmAMessageMapperRegistryAsync` — `(Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType)`
+
+Both mirror `Get`/`GetAsync` (factory-aware, same default and generic-definition guards) without instantiating. `TransformPipelineBuilder.HasPipeline` / `HasPipelineAsync` now answer through them, so the outbox send/receive path no longer creates and releases a throwaway probe mapper per message. Same netstandard2.0 rule: third-party registry implementations must add the member to compile.
+
 > **If you resolve a mapper or transform directly** — via `IAmAMessageMapperRegistry.Get<T>()` / `GetAsync<T>()` or a factory `Create` — you must now call `Release` (or `ReleaseAsync`) when finished, **even for a non-disposable mapper such as the default `JsonMessageMapper`**. `GetTransient` now allocates and retains an `IServiceScope` per resolution regardless of whether the instance is `IDisposable` (the scope can own the instance's injected dependencies and its own `IServiceProvider`), so skipping the release silently retains one empty scope per resolution. The factory is now disposed deterministically when its owner is disposed by the container at host shutdown (see *Deterministic factory disposal* below), so this retention is bounded by the host's lifetime rather than the process leak of #4252 — but a long-running host still accumulates one scope per un-released resolution between startup and shutdown, so you must still release. All in-tree call sites already release. Note that `SimpleMessageMapperFactory`'s `Release` is a deliberate no-op — the `Func` you supply owns what it returns — so a `Func` that news up a disposable mapper is not disposed for you.
 
 #### Deterministic factory disposal at host shutdown

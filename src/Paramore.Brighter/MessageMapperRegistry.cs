@@ -183,12 +183,22 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Resolves the sync mapper type for a given request type without creating an instance.
+        /// Resolves the sync mapper type <see cref="Get{TRequest}"/> would create for a request type,
+        /// without creating an instance.
         /// </summary>
+        /// <remarks>
+        /// Factory-aware, so it mirrors <see cref="Get{TRequest}"/> exactly: with no sync factory
+        /// <see cref="Get{TRequest}"/> returns null, so this returns a null type too. A non-generic default
+        /// mapper cannot be closed over the request type, so it resolves to null (it is not a usable mapper
+        /// for this type).
+        /// </remarks>
         /// <param name="requestType">The request type to look up.</param>
         /// <returns>A tuple of (mapper type or null, whether it is a default mapper).</returns>
         public (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType)
         {
+            if (_messageMapperFactory is null)
+                return (null, false);
+
             if (_messageMappers.TryGetValue(requestType, out var mapperType))
                 return (mapperType, false);
 
@@ -202,12 +212,22 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Resolves the async mapper type for a given request type without creating an instance.
+        /// Resolves the async mapper type <see cref="GetAsync{TRequest}"/> would create for a request type,
+        /// without creating an instance.
         /// </summary>
+        /// <remarks>
+        /// Factory-aware, so it mirrors <see cref="GetAsync{TRequest}"/> exactly: with no async factory
+        /// <see cref="GetAsync{TRequest}"/> returns null, so this returns a null type too. A non-generic
+        /// default mapper cannot be closed over the request type, so it resolves to null (it is not a usable
+        /// mapper for this type).
+        /// </remarks>
         /// <param name="requestType">The request type to look up.</param>
         /// <returns>A tuple of (mapper type or null, whether it is a default mapper).</returns>
         public (Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType)
         {
+            if (_messageMapperFactoryAsync is null)
+                return (null, false);
+
             if (_asyncMessageMappers.TryGetValue(requestType, out var mapperType))
                 return (mapperType, false);
 

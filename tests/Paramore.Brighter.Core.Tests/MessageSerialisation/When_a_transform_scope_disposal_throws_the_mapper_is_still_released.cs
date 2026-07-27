@@ -156,6 +156,7 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
     private sealed class RecordingReleaseRegistry(ReleaseProbe probe) : IAmAMessageMapperRegistry
     {
         public IAmAMessageMapper<T>? Get<T>() where T : class, IRequest => null;
+        public (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType) => (null, false);
         public void Release(IAmAMessageMapper mapper) => probe.Mark();
         public void Register<TRequest, TMessageMapper>()
             where TRequest : class, IRequest
@@ -166,6 +167,7 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
     private sealed class RecordingReleaseRegistryAsync(ReleaseProbe probe) : IAmAMessageMapperRegistryAsync
     {
         public IAmAMessageMapperAsync<T>? GetAsync<T>() where T : class, IRequest => null;
+        public (Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType) => (null, false);
         public void Release(IAmAMessageMapperAsync mapper) => probe.Mark();
         public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper)
         {

@@ -42,6 +42,19 @@ namespace Paramore.Brighter
         /// <returns>IAmAMessageMapper&lt;T&gt;.</returns>
         IAmAMessageMapper<T>? Get<T>() where T : class, IRequest;
         /// <summary>
+        /// Resolves the mapper type that <see cref="Get{T}"/> would create for <paramref name="requestType"/>,
+        /// without creating an instance — so a caller that only needs to know whether a mapper exists (e.g.
+        /// a pipeline probe) does not pay for one.
+        /// </summary>
+        /// <remarks>
+        /// Mirrors <see cref="Get{T}"/>'s resolution, including its guards: a null <c>MapperType</c> means
+        /// <see cref="Get{T}"/> would also return null — no mapper is registered and no usable default
+        /// applies, or the registry has no factory to create one.
+        /// </remarks>
+        /// <param name="requestType">The request type to resolve a mapper for.</param>
+        /// <returns>The resolved mapper type (null if none), and whether it came from the default mapper.</returns>
+        (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType);
+        /// <summary>
         /// Releases a mapper obtained from <see cref="Get{T}"/> back to the factory that created it.
         /// </summary>
         /// <remarks>

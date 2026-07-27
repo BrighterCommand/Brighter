@@ -167,30 +167,9 @@ namespace Paramore.Brighter
         }
 
         public bool HasPipeline<TRequest>() where TRequest : class, IRequest
-        {
-            //Get creates an instance to answer the question, so release it again; no pipeline owns it
-            var messageMapper = _mapperRegistry.Get<TRequest>();
-            try
-            {
-                return messageMapper is not null;
-            }
-            finally
-            {
-                //Releasing the probe mapper is best-effort: a throwing release must not propagate out of a
-                //predicate and be mistaken for a mapping failure by the caller. Log and swallow.
-                if (messageMapper is not null)
-                {
-                    try
-                    {
-                        _mapperRegistry.Release(messageMapper);
-                    }
-                    catch (Exception releaseException)
-                    {
-                        Log.FailedToReleaseProbeMapper(s_logger, releaseException, typeof(TRequest).Name);
-                    }
-                }
-            }
-        }
+            //resolve the mapper type rather than create an instance: this runs once per message and only
+            //answers "is there a pipeline?", so there is nothing to release and no probe to leak
+            => _mapperRegistry.ResolveMapperInfo(typeof(TRequest)).MapperType is not null;
 
         private IEnumerable<IAmAMessageTransform> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
             where TRequest : class, IRequest
@@ -432,9 +411,6 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "No message transformer factory configured, so no transforms will be created but {TransformCount} configured")]
             public static partial void NoMessageTransformerFactoryConfigured(ILogger logger, int transformCount);
-
-            [LoggerMessage(LogLevel.Warning, "Failed to release the probe mapper resolved by HasPipeline for {Request}; the answer is unaffected")]
-            public static partial void FailedToReleaseProbeMapper(ILogger logger, Exception ex, string request);
         }
     }
 }
