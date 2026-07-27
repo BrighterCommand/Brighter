@@ -285,10 +285,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (!_transientScopes.TryGetValue(instance, out var scopes)) return Array.Empty<IServiceScope>();
 
-            //do all the bookkeeping eagerly, before any scope is disposed: this ran as a lazy iterator, so
-            //a DisposeScope throw in the caller's foreach unwound it before the key-removal below and left
-            //the now-empty stack keyed by the instance — a strong reference retaining the mapper/transform
-            //until factory disposal, the exact retention this release path exists to prevent
+            //do all the bookkeeping eagerly, before any scope is disposed: a DisposeScope throw while the
+            //caller drains must not leave the now-empty stack keyed by the instance — a strong reference
+            //retaining the mapper/transform until factory disposal, the exact retention this path prevents
             var toDispose = new List<IServiceScope>(1);
 
             //dispose one scope per Release, matching the push in GetTransient
@@ -296,18 +295,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 toDispose.Add(scope);
 
             //once the last scope for this instance is drained, stop retaining the instance as a key.
-            //Remove only this exact (now-empty) stack. A concurrent GetTransient can GetOrAdd this same
-            //still-keyed stack and push onto it in the window between the emptiness check and the Remove;
-            //Remove matches the entry by the stack's reference, not its emptiness, so it still succeeds and
-            //detaches a stack that is no longer empty. Those pushed scopes back a resolution GetTransient
-            //has already returned to a live caller, so re-home them under the instance key for that
-            //caller's own later Release — disposing them here would tear down state still in use (a
-            //use-after-dispose), the one failure mode worse than the leak this removal guards against.
-            //This re-home is a SINGLE pass and narrows, but does not fully close, the window: a push that
-            //lands after this loop drains empty sits on a now-detached stack that nothing drains — a rare,
-            //bounded leak (only for a shared instance under Transient), traded for the worse
-            //use-after-dispose. A while(true) re-check loop would close it; not taken by decision. See
-            //bugfixes/0012-transient-release-redrain-use-after-dispose for the full residual-window note.
+            //Remove matches the entry by the stack's reference, not its emptiness, so a scope a concurrent
+            //GetTransient pushed onto this same stack between the emptiness check and the Remove backs a
+            //resolution already handed to a live caller: re-home it under the instance key for that caller's
+            //own later Release rather than dispose it here, which would tear down state still in use. The
+            //re-home is a single pass and narrows, but does not fully close, the window — a push landing
+            //after this loop drains empty sits on a detached stack that nothing drains (a rare, bounded
+            //leak for a shared instance under Transient, traded for the worse use-after-dispose).
             if (scopes.IsEmpty &&
                 ((ICollection<KeyValuePair<object, ConcurrentStack<IServiceScope>>>)_transientScopes)
                     .Remove(new KeyValuePair<object, ConcurrentStack<IServiceScope>>(instance, scopes)))

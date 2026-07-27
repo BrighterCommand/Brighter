@@ -117,8 +117,8 @@ namespace Paramore.Brighter
             catch (Exception e)
             {
                 //nothing was returned to the caller to take ownership of the mapper and transforms, so
-                //release them here rather than leak them. Cleanup can now throw (this PR lets Release/Dispose
-                //surface exceptions), so guard it: a disposal failure must not mask the configuration error
+                //release them here rather than leak them. Cleanup may throw (Release/Dispose surface
+                //exceptions), so guard it: a disposal failure must not mask the configuration error
                 //the caller needs to see.
                 try { CleanUpAfterFailedBuild(pipeline, transforms, messageMapper); }
                 catch { /* swallowed: cleanup is best-effort; do not mask the build error rethrown below */ }
@@ -158,8 +158,8 @@ namespace Paramore.Brighter
             catch (Exception e)
             {
                 //nothing was returned to the caller to take ownership of the mapper and transforms, so
-                //release them here rather than leak them. Cleanup can now throw (this PR lets Release/Dispose
-                //surface exceptions), so guard it: a disposal failure must not mask the configuration error
+                //release them here rather than leak them. Cleanup may throw (Release/Dispose surface
+                //exceptions), so guard it: a disposal failure must not mask the configuration error
                 //the caller needs to see.
                 try { CleanUpAfterFailedBuild(pipeline, transforms, messageMapper); }
                 catch { /* swallowed: cleanup is best-effort; do not mask the build error rethrown below */ }
