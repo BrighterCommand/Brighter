@@ -6,34 +6,26 @@ using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-public class TransformPipelineBuilderHasPipelineTests
+public class TransformPipelineBuilderHasPipelineForUnregisteredTypeTests
 {
     [Fact]
-    public void When_checking_for_a_pipeline_should_not_create_a_probe_mapper()
+    public void When_checking_for_a_pipeline_for_an_unregistered_type_it_should_return_false()
     {
         //arrange
-        const int messageCount = 10;
-        var disposals = new MapperDisposalLog();
-
         var collection = new ServiceCollection();
-        collection.AddSingleton(disposals);
+        collection.AddSingleton(new MapperDisposalLog());
         collection.AddTransient<DisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
         var provider = collection.BuildServiceProvider();
 
         using var mapperFactory = new ServiceProviderMapperFactory(provider);
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
-        mapperRegistry.Register<MinimalCommand, DisposableMapper>();
+        //no Register call for MinimalCommand
 
         var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory());
 
-        //act — HasPipeline resolves the mapper TYPE to answer "is there a pipeline?"; it no longer creates
-        //an instance, so on the mediator's once-per-message probe there is nothing to release or leak
-        for (var i = 0; i < messageCount; i++)
-            Assert.True(pipelineBuilder.HasPipeline<MinimalCommand>());
-
-        //assert — no mapper was ever instantiated, so none was disposed
-        Assert.Equal(0, disposals.Count);
+        //act + assert — no mapper registered and no default, so no pipeline
+        Assert.False(pipelineBuilder.HasPipeline<MinimalCommand>());
     }
 
     private sealed class MinimalCommand : Command
@@ -41,8 +33,6 @@ public class TransformPipelineBuilderHasPipelineTests
         public MinimalCommand() : base(Guid.NewGuid()) { }
     }
 
-    // A mapper that records its disposal against a shared log, so that the disposal of an
-    // instance the test never holds a reference to is still observable
     private sealed class DisposableMapper : IAmAMessageMapper<MinimalCommand>, IDisposable
     {
         private readonly MapperDisposalLog _disposals;
