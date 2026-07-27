@@ -47,11 +47,13 @@ namespace Paramore.Brighter
             //drain as we go: remove each transform before releasing it, so a Release that throws (MS DI's
             //sync scope Dispose throws for an IAsyncDisposable-only transform, and a user Dispose may throw)
             //neither leaves the remaining transforms unreleased on a finalizer retry nor lets an
-            //already-released transform be released again — the retry re-runs this over the shortened list
+            //already-released transform be released again — the retry re-runs this over the shortened list.
+            //Remove from the tail so each removal is O(1); release order is irrelevant, the transforms are independent.
             while (_trackedObjects.Count > 0)
             {
-                var trackedItem = _trackedObjects[0];
-                _trackedObjects.RemoveAt(0);
+                var lastIndex = _trackedObjects.Count - 1;
+                var trackedItem = _trackedObjects[lastIndex];
+                _trackedObjects.RemoveAt(lastIndex);
                 _factory.Release(trackedItem);
                 Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
             }
