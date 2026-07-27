@@ -84,13 +84,32 @@ namespace Paramore.Brighter
             if (_messageMapperFactory is null)
                 return null;
 
-            if (!_messageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapper != null)
+            //only an open generic default can be closed over the request type; a non-generic default is not a
+            //usable mapper for this type, so leave it null and return null — mirroring the guard in
+            //ResolveMapperInfo, which HasPipeline routes through, so the two agree
+            if (!_messageMappers.TryGetValue(typeof(TRequest), out var messageMapperType)
+                && _defaultMessageMapper is { IsGenericTypeDefinition: true })
                 messageMapperType = ResolveClosedDefault(_resolvedDefaultMappers, _defaultMessageMapper, typeof(TRequest));
 
             if (messageMapperType is null)
                 return null;
 
-            return (IAmAMessageMapper<TRequest>?)_messageMapperFactory.Create(messageMapperType);
+            var mapper = _messageMapperFactory.Create(messageMapperType);
+            switch (mapper)
+            {
+                case null:
+                    return null;
+                case IAmAMessageMapper<TRequest> typed:
+                    return typed;
+                default:
+                    //the factory resolved a mapper of the wrong closed type — a Register mis-registration, or a
+                    //SimpleMessageMapperFactory Func returning the wrong closed type. Release it back to the
+                    //factory (and, for an IoC-backed factory, the scope it opened) before the cast failure
+                    //propagates, rather than leaking the mapper and its scope for the life of the host.
+                    _messageMapperFactory.Release(mapper);
+                    throw new InvalidCastException(
+                        $"The mapper {mapper.GetType()} registered for {typeof(TRequest)} does not implement {typeof(IAmAMessageMapper<TRequest>)}");
+            }
         }
 
         /// <summary>
@@ -103,13 +122,32 @@ namespace Paramore.Brighter
             if (_messageMapperFactoryAsync is null)
                 return null;
             
-            if (!_asyncMessageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapperAsync != null)
+            //only an open generic default can be closed over the request type; a non-generic default is not a
+            //usable mapper for this type, so leave it null and return null — mirroring the guard in
+            //ResolveAsyncMapperInfo, which HasPipeline routes through, so the two agree
+            if (!_asyncMessageMappers.TryGetValue(typeof(TRequest), out var messageMapperType)
+                && _defaultMessageMapperAsync is { IsGenericTypeDefinition: true })
                 messageMapperType = ResolveClosedDefault(_resolvedDefaultAsyncMappers, _defaultMessageMapperAsync, typeof(TRequest));
 
             if (messageMapperType is null)
                 return null;
 
-            return (IAmAMessageMapperAsync<TRequest>?)_messageMapperFactoryAsync.Create(messageMapperType);
+            var mapper = _messageMapperFactoryAsync.Create(messageMapperType);
+            switch (mapper)
+            {
+                case null:
+                    return null;
+                case IAmAMessageMapperAsync<TRequest> typed:
+                    return typed;
+                default:
+                    //the factory resolved a mapper of the wrong closed type — a RegisterAsync mis-registration, or a
+                    //SimpleMessageMapperFactoryAsync Func returning the wrong closed type. Release it back to the
+                    //factory (and, for an IoC-backed factory, the scope it opened) before the cast failure
+                    //propagates, rather than leaking the mapper and its scope for the life of the host.
+                    _messageMapperFactoryAsync.Release(mapper);
+                    throw new InvalidCastException(
+                        $"The mapper {mapper.GetType()} registered for {typeof(TRequest)} does not implement {typeof(IAmAMessageMapperAsync<TRequest>)}");
+            }
         }
 
         /// <summary>
