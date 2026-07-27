@@ -142,7 +142,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     //ObjectDisposedException rather than dereferencing null
                     var scope = _scope;
                     if (scope is null)
-                        throw new ObjectDisposedException(nameof(ServiceProviderLifetimeScope));
+                        throw Disposed();
                     return (T?)scope.ServiceProvider.GetService(objectType);
                 }));
             return (T?)lazy.Value;
@@ -210,8 +210,25 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private void ThrowIfDisposed()
         {
             if (Volatile.Read(ref _disposed) != 0)
-                throw new ObjectDisposedException(nameof(ServiceProviderLifetimeScope));
+                throw Disposed();
         }
+
+        /// <summary>
+        /// Builds the <see cref="ObjectDisposedException"/> thrown once this scope is disposed. The type it
+        /// names (<see cref="ServiceProviderLifetimeScope"/>) is <c>internal</c>, so on its own it points a
+        /// user at nothing they can find. This is the <em>designed</em> failure mode of the owner-disposal
+        /// cascade — a Brighter DI-backed mapper/transform/handler factory whose registry was shared across
+        /// owners and disposed by one while another is still resolving through it — so the message names the
+        /// configured lifetime and the shared-registry cause rather than leaving the operator to guess.
+        /// </summary>
+        private ObjectDisposedException Disposed() =>
+            new(
+                $"Brighter DI-backed factory ({_lifetime} lifetime)",
+                "The Brighter mapper/transform/handler factory behind this scope has been disposed and can no " +
+                "longer resolve objects. This is the designed failure mode when a MessageMapperRegistry (or the " +
+                "factories it owns) is shared across owners and one owner disposes it while another is still " +
+                "using it. Give each owner its own registry, or do not dispose a shared one until every owner " +
+                "is finished with it.");
 
         /// <summary>
         /// Releases an object back to the scope that owns it.
@@ -438,6 +455,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 foreach (var scopes in _transientScopes.Values)
                     while (scopes.TryPop(out var scope))
                     {
+                        //TODO: this swallow is silent because the class has no logger; unlike the pipeline
+                        //release paths (Reactor/Proactor/OutboxProducerMediator, TransformPipelineBuilder) a
+                        //repeated Release/Dispose failure here leaves no diagnostic. Injecting an ILogger is
+                        //more intrusive than a two-line add, so it is deferred — emit at Debug when a logger
+                        //is threaded through this type.
                         try { DisposeScope(scope); }
                         catch { /* swallowed: best-effort cleanup must not skip the rest */ }
                     }
@@ -453,6 +475,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 var rootScope = Interlocked.Exchange(ref _scope, null);
                 if (rootScope != null)
                 {
+                    //TODO: silent for the same reason as the transient drain above — no logger on this type.
+                    //Emit at Debug here too when an ILogger is threaded through ServiceProviderLifetimeScope.
                     try { DisposeScope(rootScope); }
                     catch { /* swallowed: best-effort cleanup, same as the transient drain */ }
                 }
