@@ -28,6 +28,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// across the whole chain. Has no effect on Scoped or Singleton handlers (a Scoped handler already
         /// shares the pipeline scope by definition), nor on mapper/transformer factories (which always
         /// isolate — that is the #4252 leak fix).
+        /// <para>
+        /// To share state across a pipeline, prefer <see cref="HandlerLifetime"/> = <c>Scoped</c>; this flag
+        /// is a compatibility fallback for code that relied on the pre-#4254 sharing under <c>Transient</c>
+        /// and cannot switch to <c>Scoped</c> yet.
+        /// </para>
         /// </summary>
         public bool IsolateTransientHandlerScope { get; set; } = true;
 
@@ -82,7 +87,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// When <c>true</c> (the default) each transient handler resolution in a pipeline gets its own DI
         /// scope; when <c>false</c> the transient handlers in one request pipeline share a single DI scope
         /// (the pre-#4254 behaviour). No effect on Scoped/Singleton handlers or on mapper/transformer
-        /// factories.
+        /// factories. To share state across a pipeline prefer <see cref="HandlerLifetime"/> = <c>Scoped</c>;
+        /// this flag is a compatibility fallback, not a knob most applications should touch.
         /// </summary>
         bool IsolateTransientHandlerScope { get; set; }
          

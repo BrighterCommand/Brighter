@@ -373,6 +373,17 @@ services.AddBrighter(options =>
 
 Under `Scoped`, every handler in the pipeline shares one `IServiceScope`, so a `Scoped` dependency is a single instance for the message — the pre-fix sharing behaviour.
 
+Switching the **handler** lifetime to `Scoped` is the intended way to share state across a pipeline, and almost certainly what you want if you were depending on the old sharing — under `Transient` it was never a designed behaviour, just a side effect of the shared scope. So we do not expect anyone to need an escape hatch. If you do rely on the pre-#4254 sharing and cannot move to `Scoped` immediately, you can restore it **without changing the handler lifetime** by setting `IsolateTransientHandlerScope = false`:
+
+```csharp
+services.AddBrighter(options =>
+{
+    options.IsolateTransientHandlerScope = false; // default is true; prefer HandlerLifetime.Scoped
+});
+```
+
+With the flag off, the transient handlers in one pipeline again share a single `IServiceScope` (disposed when the pipeline completes), so a DI-`Scoped` dependency is one shared instance across the chain — the pre-#4254 behaviour — while `Transient` still means a fresh handler instance per resolution. The flag governs **only** transient handlers; it has no effect on `Scoped` or `Singleton` handlers, nor on the mapper and transformer factories, which always isolate (that is the leak fix). It defaults to `true`, so the isolating behaviour described above is the default, and the flag is a compatibility fallback rather than a knob most applications should touch.
+
 #### Other observable changes
 
 A few smaller changes that are unlikely to affect you but are observable:
