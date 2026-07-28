@@ -35,6 +35,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ServiceLifetime _handlerLifetime;
+        private readonly bool _isolateTransientHandlerScope;
         private readonly ServiceProviderLifetimeScope _singletonScope;
         private readonly ConcurrentDictionary<IAmALifetime, ServiceProviderLifetimeScope> _lifetimeScopes = new();
 
@@ -47,6 +48,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _serviceProvider = serviceProvider;
             var options = (IBrighterOptions?)serviceProvider.GetService(typeof(IBrighterOptions));
             _handlerLifetime = options?.HandlerLifetime ?? ServiceLifetime.Transient;
+            _isolateTransientHandlerScope = options?.IsolateTransientHandlerScope ?? true;
             _singletonScope = new ServiceProviderLifetimeScope(serviceProvider, ServiceLifetime.Singleton);
         }
 
@@ -125,7 +127,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private ServiceProviderLifetimeScope GetOrCreateLifetimeScope(IAmALifetime lifetime, ServiceLifetime serviceLifetime)
         {
             return _lifetimeScopes.GetOrAdd(lifetime, _ =>
-                new ServiceProviderLifetimeScope(_serviceProvider, serviceLifetime));
+                new ServiceProviderLifetimeScope(_serviceProvider, serviceLifetime, _isolateTransientHandlerScope));
         }
 
         private void ReleaseLifetimeScope(IAmALifetime lifetime)

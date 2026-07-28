@@ -49,6 +49,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ConcurrentDictionary<object, ConcurrentStack<IServiceScope>> _transientScopes =
             new(InstanceComparer.Default);
         private IServiceScope? _scope;
+        //when false, the Transient path serves every resolution from one shared scope (the pre-#4254
+        //behaviour) instead of giving each resolution its own scope. Handler factories drive this from
+        //IBrighterOptions.IsolateTransientHandlerScope; mapper/transformer factories always isolate, so the
+        //#4252 leak fix is unaffected by this flag.
+        private readonly bool _isolateTransientScopes;
         //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange,
         //making the disposal body run exactly once even under concurrent Dispose; readers use Volatile.Read
         private int _disposed;
@@ -58,10 +63,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="serviceProvider">The .NET IoC container</param>
         /// <param name="lifetime">The lifetime for created objects</param>
-        public ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime)
+        /// <param name="isolateTransientScopes">
+        /// When <c>true</c> (default) each Transient resolution gets its own <see cref="IServiceScope"/>,
+        /// released independently; when <c>false</c> every Transient resolution shares one scope that is
+        /// disposed with this lifetime scope (the pre-#4254 handler behaviour).
+        /// </param>
+        public ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime, bool isolateTransientScopes = true)
         {
             _serviceProvider = serviceProvider;
             _lifetime = lifetime;
+            _isolateTransientScopes = isolateTransientScopes;
         }
 
         /// <summary>
@@ -87,7 +98,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 ServiceLifetime.Singleton => GetOrCreateSingleton<T>(objectType),
                 ServiceLifetime.Scoped => GetOrCreateScoped<T>(objectType),
-                ServiceLifetime.Transient => GetTransient<T>(objectType),
+                ServiceLifetime.Transient => _isolateTransientScopes
+                    ? GetTransient<T>(objectType)
+                    : GetTransientShared<T>(objectType),
                 _ => throw new InvalidOperationException($"Unsupported lifetime: {_lifetime}")
             };
         }
@@ -156,6 +169,34 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     DisposeScope(created);
                 ThrowIfDisposed();
             }
+        }
+
+        /// <summary>
+        /// Legacy Transient behaviour (pre-#4254): serves every resolution from one shared
+        /// <see cref="IServiceScope"/> that lives until this lifetime scope is disposed, rather than
+        /// giving each resolution its own scope. A fresh instance is still returned per call (unlike
+        /// Scoped, which caches by type), but all resolutions share one scope, so a scoped-registered
+        /// dependency is one shared instance across them. Selected when <c>isolateTransientScopes</c> is
+        /// <c>false</c> — the handler path opts back into the per-request-pipeline scope model this way.
+        /// </summary>
+        /// <remarks>
+        /// LEAK INVARIANT — this path is leak-safe only while this <see cref="ServiceProviderLifetimeScope"/>
+        /// is short-lived. The shared scope tracks every disposable it resolves and frees them only when the
+        /// scope is disposed, so a fresh instance per call accumulates in it until then. That is exactly the
+        /// #4252 leak when the scope is app-lifetime — which is why the mapper/transformer factories always
+        /// isolate and never reach here. The only caller that sets <c>isolateTransientScopes = false</c> is
+        /// <see cref="ServiceProviderHandlerFactory"/>, whose transient lifetime scope is created per
+        /// <c>IAmALifetime</c> (one request pipeline) and disposed when that pipeline completes
+        /// (<c>ReleaseLifetimeScope</c>), so accumulation is bounded to a single pipeline — the pre-#4254
+        /// behaviour, which never leaked. Do not enable this flag on any long-lived lifetime scope.
+        /// </remarks>
+        private T? GetTransientShared<T>(Type objectType) where T : class
+        {
+            EnsureRootScopePublished();
+            var scope = _scope;
+            if (scope is null)
+                throw Disposed();
+            return (T?)scope.ServiceProvider.GetService(objectType);
         }
 
         /// <summary>

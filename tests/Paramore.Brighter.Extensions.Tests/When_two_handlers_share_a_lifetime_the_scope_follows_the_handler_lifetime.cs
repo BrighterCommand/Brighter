@@ -60,6 +60,33 @@ public class HandlerLifetimeCallChainScopeTests
         Assert.NotSame(first.Dependency, second.Dependency);
     }
 
+    [Fact]
+    public void When_transient_handlers_opt_out_of_scope_isolation_they_share_a_dependency()
+    {
+        //arrange — Transient handlers, but IsolateHandlerScope turned off (the pre-#4254 model):
+        //the pipeline shares one DI scope, so a scoped dependency is one instance across the chain
+        var collection = new ServiceCollection();
+        collection.AddScoped<ScopedDependency>();
+        collection.AddTransient<FirstHandler>();
+        collection.AddTransient<SecondHandler>();
+        collection.AddSingleton<IBrighterOptions>(new BrighterOptions
+        {
+            HandlerLifetime = ServiceLifetime.Transient,
+            IsolateTransientHandlerScope = false
+        });
+        var provider = collection.BuildServiceProvider();
+
+        var factory = new ServiceProviderHandlerFactory(provider);
+        var lifetime = new TestLifetimeScope();
+
+        //act — two different handlers resolved through the same lifetime (one call chain)
+        var first = (FirstHandler)((IAmAHandlerFactorySync)factory).Create(typeof(FirstHandler), lifetime)!;
+        var second = (SecondHandler)((IAmAHandlerFactorySync)factory).Create(typeof(SecondHandler), lifetime)!;
+
+        //assert — the flag reverts to a shared per-pipeline scope, so the dependency is the same instance
+        Assert.Same(first.Dependency, second.Dependency);
+    }
+
     private sealed class TestCommand : Command
     {
         public TestCommand() : base(Guid.NewGuid()) { }
