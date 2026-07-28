@@ -54,8 +54,11 @@ namespace Paramore.Brighter
         private readonly InstrumentationOptions _instrumentationOptions;
 
         //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
-        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento = new();
-        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento = new();
+        //materialised (sorted once at insertion) rather than a lazy IOrderedEnumerable: the cached value is
+        //enumerated more than once per build (BuildTransformPipeline plus the Find*.Any() ignored-attribute
+        //check) and on every message, so a lazy OrderByDescending would re-run the sort each time
+        private static readonly ConcurrentDictionary<Type, WrapWithAttribute[]> s_wrapTransformsMemento = new();
+        private static readonly ConcurrentDictionary<Type, UnwrapWithAttribute[]> s_unWrapTransformsMemento = new();
 
         /// <summary>
         /// Creates an instance of a transform pipeline builder.
@@ -340,14 +343,15 @@ namespace Paramore.Brighter
             return messageMapper;
         }
 
-        private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
+        private WrapWithAttribute[] FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType();
-            if (!s_wrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<WrapWithAttribute>? transformAttributes))
+            if (!s_wrapTransformsMemento.TryGetValue(key, out WrapWithAttribute[]? transformAttributes))
             {
                 transformAttributes = FindMapToMessage(messageMapper)
                     .GetOtherWrapsInPipeline()
-                    .OrderByDescending(attribute => attribute.Step);
+                    .OrderByDescending(attribute => attribute.Step)
+                    .ToArray();
 
                 s_wrapTransformsMemento.TryAdd(key, transformAttributes);
             }
@@ -355,14 +359,15 @@ namespace Paramore.Brighter
             return transformAttributes;
         }
 
-        private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
+        private UnwrapWithAttribute[] FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType();
-            if (!s_unWrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<UnwrapWithAttribute>? transformAttributes))
+            if (!s_unWrapTransformsMemento.TryGetValue(key, out UnwrapWithAttribute[]? transformAttributes))
             {
                 transformAttributes = FindMapToRequest(messageMapper)
                     .GetOtherUnwrapsInPipeline()
-                    .OrderByDescending(attribute => attribute.Step);
+                    .OrderByDescending(attribute => attribute.Step)
+                    .ToArray();
 
                 s_unWrapTransformsMemento.TryAdd(key, transformAttributes);
             }

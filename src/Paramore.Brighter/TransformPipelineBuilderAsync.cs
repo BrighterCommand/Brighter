@@ -53,9 +53,12 @@ namespace Paramore.Brighter
         private readonly InstrumentationOptions _instrumentationOptions;
 
         //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
-        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento = new();
+        //materialised (sorted once at insertion) rather than a lazy IOrderedEnumerable: the cached value is
+        //enumerated more than once per build and on every message, so a lazy OrderByDescending would re-run
+        //the sort each time
+        private static readonly ConcurrentDictionary<Type, WrapWithAttribute[]> s_wrapTransformsMemento = new();
 
-        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento = new();
+        private static readonly ConcurrentDictionary<Type, UnwrapWithAttribute[]> s_unWrapTransformsMemento = new();
 
         /// <summary>
         /// Creates an instance of a transform pipeline builder.
@@ -260,20 +263,22 @@ namespace Paramore.Brighter
             return messageMapper;
         }
 
-        private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
+        private WrapWithAttribute[] FindWrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType();
             return s_wrapTransformsMemento.GetOrAdd(key, _ => FindMapToMessage(messageMapper)
                 .GetOtherWrapsInPipeline()
-                .OrderByDescending(attribute => attribute.Step));
+                .OrderByDescending(attribute => attribute.Step)
+                .ToArray());
         }
 
-        private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
+        private UnwrapWithAttribute[] FindUnwrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType();
             return s_unWrapTransformsMemento.GetOrAdd(key, _ => FindMapToRequest(messageMapper)
                 .GetOtherUnwrapsInPipeline()
-                .OrderByDescending(attribute => attribute.Step));
+                .OrderByDescending(attribute => attribute.Step)
+                .ToArray());
         }
 
         private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapperAsync<TRequest> messageMapper) where TRequest : class, IRequest
