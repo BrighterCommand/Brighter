@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 
 namespace Paramore.Brighter
@@ -64,19 +65,37 @@ namespace Paramore.Brighter
             //release once only; an explicit Dispose followed by another must not release twice
             if (Interlocked.Exchange(ref _released, 1) != 0) return;
 
+            //hold any transform-scope failure so the mapper release below still runs, but a throw from that
+            //release cannot mask it: cleanup must not swallow the real error
+            Exception? scopeError = null;
             try
             {
                 InstanceScope?.Dispose();
             }
-            finally
+            catch (Exception ex)
+            {
+                scopeError = ex;
+            }
+
+            try
             {
                 //the mapper is created per pipeline, so it is ours to return; released outside InstanceScope
-                //because that scope only exists when a transformer factory was supplied. Released in a
-                //finally so a throw from the transform-scope disposal above cannot orphan the mapper's own
-                //scope — the release-once guard is already set, so neither the finalizer nor a later Dispose
-                //would retry it, which is the exact leak this pipeline is meant to close.
+                //because that scope only exists when a transformer factory was supplied. Released
+                //unconditionally after the transform scope so a throw from that disposal above cannot orphan
+                //the mapper's own scope — the release-once guard is already set, so neither the finalizer nor
+                //a later Dispose would retry it, which is the exact leak this pipeline is meant to close.
                 _mapperRegistry?.Release(MapperLease);
             }
+            catch (Exception releaseError)
+            {
+                //both failed: surface both rather than let this cleanup exception mask the transform-scope one
+                if (scopeError is null) throw;
+                throw new AggregateException(scopeError, releaseError);
+            }
+
+            //only the transform scope failed: rethrow it preserved (type and stack, including its own drain
+            //AggregateException)
+            if (scopeError is not null) ExceptionDispatchInfo.Capture(scopeError).Throw();
         }
     }
 }
