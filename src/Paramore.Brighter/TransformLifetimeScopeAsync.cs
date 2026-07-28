@@ -9,7 +9,7 @@ namespace Paramore.Brighter
     public partial class TransformLifetimeScopeAsync(IAmAMessageTransformerFactoryAsync factory)
         : IAmATransformLifetimeAsync
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScope>();
+        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScopeAsync>();
         private readonly IList<Lease<IAmAMessageTransformAsync>> _trackedObjects = new List<Lease<IAmAMessageTransformAsync>>();
 
         public void Dispose()
