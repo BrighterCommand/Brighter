@@ -1,7 +1,7 @@
 ---
 id: 0067-per-resolution-di-scope-for-transient-factory-instances
 title: "Per-resolution DI scope for transient factory instances"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-07-28
@@ -18,7 +18,7 @@ Date: 2026-07-28
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

@@ -1,7 +1,7 @@
 ---
 id: 0068-deterministic-disposal-finalizer-safety-net
 title: "Deterministic disposal; the finalizer is a safety net, not the mechanism"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-07-28
@@ -18,7 +18,7 @@ Date: 2026-07-28
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

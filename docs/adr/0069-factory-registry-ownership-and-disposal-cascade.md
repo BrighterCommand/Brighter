@@ -1,7 +1,7 @@
 ---
 id: 0069-factory-registry-ownership-and-disposal-cascade
 title: "Ownership and disposal cascade for mapper/transform factories"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-07-28
@@ -19,7 +19,7 @@ Date: 2026-07-28
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -35,10 +35,12 @@ Disposal follows ownership: **the component that created a disposable disposes i
 
 `MessageMapperRegistry` is `IDisposable` and disposes the mapper factories it was constructed with — both the synchronous and asynchronous factory. It disposes both even when the first `Dispose` throws (`try/finally`), so a fault draining one factory cannot orphan the scopes retained by the other, and the disposal is idempotent (the disposed flag is claimed with a single atomic exchange) so an owner and the container can both dispose it exactly once.
 
-### Producer and consumer roots cascade
+### Producer and consumer roots cascade — but only what they are told they own
 
-- The `OutboxProducerMediator` (producer side) is `IDisposable` and, on disposal, cascades into the `IAmAMessageMapperRegistry` and both transform factories it was given, disposing each quietly (a failure to dispose one is logged, not allowed to skip the rest). A `ReferenceEquals` guard avoids disposing the same object twice when the sync and async registry are one instance (the DI path).
-- The `Dispatcher` (consumer side) is likewise `IDisposable` and disposes the registry and transform factories it constructed and no one else owns.
+Ownership is **declared explicitly and defaults to non-owning.** Both roots take `ownsRegistry` and `ownsTransformerFactories` constructor flags that **default to `false`**, and each disposes the registry / transform factories only when the matching flag is `true`. A root handed a *shared* registry or factories — the manual-wiring and control-bus paths, where a registry is routinely shared with another bus or Dispatcher — therefore never tears them down. The DI composition, which news up a registry and factories solely for one root, opts in by passing `true`.
+
+- The `OutboxProducerMediator` (producer side) is `IDisposable` and, for each flag it owns, cascades into the `IAmAMessageMapperRegistry` and both transform factories, disposing each quietly (a failure to dispose one is logged, not allowed to skip the rest). A `ReferenceEquals` guard avoids disposing the same object twice when the sync and async registry are one instance (the DI path).
+- The `Dispatcher` (consumer side) is likewise `IDisposable` and disposes the registry and transform factories only for the flags it was told it owns.
 
 ### A non-creator does not dispose
 
@@ -52,7 +54,7 @@ Components that receive a registry they did not create do not dispose it. The pi
 
 ### Negative
 
-- If a `MessageMapperRegistry` or a transformer factory is **manually** shared between independently-disposed owners (e.g. a `CommandProcessor` external bus and a `Dispatcher`), disposing one owner disposes objects the other still uses, and subsequent resolutions throw `ObjectDisposedException`. This is a runtime break with no compile-time signal; the mitigation is to give each owner its own registry/factories or to defer disposal until all owners are done.
+- The non-owning default makes manual sharing safe, but the ownership flags can still be misused: if a `MessageMapperRegistry` or a transformer factory is shared between independently-disposed owners (e.g. a `CommandProcessor` external bus and a `Dispatcher`) **and** more than one of them is constructed with `ownsRegistry`/`ownsTransformerFactories = true`, disposing that owner tears down objects the others still use, and their subsequent resolutions throw `ObjectDisposedException`. This is a runtime break with no compile-time signal; the guidance is that at most one owner may claim ownership of a shared instance — give each owner its own registry/factories, or leave the flags `false` and let the DI container own disposal.
 
 ## References
 
