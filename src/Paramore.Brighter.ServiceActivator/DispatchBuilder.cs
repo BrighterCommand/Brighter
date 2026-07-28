@@ -154,15 +154,25 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Builds this instance.
         /// </summary>
+        /// <param name="ownsRegistry">
+        /// Does the built Dispatcher own the message mapper registry, so it disposes it at teardown? Defaults to
+        /// <c>false</c>: on the manual-wiring path the registry is routinely shared with a command processor's
+        /// external bus and must not be disposed from under it. The DI path passes <c>true</c> because it news up
+        /// a registry solely for the Dispatcher.
+        /// </param>
+        /// <param name="ownsTransformerFactories">
+        /// Does the built Dispatcher own the transform factories, so it disposes them at teardown? Defaults to
+        /// <c>false</c>; the DI path passes <c>true</c>.
+        /// </param>
         /// <returns>Dispatcher.</returns>
-        public Dispatcher Build()
+        public Dispatcher Build(bool ownsRegistry = false, bool ownsTransformerFactories = false)
         {
             if (_commandProcessor is null || _subscriptions is null)
                 throw new ArgumentException("Command Processor Factory and Subscription are required.");
-            
-            return new Dispatcher(_commandProcessor, _subscriptions, _messageMapperRegistry, 
-                _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync, 
-                _requestContextFactory, _tracer, _instrumentationOptions
+
+            return new Dispatcher(_commandProcessor, _subscriptions, _messageMapperRegistry,
+                _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync,
+                _requestContextFactory, _tracer, _instrumentationOptions, ownsRegistry, ownsTransformerFactories
             );
         }
 
@@ -265,8 +275,16 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Builds this instance.
         /// </summary>
+        /// <param name="ownsRegistry">
+        /// Does the built Dispatcher own the message mapper registry, so it disposes it at teardown? Defaults to
+        /// <c>false</c> for the manual-wiring path, where the registry may be shared; the DI path passes <c>true</c>.
+        /// </param>
+        /// <param name="ownsTransformerFactories">
+        /// Does the built Dispatcher own the transform factories, so it disposes them at teardown? Defaults to
+        /// <c>false</c>; the DI path passes <c>true</c>.
+        /// </param>
         /// <returns>Dispatcher.</returns>
-        Dispatcher Build();
+        Dispatcher Build(bool ownsRegistry = false, bool ownsTransformerFactories = false);
     }
     #endregion
 }

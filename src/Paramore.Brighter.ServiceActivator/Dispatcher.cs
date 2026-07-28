@@ -57,6 +57,8 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly IAmAMessageTransformerFactory? _messageTransformerFactory;
         private readonly IAmAMessageMapperRegistryAsync? _messageMapperRegistryAsync;
         private readonly IAmAMessageTransformerFactoryAsync? _messageTransformerFactoryAsync;
+        private readonly bool _ownsRegistry;
+        private readonly bool _ownsTransformerFactories;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmABrighterTracer? _tracer;
         private readonly InstrumentationOptions _instrumentationOptions;
@@ -106,17 +108,29 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="requestContextFactory">The factory used to make a request synchronizationHelper</param>
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="ownsRegistry">
+        /// Does this Dispatcher own the message mapper registry, so that <see cref="Dispose"/> should dispose it?
+        /// Defaults to <c>false</c> for the manual-wiring path, where the registry is routinely shared with a
+        /// <see cref="CommandProcessor"/>'s external bus and must not be torn down from under it. The DI path
+        /// (<c>BuildDispatcher</c>) news up a registry solely for this Dispatcher and passes <c>true</c>.
+        /// </param>
+        /// <param name="ownsTransformerFactories">
+        /// Does this Dispatcher own the transform factories, so that <see cref="Dispose"/> should dispose them?
+        /// Defaults to <c>false</c> for the manual-wiring path; the DI path passes <c>true</c>.
+        /// </param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
         public Dispatcher(
             IAmACommandProcessor commandProcessor,
             IEnumerable<Subscription> subscriptions,
             IAmAMessageMapperRegistry? messageMapperRegistry = null,
-            IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync = null, 
+            IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync = null,
             IAmAMessageTransformerFactory? messageTransformerFactory = null,
             IAmAMessageTransformerFactoryAsync? messageTransformerFactoryAsync= null,
-            IAmARequestContextFactory? requestContextFactory = null, 
+            IAmARequestContextFactory? requestContextFactory = null,
             IAmABrighterTracer? tracer = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+            bool ownsRegistry = false,
+            bool ownsTransformerFactories = false)
         {
             CommandProcessor = commandProcessor;
             
@@ -125,6 +139,8 @@ namespace Paramore.Brighter.ServiceActivator
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _messageTransformerFactory = messageTransformerFactory;
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+            _ownsRegistry = ownsRegistry;
+            _ownsTransformerFactories = ownsTransformerFactories;
             _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
@@ -148,13 +164,17 @@ namespace Paramore.Brighter.ServiceActivator
         /// Disposes the runtime mapper registry and transform factories the Dispatcher owns.
         /// </summary>
         /// <remarks>
+        /// The Dispatcher disposes only what it is told it owns (<c>ownsRegistry</c>/<c>ownsTransformerFactories</c>).
         /// On the DI path <c>BuildDispatcher</c> news up a fresh <see cref="IAmAMessageMapperRegistry"/>
         /// plus both transform factories for this Dispatcher and registers none of them in the container, so
-        /// the Dispatcher is their sole owner. Each factory retains a per-resolution <see cref="System.IServiceScope"/>
+        /// the Dispatcher is their sole owner and is constructed owning them. Each factory retains a
+        /// per-resolution <see cref="System.IServiceScope"/>
         /// for any mapper/transform obtained but not released; without this cascade those scopes are held
         /// until the process exits rather than at container teardown — the same retention the producer-side
         /// <c>OutboxProducerMediator.Dispose</c> was extended to drain. The Dispatcher is registered as a
-        /// container singleton, so the container disposes it at shutdown.
+        /// container singleton, so the container disposes it at shutdown. On the manual-wiring path the
+        /// registry is routinely shared with a <see cref="CommandProcessor"/>'s external bus, so the Dispatcher
+        /// is constructed <b>not</b> owning it and this disposal leaves it intact for the other owner.
         /// <para>
         /// Stop the pumps before disposing: call <see cref="End"/> (and await its completion) first. This
         /// disposal frees the mapper registry and transform factories but does not stop the consumers, so
@@ -172,16 +192,24 @@ namespace Paramore.Brighter.ServiceActivator
             if (Interlocked.Exchange(ref _disposed, 1) != 0)
                 return;
 
-            //dispose each owned factory independently so one factory's fault cannot skip the rest. Disposing
-            //the registry cascades to the two mapper factories it holds. The sync and async registry are the
-            //same instance on the DI path (BuildDispatcher passes one MessageMapperRegistry as both), so guard
-            //the async disposal on reference identity to avoid disposing it twice; MessageMapperRegistry.Dispose
-            //is idempotent regardless, but this keeps the teardown log clean.
-            DisposeQuietly(_messageMapperRegistry);
-            if (!ReferenceEquals(_messageMapperRegistryAsync, _messageMapperRegistry))
-                DisposeQuietly(_messageMapperRegistryAsync);
-            DisposeQuietly(_messageTransformerFactory);
-            DisposeQuietly(_messageTransformerFactoryAsync);
+            //dispose only what this Dispatcher owns, and each owned factory independently so one factory's fault
+            //cannot skip the rest. Disposing the registry cascades to the two mapper factories it holds. The
+            //sync and async registry are the same instance on the DI path (BuildDispatcher passes one
+            //MessageMapperRegistry as both), so guard the async disposal on reference identity to avoid
+            //disposing it twice; MessageMapperRegistry.Dispose is idempotent regardless, but this keeps the
+            //teardown log clean.
+            if (_ownsRegistry)
+            {
+                DisposeQuietly(_messageMapperRegistry);
+                if (!ReferenceEquals(_messageMapperRegistryAsync, _messageMapperRegistry))
+                    DisposeQuietly(_messageMapperRegistryAsync);
+            }
+
+            if (_ownsTransformerFactories)
+            {
+                DisposeQuietly(_messageTransformerFactory);
+                DisposeQuietly(_messageTransformerFactoryAsync);
+            }
         }
 
         //Disposes a member if it is IDisposable, swallowing and logging any failure so one factory's fault

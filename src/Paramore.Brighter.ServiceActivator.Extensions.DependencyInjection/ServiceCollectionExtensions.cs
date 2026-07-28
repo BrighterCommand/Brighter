@@ -173,12 +173,14 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 }
             }
 
+            //the registry and transform factories are newed up above solely for this Dispatcher and are not
+            //container-registered, so the Dispatcher is their sole owner and disposes them at container teardown
             return dispatcherBuilder
                 .MessageMappers(messageMapperRegistry, messageMapperRegistry, messageTransformFactory, messageTransformFactoryAsync)
                 .ChannelFactory(channelFactory)
                 .Subscriptions(options.Subscriptions)
                 .ConfigureInstrumentation(tracer, options.InstrumentationOptions)
-                .Build();
+                .Build(ownsRegistry: true, ownsTransformerFactories: true);
         }
 
         private static T BuildInbox<T>(IServiceProvider serviceProvider) where T : class, IAmAnInbox

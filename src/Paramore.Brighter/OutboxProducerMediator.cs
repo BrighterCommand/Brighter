@@ -54,6 +54,8 @@ namespace Paramore.Brighter
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
         private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
+        private readonly bool _ownsRegistry;
+        private readonly bool _ownsTransformerFactories;
         private readonly TransformPipelineBuilder _transformPipelineBuilder;
         private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
         private readonly IAmAnOutboxSync<TMessage, TTransaction>? _outBox;
@@ -106,13 +108,23 @@ namespace Paramore.Brighter
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="timeProvider"></param>
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>
+        /// <param name="ownsRegistry">
+        /// Does this mediator own the message mapper registry, so that <see cref="Dispose()"/> should dispose it?
+        /// Defaults to <c>false</c> for the manual-wiring path, where the registry is routinely shared with a
+        /// Dispatcher or another bus and must not be torn down from under it. The DI path
+        /// (<c>BuildOutBoxProducerMediator</c>) news up a registry solely for this mediator and passes <c>true</c>.
+        /// </param>
+        /// <param name="ownsTransformerFactories">
+        /// Does this mediator own the transform factories, so that <see cref="Dispose()"/> should dispose them?
+        /// Defaults to <c>false</c> for the manual-wiring path; the DI path passes <c>true</c>.
+        /// </param>
         public OutboxProducerMediator(
             IAmAProducerRegistry producerRegistry,
             ResiliencePipelineRegistry<string> resiliencePipelineRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
-            IAmABrighterTracer? tracer, 
+            IAmABrighterTracer? tracer,
             IAmAPublicationFinder publicationFinder,
             IAmAnOutbox? outbox = null,
             IAmAnOutboxCircuitBreaker? outboxCircuitBreaker = null,
@@ -122,7 +134,9 @@ namespace Paramore.Brighter
             TimeSpan? maxOutStandingCheckInterval = null,
             Dictionary<string, object>? outBoxBag = null,
             TimeProvider? timeProvider = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+            bool ownsRegistry = false,
+            bool ownsTransformerFactories = false)
         {
             _producerRegistry = producerRegistry ??
                                 throw new ConfigurationException("Missing Producer Registry for External Bus Services");
@@ -147,6 +161,8 @@ namespace Paramore.Brighter
             _messageMapperRegistry = mapperRegistry;
             _messageTransformerFactory = messageTransformerFactory;
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+            _ownsRegistry = ownsRegistry;
+            _ownsTransformerFactories = ownsTransformerFactories;
 
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, instrumentationOptions);
             _transformPipelineBuilderAsync =
@@ -197,14 +213,22 @@ namespace Paramore.Brighter
                 try { _producerRegistry.CloseAll(); }
                 catch (Exception e) { Log.FailedToCloseProducers(s_logger, e); }
 
-                //the mediator is the sole owner of the runtime mapper/transform factories (built for it in
-                //ServiceCollectionExtensions and never registered in the container). Disposing the registry
-                //cascades to the two mapper factories it holds; the two transform factories are disposed
-                //directly. Without this the per-resolution IServiceScope each factory retains for a mapper or
-                //transform obtained but not released is held until the process exits, not at container teardown.
-                DisposeQuietly(_messageMapperRegistry);
-                DisposeQuietly(_messageTransformerFactory);
-                DisposeQuietly(_messageTransformerFactoryAsync);
+                //dispose only what this mediator owns. On the DI path it is the sole owner of the runtime
+                //mapper/transform factories (built for it in ServiceCollectionExtensions and never registered in
+                //the container), so it is constructed owning them: disposing the registry cascades to the two
+                //mapper factories it holds; the two transform factories are disposed directly. Without this the
+                //per-resolution IServiceScope each factory retains for a mapper or transform obtained but not
+                //released is held until the process exits, not at container teardown. On the manual-wiring path
+                //the registry is routinely shared with a Dispatcher or another bus, so the mediator is
+                //constructed not owning it and leaves it intact for the other owner.
+                if (_ownsRegistry)
+                    DisposeQuietly(_messageMapperRegistry);
+
+                if (_ownsTransformerFactories)
+                {
+                    DisposeQuietly(_messageTransformerFactory);
+                    DisposeQuietly(_messageTransformerFactoryAsync);
+                }
             }
         }
 

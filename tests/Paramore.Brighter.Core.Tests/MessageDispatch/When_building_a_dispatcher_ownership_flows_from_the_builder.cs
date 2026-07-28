@@ -8,80 +8,69 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class DispatcherDisposalTests
+    /// <summary>
+    /// Regression for PR #4254 review finding 4. Ownership must flow from the construction site through
+    /// <see cref="DispatchBuilder"/> to the Dispatcher: the manual fluent-build path defaults to not owning the
+    /// shared registry/factories, while the DI path (<c>BuildDispatcher</c>) passes <c>Build(true, true)</c>
+    /// because it news up a graph solely for the Dispatcher. These pin both ends of that thread so the DI path
+    /// cannot silently stop disposing the graph (regressing the shutdown-retention fix) and the manual path
+    /// cannot silently dispose a shared registry.
+    /// </summary>
+    public class DispatchBuilderOwnershipTests
     {
         [Fact]
-        public void When_disposing_the_dispatcher_it_disposes_the_registry_and_transform_factories()
+        public void When_building_without_declaring_ownership_the_dispatcher_does_not_dispose_the_graph()
         {
-            //arrange
-            IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
-
             var syncMapperFactory = new DisposeCountingMapperFactory();
             var asyncMapperFactory = new DisposeCountingMapperFactoryAsync();
-
-            //the DI path (BuildDispatcher) news one MessageMapperRegistry and passes it as both the sync and
-            //the async registry, so use the same instance here to mirror production
             var mapperRegistry = new MessageMapperRegistry(syncMapperFactory, asyncMapperFactory);
-
             var syncTransformerFactory = new DisposeCountingTransformerFactory();
             var asyncTransformerFactory = new DisposeCountingTransformerFactoryAsync();
 
-            var dispatcher = new Dispatcher(
-                commandProcessor,
-                new List<Subscription>(),
-                mapperRegistry,
-                mapperRegistry,
-                syncTransformerFactory,
-                asyncTransformerFactory,
-                ownsRegistry: true,
-                ownsTransformerFactories: true);
+            var dispatcher = BuildDispatcher(mapperRegistry, syncTransformerFactory, asyncTransformerFactory)
+                .Build();
 
-            //act — the Dispatcher is the sole owner of the runtime mapper/transform graph built for it in
-            //BuildDispatcher. The container disposes the Dispatcher (a singleton) at shutdown; the Dispatcher
-            //must cascade to the factories that hold per-resolution scopes, otherwise those scopes are
-            //retained until the process exits (the consumer-side half of the #4252 retention).
             dispatcher.Dispose();
 
-            //assert — the registry cascade disposes both mapper factories; both transform factories directly
+            Assert.Equal(0, syncMapperFactory.DisposeCount);
+            Assert.Equal(0, asyncMapperFactory.DisposeCount);
+            Assert.Equal(0, syncTransformerFactory.DisposeCount);
+            Assert.Equal(0, asyncTransformerFactory.DisposeCount);
+        }
+
+        [Fact]
+        public void When_building_and_declaring_ownership_the_dispatcher_disposes_the_graph()
+        {
+            var syncMapperFactory = new DisposeCountingMapperFactory();
+            var asyncMapperFactory = new DisposeCountingMapperFactoryAsync();
+            var mapperRegistry = new MessageMapperRegistry(syncMapperFactory, asyncMapperFactory);
+            var syncTransformerFactory = new DisposeCountingTransformerFactory();
+            var asyncTransformerFactory = new DisposeCountingTransformerFactoryAsync();
+
+            var dispatcher = BuildDispatcher(mapperRegistry, syncTransformerFactory, asyncTransformerFactory)
+                .Build(ownsRegistry: true, ownsTransformerFactories: true);
+
+            dispatcher.Dispose();
+
             Assert.Equal(1, syncMapperFactory.DisposeCount);
             Assert.Equal(1, asyncMapperFactory.DisposeCount);
             Assert.Equal(1, syncTransformerFactory.DisposeCount);
             Assert.Equal(1, asyncTransformerFactory.DisposeCount);
         }
 
-        [Fact]
-        public void When_disposing_the_dispatcher_twice_it_disposes_each_factory_once()
+        private static IAmADispatchBuilder BuildDispatcher(
+            MessageMapperRegistry mapperRegistry,
+            IAmAMessageTransformerFactory syncTransformerFactory,
+            IAmAMessageTransformerFactoryAsync asyncTransformerFactory)
         {
-            //arrange
-            IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
-
-            var syncMapperFactory = new DisposeCountingMapperFactory();
-            var asyncMapperFactory = new DisposeCountingMapperFactoryAsync();
-            var mapperRegistry = new MessageMapperRegistry(syncMapperFactory, asyncMapperFactory);
-
-            var syncTransformerFactory = new DisposeCountingTransformerFactory();
-            var asyncTransformerFactory = new DisposeCountingTransformerFactoryAsync();
-
-            var dispatcher = new Dispatcher(
-                commandProcessor,
-                new List<Subscription>(),
-                mapperRegistry,
-                mapperRegistry,
-                syncTransformerFactory,
-                asyncTransformerFactory,
-                ownsRegistry: true,
-                ownsTransformerFactories: true);
-
-            //act — a second Dispose() (an application-level one after the container's) must be claimed and
-            //must not re-run the factory disposals
-            dispatcher.Dispose();
-            dispatcher.Dispose();
-
-            //assert — every factory disposed exactly once despite the double dispose
-            Assert.Equal(1, syncMapperFactory.DisposeCount);
-            Assert.Equal(1, asyncMapperFactory.DisposeCount);
-            Assert.Equal(1, syncTransformerFactory.DisposeCount);
-            Assert.Equal(1, asyncTransformerFactory.DisposeCount);
+            var channelFactory = new InMemoryChannelFactory(new InternalBus(), TimeProvider.System);
+            return DispatchBuilder
+                .StartNew()
+                .CommandProcessor(new SpyCommandProcessor(), new InMemoryRequestContextFactory())
+                .MessageMappers(mapperRegistry, mapperRegistry, syncTransformerFactory, asyncTransformerFactory)
+                .ChannelFactory(channelFactory)
+                .Subscriptions(new List<Subscription>())
+                .NoInstrumentation();
         }
 
         private sealed class DisposeCountingMapperFactory : IAmAMessageMapperFactory, IDisposable
