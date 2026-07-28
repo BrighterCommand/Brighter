@@ -44,11 +44,15 @@ namespace Paramore.Brighter.ServiceActivator
     /// events translated from those messages to handlers. It controls the lifetime of the application through <see cref="Receive"/> and <see cref="End"/> and allows
     /// the stop and start of individual connections through <see cref="Open(string)"/> and <see cref="Shut(string)"/>
     /// </summary>
-    public partial class Dispatcher : IDispatcher
+    public partial class Dispatcher : IDispatcher, IDisposable
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<Dispatcher>();
 
         private Task? _controlTask;
+        //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange,
+        //making the disposal body run exactly once even under concurrent Dispose (an application-level
+        //dispose racing the container's)
+        private int _disposed;
         private readonly IAmAMessageMapperRegistry? _messageMapperRegistry;
         private readonly IAmAMessageTransformerFactory? _messageTransformerFactory;
         private readonly IAmAMessageMapperRegistryAsync? _messageMapperRegistryAsync;
@@ -138,6 +142,46 @@ namespace Paramore.Brighter.ServiceActivator
             _consumers = new ConcurrentDictionary<string, IAmAConsumer>();
 
             State = DispatcherState.DS_AWAITING;
+        }
+
+        /// <summary>
+        /// Disposes the runtime mapper registry and transform factories the Dispatcher owns.
+        /// </summary>
+        /// <remarks>
+        /// On the DI path <c>BuildDispatcher</c> news up a fresh <see cref="IAmAMessageMapperRegistry"/>
+        /// plus both transform factories for this Dispatcher and registers none of them in the container, so
+        /// the Dispatcher is their sole owner. Each factory retains a per-resolution <see cref="System.IServiceScope"/>
+        /// for any mapper/transform obtained but not released; without this cascade those scopes are held
+        /// until the process exits rather than at container teardown — the same retention the producer-side
+        /// <c>OutboxProducerMediator.Dispose</c> was extended to drain. The Dispatcher is registered as a
+        /// container singleton, so the container disposes it at shutdown.
+        /// </remarks>
+        public void Dispose()
+        {
+            //claim disposed up front with a single atomic exchange: each disposal below is a teardown backstop
+            //that must run at most once. A throw from any step must not leave the flag unclaimed and let a
+            //second Dispose() (an application-level one after the container's) re-dispose the factories.
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                return;
+
+            //dispose each owned factory independently so one factory's fault cannot skip the rest. Disposing
+            //the registry cascades to the two mapper factories it holds. The sync and async registry are the
+            //same instance on the DI path (BuildDispatcher passes one MessageMapperRegistry as both), so guard
+            //the async disposal on reference identity to avoid disposing it twice; MessageMapperRegistry.Dispose
+            //is idempotent regardless, but this keeps the teardown log clean.
+            DisposeQuietly(_messageMapperRegistry);
+            if (!ReferenceEquals(_messageMapperRegistryAsync, _messageMapperRegistry))
+                DisposeQuietly(_messageMapperRegistryAsync);
+            DisposeQuietly(_messageTransformerFactory);
+            DisposeQuietly(_messageTransformerFactoryAsync);
+        }
+
+        //Disposes a member if it is IDisposable, swallowing and logging any failure so one factory's fault
+        //cannot skip the remaining disposals in the teardown chain.
+        private static void DisposeQuietly(object? member)
+        {
+            try { (member as IDisposable)?.Dispose(); }
+            catch (Exception e) { Log.FailedToDisposeOwnedResource(s_logger, member?.GetType().Name ?? "null", e); }
         }
 
         /// <summary>
@@ -457,6 +501,9 @@ namespace Paramore.Brighter.ServiceActivator
             
             [LoggerMessage(LogLevel.Information, "Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}")]
             public static partial void CreatingConsumer(ILogger logger, int? consumerNumber, string channelName);
+
+            [LoggerMessage(LogLevel.Error, "Dispatcher: Failed to dispose owned resource {Resource} at shutdown")]
+            public static partial void FailedToDisposeOwnedResource(ILogger logger, string resource, Exception exception);
         }
     }
 }
