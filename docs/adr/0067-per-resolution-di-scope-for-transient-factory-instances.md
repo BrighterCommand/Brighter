@@ -45,7 +45,15 @@ An un-released resolution's scope is drained when the lifetime scope itself is d
 ### Two resolution entry points
 
 - The **mapper and transformer factories** take the token-returning entry point and release each resolution's scope per message — this is what closes the leak.
-- The **handler factory** takes a token-discarding entry point: a handler is resolved through a lifetime scope created per request pipeline (one `IAmALifetime`) and disposed when that pipeline completes, so the whole scope is drained at pipeline end and there is no per-instance release. The transient-handler scope granularity within a pipeline is governed separately by `IBrighterOptions.IsolateTransientHandlerScope`.
+- The **handler factory** takes a token-discarding entry point: a handler is resolved through a lifetime scope created per request pipeline (one `IAmALifetime`) and disposed when that pipeline completes, so the whole scope is drained at pipeline end and there is no per-instance release. The transient-handler scope granularity *within* a pipeline is governed separately by `IBrighterOptions.IsolateTransientHandlerScope` (see below).
+
+### An escape hatch to the pre-existing shared handler scope
+
+Making each transient resolution isolate its own scope also changes what a *transient handler* sees: before this work, the transient handlers in one pipeline shared a single DI scope, so a scoped-registered dependency was one shared instance across the whole chain. Per-resolution isolation gives each transient handler its own scope, and therefore a distinct instance of that dependency.
+
+`IBrighterOptions.IsolateTransientHandlerScope` preserves an opt-out. It defaults to `true` (each transient handler resolution gets its own scope — the new behaviour). Setting it to `false` restores the **pre-existing shared instance scope**: all transient handlers in one pipeline share a single DI scope that is disposed when the pipeline completes. It is a **compatibility fallback** for code that relied on the old cross-handler sharing under `Transient` and cannot yet switch to `HandlerLifetime = Scoped` (the preferred way to share state across a pipeline).
+
+The flag is **scoped to the handler factory only**. It has no effect on Scoped or Singleton handlers, and — crucially — none on the mapper and transformer factories, which *always* isolate per resolution because that isolation is the leak fix this ADR exists for. The shared-scope path is a choice about handler-dependency sharing, not a way to reopen the mapper/transform leak.
 
 ### Scope disposal respects the async pump
 
@@ -57,6 +65,7 @@ A scope is disposed through `IAsyncDisposable` when it offers it. On a thread ow
 
 - Closes #4252: each transient mapper/transform gets and releases its own scope, so a long-running host no longer accumulates one scope per message.
 - Releasing one resolution can never dispose a scope another live resolution depends on (realises ADR 0066), and disposal is deterministic rather than GC-timed (see ADR 0068).
+- The change to transient-handler scoping is reversible: `IsolateTransientHandlerScope = false` restores the pre-existing shared handler scope for code that depended on it, without reopening the mapper/transform leak.
 
 ### Negative
 
