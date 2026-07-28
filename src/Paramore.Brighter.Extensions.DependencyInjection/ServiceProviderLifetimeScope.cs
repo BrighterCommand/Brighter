@@ -29,6 +29,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -37,8 +39,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// for singleton, scoped, and transient object creation. This class extracts the common
     /// lifetime management pattern used across handler, mapper, and transformer factories.
     /// </summary>
-    internal sealed class ServiceProviderLifetimeScope : IDisposable
+    internal sealed partial class ServiceProviderLifetimeScope : IDisposable
     {
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceProviderLifetimeScope>();
+
         private readonly IServiceProvider _serviceProvider;
         private readonly ServiceLifetime _lifetime;
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _singletonInstances = new();
@@ -502,13 +506,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 foreach (var scopes in _transientScopes.Values)
                     while (scopes.TryPop(out var scope))
                     {
-                        //TODO: this swallow is silent because the class has no logger; unlike the pipeline
-                        //release paths (Reactor/Proactor/OutboxProducerMediator, TransformPipelineBuilder) a
-                        //repeated Release/Dispose failure here leaves no diagnostic. Injecting an ILogger is
-                        //more intrusive than a two-line add, so it is deferred — emit at Debug when a logger
-                        //is threaded through this type.
+                        //best-effort cleanup: a throw must not skip the remaining scopes, but it is logged
+                        //(a repeated failure on this terminal teardown path means an unbounded leak) rather
+                        //than swallowed silently, matching the other release paths in this change.
                         try { DisposeScope(scope); }
-                        catch { /* swallowed: best-effort cleanup must not skip the rest */ }
+                        catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
                     }
                 _transientScopes.Clear();
             }
@@ -522,10 +524,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 var rootScope = Interlocked.Exchange(ref _scope, null);
                 if (rootScope != null)
                 {
-                    //TODO: silent for the same reason as the transient drain above — no logger on this type.
-                    //Emit at Debug here too when an ILogger is threaded through ServiceProviderLifetimeScope.
+                    //logged for the same reason as the transient drain above — best-effort, but not silent
                     try { DisposeScope(rootScope); }
-                    catch { /* swallowed: best-effort cleanup, same as the transient drain */ }
+                    catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
                 }
                 _scopedInstances.Clear();
             }
@@ -539,6 +540,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             bool IEqualityComparer<object>.Equals(object? x, object? y) => ReferenceEquals(x, y);
 
             int IEqualityComparer<object>.GetHashCode(object obj) => RuntimeHelpers.GetHashCode(obj);
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Debug, "Failed to dispose a service scope while tearing down the Brighter DI-backed factory. Best-effort cleanup continues; a repeated failure here points at a mapper/transform/handler Dispose that throws.")]
+            public static partial void FailedToDisposeScope(ILogger logger, Exception exception);
         }
     }
 }
