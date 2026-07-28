@@ -33,7 +33,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class EmptyMessageTransformerFactory : IAmAMessageTransformerFactory
     {
-        public Lease<IAmAMessageTransform>? Create(Type transformerType) { return new Lease<IAmAMessageTransform>(new EmptyMessageTransform()); }
+        public Lease<IAmAMessageTransform>? Create(Type transformerType) { return Lease<IAmAMessageTransform>.ForSharedInstance(new EmptyMessageTransform()); }
 
         public void Release(Lease<IAmAMessageTransform> lease) { lease.Instance.Dispose(); }
     }

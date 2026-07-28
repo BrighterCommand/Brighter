@@ -44,7 +44,7 @@ namespace Paramore.Brighter
         public Lease<IAmAMessageTransformAsync>? Create(Type transformerType)
         {
             var transform = _factoryMethod(transformerType);
-            return transform is null ? null : new Lease<IAmAMessageTransformAsync>(transform);
+            return transform is null ? null : Lease<IAmAMessageTransformAsync>.ForSharedInstance(transform);
         }
 
         public void Release(Lease<IAmAMessageTransformAsync> lease)
