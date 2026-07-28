@@ -47,13 +47,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceLifetime _lifetime;
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _singletonInstances = new();
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _scopedInstances = new();
-        //every Transient resolution's own scope is tracked here by the scope's own reference identity (the
-        //default comparer), NOT by the instance it produced. A resolution IS its scope, so a shared instance
-        //(a Singleton resolved under a Transient lifetime) has one distinct entry per resolution rather than
-        //several stacked under one key — release keys on the scope, so it reclaims exactly the resolution being
-        //released and can never pop a scope another live resolution still holds. Used only as a set (value byte
-        //is a placeholder); it is the safety net that drains any un-released scope when this scope is disposed.
-        private readonly ConcurrentDictionary<IServiceScope, byte> _outstandingScopes = new();
+        //every Transient resolution's own scope is tracked here by the scope's own reference identity, NOT by
+        //the instance it produced. A resolution IS its scope, so a shared instance (a Singleton resolved under a
+        //Transient lifetime) has one distinct entry per resolution rather than several stacked under one key —
+        //release keys on the scope, so it reclaims exactly the resolution being released and can never pop a
+        //scope another live resolution still holds. The comparer is supplied explicitly: MS DI's own scope
+        //happens to use reference equality by default, but IServiceScope carries no such contract, so a custom
+        //scope overriding Equals/GetHashCode could otherwise fold two distinct resolutions onto one key and let
+        //one release reclaim the other's scope. Used only as a set (value byte is a placeholder); it is the
+        //safety net that drains any un-released scope when this scope is disposed.
+        private readonly ConcurrentDictionary<IServiceScope, byte> _outstandingScopes =
+            new(ReferenceEqualityComparer.Instance);
         private IServiceScope? _scope;
         //when false, the Transient path serves every resolution from one shared scope (the pre-#4254
         //behaviour) instead of giving each resolution its own scope. Handler factories drive this from
@@ -489,6 +493,20 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 _scopedInstances.Clear();
             }
             // Note: Don't clear singleton instances as they may be shared
+        }
+
+        /// <summary>
+        /// Keys <see cref="_outstandingScopes"/> on the scope's own reference identity, independent of any
+        /// <c>Equals</c>/<c>GetHashCode</c> a scope implementation might override. <c>ReferenceEqualityComparer</c>
+        /// from the BCL is not available on <c>netstandard2.0</c>, so this supplies the same behaviour.
+        /// </summary>
+        private sealed class ReferenceEqualityComparer : IEqualityComparer<IServiceScope>
+        {
+            public static readonly ReferenceEqualityComparer Instance = new();
+
+            public bool Equals(IServiceScope? x, IServiceScope? y) => ReferenceEquals(x, y);
+
+            public int GetHashCode(IServiceScope obj) => RuntimeHelpers.GetHashCode(obj);
         }
 
         private static partial class Log

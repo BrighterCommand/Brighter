@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -58,7 +60,7 @@ namespace Paramore.Brighter
         /// </param>
         public Lease(T instance, object? releaseToken = null)
         {
-            Instance = instance;
+            Instance = instance ?? throw new ArgumentNullException(nameof(instance));
             ReleaseToken = releaseToken;
         }
 
