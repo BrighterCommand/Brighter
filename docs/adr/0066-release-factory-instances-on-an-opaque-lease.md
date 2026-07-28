@@ -31,15 +31,16 @@ Accepted
 
 `Create`/`Get` return a `sealed class Lease<T>` (opaque data: `Instance` + opaque `object? ReleaseToken`); `factory.Release(lease)` / `registry.Release<T>(lease)` key release on the resolution. Set-based tracking (`ConcurrentDictionary<IServiceScope, byte>` + idempotent `TryRemove`) replaces the per-instance stack, `InstanceComparer`, and `CollectScopesToRelease` re-home.
 
-`Lease<T>` (new, in `Paramore.Brighter`) is a small `sealed class` pairing the resolved `Instance` with an opaque `ReleaseToken`. The token — for the DI-backed factories, the resolution's own `IServiceScope` — lets the factory reclaim exactly the one resolution being released, so a shared instance handed out under a transient lifetime is torn d
-own one resolution at a time and an over-release is a no-op. It carries an implicit conversion from `T`, so a caller constructing a pipeline without a per-resolution scope (typically a test, or a factory that hands out a shared instance) can pass a bare instance where a lease is expected.
+`Lease<T>` (new, in `Paramore.Brighter`) is a small `sealed class` pairing the resolved `Instance` with an opaque `ReleaseToken`. The token — for the DI-backed factories, the resolution's own `IServiceScope` — lets the factory reclaim exactly the one resolution being released, so a shared instance handed out under a transient lifetime is torn down one resolution at a time and an over-release is a no-op. It carries an implicit conversion from `T`, so a caller constructing a pipeline without a per-resolution scope (typically a test, or a factory that hands out a shared instance) can pass a bare instance where a lease is expected.
+
+The lease's generic argument also carries the *interface*: `Get<T>` returns a `Lease<IAmAMessageMapper<T>>` and `GetAsync<T>` a `Lease<IAmAMessageMapperAsync<T>>`. A dual-interface mapper (e.g. `JsonMessageMapper<T>`, which implements both) resolved from `GetAsync` is therefore an async-typed lease that can only bind to the async `Release<T>` overload — routing it to the sync factory (a different `ServiceProviderLifetimeScope` than it was resolved from, so a silent leak) is a **compile-time type error**. The two `Release<T>` overloads are distinguished by parameter type, so they are plain public methods on the concrete registry and no interface cast is needed at the call site.
 
 ### Considered and rejected: lease is `IDisposable`/`IAsyncDisposable` (self-releasing)
 
 A self-disposing lease (`using`/`await using`, `Release` gone from the interfaces) is the more modern shape, but was rejected on **impact**:
 
 - It pushes the DI-specific pump-deadlock **context-suppression disposal** out of the DI layer into a token wrapper — worse separation of concerns.
-- It's a **larger public-surface change** on an already-breaking major-version PR (removing `Release` from all 5/6 interfaces vs. changing its parameter).
+- It's a **larger public-surface change** on an already-breaking major-version PR (removing `Release` from all six interfaces vs. changing its parameter).
 - The chosen "opaque-data class + `factory.Release(lease)`" keeps Create/Release symmetry, so the conceptual change is smaller and all disposal logic stays where it belongs.
 
 The user explicitly chose the opaque-data-class option over the self-disposing one; capture that this is a deliberate, reversible-if-warranted choice.
@@ -48,3 +49,6 @@ The user explicitly chose the opaque-data-class option over the self-disposing o
 
 - Broad breaking surface: 6 interfaces, DI impls, registry, pipelines/builders, all test doubles.
 - Because `Lease<T>` is invariant, registry `Release<T>` is generic; the factory `Release` stays non-generic and the registry re-wraps, carrying the same token.
+- Over-releasing a lease is an **idempotent no-op** rather than a use-after-dispose, and the dual-interface silent-misroute becomes a compile error (above): both hazards are removed by the type system rather than by discipline.
+- Keying on the resolution rather than the instance closes the shared-instance over-release/use-after-dispose bug class outright, so the instance-keyed stack and its concurrent re-home pass are no longer needed. See ADR 0067 for the internal `ServiceProviderLifetimeScope` mechanism this decision is realised by.
+- The per-resolution lease is the natural handle for the planned scope-handling work (see *Forward influence* above): a consumer scope of one message, and a producer side flowing an ambient request scope, both key off it.
