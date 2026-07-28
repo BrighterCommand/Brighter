@@ -42,14 +42,28 @@ namespace Paramore.Brighter
             //neither leaves the remaining transforms unreleased on a finalizer retry nor lets an
             //already-released transform be released again — the retry re-runs this over the shortened list.
             //Remove from the tail so each removal is O(1); release order is irrelevant, the transforms are independent.
+            //A throwing Release is caught per item so the drain completes deterministically rather than
+            //aborting and leaving the remaining transforms to the GC-timed finalizer; the collected failures
+            //surface together as an AggregateException to an explicit Dispose (the finalizer swallows it).
+            List<Exception>? releaseExceptions = null;
             while (_trackedObjects.Count > 0)
             {
                 var lastIndex = _trackedObjects.Count - 1;
                 var trackedItem = _trackedObjects[lastIndex];
                 _trackedObjects.RemoveAt(lastIndex);
-                factory.Release(trackedItem);
-                Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                try
+                {
+                    factory.Release(trackedItem);
+                    Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                }
+                catch (Exception ex)
+                {
+                    (releaseExceptions ??= new List<Exception>()).Add(ex);
+                }
             }
+
+            if (releaseExceptions is not null)
+                throw new AggregateException(releaseExceptions);
         }
 
         private static partial class Log

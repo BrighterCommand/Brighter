@@ -10,7 +10,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 public class TransformLifetimeScopePartialReleaseTests
 {
     [Fact]
-    public void When_a_transform_release_throws_the_scope_still_releases_the_rest_without_double_releasing()
+    public void When_a_transform_release_throws_the_scope_drains_the_rest_and_surfaces_an_aggregate()
     {
         //arrange — three tracked transforms; the factory throws when releasing the middle one, the same
         //shape as MS DI's synchronous scope Dispose throwing for an IAsyncDisposable-only transform
@@ -25,21 +25,27 @@ public class TransformLifetimeScopePartialReleaseTests
         scope.Add(throwing);
         scope.Add(after);
 
-        //act — the first release surfaces the throw (an explicit Dispose must not swallow it); a retry then
-        //runs, as the finalizer would after Dispose threw before GC.SuppressFinalize
-        Assert.Throws<InvalidOperationException>(() => scope.Dispose());
-        scope.Dispose();
+        //act — a single explicit Dispose drains every transform deterministically (it does not abort on the
+        //throwing one and leave the rest to the GC-timed finalizer) and surfaces the failure as an
+        //AggregateException rather than swallowing it
+        var aggregate = Assert.Throws<AggregateException>(() => scope.Dispose());
 
-        //assert — every transform is released exactly once across the two passes: none skipped, none twice.
-        //Before the fix the retry re-ran the unmodified list, so 'before' was released twice and 'after'
-        //never at all.
+        //assert — the drain completed in that one pass: every transform released exactly once, none skipped;
+        //and the AggregateException carries the original release failure
+        Assert.Equal(1, factory.ReleaseCount(before));
+        Assert.Equal(1, factory.ReleaseCount(throwing));
+        Assert.Equal(1, factory.ReleaseCount(after));
+        Assert.IsType<InvalidOperationException>(Assert.Single(aggregate.InnerExceptions));
+
+        //a second Dispose finds an empty list (the first drained it) — no re-release
+        scope.Dispose();
         Assert.Equal(1, factory.ReleaseCount(before));
         Assert.Equal(1, factory.ReleaseCount(throwing));
         Assert.Equal(1, factory.ReleaseCount(after));
     }
 
     [Fact]
-    public async Task When_an_async_transform_release_throws_the_scope_still_releases_the_rest_without_double_releasing()
+    public async Task When_an_async_transform_release_throws_the_scope_drains_the_rest_and_surfaces_an_aggregate()
     {
         //arrange
         var factory = new CountingReleaseFactoryAsync();
@@ -53,11 +59,16 @@ public class TransformLifetimeScopePartialReleaseTests
         scope.Add(throwing);
         scope.Add(after);
 
-        //act — DisposeAsync surfaces the throw; a retry drains the rest
-        await Assert.ThrowsAsync<InvalidOperationException>(async () => await scope.DisposeAsync());
-        await scope.DisposeAsync();
+        //act — a single DisposeAsync drains the rest deterministically and surfaces the failure as an aggregate
+        var aggregate = await Assert.ThrowsAsync<AggregateException>(async () => await scope.DisposeAsync());
 
         //assert
+        Assert.Equal(1, factory.ReleaseCount(before));
+        Assert.Equal(1, factory.ReleaseCount(throwing));
+        Assert.Equal(1, factory.ReleaseCount(after));
+        Assert.IsType<InvalidOperationException>(Assert.Single(aggregate.InnerExceptions));
+
+        await scope.DisposeAsync();
         Assert.Equal(1, factory.ReleaseCount(before));
         Assert.Equal(1, factory.ReleaseCount(throwing));
         Assert.Equal(1, factory.ReleaseCount(after));

@@ -54,14 +54,27 @@ namespace Paramore.Brighter
             //before releasing it stops a throwing Release from skipping the rest on a finalizer retry or
             //re-releasing an already-released transform. This synchronous path backs the finalizer.
             //Remove from the tail so each removal is O(1); release order is irrelevant, the transforms are independent.
+            //A throwing Release is caught per item so the drain completes deterministically rather than
+            //aborting; the collected failures surface together as an AggregateException (the finalizer swallows it).
+            List<Exception>? releaseExceptions = null;
             while (_trackedObjects.Count > 0)
             {
                 var lastIndex = _trackedObjects.Count - 1;
                 var trackedItem = _trackedObjects[lastIndex];
                 _trackedObjects.RemoveAt(lastIndex);
-                factory.Release(trackedItem);
-                Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                try
+                {
+                    factory.Release(trackedItem);
+                    Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                }
+                catch (Exception ex)
+                {
+                    (releaseExceptions ??= new List<Exception>()).Add(ex);
+                }
             }
+
+            if (releaseExceptions is not null)
+                throw new AggregateException(releaseExceptions);
         }
 
         private async ValueTask ReleaseTrackedObjectsAsync()
@@ -70,14 +83,27 @@ namespace Paramore.Brighter
             //skip the remaining transforms on a retry, nor let an already-released transform be released
             //again when DisposeAsync is followed by the finalizer's synchronous release.
             //Remove from the tail so each removal is O(1); release order is irrelevant, the transforms are independent.
+            //A throwing ReleaseAsync is caught per item so the drain completes deterministically rather than
+            //aborting; the collected failures surface together as an AggregateException to an explicit DisposeAsync.
+            List<Exception>? releaseExceptions = null;
             while (_trackedObjects.Count > 0)
             {
                 var lastIndex = _trackedObjects.Count - 1;
                 var trackedItem = _trackedObjects[lastIndex];
                 _trackedObjects.RemoveAt(lastIndex);
-                await factory.ReleaseAsync(trackedItem).ConfigureAwait(false);
-                Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                try
+                {
+                    await factory.ReleaseAsync(trackedItem).ConfigureAwait(false);
+                    Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                }
+                catch (Exception ex)
+                {
+                    (releaseExceptions ??= new List<Exception>()).Add(ex);
+                }
             }
+
+            if (releaseExceptions is not null)
+                throw new AggregateException(releaseExceptions);
         }
 
         private static partial class Log
