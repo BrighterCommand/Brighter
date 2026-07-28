@@ -21,9 +21,9 @@ public class TransformLifetimeScopePartialReleaseTests
         factory.ThrowFor(throwing);
 
         var scope = new TransformLifetimeScope(factory);
-        scope.Add(before);
-        scope.Add(throwing);
-        scope.Add(after);
+        scope.Add(Lease<IAmAMessageTransform>.ForSharedInstance(before));
+        scope.Add(Lease<IAmAMessageTransform>.ForSharedInstance(throwing));
+        scope.Add(Lease<IAmAMessageTransform>.ForSharedInstance(after));
 
         //act — a single explicit Dispose drains every transform deterministically (it does not abort on the
         //throwing one and leave the rest to the GC-timed finalizer) and surfaces the failure as an
@@ -55,9 +55,9 @@ public class TransformLifetimeScopePartialReleaseTests
         factory.ThrowFor(throwing);
 
         var scope = new TransformLifetimeScopeAsync(factory);
-        scope.Add(before);
-        scope.Add(throwing);
-        scope.Add(after);
+        scope.Add(Lease<IAmAMessageTransformAsync>.ForSharedInstance(before));
+        scope.Add(Lease<IAmAMessageTransformAsync>.ForSharedInstance(throwing));
+        scope.Add(Lease<IAmAMessageTransformAsync>.ForSharedInstance(after));
 
         //act — a single DisposeAsync drains the rest deterministically and surfaces the failure as an aggregate
         var aggregate = await Assert.ThrowsAsync<AggregateException>(async () => await scope.DisposeAsync());

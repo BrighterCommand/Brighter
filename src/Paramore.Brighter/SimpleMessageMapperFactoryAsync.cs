@@ -53,7 +53,7 @@ namespace Paramore.Brighter
         public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType)
         {
             var mapper = _factoryMethod(messageMapperType);
-            return mapper is null ? null : new Lease<IAmAMessageMapperAsync>(mapper);
+            return mapper is null ? null : Lease<IAmAMessageMapperAsync>.ForSharedInstance(mapper);
         }
 
         /// <summary>

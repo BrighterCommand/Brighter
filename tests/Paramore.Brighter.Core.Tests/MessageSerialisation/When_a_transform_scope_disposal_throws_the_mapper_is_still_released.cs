@@ -28,9 +28,9 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
         //throws) and a registry that records the mapper release
         var mapper = new ReleaseProbe();
         var pipeline = new WrapPipeline<MinimalCommand>(
-            new MinimalMapper(),
+            Lease<IAmAMessageMapper<MinimalCommand>>.ForSharedInstance(new MinimalMapper()),
             messageTransformerFactory: new ThrowingOnReleaseTransformerFactory(),
-            transformLeases: new Lease<IAmAMessageTransform>[] { new NoOpTransform() },
+            transformLeases: new Lease<IAmAMessageTransform>[] { Lease<IAmAMessageTransform>.ForSharedInstance(new NoOpTransform()) },
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new RecordingReleaseRegistry(mapper));
 
@@ -49,9 +49,9 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
         //arrange — the async DisposeAsync path: an async transform whose factory ReleaseAsync throws
         var mapper = new ReleaseProbe();
         var pipeline = new WrapPipelineAsync<MinimalCommand>(
-            new MinimalMapperAsync(),
+            Lease<IAmAMessageMapperAsync<MinimalCommand>>.ForSharedInstance(new MinimalMapperAsync()),
             messageTransformerFactoryAsync: new ThrowingOnReleaseTransformerFactoryAsync(),
-            transformLeases: new Lease<IAmAMessageTransformAsync>[] { new NoOpTransformAsync() },
+            transformLeases: new Lease<IAmAMessageTransformAsync>[] { Lease<IAmAMessageTransformAsync>.ForSharedInstance(new NoOpTransformAsync()) },
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new RecordingReleaseRegistryAsync(mapper));
 
@@ -70,9 +70,9 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
         //transform scope through sync Release, which throws here
         var mapper = new ReleaseProbe();
         var pipeline = new WrapPipelineAsync<MinimalCommand>(
-            new MinimalMapperAsync(),
+            Lease<IAmAMessageMapperAsync<MinimalCommand>>.ForSharedInstance(new MinimalMapperAsync()),
             messageTransformerFactoryAsync: new ThrowingOnReleaseTransformerFactoryAsync(),
-            transformLeases: new Lease<IAmAMessageTransformAsync>[] { new NoOpTransformAsync() },
+            transformLeases: new Lease<IAmAMessageTransformAsync>[] { Lease<IAmAMessageTransformAsync>.ForSharedInstance(new NoOpTransformAsync()) },
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new RecordingReleaseRegistryAsync(mapper));
 
