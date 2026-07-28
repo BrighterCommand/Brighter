@@ -1,0 +1,47 @@
+---
+id: 0066-release-factory-instances-on-an-opaque-lease
+title: Key Release Factory Created Instance via an Opaque `Lease<T>` 
+status: Accepted
+author:
+  - "Ian Cooper"
+created: 2026-07-28
+summary: "Changes what a DI-friendly factory returns from being the instance to being a lease of the instance, which includes the instance and an opaque token, which allows us to release the scope associated with a transient instance from amongst scopes that we have loaded"
+tags:
+  - "lifetime"
+  - "dependency injection"
+  - "scope"
+---
+
+# 66. Key Release Factory Created Instance via an Opaque `Lease<T>`
+
+Date: 2026-07-28
+
+## Status
+Accepted
+
+## Context
+
+`ServiceProviderLifetimeScope` keyed transient scopes by **instance identity**. A *shared* instance (a container-`Singleton` mapper/transform resolved under the default `Transient` `MapperLifetime`/`TransformerLifetime`) stacks N scopes under one key, so `Release(instance)` can't tell which resolution's scope to pop → over-release disposes a scope another live resolution still holds (use-after-dispose). The `CollectScopesToRelease` re-home pass (bugfix 0012) *narrowed but never closed* the matching race.
+
+- **Why not just return the instance (the naïve option):** the caller (pipeline) must release *the specific resolution* it holds. Only a token that carries resolution identity — the resolution's own `IServiceScope` — lets `Release` reclaim exactly one scope and makes over-release an idempotent no-op. Returning the bare instance forces instance-keying, which *is* the bug.
+- **Assembly-boundary force:** the lease type lives in **core** (`Paramore.Brighter`), but the real `IServiceScope` lives in the **DI** assembly. So the token must be an opaque `object?` the caller carries but cannot interpret; all DI-specific disposal (including the pump-deadlock context suppression) stays in the DI layer.
+- **Forward influence:** this establishes "resolution-scoped lease" as the unit of lifetime, which is directly relevant to the planned **scope-handling improvements** (consumer scope = one message; producer side flowing the ambient ASP.NET request scope). The lease is the natural handle those designs can build on.
+
+## Decision
+
+`Create`/`Get` return a `sealed class Lease<T>` (opaque data: `Instance` + opaque `object? ReleaseToken`); `factory.Release(lease)` / `registry.Release<T>(lease)` key release on the resolution. Set-based tracking (`ConcurrentDictionary<IServiceScope, byte>` + idempotent `TryRemove`) replaces the per-instance stack, `InstanceComparer`, and `CollectScopesToRelease` re-home.
+
+### Considered and rejected: lease is `IDisposable`/`IAsyncDisposable` (self-releasing)
+
+A self-disposing lease (`using`/`await using`, `Release` gone from the interfaces) is the more modern shape, but was rejected on **impact**:
+
+- It pushes the DI-specific pump-deadlock **context-suppression disposal** out of the DI layer into a token wrapper — worse separation of concerns.
+- It's a **larger public-surface change** on an already-breaking major-version PR (removing `Release` from all 5/6 interfaces vs. changing its parameter).
+- The chosen "opaque-data class + `factory.Release(lease)`" keeps Create/Release symmetry, so the conceptual change is smaller and all disposal logic stays where it belongs.
+
+The user explicitly chose the opaque-data-class option over the self-disposing one; capture that this is a deliberate, reversible-if-warranted choice.
+
+## Consequences
+
+- Broad breaking surface: 6 interfaces, DI impls, registry, pipelines/builders, all test doubles.
+- Because `Lease<T>` is invariant, registry `Release<T>` is generic; the factory `Release` stays non-generic and the registry re-wraps, carrying the same token.
