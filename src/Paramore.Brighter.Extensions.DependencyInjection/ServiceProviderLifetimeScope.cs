@@ -148,10 +148,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         private void EnsureRootScopePublished()
         {
-            //publish the first scope atomically: a plain `_scope ??= CreateScope()` lets two threads racing
-            //the first resolution each create a scope, and the loser's assignment is overwritten and never
-            //disposed (neither Dispose nor Release drains a scope that is not _scope). CompareExchange keeps
-            //the winner and the loser disposes the scope it created.
+            //INVARIANT: publish the first scope with CompareExchange, not `_scope ??= CreateScope()`. Two
+            //threads racing the first resolution would each create a scope and the loser's would be
+            //overwritten and never disposed (nothing drains a scope that is not _scope). The loser disposes
+            //the scope it created.
             if (_scope is not null)
                 return;
 
@@ -163,12 +163,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
             else if (Volatile.Read(ref _disposed) != 0)
             {
-                //won the publish, but a Dispose that read _scope before our CompareExchange published it
-                //drained nothing and left our scope orphaned — the create-vs-Dispose mirror of the
-                //two-creators race above. Reclaim it: if _scope is still the scope we published (Dispose has
-                //not since claimed it), take it back and dispose it, so it is not orphaned. Then throw,
-                //because the scope this resolution needed is gone. Dispose claims _scope with the same atomic
-                //swap, so the scope is disposed exactly once whichever side wins.
+                //won the publish, but a concurrent Dispose read _scope before we published and left ours
+                //orphaned. Reclaim it (if Dispose has not since claimed it) and throw — the scope this
+                //resolution needed is gone. Dispose claims _scope with the same atomic swap, so it is
+                //disposed exactly once whichever side wins.
                 if (Interlocked.CompareExchange(ref _scope, null, created) == created)
                     DisposeScope(created);
                 ThrowIfDisposed();
@@ -295,47 +293,23 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 "is finished with it.");
 
         /// <summary>
-        /// Releases an object back to the scope that owns it.
+        /// Releases an object back to the scope that owns it. Only a transient instance has a scope of its
+        /// own to drain; a singleton (owned by the container) and a scoped instance (owned by <c>_scope</c>
+        /// and cached for reuse) are a no-op.
         /// <para>
-        /// Only a transient instance has scopes of its own to drain: this disposes one — the scope from
-        /// a single matching creation — so the DI container drops its reference and disposes whatever
-        /// that scope owns exactly once. A singleton is owned
-        /// by the container, and a scoped instance is owned by <c>_scope</c> and stays cached in
-        /// <c>_scopedInstances</c> for reuse — disposing either here would hand out a disposed instance
-        /// on the next <see cref="GetOrCreate{T}"/>, so both are a no-op.
+        /// Call <see cref="Release"/> exactly <b>once per creation</b> (the contract on
+        /// <see cref="GetTransient{T}"/>). A never-tracked instance and a stray extra release of a genuine
+        /// per-resolution transient are both harmless no-ops, but over-releasing a <b>shared</b> instance —
+        /// a <c>Singleton</c>-registered mapper/transform resolved under the default <c>Transient</c>
+        /// lifetime, which stacks one scope per resolution — pops a still-outstanding resolution's scope and
+        /// disposes it beneath a caller still holding the instance. See <see cref="CollectScopesToRelease"/>
+        /// for the concurrent-release re-home that bounds (but does not fully close) the matching race, and
+        /// <c>bugfixes/0012</c> for the analysis; a per-request <c>Transient</c> or <c>Scoped</c>
+        /// registration avoids the shared-instance case entirely.
         /// </para>
-        /// <para>
-        /// Call <see cref="Release"/> exactly <b>once per creation</b>, matching the contract stated on
-        /// <see cref="GetTransient{T}"/> ("Release must be called once per creation"). Releasing an
-        /// instance that was never tracked is a harmless no-op; so is a stray extra release of a genuine
-        /// per-resolution transient, whose single scope has already been drained. But a shared instance
-        /// resolved under a Transient lifetime stacks one scope per <see cref="GetTransient{T}"/>: a
-        /// spurious second release for one creation pops the scope of <em>another</em> still-outstanding
-        /// resolution and disposes it beneath a caller that is still holding the instance. Over-releasing
-        /// is therefore not a safe no-op in the shared-instance case — release once for each
-        /// <see cref="GetTransient{T}"/>, no more.
-        /// </para>
-        /// <para>
-        /// The shared-instance case arises when a mapper or transform is registered in DI as a
-        /// <c>Singleton</c> (or otherwise hands back one instance to every resolution) while its
-        /// <c>MapperLifetime</c> / <c>TransformerLifetime</c> is the default <c>Transient</c>, so each
-        /// resolution still opens its own scope over the same shared object. Besides the over-release
-        /// hazard above, concurrent releases of such a shared instance race: <see cref="CollectScopesToRelease"/>
-        /// re-homes a scope a parallel <see cref="GetTransient{T}"/> pushes mid-release, which narrows but
-        /// does not fully close a rare, bounded leak window. A per-request <c>Transient</c> or a
-        /// <c>Scoped</c> registration avoids the shared-instance case entirely.
-        /// </para>
+        /// Prefer <see cref="ReleaseAsync"/> where the caller can await: this synchronous path can only
+        /// suppress the pump context and block on the wait (see <see cref="DisposeScope"/>).
         /// </summary>
-        /// <remarks>
-        /// Synchronous by the factory release contract, so the instance's scope is drained synchronously
-        /// through <see cref="DisposeScope"/>. Prefer <see cref="ReleaseAsync"/> where the caller can
-        /// await — on a thread owned by a single-threaded <see cref="SynchronizationContext"/> (the
-        /// Proactor message pump) the async path lets an <see cref="IAsyncDisposable"/> mapper/transform
-        /// <c>DisposeAsync</c> complete without blocking the pump; this synchronous path can only suppress
-        /// the pump context and block on the wait (see <see cref="DisposeScope"/>). See
-        /// <see cref="DisposeScope"/> for why a
-        /// mapper/transform <c>DisposeAsync</c> should still avoid real I/O.
-        /// </remarks>
         /// <param name="instance">The object to release</param>
         public void Release(object? instance)
         {
@@ -344,17 +318,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Releases an object back to the scope that owns it, draining that scope asynchronously.
+        /// Releases an object back to the scope that owns it, draining that scope asynchronously — the
+        /// counterpart of <see cref="Release"/>, called from the async pipeline's <c>DisposeAsync</c>.
+        /// Awaiting the scope's <c>DisposeAsync</c> rather than blocking on it keeps an
+        /// <see cref="IAsyncDisposable"/> mapper/transform from deadlocking the Proactor pump's
+        /// single-threaded <see cref="SynchronizationContext"/> (see <see cref="DisposeScope"/>). Shares
+        /// <see cref="CollectScopesToRelease"/> with <see cref="Release"/>, so the same idempotency applies.
         /// </summary>
-        /// <remarks>
-        /// The asynchronous counterpart of <see cref="Release"/>, called from the async pipeline's
-        /// <c>DisposeAsync</c> (<c>await using</c>). Awaiting the scope's <c>DisposeAsync</c> — rather
-        /// than blocking on it — is what keeps an <see cref="IAsyncDisposable"/> mapper/transform from
-        /// deadlocking the single-threaded <see cref="SynchronizationContext"/> of the Proactor pump: a
-        /// continuation the user's <c>DisposeAsync</c> posts back to that context can run because the
-        /// pump thread is suspended at the <c>await</c>, not blocked. The same idempotency and race
-        /// handling as <see cref="Release"/> applies — both share <see cref="CollectScopesToRelease"/>.
-        /// </remarks>
         /// <param name="instance">The object to release</param>
         public async ValueTask ReleaseAsync(object? instance)
         {
@@ -512,11 +482,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 //drain every tracked transient scope even when one disposal throws (MS DI's scope Dispose
                 //throws for an IAsyncDisposable-only service, and a user Dispose may). This is the terminal
-                //cleanup — no finalizer will retry it, and under HandlerLifetime.Transient this runs once
-                //per message holding one scope per handler in the chain, so a skip-the-rest would leak the
-                //DI scopes of every other handler. Swallowing per scope both keeps a later scope from being
-                //skipped and keeps the root-scope disposal in the finally reachable; it mirrors the
-                //best-effort drain in TransformPipelineBuilder.ReleaseTransforms.
+                //cleanup — no finalizer retries it — so a per-scope catch keeps one failure from skipping the
+                //rest and from skipping the root-scope disposal in the finally.
                 foreach (var scopes in _transientScopes.Values)
                     while (scopes.TryPop(out var scope))
                     {
@@ -530,11 +497,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
             finally
             {
-                //claim _scope with an atomic swap: a resolution that publishes its first scope concurrently
-                //re-checks _disposed and reclaims what it published, so the scope is disposed exactly once
-                //whichever side wins. Also collapses the double-read of _scope (check-then-use) that let two
-                //concurrent disposals both dispose it. In the finally so a throwing transient drain above
-                //(were the swallow ever removed) still cannot strand this shared scope undisposed.
+                //claim _scope with an atomic swap so it is disposed exactly once whichever side wins the race
+                //with a concurrent first-scope publish (which re-checks _disposed and reclaims what it
+                //published). In the finally so a throwing transient drain above cannot strand it undisposed.
                 var rootScope = Interlocked.Exchange(ref _scope, null);
                 if (rootScope != null)
                 {
