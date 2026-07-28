@@ -355,10 +355,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// same atomic-remove idempotency as <see cref="Release"/>.
         /// </summary>
         /// <param name="releaseToken">The release token returned alongside the resolution</param>
-        public async ValueTask ReleaseAsync(object? releaseToken)
+        public ValueTask ReleaseAsync(object? releaseToken)
         {
+            //fast path: a null or non-scope token, or a scope already drained, is a no-op — return a
+            //completed ValueTask without allocating an async state machine. This is the common case: the
+            //Singleton/Scoped/shared-transient lifetimes carry no token, and every over-release lands here.
             if (releaseToken is IServiceScope scope && _outstandingScopes.TryRemove(scope, out _))
-                await DisposeScopeAsync(scope).ConfigureAwait(false);
+                return DisposeScopeAsync(scope);
+            return default;
         }
 
         /// <summary>
