@@ -31,6 +31,9 @@ Accepted
 
 `Create`/`Get` return a `sealed class Lease<T>` (opaque data: `Instance` + opaque `object? ReleaseToken`); `factory.Release(lease)` / `registry.Release<T>(lease)` key release on the resolution. Set-based tracking (`ConcurrentDictionary<IServiceScope, byte>` + idempotent `TryRemove`) replaces the per-instance stack, `InstanceComparer`, and `CollectScopesToRelease` re-home.
 
+`Lease<T>` (new, in `Paramore.Brighter`) is a small `sealed class` pairing the resolved `Instance` with an opaque `ReleaseToken`. The token — for the DI-backed factories, the resolution's own `IServiceScope` — lets the factory reclaim exactly the one resolution being released, so a shared instance handed out under a transient lifetime is torn d
+own one resolution at a time and an over-release is a no-op. It carries an implicit conversion from `T`, so a caller constructing a pipeline without a per-resolution scope (typically a test, or a factory that hands out a shared instance) can pass a bare instance where a lease is expected.
+
 ### Considered and rejected: lease is `IDisposable`/`IAsyncDisposable` (self-releasing)
 
 A self-disposing lease (`using`/`await using`, `Release` gone from the interfaces) is the more modern shape, but was rejected on **impact**:
