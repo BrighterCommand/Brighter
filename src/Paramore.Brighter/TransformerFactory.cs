@@ -24,12 +24,16 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    internal sealed class TransformerFactory<TRequest>(TransformAttribute attribute, IAmAMessageTransformerFactory factory)
+    internal sealed partial class TransformerFactory<TRequest>(TransformAttribute attribute, IAmAMessageTransformerFactory factory)
         where TRequest : class, IRequest
     {
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TransformerFactory<TRequest>>();
+
         private readonly Type _messageType = typeof(TRequest);
 
         public Lease<IAmAMessageTransform> CreateMessageTransformer()
@@ -49,12 +53,20 @@ namespace Paramore.Brighter
                 //the transformer was created but never returned to the caller, so we own it; release its
                 //lease to the factory rather than leak it before letting the initialization error propagate.
                 //Release/Dispose may throw (a user Release, or MS DI's sync scope Dispose on
-                //netstandard2.0 for an IAsyncDisposable-only transform); swallow it so it cannot mask
-                //the real initialization error being rethrown.
-                try { factory.Release(lease); } catch { /* best-effort cleanup */ }
+                //netstandard2.0 for an IAsyncDisposable-only transform); log-and-swallow it so it cannot
+                //mask the real initialization error being rethrown, but a repeated failure here (an
+                //unreleased transform scope) is not left invisible.
+                try { factory.Release(lease); }
+                catch (Exception releaseException) { Log.FailedToReleaseTransformerAfterInitFailure(s_logger, releaseException); }
                 throw;
             }
             return lease;
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Failed to release a transformer after its initialization failed; the initialization error is preserved and rethrown. A repeated failure here points at a transform Release or Dispose that throws, leaking its scope.")]
+            public static partial void FailedToReleaseTransformerAfterInitFailure(ILogger logger, Exception exception);
         }
     }
 }

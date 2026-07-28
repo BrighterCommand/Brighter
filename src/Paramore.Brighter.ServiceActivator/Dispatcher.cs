@@ -155,6 +155,14 @@ namespace Paramore.Brighter.ServiceActivator
         /// until the process exits rather than at container teardown — the same retention the producer-side
         /// <c>OutboxProducerMediator.Dispose</c> was extended to drain. The Dispatcher is registered as a
         /// container singleton, so the container disposes it at shutdown.
+        /// <para>
+        /// Stop the pumps before disposing: call <see cref="End"/> (and await its completion) first. This
+        /// disposal frees the mapper registry and transform factories but does not stop the consumers, so
+        /// disposing a still-running Dispatcher leaves in-flight <c>BuildUnwrapPipeline</c> calls resolving
+        /// through a disposed factory, which throws <see cref="System.ObjectDisposedException"/> and faults the
+        /// pump. The hosted path already orders this correctly — <c>ServiceActivatorHostedService.StopAsync</c>
+        /// awaits <see cref="End"/> before the container disposes the provider.
+        /// </para>
         /// </remarks>
         public void Dispose()
         {

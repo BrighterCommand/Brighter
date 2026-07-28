@@ -314,10 +314,10 @@ namespace Paramore.Brighter
             [LoggerMessage(LogLevel.Warning, "No message transformer factory configured, so no transforms will be created but {TransformCount} configured")]
             public static partial void NoMessageTransformerFactoryConfigured(ILogger logger, int transformCount);
 
-            [LoggerMessage(LogLevel.Debug, "Failed to release resources while cleaning up after a failed pipeline build; the build error is preserved and rethrown. A repeated failure here points at a mapper/transform Release or Dispose that throws.")]
+            [LoggerMessage(LogLevel.Warning, "Failed to release resources while cleaning up after a failed pipeline build; the build error is preserved and rethrown. A repeated failure here points at a mapper/transform Release or Dispose that throws.")]
             public static partial void FailedToCleanUpAfterFailedBuild(ILogger logger, Exception exception);
 
-            [LoggerMessage(LogLevel.Debug, "Failed to release a transform while cleaning up a partially-built pipeline; releasing the remaining transforms. A repeated failure here points at a transform Release or Dispose that throws.")]
+            [LoggerMessage(LogLevel.Warning, "Failed to release a transform while cleaning up a partially-built pipeline; releasing the remaining transforms. A repeated failure here points at a transform Release or Dispose that throws.")]
             public static partial void FailedToReleaseTransform(ILogger logger, Exception exception);
         }
     }

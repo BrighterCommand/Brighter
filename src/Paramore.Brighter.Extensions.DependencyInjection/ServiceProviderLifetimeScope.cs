@@ -511,7 +511,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         private static partial class Log
         {
-            [LoggerMessage(LogLevel.Debug, "Failed to dispose a service scope while tearing down the Brighter DI-backed factory. Best-effort cleanup continues; a repeated failure here points at a mapper/transform/handler Dispose that throws.")]
+            [LoggerMessage(LogLevel.Warning, "Failed to dispose a service scope while tearing down the Brighter DI-backed factory. Best-effort cleanup continues; a repeated failure here points at a mapper/transform/handler Dispose that throws.")]
             public static partial void FailedToDisposeScope(ILogger logger, Exception exception);
         }
     }

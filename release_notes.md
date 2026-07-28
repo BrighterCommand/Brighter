@@ -370,6 +370,10 @@ All of these owners are registered as container singletons, so the container dis
 
 **This shutdown disposal is a teardown backstop, not a substitute for `Release`.** It reclaims once, at host shutdown; it does nothing for a host that runs for days. Releasing each mapper/transform you resolve directly — as the pipeline does on every message — is what bounds retention *during* the run. Relying on owner disposal for reclamation along the way just reproduces the unbounded accumulation this fix closes.
 
+#### Breaking change: `IBrighterOptions` gains `IsolateTransientHandlerScope`
+
+`IBrighterOptions` (in `Paramore.Brighter.Extensions.DependencyInjection`) gains a `bool IsolateTransientHandlerScope { get; set; }` member — the opt-out described in the *Behaviour change* below. `Paramore.Brighter.Extensions.DependencyInjection` targets `netstandard2.0`, which has no default interface members, so this ships without a default body: **any third-party implementation of `IBrighterOptions` must add the member to compile.** In-tree there is exactly one implementer (`BrighterOptions`), which defaults it to `true` (isolate), so the change is invisible to CI but a source break for external implementers — the same class of break as the factory/registry interfaces above.
+
 #### Behaviour change: transient handler lifetime isolates its DI scope per handler
 
 The interface additions above are compile-time breaks. This one is the only **observable semantic** change, and it is invisible at compile time — no signature change and no exception; only the number of DI-`Scoped` instances a pipeline sees changes. It lands on the **default** `HandlerLifetime` (`Transient`).
