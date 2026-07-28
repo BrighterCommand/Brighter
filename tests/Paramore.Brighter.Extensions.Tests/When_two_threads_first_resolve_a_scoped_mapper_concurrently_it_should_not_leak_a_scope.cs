@@ -34,7 +34,10 @@ public class ScopedMapperFirstResolutionRaceTests
         // together; the CreateScope() gate then holds the first inside creation until the second arrives
         var workers = new[] { new Thread(Resolve), new Thread(Resolve) };
         foreach (var worker in workers) worker.Start();
-        foreach (var worker in workers) Assert.True(worker.Join(TimeSpan.FromSeconds(10)), "resolution deadlocked");
+        //wider than the barrier's own timeout so that if a future fast path ever leaves one thread not blocking
+        //at the barrier, this Join outlives the barrier and the workers reach the diagnostic CreatedCount assert
+        //rather than both timers expiring together and reporting the generic "resolution deadlocked"
+        foreach (var worker in workers) Assert.True(worker.Join(TimeSpan.FromSeconds(30)), "resolution deadlocked");
 
         // both threads created a scope under the race — the precondition the test is proving cleanup for
         Assert.Equal(2, scopeTracker.CreatedCount);

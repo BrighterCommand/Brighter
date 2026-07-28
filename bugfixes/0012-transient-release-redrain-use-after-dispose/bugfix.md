@@ -1,7 +1,13 @@
 # Bugfix: Release re-drain disposes a scope a concurrent GetTransient handed to a live caller
 
 **Linked Issue**: PR #4254 round-11 review, Finding #4 (comment 5081011984)
-**Status**: Fixed
+**Status**: Superseded
+
+> **Note**: The scope-keyed lease redesign (ADR 0066 / 0067) later removed `CollectScopesToRelease`, the
+> per-instance scope stack, and the whole re-drain pass this bugfix hardened. Release now keys on the
+> resolution's own `IServiceScope` via `Lease<T>`, so there is no shared per-instance stack to re-drain and
+> no ordering to get wrong. The method and code paths named below no longer exist in the tree; this record
+> is retained for history only. See ADR 0066 and `bugfixes/0016-shared-instance-over-release-lease`.
 
 ## Symptom
 Under `MapperLifetime`/`TransformerLifetime` = `Transient` with a **shared instance** — the case the

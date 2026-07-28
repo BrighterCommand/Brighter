@@ -14,8 +14,11 @@ namespace Paramore.Brighter
 
         public void Dispose()
         {
-            ReleaseTrackedObjects();
-            GC.SuppressFinalize(this);
+            //SuppressFinalize in a finally: the drain can now throw (a Release failure surfaces as an
+            //AggregateException to an explicit Dispose), and if it does the object would otherwise stay
+            //registered for finalization, whose retry only re-runs the already-drained list — wasted work
+            try { ReleaseTrackedObjects(); }
+            finally { GC.SuppressFinalize(this); }
         }
 
         /// <summary>
@@ -25,8 +28,11 @@ namespace Paramore.Brighter
         /// </summary>
         public async ValueTask DisposeAsync()
         {
-            await ReleaseTrackedObjectsAsync().ConfigureAwait(false);
-            GC.SuppressFinalize(this);
+            //SuppressFinalize in a finally: the drain can now throw (a Release failure surfaces as an
+            //AggregateException to an explicit DisposeAsync), and if it does the object would otherwise stay
+            //registered for finalization, whose retry only re-runs the already-drained list — wasted work
+            try { await ReleaseTrackedObjectsAsync().ConfigureAwait(false); }
+            finally { GC.SuppressFinalize(this); }
         }
 
         ~TransformLifetimeScopeAsync()

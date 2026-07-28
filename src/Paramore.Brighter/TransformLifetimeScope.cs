@@ -12,8 +12,11 @@ namespace Paramore.Brighter
 
         public void Dispose()
         {
-            ReleaseTrackedObjects();
-            GC.SuppressFinalize(this);
+            //SuppressFinalize in a finally: the drain can now throw (a Release failure surfaces as an
+            //AggregateException to an explicit Dispose), and if it does the object would otherwise stay
+            //registered for finalization, whose retry only re-runs the already-drained list — wasted work
+            try { ReleaseTrackedObjects(); }
+            finally { GC.SuppressFinalize(this); }
         }
 
         ~TransformLifetimeScope()
