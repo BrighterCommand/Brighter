@@ -26,8 +26,11 @@ public class TransformPipelineFinalizerReleaseTests
 
         //assert: the finalizer genuinely ran and attempted the release that throws (pinning that the GC
         //actually collected the abandoned pipeline, not a vacuous pass), and reaching here means the
-        //exception was swallowed instead of escaping ~TransformPipeline and crashing the process
-        Assert.Equal(1, ThrowingOnReleaseRegistry.ReleaseAttempts);
+        //exception was swallowed instead of escaping ~TransformPipeline and crashing the process.
+        //>= 1 rather than == 1: the counter is a never-reset static, so a GC that runs the finalizer path
+        //under a retry (or a future fact reusing this registry) must not turn "the finalizer ran" into a
+        //confusing count mismatch — the load-bearing fact is that it ran at all, not exactly once.
+        Assert.True(ThrowingOnReleaseRegistry.ReleaseAttempts >= 1);
     }
 
     [Fact]
@@ -41,8 +44,9 @@ public class TransformPipelineFinalizerReleaseTests
         CollectAndRunFinalizers();
 
         //assert: the async pipeline's finalizer genuinely ran the synchronous release that throws, and it
-        //was swallowed rather than escaping ~TransformPipelineAsync
-        Assert.Equal(1, ThrowingOnReleaseRegistryAsync.ReleaseAttempts);
+        //was swallowed rather than escaping ~TransformPipelineAsync. >= 1 for the same never-reset-static
+        //robustness reason as the sync fact above.
+        Assert.True(ThrowingOnReleaseRegistryAsync.ReleaseAttempts >= 1);
     }
 
     private static void CollectAndRunFinalizers()
@@ -72,7 +76,7 @@ public class TransformPipelineFinalizerReleaseTests
     {
         _ = new WrapPipelineAsync<MinimalCommand>(
             new MinimalMapperAsync(),
-            messageTransformerFactoryAsync: null!,
+            messageTransformerFactoryAsync: null,
             transforms: Array.Empty<IAmAMessageTransformAsync>(),
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new ThrowingOnReleaseRegistryAsync());

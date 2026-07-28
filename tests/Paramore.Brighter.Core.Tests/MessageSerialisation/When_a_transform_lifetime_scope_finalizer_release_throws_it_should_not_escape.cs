@@ -24,8 +24,10 @@ public class TransformLifetimeScopeFinalizerReleaseTests
 
         //assert: the finalizer genuinely ran and attempted the release that throws (pinning that the GC
         //actually collected the abandoned scope, not a vacuous pass), and reaching here means the
-        //exception was swallowed instead of escaping ~TransformLifetimeScope and crashing the process
-        Assert.Equal(1, ThrowingOnReleaseTransformerFactory.ReleaseAttempts);
+        //exception was swallowed instead of escaping ~TransformLifetimeScope and crashing the process.
+        //>= 1 rather than == 1: the counter is a never-reset static, so a GC retry or a future fact reusing
+        //this factory must not turn "the finalizer ran" into a confusing count mismatch.
+        Assert.True(ThrowingOnReleaseTransformerFactory.ReleaseAttempts >= 1);
     }
 
     [Fact]
@@ -39,8 +41,9 @@ public class TransformLifetimeScopeFinalizerReleaseTests
         CollectAndRunFinalizers();
 
         //assert: the async scope's finalizer genuinely ran the synchronous release that throws, and it was
-        //swallowed rather than escaping ~TransformLifetimeScopeAsync
-        Assert.Equal(1, ThrowingOnReleaseTransformerFactoryAsync.ReleaseAttempts);
+        //swallowed rather than escaping ~TransformLifetimeScopeAsync. >= 1 for the same never-reset-static
+        //robustness reason as the sync fact above.
+        Assert.True(ThrowingOnReleaseTransformerFactoryAsync.ReleaseAttempts >= 1);
     }
 
     private static void CollectAndRunFinalizers()

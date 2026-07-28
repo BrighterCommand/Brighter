@@ -44,7 +44,7 @@ namespace Paramore.Brighter
         /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
         public UnwrapPipeline(
             IEnumerable<IAmAMessageTransform> transforms,
-            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmAMessageTransformerFactory? messageTransformerFactory,
             IAmAMessageMapper<TRequest> messageMapper,
             IAmAMessageMapperRegistry? mapperRegistry = null
             ) : base(messageMapper, transforms, mapperRegistry)
