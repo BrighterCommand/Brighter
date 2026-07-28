@@ -94,7 +94,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 return new Lease<IAmAMessageMapper>(new MyEventMessageMapper());
             }
 
-            public void Release(Lease<IAmAMessageMapper> lease)
+            public void Release(Lease<IAmAMessageMapper>? lease)
             {
                 Interlocked.Increment(ref _releaseCount);
             }

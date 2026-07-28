@@ -63,8 +63,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// For scoped/transient, disposes the per-resolution scope the transformer was resolved from.
         /// </summary>
         /// <param name="lease">The lease returned by <see cref="Create"/> for the transformer to release</param>
-        public void Release(Lease<IAmAMessageTransform> lease)
+        public void Release(Lease<IAmAMessageTransform>? lease)
         {
+            //over-release of a lease is a harmless no-op, including a null lease
+            if (lease is null) return;
             _lifetimeScope.Release(lease.ReleaseToken);
         }
 

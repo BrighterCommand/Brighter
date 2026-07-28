@@ -51,7 +51,7 @@ namespace Paramore.Brighter
         /// owned by the Proactor's single-threaded synchronization context prefer <see cref="ReleaseAsync"/>.
         /// </remarks>
         /// <param name="lease">The lease returned by <see cref="Create"/> for the transformer to release.</param>
-        void Release(Lease<IAmAMessageTransformAsync> lease);
+        void Release(Lease<IAmAMessageTransformAsync>? lease);
 
         /// <summary>
         /// Releases the transformer resolution identified by <paramref name="lease"/> asynchronously, awaiting
@@ -66,6 +66,6 @@ namespace Paramore.Brighter
         /// returning <c>default</c>.
         /// </remarks>
         /// <param name="lease">The lease returned by <see cref="Create"/> for the transformer to release.</param>
-        ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease);
+        ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease);
     }
 }

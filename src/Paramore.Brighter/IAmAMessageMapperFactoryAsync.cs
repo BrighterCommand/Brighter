@@ -59,7 +59,7 @@ namespace Paramore.Brighter
         /// <see cref="ReleaseAsync"/>.
         /// </remarks>
         /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release.</param>
-        void Release(Lease<IAmAMessageMapperAsync> lease);
+        void Release(Lease<IAmAMessageMapperAsync>? lease);
 
         /// <summary>
         /// Releases the mapper resolution identified by <paramref name="lease"/> asynchronously, awaiting its
@@ -74,6 +74,6 @@ namespace Paramore.Brighter
         /// <c>default</c>.
         /// </remarks>
         /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release.</param>
-        ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease);
+        ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>? lease);
     }
 }

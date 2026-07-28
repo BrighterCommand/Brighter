@@ -62,7 +62,7 @@ namespace Paramore.Brighter
         /// must not dispose it, and the lease carries no release token.
         /// </summary>
         /// <param name="lease">The mapper lease to release.</param>
-        public void Release(Lease<IAmAMessageMapperAsync> lease)
+        public void Release(Lease<IAmAMessageMapperAsync>? lease)
         {
         }
 
@@ -71,7 +71,7 @@ namespace Paramore.Brighter
         /// <see cref="Release"/>: the caller's factory method owns whatever it returns.
         /// </summary>
         /// <param name="lease">The mapper lease to release.</param>
-        public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease)
+        public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>? lease)
         {
             return default;
         }

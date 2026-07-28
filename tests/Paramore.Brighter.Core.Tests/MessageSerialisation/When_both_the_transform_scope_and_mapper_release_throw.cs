@@ -119,14 +119,14 @@ public class TransformPipelineBothReleasesThrowTests
     private sealed class ThrowingOnReleaseTransformerFactory : IAmAMessageTransformerFactory
     {
         public Lease<IAmAMessageTransform>? Create(Type transformerType) => throw new NotImplementedException();
-        public void Release(Lease<IAmAMessageTransform> lease) => throw new InvalidOperationException(TransformFailure);
+        public void Release(Lease<IAmAMessageTransform>? lease) => throw new InvalidOperationException(TransformFailure);
     }
 
     private sealed class ThrowingOnReleaseTransformerFactoryAsync : IAmAMessageTransformerFactoryAsync
     {
         public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => throw new NotImplementedException();
-        public void Release(Lease<IAmAMessageTransformAsync> lease) => throw new InvalidOperationException(TransformFailure);
-        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease) => throw new InvalidOperationException(TransformFailure);
+        public void Release(Lease<IAmAMessageTransformAsync>? lease) => throw new InvalidOperationException(TransformFailure);
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease) => throw new InvalidOperationException(TransformFailure);
     }
 
     //releasing the mapper also throws, so the finally's exception would otherwise mask the transform failure
@@ -134,7 +134,7 @@ public class TransformPipelineBothReleasesThrowTests
     {
         public Lease<IAmAMessageMapper<T>>? Get<T>() where T : class, IRequest => null;
         public (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType) => (null, false);
-        public void Release<T>(Lease<IAmAMessageMapper<T>> lease) where T : class, IRequest =>
+        public void Release<T>(Lease<IAmAMessageMapper<T>>? lease) where T : class, IRequest =>
             throw new InvalidOperationException(MapperFailure);
         public void Register<TRequest, TMessageMapper>()
             where TRequest : class, IRequest
@@ -146,9 +146,9 @@ public class TransformPipelineBothReleasesThrowTests
     {
         public Lease<IAmAMessageMapperAsync<T>>? GetAsync<T>() where T : class, IRequest => null;
         public (Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType) => (null, false);
-        public void Release<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest =>
+        public void Release<T>(Lease<IAmAMessageMapperAsync<T>>? lease) where T : class, IRequest =>
             throw new InvalidOperationException(MapperFailure);
-        public ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest =>
+        public ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>>? lease) where T : class, IRequest =>
             throw new InvalidOperationException(MapperFailure);
         public void RegisterAsync<TRequest, TMessageMapper>()
             where TRequest : class, IRequest

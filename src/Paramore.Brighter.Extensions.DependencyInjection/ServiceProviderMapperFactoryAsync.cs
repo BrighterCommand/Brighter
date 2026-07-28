@@ -66,8 +66,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// is retained until the factory is disposed at shutdown.
         /// </summary>
         /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release</param>
-        public void Release(Lease<IAmAMessageMapperAsync> lease)
+        public void Release(Lease<IAmAMessageMapperAsync>? lease)
         {
+            //over-release of a lease is a harmless no-op, including a null lease
+            if (lease is null) return;
             _lifetimeScope.Release(lease.ReleaseToken);
         }
 
@@ -79,8 +81,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// synchronization context a continuation may need.
         /// </summary>
         /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release</param>
-        public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease)
+        public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>? lease)
         {
+            if (lease is null) return default;
             return _lifetimeScope.ReleaseAsync(lease.ReleaseToken);
         }
 

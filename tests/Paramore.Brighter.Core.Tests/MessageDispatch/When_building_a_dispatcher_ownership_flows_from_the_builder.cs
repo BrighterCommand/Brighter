@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             public int DisposeCount { get; private set; }
             public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
-            public void Release(Lease<IAmAMessageMapper> lease) { }
+            public void Release(Lease<IAmAMessageMapper>? lease) { }
             public void Dispose() => DisposeCount++;
         }
 
@@ -85,8 +85,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             public int DisposeCount { get; private set; }
             public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => null;
-            public void Release(Lease<IAmAMessageMapperAsync> lease) { }
-            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease) => default;
+            public void Release(Lease<IAmAMessageMapperAsync>? lease) { }
+            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>? lease) => default;
             public void Dispose() => DisposeCount++;
         }
 
@@ -94,7 +94,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             public int DisposeCount { get; private set; }
             public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
-            public void Release(Lease<IAmAMessageTransform> lease) { }
+            public void Release(Lease<IAmAMessageTransform>? lease) { }
             public void Dispose() => DisposeCount++;
         }
 
@@ -102,8 +102,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             public int DisposeCount { get; private set; }
             public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => null;
-            public void Release(Lease<IAmAMessageTransformAsync> lease) { }
-            public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease) => default;
+            public void Release(Lease<IAmAMessageTransformAsync>? lease) { }
+            public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease) => default;
             public void Dispose() => DisposeCount++;
         }
     }

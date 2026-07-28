@@ -70,6 +70,6 @@ public class MediatorUnresolvableMapperSendTests
     {
         public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
 
-        public void Release(Lease<IAmAMessageMapper> lease) { }
+        public void Release(Lease<IAmAMessageMapper>? lease) { }
     }
 }

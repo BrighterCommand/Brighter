@@ -64,8 +64,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// For scoped/transient, disposes the per-resolution scope the transformer was resolved from.
         /// </summary>
         /// <param name="lease">The lease returned by <see cref="Create"/> for the transformer to release</param>
-        public void Release(Lease<IAmAMessageTransformAsync> lease)
+        public void Release(Lease<IAmAMessageTransformAsync>? lease)
         {
+            //over-release of a lease is a harmless no-op, including a null lease
+            if (lease is null) return;
             _lifetimeScope.Release(lease.ReleaseToken);
         }
 
@@ -76,8 +78,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// transform's disposal does not block the single-threaded synchronization context.
         /// </summary>
         /// <param name="lease">The lease returned by <see cref="Create"/> for the transformer to release</param>
-        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease)
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease)
         {
+            if (lease is null) return default;
             return _lifetimeScope.ReleaseAsync(lease.ReleaseToken);
         }
 

@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
 
             public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
 
-            public void Release(Lease<IAmAMessageMapper> lease) => Released = lease.Instance;
+            public void Release(Lease<IAmAMessageMapper>? lease) => Released = lease!.Instance;
         }
 
         private sealed class RecordingMapperFactoryAsync : IAmAMessageMapperFactoryAsync
@@ -90,9 +90,9 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
 
             public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => null;
 
-            public void Release(Lease<IAmAMessageMapperAsync> lease) => Released = lease.Instance;
+            public void Release(Lease<IAmAMessageMapperAsync>? lease) => Released = lease!.Instance;
 
-            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease) => default;
+            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>? lease) => default;
         }
     }
 }

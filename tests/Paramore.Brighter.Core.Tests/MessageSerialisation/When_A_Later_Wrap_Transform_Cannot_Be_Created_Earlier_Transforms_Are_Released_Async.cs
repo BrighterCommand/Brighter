@@ -77,8 +77,8 @@ public class AsyncTransformPipelinePartialWrapBuildReleaseTests
             return new Lease<IAmAMessageTransformAsync>(transform);
         }
 
-        public void Release(Lease<IAmAMessageTransformAsync> lease) => Released.Add(lease.Instance);
+        public void Release(Lease<IAmAMessageTransformAsync>? lease) => Released.Add(lease!.Instance);
 
-        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease) { Released.Add(lease.Instance); return default; }
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease) { Released.Add(lease!.Instance); return default; }
     }
 }

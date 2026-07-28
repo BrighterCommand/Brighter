@@ -66,6 +66,6 @@ public class TransformPipelinePostConstructionFailureReleaseTests
             return new Lease<IAmAMessageTransform>(transform);
         }
 
-        public void Release(Lease<IAmAMessageTransform> lease) => Released.Add(lease.Instance);
+        public void Release(Lease<IAmAMessageTransform>? lease) => Released.Add(lease!.Instance);
     }
 }

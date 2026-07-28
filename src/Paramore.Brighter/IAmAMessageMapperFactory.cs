@@ -57,6 +57,6 @@ namespace Paramore.Brighter
         /// not own, should make this a no-op.
         /// </remarks>
         /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release.</param>
-        void Release(Lease<IAmAMessageMapper> lease);
+        void Release(Lease<IAmAMessageMapper>? lease);
     }
 }

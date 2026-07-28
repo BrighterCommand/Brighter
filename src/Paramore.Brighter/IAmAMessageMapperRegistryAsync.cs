@@ -68,7 +68,7 @@ namespace Paramore.Brighter
         /// mapper's disposal instead of blocking the pump.
         /// </remarks>
         /// <param name="lease">The lease returned by <see cref="GetAsync{T}"/> to release.</param>
-        void Release<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest;
+        void Release<T>(Lease<IAmAMessageMapperAsync<T>>? lease) where T : class, IRequest;
 
         /// <summary>
         /// Releases a mapper lease obtained from <see cref="GetAsync{T}"/> back to the factory that created it,
@@ -81,7 +81,7 @@ namespace Paramore.Brighter
         /// the Proactor's single-threaded synchronization context from deadlocking the pump thread.
         /// </remarks>
         /// <param name="lease">The lease returned by <see cref="GetAsync{T}"/> to release.</param>
-        ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest;
+        ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>>? lease) where T : class, IRequest;
         /// <summary>
         /// Registers this instance.
         /// </summary>

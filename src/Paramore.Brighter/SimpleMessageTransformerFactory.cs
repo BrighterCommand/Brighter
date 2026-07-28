@@ -40,7 +40,7 @@ namespace Paramore.Brighter
             return transform is null ? null : Lease<IAmAMessageTransform>.ForSharedInstance(transform);
         }
 
-        public void Release(Lease<IAmAMessageTransform> lease)
+        public void Release(Lease<IAmAMessageTransform>? lease)
         {
             return;
         }

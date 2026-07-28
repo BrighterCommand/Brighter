@@ -49,12 +49,12 @@ public class MessageWrapCleanupTests
             return new Lease<IAmAMessageTransform>(new MySimpleTransform());
         }
 
-        public void Release(Lease<IAmAMessageTransform> lease)
+        public void Release(Lease<IAmAMessageTransform>? lease)
         {
-            var disposable = lease.Instance as IDisposable;
+            var disposable = lease!.Instance as IDisposable;
             disposable?.Dispose();
 
-            s_released += "|" + lease.Instance.GetType().Name;
+            s_released += "|" + lease!.Instance.GetType().Name;
         }
     }
 

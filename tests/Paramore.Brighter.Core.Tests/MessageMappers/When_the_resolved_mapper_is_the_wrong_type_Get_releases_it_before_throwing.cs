@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
                 return new Lease<IAmAMessageMapper>(new WrongMapper());
             }
 
-            public void Release(Lease<IAmAMessageMapper> lease) => Interlocked.Increment(ref _releaseCount);
+            public void Release(Lease<IAmAMessageMapper>? lease) => Interlocked.Increment(ref _releaseCount);
         }
 
         private sealed class WrongTypeTrackingMapperFactoryAsync : IAmAMessageMapperFactoryAsync
@@ -109,9 +109,9 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
                 return new Lease<IAmAMessageMapperAsync>(new WrongMapperAsync());
             }
 
-            public void Release(Lease<IAmAMessageMapperAsync> lease) => Interlocked.Increment(ref _releaseCount);
+            public void Release(Lease<IAmAMessageMapperAsync>? lease) => Interlocked.Increment(ref _releaseCount);
 
-            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease)
+            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>? lease)
             {
                 Interlocked.Increment(ref _releaseCount);
                 return default;

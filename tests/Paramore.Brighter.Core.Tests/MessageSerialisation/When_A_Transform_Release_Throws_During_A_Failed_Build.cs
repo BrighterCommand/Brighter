@@ -147,11 +147,11 @@ public class TransformPipelineFailedBuildReleaseThrowTests
             return new Lease<IAmAMessageTransform>(transform);
         }
 
-        public void Release(Lease<IAmAMessageTransform> lease)
+        public void Release(Lease<IAmAMessageTransform>? lease)
         {
             //record the attempt before a possible throw, so the test can see which transforms cleanup reached
-            Released.Add(lease.Instance);
-            if (ReferenceEquals(lease.Instance, _throwOnRelease))
+            Released.Add(lease!.Instance);
+            if (ReferenceEquals(lease!.Instance, _throwOnRelease))
                 throw new InvalidOperationException("release failed");
         }
     }
@@ -279,14 +279,14 @@ public class AsyncTransformPipelineFailedBuildReleaseThrowTests
         }
 
         //the failed-build cleanup drains through the synchronous Release, so that is the one that throws
-        public void Release(Lease<IAmAMessageTransformAsync> lease)
+        public void Release(Lease<IAmAMessageTransformAsync>? lease)
         {
-            Released.Add(lease.Instance);
-            if (ReferenceEquals(lease.Instance, _throwOnRelease))
+            Released.Add(lease!.Instance);
+            if (ReferenceEquals(lease!.Instance, _throwOnRelease))
                 throw new InvalidOperationException("release failed");
         }
 
-        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease)
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease)
         {
             Release(lease);
             return default;

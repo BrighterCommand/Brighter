@@ -86,7 +86,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 return new Lease<IAmAMessageMapper>(new MyCommandMessageMapper());
             }
 
-            public void Release(Lease<IAmAMessageMapper> lease)
+            public void Release(Lease<IAmAMessageMapper>? lease)
             {
                 Interlocked.Increment(ref _releaseCount);
             }

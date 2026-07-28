@@ -47,6 +47,6 @@ namespace Paramore.Brighter
         /// resolution's scope; an over-release is a no-op.
         /// </summary>
         /// <param name="lease">The lease returned by <see cref="Create"/> for the transformer to release.</param>
-        void Release(Lease<IAmAMessageTransform> lease);
+        void Release(Lease<IAmAMessageTransform>? lease);
     }
 }

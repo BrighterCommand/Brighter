@@ -253,7 +253,7 @@ public class UnwrapTransformResolvableTests
 
         public Lease<IAmAMessageMapper>? Create(System.Type messageMapperType) => null;
 
-        public void Release(Lease<IAmAMessageMapper> lease) { }
+        public void Release(Lease<IAmAMessageMapper>? lease) { }
 
         public void Dispose() => Disposed = true;
     }

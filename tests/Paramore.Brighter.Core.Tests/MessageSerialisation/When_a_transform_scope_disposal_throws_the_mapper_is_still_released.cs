@@ -142,16 +142,16 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
     private sealed class ThrowingOnReleaseTransformerFactory : IAmAMessageTransformerFactory
     {
         public Lease<IAmAMessageTransform>? Create(Type transformerType) => throw new NotImplementedException();
-        public void Release(Lease<IAmAMessageTransform> lease) =>
+        public void Release(Lease<IAmAMessageTransform>? lease) =>
             throw new InvalidOperationException("transform release failed");
     }
 
     private sealed class ThrowingOnReleaseTransformerFactoryAsync : IAmAMessageTransformerFactoryAsync
     {
         public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => throw new NotImplementedException();
-        public void Release(Lease<IAmAMessageTransformAsync> lease) =>
+        public void Release(Lease<IAmAMessageTransformAsync>? lease) =>
             throw new InvalidOperationException("transform release failed");
-        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease) =>
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease) =>
             throw new InvalidOperationException("transform release failed");
     }
 
@@ -161,7 +161,7 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
     {
         public Lease<IAmAMessageMapper<T>>? Get<T>() where T : class, IRequest => null;
         public (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType) => (null, false);
-        public void Release<T>(Lease<IAmAMessageMapper<T>> lease) where T : class, IRequest => probe.Mark();
+        public void Release<T>(Lease<IAmAMessageMapper<T>>? lease) where T : class, IRequest => probe.Mark();
         public void Register<TRequest, TMessageMapper>()
             where TRequest : class, IRequest
             where TMessageMapper : class, IAmAMessageMapper<TRequest> { }
@@ -172,8 +172,8 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
     {
         public Lease<IAmAMessageMapperAsync<T>>? GetAsync<T>() where T : class, IRequest => null;
         public (Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType) => (null, false);
-        public void Release<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest => probe.Mark();
-        public ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest
+        public void Release<T>(Lease<IAmAMessageMapperAsync<T>>? lease) where T : class, IRequest => probe.Mark();
+        public ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>>? lease) where T : class, IRequest
         {
             probe.Mark();
             return default;

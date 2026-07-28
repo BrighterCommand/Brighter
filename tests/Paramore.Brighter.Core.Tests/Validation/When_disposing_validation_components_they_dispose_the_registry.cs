@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.Validation
         {
             public int DisposeCount { get; private set; }
             public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
-            public void Release(Lease<IAmAMessageMapper> lease) { }
+            public void Release(Lease<IAmAMessageMapper>? lease) { }
             public void Dispose() => DisposeCount++;
         }
     }

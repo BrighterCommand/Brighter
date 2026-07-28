@@ -84,7 +84,7 @@ public class MessagePumpMapperReleaseThrowsTests
     {
         public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => new Lease<IAmAMessageMapper>(factoryMethod(messageMapperType));
 
-        public void Release(Lease<IAmAMessageMapper> lease) =>
+        public void Release(Lease<IAmAMessageMapper>? lease) =>
             throw new InvalidOperationException("mapper release failed");
     }
 }

@@ -106,10 +106,10 @@ public class TransformLifetimeScopePartialReleaseTests
 
         public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
 
-        public void Release(Lease<IAmAMessageTransform> lease)
+        public void Release(Lease<IAmAMessageTransform>? lease)
         {
-            _counts[lease.Instance] = ReleaseCount(lease.Instance) + 1;
-            if (ReferenceEquals(lease.Instance, _throwFor))
+            _counts[lease!.Instance] = ReleaseCount(lease!.Instance) + 1;
+            if (ReferenceEquals(lease!.Instance, _throwFor))
                 throw new InvalidOperationException("release failed");
         }
     }
@@ -124,14 +124,14 @@ public class TransformLifetimeScopePartialReleaseTests
 
         public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => null;
 
-        public void Release(Lease<IAmAMessageTransformAsync> lease)
+        public void Release(Lease<IAmAMessageTransformAsync>? lease)
         {
-            _counts[lease.Instance] = ReleaseCount(lease.Instance) + 1;
-            if (ReferenceEquals(lease.Instance, _throwFor))
+            _counts[lease!.Instance] = ReleaseCount(lease!.Instance) + 1;
+            if (ReferenceEquals(lease!.Instance, _throwFor))
                 throw new InvalidOperationException("release failed");
         }
 
-        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease)
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease)
         {
             Release(lease);
             return default;

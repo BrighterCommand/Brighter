@@ -118,7 +118,7 @@ public class TransformPipelineFinalizerReleaseTests
 
         public (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType) => (null, false);
 
-        public void Release<T>(Lease<IAmAMessageMapper<T>> lease) where T : class, IRequest
+        public void Release<T>(Lease<IAmAMessageMapper<T>>? lease) where T : class, IRequest
         {
             Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
@@ -142,13 +142,13 @@ public class TransformPipelineFinalizerReleaseTests
 
         public (Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType) => (null, false);
 
-        public void Release<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest
+        public void Release<T>(Lease<IAmAMessageMapperAsync<T>>? lease) where T : class, IRequest
         {
             Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
         }
 
-        public ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest =>
+        public ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>>? lease) where T : class, IRequest =>
             throw new InvalidOperationException("release failed");
 
         public void RegisterAsync<TRequest, TMessageMapper>()

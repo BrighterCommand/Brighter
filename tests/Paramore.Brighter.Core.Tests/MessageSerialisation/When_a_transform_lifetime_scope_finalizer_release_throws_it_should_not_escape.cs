@@ -104,7 +104,7 @@ public class TransformLifetimeScopeFinalizerReleaseTests
 
         public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
 
-        public void Release(Lease<IAmAMessageTransform> lease)
+        public void Release(Lease<IAmAMessageTransform>? lease)
         {
             Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
@@ -120,13 +120,13 @@ public class TransformLifetimeScopeFinalizerReleaseTests
 
         public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => null;
 
-        public void Release(Lease<IAmAMessageTransformAsync> lease)
+        public void Release(Lease<IAmAMessageTransformAsync>? lease)
         {
             Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
         }
 
-        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease) =>
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease) =>
             throw new InvalidOperationException("release failed");
     }
 }

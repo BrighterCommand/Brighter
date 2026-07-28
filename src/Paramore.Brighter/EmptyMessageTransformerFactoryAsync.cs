@@ -36,10 +36,12 @@ namespace Paramore.Brighter
     {
         public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) { return Lease<IAmAMessageTransformAsync>.ForSharedInstance(new EmptyMessageTransformAsync()); }
 
-        public void Release(Lease<IAmAMessageTransformAsync> lease) { lease.Instance.Dispose(); }
+        public void Release(Lease<IAmAMessageTransformAsync>? lease) { lease?.Instance.Dispose(); }
 
-        public async ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease)
+        public async ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease)
         {
+            if (lease is null) return;
+
             //symmetry with the real async transformer factory: await async disposal when the transform
             //offers it, falling back to synchronous Dispose. The default EmptyMessageTransformAsync is
             //IDisposable only, so this is behaviour-preserving today and faithful for any async-disposable

@@ -57,7 +57,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// holding no resources, so there is nothing to release.
         /// </summary>
         /// <param name="lease">The mapper lease to release.</param>
-        public void Release(Lease<IAmAMessageMapper> lease)
+        public void Release(Lease<IAmAMessageMapper>? lease)
         {
         }
     }

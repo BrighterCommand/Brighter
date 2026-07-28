@@ -51,15 +51,15 @@ public class AsyncMessageWrapCleanupTests
             return new Lease<IAmAMessageTransformAsync>(new MySimpleTransformAsync());
         }
 
-        public void Release(Lease<IAmAMessageTransformAsync> lease)
+        public void Release(Lease<IAmAMessageTransformAsync>? lease)
         {
-            var disposable = lease.Instance as IDisposable;
+            var disposable = lease!.Instance as IDisposable;
             disposable?.Dispose();
 
-            s_released += "|" + lease.Instance.GetType().Name;
+            s_released += "|" + lease!.Instance.GetType().Name;
         }
 
-        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease)
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease)
         {
             Release(lease);
             return default;

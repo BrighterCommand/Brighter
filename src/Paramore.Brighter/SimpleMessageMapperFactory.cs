@@ -61,7 +61,7 @@ namespace Paramore.Brighter
         /// must not dispose it, and the lease carries no release token.
         /// </summary>
         /// <param name="lease">The mapper lease to release.</param>
-        public void Release(Lease<IAmAMessageMapper> lease)
+        public void Release(Lease<IAmAMessageMapper>? lease)
         {
         }
     }

@@ -171,8 +171,10 @@ namespace Paramore.Brighter
         /// </para>
         /// </remarks>
         /// <param name="lease">The lease to release.</param>
-        public void Release<TRequest>(Lease<IAmAMessageMapper<TRequest>> lease) where TRequest : class, IRequest
+        public void Release<TRequest>(Lease<IAmAMessageMapper<TRequest>>? lease) where TRequest : class, IRequest
         {
+            //over-release of a lease is a harmless no-op, including a null lease
+            if (lease is null) return;
             //re-wrap under the non-generic factory interface, carrying the same release token
             _messageMapperFactory?.Release(new Lease<IAmAMessageMapper>(lease.Instance, lease.ReleaseToken));
         }
@@ -186,8 +188,9 @@ namespace Paramore.Brighter
         /// owned by the Proactor's single-threaded synchronization context prefer <see cref="ReleaseAsync{TRequest}"/>.
         /// </remarks>
         /// <param name="lease">The lease to release.</param>
-        public void Release<TRequest>(Lease<IAmAMessageMapperAsync<TRequest>> lease) where TRequest : class, IRequest
+        public void Release<TRequest>(Lease<IAmAMessageMapperAsync<TRequest>>? lease) where TRequest : class, IRequest
         {
+            if (lease is null) return;
             _messageMapperFactoryAsync?.Release(new Lease<IAmAMessageMapperAsync>(lease.Instance, lease.ReleaseToken));
         }
 
@@ -202,8 +205,9 @@ namespace Paramore.Brighter
         /// the mapper's <c>DisposeAsync</c> posts back to its single-threaded synchronization context.
         /// </remarks>
         /// <param name="lease">The lease to release.</param>
-        public ValueTask ReleaseAsync<TRequest>(Lease<IAmAMessageMapperAsync<TRequest>> lease) where TRequest : class, IRequest
+        public ValueTask ReleaseAsync<TRequest>(Lease<IAmAMessageMapperAsync<TRequest>>? lease) where TRequest : class, IRequest
         {
+            if (lease is null) return default;
             return _messageMapperFactoryAsync?.ReleaseAsync(new Lease<IAmAMessageMapperAsync>(lease.Instance, lease.ReleaseToken)) ?? default;
         }
 

@@ -88,10 +88,10 @@ public class AsyncMessagePumpMapperReleaseThrowsTests
     {
         public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => new Lease<IAmAMessageMapperAsync>(factoryMethod(messageMapperType));
 
-        public void Release(Lease<IAmAMessageMapperAsync> lease) =>
+        public void Release(Lease<IAmAMessageMapperAsync>? lease) =>
             throw new InvalidOperationException("mapper release failed");
 
-        public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease) =>
+        public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>? lease) =>
             throw new InvalidOperationException("mapper release failed");
     }
 }

@@ -92,12 +92,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 return new Lease<IAmAMessageMapperAsync>(new MyEventMessageMapperAsync());
             }
 
-            public void Release(Lease<IAmAMessageMapperAsync> lease)
+            public void Release(Lease<IAmAMessageMapperAsync>? lease)
             {
                 Interlocked.Increment(ref _releaseCount);
             }
 
-            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease)
+            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>? lease)
             {
                 Interlocked.Increment(ref _releaseCount);
                 return default;

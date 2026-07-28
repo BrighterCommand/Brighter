@@ -76,7 +76,7 @@ public class CommandProcessorPostMapperReleaseThrowsTests
     {
         public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => new Lease<IAmAMessageMapper>(new MyCommandMessageMapper());
 
-        public void Release(Lease<IAmAMessageMapper> lease) =>
+        public void Release(Lease<IAmAMessageMapper>? lease) =>
             throw new InvalidOperationException("mapper release failed");
     }
 }

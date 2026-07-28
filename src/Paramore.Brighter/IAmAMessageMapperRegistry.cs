@@ -65,7 +65,7 @@ namespace Paramore.Brighter
         /// a transient lifetime is reclaimed one resolution at a time and an over-release is a no-op.
         /// </remarks>
         /// <param name="lease">The lease returned by <see cref="Get{T}"/> to release.</param>
-        void Release<T>(Lease<IAmAMessageMapper<T>> lease) where T : class, IRequest;
+        void Release<T>(Lease<IAmAMessageMapper<T>>? lease) where T : class, IRequest;
         /// <summary>
         /// Registers this instance.
         /// </summary>
