@@ -251,6 +251,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //GetOrAdd and the Push it would have missed this scope. Re-check and drain the stack we
             //just pushed to — a local reference, so the scope is reclaimed even once Dispose has
             //removed the entry. TryPop is atomic, so each scope is disposed exactly once.
+            //
+            //Unlike CollectScopesToRelease — which, on the normal release path, re-homes a scope a parallel
+            //resolution pushed rather than dispose state a live caller still holds — this branch drains the
+            //whole stack and TryRemoves whatever entry is current. That asymmetry is deliberate: this runs
+            //only once _disposed is set, i.e. the factory is being torn down. Dispose() drains every stack in
+            //_transientScopes and Clears it regardless, so any sibling scope on this stack (the shared-instance
+            //case) is one Dispose would dispose anyway, and any entry TryRemove pulls is one Dispose would
+            //clear anyway — the blast radius is a factory already disposing. Do NOT "fix" this to match
+            //CollectScopesToRelease's re-home; the re-home matters only while the scope is still live.
             if (Volatile.Read(ref _disposed) != 0)
             {
                 _transientScopes.TryRemove(instance, out _);
@@ -388,8 +397,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 ((ICollection<KeyValuePair<object, ConcurrentStack<IServiceScope>>>)_transientScopes)
                     .Remove(new KeyValuePair<object, ConcurrentStack<IServiceScope>>(instance, scopes)))
             {
+                //resolve the re-home stack lazily on the first raced scope so we neither repeat the
+                //dictionary lookup per iteration nor re-create an empty entry under the key we just removed
+                //when there is nothing to re-home
+                ConcurrentStack<IServiceScope>? reHome = null;
                 while (scopes.TryPop(out var raced))
-                    _transientScopes.GetOrAdd(instance, static _ => new ConcurrentStack<IServiceScope>()).Push(raced);
+                    (reHome ??= _transientScopes.GetOrAdd(instance, static _ => new ConcurrentStack<IServiceScope>()))
+                        .Push(raced);
             }
 
             return toDispose;
