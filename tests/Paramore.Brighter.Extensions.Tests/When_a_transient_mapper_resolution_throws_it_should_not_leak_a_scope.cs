@@ -32,7 +32,7 @@ public class TransientMapperResolutionThrowsScopeTests
 
         // Assert — resolution threw (the misconfiguration), the scope was created, and it was
         // disposed rather than orphaned. Before the fix the scope was created (CreatedCount == 1)
-        // but neither tracked in _transientScopes (the push never ran) nor disposed
+        // but neither tracked in _outstandingScopes (the TryAdd never ran) nor disposed
         // (DisposedCount == 0), so it leaked: Release has no key to find it and Dispose only drains
         // what was tracked.
         Assert.NotNull(thrown);

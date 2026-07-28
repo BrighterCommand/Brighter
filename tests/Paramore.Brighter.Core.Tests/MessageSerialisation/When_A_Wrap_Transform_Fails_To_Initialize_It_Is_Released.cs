@@ -63,13 +63,13 @@ public class TransformerFactoryInitializeFailureReleaseTests
         public List<IAmAMessageTransform> Created { get; } = new();
         public List<IAmAMessageTransform> Released { get; } = new();
 
-        public IAmAMessageTransform? Create(Type transformerType)
+        public Lease<IAmAMessageTransform>? Create(Type transformerType)
         {
             var transform = new MyInitializeThrowsTransform();
             Created.Add(transform);
-            return transform;
+            return new Lease<IAmAMessageTransform>(transform);
         }
 
-        public void Release(IAmAMessageTransform transformer) => Released.Add(transformer);
+        public void Release(Lease<IAmAMessageTransform> lease) => Released.Add(lease.Instance);
     }
 }

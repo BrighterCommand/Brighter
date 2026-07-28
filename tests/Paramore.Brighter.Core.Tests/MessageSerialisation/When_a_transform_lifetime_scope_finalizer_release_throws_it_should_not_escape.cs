@@ -102,9 +102,9 @@ public class TransformLifetimeScopeFinalizerReleaseTests
         //recorded before the throw so the test can prove the finalizer genuinely reached the release
         public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
 
-        public IAmAMessageTransform? Create(Type transformerType) => null;
+        public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
 
-        public void Release(IAmAMessageTransform transformer)
+        public void Release(Lease<IAmAMessageTransform> lease)
         {
             Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
@@ -118,15 +118,15 @@ public class TransformLifetimeScopeFinalizerReleaseTests
         //recorded before the throw so the test can prove the finalizer genuinely reached the release
         public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
 
-        public IAmAMessageTransformAsync? Create(Type transformerType) => null;
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => null;
 
-        public void Release(IAmAMessageTransformAsync transformer)
+        public void Release(Lease<IAmAMessageTransformAsync> lease)
         {
             Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
         }
 
-        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer) =>
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease) =>
             throw new InvalidOperationException("release failed");
     }
 }

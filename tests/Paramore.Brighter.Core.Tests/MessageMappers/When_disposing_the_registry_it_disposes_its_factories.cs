@@ -75,9 +75,9 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
 
         private sealed class ThrowingMapperFactory : IAmAMessageMapperFactory, IDisposable
         {
-            public IAmAMessageMapper? Create(Type messageMapperType) => null;
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
 
-            public void Release(IAmAMessageMapper mapper) { }
+            public void Release(Lease<IAmAMessageMapper> lease) { }
 
             public void Dispose() => throw new InvalidOperationException("sync factory dispose failed");
         }
@@ -86,9 +86,9 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
         {
             public int DisposeCount { get; private set; }
 
-            public IAmAMessageMapper? Create(Type messageMapperType) => null;
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
 
-            public void Release(IAmAMessageMapper mapper) { }
+            public void Release(Lease<IAmAMessageMapper> lease) { }
 
             public void Dispose() => DisposeCount++;
         }
@@ -97,11 +97,11 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
         {
             public int DisposeCount { get; private set; }
 
-            public IAmAMessageMapperAsync? Create(Type messageMapperType) => null;
+            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => null;
 
-            public void Release(IAmAMessageMapperAsync mapper) { }
+            public void Release(Lease<IAmAMessageMapperAsync> lease) { }
 
-            public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper) => default;
+            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease) => default;
 
             public void Dispose() => DisposeCount++;
         }

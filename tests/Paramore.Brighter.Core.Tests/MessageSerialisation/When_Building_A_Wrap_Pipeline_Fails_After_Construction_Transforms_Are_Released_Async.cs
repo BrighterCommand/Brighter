@@ -65,15 +65,15 @@ public class AsyncTransformPipelinePostConstructionFailureReleaseTests
         public List<IAmAMessageTransformAsync> Created { get; } = new();
         public List<IAmAMessageTransformAsync> Released { get; } = new();
 
-        public IAmAMessageTransformAsync? Create(Type transformerType)
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType)
         {
             var transform = new MySimpleTransformAsync();
             Created.Add(transform);
-            return transform;
+            return new Lease<IAmAMessageTransformAsync>(transform);
         }
 
-        public void Release(IAmAMessageTransformAsync transformer) => Released.Add(transformer);
+        public void Release(Lease<IAmAMessageTransformAsync> lease) => Released.Add(lease.Instance);
 
-        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer) { Released.Add(transformer); return default; }
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease) { Released.Add(lease.Instance); return default; }
     }
 }

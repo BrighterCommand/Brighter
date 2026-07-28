@@ -135,7 +135,7 @@ public class TransformPipelineFailedBuildReleaseThrowTests
         public List<IAmAMessageTransform> Released { get; } = new();
         private IAmAMessageTransform? _throwOnRelease;
 
-        public IAmAMessageTransform? Create(Type transformerType)
+        public Lease<IAmAMessageTransform>? Create(Type transformerType)
         {
             //the failing transform cannot be built, so the build throws when it is reached
             if (transformerType == typeof(UnbuildableTransform)) return null;
@@ -144,14 +144,14 @@ public class TransformPipelineFailedBuildReleaseThrowTests
             Created.Add(transform);
             //the first transform built is the one whose release throws
             _throwOnRelease ??= transform;
-            return transform;
+            return new Lease<IAmAMessageTransform>(transform);
         }
 
-        public void Release(IAmAMessageTransform transformer)
+        public void Release(Lease<IAmAMessageTransform> lease)
         {
             //record the attempt before a possible throw, so the test can see which transforms cleanup reached
-            Released.Add(transformer);
-            if (ReferenceEquals(transformer, _throwOnRelease))
+            Released.Add(lease.Instance);
+            if (ReferenceEquals(lease.Instance, _throwOnRelease))
                 throw new InvalidOperationException("release failed");
         }
     }
@@ -268,27 +268,27 @@ public class AsyncTransformPipelineFailedBuildReleaseThrowTests
         public List<IAmAMessageTransformAsync> Released { get; } = new();
         private IAmAMessageTransformAsync? _throwOnRelease;
 
-        public IAmAMessageTransformAsync? Create(Type transformerType)
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType)
         {
             if (transformerType == typeof(UnbuildableTransformAsync)) return null;
 
             var transform = new RecordingTransformAsync();
             Created.Add(transform);
             _throwOnRelease ??= transform;
-            return transform;
+            return new Lease<IAmAMessageTransformAsync>(transform);
         }
 
         //the failed-build cleanup drains through the synchronous Release, so that is the one that throws
-        public void Release(IAmAMessageTransformAsync transformer)
+        public void Release(Lease<IAmAMessageTransformAsync> lease)
         {
-            Released.Add(transformer);
-            if (ReferenceEquals(transformer, _throwOnRelease))
+            Released.Add(lease.Instance);
+            if (ReferenceEquals(lease.Instance, _throwOnRelease))
                 throw new InvalidOperationException("release failed");
         }
 
-        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer)
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease)
         {
-            Release(transformer);
+            Release(lease);
             return default;
         }
     }

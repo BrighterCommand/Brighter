@@ -66,7 +66,7 @@ public class TransformPipelineFinalizerReleaseTests
         _ = new WrapPipeline<MinimalCommand>(
             new MinimalMapper(),
             messageTransformerFactory: null,
-            transforms: Array.Empty<IAmAMessageTransform>(),
+            transformLeases: Array.Empty<Lease<IAmAMessageTransform>>(),
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new ThrowingOnReleaseRegistry());
     }
@@ -77,7 +77,7 @@ public class TransformPipelineFinalizerReleaseTests
         _ = new WrapPipelineAsync<MinimalCommand>(
             new MinimalMapperAsync(),
             messageTransformerFactoryAsync: null,
-            transforms: Array.Empty<IAmAMessageTransformAsync>(),
+            transformLeases: Array.Empty<Lease<IAmAMessageTransformAsync>>(),
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new ThrowingOnReleaseRegistryAsync());
     }
@@ -114,11 +114,11 @@ public class TransformPipelineFinalizerReleaseTests
         //recorded before the throw so the test can prove the finalizer genuinely reached the release
         public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
 
-        public IAmAMessageMapper<T>? Get<T>() where T : class, IRequest => null;
+        public Lease<IAmAMessageMapper<T>>? Get<T>() where T : class, IRequest => null;
 
         public (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType) => (null, false);
 
-        public void Release(IAmAMessageMapper mapper)
+        public void Release<T>(Lease<IAmAMessageMapper<T>> lease) where T : class, IRequest
         {
             Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
@@ -138,17 +138,17 @@ public class TransformPipelineFinalizerReleaseTests
         //recorded before the throw so the test can prove the finalizer genuinely reached the release
         public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
 
-        public IAmAMessageMapperAsync<T>? GetAsync<T>() where T : class, IRequest => null;
+        public Lease<IAmAMessageMapperAsync<T>>? GetAsync<T>() where T : class, IRequest => null;
 
         public (Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType) => (null, false);
 
-        public void Release(IAmAMessageMapperAsync mapper)
+        public void Release<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest
         {
             Interlocked.Increment(ref s_releaseAttempts);
             throw new InvalidOperationException("release failed");
         }
 
-        public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper) =>
+        public ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest =>
             throw new InvalidOperationException("release failed");
 
         public void RegisterAsync<TRequest, TMessageMapper>()

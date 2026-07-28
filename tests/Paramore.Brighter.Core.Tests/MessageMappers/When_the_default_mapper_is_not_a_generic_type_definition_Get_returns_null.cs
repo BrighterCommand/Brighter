@@ -67,15 +67,15 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
 
         private sealed class StubMapperFactory : IAmAMessageMapperFactory
         {
-            public IAmAMessageMapper Create(Type messageMapperType) => new NonGenericDefaultMapper();
-            public void Release(IAmAMessageMapper mapper) { }
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => new Lease<IAmAMessageMapper>(new NonGenericDefaultMapper());
+            public void Release(Lease<IAmAMessageMapper> lease) { }
         }
 
         private sealed class StubMapperFactoryAsync : IAmAMessageMapperFactoryAsync
         {
-            public IAmAMessageMapperAsync Create(Type messageMapperType) => new NonGenericDefaultMapperAsync();
-            public void Release(IAmAMessageMapperAsync mapper) { }
-            public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper) => default;
+            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => new Lease<IAmAMessageMapperAsync>(new NonGenericDefaultMapperAsync());
+            public void Release(Lease<IAmAMessageMapperAsync> lease) { }
+            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease) => default;
         }
     }
 }

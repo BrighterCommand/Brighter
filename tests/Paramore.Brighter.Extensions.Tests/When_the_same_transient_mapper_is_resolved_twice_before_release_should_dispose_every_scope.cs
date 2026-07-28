@@ -34,9 +34,10 @@ public class TransientScopeKeyCollisionTests
         factory.Release(first!);
         factory.Release(second!);
 
-        // Assert — both resolutions returned the one shared instance (the key collision), and every
-        // scope opened has been disposed: scopes created == scopes disposed, nothing orphaned.
-        Assert.Same(first, second);
+        // Assert — both resolutions returned the one shared instance, but each Create returned its own
+        // lease over its own scope (release now keys on the lease/resolution, not the shared instance),
+        // and every scope opened has been disposed: scopes created == scopes disposed, nothing orphaned.
+        Assert.Same(first!.Instance, second!.Instance);
         Assert.Equal(scopeTracker.CreatedCount, scopeTracker.DisposedCount);
     }
 

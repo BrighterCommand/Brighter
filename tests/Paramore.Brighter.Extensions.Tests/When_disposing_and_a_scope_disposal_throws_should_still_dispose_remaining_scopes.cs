@@ -17,8 +17,8 @@ public class LifetimeScopeDisposalThrowDrainTests
     {
         // Arrange — three transient mappers, each resolved through its own scope whose disposal throws (as
         // MS DI's scope Dispose does for an IAsyncDisposable-only service, and as a user Dispose may). Each
-        // scope is tracked as a separate entry in _transientScopes, and none is released, so factory
-        // disposal is the only thing that drains them.
+        // scope is a separate entry in _outstandingScopes, and none is released, so factory disposal is the
+        // only thing that drains them.
         var disposalAttempts = new StrongBox<int>(0);
 
         var collection = new ServiceCollection();
@@ -39,20 +39,20 @@ public class LifetimeScopeDisposalThrowDrainTests
         factory.Dispose();
 
         // Assert — every tracked scope's disposal was attempted (the throw did not skip the rest), Dispose
-        // did not propagate the throw, and the tracking dictionary was cleared. Before the fix the drain
+        // did not propagate the throw, and the tracking set was drained. Before the fix the drain
         // loop's DisposeScope was unguarded: the first throw unwound Dispose, leaving the other two scopes
-        // undisposed and the dictionary un-cleared.
+        // undisposed and the set un-cleared.
         Assert.Equal(3, disposalAttempts.Value);
-        Assert.Empty(TransientScopes(factory));
+        Assert.Empty(OutstandingScopes(factory));
     }
 
-    private static IDictionary TransientScopes(ServiceProviderMapperFactory factory)
+    private static IDictionary OutstandingScopes(ServiceProviderMapperFactory factory)
     {
         var lifetimeScope = factory.GetType()
             .GetField("_lifetimeScope", BindingFlags.Instance | BindingFlags.NonPublic)!
             .GetValue(factory)!;
         return (IDictionary)lifetimeScope.GetType()
-            .GetField("_transientScopes", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetField("_outstandingScopes", BindingFlags.Instance | BindingFlags.NonPublic)!
             .GetValue(lifetimeScope)!;
     }
 

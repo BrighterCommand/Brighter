@@ -41,7 +41,7 @@ public class ScopedMapperFirstResolutionRaceTests
 
         // Assert — once the factory is disposed every scope it created has been disposed exactly as many
         // times as it was created. With the non-atomic assignment the loser scope is neither the retained
-        // _scope nor in _transientScopes, so Dispose() never drains it and DisposedCount stays at 1.
+        // _scope nor in _outstandingScopes, so Dispose() never drains it and DisposedCount stays at 1.
         factory.Dispose();
         Assert.Equal(scopeTracker.CreatedCount, scopeTracker.DisposedCount);
     }

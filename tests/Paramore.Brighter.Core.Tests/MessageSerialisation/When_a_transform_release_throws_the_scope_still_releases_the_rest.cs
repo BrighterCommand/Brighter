@@ -104,12 +104,12 @@ public class TransformLifetimeScopePartialReleaseTests
         public void ThrowFor(IAmAMessageTransform transform) => _throwFor = transform;
         public int ReleaseCount(IAmAMessageTransform transform) => _counts.TryGetValue(transform, out var c) ? c : 0;
 
-        public IAmAMessageTransform? Create(Type transformerType) => null;
+        public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
 
-        public void Release(IAmAMessageTransform transformer)
+        public void Release(Lease<IAmAMessageTransform> lease)
         {
-            _counts[transformer] = ReleaseCount(transformer) + 1;
-            if (ReferenceEquals(transformer, _throwFor))
+            _counts[lease.Instance] = ReleaseCount(lease.Instance) + 1;
+            if (ReferenceEquals(lease.Instance, _throwFor))
                 throw new InvalidOperationException("release failed");
         }
     }
@@ -122,18 +122,18 @@ public class TransformLifetimeScopePartialReleaseTests
         public void ThrowFor(IAmAMessageTransformAsync transform) => _throwFor = transform;
         public int ReleaseCount(IAmAMessageTransformAsync transform) => _counts.TryGetValue(transform, out var c) ? c : 0;
 
-        public IAmAMessageTransformAsync? Create(Type transformerType) => null;
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => null;
 
-        public void Release(IAmAMessageTransformAsync transformer)
+        public void Release(Lease<IAmAMessageTransformAsync> lease)
         {
-            _counts[transformer] = ReleaseCount(transformer) + 1;
-            if (ReferenceEquals(transformer, _throwFor))
+            _counts[lease.Instance] = ReleaseCount(lease.Instance) + 1;
+            if (ReferenceEquals(lease.Instance, _throwFor))
                 throw new InvalidOperationException("release failed");
         }
 
-        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer)
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease)
         {
-            Release(transformer);
+            Release(lease);
             return default;
         }
     }

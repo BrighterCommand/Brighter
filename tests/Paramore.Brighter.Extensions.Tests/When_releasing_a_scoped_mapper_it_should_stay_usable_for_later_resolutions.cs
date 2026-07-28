@@ -31,10 +31,10 @@ public class ScopedMapperReleaseReuseTests
         var second = factory.Create(typeof(DisposableMapper));
 
         // Assert — the release did not dispose the cached scoped mapper, and the second resolution returns
-        // the same live instance. CollectScopesToRelease returns early for any non-Transient lifetime, so a
-        // Scoped release drains nothing.
+        // the same live instance. A Scoped resolution carries a null release token, so releasing its lease
+        // drains nothing.
         Assert.Equal(0, disposals.Count);
-        Assert.Same(first, second);
+        Assert.Same(first!.Instance, second!.Instance);
 
         // The factory still owns the scoped instance and disposes it exactly once at shutdown.
         factory.Dispose();

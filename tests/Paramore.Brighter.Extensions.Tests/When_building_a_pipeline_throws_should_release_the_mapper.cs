@@ -146,15 +146,15 @@ public class TransformPipelineBuilderFailureReleaseTests
 
     private sealed class NullTransformerFactory : IAmAMessageTransformerFactory
     {
-        public IAmAMessageTransform? Create(Type transformerType) => null;
-        public void Release(IAmAMessageTransform transformer) { }
+        public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
+        public void Release(Lease<IAmAMessageTransform> lease) { }
     }
 
     private sealed class NullTransformerFactoryAsync : IAmAMessageTransformerFactoryAsync
     {
-        public IAmAMessageTransformAsync? Create(Type transformerType) => null;
-        public void Release(IAmAMessageTransformAsync transformer) { }
-        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer) => default;
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => null;
+        public void Release(Lease<IAmAMessageTransformAsync> lease) { }
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease) => default;
     }
 
     // Wraps the real IServiceScopeFactory and counts every scope disposal

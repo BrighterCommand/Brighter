@@ -19,8 +19,9 @@ public class ServiceProviderTransformerFactoryLeakTests
         var factory = new ServiceProviderTransformerFactory(provider);
 
         //act
-        var transform = (DisposeCountingTransform)factory.Create(typeof(DisposeCountingTransform))!;
-        factory.Release(transform);
+        var lease = factory.Create(typeof(DisposeCountingTransform))!;
+        var transform = (DisposeCountingTransform)lease.Instance;
+        factory.Release(lease);
         var disposeCountAfterRelease = transform.DisposeCount;
 
         // If the factory's service scope retains the released transient, disposing the factory

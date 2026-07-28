@@ -82,9 +82,9 @@ public class MessagePumpMapperReleaseThrowsTests
     private sealed class ThrowingOnReleaseMessageMapperFactory(Func<Type, IAmAMessageMapper> factoryMethod)
         : IAmAMessageMapperFactory
     {
-        public IAmAMessageMapper Create(Type messageMapperType) => factoryMethod(messageMapperType);
+        public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => new Lease<IAmAMessageMapper>(factoryMethod(messageMapperType));
 
-        public void Release(IAmAMessageMapper mapper) =>
+        public void Release(Lease<IAmAMessageMapper> lease) =>
             throw new InvalidOperationException("mapper release failed");
     }
 }

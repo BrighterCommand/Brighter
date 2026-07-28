@@ -68,8 +68,8 @@ public class MediatorUnresolvableMapperSendTests
 
     private sealed class NullReturningMapperFactory : IAmAMessageMapperFactory
     {
-        public IAmAMessageMapper Create(Type messageMapperType) => null!;
+        public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
 
-        public void Release(IAmAMessageMapper mapper) { }
+        public void Release(Lease<IAmAMessageMapper> lease) { }
     }
 }

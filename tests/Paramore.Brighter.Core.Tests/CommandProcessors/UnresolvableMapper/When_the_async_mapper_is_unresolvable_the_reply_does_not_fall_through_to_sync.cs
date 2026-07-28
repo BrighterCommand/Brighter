@@ -76,10 +76,10 @@ public class MediatorUnresolvableMapperReplyTests
 
     private sealed class NullReturningMapperFactoryAsync : IAmAMessageMapperFactoryAsync
     {
-        public IAmAMessageMapperAsync Create(Type messageMapperType) => null!;
+        public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => null;
 
-        public void Release(IAmAMessageMapperAsync mapper) { }
+        public void Release(Lease<IAmAMessageMapperAsync> lease) { }
 
-        public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper) => default;
+        public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease) => default;
     }
 }

@@ -24,27 +24,26 @@ public class ReleaseScopeDisposalThrowRetentionTests
             rootProvider, new ThrowingDisposeScopeFactory(rootProvider.GetRequiredService<IServiceScopeFactory>()));
 
         var factory = new ServiceProviderMapperFactory(trackingProvider);
-        var mapper = factory.Create(typeof(NonDisposableMapper))!;
+        var lease = factory.Create(typeof(NonDisposableMapper))!;
 
-        // Act — releasing pops the scope and disposes it; the disposal throws. The bookkeeping that stops
-        // retaining the instance as a key must still have completed before the disposal was attempted.
-        Assert.Throws<InvalidOperationException>(() => factory.Release(mapper));
+        // Act — releasing removes the resolution's scope from tracking, then disposes it; the disposal
+        // throws. The tracking removal is an atomic TryRemove that runs BEFORE the disposal, so the throw
+        // cannot leave the scope retained.
+        Assert.Throws<InvalidOperationException>(() => factory.Release(lease));
 
-        // Assert — the instance is no longer tracked. Before the fix, CollectScopesToRelease was a lazy
-        // iterator: the DisposeScope throw unwound the foreach before the key-removal step ran, so the
-        // now-empty stack stayed keyed by the instance, retaining it until factory disposal.
-        Assert.False(StillTracks(factory, mapper), "the released instance is still retained as a scope key");
+        // Assert — the released resolution's scope is no longer tracked, even though its disposal threw.
+        Assert.False(StillTracks(factory, lease.ReleaseToken!), "the released scope is still retained in tracking");
     }
 
-    private static bool StillTracks(ServiceProviderMapperFactory factory, object instance)
+    private static bool StillTracks(ServiceProviderMapperFactory factory, object scope)
     {
         var lifetimeScope = factory.GetType()
             .GetField("_lifetimeScope", BindingFlags.Instance | BindingFlags.NonPublic)!
             .GetValue(factory)!;
-        var transientScopes = (IDictionary)lifetimeScope.GetType()
-            .GetField("_transientScopes", BindingFlags.Instance | BindingFlags.NonPublic)!
+        var outstandingScopes = (IDictionary)lifetimeScope.GetType()
+            .GetField("_outstandingScopes", BindingFlags.Instance | BindingFlags.NonPublic)!
             .GetValue(lifetimeScope)!;
-        return transientScopes.Contains(instance);
+        return outstandingScopes.Contains(scope);
     }
 
     private sealed class MinimalCommand : Command

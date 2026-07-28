@@ -74,9 +74,9 @@ public class CommandProcessorPostMapperReleaseThrowsTests
 
     private sealed class ThrowingOnReleaseMessageMapperFactory : IAmAMessageMapperFactory
     {
-        public IAmAMessageMapper Create(Type messageMapperType) => new MyCommandMessageMapper();
+        public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => new Lease<IAmAMessageMapper>(new MyCommandMessageMapper());
 
-        public void Release(IAmAMessageMapper mapper) =>
+        public void Release(Lease<IAmAMessageMapper> lease) =>
             throw new InvalidOperationException("mapper release failed");
     }
 }

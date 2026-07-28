@@ -83,34 +83,34 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         private sealed class DisposeCountingMapperFactory : IAmAMessageMapperFactory, IDisposable
         {
             public int DisposeCount { get; private set; }
-            public IAmAMessageMapper? Create(Type messageMapperType) => null;
-            public void Release(IAmAMessageMapper mapper) { }
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
+            public void Release(Lease<IAmAMessageMapper> lease) { }
             public void Dispose() => DisposeCount++;
         }
 
         private sealed class DisposeCountingMapperFactoryAsync : IAmAMessageMapperFactoryAsync, IDisposable
         {
             public int DisposeCount { get; private set; }
-            public IAmAMessageMapperAsync? Create(Type messageMapperType) => null;
-            public void Release(IAmAMessageMapperAsync mapper) { }
-            public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper) => default;
+            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => null;
+            public void Release(Lease<IAmAMessageMapperAsync> lease) { }
+            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease) => default;
             public void Dispose() => DisposeCount++;
         }
 
         private sealed class DisposeCountingTransformerFactory : IAmAMessageTransformerFactory, IDisposable
         {
             public int DisposeCount { get; private set; }
-            public IAmAMessageTransform? Create(Type transformerType) => null;
-            public void Release(IAmAMessageTransform transformer) { }
+            public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
+            public void Release(Lease<IAmAMessageTransform> lease) { }
             public void Dispose() => DisposeCount++;
         }
 
         private sealed class DisposeCountingTransformerFactoryAsync : IAmAMessageTransformerFactoryAsync, IDisposable
         {
             public int DisposeCount { get; private set; }
-            public IAmAMessageTransformAsync? Create(Type transformerType) => null;
-            public void Release(IAmAMessageTransformAsync transformer) { }
-            public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer) => default;
+            public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => null;
+            public void Release(Lease<IAmAMessageTransformAsync> lease) { }
+            public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease) => default;
             public void Dispose() => DisposeCount++;
         }
     }

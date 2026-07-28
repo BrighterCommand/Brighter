@@ -59,7 +59,7 @@ public class TransformPipelinePartialWrapBuildReleaseTests
         public List<IAmAMessageTransform> Created { get; } = new();
         public List<IAmAMessageTransform> Released { get; } = new();
 
-        public IAmAMessageTransform? Create(Type transformerType)
+        public Lease<IAmAMessageTransform>? Create(Type transformerType)
         {
             //the factory can satisfy the first transform but not the second
             if (transformerType == typeof(MyParameterizedTransformAsync))
@@ -67,9 +67,9 @@ public class TransformPipelinePartialWrapBuildReleaseTests
 
             var transform = new MySimpleTransform();
             Created.Add(transform);
-            return transform;
+            return new Lease<IAmAMessageTransform>(transform);
         }
 
-        public void Release(IAmAMessageTransform transformer) => Released.Add(transformer);
+        public void Release(Lease<IAmAMessageTransform> lease) => Released.Add(lease.Instance);
     }
 }

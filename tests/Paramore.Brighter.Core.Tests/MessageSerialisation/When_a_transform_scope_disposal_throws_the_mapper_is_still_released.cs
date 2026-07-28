@@ -30,7 +30,7 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
         var pipeline = new WrapPipeline<MinimalCommand>(
             new MinimalMapper(),
             messageTransformerFactory: new ThrowingOnReleaseTransformerFactory(),
-            transforms: new IAmAMessageTransform[] { new NoOpTransform() },
+            transformLeases: new Lease<IAmAMessageTransform>[] { new NoOpTransform() },
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new RecordingReleaseRegistry(mapper));
 
@@ -51,7 +51,7 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
         var pipeline = new WrapPipelineAsync<MinimalCommand>(
             new MinimalMapperAsync(),
             messageTransformerFactoryAsync: new ThrowingOnReleaseTransformerFactoryAsync(),
-            transforms: new IAmAMessageTransformAsync[] { new NoOpTransformAsync() },
+            transformLeases: new Lease<IAmAMessageTransformAsync>[] { new NoOpTransformAsync() },
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new RecordingReleaseRegistryAsync(mapper));
 
@@ -72,7 +72,7 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
         var pipeline = new WrapPipelineAsync<MinimalCommand>(
             new MinimalMapperAsync(),
             messageTransformerFactoryAsync: new ThrowingOnReleaseTransformerFactoryAsync(),
-            transforms: new IAmAMessageTransformAsync[] { new NoOpTransformAsync() },
+            transformLeases: new Lease<IAmAMessageTransformAsync>[] { new NoOpTransformAsync() },
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new RecordingReleaseRegistryAsync(mapper));
 
@@ -141,17 +141,17 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
     //IAsyncDisposable-only service
     private sealed class ThrowingOnReleaseTransformerFactory : IAmAMessageTransformerFactory
     {
-        public IAmAMessageTransform Create(Type transformerType) => throw new NotImplementedException();
-        public void Release(IAmAMessageTransform transformer) =>
+        public Lease<IAmAMessageTransform>? Create(Type transformerType) => throw new NotImplementedException();
+        public void Release(Lease<IAmAMessageTransform> lease) =>
             throw new InvalidOperationException("transform release failed");
     }
 
     private sealed class ThrowingOnReleaseTransformerFactoryAsync : IAmAMessageTransformerFactoryAsync
     {
-        public IAmAMessageTransformAsync Create(Type transformerType) => throw new NotImplementedException();
-        public void Release(IAmAMessageTransformAsync transformer) =>
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => throw new NotImplementedException();
+        public void Release(Lease<IAmAMessageTransformAsync> lease) =>
             throw new InvalidOperationException("transform release failed");
-        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer) =>
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease) =>
             throw new InvalidOperationException("transform release failed");
     }
 
@@ -159,9 +159,9 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
     //despite the transform-scope disposal throwing
     private sealed class RecordingReleaseRegistry(ReleaseProbe probe) : IAmAMessageMapperRegistry
     {
-        public IAmAMessageMapper<T>? Get<T>() where T : class, IRequest => null;
+        public Lease<IAmAMessageMapper<T>>? Get<T>() where T : class, IRequest => null;
         public (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType) => (null, false);
-        public void Release(IAmAMessageMapper mapper) => probe.Mark();
+        public void Release<T>(Lease<IAmAMessageMapper<T>> lease) where T : class, IRequest => probe.Mark();
         public void Register<TRequest, TMessageMapper>()
             where TRequest : class, IRequest
             where TMessageMapper : class, IAmAMessageMapper<TRequest> { }
@@ -170,10 +170,10 @@ public class TransformPipelineMapperReleaseOnScopeThrowTests
 
     private sealed class RecordingReleaseRegistryAsync(ReleaseProbe probe) : IAmAMessageMapperRegistryAsync
     {
-        public IAmAMessageMapperAsync<T>? GetAsync<T>() where T : class, IRequest => null;
+        public Lease<IAmAMessageMapperAsync<T>>? GetAsync<T>() where T : class, IRequest => null;
         public (Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType) => (null, false);
-        public void Release(IAmAMessageMapperAsync mapper) => probe.Mark();
-        public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper)
+        public void Release<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest => probe.Mark();
+        public ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest
         {
             probe.Mark();
             return default;

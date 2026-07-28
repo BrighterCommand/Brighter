@@ -251,9 +251,9 @@ public class UnwrapTransformResolvableTests
     {
         public bool Disposed { get; private set; }
 
-        public IAmAMessageMapper Create(System.Type messageMapperType) => null!;
+        public Lease<IAmAMessageMapper>? Create(System.Type messageMapperType) => null;
 
-        public void Release(IAmAMessageMapper mapper) { }
+        public void Release(Lease<IAmAMessageMapper> lease) { }
 
         public void Dispose() => Disposed = true;
     }

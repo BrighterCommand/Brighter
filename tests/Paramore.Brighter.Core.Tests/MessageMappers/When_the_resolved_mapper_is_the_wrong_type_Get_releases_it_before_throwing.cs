@@ -86,13 +86,13 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
             public int CreateCount => _createCount;
             public int ReleaseCount => _releaseCount;
 
-            public IAmAMessageMapper Create(Type messageMapperType)
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType)
             {
                 Interlocked.Increment(ref _createCount);
-                return new WrongMapper();
+                return new Lease<IAmAMessageMapper>(new WrongMapper());
             }
 
-            public void Release(IAmAMessageMapper mapper) => Interlocked.Increment(ref _releaseCount);
+            public void Release(Lease<IAmAMessageMapper> lease) => Interlocked.Increment(ref _releaseCount);
         }
 
         private sealed class WrongTypeTrackingMapperFactoryAsync : IAmAMessageMapperFactoryAsync
@@ -103,15 +103,15 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
             public int CreateCount => _createCount;
             public int ReleaseCount => _releaseCount;
 
-            public IAmAMessageMapperAsync Create(Type messageMapperType)
+            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType)
             {
                 Interlocked.Increment(ref _createCount);
-                return new WrongMapperAsync();
+                return new Lease<IAmAMessageMapperAsync>(new WrongMapperAsync());
             }
 
-            public void Release(IAmAMessageMapperAsync mapper) => Interlocked.Increment(ref _releaseCount);
+            public void Release(Lease<IAmAMessageMapperAsync> lease) => Interlocked.Increment(ref _releaseCount);
 
-            public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper)
+            public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease)
             {
                 Interlocked.Increment(ref _releaseCount);
                 return default;

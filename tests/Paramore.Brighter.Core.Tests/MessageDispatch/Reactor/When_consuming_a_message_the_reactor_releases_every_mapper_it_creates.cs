@@ -88,13 +88,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             public int CreateCount => Volatile.Read(ref _createCount);
             public int ReleaseCount => Volatile.Read(ref _releaseCount);
 
-            public IAmAMessageMapper Create(Type messageMapperType)
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType)
             {
                 Interlocked.Increment(ref _createCount);
-                return new MyEventMessageMapper();
+                return new Lease<IAmAMessageMapper>(new MyEventMessageMapper());
             }
 
-            public void Release(IAmAMessageMapper mapper)
+            public void Release(Lease<IAmAMessageMapper> lease)
             {
                 Interlocked.Increment(ref _releaseCount);
             }
