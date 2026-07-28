@@ -1,19 +1,34 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace Paramore.Brighter
 {
-    public abstract class TransformPipeline<TRequest>(
-        IAmAMessageMapper<TRequest> messageMapper,
-        IEnumerable<IAmAMessageTransform> transforms,
-        IAmAMessageMapperRegistry? mapperRegistry = null) : IDisposable where TRequest : class, IRequest
+    public abstract class TransformPipeline<TRequest> : IDisposable where TRequest : class, IRequest
     {
-        protected readonly IAmAMessageMapper<TRequest> MessageMapper = messageMapper;
-        protected readonly IEnumerable<IAmAMessageTransform> Transforms = transforms;
+        //the mapper lease keys release on the resolution the registry opened, not the mapper instance, so a
+        //shared mapper is reclaimed one resolution at a time
+        protected readonly Lease<IAmAMessageMapper<TRequest>> MapperLease;
+        protected readonly IReadOnlyList<Lease<IAmAMessageTransform>> TransformLeases;
+        protected readonly IReadOnlyList<IAmAMessageTransform> Transforms;
+        protected IAmAMessageMapper<TRequest> MessageMapper => MapperLease.Instance;
         protected TransformLifetimeScope? InstanceScope;
 
+        private readonly IAmAMessageMapperRegistry? _mapperRegistry;
         private int _released;
+
+        protected TransformPipeline(
+            Lease<IAmAMessageMapper<TRequest>> messageMapperLease,
+            IEnumerable<Lease<IAmAMessageTransform>> transformLeases,
+            IAmAMessageMapperRegistry? mapperRegistry = null)
+        {
+            MapperLease = messageMapperLease;
+            TransformLeases = transformLeases as IReadOnlyList<Lease<IAmAMessageTransform>> ?? transformLeases.ToArray();
+            //materialise the transform instances once for execution; the leases stay for release
+            Transforms = TransformLeases.Select(lease => lease.Instance).ToArray();
+            _mapperRegistry = mapperRegistry;
+        }
 
         /// <summary>
         /// Disposes a pipeline builder, which will call release on the factory for the message mapper and
@@ -60,7 +75,7 @@ namespace Paramore.Brighter
                 //finally so a throw from the transform-scope disposal above cannot orphan the mapper's own
                 //scope — the release-once guard is already set, so neither the finalizer nor a later Dispose
                 //would retry it, which is the exact leak this pipeline is meant to close.
-                mapperRegistry?.Release(MessageMapper);
+                _mapperRegistry?.Release(MapperLease);
             }
         }
     }

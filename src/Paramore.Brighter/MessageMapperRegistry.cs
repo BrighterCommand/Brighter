@@ -79,7 +79,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
         /// <returns>IAmAMessageMapper&lt;TRequest&gt;.</returns>
-        public IAmAMessageMapper<TRequest>? Get<TRequest>() where TRequest : class, IRequest
+        public Lease<IAmAMessageMapper<TRequest>>? Get<TRequest>() where TRequest : class, IRequest
         {
             if (_messageMapperFactory is null)
                 return null;
@@ -94,21 +94,23 @@ namespace Paramore.Brighter
             if (messageMapperType is null)
                 return null;
 
-            var mapper = _messageMapperFactory.Create(messageMapperType);
-            switch (mapper)
+            var lease = _messageMapperFactory.Create(messageMapperType);
+            switch (lease?.Instance)
             {
                 case null:
                     return null;
                 case IAmAMessageMapper<TRequest> typed:
-                    return typed;
+                    //re-wrap under the typed interface, carrying the same release token so the resolution the
+                    //factory opened is the one released later
+                    return new Lease<IAmAMessageMapper<TRequest>>(typed, lease.ReleaseToken);
                 default:
                     //the factory resolved a mapper of the wrong closed type — a Register mis-registration, or a
                     //SimpleMessageMapperFactory Func returning the wrong closed type. Release it back to the
                     //factory (and, for an IoC-backed factory, the scope it opened) before the cast failure
                     //propagates, rather than leaking the mapper and its scope for the life of the host.
-                    _messageMapperFactory.Release(mapper);
+                    _messageMapperFactory.Release(lease);
                     throw new InvalidCastException(
-                        $"The mapper {mapper.GetType()} registered for {typeof(TRequest)} does not implement {typeof(IAmAMessageMapper<TRequest>)}");
+                        $"The mapper {lease.Instance.GetType()} registered for {typeof(TRequest)} does not implement {typeof(IAmAMessageMapper<TRequest>)}");
             }
         }
 
@@ -117,11 +119,11 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
         /// <returns>IAmAMessageMapperAsync&lt;TRequest&gt;.</returns>
-        public IAmAMessageMapperAsync<TRequest>? GetAsync<TRequest>() where TRequest : class, IRequest
+        public Lease<IAmAMessageMapperAsync<TRequest>>? GetAsync<TRequest>() where TRequest : class, IRequest
         {
             if (_messageMapperFactoryAsync is null)
                 return null;
-            
+
             //only an open generic default can be closed over the request type; a non-generic default is not a
             //usable mapper for this type, so leave it null and return null — mirroring the guard in
             //ResolveAsyncMapperInfo, which HasPipeline routes through, so the two agree
@@ -132,84 +134,77 @@ namespace Paramore.Brighter
             if (messageMapperType is null)
                 return null;
 
-            var mapper = _messageMapperFactoryAsync.Create(messageMapperType);
-            switch (mapper)
+            var lease = _messageMapperFactoryAsync.Create(messageMapperType);
+            switch (lease?.Instance)
             {
                 case null:
                     return null;
                 case IAmAMessageMapperAsync<TRequest> typed:
-                    return typed;
+                    //re-wrap under the typed interface, carrying the same release token so the resolution the
+                    //factory opened is the one released later
+                    return new Lease<IAmAMessageMapperAsync<TRequest>>(typed, lease.ReleaseToken);
                 default:
                     //the factory resolved a mapper of the wrong closed type — a RegisterAsync mis-registration, or a
                     //SimpleMessageMapperFactoryAsync Func returning the wrong closed type. Release it back to the
                     //factory (and, for an IoC-backed factory, the scope it opened) before the cast failure
                     //propagates, rather than leaking the mapper and its scope for the life of the host.
-                    _messageMapperFactoryAsync.Release(mapper);
+                    _messageMapperFactoryAsync.Release(lease);
                     throw new InvalidCastException(
-                        $"The mapper {mapper.GetType()} registered for {typeof(TRequest)} does not implement {typeof(IAmAMessageMapperAsync<TRequest>)}");
+                        $"The mapper {lease.Instance.GetType()} registered for {typeof(TRequest)} does not implement {typeof(IAmAMessageMapperAsync<TRequest>)}");
             }
         }
 
         /// <summary>
-        /// Releases a mapper obtained from <see cref="Get{TRequest}"/> back to the factory that created it.
+        /// Releases a mapper lease obtained from <see cref="Get{TRequest}"/> back to the factory that created it.
         /// </summary>
         /// <remarks>
-        /// <see cref="Get{TRequest}"/> creates an instance per call, so an unreleased mapper leaves the
-        /// factory holding it — and, for an IoC-backed factory, the scope it was resolved from — until
+        /// <see cref="Get{TRequest}"/> creates an instance per call, so an unreleased lease leaves the
+        /// factory holding the mapper — and, for an IoC-backed factory, the scope it was resolved from — until
         /// the factory is disposed at shutdown.
         /// <para>
-        /// Implemented explicitly, as is <see cref="IAmAMessageMapperRegistryAsync.Release(IAmAMessageMapperAsync)"/>:
-        /// a mapper that supports both Reactor and Proactor (e.g. <c>JsonMessageMapper&lt;T&gt;</c>)
-        /// implements both <see cref="IAmAMessageMapper"/> and <see cref="IAmAMessageMapperAsync"/>, so
-        /// a caller holding the concrete registry could bind  <c>registry.Release(dualMapper)</c> to the wrong factory
-        /// (or hit CS0121). Hiding both behind their  interfaces forces the caller to
-        /// pick <see cref="IAmAMessageMapperRegistry"/> or  <see cref="IAmAMessageMapperRegistryAsync"/> explicitly,
-        /// so releasing a mapper resolved from  <see cref="GetAsync{TRequest}"/> through the sync factory is a
-        /// compile error, not a silent leak.
+        /// The lease's generic argument keys the release on the interface as well as the resolution: a mapper
+        /// that supports both Reactor and Proactor (e.g. <c>JsonMessageMapper&lt;T&gt;</c>) is resolved as a
+        /// <see cref="Lease{T}"/> of <see cref="IAmAMessageMapper{T}"/> from <see cref="Get{TRequest}"/> and of
+        /// <see cref="IAmAMessageMapperAsync{T}"/> from <see cref="GetAsync{TRequest}"/>, so a sync lease can
+        /// only bind to this sync overload and an async lease to <see cref="Release{TRequest}(Lease{IAmAMessageMapperAsync{TRequest}})"/>
+        /// — routing a mapper to the wrong factory is now a compile-time type error rather than a silent leak.
         /// </para>
         /// </remarks>
-        /// <param name="mapper">The mapper to release.</param>
-        void IAmAMessageMapperRegistry.Release(IAmAMessageMapper mapper)
+        /// <param name="lease">The lease to release.</param>
+        public void Release<TRequest>(Lease<IAmAMessageMapper<TRequest>> lease) where TRequest : class, IRequest
         {
-            _messageMapperFactory?.Release(mapper);
+            //re-wrap under the non-generic factory interface, carrying the same release token
+            _messageMapperFactory?.Release(new Lease<IAmAMessageMapper>(lease.Instance, lease.ReleaseToken));
         }
 
         /// <summary>
-        /// Releases a mapper obtained from <see cref="GetAsync{TRequest}"/> back to the factory that
+        /// Releases a mapper lease obtained from <see cref="GetAsync{TRequest}"/> back to the factory that
         /// created it.
         /// </summary>
         /// <remarks>
         /// Synchronous; used by the pipeline finalizer fallback and build-failure cleanup. On a thread
-        /// owned by the Proactor's single-threaded synchronization context prefer <see cref="ReleaseAsync"/>.
-        /// <para>
-        /// Implemented explicitly, as is <see cref="IAmAMessageMapperRegistry.Release(IAmAMessageMapper)"/>:
-        /// with both <c>Release</c> overloads hidden behind their interfaces a caller holding the concrete
-        /// registry must choose <see cref="IAmAMessageMapperRegistry"/> or
-        /// <see cref="IAmAMessageMapperRegistryAsync"/>, so a dual-interface mapper cannot silently bind to
-        /// the wrong factory. Release an async mapper through <see cref="IAmAMessageMapperRegistryAsync"/>
-        /// or <see cref="ReleaseAsync"/>.
-        /// </para>
+        /// owned by the Proactor's single-threaded synchronization context prefer <see cref="ReleaseAsync{TRequest}"/>.
         /// </remarks>
-        /// <param name="mapper">The mapper to release.</param>
-        void IAmAMessageMapperRegistryAsync.Release(IAmAMessageMapperAsync mapper)
+        /// <param name="lease">The lease to release.</param>
+        public void Release<TRequest>(Lease<IAmAMessageMapperAsync<TRequest>> lease) where TRequest : class, IRequest
         {
-            _messageMapperFactoryAsync?.Release(mapper);
+            _messageMapperFactoryAsync?.Release(new Lease<IAmAMessageMapperAsync>(lease.Instance, lease.ReleaseToken));
         }
 
         /// <summary>
-        /// Releases a mapper obtained from <see cref="GetAsync{TRequest}"/> back to the factory that
+        /// Releases a mapper lease obtained from <see cref="GetAsync{TRequest}"/> back to the factory that
         /// created it, awaiting its disposal.
         /// </summary>
         /// <remarks>
-        /// The asynchronous counterpart of <see cref="IAmAMessageMapperRegistryAsync.Release(IAmAMessageMapperAsync)"/>, called from the
-        /// async pipeline's <c>DisposeAsync</c>. Awaiting an <see cref="IAsyncDisposable"/> mapper's
-        /// disposal rather than blocking on it keeps the Proactor pump thread free to run a continuation
+        /// The asynchronous counterpart of <see cref="Release{TRequest}(Lease{IAmAMessageMapperAsync{TRequest}})"/>,
+        /// called from the async pipeline's <c>DisposeAsync</c>. Awaiting an <see cref="IAsyncDisposable"/>
+        /// mapper's disposal rather than blocking on it keeps the Proactor pump thread free to run a continuation
         /// the mapper's <c>DisposeAsync</c> posts back to its single-threaded synchronization context.
         /// </remarks>
-        /// <param name="mapper">The mapper to release.</param>
-        public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper)
+        /// <param name="lease">The lease to release.</param>
+        public ValueTask ReleaseAsync<TRequest>(Lease<IAmAMessageMapperAsync<TRequest>> lease) where TRequest : class, IRequest
         {
-            return _messageMapperFactoryAsync?.ReleaseAsync(mapper) ?? default;
+            return _messageMapperFactoryAsync?.ReleaseAsync(new Lease<IAmAMessageMapperAsync>(lease.Instance, lease.ReleaseToken)) ?? default;
         }
 
         /// <summary>

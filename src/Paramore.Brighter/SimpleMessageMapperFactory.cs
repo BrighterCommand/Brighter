@@ -49,18 +49,19 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
         /// <returns>IAmAMessageMapper.</returns>
-        public IAmAMessageMapper? Create(Type messageMapperType)
+        public Lease<IAmAMessageMapper>? Create(Type messageMapperType)
         {
-            return _factoryMethod(messageMapperType);
+            var mapper = _factoryMethod(messageMapperType);
+            return mapper is null ? null : new Lease<IAmAMessageMapper>(mapper);
         }
 
         /// <summary>
-        /// Releases the specified message mapper. A no-op: the factory method supplied by the caller
+        /// Releases the specified message mapper lease. A no-op: the factory method supplied by the caller
         /// owns whatever it returns — it may legitimately hand back a shared instance — so this factory
-        /// must not dispose it.
+        /// must not dispose it, and the lease carries no release token.
         /// </summary>
-        /// <param name="mapper">The mapper to release.</param>
-        public void Release(IAmAMessageMapper mapper)
+        /// <param name="lease">The mapper lease to release.</param>
+        public void Release(Lease<IAmAMessageMapper> lease)
         {
         }
     }

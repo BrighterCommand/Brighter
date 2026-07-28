@@ -32,28 +32,29 @@ namespace Paramore.Brighter
     {
         private readonly Type _messageType = typeof(TRequest);
 
-        public IAmAMessageTransform CreateMessageTransformer()
+        public Lease<IAmAMessageTransform> CreateMessageTransformer()
         {
             var transformerType = attribute.GetHandlerType();
-            var transformer = factory.Create(transformerType);
-            if (transformer is null)
+            var lease = factory.Create(transformerType);
+            if (lease is null)
                 throw new ConfigurationException($"Could not create transformer {transformerType} from {factory}");
             try
             {
+                var transformer = lease.Instance;
                 if (attribute is WrapWithAttribute) transformer.InitializeWrapFromAttributeParams(attribute.InitializerParams());
                 if (attribute is UnwrapWithAttribute) transformer.InitializeUnwrapFromAttributeParams(attribute.InitializerParams());
             }
             catch (Exception)
             {
-                //the transformer was created but never returned to the caller, so we own it; release it
-                //to the factory rather than leak it before letting the initialization error propagate.
+                //the transformer was created but never returned to the caller, so we own it; release its
+                //lease to the factory rather than leak it before letting the initialization error propagate.
                 //Release/Dispose may throw (a user Release, or MS DI's sync scope Dispose on
                 //netstandard2.0 for an IAsyncDisposable-only transform); swallow it so it cannot mask
                 //the real initialization error being rethrown.
-                try { factory.Release(transformer); } catch { /* best-effort cleanup */ }
+                try { factory.Release(lease); } catch { /* best-effort cleanup */ }
                 throw;
             }
-            return transformer;
+            return lease;
         }
     }
 }

@@ -49,24 +49,24 @@ namespace Paramore.Brighter
         /// <summary>
         /// Constructs an instance of a wrap pipeline
         /// </summary>
-        /// <param name="messageMapperAsync">The message mapper that forms the pipeline source</param>
+        /// <param name="messageMapperLease">The lease over the message mapper that forms the pipeline source</param>
         /// <param name="messageTransformerFactoryAsync">Factory for transforms, required to release</param>
-        /// <param name="transforms">The transforms applied after the message mapper</param>
+        /// <param name="transformLeases">The leases over the transforms applied after the message mapper</param>
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
         public WrapPipelineAsync(
-            IAmAMessageMapperAsync<TRequest> messageMapperAsync,
+            Lease<IAmAMessageMapperAsync<TRequest>> messageMapperLease,
             IAmAMessageTransformerFactoryAsync? messageTransformerFactoryAsync,
-            IEnumerable<IAmAMessageTransformAsync> transforms,
+            IEnumerable<Lease<IAmAMessageTransformAsync>> transformLeases,
             InstrumentationOptions instrumentationOptions,
             IAmAMessageMapperRegistryAsync? mapperRegistry = null
-            ) : base(messageMapperAsync, transforms, mapperRegistry)
+            ) : base(messageMapperLease, transformLeases, mapperRegistry)
         {
             _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactoryAsync != null)
             {
                 InstanceScope = new TransformLifetimeScopeAsync(messageTransformerFactoryAsync);
-                Transforms.Each(transform => InstanceScope.Add(transform));
+                TransformLeases.Each(lease => InstanceScope.Add(lease));
             }
         }
 

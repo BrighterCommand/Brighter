@@ -52,9 +52,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="messageMapperType">The type of mapper to instantiate</param>
         /// <returns>The created mapper instance</returns>
-        public IAmAMessageMapper? Create(Type messageMapperType)
+        public Lease<IAmAMessageMapper>? Create(Type messageMapperType)
         {
-            return _lifetimeScope.GetOrCreate<IAmAMessageMapper>(messageMapperType);
+            var mapper = _lifetimeScope.GetOrCreate<IAmAMessageMapper>(messageMapperType, out var releaseToken);
+            return mapper is null ? null : new Lease<IAmAMessageMapper>(mapper, releaseToken);
         }
 
         /// <summary>
@@ -63,10 +64,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// resolved from. Without this the scope — and any <see cref="IDisposable"/> mapper it holds —
         /// is retained until the factory is disposed at shutdown.
         /// </summary>
-        /// <param name="mapper">The mapper to release</param>
-        public void Release(IAmAMessageMapper mapper)
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release</param>
+        public void Release(Lease<IAmAMessageMapper> lease)
         {
-            _lifetimeScope.Release(mapper);
+            _lifetimeScope.Release(lease.ReleaseToken);
         }
 
         /// <summary>

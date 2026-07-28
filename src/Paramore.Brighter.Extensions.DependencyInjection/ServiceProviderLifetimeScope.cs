@@ -47,11 +47,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceLifetime _lifetime;
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _singletonInstances = new();
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _scopedInstances = new();
-        //one instance can back several transient scopes when the registration returns a shared
-        //reference (e.g. a singleton resolved under a Transient lifetime), so scopes are stacked
-        //per instance — a 1:1 map would overwrite and orphan the earlier scope
-        private readonly ConcurrentDictionary<object, ConcurrentStack<IServiceScope>> _transientScopes =
-            new(InstanceComparer.Default);
+        //every Transient resolution's own scope is tracked here by the scope's own reference identity (the
+        //default comparer), NOT by the instance it produced. A resolution IS its scope, so a shared instance
+        //(a Singleton resolved under a Transient lifetime) has one distinct entry per resolution rather than
+        //several stacked under one key — release keys on the scope, so it reclaims exactly the resolution being
+        //released and can never pop a scope another live resolution still holds. Used only as a set (value byte
+        //is a placeholder); it is the safety net that drains any un-released scope when this scope is disposed.
+        private readonly ConcurrentDictionary<IServiceScope, byte> _outstandingScopes = new();
         private IServiceScope? _scope;
         //when false, the Transient path serves every resolution from one shared scope (the pre-#4254
         //behaviour) instead of giving each resolution its own scope. Handler factories drive this from
@@ -94,19 +96,49 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="objectType">The concrete type to create</param>
         /// <returns>The created or cached instance, or null if not registered</returns>
         /// <exception cref="ObjectDisposedException">Thrown when this scope has already been disposed</exception>
-        public T? GetOrCreate<T>(Type objectType) where T : class
+        /// <remarks>
+        /// This overload discards the release token, so the caller cannot release an individual transient
+        /// resolution's scope — it is drained only when this lifetime scope is disposed. Used by the handler
+        /// factory, whose lifetime scope is per-request-pipeline and disposed when the pipeline completes.
+        /// A per-message factory (mapper/transformer) that must release each resolution eagerly uses the
+        /// <see cref="GetOrCreate{T}(Type, out object?)"/> overload and passes the token to <see cref="Release"/>.
+        /// </remarks>
+        public T? GetOrCreate<T>(Type objectType) where T : class => GetOrCreate<T>(objectType, out _);
+
+        /// <summary>
+        /// Creates or retrieves an object of the specified type according to the configured lifetime, and
+        /// returns an opaque <paramref name="releaseToken"/> identifying this resolution.
+        /// </summary>
+        /// <typeparam name="T">The interface type to cast the result to</typeparam>
+        /// <param name="objectType">The concrete type to create</param>
+        /// <param name="releaseToken">
+        /// For an isolated Transient resolution, the resolution's own <see cref="IServiceScope"/> (as
+        /// <see cref="object"/>) — pass it to <see cref="Release"/>/<see cref="ReleaseAsync"/> to drain exactly
+        /// that scope. <c>null</c> for Singleton, Scoped, the shared-scope Transient path, and an unresolved
+        /// (null) instance — none of which own a per-resolution scope, so release is a no-op.
+        /// </param>
+        /// <returns>The created or cached instance, or null if not registered</returns>
+        /// <exception cref="ObjectDisposedException">Thrown when this scope has already been disposed</exception>
+        public T? GetOrCreate<T>(Type objectType, out object? releaseToken) where T : class
         {
             ThrowIfDisposed();
 
-            return _lifetime switch
+            switch (_lifetime)
             {
-                ServiceLifetime.Singleton => GetOrCreateSingleton<T>(objectType),
-                ServiceLifetime.Scoped => GetOrCreateScoped<T>(objectType),
-                ServiceLifetime.Transient => _isolateTransientScopes
-                    ? GetTransient<T>(objectType)
-                    : GetTransientShared<T>(objectType),
-                _ => throw new InvalidOperationException($"Unsupported lifetime: {_lifetime}")
-            };
+                case ServiceLifetime.Singleton:
+                    releaseToken = null;
+                    return GetOrCreateSingleton<T>(objectType);
+                case ServiceLifetime.Scoped:
+                    releaseToken = null;
+                    return GetOrCreateScoped<T>(objectType);
+                case ServiceLifetime.Transient:
+                    if (_isolateTransientScopes)
+                        return GetTransient<T>(objectType, out releaseToken);
+                    releaseToken = null;
+                    return GetTransientShared<T>(objectType);
+                default:
+                    throw new InvalidOperationException($"Unsupported lifetime: {_lifetime}");
+            }
         }
 
         /// <summary>
@@ -202,21 +234,25 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Creates a transient instance in its own short-lived <see cref="IServiceScope"/>. Each call's
-        /// scope is stacked against the instance (a shared instance can back several), and
-        /// <see cref="Release"/> must be called once per creation to dispose them — without that call
-        /// the scope is retained until this lifetime scope itself is disposed.
+        /// Creates a transient instance in its own short-lived <see cref="IServiceScope"/>, tracks that scope,
+        /// and returns it as the <paramref name="releaseToken"/>. <see cref="Release"/> must be called once per
+        /// creation with that token to dispose the scope — without it the scope is retained until this lifetime
+        /// scope itself is disposed.
         /// </summary>
         /// <remarks>
-        /// Every instance is tracked, not just a disposable one. The scope owns more than the instance:
-        /// it also owns whatever that instance captured from it — including the scope's own
-        /// <see cref="IServiceProvider"/>, which the .NET container injects when a constructor asks for
-        /// one. Disposing the scope while the instance is still alive hands the instance a disposed
-        /// provider, so scope lifetime has to follow instance lifetime rather than the instance's
-        /// disposability. Only an unresolved (null) instance leaves nothing to release, so only then is
-        /// the scope disposed here.
+        /// The scope is the resolution's identity: it owns more than the instance — also whatever that instance
+        /// captured from it, including the scope's own <see cref="IServiceProvider"/>, which the .NET container
+        /// injects when a constructor asks for one. Disposing the scope while the instance is still alive hands
+        /// the instance a disposed provider, so scope lifetime follows the resolution, not the instance's
+        /// disposability, and the scope is tracked even for a non-disposable instance. Only an unresolved (null)
+        /// instance leaves nothing to release, so only then is the scope disposed here.
+        /// <para>
+        /// Tracking is by the scope's own reference, so two resolutions of a shared instance are two distinct
+        /// entries; releasing one leaves the other's scope intact. This is what removes the shared-instance
+        /// over-release hazard that keyed the old per-instance stack.
+        /// </para>
         /// </remarks>
-        private T? GetTransient<T>(Type objectType) where T : class
+        private T? GetTransient<T>(Type objectType, out object? releaseToken) where T : class
         {
             var scope = _serviceProvider.CreateScope();
             T? instance;
@@ -228,44 +264,35 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 //resolution threw before the scope was tracked (a common misconfiguration: the type
                 //is registered but a constructor dependency is not, so the container throws while
-                //activating it; the cast can also throw). The scope is not yet in _transientScopes, so
-                //neither Release nor Dispose could ever reclaim it — dispose it here before rethrowing
-                //so a failed resolution does not leak one scope per attempt.
+                //activating it; the cast can also throw). The scope is not yet tracked, so neither Release
+                //nor Dispose could ever reclaim it — dispose it here before rethrowing so a failed
+                //resolution does not leak one scope per attempt.
                 DisposeScope(scope);
                 throw;
             }
             if (instance == null)
             {
                 DisposeScope(scope);
+                releaseToken = null;
                 return null;
             }
 
-            //stack rather than overwrite: if this instance is shared (a singleton resolved under a
-            //Transient lifetime) an indexer set would drop the earlier scope, leaking it
-            var scopes = _transientScopes.GetOrAdd(instance, static _ => new ConcurrentStack<IServiceScope>());
-            scopes.Push(scope);
+            //track the resolution's scope by its own reference (never by the instance): a shared instance
+            //gets one entry per resolution, so Release reclaims exactly this one
+            _outstandingScopes.TryAdd(scope, 0);
 
-            //a Dispose that began after our guard drains _transientScopes; had it run between the
-            //GetOrAdd and the Push it would have missed this scope. Re-check and drain the stack we
-            //just pushed to — a local reference, so the scope is reclaimed even once Dispose has
-            //removed the entry. TryPop is atomic, so each scope is disposed exactly once.
-            //
-            //Unlike CollectScopesToRelease — which, on the normal release path, re-homes a scope a parallel
-            //resolution pushed rather than dispose state a live caller still holds — this branch drains the
-            //whole stack and TryRemoves whatever entry is current. That asymmetry is deliberate: this runs
-            //only once _disposed is set, i.e. the factory is being torn down. Dispose() drains every stack in
-            //_transientScopes and Clears it regardless, so any sibling scope on this stack (the shared-instance
-            //case) is one Dispose would dispose anyway, and any entry TryRemove pulls is one Dispose would
-            //clear anyway — the blast radius is a factory already disposing. Do NOT "fix" this to match
-            //CollectScopesToRelease's re-home; the re-home matters only while the scope is still live.
+            //a Dispose that began after our guard drains _outstandingScopes; had it run between our guard
+            //check and the TryAdd it would have missed this scope. Re-check: if disposal has started, remove
+            //and dispose the scope we just added (TryRemove is atomic, so Dispose's own drain cannot also
+            //dispose it) and throw — the factory is tearing down.
             if (Volatile.Read(ref _disposed) != 0)
             {
-                _transientScopes.TryRemove(instance, out _);
-                while (scopes.TryPop(out var orphaned))
-                    DisposeScope(orphaned);
+                if (_outstandingScopes.TryRemove(scope, out _))
+                    DisposeScope(scope);
                 ThrowIfDisposed();
             }
 
+            releaseToken = scope;
             return instance;
         }
 
@@ -293,90 +320,41 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 "is finished with it.");
 
         /// <summary>
-        /// Releases an object back to the scope that owns it. Only a transient instance has a scope of its
-        /// own to drain; a singleton (owned by the container) and a scoped instance (owned by <c>_scope</c>
-        /// and cached for reuse) are a no-op.
+        /// Releases the resolution identified by <paramref name="releaseToken"/> — the token returned by
+        /// <see cref="GetOrCreate{T}(Type, out object?)"/> — disposing exactly that resolution's scope. Only
+        /// an isolated Transient resolution has a scope of its own; a Singleton (owned by the container), a
+        /// Scoped instance (owned by <c>_scope</c> and cached for reuse), the shared-scope Transient path, and
+        /// a null token are all no-ops.
         /// <para>
-        /// Call <see cref="Release"/> exactly <b>once per creation</b> (the contract on
-        /// <see cref="GetTransient{T}"/>). A never-tracked instance and a stray extra release of a genuine
-        /// per-resolution transient are both harmless no-ops, but over-releasing a <b>shared</b> instance —
-        /// a <c>Singleton</c>-registered mapper/transform resolved under the default <c>Transient</c>
-        /// lifetime, which stacks one scope per resolution — pops a still-outstanding resolution's scope and
-        /// disposes it beneath a caller still holding the instance. See <see cref="CollectScopesToRelease"/>
-        /// for the concurrent-release re-home that bounds (but does not fully close) the matching race, and
-        /// <c>bugfixes/0012</c> for the analysis; a per-request <c>Transient</c> or <c>Scoped</c>
-        /// registration avoids the shared-instance case entirely.
+        /// Idempotent: the scope is removed from tracking with an atomic
+        /// <see cref="System.Collections.Concurrent.ConcurrentDictionary{TKey,TValue}.TryRemove(TKey,out TValue)"/>,
+        /// so a second release of the same token — or a release racing this scope's disposal — finds nothing to
+        /// remove and disposes nothing. Because tracking is per-resolution, this can never dispose a scope
+        /// another live resolution still holds, even when both resolutions share one instance.
         /// </para>
         /// Prefer <see cref="ReleaseAsync"/> where the caller can await: this synchronous path can only
         /// suppress the pump context and block on the wait (see <see cref="DisposeScope"/>).
         /// </summary>
-        /// <param name="instance">The object to release</param>
-        public void Release(object? instance)
+        /// <param name="releaseToken">The release token returned alongside the resolution</param>
+        public void Release(object? releaseToken)
         {
-            foreach (var scope in CollectScopesToRelease(instance))
+            if (releaseToken is IServiceScope scope && _outstandingScopes.TryRemove(scope, out _))
                 DisposeScope(scope);
         }
 
         /// <summary>
-        /// Releases an object back to the scope that owns it, draining that scope asynchronously — the
-        /// counterpart of <see cref="Release"/>, called from the async pipeline's <c>DisposeAsync</c>.
-        /// Awaiting the scope's <c>DisposeAsync</c> rather than blocking on it keeps an
+        /// Releases the resolution identified by <paramref name="releaseToken"/>, draining that scope
+        /// asynchronously — the counterpart of <see cref="Release"/>, called from the async pipeline's
+        /// <c>DisposeAsync</c>. Awaiting the scope's <c>DisposeAsync</c> rather than blocking on it keeps an
         /// <see cref="IAsyncDisposable"/> mapper/transform from deadlocking the Proactor pump's
-        /// single-threaded <see cref="SynchronizationContext"/> (see <see cref="DisposeScope"/>). Shares
-        /// <see cref="CollectScopesToRelease"/> with <see cref="Release"/>, so the same idempotency applies.
+        /// single-threaded <see cref="SynchronizationContext"/> (see <see cref="DisposeScope"/>). Shares the
+        /// same atomic-remove idempotency as <see cref="Release"/>.
         /// </summary>
-        /// <param name="instance">The object to release</param>
-        public async ValueTask ReleaseAsync(object? instance)
+        /// <param name="releaseToken">The release token returned alongside the resolution</param>
+        public async ValueTask ReleaseAsync(object? releaseToken)
         {
-            foreach (var scope in CollectScopesToRelease(instance))
+            if (releaseToken is IServiceScope scope && _outstandingScopes.TryRemove(scope, out _))
                 await DisposeScopeAsync(scope).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Shared bookkeeping for <see cref="Release"/> and <see cref="ReleaseAsync"/>: pops one scope per
-        /// release (matching the push in <see cref="GetTransient{T}"/>) and, once the instance's stack is
-        /// empty, stops retaining it as a key. Yields the scopes to dispose so the caller drains them
-        /// synchronously or asynchronously; only a transient, tracked instance yields anything, so a
-        /// double release or a never-tracked instance is a safe no-op.
-        /// </summary>
-        private IReadOnlyList<IServiceScope> CollectScopesToRelease(object? instance)
-        {
-            if (_lifetime != ServiceLifetime.Transient) return Array.Empty<IServiceScope>();
-            if (instance == null) return Array.Empty<IServiceScope>();
-
-            if (!_transientScopes.TryGetValue(instance, out var scopes)) return Array.Empty<IServiceScope>();
-
-            //do all the bookkeeping eagerly, before any scope is disposed: a DisposeScope throw while the
-            //caller drains must not leave the now-empty stack keyed by the instance — a strong reference
-            //retaining the mapper/transform until factory disposal, the exact retention this path prevents
-            var toDispose = new List<IServiceScope>(1);
-
-            //dispose one scope per Release, matching the push in GetTransient
-            if (scopes.TryPop(out var scope))
-                toDispose.Add(scope);
-
-            //once the last scope for this instance is drained, stop retaining the instance as a key.
-            //Remove matches the entry by the stack's reference, not its emptiness, so a scope a concurrent
-            //GetTransient pushed onto this same stack between the emptiness check and the Remove backs a
-            //resolution already handed to a live caller: re-home it under the instance key for that caller's
-            //own later Release rather than dispose it here, which would tear down state still in use. The
-            //re-home is a single pass and narrows, but does not fully close, the window — a push landing
-            //after this loop drains empty sits on a detached stack that nothing drains (a rare, bounded
-            //leak for a shared instance under Transient, traded for the worse use-after-dispose).
-            if (scopes.IsEmpty &&
-                ((ICollection<KeyValuePair<object, ConcurrentStack<IServiceScope>>>)_transientScopes)
-                    .Remove(new KeyValuePair<object, ConcurrentStack<IServiceScope>>(instance, scopes)))
-            {
-                //resolve the re-home stack lazily on the first raced scope so we neither repeat the
-                //dictionary lookup per iteration nor re-create an empty entry under the key we just removed
-                //when there is nothing to re-home
-                ConcurrentStack<IServiceScope>? reHome = null;
-                while (scopes.TryPop(out var raced))
-                    (reHome ??= _transientScopes.GetOrAdd(instance, static _ => new ConcurrentStack<IServiceScope>()))
-                        .Push(raced);
-            }
-
-            return toDispose;
         }
 
         /// <summary>
@@ -480,20 +458,21 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             try
             {
-                //drain every tracked transient scope even when one disposal throws (MS DI's scope Dispose
+                //drain every un-released transient scope even when one disposal throws (MS DI's scope Dispose
                 //throws for an IAsyncDisposable-only service, and a user Dispose may). This is the terminal
                 //cleanup — no finalizer retries it — so a per-scope catch keeps one failure from skipping the
-                //rest and from skipping the root-scope disposal in the finally.
-                foreach (var scopes in _transientScopes.Values)
-                    while (scopes.TryPop(out var scope))
-                    {
-                        //best-effort cleanup: a throw must not skip the remaining scopes, but it is logged
-                        //(a repeated failure on this terminal teardown path means an unbounded leak) rather
-                        //than swallowed silently, matching the other release paths in this change.
-                        try { DisposeScope(scope); }
-                        catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
-                    }
-                _transientScopes.Clear();
+                //rest and from skipping the root-scope disposal in the finally. TryRemove so a concurrent
+                //Release of the same scope cannot also dispose it.
+                foreach (var scope in _outstandingScopes.Keys)
+                {
+                    if (!_outstandingScopes.TryRemove(scope, out _))
+                        continue;
+                    //best-effort cleanup: a throw must not skip the remaining scopes, but it is logged
+                    //(a repeated failure on this terminal teardown path means an unbounded leak) rather
+                    //than swallowed silently, matching the other release paths in this change.
+                    try { DisposeScope(scope); }
+                    catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
+                }
             }
             finally
             {
@@ -510,15 +489,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 _scopedInstances.Clear();
             }
             // Note: Don't clear singleton instances as they may be shared
-        }
-
-        private sealed class InstanceComparer : IEqualityComparer<object>
-        {
-            internal static readonly InstanceComparer Default = new();
-
-            bool IEqualityComparer<object>.Equals(object? x, object? y) => ReferenceEquals(x, y);
-
-            int IEqualityComparer<object>.GetHashCode(object obj) => RuntimeHelpers.GetHashCode(obj);
         }
 
         private static partial class Log

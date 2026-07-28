@@ -41,17 +41,18 @@ namespace Paramore.Brighter
             _factoryMethod = factoryMethod;
         }
 
-        public IAmAMessageTransformAsync Create(Type transformerType)
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType)
         {
-            return _factoryMethod(transformerType);
+            var transform = _factoryMethod(transformerType);
+            return transform is null ? null : new Lease<IAmAMessageTransformAsync>(transform);
         }
 
-        public void Release(IAmAMessageTransformAsync transformer)
+        public void Release(Lease<IAmAMessageTransformAsync> lease)
         {
             return;
         }
 
-        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer)
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease)
         {
             return default;
         }

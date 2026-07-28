@@ -36,11 +36,12 @@ namespace Paramore.Brighter
     public interface IAmAMessageMapperRegistry
     {
         /// <summary>
-        /// Gets this instance.
+        /// Gets a mapper for <typeparamref name="T"/>, wrapped in a <see cref="Lease{T}"/> that identifies this
+        /// resolution so it can later be released back to the factory that created it.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <returns>IAmAMessageMapper&lt;T&gt;.</returns>
-        IAmAMessageMapper<T>? Get<T>() where T : class, IRequest;
+        /// <returns>A lease over the mapper, or <c>null</c> if none is registered.</returns>
+        Lease<IAmAMessageMapper<T>>? Get<T>() where T : class, IRequest;
         /// <summary>
         /// Resolves the mapper type that <see cref="Get{T}"/> would create for <paramref name="requestType"/>,
         /// without creating an instance — so a caller that only needs to know whether a mapper exists (e.g.
@@ -55,15 +56,16 @@ namespace Paramore.Brighter
         /// <returns>The resolved mapper type (null if none), and whether it came from the default mapper.</returns>
         (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType);
         /// <summary>
-        /// Releases a mapper obtained from <see cref="Get{T}"/> back to the factory that created it.
+        /// Releases a mapper lease obtained from <see cref="Get{T}"/> back to the factory that created it.
         /// </summary>
         /// <remarks>
-        /// <see cref="Get{T}"/> creates an instance on every call, so every caller must release what it
+        /// <see cref="Get{T}"/> creates an instance on every call, so every caller must release the lease it
         /// obtains once it has finished with it — including a caller that only wanted to know whether a
-        /// mapper exists.
+        /// mapper exists. Releasing by lease keys on the resolution, so a shared mapper instance resolved under
+        /// a transient lifetime is reclaimed one resolution at a time and an over-release is a no-op.
         /// </remarks>
-        /// <param name="mapper">The mapper to release.</param>
-        void Release(IAmAMessageMapper mapper);
+        /// <param name="lease">The lease returned by <see cref="Get{T}"/> to release.</param>
+        void Release<T>(Lease<IAmAMessageMapper<T>> lease) where T : class, IRequest;
         /// <summary>
         /// Registers this instance.
         /// </summary>

@@ -50,27 +50,28 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
         /// <returns>IAmAMessageMapper.</returns>
-        public IAmAMessageMapperAsync Create(Type messageMapperType)
+        public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType)
         {
-            return _factoryMethod(messageMapperType);
+            var mapper = _factoryMethod(messageMapperType);
+            return mapper is null ? null : new Lease<IAmAMessageMapperAsync>(mapper);
         }
 
         /// <summary>
-        /// Releases the specified message mapper. A no-op: the factory method supplied by the caller
+        /// Releases the specified message mapper lease. A no-op: the factory method supplied by the caller
         /// owns whatever it returns — it may legitimately hand back a shared instance — so this factory
-        /// must not dispose it.
+        /// must not dispose it, and the lease carries no release token.
         /// </summary>
-        /// <param name="mapper">The mapper to release.</param>
-        public void Release(IAmAMessageMapperAsync mapper)
+        /// <param name="lease">The mapper lease to release.</param>
+        public void Release(Lease<IAmAMessageMapperAsync> lease)
         {
         }
 
         /// <summary>
-        /// Releases the specified message mapper asynchronously. A no-op for the same reason as
+        /// Releases the specified message mapper lease asynchronously. A no-op for the same reason as
         /// <see cref="Release"/>: the caller's factory method owns whatever it returns.
         /// </summary>
-        /// <param name="mapper">The mapper to release.</param>
-        public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper)
+        /// <param name="lease">The mapper lease to release.</param>
+        public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease)
         {
             return default;
         }

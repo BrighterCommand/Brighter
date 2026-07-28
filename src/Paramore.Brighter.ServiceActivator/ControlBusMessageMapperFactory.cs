@@ -35,29 +35,29 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
         /// <returns>IAmAMessageMapper.</returns>
-        public IAmAMessageMapper? Create(Type messageMapperType)
+        public Lease<IAmAMessageMapper>? Create(Type messageMapperType)
         {
             if (messageMapperType == typeof (ConfigurationCommandMessageMapper))
             {
-                return new ConfigurationCommandMessageMapper();
+                return new Lease<IAmAMessageMapper>(new ConfigurationCommandMessageMapper());
             }
             else if (messageMapperType == typeof (HeartbeatRequestCommandMessageMapper))
             {
-                return new HeartbeatRequestCommandMessageMapper();
+                return new Lease<IAmAMessageMapper>(new HeartbeatRequestCommandMessageMapper());
             }
             else if (messageMapperType == typeof (HeartbeatReplyCommandMessageMapper))
             {
-                return new HeartbeatReplyCommandMessageMapper();
+                return new Lease<IAmAMessageMapper>(new HeartbeatReplyCommandMessageMapper());
             }
             throw new ConfigurationException(string.Format("Message Mapper for type {0} not registered with ControBusMessageMapperFactory", messageMapperType.FullName));
         }
 
         /// <summary>
-        /// Releases the specified message mapper. A no-op: the control bus mappers are plain objects
+        /// Releases the specified message mapper lease. A no-op: the control bus mappers are plain objects
         /// holding no resources, so there is nothing to release.
         /// </summary>
-        /// <param name="mapper">The mapper to release.</param>
-        public void Release(IAmAMessageMapper mapper)
+        /// <param name="lease">The mapper lease to release.</param>
+        public void Release(Lease<IAmAMessageMapper> lease)
         {
         }
     }

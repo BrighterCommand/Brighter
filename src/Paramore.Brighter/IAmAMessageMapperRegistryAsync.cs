@@ -37,11 +37,12 @@ namespace Paramore.Brighter
     public interface IAmAMessageMapperRegistryAsync
     {
         /// <summary>
-        /// Gets this instance.
+        /// Gets an async mapper for <typeparamref name="T"/>, wrapped in a <see cref="Lease{T}"/> that
+        /// identifies this resolution so it can later be released back to the factory that created it.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <returns>IAmAMessageMapperAsync&lt;T&gt;.</returns>
-        IAmAMessageMapperAsync<T>? GetAsync<T>() where T : class, IRequest;
+        /// <returns>A lease over the mapper, or <c>null</c> if none is registered.</returns>
+        Lease<IAmAMessageMapperAsync<T>>? GetAsync<T>() where T : class, IRequest;
         /// <summary>
         /// Resolves the mapper type that <see cref="GetAsync{T}"/> would create for <paramref name="requestType"/>,
         /// without creating an instance — so a caller that only needs to know whether a mapper exists (e.g.
@@ -66,21 +67,21 @@ namespace Paramore.Brighter
         /// context prefer <see cref="ReleaseAsync"/>, which can await an <see cref="IAsyncDisposable"/>
         /// mapper's disposal instead of blocking the pump.
         /// </remarks>
-        /// <param name="mapper">The mapper to release.</param>
-        void Release(IAmAMessageMapperAsync mapper);
+        /// <param name="lease">The lease returned by <see cref="GetAsync{T}"/> to release.</param>
+        void Release<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest;
 
         /// <summary>
-        /// Releases a mapper obtained from <see cref="GetAsync{T}"/> back to the factory that created it,
+        /// Releases a mapper lease obtained from <see cref="GetAsync{T}"/> back to the factory that created it,
         /// awaiting its disposal.
         /// </summary>
         /// <remarks>
-        /// The asynchronous counterpart of <see cref="Release"/>, called from the async pipeline's
+        /// The asynchronous counterpart of <see cref="Release{T}"/>, called from the async pipeline's
         /// <c>DisposeAsync</c> (<c>await using</c>). Awaiting — rather than blocking on — an
         /// <see cref="IAsyncDisposable"/> mapper's disposal is what keeps a continuation it posts back to
         /// the Proactor's single-threaded synchronization context from deadlocking the pump thread.
         /// </remarks>
-        /// <param name="mapper">The mapper to release.</param>
-        ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper);
+        /// <param name="lease">The lease returned by <see cref="GetAsync{T}"/> to release.</param>
+        ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>> lease) where T : class, IRequest;
         /// <summary>
         /// Registers this instance.
         /// </summary>

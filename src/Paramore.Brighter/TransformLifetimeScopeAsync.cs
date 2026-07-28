@@ -10,7 +10,7 @@ namespace Paramore.Brighter
         : IAmATransformLifetimeAsync
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScope>();
-        private readonly IList<IAmAMessageTransformAsync> _trackedObjects = new List<IAmAMessageTransformAsync>();
+        private readonly IList<Lease<IAmAMessageTransformAsync>> _trackedObjects = new List<Lease<IAmAMessageTransformAsync>>();
 
         public void Dispose()
         {
@@ -42,10 +42,10 @@ namespace Paramore.Brighter
             catch { /* swallowed: a finalizer must not throw */ }
         }
 
-        public void Add(IAmAMessageTransformAsync instance)
+        public void Add(Lease<IAmAMessageTransformAsync> lease)
         {
-            _trackedObjects.Add(instance);
-            Log.TrackingInstance(s_logger, instance.GetHashCode(), instance.GetType());
+            _trackedObjects.Add(lease);
+            Log.TrackingInstance(s_logger, lease.Instance.GetHashCode(), lease.Instance.GetType());
          }
 
         private void ReleaseTrackedObjects()
@@ -65,7 +65,7 @@ namespace Paramore.Brighter
                 try
                 {
                     factory.Release(trackedItem);
-                    Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                    Log.ReleasingHandlerInstance(s_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
                 }
                 catch (Exception ex)
                 {
@@ -94,7 +94,7 @@ namespace Paramore.Brighter
                 try
                 {
                     await factory.ReleaseAsync(trackedItem).ConfigureAwait(false);
-                    Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                    Log.ReleasingHandlerInstance(s_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
                 }
                 catch (Exception ex)
                 {

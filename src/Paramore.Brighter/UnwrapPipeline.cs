@@ -38,21 +38,21 @@ namespace Paramore.Brighter
         /// <summary>
         /// Constructs an instance of an Unwrap pipeline
         /// </summary>
-        /// <param name="transforms">The transforms that run before the mapper</param>
+        /// <param name="transformLeases">The leases over the transforms that run before the mapper</param>
         /// <param name="messageTransformerFactory">The factory used to create transforms</param>
-        /// <param name="messageMapper">The message mapper that forms the pipeline sink</param>
+        /// <param name="messageMapperLease">The lease over the message mapper that forms the pipeline sink</param>
         /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
         public UnwrapPipeline(
-            IEnumerable<IAmAMessageTransform> transforms,
+            IEnumerable<Lease<IAmAMessageTransform>> transformLeases,
             IAmAMessageTransformerFactory? messageTransformerFactory,
-            IAmAMessageMapper<TRequest> messageMapper,
+            Lease<IAmAMessageMapper<TRequest>> messageMapperLease,
             IAmAMessageMapperRegistry? mapperRegistry = null
-            ) : base(messageMapper, transforms, mapperRegistry)
+            ) : base(messageMapperLease, transformLeases, mapperRegistry)
         {
             if (messageTransformerFactory != null)
             {
                 InstanceScope = new TransformLifetimeScope(messageTransformerFactory);
-                Transforms.Each(transform => InstanceScope.Add(transform));
+                TransformLeases.Each(lease => InstanceScope.Add(lease));
             }
         }
 

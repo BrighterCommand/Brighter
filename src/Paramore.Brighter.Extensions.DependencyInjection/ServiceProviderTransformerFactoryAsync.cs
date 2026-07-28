@@ -53,19 +53,20 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="transformerType">The type of transformer to create</param>
         /// <returns>The created transformer instance</returns>
-        public IAmAMessageTransformAsync? Create(Type transformerType)
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType)
         {
-            return _lifetimeScope.GetOrCreate<IAmAMessageTransformAsync>(transformerType);
+            var transform = _lifetimeScope.GetOrCreate<IAmAMessageTransformAsync>(transformerType, out var releaseToken);
+            return transform is null ? null : new Lease<IAmAMessageTransformAsync>(transform, releaseToken);
         }
 
         /// <summary>
         /// Releases a transformer. For singleton lifetime, does nothing.
-        /// For scoped/transient, disposes the transformer if it implements IDisposable.
+        /// For scoped/transient, disposes the per-resolution scope the transformer was resolved from.
         /// </summary>
-        /// <param name="transformer">The transformer to release</param>
-        public void Release(IAmAMessageTransformAsync transformer)
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the transformer to release</param>
+        public void Release(Lease<IAmAMessageTransformAsync> lease)
         {
-            _lifetimeScope.Release(transformer);
+            _lifetimeScope.Release(lease.ReleaseToken);
         }
 
         /// <summary>
@@ -74,10 +75,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <see cref="Release"/> on the Proactor pump thread: awaiting an <see cref="IAsyncDisposable"/>
         /// transform's disposal does not block the single-threaded synchronization context.
         /// </summary>
-        /// <param name="transformer">The transformer to release</param>
-        public ValueTask ReleaseAsync(IAmAMessageTransformAsync transformer)
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the transformer to release</param>
+        public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync> lease)
         {
-            return _lifetimeScope.ReleaseAsync(transformer);
+            return _lifetimeScope.ReleaseAsync(lease.ReleaseToken);
         }
 
         /// <summary>

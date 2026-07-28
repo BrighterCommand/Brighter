@@ -8,7 +8,7 @@ namespace Paramore.Brighter
     public partial class TransformLifetimeScope(IAmAMessageTransformerFactory factory) : IAmATransformLifetime
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScope>();
-        private readonly IList<IAmAMessageTransform> _trackedObjects = new List<IAmAMessageTransform>();
+        private readonly IList<Lease<IAmAMessageTransform>> _trackedObjects = new List<Lease<IAmAMessageTransform>>();
 
         public void Dispose()
         {
@@ -29,10 +29,10 @@ namespace Paramore.Brighter
             catch { /* swallowed: a finalizer must not throw */ }
         }
         
-        public void Add(IAmAMessageTransform instance)
+        public void Add(Lease<IAmAMessageTransform> lease)
         {
-            _trackedObjects.Add(instance);
-            Log.TrackingInstance(s_logger, instance.GetHashCode(), instance.GetType());
+            _trackedObjects.Add(lease);
+            Log.TrackingInstance(s_logger, lease.Instance.GetHashCode(), lease.Instance.GetType());
          }
         
         private void ReleaseTrackedObjects()
@@ -54,7 +54,7 @@ namespace Paramore.Brighter
                 try
                 {
                     factory.Release(trackedItem);
-                    Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                    Log.ReleasingHandlerInstance(s_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
                 }
                 catch (Exception ex)
                 {

@@ -38,29 +38,32 @@ namespace Paramore.Brighter
     public interface IAmAMessageMapperFactoryAsync
     {
         /// <summary>
-        /// Creates the specified message mapper type.
+        /// Creates the specified message mapper type, returning a <see cref="Lease{T}"/> that identifies this
+        /// resolution so it can later be released back to this factory.
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
-        /// <returns>IAmAMessageMapper.</returns>
-        IAmAMessageMapperAsync? Create(Type messageMapperType);
+        /// <returns>A lease over the created mapper, or <c>null</c> if none could be created.</returns>
+        Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType);
 
         /// <summary>
-        /// Releases the specified message mapper once the pipeline that owns it has finished with it.
+        /// Releases the mapper resolution identified by <paramref name="lease"/> once the pipeline that owns it
+        /// has finished with it.
         /// </summary>
         /// <remarks>
         /// A factory that creates a mapper per message must release it, or any resource the mapper holds
         /// — and, for an IoC container, the scope the mapper was resolved from — is retained until the
-        /// factory itself is disposed at shutdown. A factory that hands out a shared instance, or whose
-        /// instances it does not own, should make this a no-op.
-        /// This is synchronous, mirroring <see cref="IAmAMessageTransformerFactoryAsync.Release"/>. On a
+        /// factory itself is disposed at shutdown. Releasing by lease reclaims exactly this resolution's scope.
+        /// A factory that hands out a shared instance, or whose instances it does not own, should make this a
+        /// no-op. This is synchronous, mirroring <see cref="IAmAMessageTransformerFactoryAsync.Release"/>. On a
         /// thread owned by the Proactor's single-threaded synchronization context prefer
         /// <see cref="ReleaseAsync"/>.
         /// </remarks>
-        /// <param name="mapper">The mapper to release.</param>
-        void Release(IAmAMessageMapperAsync mapper);
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release.</param>
+        void Release(Lease<IAmAMessageMapperAsync> lease);
 
         /// <summary>
-        /// Releases the specified message mapper asynchronously, awaiting its disposal.
+        /// Releases the mapper resolution identified by <paramref name="lease"/> asynchronously, awaiting its
+        /// disposal.
         /// </summary>
         /// <remarks>
         /// The asynchronous counterpart of <see cref="Release"/>, called from the async pipeline's
@@ -70,7 +73,7 @@ namespace Paramore.Brighter
         /// hands out a shared instance, or holds no resources, should make this a no-op returning
         /// <c>default</c>.
         /// </remarks>
-        /// <param name="mapper">The mapper to release.</param>
-        ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper);
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release.</param>
+        ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease);
     }
 }

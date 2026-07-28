@@ -53,9 +53,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="messageMapperType">The type of mapper to instantiate</param>
         /// <returns>The created mapper instance</returns>
-        public IAmAMessageMapperAsync? Create(Type messageMapperType)
+        public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType)
         {
-            return _lifetimeScope.GetOrCreate<IAmAMessageMapperAsync>(messageMapperType);
+            var mapper = _lifetimeScope.GetOrCreate<IAmAMessageMapperAsync>(messageMapperType, out var releaseToken);
+            return mapper is null ? null : new Lease<IAmAMessageMapperAsync>(mapper, releaseToken);
         }
 
         /// <summary>
@@ -64,10 +65,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// resolved from. Without this the scope — and any <see cref="IDisposable"/> mapper it holds —
         /// is retained until the factory is disposed at shutdown.
         /// </summary>
-        /// <param name="mapper">The mapper to release</param>
-        public void Release(IAmAMessageMapperAsync mapper)
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release</param>
+        public void Release(Lease<IAmAMessageMapperAsync> lease)
         {
-            _lifetimeScope.Release(mapper);
+            _lifetimeScope.Release(lease.ReleaseToken);
         }
 
         /// <summary>
@@ -77,10 +78,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <see cref="IAsyncDisposable"/> mapper's disposal does not block the single-threaded
         /// synchronization context a continuation may need.
         /// </summary>
-        /// <param name="mapper">The mapper to release</param>
-        public ValueTask ReleaseAsync(IAmAMessageMapperAsync mapper)
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release</param>
+        public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync> lease)
         {
-            return _lifetimeScope.ReleaseAsync(mapper);
+            return _lifetimeScope.ReleaseAsync(lease.ReleaseToken);
         }
 
         /// <summary>
