@@ -35,7 +35,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — no channels configured: acknowledge and log not yet conformant for Redis / RedisMessagingGateway (maintainer sign-off)")]
+    [Fact]
     public void When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log()
     {
         // Arrange — neither DLQ nor invalid channel configured (FR-7, AC-7, FR-1(2))

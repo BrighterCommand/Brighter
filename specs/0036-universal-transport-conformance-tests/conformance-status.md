@@ -60,6 +60,19 @@ cell remains `Unknown`.
   trap (a reused `DefaultMessageBuilder` yielding byte-identical messages) applies to SnsFifo too and is
   handled by the shared `FifoMetadataProducer` (constant group id + a unique dedup id per send, with
   content-based deduplication disabled on both the FIFO topic and queue so the explicit ids govern).
+- `Redis / RedisMessagingGateway` FR-16 (Nack → redelivery) is `Deferred -> #4240`: Redis reads
+  destructively via BLPOP/LPOP, so by the time a handler nacks a message it has already been popped and
+  cannot be returned. `RedisMessageConsumer.Nack`/`NackAsync` are therefore documented **no-ops** (per
+  ADR `0039`), and — because they neither redeliver nor clear the in-flight set — the next `Receive`
+  throws `ChannelFailureException: Unacked message still in flight`. Both variants (Reactor + Proactor)
+  fail identically. This is a genuine platform limitation, not a harness gap: faking redelivery in the
+  test harness would mask a capability the gateway genuinely lacks. Contrast Kafka, where Nack leaves the
+  offset uncommitted and the broker redelivers natively (FR-16 `Pass`). The other ten Redis behaviours
+  conform: delay (FR-2/FR-9) via a wired `RedisHarnessMessageScheduler` (Redis delegates a non-zero delay
+  to the scheduler seam, as Kafka does — `Pass`, harness-only); reject→DLQ/invalid + metadata
+  (FR-4/5/6/8/17) via the Brighter-managed DLQ and invalid-message channels (ADR `0039`), with the
+  invalid-channel read hook implemented in the provider (was a `Message.Empty` stub); and requeue/
+  redeliver + no-channel ack (FR-7/15/22).
 
 ## Conformance Matrix
 
@@ -81,7 +94,7 @@ cell remains `Unknown`.
 | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | MSSQL / MSSQLMessagingGateway | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | PostgresSQL / PostgresMessagingGateway | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
-| Redis / RedisMessagingGateway | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
 | RMQ.Async / Classic | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | RMQ.Async / Quorum | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | RocketMQ / RocketMQMessagingGateway | Unknown (known FR-2 gap) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |

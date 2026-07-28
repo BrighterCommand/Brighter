@@ -40,11 +40,20 @@ public class RedisMessageGatewayProvider
 {
     private readonly RedisMessagingGatewayConfiguration _configuration;
     private RedisMessageConsumer? _dlqConsumer;
+    private RedisMessageConsumer? _invalidConsumer;
+    private RedisHarnessMessageScheduler? _scheduler;
 
     public RedisMessageGatewayProvider()
     {
         _configuration = RedisFixture.RedisMessagingGatewayConfiguration();
     }
+
+    // Redis has no native delayed delivery: the gateway delegates a requested delay to the
+    // scheduler seam (producer.Scheduler for FR-9 send-with-delay; the consumer factory's
+    // scheduler for FR-2 requeue-with-delay). One shared harness scheduler honours the delay by
+    // wall-clock and re-publishes to the topic. Lazily created; disposed in CleanUp.
+    private RedisHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new RedisHarnessMessageScheduler(_configuration);
 
     public void CleanUp(
         IAmAMessageProducerSync? producer,
@@ -61,6 +70,10 @@ public class RedisMessageGatewayProvider
         try { producer?.Dispose(); } catch { /* best effort */ }
         try { _dlqConsumer?.Dispose(); } catch { /* best effort */ }
         _dlqConsumer = null;
+        try { _invalidConsumer?.Dispose(); } catch { /* best effort */ }
+        _invalidConsumer = null;
+        try { _scheduler?.Dispose(); } catch { /* best effort */ }
+        _scheduler = null;
     }
 
     public async Task CleanUpAsync(
@@ -85,12 +98,21 @@ public class RedisMessageGatewayProvider
             try { await _dlqConsumer.DisposeAsync(); } catch { /* best effort */ }
             _dlqConsumer = null;
         }
+
+        if (_invalidConsumer != null)
+        {
+            try { await _invalidConsumer.DisposeAsync(); } catch { /* best effort */ }
+            _invalidConsumer = null;
+        }
+
+        try { _scheduler?.Dispose(); } catch { /* best effort */ }
+        _scheduler = null;
     }
 
     public IAmAChannelSync CreateChannel(RedisSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new RedisMessageConsumerFactory(_configuration)
+            new RedisMessageConsumerFactory(_configuration, Scheduler)
         ).CreateSyncChannel(subscription);
 
         // Redis requires a receive before send to establish the subscription
@@ -109,6 +131,19 @@ public class RedisMessageGatewayProvider
             _dlqConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
+        // Pre-subscribe invalid-message consumer so it receives notifications when messages
+        // are rejected as unacceptable (FR-5). Mirrors the DLQ hook above.
+        if (subscription.InvalidMessageRoutingKey != null)
+        {
+            var invalidQueueName = new ChannelName($"invalid-{Guid.NewGuid().ToString("N")[..8]}");
+            _invalidConsumer = new RedisMessageConsumer(
+                _configuration,
+                invalidQueueName,
+                subscription.InvalidMessageRoutingKey
+            );
+            _invalidConsumer.Receive(TimeSpan.FromMilliseconds(1000));
+        }
+
         // Always wrap with requeue tracking to ensure x-original-message-id is set.
         // When DLQ is configured, uses the subscription's requeue count for DLQ routing.
         // Otherwise, uses int.MaxValue so DLQ routing never triggers.
@@ -125,7 +160,7 @@ public class RedisMessageGatewayProvider
     )
     {
         var channel = await new ChannelFactory(
-            new RedisMessageConsumerFactory(_configuration)
+            new RedisMessageConsumerFactory(_configuration, Scheduler)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         // Redis async ReceiveAsync does NOT enforce a 1s minimum timeout like
@@ -144,6 +179,17 @@ public class RedisMessageGatewayProvider
             _dlqConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
+        if (subscription.InvalidMessageRoutingKey != null)
+        {
+            var invalidQueueName = new ChannelName($"invalid-{Guid.NewGuid().ToString("N")[..8]}");
+            _invalidConsumer = new RedisMessageConsumer(
+                _configuration,
+                invalidQueueName,
+                subscription.InvalidMessageRoutingKey
+            );
+            _invalidConsumer.Receive(TimeSpan.FromMilliseconds(1000));
+        }
+
         var maxRequeue = subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0
             ? subscription.RequeueCount
             : int.MaxValue;
@@ -153,7 +199,7 @@ public class RedisMessageGatewayProvider
 
     public IAmAMessageProducerSync CreateProducer(RedisMessagePublication publication)
     {
-        return new RedisMessageProducer(_configuration, publication);
+        return new RedisMessageProducer(_configuration, publication) { Scheduler = Scheduler };
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
@@ -162,7 +208,7 @@ public class RedisMessageGatewayProvider
     )
     {
         await Task.CompletedTask;
-        return new RedisMessageProducer(_configuration, publication);
+        return new RedisMessageProducer(_configuration, publication) { Scheduler = Scheduler };
     }
 
     public RedisMessagePublication CreatePublication(
@@ -288,15 +334,69 @@ public class RedisMessageGatewayProvider
 
     public Message GetMessageFromInvalidChannel(RedisSubscription subscription)
     {
-        return Message.Empty;
+        if (_invalidConsumer == null)
+            throw new InvalidOperationException("Invalid-message consumer was not pre-created. Ensure CreateChannel was called with an invalid-message-configured subscription.");
+
+        for (var i = 0; i < 10; i++)
+        {
+            var messages = _invalidConsumer.Receive(TimeSpan.FromSeconds(5));
+            if (!messages.Any())
+            {
+                Thread.Sleep(1000);
+                continue;
+            }
+
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                _invalidConsumer.Acknowledge(message);
+
+                // Restore original topic — Reject changes it to the invalid routing key
+                if (message.Header.Bag.TryGetValue("originalTopic", out var originalTopic))
+                    message.Header.Topic = new RoutingKey(originalTopic.ToString()!);
+
+                return message;
+            }
+            Thread.Sleep(1000);
+        }
+
+        return new Message();
     }
 
-    public Task<Message> GetMessageFromInvalidChannelAsync(
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
         RedisSubscription subscription,
         CancellationToken cancellationToken = default
     )
     {
-        return Task.FromResult(Message.Empty);
+        if (_invalidConsumer == null)
+            throw new InvalidOperationException("Invalid-message consumer was not pre-created. Ensure CreateChannelAsync was called with an invalid-message-configured subscription.");
+
+        await Task.CompletedTask;
+
+        for (var i = 0; i < 10; i++)
+        {
+            var messages = _invalidConsumer.Receive(TimeSpan.FromSeconds(5));
+            if (!messages.Any())
+            {
+                Thread.Sleep(1000);
+                continue;
+            }
+
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                _invalidConsumer.Acknowledge(message);
+
+                // Restore original topic — Reject changes it to the invalid routing key
+                if (message.Header.Bag.TryGetValue("originalTopic", out var originalTopic))
+                    message.Header.Topic = new RoutingKey(originalTopic.ToString()!);
+
+                return message;
+            }
+            Thread.Sleep(1000);
+        }
+
+        return new Message();
     }
 
     public RejectionMetadataKeys RejectionMetadataKeys =>

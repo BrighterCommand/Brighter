@@ -526,7 +526,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AWS.V4.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-localstack.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.AWS.V4.Tests --filter "FullyQualifiedName~MessagingGateway.SnsFifo." && grep -q -- 'AWS.V4 / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'AWS.V4 / SnsFifo' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0038-aws-sqs-dlq-direct-send`; requirements FR-13, FR-21.
 
-- [ ] **Bring Redis to conformance**
+- [x] **Bring Redis to conformance**
   - **Behavior**: Run the generated canonical suite for `Redis / RedisMessagingGateway` against the Redis broker, both variants. Fix-to-conform inline where localized (Brighter-managed DLQ/invalid channel, metadata under Redis camelCase keys); otherwise flag-and-move-on to signed-off `Deferred`. Update the Redis ledger row.
   - **Test file**: `tests/Paramore.Brighter.Redis.Tests/MessagingGateway/Generated/Reactor/*.cs`
   - **Test should verify**:
