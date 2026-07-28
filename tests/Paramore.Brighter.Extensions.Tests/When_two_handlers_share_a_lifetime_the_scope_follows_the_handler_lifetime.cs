@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
@@ -87,6 +89,43 @@ public class HandlerLifetimeCallChainScopeTests
         Assert.Same(first.Dependency, second.Dependency);
     }
 
+    [Theory]
+    [InlineData(true)]   // new default — each transient handler isolated in its own scope
+    [InlineData(false)]  // opt-out — the transient handlers share one per-pipeline scope
+    public void When_a_transient_handler_pipeline_is_released_it_disposes_every_scope_it_created(bool isolate)
+    {
+        //arrange — count scopes created and disposed so we can tell "restored the old scoping" apart from
+        //"restored the old leak": in either mode, releasing the pipeline must dispose exactly what it created
+        var collection = new ServiceCollection();
+        collection.AddScoped<ScopedDependency>();
+        collection.AddTransient<FirstHandler>();
+        collection.AddTransient<SecondHandler>();
+        collection.AddSingleton<IBrighterOptions>(new BrighterOptions
+        {
+            HandlerLifetime = ServiceLifetime.Transient,
+            IsolateTransientHandlerScope = isolate
+        });
+        var rootProvider = collection.BuildServiceProvider();
+
+        var tracker = new ScopeTracker(rootProvider.GetRequiredService<IServiceScopeFactory>());
+        var trackingProvider = new TrackingServiceProvider(rootProvider, tracker);
+
+        var factory = new ServiceProviderHandlerFactory(trackingProvider);
+        var lifetime = new TestLifetimeScope();
+
+        var first = (FirstHandler)((IAmAHandlerFactorySync)factory).Create(typeof(FirstHandler), lifetime)!;
+        var second = (SecondHandler)((IAmAHandlerFactorySync)factory).Create(typeof(SecondHandler), lifetime)!;
+
+        //act — release the pipeline the way HandlerLifetimeScope.Dispose() does at end of message
+        ((IAmAHandlerFactorySync)factory).Release(first, lifetime);
+        ((IAmAHandlerFactorySync)factory).Release(second, lifetime);
+
+        //assert — a scope was created (isolate=true makes one per handler, isolate=false shares one), and
+        //release disposed every one of them, so the opt-out is a lifetime change and not a leak
+        Assert.True(tracker.CreatedCount > 0);
+        Assert.Equal(tracker.CreatedCount, tracker.DisposedCount);
+    }
+
     private sealed class TestCommand : Command
     {
         public TestCommand() : base(Guid.NewGuid()) { }
@@ -116,5 +155,74 @@ public class HandlerLifetimeCallChainScopeTests
         public ScopedDependency Dependency { get; }
         public SecondHandler(ScopedDependency dependency) => Dependency = dependency;
         public override TestCommand Handle(TestCommand command) => command;
+    }
+
+    // Wraps the real IServiceScopeFactory and counts every scope created and disposed
+    private sealed class ScopeTracker : IServiceScopeFactory
+    {
+        private readonly IServiceScopeFactory _inner;
+        private int _createdCount;
+        private int _disposedCount;
+
+        public ScopeTracker(IServiceScopeFactory inner) => _inner = inner;
+
+        public int CreatedCount => _createdCount;
+        public int DisposedCount => _disposedCount;
+
+        public IServiceScope CreateScope()
+        {
+            Interlocked.Increment(ref _createdCount);
+            var scope = _inner.CreateScope();
+            return new TrackingScope(scope, () => Interlocked.Increment(ref _disposedCount));
+        }
+
+        private sealed class TrackingScope : IServiceScope, IAsyncDisposable
+        {
+            private readonly IServiceScope _inner;
+            private readonly Action _onDispose;
+            private int _disposed;
+
+            public TrackingScope(IServiceScope inner, Action onDispose)
+            {
+                _inner = inner;
+                _onDispose = onDispose;
+            }
+
+            public IServiceProvider ServiceProvider => _inner.ServiceProvider;
+
+            public void Dispose()
+            {
+                if (Interlocked.Exchange(ref _disposed, 1) == 0) _onDispose();
+                _inner.Dispose();
+            }
+
+            //Production on net8+ disposes an IAsyncDisposable scope through DisposeAsync, so count the
+            //disposal in whichever shape the caller uses.
+            public async ValueTask DisposeAsync()
+            {
+                if (Interlocked.Exchange(ref _disposed, 1) == 0) _onDispose();
+                if (_inner is IAsyncDisposable asyncInner)
+                    await asyncInner.DisposeAsync().ConfigureAwait(false);
+                else
+                    _inner.Dispose();
+            }
+        }
+    }
+
+    // Delegates every GetService call to the root provider except IServiceScopeFactory, which is
+    // redirected to the ScopeTracker so every CreateScope() call is intercepted and counted
+    private sealed class TrackingServiceProvider : IServiceProvider
+    {
+        private readonly IServiceProvider _inner;
+        private readonly ScopeTracker _scopeTracker;
+
+        public TrackingServiceProvider(IServiceProvider inner, ScopeTracker scopeTracker)
+        {
+            _inner = inner;
+            _scopeTracker = scopeTracker;
+        }
+
+        public object? GetService(Type serviceType) =>
+            serviceType == typeof(IServiceScopeFactory) ? _scopeTracker : _inner.GetService(serviceType);
     }
 }
