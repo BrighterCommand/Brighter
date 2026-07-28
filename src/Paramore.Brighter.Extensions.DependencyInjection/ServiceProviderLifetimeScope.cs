@@ -109,31 +109,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         private T? GetOrCreateScoped<T>(Type objectType) where T : class
         {
-            //publish the first scope atomically: a plain `_scope ??= CreateScope()` lets two threads racing
-            //the first scoped resolution each create a scope, and the loser's assignment is overwritten and
-            //never disposed (neither Dispose nor Release drains a scope that is not _scope). CompareExchange
-            //keeps the winner and the loser disposes the scope it created.
-            if (_scope is null)
-            {
-                var created = _serviceProvider.CreateScope();
-                if (Interlocked.CompareExchange(ref _scope, created, null) is not null)
-                {
-                    //lost the publish race — dispose the scope we created
-                    DisposeScope(created);
-                }
-                else if (Volatile.Read(ref _disposed) != 0)
-                {
-                    //won the publish, but a Dispose that read _scope before our CompareExchange published
-                    //it drained nothing and left our scope orphaned — the create-vs-Dispose mirror of the
-                    //two-creators race above. Reclaim it: if _scope is still the scope we published (Dispose
-                    //has not since claimed it), take it back and dispose it, so it is not orphaned. Then
-                    //throw, because the scope this resolution needed is gone. Dispose claims _scope with the
-                    //same atomic swap, so the scope is disposed exactly once whichever side wins.
-                    if (Interlocked.CompareExchange(ref _scope, null, created) == created)
-                        DisposeScope(created);
-                    ThrowIfDisposed();
-                }
-            }
+            EnsureRootScopePublished();
 
             var lazy = _scopedInstances.GetOrAdd(objectType, _ =>
                 new Lazy<object?>(() =>
@@ -146,6 +122,40 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     return (T?)scope.ServiceProvider.GetService(objectType);
                 }));
             return (T?)lazy.Value;
+        }
+
+        /// <summary>
+        /// Publishes the single shared <c>_scope</c> exactly once, atomically, and reclaims it if a
+        /// concurrent <see cref="Dispose"/> raced the publish. Shared by the Scoped path and, when
+        /// transient-scope isolation is turned off, the legacy shared-scope Transient path.
+        /// </summary>
+        private void EnsureRootScopePublished()
+        {
+            //publish the first scope atomically: a plain `_scope ??= CreateScope()` lets two threads racing
+            //the first resolution each create a scope, and the loser's assignment is overwritten and never
+            //disposed (neither Dispose nor Release drains a scope that is not _scope). CompareExchange keeps
+            //the winner and the loser disposes the scope it created.
+            if (_scope is not null)
+                return;
+
+            var created = _serviceProvider.CreateScope();
+            if (Interlocked.CompareExchange(ref _scope, created, null) is not null)
+            {
+                //lost the publish race — dispose the scope we created
+                DisposeScope(created);
+            }
+            else if (Volatile.Read(ref _disposed) != 0)
+            {
+                //won the publish, but a Dispose that read _scope before our CompareExchange published it
+                //drained nothing and left our scope orphaned — the create-vs-Dispose mirror of the
+                //two-creators race above. Reclaim it: if _scope is still the scope we published (Dispose has
+                //not since claimed it), take it back and dispose it, so it is not orphaned. Then throw,
+                //because the scope this resolution needed is gone. Dispose claims _scope with the same atomic
+                //swap, so the scope is disposed exactly once whichever side wins.
+                if (Interlocked.CompareExchange(ref _scope, null, created) == created)
+                    DisposeScope(created);
+                ThrowIfDisposed();
+            }
         }
 
         /// <summary>
