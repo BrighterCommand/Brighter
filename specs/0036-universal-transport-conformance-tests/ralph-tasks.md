@@ -538,7 +538,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Redis.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-redis.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.Redis.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'Redis / RedisMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'Redis / RedisMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0039-redis-dlq-brighter-managed`; requirements FR-13, FR-21.
 
-- [ ] **Bring MSSQL to conformance**
+- [x] **Bring MSSQL to conformance**
   - **Behavior**: Run the generated canonical suite for `MSSQL / MSSQLMessagingGateway` against the MSSQL broker, both variants. Fix-to-conform inline where localized (Brighter-managed DLQ per ADR 0040); otherwise flag-and-move-on to signed-off `Deferred`. Update the MSSQL ledger row.
   - **Test file**: `tests/Paramore.Brighter.MSSQL.Tests/MessagingGateway/Generated/Reactor/*.cs`
   - **Test should verify**:

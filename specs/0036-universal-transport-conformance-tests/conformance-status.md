@@ -73,6 +73,17 @@ cell remains `Unknown`.
   (FR-4/5/6/8/17) via the Brighter-managed DLQ and invalid-message channels (ADR `0039`), with the
   invalid-channel read hook implemented in the provider (was a `Message.Empty` stub); and requeue/
   redeliver + no-channel ack (FR-7/15/22).
+- `MSSQL / MSSQLMessagingGateway` FR-16 (Nack → redelivery) is `Deferred -> #4240` — **same root cause
+  as Redis**. The MSSQL queue consumer reads destructively from the queue table (the row is removed on
+  read), so `MsSqlMessageConsumer.Nack`/`NackAsync` are **no-ops** (`public void Nack(Message) {}`):
+  the message is already gone and cannot be redelivered. The FR-16 arms therefore observe `MT_NONE`
+  where the redelivered message is expected. Both variants fail identically. Genuine platform limitation,
+  not a harness gap (contrast Kafka's uncommitted-offset native redelivery, FR-16 `Pass`). The other ten
+  MSSQL behaviours conform: delay (FR-2/FR-9) via a wired `MsSqlHarnessMessageScheduler` (MSSQL delegates
+  a non-zero delay to the scheduler seam, as Kafka/Redis do — `Pass`, harness-only); reject→DLQ/invalid +
+  metadata (FR-4/5/6/8/17) via the Brighter-managed DLQ and invalid-message channels (ADR `0040`), whose
+  provider read hooks were already real (no stub, unlike Redis); and requeue/redeliver + no-channel ack
+  (FR-7/15/22).
 
 ## Conformance Matrix
 
@@ -92,7 +103,7 @@ cell remains `Unknown`.
 | GCP / StreamOrdering | Unknown (known FR-2 gap) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | Kafka / Standard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| MSSQL / MSSQLMessagingGateway | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
 | PostgresSQL / PostgresMessagingGateway | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
 | RMQ.Async / Classic | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |

@@ -22,10 +22,19 @@ public class MsSqlMessageGatewayProvider
         IAmAMessageGatewayReactorProvider
 {
     private RelationalDatabaseConfiguration? _configuration;
+    private MsSqlHarnessMessageScheduler? _scheduler;
 
     public MsSqlMessageGatewayProvider()
     {
     }
+
+    // MSSQL has no native delayed delivery: the gateway delegates a requested delay to the
+    // scheduler seam (producer.Scheduler for FR-9 send-with-delay; the consumer factory's
+    // scheduler for FR-2 requeue-with-delay). One shared harness scheduler honours the delay by
+    // wall-clock and re-publishes to the topic. Accessed only after _configuration is set (the
+    // channel/producer factories assign it first); disposed in CleanUp.
+    private MsSqlHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new MsSqlHarnessMessageScheduler(_configuration!);
 
     public void CleanUp(
         IAmAMessageProducerSync? producer,
@@ -40,6 +49,8 @@ public class MsSqlMessageGatewayProvider
         }
 
         producer?.Dispose();
+        _scheduler?.Dispose();
+        _scheduler = null;
     }
 
     public async Task CleanUpAsync(
@@ -58,6 +69,9 @@ public class MsSqlMessageGatewayProvider
         {
             await producer.DisposeAsync();
         }
+
+        _scheduler?.Dispose();
+        _scheduler = null;
     }
 
     public IAmAChannelSync CreateChannel(MsSqlSubscription subscription)
@@ -69,7 +83,7 @@ public class MsSqlMessageGatewayProvider
             _configuration = testHelper.QueueConfiguration;
         }
 
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, Scheduler);
         var channel = new ChannelFactory(consumerFactory).CreateSyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
@@ -92,7 +106,7 @@ public class MsSqlMessageGatewayProvider
             _configuration = testHelper.QueueConfiguration;
         }
 
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, Scheduler);
         var channel = new ChannelFactory(consumerFactory).CreateAsyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
@@ -113,8 +127,9 @@ public class MsSqlMessageGatewayProvider
         }
 
         var producers = new MsSqlMessageProducerFactory(_configuration, [publication]).Create();
-        var producer = producers.First().Value;
-        return (IAmAMessageProducerSync)producer;
+        var producer = (IAmAMessageProducerSync)producers.First().Value;
+        producer.Scheduler = Scheduler;
+        return producer;
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
@@ -131,8 +146,9 @@ public class MsSqlMessageGatewayProvider
 
         var producers = await new MsSqlMessageProducerFactory(_configuration, [publication])
             .CreateAsync();
-        var producer = producers.First().Value;
-        return (IAmAMessageProducerAsync)producer;
+        var producer = (IAmAMessageProducerAsync)producers.First().Value;
+        producer.Scheduler = Scheduler;
+        return producer;
     }
 
     public Publication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)

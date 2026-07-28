@@ -36,7 +36,7 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlq : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — reject with None reason to DLQ not yet conformant for MSSQL / MSSQLMessagingGateway (maintainer sign-off)")]
+    [Fact]
     public void When_rejecting_message_with_unknown_reason_should_send_to_dlq()
     {
         // Arrange — both DLQ and invalid channel configured (FR-17, AC-18, FR-1(2))
