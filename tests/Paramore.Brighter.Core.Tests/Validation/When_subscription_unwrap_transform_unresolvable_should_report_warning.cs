@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.MessageMappers;
@@ -57,7 +58,7 @@ public class UnwrapTransformResolvableTests
     {
         // Arrange — mapper declares an unwrap transform (MyDescribableTransform) the probe cannot resolve
         var registry = RegistryWith<MyDescribableCommandMessageMapper>();
-        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(() => registry, StubTransformerResolvabilityProbe.ResolvesNothing);
         var subscription = SubscriptionFor<MyDescribableCommand>("greeting-subscription");
 
         // Act
@@ -80,7 +81,7 @@ public class UnwrapTransformResolvableTests
     {
         // Arrange — same mapper, but the probe resolves every transformer
         var registry = RegistryWith<MyDescribableCommandMessageMapper>();
-        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, StubTransformerResolvabilityProbe.ResolvesEverything);
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(() => registry, StubTransformerResolvabilityProbe.ResolvesEverything);
         var subscription = SubscriptionFor<MyDescribableCommand>("greeting-subscription");
 
         // Act
@@ -97,7 +98,7 @@ public class UnwrapTransformResolvableTests
     {
         // Arrange — vanilla mapper declares no unwrap transforms
         var registry = RegistryWith<MyVanillaDescribableCommandMessageMapper>();
-        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(() => registry, StubTransformerResolvabilityProbe.ResolvesNothing);
         var subscription = SubscriptionFor<MyDescribableCommand>("greeting-subscription");
 
         // Act
@@ -114,7 +115,7 @@ public class UnwrapTransformResolvableTests
     {
         // Arrange — a datatype-channel subscription has a null RequestType and cannot be inspected, so it is skipped
         var registry = RegistryWith<MyDescribableCommandMessageMapper>();
-        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(() => registry, StubTransformerResolvabilityProbe.ResolvesNothing);
         var subscription = new Subscription(
             subscriptionName: new SubscriptionName("datatype-subscription"),
             channelName: new ChannelName("test-channel"),
@@ -139,7 +140,7 @@ public class UnwrapTransformResolvableTests
             new SimpleMessageMapperFactory(_ => null!),
             new SimpleMessageMapperFactoryAsync(_ => null!));
         TransformPipelineBuilder.ClearPipelineCache();
-        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(() => registry, StubTransformerResolvabilityProbe.ResolvesNothing);
         var subscription = SubscriptionFor<MyDescribableCommand>("greeting-subscription");
 
         // Act
@@ -158,7 +159,7 @@ public class UnwrapTransformResolvableTests
         // but not the other (CompressPayloadTransformer)
         var registry = RegistryWith<MyTwoUnwrapDescribableCommandMessageMapper>();
         var probe = new StubTransformerResolvabilityProbe(t => t != typeof(CompressPayloadTransformer));
-        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, probe);
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(() => registry, probe);
         var subscription = SubscriptionFor<MyDescribableCommand>("greeting-subscription");
 
         // Act
@@ -183,7 +184,7 @@ public class UnwrapTransformResolvableTests
             typeof(JsonMessageMapper<>),
             typeof(JsonMessageMapper<>));
         TransformPipelineBuilder.ClearPipelineCache();
-        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(() => registry, StubTransformerResolvabilityProbe.ResolvesNothing);
         var subscription = SubscriptionFor<MyDescribableCommand>("greeting-subscription");
 
         // Act
@@ -209,7 +210,7 @@ public class UnwrapTransformResolvableTests
             typeof(JsonMessageMapper<>));
         registry.RegisterAsync<MyDescribableCommand, MyDescribableCommandMessageMapperAsync>();
         TransformPipelineBuilder.ClearPipelineCache();
-        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(() => registry, StubTransformerResolvabilityProbe.ResolvesNothing);
         var subscription = SubscriptionFor<MyDescribableCommand>("greeting-subscription");
 
         // Act
@@ -220,5 +221,40 @@ public class UnwrapTransformResolvableTests
         Assert.False(satisfied);
         Assert.Single(results);
         Assert.Contains(nameof(MyDescribableTransform), results[0].Error!.Message);
+    }
+
+    [Fact]
+    public void When_the_specification_is_disposed_it_disposes_the_registry_it_owns()
+    {
+        // Arrange — PR #4254 review finding 3. The DI registration hands this rule a MessageMapperRegistry
+        // created solely for it, and registers the returned specification as a container-owned singleton.
+        // The specification must own that registry and dispose it when the container disposes the singleton,
+        // so the registry's factories (and any scopes an IoC-backed factory resolved) are drained rather
+        // than retained until process exit.
+        var factory = new DisposeTrackingMapperFactory();
+        var registry = new MessageMapperRegistry(factory, null);
+        registry.Register<MyDescribableCommand, MyDescribableCommandMessageMapper>();
+        TransformPipelineBuilder.ClearPipelineCache();
+
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(
+            () => registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+
+        // Act — stand in for the container disposing the singleton specification at shutdown
+        var disposable = Assert.IsAssignableFrom<IDisposable>(spec);
+        disposable.Dispose();
+
+        // Assert — the owned registry was disposed, cascading into its factory
+        Assert.True(factory.Disposed, "the specification did not dispose the registry it was given to own");
+    }
+
+    private sealed class DisposeTrackingMapperFactory : IAmAMessageMapperFactory, IDisposable
+    {
+        public bool Disposed { get; private set; }
+
+        public Lease<IAmAMessageMapper>? Create(System.Type messageMapperType) => null;
+
+        public void Release(Lease<IAmAMessageMapper>? lease) { }
+
+        public void Dispose() => Disposed = true;
     }
 }

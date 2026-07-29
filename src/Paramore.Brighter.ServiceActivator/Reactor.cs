@@ -525,9 +525,10 @@ namespace Paramore.Brighter.ServiceActivator
                 throw new MessageMappingException($"Failed to find request type for message {message.Id} ", 
                     new ArgumentNullException(nameof(requestType), "The request type cannot be null."));
             
+            object? pipeline = null;
             try
             {
-                object? pipeline = MakeUnwrapPipeline(requestType);
+                pipeline = MakeUnwrapPipeline(requestType);
 
                 // Call Unwrap on the pipeline
                 var unwrapMethod = pipeline!.GetType().GetMethod("Unwrap");
@@ -553,6 +554,30 @@ namespace Paramore.Brighter.ServiceActivator
             catch (Exception exception)
             {
                 throw new MessageMappingException($"Failed to map message {message.Id} of {requestType.FullName} using transform pipeline ", exception);
+            }
+            finally
+            {
+                // The pipeline owns the message mapper and any transforms; releasing them back to their
+                // factories is deterministic rather than left to the finalizer. TransformPipeline<T>
+                // implements IDisposable non-generically, so we do not need to know TRequest here.
+                //
+                // The release runs here, outside the mapping try, and a failure is logged rather than
+                // rethrown: the request is already built by the time this runs, so a throwing
+                // mapper/transform release must not fall into the catch above and reclassify a
+                // successfully-mapped message as MessageMappingException — which the pump treats as
+                // Unacceptable, rejecting and discarding a good message and, after the limit, shutting
+                // the pump down.
+                if (pipeline is IDisposable pipelineLifetime)
+                {
+                    try
+                    {
+                        pipelineLifetime.Dispose();
+                    }
+                    catch (Exception releaseException)
+                    {
+                        Log.FailedToReleasePipeline(s_logger, releaseException, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                    }
+                }
             }
 
             return request;
@@ -608,6 +633,9 @@ namespace Paramore.Brighter.ServiceActivator
             
             [LoggerMessage(LogLevel.Warning, "MessagePump: Failed to map message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void FailedToMapMessage(ILogger logger, Exception ex, string id, string? channelName, string routingKey, int managementThreadId);
+
+            [LoggerMessage(LogLevel.Warning, "MessagePump: Failed to release the transform pipeline for message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}; the message was mapped successfully and is unaffected")]
+            internal static partial void FailedToReleasePipeline(ILogger logger, Exception ex, string id, string? channelName, string routingKey, int managementThreadId);
             
             [LoggerMessage(LogLevel.Error, "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void FailedToDispatchMessage2(ILogger logger, Exception e, string id, string? channelName, string routingKey, int managementThreadId);
