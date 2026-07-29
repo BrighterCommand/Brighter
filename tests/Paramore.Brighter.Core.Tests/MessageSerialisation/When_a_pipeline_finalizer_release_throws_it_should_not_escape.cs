@@ -8,6 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
+[Collection(FinalizerTestCollection.Name)]
 public class TransformPipelineFinalizerReleaseTests
 {
     [Fact]
