@@ -73,9 +73,14 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlq : IDisposable
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
 
+        // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
+        // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-        Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
+        if (keys.StampsRejectionMetadata)
+        {
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
+            Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
+        }
     }
 }

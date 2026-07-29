@@ -43,7 +43,7 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — rejection metadata stamping not yet conformant for RMQ.Async / Classic (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_should_include_metadata_async()
     {
         // Arrange
@@ -81,30 +81,36 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
 
+        // The message must reach the DLQ (routing, asserted above). The rejection-metadata fields are
+        // asserted only when the provider's gateway stamps Brighter metadata; a native-dead-letter
+        // transport (e.g. RabbitMQ DLX) declares empty keys and is conformant on routing alone
+        // (FR-8 relaxation, AC-8).
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
+        if (keys.StampsRejectionMetadata)
+        {
+            // OriginalTopic (FR-8, AC-8)
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
+            Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
 
-        // OriginalTopic — a provider key of string.Empty fails as genuine non-conformance (FR-8, AC-8)
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-        Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
+            // OriginalType (FR-8, AC-8)
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalType));
+            Assert.Equal(message.Header.MessageType.ToString(), dlqMessage.Header.Bag[keys.OriginalType].ToString());
 
-        // OriginalType — a provider key of string.Empty fails as genuine non-conformance (FR-8, AC-8)
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalType));
-        Assert.Equal(message.Header.MessageType.ToString(), dlqMessage.Header.Bag[keys.OriginalType].ToString());
+            // RejectionReason (FR-8, AC-8)
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
+            Assert.Equal(RejectionReason.DeliveryError.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
 
-        // RejectionReason — a provider key of string.Empty fails as genuine non-conformance (FR-8, AC-8)
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
-        Assert.Equal(RejectionReason.DeliveryError.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
+            // RejectionMessage (FR-8, AC-8)
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionMessage));
+            Assert.Equal(REJECTION_DESCRIPTION, dlqMessage.Header.Bag[keys.RejectionMessage].ToString());
 
-        // RejectionMessage — a provider key of string.Empty fails as genuine non-conformance (FR-8, AC-8)
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionMessage));
-        Assert.Equal(REJECTION_DESCRIPTION, dlqMessage.Header.Bag[keys.RejectionMessage].ToString());
-
-        // RejectionTimestamp — ISO-8601 parseable, within last minute; empty key fails as non-conformance (FR-8, AC-8)
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionTimestamp));
-        var timestampValue = dlqMessage.Header.Bag[keys.RejectionTimestamp].ToString();
-        Assert.True(DateTimeOffset.TryParse(timestampValue, out var parsedTimestamp),
-            "RejectionTimestamp must be parseable ISO-8601");
-        Assert.True(DateTimeOffset.UtcNow - parsedTimestamp < TimeSpan.FromMinutes(1),
-            "RejectionTimestamp must be within the last minute");
+            // RejectionTimestamp — ISO-8601 parseable, within last minute (FR-8, AC-8)
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionTimestamp));
+            var timestampValue = dlqMessage.Header.Bag[keys.RejectionTimestamp].ToString();
+            Assert.True(DateTimeOffset.TryParse(timestampValue, out var parsedTimestamp),
+                "RejectionTimestamp must be parseable ISO-8601");
+            Assert.True(DateTimeOffset.UtcNow - parsedTimestamp < TimeSpan.FromMinutes(1),
+                "RejectionTimestamp must be within the last minute");
+        }
     }
 }

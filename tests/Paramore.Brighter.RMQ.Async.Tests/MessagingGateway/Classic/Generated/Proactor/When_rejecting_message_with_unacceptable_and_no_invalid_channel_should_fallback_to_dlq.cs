@@ -41,7 +41,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — fallback: unacceptable, DLQ-only not yet conformant for RMQ.Async / Classic (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq_async()
     {
         // Arrange — DLQ configured only; no invalid channel (FR-6, AC-6, FR-1(2))
@@ -80,8 +80,13 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
 
+        // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
+        // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
-        Assert.Equal(RejectionReason.Unacceptable.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
+        if (keys.StampsRejectionMetadata)
+        {
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
+            Assert.Equal(RejectionReason.Unacceptable.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
+        }
     }
 }

@@ -335,3 +335,50 @@ and re-expressed as four behaviour-class sub-tasks. The commit `97c9be7b9` and t
 ledger remain the honest starting point; the sub-tasks flip columns to `Pass`/`Fixed` as each is
 genuinely proven. ADR 0067's rollout *decision* is unchanged — only its deferral *governance* is
 tightened.
+
+## Relaxed: FR-8 metadata not required for native-dead-letter transports (RMQ.Async)
+
+**Recorded 2026-07-29 (maintainer-approved).** The RMQ.Async / Classic conformance run surfaced a
+contract question the earlier transports never did: the canonical reject behaviours (FR-4 delivery-error
+→ DLQ, FR-6 unacceptable-no-invalid → DLQ, FR-17 None → DLQ, and the dedicated FR-8 metadata test) each
+assert Brighter **rejection metadata** (`OriginalTopic`, `OriginalType`, `RejectionReason`,
+`RejectionMessage`, `RejectionTimestamp`) on the dead-lettered message. RabbitMQ dead-letters **natively**
+via a DLX: `RmqMessageConsumer.RejectAsync` calls `Channel.BasicRejectAsync(deliveryTag, requeue: false)`
+and, because the queue is declared with `x-dead-letter-exchange`/`x-dead-letter-routing-key`, the broker
+routes the message to the DLQ. This **routing works** (verified against a live 4.2 broker, both variants:
+the DLQ-arrival assertion passes). But `basic.reject` carries only a delivery tag + requeue flag — it
+moves the **untouched original** message, so the gateway cannot add Brighter metadata without abandoning
+native DLX for a Brighter-managed re-publish (the `SqsMessageConsumer` pattern: stamp the bag, publish the
+enriched copy to a DLQ/invalid routing key, then ack).
+
+**Decision (owner choice among: fix RMQ to Brighter-managed routing / relax FR-8 / keep deferred):**
+**relax FR-8** — a transport that dead-letters via a native broker mechanism is conformant on **routing
+alone**; requiring Brighter metadata would force every native-DLQ transport into a re-publish path it does
+not otherwise need. Mechanism (universal, provider-driven, no per-transport template): the generated
+`RejectionMetadataKeys` record gains a computed `StampsRejectionMetadata` (true iff the provider declares
+non-empty keys); the canonical templates for FR-4/6/8/17 assert **DLQ arrival unconditionally** and guard
+the **metadata sub-assertions** behind `if (keys.StampsRejectionMetadata)`. Transports whose gateway
+stamps metadata (SQS/Redis/Postgres/MSSQL — non-empty keys) are **unchanged** (the guard is always true
+for them); a native-DLQ transport (RMQ — empty keys) proves routing and skips the metadata assertions.
+This is a change to the universal conformance **contract** (FR-8 / AC-8), applied by regenerating every
+config and rebuilding `Brighter.slnx`.
+
+**Not relaxed: FR-5** (reject-as-unacceptable must land in a **separate invalid channel**, distinct from
+the DLQ). That is a *routing* requirement, not a metadata one — RMQ models no invalid destination
+(`RmqMessageConsumer`/`RmqSubscription` carry only a single dead-letter destination), so an unacceptable
+rejection dead-letters to the DLQ. FR-5 therefore stays `Deferred -> #4240` for RMQ; conforming needs
+Brighter-managed invalid routing in `src`. **Consequence:** RMQ.Async / Classic goes from 6 `Pass` + 5
+`Deferred` to **10 `Pass` + 1 `Deferred` (FR-5)**; the same relaxation will apply to RMQ.Async / Quorum
+and any future native-DLQ transport.
+
+**⚠️ Guardrail — empty keys must be a *deliberate* native-dead-letter declaration, not an unfilled stub.**
+`StampsRejectionMetadata == false` silently skips the metadata sub-assertions, so a provider that returns
+empty keys merely because nobody populated them yet would get a free `Pass` on FR-4/6/8/17 (routing only),
+masking a genuine metadata gap. This is safe for every *proven* transport today — AWS ×8, PostgreSQL,
+MSSQL, Redis, RocketMQ, Kafka all declare real keys, so their metadata is still fully asserted. But
+**GCP ×4 currently return empty keys and are still `Unknown`.** When the GCP conformance task runs (Phase 4)
+it must consciously determine whether GCP genuinely dead-letters natively (Pub/Sub dead-letter topics — in
+which case empty keys + routing-only is correct and conformant, exactly like RMQ) **or** whether the empty
+keys are a stub for a gateway that should stamp Brighter metadata (in which case the provider must populate
+the keys so the assertions run). The relaxation is a capability *declaration*, not a licence to skip
+verification — the per-transport task owns that call, per ADR 0067's evidence-not-inference rule.

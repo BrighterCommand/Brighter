@@ -81,11 +81,16 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
 
+        // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
+        // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
-        Assert.Equal(RejectionReason.None.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-        Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
+        if (keys.StampsRejectionMetadata)
+        {
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
+            Assert.Equal(RejectionReason.None.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
+            Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
+        }
 
         // Assert — invalid channel must be empty: single bounded receive (AC-20 exemption, AC-18)
         var invalidMessage = await _messageGatewayProvider.GetMessageFromInvalidChannelAsync(_subscription);

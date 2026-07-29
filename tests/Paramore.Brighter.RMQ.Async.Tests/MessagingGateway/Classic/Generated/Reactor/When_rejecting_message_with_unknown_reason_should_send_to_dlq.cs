@@ -36,7 +36,7 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlq : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — reject with None reason to DLQ not yet conformant for RMQ.Async / Classic (maintainer sign-off)")]
+    [Fact]
     public void When_rejecting_message_with_unknown_reason_should_send_to_dlq()
     {
         // Arrange — both DLQ and invalid channel configured (FR-17, AC-18, FR-1(2))
@@ -76,11 +76,16 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlq : IDisposable
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
 
+        // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
+        // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
-        Assert.Equal(RejectionReason.None.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-        Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
+        if (keys.StampsRejectionMetadata)
+        {
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
+            Assert.Equal(RejectionReason.None.ToString(), dlqMessage.Header.Bag[keys.RejectionReason].ToString());
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
+            Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
+        }
 
         // Assert — invalid channel must be empty: single bounded receive (AC-20 exemption, AC-18)
         var invalidMessage = _messageGatewayProvider.GetMessageFromInvalidChannel(_subscription);

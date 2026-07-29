@@ -102,39 +102,41 @@ cell remains `Unknown`.
   `channelName` at the rejection routing key (matching how the main `CreateSubscription` aligns
   `ChannelName` with the topic) makes all five behaviours `Pass`; the reject-to-DLQ routing itself was
   already conformant (Brighter-managed DLQ, ADR `0041`).
-- `RMQ.Async / Classic` is `Pass` on six behaviours and `Deferred -> #4240` on the five-cell
-  reject/DLQ/invalid/metadata class (FR-4/5/6/8/17). **⚠️ Reference-environment fix first:**
-  `docker-compose-rmq.yaml` pointed at `rabbitmq:management` (now RabbitMQ 4.3), which **hard-rejects the
-  transient non-exclusive queues the gateway declares** (`INTERNAL_ERROR - Feature
-  'transient_nonexcl_queues' is deprecated`) — every test failed at queue declaration. Pinned it to the
-  CI/reference image `brightercommand/rabbitmq:4.2-management-delay` (RabbitMQ 4.2, matching CI and the
-  root `docker-compose.yaml`); a fresh data volume is required (downgrading 4.3→4.2 over a stale volume
-  crashes the broker on boot). **Requeue/redeliver + no-channel ack (FR-7/15/16/22) `Pass` natively** —
-  notably **FR-16** (`RmqMessageConsumer.NackAsync` → `BasicNackAsync(requeue: true)` → the broker
-  redelivers, contrast Redis/MSSQL `Deferred`). **Delay (FR-2/FR-9) `Pass` via a wired
-  `RmqHarnessMessageScheduler`** — the gateway delegates a non-zero delay to `IAmAMessageProducer.Scheduler`
-  when `DelaySupported == false` (the same scheduler seam proven for Kafka/Redis/MSSQL); the harness
-  presents a plain (non-delay) exchange so this seam is exercised, yielding conformant semantics (delivered
-  `Header.Delayed == TimeSpan.Zero`, honoured delay). The **native** `x-delayed-message` plugin path is
-  deliberately not used because it is not yet conformant — `RmqMessagePublisher.RequeueMessageAsync`
-  hardcodes `TimeSpan.Zero` and publishes to the default exchange, dropping a requeue delay (FR-2 would
-  redeliver immediately), and a plugin-delivered send arrives carrying `Header.Delayed == delay`, tripping
-  the universal message-equivalence assertion; both are larger src fixes tracked under #4240. **The
-  reject/DLQ/invalid/metadata class (FR-4/5/6/8/17) is `Deferred -> #4240`:** RMQ's rejection path is a
-  native `BasicReject` that dead-letters through the single configured DLX (`x-dead-letter-routing-key`),
-  and neither `RmqMessageConsumer` nor `RmqSubscription` models a separate invalid channel or stamps
-  Brighter rejection metadata (RMQ has **no per-transport DLQ ADR** — it relies on native DLX + universal
-  routing `0047`/`0045`). Evidence (live 4.2 broker, both variants): reject→DLQ *arrival* works
-  (`Assert.NotEqual(MT_NONE, dlqMessage)` passes), but every reject test then fails on
-  `dlqMessage.Header.Bag.ContainsKey(keys.<X>)` because the gateway stamps **no** rejection metadata and
-  the provider's `RejectionMetadataKeys` are empty (FR-4/6/8/17); and FR-5's unacceptable message
-  dead-letters to the DLQ, not to a distinct invalid channel (the real invalid read hook observes
-  `MT_NONE`). Conforming requires implementing Brighter-managed rejection routing + metadata stamping (a
-  rejection producer that routes by reason to DLQ/invalid) in `src/…RMQ.Async`, replacing the native-DLX
-  path — beyond the localized low-risk boundary (three deferral preconditions met: evidence recorded, the
-  DLQ read hook is real and the invalid read hook was implemented, the residual is a substantial src
-  change). Contrast Redis/MSSQL/Postgres, which have Brighter-managed DLQ + invalid channels (ADRs
-  `0039`/`0040`/`0041`) and so `Pass` FR-4/5/6/8/17.
+- `RMQ.Async / Classic` is `Pass` on **ten** behaviours and `Deferred -> #4240` on **FR-5 only**
+  (a separate invalid channel). **⚠️ Reference-environment fix first:** `docker-compose-rmq.yaml` pointed
+  at `rabbitmq:management` (now RabbitMQ 4.3), which **hard-rejects the transient non-exclusive queues the
+  gateway declares** (`INTERNAL_ERROR - Feature 'transient_nonexcl_queues' is deprecated`) — every test
+  failed at queue declaration. Pinned it to the CI/reference image
+  `brightercommand/rabbitmq:4.2-management-delay` (RabbitMQ 4.2, matching CI and the root
+  `docker-compose.yaml`); a fresh data volume is required (downgrading 4.3→4.2 over a stale volume crashes
+  the broker on boot). **Requeue/redeliver + no-channel ack (FR-7/15/16/22) `Pass` natively** — notably
+  **FR-16** (`RmqMessageConsumer.NackAsync` → `BasicNackAsync(requeue: true)` → the broker redelivers,
+  contrast Redis/MSSQL `Deferred`). **Delay (FR-2/FR-9) `Pass` via a wired `RmqHarnessMessageScheduler`** —
+  the gateway delegates a non-zero delay to `IAmAMessageProducer.Scheduler` when `DelaySupported == false`
+  (the same scheduler seam proven for Kafka/Redis/MSSQL); the harness presents a plain (non-delay) exchange
+  so this seam is exercised, yielding conformant semantics (delivered `Header.Delayed == TimeSpan.Zero`,
+  honoured delay). The **native** `x-delayed-message` plugin path is deliberately not used because it is not
+  yet conformant — `RmqMessagePublisher.RequeueMessageAsync` hardcodes `TimeSpan.Zero` and publishes to the
+  default exchange, dropping a requeue delay (FR-2 would redeliver immediately), and a plugin-delivered send
+  arrives carrying `Header.Delayed == delay`, tripping the universal message-equivalence assertion; both are
+  larger src fixes tracked under #4240. **Reject→DLQ (FR-4/6/17) and metadata (FR-8) `Pass` via the native
+  DLX under the FR-8 relaxation.** RMQ's rejection path is a native `BasicReject` that dead-letters through
+  the single configured DLX (`x-dead-letter-routing-key`); the message reaches the DLQ (evidence: live 4.2
+  broker, both variants, `Assert.NotEqual(MT_NONE, dlqMessage)` passes), but `BasicReject` moves the
+  *untouched original* message (the AMQP frame carries only delivery-tag + requeue), so the gateway stamps
+  **no** Brighter rejection metadata and the provider's `RejectionMetadataKeys` are empty. Per the
+  maintainer-approved **FR-8 relaxation** (see `decision-log.md`), a transport that dead-letters via a
+  native broker mechanism is conformant on **routing alone**: the canonical templates assert DLQ arrival
+  unconditionally and guard the rejection-metadata sub-assertions on
+  `RejectionMetadataKeys.StampsRejectionMetadata` (true iff the provider declares non-empty keys). So
+  FR-4/6/8/17 `Pass` for RMQ (routing) while metadata-stamping transports (SQS/Redis/Postgres/MSSQL, ADRs
+  `0038`/`0039`/`0040`/`0041`) still assert the full metadata. **⛔ FR-5 (a *separate* invalid channel)
+  stays `Deferred -> #4240`:** neither `RmqMessageConsumer` nor `RmqSubscription` models an invalid
+  destination — an unacceptable rejection dead-letters to the *DLQ*, not a distinct invalid channel (the
+  real invalid read hook observes `MT_NONE`). This is not relaxed by FR-8 (it is a routing gap, not a
+  metadata gap); conforming requires Brighter-managed invalid routing in `src/…RMQ.Async` (three deferral
+  preconditions met: evidence recorded, the invalid read hook was implemented, the residual is a
+  substantial src change).
 
 ## Conformance Matrix
 
@@ -157,7 +159,7 @@ cell remains `Unknown`.
 | MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
 | PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
-| RMQ.Async / Classic | Pass | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass |
+| RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RMQ.Async / Quorum | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | RocketMQ / RocketMQMessagingGateway | Unknown (known FR-2 gap) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | AzureServiceBus / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |

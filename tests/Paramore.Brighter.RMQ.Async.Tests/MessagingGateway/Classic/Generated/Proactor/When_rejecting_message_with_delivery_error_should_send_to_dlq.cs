@@ -41,7 +41,7 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — reject with delivery error to DLQ not yet conformant for RMQ.Async / Classic (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_with_delivery_error_should_send_to_dlq_async()
     {
         // Arrange
@@ -79,9 +79,14 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
 
+        // Metadata sub-assertions apply only when the provider's gateway stamps Brighter rejection
+        // metadata; a native-dead-letter transport (empty keys) proves DLQ routing above and skips these.
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-        Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
-        Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
+        if (keys.StampsRejectionMetadata)
+        {
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
+            Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
+            Assert.True(dlqMessage.Header.Bag.ContainsKey(keys.RejectionReason));
+        }
     }
 }
