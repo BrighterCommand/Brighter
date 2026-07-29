@@ -574,7 +574,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Async.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-rmq.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.RMQ.Async.Tests --filter "FullyQualifiedName~MessagingGateway.Classic." && grep -q -- 'RMQ.Async / Classic' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'RMQ.Async / Classic' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4 (RMQ.Async native DLX, larger fix), Architecture Overview stage (ii); ADR `0047-message-rejection-routing-strategy`, `0045-provide-dlq-where-missing`; requirements FR-13, FR-21.
 
-- [ ] **Bring RMQ.Async / Quorum to conformance**
+- [x] **Bring RMQ.Async / Quorum to conformance**
   - **Behavior**: Per the Phase 3 method, resolve the `RMQ.Async / Quorum` row against the RabbitMQ broker, both variants. Same size/risk boundary as Classic: localized fix in `src/Paramore.Brighter.MessagingGateway.RMQ.Async` → `Fixed (#PR)`; otherwise a signed-off `Deferred`.
   - **Test file**: `tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway/Quorum/Generated/Reactor/*.cs`
   - **Test should verify**:

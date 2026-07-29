@@ -137,6 +137,20 @@ cell remains `Unknown`.
   metadata gap); conforming requires Brighter-managed invalid routing in `src/…RMQ.Async` (three deferral
   preconditions met: evidence recorded, the invalid read hook was implemented, the residual is a
   substantial src change).
+- `RMQ.Async / Quorum` mirrors `RMQ.Async / Classic` exactly: **10 `Pass` + FR-5 `Deferred -> #4240`**.
+  Quorum queues use the same RabbitMQ AMQP gateway (`src/Paramore.Brighter.MessagingGateway.RMQ.Async`),
+  so every conformance argument that applies to Classic applies to Quorum. **Delay (FR-2/FR-9) `Pass` via
+  the same wired `RmqHarnessMessageScheduler`** — the Quorum provider presents a plain (non-delay) durable
+  exchange so `DelaySupported == false` and the scheduler seam is exercised (delivered `Header.Delayed ==
+  TimeSpan.Zero`, honoured delay; same as Classic). **Reject→DLQ (FR-4/6/17) and metadata (FR-8) `Pass`
+  via the native DLX under the FR-8 relaxation** — Quorum queues support `x-dead-letter-exchange` /
+  `x-dead-letter-routing-key` identically to Classic queues; `RejectionMetadataKeys` is empty → routing
+  only asserted (same as Classic). **FR-16 `Pass`** — `RmqMessageConsumer.NackAsync` → `BasicNackAsync(requeue:
+  true)` → broker redelivers, same mechanism as Classic. **FR-7/15/22 `Pass`** natively. **⛔ FR-5 (a
+  *separate* invalid channel) stays `Deferred -> #4240`** — same architectural src gap as Classic: an
+  unacceptable rejection dead-letters to the DLX, not a distinct invalid channel; the real invalid read
+  hook observes `MT_NONE` (evidence from the Quorum test run on a live 4.2 broker, both variants); the
+  residual is a substantial src change to `src/…RMQ.Async` (three deferral preconditions met).
 
 ## Conformance Matrix
 
@@ -160,7 +174,7 @@ cell remains `Unknown`.
 | PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
 | RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RMQ.Async / Quorum | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RocketMQ / RocketMQMessagingGateway | Unknown (known FR-2 gap) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | AzureServiceBus / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | MQTT / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
