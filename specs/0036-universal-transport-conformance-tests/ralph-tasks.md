@@ -562,7 +562,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.PostgresSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-postgres.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.PostgresSQL.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'PostgresSQL / PostgresMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'PostgresSQL / PostgresMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0041-postgres-dlq-brighter-managed`; requirements FR-13, FR-21.
 
-- [ ] **Bring RMQ.Async / Classic to conformance**
+- [x] **Bring RMQ.Async / Classic to conformance**
   - **Behavior**: Per the Phase 3 method, resolve the `RMQ.Async / Classic` row against the RabbitMQ broker, both variants. RMQ has no per-transport DLQ ADR (reject/DLQ rests on native DLX + universal routing 0047/0045), so its fix may be larger — apply the size/risk boundary: localized fix in `src/Paramore.Brighter.MessagingGateway.RMQ.Async` → `Fixed (#PR)`; otherwise a signed-off `Deferred`. RMQ.Async reference configuration — do it first.
   - **Test file**: `tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway/Classic/Generated/Reactor/*.cs`
   - **Test should verify**:

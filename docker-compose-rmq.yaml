@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   rabbitmq:
-    image: rabbitmq:management
+    image: brightercommand/rabbitmq:4.2-management-delay
     hostname: rabbitmq-server
     ports:
       - "5672:5672"
