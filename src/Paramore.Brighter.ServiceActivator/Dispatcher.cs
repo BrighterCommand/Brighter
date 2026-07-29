@@ -44,7 +44,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// events translated from those messages to handlers. It controls the lifetime of the application through <see cref="Receive"/> and <see cref="End"/> and allows
     /// the stop and start of individual connections through <see cref="Open(string)"/> and <see cref="Shut(string)"/>
     /// </summary>
-    public partial class Dispatcher : IDispatcher, IDisposable
+    public partial class Dispatcher : IDispatcher, IDisposable, IAsyncDisposable
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<Dispatcher>();
 
@@ -256,6 +256,81 @@ namespace Paramore.Brighter.ServiceActivator
         private static void DisposeQuietly(object? member)
         {
             try { (member as IDisposable)?.Dispose(); }
+            catch (Exception e) { Log.FailedToDisposeOwnedResource(s_logger, member?.GetType().Name ?? "null", e); }
+        }
+
+        /// <summary>
+        /// The awaitable twin of <see cref="Dispose"/>. Prefer this on the graceful shutdown path.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Dispose"/> drains the pumps with a blocking <c>End().Wait(ShutdownTimeout)</c>, which parks a
+        /// thread for up to <see cref="ShutdownTimeout"/> when a consumer is slow to finish its in-flight message.
+        /// A host that tears down its service provider through <c>DisposeAsync</c> — which Microsoft.Extensions.
+        /// DependencyInjection honours in preference to <see cref="IDisposable"/> when a service implements both —
+        /// gets that drain <b>awaited</b> here instead, freeing the thread while the pumps run out their current
+        /// message. The ordering and the ownership rules are identical to <see cref="Dispose"/> (see its remarks):
+        /// the drain (bounded by <see cref="ShutdownTimeout"/>) completes before the owned factories are disposed,
+        /// and an owned factory that is itself <see cref="IAsyncDisposable"/> is torn down through its async path.
+        /// <see cref="IDisposable"/> is kept alongside because MS DI throws if it must synchronously dispose a
+        /// service that is only <see cref="IAsyncDisposable"/>; the two paths share the run-at-most-once flag, so
+        /// disposing both ways (or twice) drains and disposes exactly once.
+        /// </remarks>
+        public async ValueTask DisposeAsync()
+        {
+            //share the atomic run-at-most-once flag with Dispose(): whichever path (or a race between them) claims
+            //it first runs the teardown; the other returns. Each disposal below is a backstop that must run once.
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                return;
+
+            //await the pump drain rather than blocking on it. End() pushes a quit onto each running pump so it runs
+            //out its current message, acknowledges it, and stops; we await that drain bounded by ShutdownTimeout.
+            //On expiry we dispose regardless — the interrupted message is left un-acknowledged for redelivery — for
+            //the same message-loss reason spelled out on Dispose().
+            try
+            {
+                var drain = End();
+                if (await Task.WhenAny(drain, Task.Delay(ShutdownTimeout)).ConfigureAwait(false) != drain)
+                    Log.ShutdownDrainTimedOut(s_logger, ShutdownTimeout.TotalMilliseconds);
+                else
+                    await drain.ConfigureAwait(false); //observe any fault the drain surfaced
+            }
+            catch (Exception e)
+            {
+                Log.FailedToDrainPumpsOnShutdown(s_logger, e);
+            }
+
+            //dispose only what this Dispatcher owns, each independently, preferring the async path. Mirrors the
+            //reference-identity guard in Dispose() for the shared sync/async registry on the DI path.
+            if (_ownsRegistry)
+            {
+                await DisposeQuietlyAsync(_messageMapperRegistry).ConfigureAwait(false);
+                if (!ReferenceEquals(_messageMapperRegistryAsync, _messageMapperRegistry))
+                    await DisposeQuietlyAsync(_messageMapperRegistryAsync).ConfigureAwait(false);
+            }
+
+            if (_ownsTransformerFactories)
+            {
+                await DisposeQuietlyAsync(_messageTransformerFactory).ConfigureAwait(false);
+                await DisposeQuietlyAsync(_messageTransformerFactoryAsync).ConfigureAwait(false);
+            }
+        }
+
+        //Disposes a member through IAsyncDisposable when it offers one, else IDisposable, swallowing and logging
+        //any failure so one factory's fault cannot skip the remaining disposals in the teardown chain.
+        private static async ValueTask DisposeQuietlyAsync(object? member)
+        {
+            try
+            {
+                switch (member)
+                {
+                    case IAsyncDisposable asyncDisposable:
+                        await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                        break;
+                    case IDisposable disposable:
+                        disposable.Dispose();
+                        break;
+                }
+            }
             catch (Exception e) { Log.FailedToDisposeOwnedResource(s_logger, member?.GetType().Name ?? "null", e); }
         }
 
