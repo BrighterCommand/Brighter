@@ -97,6 +97,16 @@ namespace Paramore.Brighter.ServiceActivator
         public DispatcherState State { get; private set; }
 
         /// <summary>
+        /// The maximum time <see cref="Dispose"/> waits for the pumps to drain their in-flight message —
+        /// after <see cref="End"/> has pushed a quit onto each pump — before it disposes the owned
+        /// mapper/transform factories. Increase it for consumers with long-running handlers (for example
+        /// video processing) so a message in progress can finish rather than be interrupted by teardown.
+        /// On expiry disposal proceeds regardless; an interrupted message is left un-acknowledged so the
+        /// broker redelivers it rather than dropping it. Defaults to 10 seconds.
+        /// </summary>
+        public TimeSpan ShutdownTimeout { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Dispatcher"/> class.
         /// </summary>
         /// <param name="commandProcessor">The command processor we should use with the dispatcher (prefer to use Command Processor Provider for IoC Scope control</param>
@@ -118,6 +128,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// Does this Dispatcher own the transform factories, so that <see cref="Dispose"/> should dispose them?
         /// Defaults to <c>false</c> for the manual-wiring path; the DI path passes <c>true</c>.
         /// </param>
+        /// <param name="shutdownTimeout">
+        /// The maximum time <see cref="Dispose"/> waits for the pumps to drain their in-flight message before
+        /// disposing the owned factories (see <see cref="ShutdownTimeout"/>). Defaults to 10 seconds when
+        /// <c>null</c>.
+        /// </param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
         public Dispatcher(
             IAmACommandProcessor commandProcessor,
@@ -130,9 +145,11 @@ namespace Paramore.Brighter.ServiceActivator
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
             bool ownsRegistry = false,
-            bool ownsTransformerFactories = false)
+            bool ownsTransformerFactories = false,
+            TimeSpan? shutdownTimeout = null)
         {
             CommandProcessor = commandProcessor;
+            ShutdownTimeout = shutdownTimeout ?? TimeSpan.FromSeconds(10);
             
             Subscriptions = subscriptions;
             _messageMapperRegistry = messageMapperRegistry;
@@ -176,12 +193,16 @@ namespace Paramore.Brighter.ServiceActivator
         /// registry is routinely shared with a <see cref="CommandProcessor"/>'s external bus, so the Dispatcher
         /// is constructed <b>not</b> owning it and this disposal leaves it intact for the other owner.
         /// <para>
-        /// Stop the pumps before disposing: call <see cref="End"/> (and await its completion) first. This
-        /// disposal frees the mapper registry and transform factories but does not stop the consumers, so
-        /// disposing a still-running Dispatcher leaves in-flight <c>BuildUnwrapPipeline</c> calls resolving
-        /// through a disposed factory, which throws <see cref="System.ObjectDisposedException"/> and faults the
-        /// pump. The hosted path already orders this correctly — <c>ServiceActivatorHostedService.StopAsync</c>
-        /// awaits <see cref="End"/> before the container disposes the provider.
+        /// Disposal stops the pumps before it frees the factories: it calls <see cref="End"/> — which pushes a
+        /// quit onto each running pump so it runs out its current message, acknowledges it, and stops — and
+        /// waits for that drain, bounded by <see cref="ShutdownTimeout"/>, before disposing. Without this a
+        /// still-running pump's in-flight <c>BuildUnwrapPipeline</c> would resolve through a disposed factory,
+        /// throw <see cref="System.ObjectDisposedException"/>, and get the good message rejected as Unacceptable
+        /// and dropped. The wait makes disposal self-ordering even when the hosted
+        /// <c>ServiceActivatorHostedService.StopAsync</c> was skipped or abandoned on its own timeout, or the
+        /// provider was disposed without a graceful stop. If the drain exceeds <see cref="ShutdownTimeout"/>
+        /// disposal proceeds regardless; the interrupted message is left un-acknowledged so the broker
+        /// redelivers it rather than losing it.
         /// </para>
         /// </remarks>
         public void Dispose()
@@ -191,6 +212,24 @@ namespace Paramore.Brighter.ServiceActivator
             //second Dispose() (an application-level one after the container's) re-dispose the factories.
             if (Interlocked.Exchange(ref _disposed, 1) != 0)
                 return;
+
+            //stop the pumps before disposing the factories they resolve mappers/transforms from. End() pushes a
+            //quit onto each running pump so it runs out its current message, acknowledges it, and stops; waiting
+            //for that drain (bounded by ShutdownTimeout) keeps the factories from being torn down under an
+            //in-flight message — which would surface as an ObjectDisposedException, be reclassified as
+            //Unacceptable, and drop a good message. This makes disposal self-ordering even when the hosted
+            //StopAsync was skipped or abandoned on timeout, or the provider was disposed without a graceful stop.
+            //On expiry (a handler that will not finish in time) we dispose regardless; the interrupted message is
+            //left un-acknowledged so the broker redelivers it rather than losing it.
+            try
+            {
+                if (!End().Wait(ShutdownTimeout))
+                    Log.ShutdownDrainTimedOut(s_logger, ShutdownTimeout.TotalMilliseconds);
+            }
+            catch (Exception e)
+            {
+                Log.FailedToDrainPumpsOnShutdown(s_logger, e);
+            }
 
             //dispose only what this Dispatcher owns, and each owned factory independently so one factory's fault
             //cannot skip the rest. Disposing the registry cascades to the two mapper factories it holds. The
@@ -540,6 +579,12 @@ namespace Paramore.Brighter.ServiceActivator
 
             [LoggerMessage(LogLevel.Error, "Dispatcher: Failed to dispose owned resource {Resource} at shutdown")]
             public static partial void FailedToDisposeOwnedResource(ILogger logger, string resource, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "Dispatcher: Pumps did not drain within {TimeoutMs}ms on shutdown; disposing anyway. Any in-flight message is left un-acknowledged for redelivery")]
+            public static partial void ShutdownDrainTimedOut(ILogger logger, double timeoutMs);
+
+            [LoggerMessage(LogLevel.Error, "Dispatcher: Failed while draining the pumps on shutdown; disposing anyway")]
+            public static partial void FailedToDrainPumpsOnShutdown(ILogger logger, Exception exception);
         }
     }
 }

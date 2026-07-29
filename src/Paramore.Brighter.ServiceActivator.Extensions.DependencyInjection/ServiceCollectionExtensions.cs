@@ -180,7 +180,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 .ChannelFactory(channelFactory)
                 .Subscriptions(options.Subscriptions)
                 .ConfigureInstrumentation(tracer, options.InstrumentationOptions)
-                .Build(ownsRegistry: true, ownsTransformerFactories: true);
+                .Build(ownsRegistry: true, ownsTransformerFactories: true, shutdownTimeout: options.ShutdownTimeout);
         }
 
         private static T BuildInbox<T>(IServiceProvider serviceProvider) where T : class, IAmAnInbox

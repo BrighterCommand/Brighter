@@ -164,15 +164,20 @@ namespace Paramore.Brighter.ServiceActivator
         /// Does the built Dispatcher own the transform factories, so it disposes them at teardown? Defaults to
         /// <c>false</c>; the DI path passes <c>true</c>.
         /// </param>
+        /// <param name="shutdownTimeout">
+        /// How long the built Dispatcher's <see cref="Dispatcher.Dispose"/> waits for the pumps to drain their
+        /// in-flight message before disposing the owned factories. Defaults to 10 seconds when <c>null</c>.
+        /// </param>
         /// <returns>Dispatcher.</returns>
-        public Dispatcher Build(bool ownsRegistry = false, bool ownsTransformerFactories = false)
+        public Dispatcher Build(bool ownsRegistry = false, bool ownsTransformerFactories = false, TimeSpan? shutdownTimeout = null)
         {
             if (_commandProcessor is null || _subscriptions is null)
                 throw new ArgumentException("Command Processor Factory and Subscription are required.");
 
             return new Dispatcher(_commandProcessor, _subscriptions, _messageMapperRegistry,
                 _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync,
-                _requestContextFactory, _tracer, _instrumentationOptions, ownsRegistry, ownsTransformerFactories
+                _requestContextFactory, _tracer, _instrumentationOptions, ownsRegistry, ownsTransformerFactories,
+                shutdownTimeout
             );
         }
 
@@ -283,8 +288,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// Does the built Dispatcher own the transform factories, so it disposes them at teardown? Defaults to
         /// <c>false</c>; the DI path passes <c>true</c>.
         /// </param>
+        /// <param name="shutdownTimeout">
+        /// How long the built Dispatcher's <see cref="Dispatcher.Dispose"/> waits for the pumps to drain their
+        /// in-flight message before disposing the owned factories. Defaults to 10 seconds when <c>null</c>.
+        /// </param>
         /// <returns>Dispatcher.</returns>
-        Dispatcher Build(bool ownsRegistry = false, bool ownsTransformerFactories = false);
+        Dispatcher Build(bool ownsRegistry = false, bool ownsTransformerFactories = false, TimeSpan? shutdownTimeout = null);
     }
     #endregion
 }
