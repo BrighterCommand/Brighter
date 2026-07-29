@@ -25,7 +25,7 @@ namespace Paramore.Brighter
             IEnumerable<Lease<IAmAMessageTransformAsync>> transformLeases,
             IAmAMessageMapperRegistryAsync? mapperRegistry = null)
         {
-            MapperLease = messageMapperLease;
+            MapperLease = messageMapperLease ?? throw new ArgumentNullException(nameof(messageMapperLease));
             TransformLeases = transformLeases as IReadOnlyList<Lease<IAmAMessageTransformAsync>> ?? transformLeases.ToArray();
             //materialise the transform instances once for execution; the leases stay for release
             Transforms = TransformLeases.Select(lease => lease.Instance).ToArray();
