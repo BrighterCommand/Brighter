@@ -2,6 +2,8 @@
 
 ## Master
 
+## 10.7.0
+
 ### Azure Service Bus: dead-letter reason and description (#4196)
 
 When a handler rejects a message consumed from Azure Service Bus, `AzureServiceBusConsumer` now records the rejection reason and description in the broker's native `DeadLetterReason` and `DeadLetterErrorDescription` fields rather than dead-lettering with blank values — so the reason is visible to operators triaging the dead-letter queue instead of living only in logs. Values are truncated to the 4096-character limit Azure Service Bus enforces. A `DeadLetterAsync(lockToken, reason, description)` overload is added to the public `IServiceBusReceiverWrapper`.
