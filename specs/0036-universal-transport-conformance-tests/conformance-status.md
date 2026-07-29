@@ -84,6 +84,24 @@ cell remains `Unknown`.
   metadata (FR-4/5/6/8/17) via the Brighter-managed DLQ and invalid-message channels (ADR `0040`), whose
   provider read hooks were already real (no stub, unlike Redis); and requeue/redeliver + no-channel ack
   (FR-7/15/22).
+- `PostgresSQL / PostgresMessagingGateway` is `Pass` on **all eleven** behaviours — notably FR-16
+  (Nack → redelivery), which **contrasts with Redis and MSSQL** (both `Deferred` above). Postgres reads
+  **non-destructively**: `PostgresMessageConsumer.Receive` leases a message by setting
+  `visible_timeout = CURRENT_TIMESTAMP + VisibleTimeout` (it does not delete the row); `Acknowledge`
+  performs the `DELETE`. So `Nack`/`NackAsync` — documented no-ops — genuinely redeliver: the visibility
+  lease expires and the message becomes available again, exactly the mechanism the consumer's own comment
+  describes. This is a real capability, not a faked one, so FR-16 is `Pass` (contrast Redis/MSSQL, whose
+  destructive reads pop the message before the nack, and Kafka's uncommitted-offset native redelivery).
+  Delay (FR-2/FR-9) is `Pass` **natively** with no scheduler — the producer and consumer bind the delay
+  straight into `visible_timeout` arithmetic (`SendWithDelay` / `Requeue`), like AWS SqsStandard. The
+  reject→DLQ/invalid + metadata behaviours (FR-4/5/6/8/17) needed **one harness-only fix**: the Postgres
+  consumer keys its read on `ChannelName` (`WHERE "queue" = ChannelName.Value`), but the provider's
+  DLQ/invalid read hooks created their read consumer with a random `DLQ-{uuid}`/`Invalid-{uuid}` channel
+  name instead of the actual `DeadLetterRoutingKey`/`InvalidMessageRoutingKey` the rejection producer
+  wrote to — so the hooks polled an empty queue and observed `MT_NONE`. Pointing the read-hook
+  `channelName` at the rejection routing key (matching how the main `CreateSubscription` aligns
+  `ChannelName` with the topic) makes all five behaviours `Pass`; the reject-to-DLQ routing itself was
+  already conformant (Brighter-managed DLQ, ADR `0041`).
 
 ## Conformance Matrix
 
@@ -104,7 +122,7 @@ cell remains `Unknown`.
 | Kafka / Standard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
-| PostgresSQL / PostgresMessagingGateway | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
 | RMQ.Async / Classic | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | RMQ.Async / Quorum | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |

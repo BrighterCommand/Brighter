@@ -179,7 +179,7 @@ public class PostgresMessageGatewayProvider
     {
         var dlqSubscription = new PostgresSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"DLQ-{Uuid.New():N}"),
+            channelName: new ChannelName(subscription.DeadLetterRoutingKey!.Value),
             routingKey: subscription.DeadLetterRoutingKey!,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Assume
@@ -219,7 +219,7 @@ public class PostgresMessageGatewayProvider
     {
         var dlqSubscription = new PostgresSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"DLQ-{Uuid.New():N}"),
+            channelName: new ChannelName(subscription.DeadLetterRoutingKey!.Value),
             routingKey: subscription.DeadLetterRoutingKey!,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Assume
@@ -259,7 +259,7 @@ public class PostgresMessageGatewayProvider
 
         var invalidSubscription = new PostgresSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"Invalid-{Uuid.New():N}"),
+            channelName: new ChannelName(subscription.InvalidMessageRoutingKey!.Value),
             routingKey: subscription.InvalidMessageRoutingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Assume
@@ -302,7 +302,7 @@ public class PostgresMessageGatewayProvider
 
         var invalidSubscription = new PostgresSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"Invalid-{Uuid.New():N}"),
+            channelName: new ChannelName(subscription.InvalidMessageRoutingKey!.Value),
             routingKey: subscription.InvalidMessageRoutingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Assume

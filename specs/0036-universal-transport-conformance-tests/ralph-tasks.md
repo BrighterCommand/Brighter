@@ -550,7 +550,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MSSQL.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-mssql.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.MSSQL.Tests --filter "FullyQualifiedName~MessagingGateway" && grep -q -- 'MSSQL / MSSQLMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'MSSQL / MSSQLMessagingGateway' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4; ADR `0040-mssql-dlq-brighter-managed`; requirements FR-13, FR-21.
 
-- [ ] **Bring PostgresSQL to conformance**
+- [x] **Bring PostgresSQL to conformance**
   - **Behavior**: Run the generated canonical suite for `PostgresSQL / PostgresMessagingGateway` against the Postgres broker, both variants. Fix-to-conform inline where localized (Brighter-managed DLQ per ADR 0041; native delay column for FR-2); otherwise flag-and-move-on to signed-off `Deferred`. Update the PostgresSQL ledger row.
   - **Test file**: `tests/Paramore.Brighter.PostgresSQL.Tests/MessagingGateway/Generated/Reactor/*.cs`
   - **Test should verify**:
