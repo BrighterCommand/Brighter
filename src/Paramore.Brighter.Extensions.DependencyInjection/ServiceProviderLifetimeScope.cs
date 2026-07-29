@@ -282,8 +282,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
 
             //track the resolution's scope by its own reference (never by the instance): a shared instance
-            //gets one entry per resolution, so Release reclaims exactly this one
-            _outstandingScopes.TryAdd(scope, 0);
+            //gets one entry per resolution, so Release reclaims exactly this one. Add unconditionally: scope
+            //is freshly created and reference-unique so a collision cannot occur, but a discarded false from
+            //TryAdd would leave this scope untracked yet still handed back as the release token, so neither
+            //Release nor Dispose could ever reclaim it — the indexer records it either way.
+            _outstandingScopes[scope] = 0;
 
             //a Dispose that began after our guard drains _outstandingScopes; had it run between our guard
             //check and the TryAdd it would have missed this scope. Re-check: if disposal has started, remove
