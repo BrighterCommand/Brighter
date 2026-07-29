@@ -378,11 +378,11 @@ All of these owners are registered as container singletons, so the container dis
 
 #### Behaviour change: transient handler lifetime isolates its DI scope per handler
 
-The interface additions above are compile-time breaks. This one is the only **observable semantic** change, and it is invisible at compile time — no signature change and no exception; only the number of DI-`Scoped` instances a pipeline sees changes. It lands on the **default** `HandlerLifetime` (`Transient`).
+On the **default** configuration — `HandlerLifetime.Transient` with `IsolateTransientHandlerScope = true` — two handlers in the same pipeline that each inject a DI-`Scoped` dependency (an EF Core `DbContext`, a unit of work, a transaction provider) now receive **two instances, and therefore two transactions, where they previously received one.** If your handlers relied on a single `DbContext` / one transaction being shared across the pipeline for a message, that unit of work is now split — see the fix below.
 
-A handler pipeline for a single message resolves every handler in the chain — attribute/middleware handlers plus the target handler — through one `IAmALifetime`. Because all transient resolutions used to share that factory's single `IServiceScope`, a dependency **registered in DI as `Scoped`** (an EF Core `DbContext`, a unit of work, a transaction provider) was one shared instance across the whole chain for that message.
+This is the only **observable semantic** change in this release, and it is invisible at compile time — no signature change and no exception; only the number of DI-`Scoped` instances a pipeline sees changes. (The interface additions above are the compile-time breaks.) It lands on the **default** `HandlerLifetime` (`Transient`).
 
-Now each transient handler is resolved in its **own** `IServiceScope`, so a DI-`Scoped` dependency is a **distinct instance per handler**. Two handlers in the same pipeline that both inject a `Scoped` `DbContext` now receive two contexts — and two transactions — where they previously received one.
+A handler pipeline for a single message resolves every handler in the chain — attribute/middleware handlers plus the target handler — through one `IAmALifetime`. Because all transient resolutions used to share that factory's single `IServiceScope`, a dependency **registered in DI as `Scoped`** (an EF Core `DbContext`, a unit of work, a transaction provider) was one shared instance across the whole chain for that message. Now each transient handler is resolved in its **own** `IServiceScope`, so a DI-`Scoped` dependency is a **distinct instance per handler** — the two-contexts / two-transactions consequence above.
 
 This aligns `Transient` with its DI meaning (a transient resolution is genuinely isolated) and is what allows a transient's scope to be its own to create and release, which is what closes the leak above.
 
