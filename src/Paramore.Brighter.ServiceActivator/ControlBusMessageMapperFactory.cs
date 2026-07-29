@@ -39,15 +39,15 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (messageMapperType == typeof (ConfigurationCommandMessageMapper))
             {
-                return Lease<IAmAMessageMapper>.ForSharedInstance(new ConfigurationCommandMessageMapper());
+                return Lease<IAmAMessageMapper>.Untracked(new ConfigurationCommandMessageMapper());
             }
             else if (messageMapperType == typeof (HeartbeatRequestCommandMessageMapper))
             {
-                return Lease<IAmAMessageMapper>.ForSharedInstance(new HeartbeatRequestCommandMessageMapper());
+                return Lease<IAmAMessageMapper>.Untracked(new HeartbeatRequestCommandMessageMapper());
             }
             else if (messageMapperType == typeof (HeartbeatReplyCommandMessageMapper))
             {
-                return Lease<IAmAMessageMapper>.ForSharedInstance(new HeartbeatReplyCommandMessageMapper());
+                return Lease<IAmAMessageMapper>.Untracked(new HeartbeatReplyCommandMessageMapper());
             }
             throw new ConfigurationException(string.Format("Message Mapper for type {0} not registered with ControBusMessageMapperFactory", messageMapperType.FullName));
         }

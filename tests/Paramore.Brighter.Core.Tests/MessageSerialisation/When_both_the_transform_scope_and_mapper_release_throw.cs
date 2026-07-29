@@ -25,9 +25,9 @@ public class TransformPipelineBothReleasesThrowTests
     public void When_a_sync_pipelines_transform_scope_and_mapper_release_both_throw_both_surface()
     {
         var pipeline = new WrapPipeline<MinimalCommand>(
-            Lease<IAmAMessageMapper<MinimalCommand>>.ForSharedInstance(new MinimalMapper()),
+            Lease<IAmAMessageMapper<MinimalCommand>>.Untracked(new MinimalMapper()),
             messageTransformerFactory: new ThrowingOnReleaseTransformerFactory(),
-            transformLeases: new Lease<IAmAMessageTransform>[] { Lease<IAmAMessageTransform>.ForSharedInstance(new NoOpTransform()) },
+            transformLeases: new Lease<IAmAMessageTransform>[] { Lease<IAmAMessageTransform>.Untracked(new NoOpTransform()) },
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new ThrowingOnReleaseRegistry());
 
@@ -40,9 +40,9 @@ public class TransformPipelineBothReleasesThrowTests
     public async Task When_an_async_pipelines_transform_scope_and_mapper_release_both_throw_both_surface()
     {
         var pipeline = new WrapPipelineAsync<MinimalCommand>(
-            Lease<IAmAMessageMapperAsync<MinimalCommand>>.ForSharedInstance(new MinimalMapperAsync()),
+            Lease<IAmAMessageMapperAsync<MinimalCommand>>.Untracked(new MinimalMapperAsync()),
             messageTransformerFactoryAsync: new ThrowingOnReleaseTransformerFactoryAsync(),
-            transformLeases: new Lease<IAmAMessageTransformAsync>[] { Lease<IAmAMessageTransformAsync>.ForSharedInstance(new NoOpTransformAsync()) },
+            transformLeases: new Lease<IAmAMessageTransformAsync>[] { Lease<IAmAMessageTransformAsync>.Untracked(new NoOpTransformAsync()) },
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new ThrowingOnReleaseRegistryAsync());
 
@@ -55,9 +55,9 @@ public class TransformPipelineBothReleasesThrowTests
     public void When_an_async_pipelines_synchronous_disposal_transform_scope_and_mapper_release_both_throw_both_surface()
     {
         var pipeline = new WrapPipelineAsync<MinimalCommand>(
-            Lease<IAmAMessageMapperAsync<MinimalCommand>>.ForSharedInstance(new MinimalMapperAsync()),
+            Lease<IAmAMessageMapperAsync<MinimalCommand>>.Untracked(new MinimalMapperAsync()),
             messageTransformerFactoryAsync: new ThrowingOnReleaseTransformerFactoryAsync(),
-            transformLeases: new Lease<IAmAMessageTransformAsync>[] { Lease<IAmAMessageTransformAsync>.ForSharedInstance(new NoOpTransformAsync()) },
+            transformLeases: new Lease<IAmAMessageTransformAsync>[] { Lease<IAmAMessageTransformAsync>.Untracked(new NoOpTransformAsync()) },
             instrumentationOptions: InstrumentationOptions.All,
             mapperRegistry: new ThrowingOnReleaseRegistryAsync());
 

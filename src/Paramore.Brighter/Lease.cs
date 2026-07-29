@@ -76,14 +76,16 @@ namespace Paramore.Brighter
         public object? ReleaseToken { get; }
 
         /// <summary>
-        /// Wraps a bare instance in a lease with no release token — a release-is-a-no-op lease, for callers
-        /// (typically tests, or factories that hand out shared instances) that construct a pipeline without a
-        /// per-resolution scope to reclaim. Naming the case keeps "nothing is reclaimed on release" a visible,
+        /// Wraps a bare instance in a lease with no release token — an <b>untracked</b>, release-is-a-no-op
+        /// lease, for callers that hold no per-resolution state to reclaim: a factory that hands out a shared
+        /// instance, a no-op factory, or a test constructing a pipeline directly. The name describes the
+        /// token-lessness, not the instance — the point is that <c>Release</c> reclaims nothing, whether or not
+        /// the wrapped instance happens to be shared. Naming the case keeps "nothing is reclaimed on release" a visible,
         /// deliberate act: a factory that opens a per-resolution scope <b>must</b> return a lease carrying its
         /// release token (via the constructor), and a bare instance can no longer become a token-less lease by
         /// an implicit conversion that would make every <c>Release</c> a silent no-op.
         /// </summary>
         /// <param name="instance">The instance to wrap.</param>
-        public static Lease<T> ForSharedInstance(T instance) => new(instance);
+        public static Lease<T> Untracked(T instance) => new(instance);
     }
 }

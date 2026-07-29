@@ -65,7 +65,7 @@ public class TransformPipelineFinalizerReleaseTests
         //no transformer factory, so InstanceScope stays null and the finalizer's only work is the
         //mapper release, which throws
         _ = new WrapPipeline<MinimalCommand>(
-            Lease<IAmAMessageMapper<MinimalCommand>>.ForSharedInstance(new MinimalMapper()),
+            Lease<IAmAMessageMapper<MinimalCommand>>.Untracked(new MinimalMapper()),
             messageTransformerFactory: null,
             transformLeases: Array.Empty<Lease<IAmAMessageTransform>>(),
             instrumentationOptions: InstrumentationOptions.All,
@@ -76,7 +76,7 @@ public class TransformPipelineFinalizerReleaseTests
     private static void CreateAndAbandonWrapPipelineAsync()
     {
         _ = new WrapPipelineAsync<MinimalCommand>(
-            Lease<IAmAMessageMapperAsync<MinimalCommand>>.ForSharedInstance(new MinimalMapperAsync()),
+            Lease<IAmAMessageMapperAsync<MinimalCommand>>.Untracked(new MinimalMapperAsync()),
             messageTransformerFactoryAsync: null,
             transformLeases: Array.Empty<Lease<IAmAMessageTransformAsync>>(),
             instrumentationOptions: InstrumentationOptions.All,

@@ -60,14 +60,14 @@ public class TransformLifetimeScopeFinalizerReleaseTests
     private static void CreateAndAbandonLifetimeScope()
     {
         var scope = new TransformLifetimeScope(new ThrowingOnReleaseTransformerFactory());
-        scope.Add(Lease<IAmAMessageTransform>.ForSharedInstance(new MinimalTransform()));
+        scope.Add(Lease<IAmAMessageTransform>.Untracked(new MinimalTransform()));
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void CreateAndAbandonLifetimeScopeAsync()
     {
         var scope = new TransformLifetimeScopeAsync(new ThrowingOnReleaseTransformerFactoryAsync());
-        scope.Add(Lease<IAmAMessageTransformAsync>.ForSharedInstance(new MinimalTransformAsync()));
+        scope.Add(Lease<IAmAMessageTransformAsync>.Untracked(new MinimalTransformAsync()));
     }
 
     private sealed class MinimalTransform : IAmAMessageTransform

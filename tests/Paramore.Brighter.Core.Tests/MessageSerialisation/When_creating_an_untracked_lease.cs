@@ -29,30 +29,31 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
 /// <summary>
 /// Regression for PR #4254 review finding 1. A token-less lease releases nothing — that is correct for a
-/// factory that hands out a shared instance, but it must be a <b>named, deliberate</b> act, never something a
-/// bare instance silently becomes. On master an implicit conversion from <c>T</c> to <see cref="Lease{T}"/>
-/// meant a third-party factory writing the mechanical migration <c>return mapper;</c> compiled to a token-less
-/// lease, making every <c>Release</c> a silent no-op and reintroducing the very leak (#4252) this change closes.
-/// The conversion is replaced by <see cref="Lease{T}.ForSharedInstance"/> so the reader can see nothing is
-/// reclaimed, and a factory that opens a per-resolution scope must pass its release token via the constructor.
+/// factory that holds no per-resolution state (a shared instance, or a no-op factory), but it must be a
+/// <b>named, deliberate</b> act, never something a bare instance silently becomes. On master an implicit
+/// conversion from <c>T</c> to <see cref="Lease{T}"/> meant a third-party factory writing the mechanical
+/// migration <c>return mapper;</c> compiled to a token-less lease, making every <c>Release</c> a silent no-op
+/// and reintroducing the very leak (#4252) this change closes. The conversion is replaced by
+/// <see cref="Lease{T}.Untracked"/> so the reader can see nothing is reclaimed, and a factory that opens a
+/// per-resolution scope must pass its release token via the constructor.
 /// </summary>
-public class LeaseForSharedInstanceTests
+public class UntrackedLeaseTests
 {
     [Fact]
-    public void When_creating_a_lease_for_a_shared_instance_it_holds_the_instance_with_no_release_token()
+    public void When_creating_an_untracked_lease_it_holds_the_instance_with_no_release_token()
     {
         var instance = new object();
 
-        var lease = Lease<object>.ForSharedInstance(instance);
+        var lease = Lease<object>.Untracked(instance);
 
         Assert.Same(instance, lease.Instance);
         Assert.Null(lease.ReleaseToken);
     }
 
     [Fact]
-    public void When_creating_a_lease_for_a_null_shared_instance_it_throws()
+    public void When_creating_an_untracked_lease_for_a_null_instance_it_throws()
     {
-        var exception = Assert.Throws<ArgumentNullException>(() => Lease<object>.ForSharedInstance(null!));
+        var exception = Assert.Throws<ArgumentNullException>(() => Lease<object>.Untracked(null!));
 
         Assert.Equal("instance", exception.ParamName);
     }
