@@ -41,8 +41,9 @@ namespace Paramore.Brighter.Validation;
 /// <param name="providerRegistrations">Optional validation-provider registrations. When supplied, the
 /// validation-provider check runs over handler pipelines; null (the default) leaves it inert.</param>
 /// <param name="mapperRegistryFactory">Optional factory that builds the mapper registry used to describe a
-/// publication's transforms. The validator invokes it once and takes ownership of the registry it returns,
-/// disposing it at teardown. Taking a factory rather than a live instance keeps that ownership transfer
+/// publication's transforms. The validator invokes it at most once — lazily, the first time a validation
+/// rule needs the registry — and takes ownership of the registry it returns, disposing it at teardown only
+/// if it was built. Taking a factory rather than a live instance keeps that ownership transfer
 /// explicit — the validator disposes only a registry it created — so a caller cannot hand in a registry it
 /// still uses elsewhere and have it disposed underneath them. Together with <paramref name="transformerProbe"/>
 /// it enables the producer wrap-transform check.</param>
@@ -57,8 +58,13 @@ public class PipelineValidator(
     Func<MessageMapperRegistry>? mapperRegistryFactory = null,
     IAmATransformerResolvabilityProbe? transformerProbe = null) : IAmAPipelineValidator, IDisposable
 {
-    //invoked once at construction: the validator owns the registry it produced and disposes only that one.
-    private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistryFactory?.Invoke();
+    //built lazily and at most once: the wrap-transform check may never run (no transformer probe, or no
+    //publications to validate against), so a factory supplied at construction must not build the registry —
+    //and its two mapper factories — until a rule actually needs it. The validator owns the registry it
+    //produces and disposes only that one, only if it was built.
+    private readonly Lazy<MessageMapperRegistry>? _mapperRegistry = mapperRegistryFactory is null
+        ? null
+        : new Lazy<MessageMapperRegistry>(mapperRegistryFactory);
 
     //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
     //an owner and the container disposing concurrently then dispose the registry exactly once
@@ -77,7 +83,10 @@ public class PipelineValidator(
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
-        _mapperRegistry?.Dispose();
+        //only a registry that was actually built needs draining; if no rule ever needed it, there is
+        //nothing to dispose
+        if (_mapperRegistry is { IsValueCreated: true })
+            _mapperRegistry.Value.Dispose();
     }
 
     /// <inheritdoc />
@@ -121,8 +130,9 @@ public class PipelineValidator(
             ProducerValidationRules.PublicationRequestTypeImplementsIRequest()
         };
 
+        //accessing .Value here builds the registry — the first and only point a rule needs it
         if (_mapperRegistry is not null && transformerProbe is not null)
-            specs.Add(ProducerValidationRules.WrapTransformResolvable(_mapperRegistry, transformerProbe));
+            specs.Add(ProducerValidationRules.WrapTransformResolvable(_mapperRegistry.Value, transformerProbe));
 
         EvaluateSpecs(publications, specs, findings);
     }

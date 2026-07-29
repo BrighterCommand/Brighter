@@ -38,8 +38,9 @@ namespace Paramore.Brighter.Validation;
 /// <param name="logger">The logger to write diagnostic output to.</param>
 /// <param name="pipelineBuilder">The pipeline builder used to describe handler pipelines.</param>
 /// <param name="mapperRegistryFactory">Optional factory that builds the mapper registry used to resolve
-/// publication/subscription mapper info. The writer invokes it once and takes ownership of the registry it
-/// returns, disposing it at teardown. Taking a factory rather than a live instance keeps that ownership
+/// publication/subscription mapper info. The writer invokes it at most once — lazily, the first time a
+/// publication with a request type is described — and takes ownership of the registry it returns, disposing
+/// it at teardown only if it was built. Taking a factory rather than a live instance keeps that ownership
 /// transfer explicit — the writer disposes only a registry it created — so a caller cannot hand in a registry
 /// it still uses elsewhere and have it disposed underneath them.</param>
 /// <param name="publications">Optional publications to describe.</param>
@@ -51,8 +52,13 @@ public class PipelineDiagnosticWriter(
     IEnumerable<Publication>? publications = null,
     IEnumerable<Subscription>? subscriptions = null) : IAmAPipelineDiagnosticWriter, IDisposable
 {
-    //invoked once at construction: the writer owns the registry it produced and disposes only that one.
-    private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistryFactory?.Invoke();
+    //built lazily and at most once: a writer with no publications (or none carrying a request type) never
+    //needs the registry, so a factory supplied at construction must not build it — and its two mapper
+    //factories — until a publication is actually described. The writer owns the registry it produces and
+    //disposes only that one, only if it was built.
+    private readonly Lazy<MessageMapperRegistry>? _mapperRegistry = mapperRegistryFactory is null
+        ? null
+        : new Lazy<MessageMapperRegistry>(mapperRegistryFactory);
 
     //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
     //an owner and the container disposing concurrently then dispose the registry exactly once
@@ -71,7 +77,10 @@ public class PipelineDiagnosticWriter(
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
-        _mapperRegistry?.Dispose();
+        //only a registry that was actually built needs draining; if no publication was described, there is
+        //nothing to dispose
+        if (_mapperRegistry is { IsValueCreated: true })
+            _mapperRegistry.Value.Dispose();
     }
 
     /// <inheritdoc />
@@ -135,9 +144,10 @@ public class PipelineDiagnosticWriter(
             var topic = pub.Topic?.Value ?? "(no topic)";
             logger.LogDebug("  {RequestType} → {Topic}", requestTypeName, topic);
 
+            //accessing .Value here builds the registry — the first point a described publication needs it
             if (_mapperRegistry != null && pub.RequestType != null)
             {
-                var transformDesc = TransformPipelineBuilder.DescribeTransforms(_mapperRegistry, pub.RequestType);
+                var transformDesc = TransformPipelineBuilder.DescribeTransforms(_mapperRegistry.Value, pub.RequestType);
                 if (transformDesc != null)
                 {
                     var mapperLabel = transformDesc.IsDefaultMapper ? "default" : "custom";
