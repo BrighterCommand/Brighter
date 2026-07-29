@@ -4,8 +4,6 @@ This Factory folder was created to work with agents by providing documentation o
 
 Brighter does not enforce how a Box or Transport is implemented - this gives maxium freedom of movement to implementors to succeed in fitting the paradigms of that database or message-oriented middleware to Brighter's needs.
 
-Brighter does require that we verify the module implement the required interfaces successfully. For this it maintains a suite of generated tests that we can use 
+Brighter does require that we verify the module implement the required interfaces successfully. For this it maintains a suite of generated tests that we can use to ensure conformance with the behaviors required by Brighter. Implementers of a new Transport or Box MUST use these tests to ensure that their implementation meets the requirements of Brighter. Documentation on how to use these suites can be found [here](tests/README.md).
 
-
-
-allowing for the creation of skills to add new ones, based on gateway or Db documentation.
+Brighter does have a standard pattern for implementing a Box or Transport. Whilst it is not required that you follow this, we recommend that you do, adjusting if necessary for the database or message-oriented middleware that you are implementing. This pattern is designed to ensure that your implementation is consistent with the rest of Brighter and to make it easier for others to understand and use your implementation. Documentation these pattern can be found in [transports](transports/transports.md) and [boxes]().
