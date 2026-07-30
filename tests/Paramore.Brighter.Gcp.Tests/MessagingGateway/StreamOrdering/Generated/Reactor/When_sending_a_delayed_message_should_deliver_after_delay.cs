@@ -37,7 +37,7 @@ public class WhenSendingADelayedMessageShouldDeliverAfterDelay : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — delayed send not yet conformant for GCP / StreamOrdering (maintainer sign-off)")]
+    [Fact(Skip = "Deferred: #4240 — delayed send not yet conformant for GCP / StreamOrdering (maintainer sign-off)")]
     public void When_sending_a_delayed_message_should_deliver_after_delay()
     {
         // Arrange

@@ -627,7 +627,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.PullOrdering." && grep -qE 'GCP / PullOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / PullOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 5 + "known FR-2 non-conformances"; ADR 0066 "Why there is no scheduler member"; requirements FR-2, AC-2, FR-13, FR-21.
 
-- [ ] **Decide/attempt the GCP / Stream FR-2 fix**
+- [x] **Decide/attempt the GCP / Stream FR-2 fix**
   - **Behavior**: Per the GCP method above, resolve the `GCP / Stream` row against the Pub/Sub emulator/project, both variants. FR-2 → `Fixed (#PR)` or signed-off `Deferred`; other behaviours resolved.
   - **Test file**: `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream/Generated/Reactor/*.cs`
   - **Test should verify**:
@@ -639,7 +639,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.Stream." && grep -qE 'GCP / Stream[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / Stream[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 5 + "known FR-2 non-conformances"; ADR 0066 "Why there is no scheduler member"; requirements FR-2, AC-2, FR-13, FR-21.
 
-- [ ] **Decide/attempt the GCP / StreamOrdering FR-2 fix**
+- [x] **Decide/attempt the GCP / StreamOrdering FR-2 fix**
   - **Behavior**: Per the GCP method above, resolve the `GCP / StreamOrdering` row against the Pub/Sub emulator/project, both variants. FR-2 → `Fixed (#PR)` or signed-off `Deferred`; other behaviours resolved.
   - **Test file**: `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/StreamOrdering/Generated/Reactor/*.cs`
   - **Test should verify**:

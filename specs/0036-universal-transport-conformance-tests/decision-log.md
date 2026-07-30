@@ -442,3 +442,31 @@ Kafka/MSSQL/Postgres, and deleted the two stale generated files. Revisit (flag �
 verified on real Pub/Sub and the reject-routing gap is closed. *The same treatment applies to the other three
 GCP configs; Stream/StreamOrdering additionally use a different consumer (`GcpPubSubStreamMessageConsumer`,
 `gcpStreamMessage.Reject()`) and need their own diagnosis.*
+
+### GCP / PullOrdering — same outcome as Pull
+
+Clean port: same `GcpPullMessageConsumer` (so the `Receive`-timeout `src` fix applies unchanged), same
+emulator/IAM/reject-ack realities. Row identical to Pull; **28 pass / 12 skip / 0 fail**. One extra harness
+fix in the shared `GcpHarnessMessageScheduler`: a re-published message carrying a partition key is sent with
+an `OrderingKey`, which Pub/Sub rejects unless the publisher client has message ordering enabled — so the
+scheduler now enables ordering on its re-publish client when the message has a partition key (previously the
+publish threw and was swallowed, so FR-9's after-delay arm timed out for ordered messages). Harmless for
+non-ordered configs (no partition key → ordering stays off).
+
+### GCP / Stream + StreamOrdering — all cells `Deferred -> #4240 (sign-off: @maintainer)` (unverifiable infra)
+
+These use **streaming pull** (`GcpPubSubStreamMessageConsumer` over a `SubscriberClient`). Against the
+emulator, even a basic post/receive **hangs indefinitely** — the emulator stays healthy and accepts the
+HTTP/2 connection, but the streaming-subscriber lifecycle never returns a message (a known streaming-pull /
+emulator incompatibility). CI **excludes** both categories (`Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering`
+in `gcp-ci`), and there are no real-GCP credentials locally, so **no cell can be verified on any available
+infra.** Maintainer decision (this session): **defer both rows entirely** to #4240. The provider changes
+(emulator detection on all four Pub/Sub builders + wired `GcpHarnessMessageScheduler`) were still applied so a
+future real-Pub/Sub run can flip the cells with no further wiring; `HasSupportToDeadLetterQueue: false` +
+deleted legacy `too_many_times` files keep the four GCP configs uniform. The streaming consumer's `Reject`
+calls `gcpStreamMessage.Accepted()` (acks/discards, like Pull's `Reject`) and its `Requeue` calls
+`gcpStreamMessage.Reject()` (nack → immediate redelivery per RetryPolicy) — so the same reject-ack /
+immediate-redelivery gaps as Pull are expected there too, to be confirmed on real GCP. **⚠️ Because the basic
+(non-ledger-gated) streaming tests hang, the `~MessagingGateway.Stream.`/`.StreamOrdering.` suites cannot be
+run locally; the ledger's no-`Unknown` state is the gate, and dotnet-test verification is deferred to a
+real-Pub/Sub run.**
