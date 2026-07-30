@@ -82,8 +82,13 @@ public class RocketMqMessageProducer(
             .AddProperty(HeaderNames.MessageType, message.Header.MessageType.ToString())
             .AddProperty(HeaderNames.TimeStamp, message.Header.TimeStamp.ToRfc3339())
             .AddProperty(HeaderNames.Source, message.Header.Source.ToString())
-            .AddProperty(HeaderNames.SpecVersion, message.Header.SpecVersion)
-            .AddProperty(HeaderNames.Baggage, message.Header.Baggage.ToString());
+            .AddProperty(HeaderNames.SpecVersion, message.Header.SpecVersion);
+
+        var baggage = message.Header.Baggage.ToString();
+        if (!string.IsNullOrEmpty(baggage))
+        {
+            builder.AddProperty(HeaderNames.Baggage, baggage);
+        }
 
         if (message.Header.Type != CloudEventsType.Empty)
         {

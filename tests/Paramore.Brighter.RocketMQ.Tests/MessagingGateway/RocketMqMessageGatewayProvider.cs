@@ -40,29 +40,63 @@ public class RocketMqMessageGatewayProvider
 {
     private readonly RocketMessagingGatewayConnection _connection;
 
+    // Every generated test resolves its topic through this map. RocketMQ topics must be pre-created
+    // (the C# client resolves a topic route before publishing, so auto-create never triggers) and
+    // topic names may not contain '.', so each canonical/legacy behaviour maps to a dedicated
+    // pre-created topic. Topics whose names contain "delayed_msg"/"requeue_delay" are created as
+    // DELAY types and "partition_key" as FIFO (see GetTopicType). The infrastructure-missing tests
+    // are deliberately NOT mapped so they fall through to a non-existent topic.
     private static readonly Dictionary<string, string> s_topicMap = new()
     {
-        // Reactor topics
+        // Reactor topics — basic
         ["When_posting_a_message_via_the_messaging_gateway_should_be_received"] = "gen_r_post_msg",
         ["When_a_message_consumer_reads_multiple_messages_should_receive_all_messages"] = "gen_r_multi_msg",
         ["When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception"] = "gen_r_multi_thread",
         ["When_sending_a_message_should_propagate_activity_context"] = "gen_r_activity",
-        ["When_requeing_a_failed_message_should_receive_message_again"] = "gen_r_requeue",
-        ["When_requeing_a_failed_message_with_delay_should_receive_message_again"] = "gen_r_requeue_delay",
-        ["When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue"] = "gen_r_dlq",
-        ["When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery"] = "gen_r_delayed_msg",
         ["When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received"] = "gen_r_partition_key",
+        // Reactor topics — delay
+        ["When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery"] = "gen_r_delayed_msg",
+        ["When_sending_a_delayed_message_should_deliver_after_delay"] = "gen_r_send_delayed_msg",
+        // Reactor topics — requeue / redeliver / nack
+        ["When_requeuing_a_failed_message_should_be_redelivered"] = "gen_r_rq_redeliver",
+        ["When_requeuing_a_failed_message_should_receive_message_again"] = "gen_r_rq_again",
+        ["When_requeuing_a_failed_message_with_delay_should_receive_message_again"] = "gen_r_rq_delay_again",
+        ["When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately"] = "gen_r_rq_zero",
+        ["When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue"] = "gen_r_exhaust",
+        ["When_nacking_a_message_it_should_be_redelivered"] = "gen_r_nack",
+        ["When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second"] = "gen_r_nack2",
+        // Reactor topics — reject
+        ["When_rejecting_message_with_delivery_error_should_send_to_dlq"] = "gen_r_rej_de",
+        ["When_rejecting_message_should_include_metadata"] = "gen_r_rej_meta",
+        ["When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log"] = "gen_r_rej_noch",
+        ["When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq"] = "gen_r_rej_fb",
+        ["When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel"] = "gen_r_rej_inv",
+        ["When_rejecting_message_with_unknown_reason_should_send_to_dlq"] = "gen_r_rej_unk",
 
-        // Proactor topics
+        // Proactor topics — basic
         ["When_posting_a_message_via_the_messaging_gateway_should_be_received_async"] = "gen_p_post_msg",
         ["When_a_message_consumer_reads_multiple_messages_should_receive_all_messages_async"] = "gen_p_multi_msg",
         ["When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception_async"] = "gen_p_multi_thread",
         ["When_sending_a_message_should_propagate_activity_context_async"] = "gen_p_activity",
-        ["When_requeing_a_failed_message_should_receive_message_again_async"] = "gen_p_requeue",
-        ["When_requeing_a_failed_message_with_delay_should_receive_message_again_async"] = "gen_p_requeue_delay",
-        ["When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue_async"] = "gen_p_dlq",
-        ["When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery_async"] = "gen_p_delayed_msg",
         ["When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received_async"] = "gen_p_partition_key",
+        // Proactor topics — delay
+        ["When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery_async"] = "gen_p_delayed_msg",
+        ["When_sending_a_delayed_message_should_deliver_after_delay_async"] = "gen_p_send_delayed_msg",
+        // Proactor topics — requeue / redeliver / nack
+        ["When_requeuing_a_failed_message_should_be_redelivered_async"] = "gen_p_rq_redeliver",
+        ["When_requeuing_a_failed_message_should_receive_message_again_async"] = "gen_p_rq_again",
+        ["When_requeuing_a_failed_message_with_delay_should_receive_message_again_async"] = "gen_p_rq_delay_again",
+        ["When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately_async"] = "gen_p_rq_zero",
+        ["When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue_async"] = "gen_p_exhaust",
+        ["When_nacking_a_message_it_should_be_redelivered_async"] = "gen_p_nack",
+        ["When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second_async"] = "gen_p_nack2",
+        // Proactor topics — reject
+        ["When_rejecting_message_with_delivery_error_should_send_to_dlq_async"] = "gen_p_rej_de",
+        ["When_rejecting_message_should_include_metadata_async"] = "gen_p_rej_meta",
+        ["When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log_async"] = "gen_p_rej_noch",
+        ["When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq_async"] = "gen_p_rej_fb",
+        ["When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel_async"] = "gen_p_rej_inv",
+        ["When_rejecting_message_with_unknown_reason_should_send_to_dlq_async"] = "gen_p_rej_unk",
     };
 
     public RocketMqMessageGatewayProvider()
@@ -96,6 +130,24 @@ public class RocketMqMessageGatewayProvider
         };
     }
 
+    // Requeue/Nack are no-ops on RocketMQ; a message redelivers when its invisibility lease expires
+    // (like a Postgres/SQS visibility lease). RocketMQ enforces a 10 s minimum invisibility, so plain
+    // requeue / nack redelivery (FR-22/FR-16, 30 s ceiling) is observable but a zero-delay "redeliver
+    // within 5 s" (FR-15) is not — that needs the commented-out ChangeInvisibleDuration (the FR-2 gap).
+    private static readonly TimeSpan s_invisibilityTimeout = TimeSpan.FromSeconds(10);
+
+    // Bound the consumer poll below the canonical delay (5 s) so the delayed-send before-D arm
+    // (a single receive shorter than the delay must yield MT_NONE) is honoured; the RocketMQ consumer
+    // long-polls for ReceiveMessageTimeout and ignores the per-call timeout, so this is the real bound.
+    private static readonly TimeSpan s_receiveMessageTimeout = TimeSpan.FromSeconds(2);
+
+    // The canonical rejection templates derive dead-letter/invalid routing keys as "{topic}.DLQ" /
+    // "{topic}.Invalid", but RocketMQ topic names may not contain '.'. Flatten the dot so the routing
+    // key names a valid pre-created topic; the reject producer and the read hooks both resolve the
+    // dead-letter/invalid destination from the subscription, so they stay in sync.
+    private static RoutingKey? ToValidTopicName(RoutingKey? routingKey)
+        => routingKey is null ? null : new RoutingKey(routingKey.Value.Replace(".", "_"));
+
     public RocketSubscription CreateSubscription(
         RoutingKey routingKey,
         ChannelName channelName,
@@ -112,8 +164,10 @@ public class RocketMqMessageGatewayProvider
                 consumerGroup: Guid.NewGuid().ToString(),
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
-                deadLetterRoutingKey: deadLetterRoutingKey,
-                invalidMessageRoutingKey: invalidMessageRoutingKey,
+                invisibilityTimeout: s_invisibilityTimeout,
+                receiveMessageTimeout: s_receiveMessageTimeout,
+                deadLetterRoutingKey: ToValidTopicName(deadLetterRoutingKey),
+                invalidMessageRoutingKey: ToValidTopicName(invalidMessageRoutingKey),
                 requeueCount: 3
             );
         }
@@ -124,6 +178,8 @@ public class RocketMqMessageGatewayProvider
             routingKey: routingKey,
             consumerGroup: Guid.NewGuid().ToString(),
             messagePumpType: MessagePumpType.Proactor,
+            invisibilityTimeout: s_invisibilityTimeout,
+            receiveMessageTimeout: s_receiveMessageTimeout,
             makeChannels: makeChannel
         );
     }

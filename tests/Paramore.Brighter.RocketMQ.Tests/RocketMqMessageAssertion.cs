@@ -37,7 +37,11 @@ public class RocketMqMessageAssertion : IAmAMessageAssertion
     public void Assert(Message expected, Message actual)
     {
        Xunit.Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-       Xunit.Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+       // Compare the semantic media type only. Brighter's MessageBody constructor augments a bare
+       // "text/plain" ContentType with "; charset=utf-8" on the receive side, so the round-tripped
+       // ContentType carries a charset the original lacked; the MediaType is what conformance requires
+       // to be preserved (matches the Kafka reference assertion).
+       Xunit.Assert.Equal(expected.Header.ContentType?.MediaType, actual.Header.ContentType?.MediaType);
        Xunit.Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
        Xunit.Assert.Equal(expected.Header.DataSchema, actual.Header.DataSchema);
 
