@@ -24,7 +24,7 @@
       "CollectionName": "PullOrdering",
       "LedgerKey": "GCP / PullOrdering",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDeadLetterQueue": false,
       "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,

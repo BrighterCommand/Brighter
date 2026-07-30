@@ -615,7 +615,7 @@
   - **RALPH-VERIFY** (provision the emulator/project first; there is no `docker-compose-gcp.yaml`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.Pull." && grep -qE 'GCP / Pull[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / Pull[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 5 + "known FR-2 non-conformances" (GCP immediate redelivery); ADR 0066 "Why there is no scheduler member"; requirements FR-2, AC-2, FR-13, FR-21 (seeded non-conformance).
 
-- [ ] **Decide/attempt the GCP / PullOrdering FR-2 fix**
+- [x] **Decide/attempt the GCP / PullOrdering FR-2 fix**
   - **Behavior**: Per the GCP method above, resolve the `GCP / PullOrdering` row against the Pub/Sub emulator/project, both variants. FR-2 → `Fixed (#PR)` or signed-off `Deferred`; other behaviours resolved.
   - **Test file**: `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/PullOrdering/Generated/Reactor/*.cs`
   - **Test should verify**:

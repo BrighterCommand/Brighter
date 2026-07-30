@@ -132,10 +132,15 @@ internal sealed class GcpHarnessMessageScheduler
                 _connection.ProjectId,
                 message.Header.Topic.Value
             );
+            // A message carrying a partition key is published with an OrderingKey (see Parser), which
+            // Pub/Sub rejects unless the publisher client has message ordering enabled. Mirror the
+            // provider's ordering-aware producer so the re-publish of an ordered message succeeds.
+            var enableOrdering = !string.IsNullOrEmpty(message.Header.PartitionKey);
             var builder = new PublisherClientBuilder
             {
                 Credential = _connection.Credential,
                 TopicName = topicName,
+                Settings = new PublisherClient.Settings { EnableMessageOrdering = enableOrdering },
             };
             _connection.PublisherConfiguration?.Invoke(builder);
 

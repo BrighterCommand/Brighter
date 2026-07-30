@@ -36,7 +36,7 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlq : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — reject with None reason to DLQ not yet conformant for GCP / PullOrdering (maintainer sign-off)")]
+    [Fact(Skip = "Deferred: #4240 — reject with None reason to DLQ not yet conformant for GCP / PullOrdering (maintainer sign-off)")]
     public void When_rejecting_message_with_unknown_reason_should_send_to_dlq()
     {
         // Arrange — both DLQ and invalid channel configured (FR-17, AC-18, FR-1(2))
