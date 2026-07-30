@@ -603,7 +603,7 @@
 
 > **GCP is split one task per configuration** (Pull, PullOrdering, Stream, StreamOrdering — four ledger rows). All four share the same FR-2 non-conformance (immediate redelivery: `ModifyAckDeadline(..., 0)` for Pull/PullOrdering; `gcpStreamMessage.Reject()` for Stream/StreamOrdering; timing governed by the subscription RetryPolicy, not the requeue delay). Each task independently decides whether a localized in-boundary fix in `src/Paramore.Brighter.MessagingGateway.GcpPubSub` can honour the delay → `Fixed (#PR)`, else flags its FR-2 cell to a signed-off `Deferred`, and resolves that configuration's other behaviours. There is no repo-root GCP compose file — provision the Pub/Sub emulator/project first; if infra cannot be stood up, flag-and-move-on. Do `GCP / Pull` first as the reference. The ledger grep is anchored (`… \|`) so `Pull` does not also match `PullOrdering` (nor `Stream` match `StreamOrdering`); the `dotnet test` filter is likewise scoped per configuration with a trailing dot (`~MessagingGateway.Pull.`, `~MessagingGateway.PullOrdering.`, etc.) so a sibling GCP configuration cannot fail this row's task.
 
-- [ ] **Decide/attempt the GCP / Pull FR-2 fix**
+- [x] **Decide/attempt the GCP / Pull FR-2 fix**
   - **Behavior**: Per the GCP method above, resolve the `GCP / Pull` row against the Pub/Sub emulator/project, both variants. FR-2 → `Fixed (#PR)` if a localized delay-honouring fix is in-boundary, else a signed-off `Deferred`; other behaviours to `Pass`/`Fixed` or signed-off `Deferred`.
   - **Test file**: `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull/Generated/Reactor/*.cs`
   - **Test should verify**:

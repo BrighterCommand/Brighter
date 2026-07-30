@@ -9,7 +9,7 @@
       "CollectionName": "Pull",
       "LedgerKey": "GCP / Pull",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDeadLetterQueue": false,
       "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
       "HasSupportToRequeue": true,

@@ -382,3 +382,63 @@ which case empty keys + routing-only is correct and conformant, exactly like RMQ
 keys are a stub for a gateway that should stamp Brighter metadata (in which case the provider must populate
 the keys so the assertions run). The relaxation is a capability *declaration*, not a licence to skip
 verification — the per-transport task owns that call, per ADR 0067's evidence-not-inference rule.
+
+---
+
+## Resolved: GCP / Pull — Phase 4, emulator run (2026-07-30)
+
+`GCP / Pull` resolved against a local **Pub/Sub emulator** (`gcr.io/google.com/cloudsdktool/cloud-sdk:emulators`,
+`docker-compose-gcp.yaml`; `PUBSUB_EMULATOR_HOST=localhost:8085`, `GOOGLE_CLOUD_PROJECT=brighter-test`).
+Both variants: **28 pass / 12 skip / 0 fail** (net10.0). No real-GCP credentials were available, so the
+emulator is the only local infra; CI runs GCP against real Pub/Sub (`.github/workflows/ci.yml` `gcp-ci`,
+which also excludes `GcpPubSubStream`/`GcpPubSubStreamOrdering`). **Row: FR-7/15/16/22 `Pass`; FR-9
+`Fixed (#4240)`; FR-2/4/5/6/8/17 `Deferred -> #4240 (sign-off: @maintainer)`; 0 `Unknown`.**
+
+**Harness gap fixed first (emulator detection).** `GcpMessagingGatewayConnection` exposes *five* separate
+client-builder config actions (`TopicManagerConfiguration`, `PublisherConfiguration`,
+`SubscriptionManagerConfiguration`, `StreamConfiguration`, `ProjectsClientConfiguration`); the provider only
+wired the publish/subscription-manager pair, so the **admin topic client** and **streaming subscriber** hit
+real GCP (`Unauthenticated`) even with `PUBSUB_EMULATOR_HOST` set. Wired `EmulatorDetection.EmulatorOrProduction`
+on all four Pub/Sub builders (harmless for CI — no env var there → production). *Takeaway for the other three
+GCP configs: wire every Pub/Sub builder, not just two.*
+
+**FR-9 `Fixed (#4240)` — wired scheduler + a localized `src` timeout fix.** GCP has no native delayed
+publish: `GcpMessageProducer.SendWithDelayAsync` delegates a non-zero delay to the `Scheduler` seam (throws
+without one). Added `GcpHarnessMessageScheduler` (wall-clock re-publish, mirrors Redis/MSSQL/SNS). That alone
+was **not** sufficient: `GcpPullMessageConsumer.Receive`/`ReceiveAsync` **ignored the caller's `timeOut`** and
+long-polled the `Pull` until a message arrived, so FR-9's short before-delay negative window blocked ~5 s and
+caught the scheduled re-publish (`MT_EVENT` where `MT_NONE` is required). A `Receive` that ignores its timeout
+also blocks the Reactor pump indefinitely — a latent gateway bug. Localized `src` fix (in-boundary per ADR
+0067): bound the `Pull` to `timeOut` via `CallSettings.FromExpiration(Expiration.FromTimeout(...))` and treat a
+`DeadlineExceeded` with no messages as an empty receive (a null/non-positive timeout stays unbounded,
+preserving prior behaviour). With both, FR-9 passes both variants.
+
+**FR-2 `Deferred` — the seeded gap, confirmed.** `GcpPullMessageConsumer.Requeue` calls
+`ModifyAckDeadline(..., 0)`, redelivering immediately regardless of the requested delay; the before-delay arm
+observed `MT_EVENT`. Not scheduler-routed (contrast FR-9's producer path), so the harness scheduler does not
+help. FR-15 (explicit zero-delay requeue) and FR-16 (Nack → redelivery, `ModifyAckDeadline(..., 0)`) and FR-22
+(plain requeue) all `Pass` natively.
+
+**FR-4/5/6/8/17 `Deferred -> #4240 (sign-off: @maintainer)` — the reject/DLQ family.** Two independent reasons,
+maintainer decision recorded (owner chose *defer all*, this session):
+1. **Infra:** the Pub/Sub **emulator cannot exercise any DLQ-configured subscription.**
+   `GcpPubSubMessageGateway.EnsureSubscriptionExistsAsync` unconditionally calls
+   `UpdateIAmRoleForDeadLetterAsync`, which uses ResourceManager `GetProject` **and**
+   `IAMPolicyClient.GetIamPolicy`; the emulator returns `Unimplemented` for IAM (and does not implement
+   ResourceManager). This is *why* CI runs GCP against real Pub/Sub. Not verifiable on available local infra.
+2. **Architectural (per the FR-8 guardrail above):** GCP's `Reject` calls `client.Acknowledge(...)` — it
+   **discards** the message; it does not route to a DLQ. GCP's native DLQ triggers only on `maxDeliveryAttempts`
+   exhaustion (requeue/nack), never on `Reject`. So the canonical "reject once → appears in DLQ" tests would
+   likely not pass even on real GCP without a gateway change — this is **not** purely an infra gap, and GCP's
+   empty `RejectionMetadataKeys` here read as an *unfilled stub*, not a deliberate native-dead-letter
+   declaration. FR-5 additionally has no separate invalid channel (like RMQ). Conforming needs Brighter-managed
+   reject→DLQ routing (and invalid routing) in `src/…GcpPubSub` — larger than a localized fix.
+
+**Legacy `too_many_times → dead_letter_queue` test gated off.** This capability-gated legacy template (not one
+of the 11 conformance columns; on the ADR 0067 deletion list) also needs the IAM-backed DLQ subscription and
+so fails on the emulator. Set `HasSupportToDeadLetterQueue: false` for `GCP / Pull` (the flag's only remaining
+effect is to gate this one legacy test — the canonical DLQ family is ledger-driven and independent), matching
+Kafka/MSSQL/Postgres, and deleted the two stale generated files. Revisit (flag → true) if GCP DLQ is later
+verified on real Pub/Sub and the reject-routing gap is closed. *The same treatment applies to the other three
+GCP configs; Stream/StreamOrdering additionally use a different consumer (`GcpPubSubStreamMessageConsumer`,
+`gcpStreamMessage.Reject()`) and need their own diagnosis.*

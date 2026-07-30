@@ -37,7 +37,7 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediately 
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — explicit zero-delay requeue not yet conformant for GCP / Pull (maintainer sign-off)")]
+    [Fact]
     public void When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately()
     {
         // Arrange

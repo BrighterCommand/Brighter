@@ -1,0 +1,20 @@
+# Google Cloud Pub/Sub emulator for the transport conformance tests.
+#
+# The Gcp.Tests providers use EmulatorDetection.EmulatorOrProduction, which honours
+# the PUBSUB_EMULATOR_HOST environment variable. Export these before running the suite:
+#
+#   export PUBSUB_EMULATOR_HOST=localhost:8085
+#   export GOOGLE_CLOUD_PROJECT=brighter-test
+#
+# CI runs the GCP tests against *real* GCP (see .github/workflows/ci.yml gcp-ci job),
+# so this compose file is for local conformance runs only.
+services:
+  pubsub-emulator:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:emulators
+    container_name: gcp-pubsub-emulator
+    command: >
+      gcloud beta emulators pubsub start
+      --host-port=0.0.0.0:8085
+      --project=brighter-test
+    ports:
+      - "8085:8085"
