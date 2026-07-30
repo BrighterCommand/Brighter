@@ -151,6 +151,48 @@ cell remains `Unknown`.
   unacceptable rejection dead-letters to the DLX, not a distinct invalid channel; the real invalid read
   hook observes `MT_NONE` (evidence from the Quorum test run on a live 4.2 broker, both variants); the
   residual is a substantial src change to `src/…RMQ.Async` (three deferral preconditions met).
+- `RocketMQ / RocketMQMessagingGateway` — **9 `Fixed (#4240)` + FR-2 / FR-15 `Deferred -> #4240`**, both
+  variants, on a live RocketMQ 5.5.0 broker (Reactor + Proactor each **21 pass / 2 skip / 0 fail**).
+  Every passing cell is `Fixed` (not `Pass`) because of a required `src` fix: `RocketMqMessageProducer`
+  guards the CloudEvents `Baggage` property — an empty baggage's `ToString()` is `""` and RocketMQ
+  `AddProperty` throws on empty, which crashed **every** send (the shared `DefaultMessageBuilder` yields
+  an empty baggage); it is now added only when non-empty.
+  - **⭐ FR-9 (delayed send) `Fixed`, NOT deferred** — RocketMQ honours delay **natively** via the
+    broker timer wheel: for a `Delay`-type topic the producer sets `SetDeliveryTimestamp(now + delay)`
+    (RocketMQ 5.x timer/scheduled messages). No scheduler seam is needed (contrast Kafka/Redis/SNS). The
+    prior belief that FR-9 was a gateway gap was an **infrastructure** artifact — the reference compose's
+    `create-topic` service hard-codes a `rocketmq-5.4.0` mqadmin path against a `5.5.0` image, so the
+    `DELAY`-typed topics were silently never created; with them created (and `timerWheelEnable=true`,
+    the broker default), delayed send delivers after the delay. `FR-9 delayed-requeue sibling`
+    (`with_delay_should_receive_message_again`) also uses this native path (its topic is `Delay`-typed).
+  - **FR-4/5/6/8/17 (reject → DLQ / invalid + metadata) `Fixed`** — RocketMQ has real DLQ **and** a
+    distinct invalid channel (both Brighter-managed via reject-time re-publish to the routing key), and
+    real `RejectionMetadataKeys` (`originalTopic`/`originalMessageType`/`rejectionReason`/…), so the
+    FR-8 metadata sub-assertions run for real (contrast RMQ's empty-keys relaxation). The reject path
+    rewrites `Header.Topic` to the DLQ/invalid topic (so the message routes there) while preserving the
+    source in the `originalTopic` bag entry; the requeue-exhaustion test's full-message assertion
+    compares against that preserved entry.
+  - **FR-7/16/22 (no-channels ack / nack redelivery / plain requeue) `Fixed`** — plain requeue and nack
+    are no-ops that rely on the invisibility lease (RocketMQ enforces a **10 s minimum**); the message
+    redelivers when the lease expires, which the canonical retry loops (30 s ceilings) observe.
+  - **⛔ FR-2 (requeue *with delay*) `Deferred -> #4240`** — `RocketMessageConsumer.Requeue` is a no-op
+    (`ChangeInvisibleDuration(view, TimeSpan.Zero)` commented out pending an upstream RocketMQ C# client
+    release), so a requeued message redelivers at the fixed ~10 s invisibility **regardless of the
+    requested delay** — the delay is never honoured. The canonical FR-2 test can pass *by accident*
+    (10 s falls inside its 2 s–30 s window) but the capability is genuinely absent, so it is a
+    maintainer-signed `Deferred` (do-not-chase-a-green rule). Three deferral preconditions met.
+  - **⛔ FR-15 (explicit zero-delay requeue, redeliver within 5 s) `Deferred -> #4240`** — same upstream
+    cause: the no-op requeue can only redeliver via the 10 s invisibility lease, so redelivery within the
+    asserted 5 s is impossible (`ChangeInvisibleDuration(view, TimeSpan.Zero)` is exactly the commented-out
+    call that would fix it). Genuine failure, three preconditions met.
+  - **Harness (test-project) adaptations, no non-Baggage `src` change**: `rq_delay`/`exhaust` topics use
+    a longer consumer poll so the genuine ~10 s invisibility redelivery is observed by their single-poll
+    receive arms (the redelivery is real; only the observation window is widened — delay/FR-9 topics keep
+    the short 2 s poll so their before-`D` arm still yields `MT_NONE`); the delayed-requeue sibling's topic
+    is `Delay`-typed to use native delivery-timestamp instead of the unwired Scheduler seam; and the
+    assertion compares the source topic via the preserved `originalTopic` bag entry for dead-lettered
+    messages. **Reference-env fix**: `docker-compose-rocketmq.yaml` broker/proxy heap raised
+    (`-Xmx128m`/`-Xmx64m` → `2g`/`1g`) so the broker sustains the suite instead of degrading under load.
 
 ## Conformance Matrix
 
@@ -175,7 +217,7 @@ cell remains `Unknown`.
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
 | RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RocketMQ / RocketMQMessagingGateway | Unknown (known FR-2 gap) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) |
 | AzureServiceBus / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | MQTT / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | RMQ.Sync / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |

@@ -37,7 +37,7 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelay : IDi
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — requeue with delay not yet conformant for RocketMQ / RocketMQMessagingGateway (maintainer sign-off)")]
+    [Fact(Skip = "Deferred: #4240 — requeue with delay not yet conformant for RocketMQ / RocketMQMessagingGateway (maintainer sign-off)")]
     public void When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay()
     {
         // Arrange

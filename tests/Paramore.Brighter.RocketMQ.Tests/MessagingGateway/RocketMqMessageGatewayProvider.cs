@@ -141,6 +141,22 @@ public class RocketMqMessageGatewayProvider
     // long-polls for ReceiveMessageTimeout and ignores the per-call timeout, so this is the real bound.
     private static readonly TimeSpan s_receiveMessageTimeout = TimeSpan.FromSeconds(2);
 
+    // The requeue-exhaustion and delayed-requeue-sibling tests observe plain-requeue redelivery, which
+    // RocketMQ honours only through the invisibility lease (10 s enforced minimum). Their post-requeue
+    // receive arms are single polls with no inner retry loop, so the consumer poll must span the lease —
+    // a 2 s poll would miss the ~10 s redelivery and report a false MT_NONE. Give those topics a longer
+    // poll; delay/FR-9 topics keep the short 2 s poll so their before-D arm still yields MT_NONE inside
+    // the 5 s delay window. (Genuine redelivery is exercised; only the observation window is widened.)
+    private static readonly TimeSpan s_invisibilityRedeliveryReceiveTimeout = TimeSpan.FromSeconds(15);
+
+    private static TimeSpan ReceiveTimeoutFor(RoutingKey routingKey)
+    {
+        var topic = routingKey.Value;
+        if (topic.Contains("exhaust") || topic.Contains("rq_delay"))
+            return s_invisibilityRedeliveryReceiveTimeout;
+        return s_receiveMessageTimeout;
+    }
+
     // The canonical rejection templates derive dead-letter/invalid routing keys as "{topic}.DLQ" /
     // "{topic}.Invalid", but RocketMQ topic names may not contain '.'. Flatten the dot so the routing
     // key names a valid pre-created topic; the reject producer and the read hooks both resolve the
@@ -165,7 +181,7 @@ public class RocketMqMessageGatewayProvider
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
                 invisibilityTimeout: s_invisibilityTimeout,
-                receiveMessageTimeout: s_receiveMessageTimeout,
+                receiveMessageTimeout: ReceiveTimeoutFor(routingKey),
                 deadLetterRoutingKey: ToValidTopicName(deadLetterRoutingKey),
                 invalidMessageRoutingKey: ToValidTopicName(invalidMessageRoutingKey),
                 requeueCount: 3
@@ -179,7 +195,7 @@ public class RocketMqMessageGatewayProvider
             consumerGroup: Guid.NewGuid().ToString(),
             messagePumpType: MessagePumpType.Proactor,
             invisibilityTimeout: s_invisibilityTimeout,
-            receiveMessageTimeout: s_receiveMessageTimeout,
+            receiveMessageTimeout: ReceiveTimeoutFor(routingKey),
             makeChannels: makeChannel
         );
     }
@@ -359,7 +375,10 @@ public class RocketMqMessageGatewayProvider
             return TopicType.Fifo;
         }
 
-        if (topic.Contains("delayed_msg") || topic.Contains("requeue_delay"))
+        // "rq_delay" (the delayed-requeue sibling) issues its initial SendWithDelay on this topic;
+        // routing it through a Delay topic uses RocketMQ's native delivery-timestamp path (proven by
+        // FR-9) instead of the unwired Scheduler seam, which would NullReferenceException.
+        if (topic.Contains("delayed_msg") || topic.Contains("requeue_delay") || topic.Contains("rq_delay"))
         {
             return TopicType.Delay;
         }

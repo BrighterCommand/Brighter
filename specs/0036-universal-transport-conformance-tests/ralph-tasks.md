@@ -586,7 +586,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Async.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-rmq.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.RMQ.Async.Tests --filter "FullyQualifiedName~MessagingGateway.Quorum." && grep -q -- 'RMQ.Async / Quorum' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -- 'RMQ.Async / Quorum' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 4 (RMQ.Async native DLX, larger fix), Architecture Overview stage (ii); ADR `0047-message-rejection-routing-strategy`, `0045-provide-dlq-where-missing`; requirements FR-13, FR-21.
 
-- [ ] **Bring RocketMQ to conformance (expected FR-2 signed-off Deferred)**
+- [x] **Bring RocketMQ to conformance (expected FR-2 signed-off Deferred)**
   - **Behavior**: Run the generated canonical suite for `RocketMQ / RocketMQMessagingGateway` against the RocketMQ broker, both variants. Non-FR-2 behaviours fix-to-conform inline where localized. FR-2 is blocked upstream (`RocketMessageConsumer.Requeue` is a no-op; `ChangeInvisibleDuration` commented out pending an upstream RocketMQ C# client release), and may pass the before-`D` arm by accident (message held by native 30s invisibility timeout) — do not chase a green FR-2; flag-and-move-on to `Deferred -> #NNNN (sign-off: @maintainer)` with the Skip marker. Update the RocketMQ ledger row.
   - **Test file**: `tests/Paramore.Brighter.RocketMQ.Tests/MessagingGateway/Generated/Reactor/*.cs`
   - **Test should verify**:

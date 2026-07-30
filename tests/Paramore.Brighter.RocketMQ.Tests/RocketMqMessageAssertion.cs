@@ -61,7 +61,14 @@ public class RocketMqMessageAssertion : IAmAMessageAssertion
        Xunit.Assert.Equal(expected.Header.Subject, actual.Header.Subject);
        Xunit.Assert.Equal(expected.Header.SpecVersion, actual.Header.SpecVersion);
        Xunit.Assert.Equal(expected.Header.Source, actual.Header.Source);
-       Xunit.Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+       // A dead-lettered message carries the DLQ topic in Header.Topic — the reject path rewrites it so
+       // the message routes to and is stored on the DLQ — while preserving the source topic in the
+       // "originalTopic" bag entry (the same entry the reject-metadata tests assert). Compare against
+       // that when present so the DLQ round-trip still proves the message identity.
+       var actualTopic = actual.Header.Bag.TryGetValue("originalTopic", out var originalTopic) && originalTopic != null
+           ? new RoutingKey(originalTopic.ToString()!)
+           : actual.Header.Topic;
+       Xunit.Assert.Equal(expected.Header.Topic, actualTopic);
        Xunit.Assert.Equal(expected.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), actual.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
        Xunit.Assert.Equal(expected.Header.Type, actual.Header.Type);
        Xunit.Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
