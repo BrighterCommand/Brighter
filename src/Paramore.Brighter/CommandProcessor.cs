@@ -1532,6 +1532,7 @@ namespace Paramore.Brighter
         {
             var context = requestContext ?? _requestContextFactory.Create();
             context.Span = span;
+            context.InstrumentationOptions = _instrumentationOptions;
 #pragma warning disable CS0618 // Type or member is obsolete
             context.Policies = _policyRegistry;
 #pragma warning restore CS0618 // Type or member is obsolete

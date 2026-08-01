@@ -35,7 +35,7 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.DynamoDB
 {
-    public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
+    public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync, IAmACausationTrackingInbox
     {
         private readonly DynamoDBContext _context;
         private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
@@ -145,7 +145,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             try
             {
                 await _context
-                .SaveAsync(new CommandItem<T>(command, contextKey), _dynamoOverwriteTableConfig, cancellationToken)
+                .SaveAsync(new CommandItem<T>(command, contextKey, ReadCausationId(requestContext)), _dynamoOverwriteTableConfig, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             }
             finally
@@ -239,18 +239,73 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             return result;
         }
 
-        private async Task<IEnumerable<CommandItem<T>>> PageAllMessagesAsync<T>(QueryOperationConfig queryConfig) 
-            where T: class, IRequest 
+        private async Task<IEnumerable<CommandItem<T>>> PageAllMessagesAsync<T>(QueryOperationConfig queryConfig)
+            where T: class, IRequest
         {
             var asyncSearch = _context.FromQueryAsync<CommandItem<T>>(queryConfig, _dynamoOverwriteTableConfig);
-            
+
             var messages = new List<CommandItem<T>>();
             do
-            { 
+            {
                 messages.AddRange(await asyncSearch.GetNextSetAsync().ConfigureAwait(ContinueOnCapturedContext));
             } while (!asyncSearch.IsDone);
 
             return messages;
         }
+
+        /// <inheritdoc />
+        public bool SupportsCausationTracking() => true;
+
+        /// <inheritdoc />
+        public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// <paramref name="timeoutInMilliseconds"/> is accepted for interface compatibility but ignored, as DynamoDB
+        /// handles timeout and retries itself (consistent with the other methods on this store).
+        /// </remarks>
+        public string? GetCausationId(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1)
+        {
+            // Note: this sync entry point delegates to GetCausationIdAsync, so any instrumentation belongs
+            // on the async path (a single code path) rather than being duplicated here. Neither adds a span today.
+            return GetCausationIdAsync(id, contextKey, requestContext, timeoutInMilliseconds, default)
+                .ConfigureAwait(ContinueOnCapturedContext)
+                .GetAwaiter()
+                .GetResult();
+        }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// <paramref name="timeoutInMilliseconds"/> is accepted for interface compatibility but ignored, as DynamoDB
+        /// handles timeout and retries itself (consistent with the other methods on this store).
+        /// </remarks>
+        public async Task<string?> GetCausationIdAsync(string id, string contextKey, RequestContext? requestContext,
+            int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
+        {
+            var queryConfig = new QueryOperationConfig
+            {
+                KeyExpression = new KeyIdContextExpression().Generate(id, contextKey),
+                ConsistentRead = true
+            };
+
+            var asyncSearch = _context.FromQueryAsync<CausationItem>(queryConfig, _dynamoOverwriteTableConfig);
+
+            do
+            {
+                var page = await asyncSearch.GetNextSetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                var match = page.FirstOrDefault();
+                if (match != null)
+                    return match.CausationId;
+            } while (!asyncSearch.IsDone);
+
+            return null;
+        }
+
+        // Reads the causation id from the request context bag, if present
+        private static string? ReadCausationId(RequestContext? requestContext)
+            => requestContext?.Bag.TryGetValue(RequestContextBagNames.CausationId, out var value) == true
+                ? value as string
+                : null;
     }
 }

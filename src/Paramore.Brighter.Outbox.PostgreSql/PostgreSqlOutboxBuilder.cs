@@ -57,6 +57,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 TraceState character varying (255) NULL,
                 Baggage text NULL,
                 DataRef character varying (255) NULL,
+                CausationId character varying (255) NULL,
                 SpecVersion character varying (255) NULL
             );
             """;
@@ -87,6 +88,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 TraceState character varying (255) NULL,
                 Baggage text NULL,
                 DataRef character varying (255) NULL,
+                CausationId character varying (255) NULL,
                 SpecVersion character varying (255) NULL
             );
             """;
@@ -111,7 +113,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         public static string GetDDL(string outboxTableName, bool binaryMessagePayload = false, string? schemaName = null)
         {
             var qualifiedTable = PgIdentifier.QuoteQualified(schemaName, outboxTableName);
-            return binaryMessagePayload ? string.Format(BinaryOutboxDdl, qualifiedTable) : string.Format(TextOutboxDdl, qualifiedTable);
+            var ddl = binaryMessagePayload ? string.Format(BinaryOutboxDdl, qualifiedTable) : string.Format(TextOutboxDdl, qualifiedTable);
+            // Replay index (Spec 0027, #2541) on causationid via Postgres's native CREATE INDEX
+            // IF NOT EXISTS. The index name folds the table identifier to lowercase and is emitted
+            // bare so it matches Postgres's natural case-fold. None of the outbox builders indexed
+            // any column before this.
+            return ddl + "\n" +
+                $"CREATE INDEX IF NOT EXISTS idx_{PgIdentifier.Normalize(outboxTableName)}_causationid ON {qualifiedTable} (causationid);";
         }
 
         /// <summary>

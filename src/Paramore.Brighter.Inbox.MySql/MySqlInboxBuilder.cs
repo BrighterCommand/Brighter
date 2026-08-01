@@ -40,6 +40,7 @@ namespace Paramore.Brighter.Inbox.MySql
                 `CommandBody` TEXT NOT NULL,
                 `Timestamp` TIMESTAMP(4) NOT NULL,
                 `ContextKey` VARCHAR(256)  NULL,
+                `CausationId` VARCHAR(256) NULL,
                 PRIMARY KEY (`CommandId`)
             ) ENGINE = InnoDB;
             """;
@@ -53,6 +54,7 @@ namespace Paramore.Brighter.Inbox.MySql
                 `CommandBody` BLOB NOT NULL,
                 `Timestamp` TIMESTAMP(4) NOT NULL,
                 `ContextKey` VARCHAR(256)  NULL,
+                `CausationId` VARCHAR(256) NULL,
                 PRIMARY KEY (`CommandId`)
             ) ENGINE = InnoDB;
             """;
@@ -66,6 +68,7 @@ namespace Paramore.Brighter.Inbox.MySql
                 `CommandBody` JSON NOT NULL,
                 `Timestamp` TIMESTAMP(4) NOT NULL,
                 `ContextKey` VARCHAR(256)  NULL,
+                `CausationId` VARCHAR(256) NULL,
                 PRIMARY KEY (`CommandId`)
             ) ENGINE = InnoDB;
             """;

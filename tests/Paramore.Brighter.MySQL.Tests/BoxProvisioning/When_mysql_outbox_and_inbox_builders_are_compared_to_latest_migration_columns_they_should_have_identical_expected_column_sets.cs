@@ -115,6 +115,22 @@ public class MySqlOutboxBuilderDriftTests
 
         Assert.Equal(expected, actual);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void When_mysql_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
+        bool hasBinaryMessagePayload)
+    {
+        //The drift test above compares columns only; the new CausationId replay index (Spec 0027,
+        //#2541) is asserted separately here per AC9. MySQL expresses it as an inline KEY inside the
+        //CREATE TABLE IF NOT EXISTS so a fresh install lands the same index a V8 migration does.
+        const string tableName = "outbox_test";
+        var ddl = MySqlOutboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
+
+        Assert.Contains("KEY `idx_CausationId`", ddl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("`CausationId`", ddl, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public class MySqlInboxBuilderDriftTests

@@ -130,5 +130,16 @@ public static class RequestContextBagNames
     /// </summary>
     /// <remarks>Reserved for future usage</remarks>
     public const string WorkflowId = "Brighter-WorkflowId";
-    
+
+    /// <summary>
+    /// Key used to store the causation id in the request context bag. The causation id links an inbox entry to
+    /// the outbox messages produced during that handler invocation, so that a duplicate (with
+    /// <see cref="Paramore.Brighter.Inbox.OnceOnlyAction.Replay"/>) can replay exactly those messages.
+    /// </summary>
+    /// <remarks>
+    /// This is distinct from the correlation id (request-reply), the <see cref="JobId"/>, and the
+    /// <see cref="WorkflowId"/>. It defaults to the handled request's id on first handling.
+    /// </remarks>
+    public const string CausationId = "Brighter-CausationId";
+
 }
