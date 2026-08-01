@@ -22,7 +22,7 @@ Accepted
 
 ## Context
 
-**Scope**: how the transform pipeline, the transform lifetime scope and the DI lifetime scope release the mapper/transform resolutions they own.
+**Scope**: how `TransformPipeline`/`TransformPipelineAsync`, `TransformLifetimeScope`/`TransformLifetimeScopeAsync` and `ServiceProviderLifetimeScope` release the mapper/transform resolutions they own. "Scope" below means a DI scope (Microsoft's `IServiceScope`); the `*LifetimeScope` types are the helpers that own them, not scopes themselves (see *Terms* in ADR 0067).
 
 Closing the per-message scope leak (ADR 0067) moved the release of a mapper/transform from something that used to happen incidentally to something a caller must do at a well-defined point. Two forces then apply at once:
 

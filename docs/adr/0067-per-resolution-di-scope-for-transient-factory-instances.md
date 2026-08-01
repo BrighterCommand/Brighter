@@ -24,6 +24,17 @@ Accepted
 
 **Scope**: how `ServiceProviderLifetimeScope` — the DI-backed lifetime helper shared by the mapper, transformer and handler factories — creates, tracks and releases the `IServiceScope` for a *transient* resolution.
 
+### Terms
+
+Two **independent** axes decide what a resolution yields, and conflating them is the main source of confusion in this area:
+
+- **Configured lifetime** — Brighter's own `HandlerLifetime` / `MapperLifetime` / `TransformerLifetime`. It governs the **artefact**: whether Brighter resolves a fresh handler, mapper or transform per resolution (`Transient`), reuses one per Brighter lifetime scope (`Scoped`), or holds one for the application (`Singleton`).
+- **Registration lifetime** — the container's `ServiceLifetime` on a descriptor. It governs what the container returns for a resolution, and therefore the **dependencies** the artefact is constructed with.
+
+Because they are set independently, "a container-`Singleton` instance resolved under `MapperLifetime.Transient`" is not a contradiction but an ordinary case, and it is the one that matters below: Brighter asks for a fresh resolution every time and the container hands back the same shared object every time. That is precisely what instance-keyed release cannot tell apart.
+
+Three further terms are kept distinct throughout. A **DI scope** is Microsoft's `IServiceScope`. `ServiceProviderLifetimeScope` is Brighter's helper that creates, tracks and disposes DI scopes — it is not itself one. `IAmALifetime` is the token identifying a single pipeline. Where this ADR says "scope" unqualified, it means a DI scope.
+
 [ADR 0039](0039-scoping-dependencies-inline-with-lifetime-scope.md) established a lifetime scope per subscriber so that handlers in a `Publish` fan-out do not share scoped dependencies. Within that model the mapper and transformer factories created a **single** `IServiceScope` per factory and reused it for every transient resolution. `MapperLifetime` and `TransformerLifetime` both **default to `Transient`**, and those factories live for the application's lifetime, so that one scope was never released between messages: every transient mapper or transform accumulated a scope for the life of the process. That is the leak reported in #4252, and because the default lifetime is `Transient` it was the default code path, not an opt-in.
 
 A scope owns more than the instance it produced: it also owns whatever that instance captured from it, including the scope's own `IServiceProvider`, which the container injects when a constructor asks for one. So a scope's lifetime must follow the *resolution*, not the instance's disposability — disposing a scope while its instance is still in use hands that instance a disposed provider.
@@ -45,11 +56,11 @@ An un-released resolution's scope is drained when the lifetime scope itself is d
 ### Two resolution entry points
 
 - The **mapper and transformer factories** take the token-returning entry point and release each resolution's scope per message — this is what closes the leak.
-- The **handler factory** takes a token-discarding entry point: a handler is resolved through a lifetime scope created per request pipeline (one `IAmALifetime`) and disposed when that pipeline completes, so the whole scope is drained at pipeline end and there is no per-instance release. The transient-handler scope granularity *within* a pipeline is governed separately by `IBrighterOptions.IsolateTransientHandlerScope` (see below).
+- The **handler factory** takes a token-discarding entry point: a handler is resolved through a `ServiceProviderLifetimeScope` created per pipeline — `IAmALifetime` is that pipeline's identity — and disposed when the pipeline completes, so the whole scope is drained at pipeline end and there is no per-instance release. The transient-handler scope granularity *within* a pipeline is governed separately by `IBrighterOptions.IsolateTransientHandlerScope` (see below).
 
 ### An escape hatch to the pre-existing shared handler scope
 
-Making each transient resolution isolate its own scope also changes what a *transient handler* sees: before this work, the transient handlers in one pipeline shared a single DI scope, so a scoped-registered dependency was one shared instance across the whole chain. Per-resolution isolation gives each transient handler its own scope, and therefore a distinct instance of that dependency.
+Making each transient resolution isolate its own scope also changes what a *transient handler* sees: before this work, the transient handlers in one pipeline shared a single DI scope, so a scoped-registered dependency was one shared instance across the whole pipeline. Per-resolution isolation gives each transient handler its own scope, and therefore a distinct instance of that dependency.
 
 `IBrighterOptions.IsolateTransientHandlerScope` preserves an opt-out. It defaults to `true` (each transient handler resolution gets its own scope — the new behaviour). Setting it to `false` restores the **pre-existing shared instance scope**: all transient handlers in one pipeline share a single DI scope that is disposed when the pipeline completes. It is a **compatibility fallback** for code that relied on the old cross-handler sharing under `Transient` and cannot yet switch to `HandlerLifetime = Scoped` (the preferred way to share state across a pipeline).
 
