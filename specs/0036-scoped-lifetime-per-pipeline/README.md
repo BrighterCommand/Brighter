@@ -45,7 +45,7 @@ This spec makes the scope unit explicit — **the pipeline** — and adds opt-in
 
 ## Status
 
-- [ ] Requirements (`/spec:requirements`) — revision 13, reviewed eleven times (20, 17, 11, 16, 13, 14, 9, 7, 4, 4, then 2 findings; both findings of the rev-12 review addressed). Awaiting the revision-13 review.
+- [x] Requirements (`/spec:requirements`) — **APPROVED** at revision 13, after eleven adversarial review rounds (20, 17, 11, 16, 13, 14, 9, 7, 4, 4, then 2 findings). The rev-12 review found all four rev-11 findings Fixed and closed with "on content, the requirements have converged"; its two remaining findings were editorial and were applied in revision 13.
 - [ ] Design (`/spec:design`) — next ADR is `0070`
 - [ ] Tasks (`/spec:tasks`)
 - [ ] Implementation (`/spec:implement`, interactive TDD via `/test-first`)
