@@ -103,6 +103,12 @@ public class OutboxMessage : IMongoDbCollectionTTL
     /// </summary>
     /// <value>The <see cref="string"/> with the correlation id.</value>
     public string? CorrelationId { get; set; }
+
+    /// <summary>
+    /// The causation id that links this outbox message to the inbox entry that produced it.
+    /// </summary>
+    /// <value>The <see cref="string"/> with the causation id, or null when not tracked.</value>
+    public string? CausationId { get; set; }
     
     /// <summary>
     /// The CloudEvents DataRef for a Claim Check of the message, if any

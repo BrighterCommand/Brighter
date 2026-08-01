@@ -112,9 +112,9 @@ public class MsSqlLegacyTableRaceTests : IAsyncLifetime
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
 
-        //Assert — exactly one synthetic V1 + one applied V2 (no duplicates).
+        //Assert — exactly one synthetic V1 + one applied V2 + one applied V3 (no duplicates).
         var rowsByVersion = GetHistoryRowsByVersion(_inboxTableName);
-        Assert.Equal(2, rowsByVersion.Count);
+        Assert.Equal(3, rowsByVersion.Count);
 
         var syntheticDescription = Assert.Contains(1, rowsByVersion);
         Assert.StartsWith("bootstrap: detected at V1", syntheticDescription);
@@ -125,8 +125,17 @@ public class MsSqlLegacyTableRaceTests : IAsyncLifetime
             $"V2 should be an applied migration row, not a synthetic bootstrap row " +
             $"(description was: '{appliedDescription}')");
 
-        //Assert — table ends at V2 with seeded marker preserved (ContextKey NULL on existing row).
-        Assert.Contains("ContextKey", GetTableColumns(_inboxTableName));
+        var appliedV3Description = Assert.Contains(3, rowsByVersion);
+        Assert.False(
+            appliedV3Description.StartsWith("bootstrap:", StringComparison.Ordinal),
+            $"V3 should be an applied migration row, not a synthetic bootstrap row " +
+            $"(description was: '{appliedV3Description}')");
+
+        //Assert — table ends at V3 (ContextKey + CausationId) with seeded marker preserved
+        //(ContextKey NULL on the existing row).
+        var inboxColumns = GetTableColumns(_inboxTableName);
+        Assert.Contains("ContextKey", inboxColumns);
+        Assert.Contains("CausationId", inboxColumns);
         Assert.True(InboxMarkerRowExistsWithNullContextKey());
     }
 

@@ -38,6 +38,8 @@ namespace Paramore.Brighter.Validation;
 /// <param name="publications">Optional publications to validate against producer rules.</param>
 /// <param name="subscriptions">Optional subscriptions to validate against consumer rules.</param>
 /// <param name="consumerSpecs">Optional consumer validation specifications.</param>
+/// <param name="inbox">Optional inbox the runtime pipeline uses; passed to rules that check causation tracking.</param>
+/// <param name="outbox">Optional outbox the runtime pipeline uses; passed to rules that check causation tracking.</param>
 /// <param name="providerRegistrations">Optional validation-provider registrations. When supplied, the
 /// validation-provider check runs over handler pipelines; null (the default) leaves it inert.</param>
 /// <param name="mapperRegistryFactory">Optional factory that builds the mapper registry used to describe a
@@ -54,6 +56,8 @@ public class PipelineValidator(
     IEnumerable<Publication>? publications = null,
     IEnumerable<Subscription>? subscriptions = null,
     IEnumerable<ISpecification<Subscription>>? consumerSpecs = null,
+    IAmAnInbox? inbox = null,
+    IAmAnOutbox? outbox = null,
     ValidationProviderRegistrations? providerRegistrations = null,
     Func<MessageMapperRegistry>? mapperRegistryFactory = null,
     IAmATransformerResolvabilityProbe? transformerProbe = null) : IAmAPipelineValidator, IDisposable
@@ -111,7 +115,8 @@ public class PipelineValidator(
         {
             HandlerPipelineValidationRules.HandlerTypeVisibility(),
             HandlerPipelineValidationRules.BackstopAttributeOrdering(),
-            HandlerPipelineValidationRules.AttributeAsyncConsistency()
+            HandlerPipelineValidationRules.AttributeAsyncConsistency(),
+            HandlerPipelineValidationRules.ReplayRequiresCausationTracking(inbox, outbox)
         };
 
         if (providerRegistrations is not null)

@@ -25,12 +25,18 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Inbox.MsSql
 {
-    public class MsSqlQueries : IRelationalDatabaseInboxQueries
+    public class MsSqlQueries : IRelationalDatabaseInboxQueries, IRelationalDatabaseInboxCausationQueries
     {
         public string AddCommand { get; } = "INSERT INTO {0} ([CommandID], [CommandType], [CommandBody], [Timestamp], [ContextKey]) VALUES (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
 
         public string ExistsCommand { get; } = "SELECT TOP 1 [CommandID] FROM {0} WHERE [CommandID] = @CommandID AND [ContextKey] = @ContextKey";
 
         public string GetCommand { get; } = "SELECT * FROM {0} where [CommandID] = @CommandID AND [ContextKey] = @ContextKey";
+
+        public string AddCausationCommand { get; } = "INSERT INTO {0} ([CommandID], [CommandType], [CommandBody], [Timestamp], [ContextKey], [CausationId]) VALUES (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey, @CausationId)";
+
+        public string GetCausationIdCommand { get; } = "SELECT TOP 1 [CausationId] FROM {0} WHERE [CommandID] = @CommandID AND [ContextKey] = @ContextKey";
+
+        public string CausationColumnExistsCommand { get; } = "SELECT 1 FROM sys.columns WHERE [object_id] = OBJECT_ID('{0}') AND [name] = 'CausationId'";
     }
 }

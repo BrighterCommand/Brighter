@@ -46,7 +46,7 @@ public class SpannerOutboxProvisioner : IAmABoxProvisioner
         "ReplyTo", "ContentType", "PartitionKey", "Dispatched", "HeaderBag",
         "Body", "Source", "Type", "DataSchema", "Subject",
         "TraceParent", "TraceState", "Baggage", "WorkflowId", "JobId",
-        "DataRef", "SpecVersion"
+        "DataRef", "SpecVersion", "CausationId"
     };
 
     private readonly IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> _detectionHelper;
