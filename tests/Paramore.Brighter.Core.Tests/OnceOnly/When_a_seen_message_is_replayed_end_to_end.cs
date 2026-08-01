@@ -164,7 +164,9 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             Assert.Equal(_command.Id, processed.Id); //the command travelled over the bus, so it is a deserialized copy
             Assert.Equal(1, ProcessAndForwardHandler.ReceivedCount);
 
-            // The inbox recorded receipt of the command, stamped with its own id as the causation id
+            // The inbox recorded receipt of the command, stamped with its own id as the causation id. The handler
+            // signals us from inside the pipeline, so wait for the surrounding UseInboxHandler to finish writing.
+            await WaitForInboxToRecord(_command.Id);
             var inboxCausationId = ((IAmACausationTrackingInbox)_inbox)
                 .GetCausationId(_command.Id, _contextKey, new RequestContext());
             Assert.Equal(_command.Id.Value, inboxCausationId);
@@ -200,6 +202,32 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             catch (OperationCanceledException)
             {
                 throw new Xunit.Sdk.XunitException("Timed out waiting for the handler to process the message off the bus.");
+            }
+        }
+
+        /// <summary>
+        /// Polls the inbox until it has recorded the given request, so the test thread does not read the inbox before
+        /// the pump thread has written to it.
+        /// </summary>
+        /// <remarks>
+        /// The handler signals the test from <em>inside</em> the pipeline, but it is <c>UseInboxHandler</c> — wrapped
+        /// <em>around</em> the handler — that writes to the inbox, and it does so only after the inner handler returns.
+        /// The signal therefore says "the handler ran", not "the inbox entry exists", and reading the causation id
+        /// straight after the signal races the pump thread's write. Gating on the entry's existence rather than on the
+        /// causation id keeps the assertion that follows meaningful: a missing entry times out here, while an entry
+        /// stamped with a wrong (or null) causation id still fails as an assertion rather than as a timeout.
+        /// </remarks>
+        /// <param name="requestId">The id of the request we expect the inbox to have recorded.</param>
+        private async Task WaitForInboxToRecord(Id requestId)
+        {
+            using var cts = new CancellationTokenSource(Timeout);
+            while (!_inbox.Exists<MyCommand>(requestId.Value, _contextKey, new RequestContext()))
+            {
+                //the token is timeout-backed, so this is how the poll loop gives up rather than spinning forever
+                if (cts.Token.IsCancellationRequested)
+                    throw new Xunit.Sdk.XunitException("Timed out waiting for the inbox to record the handled command.");
+
+                await Task.Delay(10);
             }
         }
 
