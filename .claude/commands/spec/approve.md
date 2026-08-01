@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Read, Write, Edit, Glob, AskUserQuestion
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(grep:*), Bash(awk:*), Read, Write, Edit, Glob, AskUserQuestion, Skill
 description: Approve a specification phase
 argument-hint: requirements|design [adr-number]|tasks
 ---
@@ -35,21 +35,31 @@ Parse $ARGUMENTS to extract phase and optional ADR number:
    - **If ADR number specified** (e.g., "design 0043"): Approve only that ADR
    - **If no ADR number**: Approve ALL ADRs in the `.adr-list`
 
-4. For each ADR to approve:
-   - Read the ADR file from `docs/adr/{adr-filename}`
-   - Use Edit tool to update Status from "Proposed" to "Accepted"
-   - Find the line containing "## Status" followed by "Proposed"
-   - Replace "Proposed" with "Accepted"
-   - Example:
-     ```
-     Old: ## Status\n\nProposed
-     New: ## Status\n\nAccepted
-     ```
+4. For each ADR to approve, flip its status to `Accepted` with the `write_adr_metadata` skill so
+   the **frontmatter `status`** and the **body `## Status`** move together (do not hand-edit only the
+   body — that would leave the frontmatter stale, and the derived index reads the frontmatter):
 
-5. Create approval marker: `touch specs/{current-spec}/.design-approved`
-6. Show user which ADRs were approved
-7. Remind the user to commit the approved ADRs to git.
-8. **Choose the implementation path (the certainty fork).** If more ADRs are still
+   ```
+   write_adr_metadata docs/adr/{adr-filename} status Accepted
+   ```
+
+   Confirm the skill reports its checks passing (frontmatter `status` matches body `## Status`).
+
+5. **Handle supersession.** If an approved ADR replaces an earlier decision, retire the older ADR in
+   the same pass. Prefer the relationship the ADR already records: read the approved ADR's `## Status`
+   / `## References` for a "Supersedes {old-id}" note, and if it is ambiguous ask the user with
+   `AskUserQuestion` which prior ADR (if any) is superseded rather than guessing.
+   - Replaced by a specific ADR → mark the **older** one `Superseded` and record the back-link:
+     `write_adr_metadata docs/adr/{old-id}.md supersede --by {new-id}`
+   - Retired with no named replacement → `write_adr_metadata docs/adr/{old-id}.md deprecate`
+
+6. **Regenerate the derived index.** After the status changes above, refresh `docs/adr/index.md` so
+   it reflects the new statuses — see "Regenerate the ADR index" at the end of this file.
+
+7. Create approval marker: `touch specs/{current-spec}/.design-approved`
+8. Show user which ADRs were approved (and any superseded/deprecated as a result).
+9. Remind the user to commit the approved ADRs (and the regenerated `docs/adr/index.md`) to git.
+10. **Choose the implementation path (the certainty fork).** If more ADRs are still
    needed, tell the user to run `/spec:design [another-focus-area]` first and stop here.
    Otherwise the design is complete and there are **two** ways to break the work down — use
    `AskUserQuestion` to let the user pick:
@@ -83,6 +93,18 @@ If phase name is not recognized, show valid options:
 - `requirements` - Approve requirements specification
 - `design [adr-number]` - Approve ADR(s) and update status to Accepted
 - `tasks` - Approve task list
+
+## Regenerate the ADR index
+
+After any ADR status change (approval, supersession, deprecation), refresh the derived
+`docs/adr/index.md` so it matches the frontmatter. This is the single canonical command (documented
+in [`.agent_instructions/adr_frontmatter.md`](../../../.agent_instructions/adr_frontmatter.md)):
+
+```bash
+awk -f .claude/commands/adr/generate_adr_index.awk docs/adr/[0-9]*.md > docs/adr/index.md
+```
+
+`docs/adr/index.md` is a regenerable cache — never hand-edit it; always regenerate from frontmatter.
 
 ## Examples
 

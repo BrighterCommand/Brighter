@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(git:*), Read, Write, Glob, Agent, AskUserQuestion
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(git:*), Bash(awk:*), Bash(date:*), Bash(basename:*), Read, Write, Edit, Glob, Agent, AskUserQuestion, Skill
 description: Create technical design specification (ADR)
 argument-hint: [adr-focus-area]
 ---
@@ -13,13 +13,18 @@ ADR directory: `docs/adr/`
 
 **Note**: You can create multiple ADRs for the same requirement. Each ADR should focus on a single architectural decision.
 
+**Frontmatter**: Every ADR carries a YAML frontmatter block (`id`, `title`, `status`, `author`,
+`created`, `summary`, `tags`) — see [`.agent_instructions/adr_frontmatter.md`](../../../.agent_instructions/adr_frontmatter.md).
+This command reads existing ADRs' frontmatter to surface prior art (Step 4) and stamps the new ADR's
+frontmatter on write (Step 7) via the `read_adr_metadata` / `write_adr_metadata` skills.
+
 **Sub-agent**: The codebase-grounded drafting of the ADR is delegated to a sub-agent
 (`subagent_type: "Plan"`, **`model: "opus"`**). `Plan` has no `Write`/`Edit`/`NotebookEdit`,
 which makes it much harder to accidentally write the file (the prompt still forbids writing
 via `Bash`), while still allowing Read/Glob/Grep to verify references. The sub-agent reads the inputs, verifies references
-against the real codebase, and RETURNS the ADR body as text. The main agent owns numbering,
-file writing, and `.adr-list` bookkeeping. See `.claude/commands/spec/README.md` →
-"Sub-agents & model policy".
+against the real codebase, and RETURNS the ADR body as text — plus a proposed frontmatter `summary`
+and `tags`. The main agent owns numbering, file writing, frontmatter stamping, and `.adr-list`
+bookkeeping. See `.claude/commands/spec/README.md` → "Sub-agents & model policy".
 
 ## Your Task
 
@@ -42,6 +47,8 @@ file writing, and `.adr-list` bookkeeping. See `.claude/commands/spec/README.md`
 1. Check existing ADRs: `ls docs/adr/ | grep -E "^[0-9]{4}-" | sort | tail -1`
 2. Calculate next number (format: 0001, 0002, 0003, etc.)
    - Example: if last is `0042-some-feature.md`, next is `0043`
+   - The number is an **ordering hint, not an identity** — the `id`/slug is the identity, and a
+     number collision with a concurrent branch is acceptable (see `adr_frontmatter.md`).
 3. Determine the ADR focus:
    - If $ARGUMENTS provided: Use that as the specific focus area (e.g., "message-serialization", "error-handling")
    - If not provided: Ask user what aspect of the requirement this ADR addresses
@@ -49,16 +56,40 @@ file writing, and `.adr-list` bookkeeping. See `.claude/commands/spec/README.md`
    - Use kebab-case for focus area
    - Example: `docs/adr/0043-kafka-dlq-message-serialization.md`
 
-   **Do NOT write the ADR file or update `.adr-list` yet** — that happens in Step 6 after
+   **Do NOT write the ADR file or update `.adr-list` yet** — that happens in Step 7 after
    the sub-agent returns and you have validated its output.
 
    > **Note**: the number is computed here but only *reserved* (written to `.adr-list`) in
-   > Step 6 after the sub-agent returns. Two `/spec:design` runs started concurrently could
+   > Step 7 after the sub-agent returns. Two `/spec:design` runs started concurrently could
    > therefore pick the same number. This is a theoretical race for a single-user dev tool
-   > and is accepted; if you ever run designs in parallel, double-check the number in Step 6
+   > and is accepted; if you ever run designs in parallel, double-check the number in Step 7
    > against `docs/adr/` before writing.
 
-### Step 4: Gather Inputs for the Sub-Agent
+### Step 4: Surface Prior-Art ADRs (before drafting)
+
+Before drafting, find existing decisions relevant to **{focus-area}** so the new ADR reuses them,
+avoids contradicting them, or deliberately supersedes them — rather than re-deciding in ignorance.
+
+Use the `read_adr_metadata` skill (`.claude/commands/adr/read_adr_metadata.md`), passing the focus
+area as the query plus any obvious tags from the taxonomy:
+
+```
+read_adr_metadata "{focus-area}" --tags "{likely-tags}"
+```
+
+It reads only frontmatter (cheap) and by default **skips `Deprecated` and `Superseded`** ADRs, so
+retired decisions are not offered as live prior art. Keep the returned candidates (`id` + `title` +
+`status` + `summary`) — you feed them to the drafting sub-agent in Step 6 so it can cite or
+distinguish them, and you flag any that this ADR would supersede.
+
+`read_adr_metadata` is the query interface over the same frontmatter that `docs/adr/index.md`
+tabulates — a ranked, retired-filtered, capped view for exactly this discovery step. Prefer it over
+reading `index.md`, which is an un-ranked full-corpus table meant for human browsing, not for loading
+into design context.
+
+If no prior art is found, note that and proceed.
+
+### Step 5: Gather Inputs for the Sub-Agent
 
 The sub-agent starts with a clean context — it only knows what you put in its prompt.
 Gather (read) the inputs it needs so you can pass their text or paths:
@@ -66,12 +97,16 @@ Gather (read) the inputs it needs so you can pass their text or paths:
 - `specs/{current-spec}/requirements.md` — the parent requirement the ADR must address.
 - Each existing ADR listed in `specs/{current-spec}/.adr-list` (read from `docs/adr/`) —
   so the new ADR stays focused on a *distinct* decision and references siblings correctly.
+- The **prior-art candidates from Step 4** (`id` + `title` + `summary`) — so the sub-agent
+  references related decisions correctly and does not contradict or silently duplicate one.
 - `.agent_instructions/design_principles.md` — pass the path; the sub-agent reads it itself.
+- `.agent_instructions/adr_frontmatter.md` — pass the path; the sub-agent reads the tag taxonomy
+  from it to propose `tags`.
 
 If any required document is missing (e.g. no `requirements.md`), stop and tell the user to
 run the appropriate command first. Do NOT launch the sub-agent with missing inputs.
 
-### Step 5: Launch Sub-Agent to Draft the ADR
+### Step 6: Launch Sub-Agent to Draft the ADR
 
 **Verify inputs with the user before launching (MAIN agent).** The `Plan` sub-agent is
 one-shot and has no `AskUserQuestion` — it cannot ask the user anything once launched. So
@@ -87,12 +122,20 @@ prompt MUST include all of the following:
 1. The full text of `requirements.md` (or its path if too large to inline).
 2. The full text of each existing ADR for this spec (or their paths), and an instruction
    that the new ADR addresses a DISTINCT decision: **{focus-area}**.
-3. The proposed number and filename (`{NNNN}-{focus-area}.md`) and today's date — so the
+3. The **prior-art candidates from Step 4** (`id` + `title` + `summary`), with an instruction to
+   reference related ones under `Related ADRs`, and to state explicitly if this ADR supersedes any
+   of them (so the main agent can mark the old one `Superseded` in Step 7).
+4. The proposed number and filename (`{NNNN}-{focus-area}.md`) and today's date — so the
    header and `Related ADRs` references are correct.
-4. The ADR template (below) — the sub-agent fills it in.
-5. The "Drafting guidance" and "Grounding requirements" blocks below.
-6. An explicit instruction: **RETURN the completed ADR as markdown text. Do NOT write any
+5. The ADR template (below) — the sub-agent fills it in.
+6. The "Drafting guidance" and "Grounding requirements" blocks below.
+7. An explicit instruction: **RETURN the completed ADR as markdown text. Do NOT write any
    file.** Use Read/Glob/Grep to verify references; do not use Write/Edit.
+8. An explicit instruction to **also return, clearly separated from the ADR body, a proposed
+   frontmatter `SUMMARY:` (1–2 sentences stating WHAT was decided, so a reader can decide whether
+   to open the ADR) and `TAGS:` (1–4 tags drawn from the controlled taxonomy in
+   `.agent_instructions/adr_frontmatter.md` — do not invent ad-hoc tags).** The main agent uses
+   these to stamp the frontmatter in Step 7.
 
 #### ADR Template (the sub-agent fills this in)
 
@@ -208,7 +251,7 @@ namespaces that don't exist misleads everyone who reads it. Therefore:
   consequences is suspicious.
 - List genuine alternatives with real rationale for rejection (not strawmen).
 
-### Step 6: Validate, Write the ADR, and Update Tracking
+### Step 7: Validate, Write the ADR, Stamp Frontmatter, and Update Tracking
 
 After the sub-agent returns:
 
@@ -216,6 +259,8 @@ After the sub-agent returns:
    - It contains all template sections (Status, Context, Decision, Consequences with both
      Positive AND Negative, Alternatives Considered, References).
    - The header number/date and `Parent Requirement` / `Related ADRs` links are correct.
+   - The sub-agent returned a `SUMMARY:` and 1–4 `TAGS:` from the taxonomy. If missing or a tag is
+     outside the taxonomy, fix it (or ask the sub-agent to revise) before stamping frontmatter.
    - **Re-check the ADR number** (closes the concurrent-run race noted in Step 3): re-run
      `ls docs/adr/` and confirm `{NNNN}-{focus-area}.md` does not already exist. If it does,
      increment to the next free number and update the ADR header before writing.
@@ -224,15 +269,43 @@ After the sub-agent returns:
      writing a misleading ADR.
    - If anything is missing or wrong, ask the sub-agent to revise, or fix it yourself before writing.
 
-2. **Write** the validated ADR to `docs/adr/{NNNN}-{focus-area}.md` using the Write tool.
+2. **Write** the validated ADR body to `docs/adr/{NNNN}-{focus-area}.md` using the Write tool.
 
-3. **Update tracking**: `echo "{NNNN}-{focus-area}.md" >> specs/{current-spec}/.adr-list`
+3. **Stamp frontmatter** with the `write_adr_metadata` skill
+   (`.claude/commands/adr/write_adr_metadata.md`), passing the sub-agent's proposed summary and tags:
 
-### Step 7: Next Steps
+   ```
+   write_adr_metadata docs/adr/{NNNN}-{focus-area}.md init --summary "{summary}" --tags "{tags}"
+   ```
+
+   This derives `id`/`title`/`created` from the file, sets `status: Proposed`, and keeps the
+   frontmatter in sync with the body `## Status`. Confirm the six checks the skill reports pass
+   (`id` == filename stem, `status` ∈ enum, tags ⊆ taxonomy, valid date, all seven keys, frontmatter
+   status matches body).
+
+   If this ADR **supersedes** a prior ADR you identified in Step 4, also mark that older ADR on disk:
+
+   ```
+   write_adr_metadata docs/adr/{old-id}.md supersede --by {NNNN}-{focus-area}
+   ```
+
+4. **Regenerate the ADR index** so `docs/adr/index.md` reflects the new ADR (and any supersession).
+   This is the single canonical command (documented in
+   [`.agent_instructions/adr_frontmatter.md`](../../../.agent_instructions/adr_frontmatter.md)):
+
+   ```bash
+   awk -f .claude/commands/adr/generate_adr_index.awk docs/adr/[0-9]*.md > docs/adr/index.md
+   ```
+
+   `docs/adr/index.md` is a regenerable cache — never hand-edit it; always regenerate from frontmatter.
+
+5. **Update tracking**: `echo "{NNNN}-{focus-area}.md" >> specs/{current-spec}/.adr-list`
+
+### Step 8: Next Steps
 
 1. Remind user to:
    - Review and complete the ADR with technical details
-   - Commit the ADR: `git add docs/adr/{NNNN}-{focus-area}.md && git commit -m "docs: add ADR for {focus-area}"`
+   - Commit the ADR and regenerated index: `git add docs/adr/{NNNN}-{focus-area}.md docs/adr/index.md && git commit -m "docs: add ADR for {focus-area}"`
    - The first ADR should typically be the first commit on the feature branch
    - Can create/update draft PR with ADR for early feedback
 2. Multiple ADRs:

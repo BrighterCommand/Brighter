@@ -1,4 +1,21 @@
+---
+id: 0041-add-parallel-split-to-mediator
+title: "Implementing Parallel Split Step for Concurrent Workflow Execution"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2025-07-07
+summary: "Introduces ParallelSplitStep<TData> and a producer-consumer model (Scheduler + Runner) using bounded in-memory channels to enable concurrent branch execution in the mediator workflow, deferring resilient out-of-process storage to a future ADR."
+tags:
+  - "mediator"
+  - "workflow"
+  - "concurrency"
+  - "async"
+---
+
 # 41. Implementing Parallel Split Step for Concurrent Workflow Execution
+
+Date: 2025-07-07
 
 ## Status
 

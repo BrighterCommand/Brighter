@@ -1,6 +1,21 @@
+---
+id: 0022-generate-metrics-from-traces
+title: "Generate Metrics from Traces"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2025-01-03
+summary: "Brighter will implement a custom OpenTelemetry processor (BrighterMetricsFromTracesProcessor) that derives standard messaging and database metrics from existing trace spans, registered automatically via AddBrighterInstrumentation when the Brighter meter is enabled."
+tags:
+  - "observability"
+  - "otel"
+  - "metrics"
+  - "tracing"
+---
+
 # 22. Generate Metrics from Traces
 
-Date: 2024-xx-xx
+Date: 2025-01-03
 
 ## Status
 

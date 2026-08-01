@@ -1,3 +1,18 @@
+---
+id: 0058-box-provisioning-rdd-role-interfaces
+title: "Box Provisioning RDD Role Interfaces and Template-Method Runner"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-05-07
+summary: "Introduces role-based instance interfaces (`IAmABoxMigrationDetectionHelper`, `IAmABoxMigrationCatalog`, `IAmABoxPayloadModeValidator`, `IAmAProvisioningUnitOfWork`) to unify the BoxProvisioning family under Responsibility-Driven Design naming conventions, converting static helper and factory classes to instance classes. Adds `SqlBoxMigrationRunner<TConnection, TTransaction>` abstract base that seals the three-path migration algorithm (fresh/bootstrap/normal) with a harmonized unit-of-work lifecycle encoding each backend's specific lock/transaction ordering and cancellation contract."
+tags:
+  - "box"
+  - "provisioning"
+  - "architecture"
+  - "migration"
+---
+
 # 0058. Box Provisioning RDD Role Interfaces and Template-Method Runner
 
 Date: 2026-05-07

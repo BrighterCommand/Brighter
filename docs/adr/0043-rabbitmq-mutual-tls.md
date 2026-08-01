@@ -1,8 +1,25 @@
+---
+id: 0043-rabbitmq-mutual-tls
+title: "Optional Mutual TLS (mTLS) Support for RabbitMQ Messaging Gateway"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2025-12-23
+summary: "Introduces opt-in mutual TLS (mTLS) support for RabbitMQ messaging gateways, allowing X.509 client certificate configuration while preserving backwards compatibility for non-TLS and TLS-only deployments."
+tags:
+  - "rabbitmq"
+  - "security"
+  - "tls"
+  - "transports"
+---
+
 # 43. Optional Mutual TLS (mTLS) Support for RabbitMQ Messaging Gateway
+
+Date: 2025-12-23
 
 ## Status
 
-Proposed (Draft PR for discussion)
+Proposed
 
 ## Context
 

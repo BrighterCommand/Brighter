@@ -27,6 +27,9 @@ using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
+    /// <summary>
+    /// Represents subscription settings for a Kafka-backed Brighter channel.
+    /// </summary>
     public class KafkaSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
     {
         /// <summary>
@@ -89,6 +92,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// RoundRobin - Assign partitions to consumers in a round robin fashion
         /// CooperativeSticky - Reduce the number of re-balances by assigning partitions to the consumer that previously owned them
         /// </summary>
+        /// <remarks>
+        /// Deprecated. Set <see cref="Confluent.Kafka.PartitionAssignmentStrategy"/> on <see cref="GroupProtocol"/> instead.
+        /// </remarks>
+        [Obsolete("Use GroupProtocol to configure partition assignment strategy. This property will be removed in a future version.")]
         public PartitionAssignmentStrategy PartitionAssignmentStrategy { get; set; }
 
         /// <summary>
@@ -105,6 +112,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// If Kafka does not receive a heartbeat from the consumer within this time window, trigger a re-balance
         /// Default is Kafka default of 10s
         /// </summary>
+        /// <remarks>
+        /// Deprecated. Set <see cref="ClassicGroupProtocol.SessionTimeout"/> on <see cref="GroupProtocol"/> instead.
+        /// </remarks>
+        [Obsolete("Use GroupProtocol to configure the session timeout. This property will be removed in a future version.")]
         public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromMilliseconds(10000);
 
         /// <summary>
@@ -117,7 +128,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// How long to wait when asking for topic metadata
         /// </summary>
         public TimeSpan TopicFindTimeout { get; set; } = TimeSpan.FromMilliseconds(5000);
-        
+
+        /// <summary>
+        /// Gets or sets the group protocol configuration applied when creating the Kafka consumer.
+        /// </summary>
+        /// <value>An <see cref="IGroupProtocol"/> implementation, or <see langword="null"/> to use the default classic protocol behavior.</value>
+        /// <remarks>
+        /// Do not share an instance across subscriptions: the consumer back-fills <see langword="null"/>
+        /// properties in place, so a shared instance would carry the first subscription's values into the
+        /// second. The instance is also applied to every consumer created from this subscription (one per
+        /// performer).
+        /// </remarks>
+        public IGroupProtocol? GroupProtocol { get; set; }
+
         /// <summary>
         /// The time provider used to create timers for sweeping uncommitted offsets
         /// Defaults to TimeProvider.System
@@ -142,9 +165,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The delay the delivery of a requeue message. </param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="unacceptableMessageLimitWindow">The time window used when evaluating <paramref name="unacceptableMessageLimit"/>.</param>
         /// <param name="offsetDefault">Where should we begin processing if we cannot find a stored offset</param>
         /// <param name="commitBatchSize">How often should we commit offsets?</param>
-        /// <param name="sessionTimeout">What is the heartbeat interval for this consumer, after which Kafka will assume dead and rebalance the consumer group; defaults to 10000ms</param>
+        /// <param name="sessionTimeout">What is the heartbeat interval for this consumer, after which Kafka will assume dead and rebalance the consumer group; defaults to 10000ms.
+        /// Deprecated: set <see cref="ClassicGroupProtocol.SessionTimeout"/> on <see cref="GroupProtocol"/> instead.</param>
         /// <param name="maxPollInterval">How often does the consumer poll for a message to be considered alive, after which Kafka will assume dead and rebalance. Defaults to 30000ms</param>
         /// <param name="sweepUncommittedOffsetsInterval">How often do we commit offsets that have yet to be saved; defaults to 30000</param>
         /// <param name="isolationLevel">Should we read messages that are not on all replicas? May cause duplicates.</param>
@@ -155,11 +180,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-        /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
+        /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?
+        /// Deprecated: set <see cref="Confluent.Kafka.PartitionAssignmentStrategy"/> on <see cref="GroupProtocol"/> instead.</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created. Used to set properties that Brighter does not expose</param>
         /// <param name="deadLetterRoutingKey">The routing key for the dead letter channel. Optional.</param>
         /// <param name="invalidMessageRoutingKey">The routing key for the invalid message channel. Optional.</param>
-        /// ///
         public KafkaSubscription(
             SubscriptionName subscriptionName,
             ChannelName channelName,
@@ -200,16 +225,22 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             MaxPollInterval = maxPollInterval ?? MaxPollInterval;
             SweepUncommittedOffsetsInterval = sweepUncommittedOffsetsInterval ?? SweepUncommittedOffsetsInterval;
             OffsetDefault = offsetDefault;
+#pragma warning disable CS0618
             SessionTimeout = sessionTimeout ?? SessionTimeout;
+            PartitionAssignmentStrategy = partitionAssignmentStrategy;
+#pragma warning restore CS0618
             NumPartitions = numOfPartitions;
             ReplicationFactor = replicationFactor;
-            PartitionAssignmentStrategy = partitionAssignmentStrategy;
             DeadLetterRoutingKey = deadLetterRoutingKey;
             InvalidMessageRoutingKey = invalidMessageRoutingKey;
             ConfigHook = configHook;
         }
     }
 
+    /// <summary>
+    /// Represents subscription settings for Kafka messages mapped to a specific request type.
+    /// </summary>
+    /// <typeparam name="T">The <see cref="IRequest"/> type consumed by this subscription.</typeparam>
     public class KafkaSubscription<T> : KafkaSubscription where T : IRequest
     {
         /// <summary>
@@ -226,9 +257,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The delay the delivery of a requeue message. 0 is no delay. Defaults to 0</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="unacceptableMessageLimitWindow">The time window used when evaluating <paramref name="unacceptableMessageLimit"/>.</param>
         /// <param name="offsetDefault">Where should we begin processing if we cannot find a stored offset</param>
         /// <param name="commitBatchSize">How often should we commit offsets?</param>
-        /// <param name="sessionTimeout">What is the heartbeat interval for this consumer, after which Kafka will assume dead and rebalance the consumer group; defaults to 10000ms</param>
+        /// <param name="sessionTimeout">What is the heartbeat interval for this consumer, after which Kafka will assume dead and rebalance the consumer group; defaults to 10000ms.
+        /// Deprecated: set <see cref="ClassicGroupProtocol.SessionTimeout"/> on <see cref="GroupProtocol"/> instead.</param>
         /// <param name="maxPollInterval">How often does the consumer poll for a message to be considered alive, after which Kafka will assume dead and rebalance; defaults to 30000ms</param>
         /// <param name="sweepUncommittedOffsetsInterval">How often do we commit offsets that have yet to be saved; defaults to 30000ms</param>
         /// <param name="isolationLevel">Should we read messages that are not on all replicas? May cause duplicates.</param>
@@ -239,7 +272,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-        /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
+        /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?
+        /// Deprecated: set <see cref="Confluent.Kafka.PartitionAssignmentStrategy"/> on <see cref="GroupProtocol"/> instead.</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created. Used to set properties that Brighter does not expose</param>
         /// <param name="deadLetterRoutingKey">The routing key for the dead letter channel. Optional.</param>
         /// <param name="invalidMessageRoutingKey">The routing key for the invalid message channel. Optional.</param>

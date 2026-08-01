@@ -1,3 +1,18 @@
+---
+id: 0030-add-a-mediator
+title: "Add a Mediator to Brighter"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2024-10-22
+summary: "Adds a Mediator class that orchestrates multi-step workflows (sequence, choice, parallel, wait) over CommandProcessor-dispatched handlers, providing a first-class orchestration alternative to emergent choreography in Brighter."
+tags:
+  - "mediator"
+  - "workflow"
+  - "architecture"
+  - "messaging"
+---
+
 # 30. Add a Mediator to Brighter 
 
 Date: 2024-10-22

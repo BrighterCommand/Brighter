@@ -83,14 +83,14 @@ public static class BrighterPipelineValidationExtensions
             var outbox = sp.GetService<IAmAnOutboxProducerMediator>()?.Outbox;
             
             var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
-            var mapperRegistry = mapperRegistryBuilder != null
-                ? ServiceCollectionExtensions.MessageMapperRegistry(sp)
+            Func<MessageMapperRegistry>? mapperRegistryFactory = mapperRegistryBuilder != null
+                ? () => ServiceCollectionExtensions.MessageMapperRegistry(sp)
                 : null;
             var transformerProbe = sp.GetService<IAmATransformerResolvabilityProbe>();
 
             return new PipelineValidator(
                 pipelineBuilder, publications, subscriptions, consumerSpecList, inbox, outbox,
-                providerRegistrations, mapperRegistry, transformerProbe);
+                providerRegistrations, mapperRegistryFactory, transformerProbe);
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterValidationHostedService>();
@@ -119,11 +119,11 @@ public static class BrighterPipelineValidationExtensions
             var publications = ResolvePublications(sp);
             var subscriptions = ResolveSubscriptions(sp);
             var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
-            var mapperRegistry = mapperRegistryBuilder != null
-                ? ServiceCollectionExtensions.MessageMapperRegistry(sp)
+            Func<MessageMapperRegistry>? mapperRegistryFactory = mapperRegistryBuilder != null
+                ? () => ServiceCollectionExtensions.MessageMapperRegistry(sp)
                 : null;
 
-            return new PipelineDiagnosticWriter(logger, pipelineBuilder, mapperRegistry, publications, subscriptions);
+            return new PipelineDiagnosticWriter(logger, pipelineBuilder, mapperRegistryFactory, publications, subscriptions);
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterDiagnosticHostedService>();

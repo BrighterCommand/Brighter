@@ -82,9 +82,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             var message = new MyEventMessageMapper().MapToMessage(@event, _publication);
             _bus.Enqueue(message);
             await Task.Delay(500);
-            
+
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
-            
+
+            // Poll rather than rely on the fixed delay having been enough: under parallel test load
+            // the reopened consumer can need longer than 500ms to consume and ack the message.
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (_bus.Stream(_routingKey).Any() && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(100);
+                _timeProvider.Advance(TimeSpan.FromSeconds(2));
+            }
+
             Assert.Empty(_bus.Stream(_routingKey));
             Assert.Equal(DispatcherState.DS_RUNNING, _dispatcher.State);
             Assert.Single(_dispatcher.Consumers);

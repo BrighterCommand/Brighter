@@ -1,3 +1,18 @@
+---
+id: 0032-remove-explicit-clear-lock
+title: "Remove Semaphore from Explicit Clear"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2025-08-28
+summary: "Removes the blocking _clearSemaphoreToken from OutboxProducerMediator's explicit clear path, relying on IDistributedLock for dual-publish protection instead, to prevent HTTP requests from serialising behind sequential semaphore waits at scale."
+tags:
+  - "outbox"
+  - "concurrency"
+  - "locking"
+  - "resilience"
+---
+
 # 32. Remove Semaphore from Explicit Clear 
 
 Date: 2025-08-28

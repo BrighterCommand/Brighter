@@ -45,7 +45,7 @@ public class AsyncOnlyMapperUnwrapTransformResolvableTests
         registry.RegisterAsync<MyDescribableCommand, MyDescribableCommandMessageMapperAsync>();
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var spec = ConsumerValidationRules.UnwrapTransformResolvable(registry, StubTransformerResolvabilityProbe.ResolvesNothing);
+        var spec = ConsumerValidationRules.UnwrapTransformResolvable(() => registry, StubTransformerResolvabilityProbe.ResolvesNothing);
         var subscription = new Subscription(
             subscriptionName: new SubscriptionName("greeting-subscription"),
             channelName: new ChannelName("test-channel"),

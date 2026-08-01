@@ -1,3 +1,17 @@
+---
+id: 0050-spy-command-processor-api
+title: "Spy Command Processor API"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2026-02-05
+summary: "Designs a three-layer SpyCommandProcessor public API — quick checks (WasCalled, CallCount, Observe<T>), request inspection (GetRequests<T>, GetCalls), and full detail access (RecordedCalls, DepositedRequests) — with all interface methods virtual to support subclassing."
+tags:
+  - "testing"
+  - "api-design"
+  - "mediator"
+---
+
 # 50. Spy Command Processor API
 
 Date: 2026-02-05

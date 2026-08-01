@@ -1,3 +1,18 @@
+---
+id: 0039-redis-dlq-brighter-managed
+title: "Redis Dead Letter Queue — Brighter-Managed"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-13
+summary: "Adds Brighter-managed DLQ support to the Redis transport by using lazy producer creation to send rejected messages to a configured DLQ or invalid message channel instead of silently discarding them, following the rejection routing strategy from ADR 0036."
+tags:
+  - "redis"
+  - "dead-letter-queue"
+  - "transports"
+  - "error-handling"
+---
+
 # 39. Redis Dead Letter Queue — Brighter-Managed
 
 Date: 2026-02-13

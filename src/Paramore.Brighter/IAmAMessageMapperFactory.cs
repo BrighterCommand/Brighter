@@ -37,10 +37,26 @@ namespace Paramore.Brighter
     public interface IAmAMessageMapperFactory
     {
         /// <summary>
-        /// Creates the specified message mapper type.
+        /// Creates the specified message mapper type, returning a <see cref="Lease{T}"/> that identifies this
+        /// resolution so it can later be released back to this factory.
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
-        /// <returns>IAmAMessageMapper.</returns>
-        IAmAMessageMapper? Create(Type messageMapperType);
+        /// <returns>A lease over the created mapper, or <c>null</c> if none could be created.</returns>
+        Lease<IAmAMessageMapper>? Create(Type messageMapperType);
+
+        /// <summary>
+        /// Releases the mapper resolution identified by <paramref name="lease"/> once the pipeline that owns it
+        /// has finished with it.
+        /// </summary>
+        /// <remarks>
+        /// A factory that creates a mapper per message must release it, or any resource the mapper holds
+        /// — and, for an IoC container, the scope the mapper was resolved from — is retained until the
+        /// factory itself is disposed at shutdown. Releasing by lease reclaims exactly this resolution's scope,
+        /// so a shared instance handed out under a transient lifetime is torn down one resolution at a time and
+        /// an over-release is a no-op. A factory that hands out a shared instance, or whose instances it does
+        /// not own, should make this a no-op.
+        /// </remarks>
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release.</param>
+        void Release(Lease<IAmAMessageMapper>? lease);
     }
 }

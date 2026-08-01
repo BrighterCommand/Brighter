@@ -1,3 +1,18 @@
+---
+id: 0027-allow-custom-publication-finder
+title: "Allow custom publication finder"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2025-05-30
+summary: "Introduces IAmAPublicationFinder to locate the appropriate Publication from a producer registry and request context, with a default implementation that resolves by RequestContext.Topic, PublicationTopicAttribute, or request type, enabling dynamic multi-topic routing."
+tags:
+  - "publish"
+  - "messaging"
+  - "configuration"
+  - "api-design"
+---
+
 # 27. Allow custom publication finder 
 
 Date: 2025-05-30

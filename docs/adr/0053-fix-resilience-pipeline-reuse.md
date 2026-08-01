@@ -1,3 +1,17 @@
+---
+id: 0053-fix-resilience-pipeline-reuse
+title: "Fix Resilience Pipeline Reuse Across Command Handlers"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-03-11
+summary: "Fixes `ResilienceExceptionPolicyHandlerAsync<TRequest>` which ignored the `UseTypePipeline` flag and always called `GetPipeline<TRequest>()`, preventing non-generic shared `ResiliencePipeline` instances from being reused across multiple command handler types."
+tags:
+  - "pipeline"
+  - "resilience"
+  - "middleware"
+---
+
 # 53. Fix Resilience Pipeline Reuse Across Command Handlers
 
 Date: 2026-03-11

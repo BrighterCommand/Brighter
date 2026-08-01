@@ -14,6 +14,16 @@
     <PackageReference Include="System.Text.Json"/>
   </ItemGroup>
 
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <!-- ServiceProviderLifetimeScope disposes IAsyncDisposable service scopes on every TFM. IAsyncDisposable
+         (Microsoft.Bcl.AsyncInterfaces) and ValueTask (System.Threading.Tasks.Extensions) are not in the
+         netstandard2.0 BCL; reference them explicitly rather than relying on the transitive copy the DI
+         abstractions pull in, so a later dependency bump that drops or downgrades them cannot break the
+         netstandard2.0 async-disposal path. -->
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
   </ItemGroup>

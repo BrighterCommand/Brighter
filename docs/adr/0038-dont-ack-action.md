@@ -1,10 +1,26 @@
+---
+id: 0038-dont-ack-action
+title: "Don't Ack Action"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-16
+summary: "Adds a DontAckAction exception type that signals the message pump to nack (rather than acknowledge) a message on queue-based transports, plus DontAckOnErrorAttribute and a FeatureSwitchAttribute.DontAck option for blocking on feature-disabled or error scenarios."
+tags:
+  - "message-pump"
+  - "message-rejection"
+  - "error-handling"
+  - "messaging"
+---
+
 # 38. Don't Ack Action
 
 Date: 2026-02-16
 
 ## Status
 
-Accepted. Amended 2026-02-17 to add Transport Nack (see Decision §6).
+Accepted
+Amended 2026-02-17 to add Transport Nack (see Decision §6).
 
 ## Context
 

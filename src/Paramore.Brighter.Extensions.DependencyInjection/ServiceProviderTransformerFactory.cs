@@ -52,19 +52,22 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="transformerType">The type of transformer to create</param>
         /// <returns>The created transformer instance</returns>
-        public IAmAMessageTransform? Create(Type transformerType)
+        public Lease<IAmAMessageTransform>? Create(Type transformerType)
         {
-            return _lifetimeScope.GetOrCreate<IAmAMessageTransform>(transformerType);
+            var transform = _lifetimeScope.GetOrCreate<IAmAMessageTransform>(transformerType, out var releaseToken);
+            return transform is null ? null : new Lease<IAmAMessageTransform>(transform, releaseToken);
         }
 
         /// <summary>
         /// Releases a transformer. For singleton lifetime, does nothing.
-        /// For scoped/transient, disposes the transformer if it implements IDisposable.
+        /// For scoped/transient, disposes the per-resolution scope the transformer was resolved from.
         /// </summary>
-        /// <param name="transformer">The transformer to release</param>
-        public void Release(IAmAMessageTransform transformer)
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the transformer to release</param>
+        public void Release(Lease<IAmAMessageTransform>? lease)
         {
-            _lifetimeScope.Release(transformer);
+            //over-release of a lease is a harmless no-op, including a null lease
+            if (lease is null) return;
+            _lifetimeScope.Release(lease.ReleaseToken);
         }
 
         /// <summary>

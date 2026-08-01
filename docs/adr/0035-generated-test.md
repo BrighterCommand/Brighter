@@ -1,3 +1,16 @@
+---
+id: 0035-generated-test
+title: "Test Generation Tool"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2025-11-18
+summary: "Introduces a command-line test generation tool (Paramore.Brighter.Test.Generator) using Liquid templates and a test-configuration.json file to produce consistent, provider-specific test suites across all outbox and gateway implementations."
+tags:
+  - "testing"
+  - "test-generation"
+---
+
 # 35. Test Generation Tool
 
 Date: 2025-11-18

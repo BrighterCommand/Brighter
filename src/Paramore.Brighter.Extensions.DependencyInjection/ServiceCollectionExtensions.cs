@@ -753,6 +753,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //again to prevent someone configuring Brighter from having to pass generic types
             var busType = typeof(OutboxProducerMediator<,>).MakeGenericType(typeof(Message), transactionType);
 
+            //the registry and transform factories are newed up here solely for this mediator and are not
+            //container-registered, so the mediator is their sole owner and disposes them at container teardown
+            //(the trailing ownsRegistry/ownsTransformerFactories arguments). Activator.CreateInstance does not
+            //apply constructor default values, so these positional arguments must be supplied explicitly.
             return (IAmAnOutboxProducerMediator?)Activator.CreateInstance(
                 busType,
                 busConfiguration.ProducerRegistry,
@@ -770,7 +774,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 busConfiguration.MaxOutStandingCheckInterval,
                 busConfiguration.OutBoxBag,
                 TimeProvider.System,
-                busConfiguration.InstrumentationOptions);
+                busConfiguration.InstrumentationOptions,
+                true,
+                true);
         }
 
         /// <summary>
