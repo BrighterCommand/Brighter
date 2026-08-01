@@ -23,9 +23,9 @@ Accepted
 
 ## Context
 
-**Scope**: which component disposes the mapper registry and the mapper/transform factories, so the per-resolution scopes of ADR 0067 are actually reclaimed.
+**Scope**: which component disposes the mapper registry and the mapper/transform factories, so the per-resolution DI scopes of ADR 0067 are actually reclaimed.
 
-A per-resolution scope that a caller fails to release is drained only when its factory is disposed (ADR 0067). For an IoC-backed factory nothing else can reach those factories to dispose them, so an owner must — and must do so exactly once, without disposing a factory or registry that another owner is still using.
+A per-resolution DI scope that a caller fails to release is drained only when its factory is disposed (ADR 0067). For an IoC-backed factory nothing else can reach those factories to dispose them, so an owner must — and must do so exactly once, without disposing a factory or registry that another owner is still using.
 
 ## Decision
 
@@ -50,7 +50,7 @@ Components that receive a registry they did not create do not dispose it. The pi
 
 ### Positive
 
-- Every per-resolution scope is reclaimed at the latest when its owning root is disposed, bounding retention to the host lifetime; in the DI path each root gets its own registry and factories, so disposal is airtight.
+- Every per-resolution DI scope is reclaimed at the latest when its owning root is disposed, bounding retention to the host lifetime; in the DI path each root gets its own registry and factories, so disposal is airtight.
 
 ### Negative
 
