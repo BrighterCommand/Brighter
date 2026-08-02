@@ -24,6 +24,19 @@ Accepted
 
 **Scope**: how `ServiceProviderLifetimeScope` — the DI-backed lifetime helper shared by the mapper, transformer and handler factories — creates, tracks and releases the `IServiceScope` for a *transient* resolution.
 
+### Where this ADR sits
+
+Four ADRs came out of the #4252 lifetime work, one decision each, and they are meant to be read in order:
+
+| ADR | Decides |
+| --- | --- |
+| 0066 | what a factory returns, so that `Release` can name the resolution it is releasing |
+| **0067** *(this one)* | that a `Transient` resolution gets its own DI scope, tracked by scope identity and released idempotently |
+| 0068 | that disposal is deterministic on the explicit path and best-effort in the finalizer |
+| 0069 | who owns, and therefore who disposes, the registry and the factories |
+
+ADRs 0070–0074 then build on all four: they give a *pipeline* its own DI scope, and let it join one the host already owns. The `Terms` block below is the one they reference rather than restate.
+
 ### Terms
 
 Two **independent** axes decide what a resolution yields, and conflating them is the main source of confusion in this area:
@@ -42,6 +55,24 @@ A scope owns more than the instance it produced: it also owns whatever that inst
 ## Decision
 
 `ServiceProviderLifetimeScope` creates a **fresh `IServiceScope` per transient resolution** and disposes it when that resolution is released.
+
+### The mechanism, end to end
+
+The two factory families reach the same helper by two different entry points, and the difference is what identifies a resolution: for a mapper or transform it is the resolution's own scope, carried back as a token; for a handler it is the pipeline, which already has an identity of its own.
+
+```mermaid
+flowchart TB
+    res(["a transient resolution arrives"]) --> which{"which factory is asking?"}
+
+    which -- "mapper or transformer" --> tok["the token-returning entry point:<br/>one fresh IServiceScope per resolution"]
+    tok --> rel["Release(token) — TryRemove, then dispose.<br/>This is what closes the leak"]
+
+    which -- "handler" --> disc["the token-discarding entry point:<br/>one ServiceProviderLifetimeScope per pipeline,<br/>identified by that pipeline's IAmALifetime"]
+    disc --> pipe["drained whole when the pipeline completes.<br/>Granularity within the pipeline is governed<br/>separately by IsolateTransientHandlerScope"]
+
+    rel --> net["whatever is still un-released is drained when the<br/>lifetime scope itself is disposed — the safety net"]
+    pipe --> net
+```
 
 ### Track by scope identity, release idempotently
 
@@ -94,6 +125,6 @@ The pre-fix model. **Rejected because** it leaks the scope (and the instance's i
 
 ## References
 
-- Realises: [ADR 0066: Key Release Factory Created Instance via an Opaque `Lease<T>`](0066-release-factory-instances-on-an-opaque-lease)
+- Realises: [ADR 0066: Release a factory-created instance through an opaque `Lease<T>`](0066-release-factory-instances-on-an-opaque-lease.md)
 - Refines: [ADR 0039: Scoping dependencies inline with lifetime scope](0039-scoping-dependencies-inline-with-lifetime-scope.md)
 - Related: [ADR 0068: Deterministic disposal — the finalizer is a safety net](0068-deterministic-disposal-finalizer-safety-net.md), [ADR 0069: Ownership and disposal cascade for mapper/transform factories](0069-factory-registry-ownership-and-disposal-cascade.md)

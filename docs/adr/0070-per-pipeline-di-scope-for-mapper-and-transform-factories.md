@@ -23,13 +23,27 @@ Proposed
 
 ## Context
 
-A transform pipeline is built from two families of artefact: the message mapper, resolved through `IAmAMessageMapperFactory`/`IAmAMessageMapperFactoryAsync` by way of `MessageMapperRegistry`, and the `[WrapWith]`/`[UnwrapWith]` transforms, resolved through `IAmAMessageTransformerFactory`/`IAmAMessageTransformerFactoryAsync`. On current master those two families come from **two different DI scopes**, and under a configured lifetime of `Scoped` neither DI scope is ever released until the host shuts down.
+A transform pipeline is a message mapper plus the `[WrapWith]`/`[UnwrapWith]` transforms that decorate it. Both are resolved from the application's container, through Brighter's factory interfaces, once per message. On current master they are resolved from **two different DI scopes**, and under a configured lifetime of `Scoped` neither of those DI scopes is released until the host shuts down. So a mapper meant to serve one message serves the process, and a dependency injected into both a mapper and its transform is two objects where the application asked for one.
 
 **Parent Requirement**: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md)
 
 **Scope**: This ADR decides one thing — **a transform pipeline takes one DI scope, and the mapper factory and the transformer factory both resolve from it**. It discharges FR-1 … FR-7 and constraint C-19, and closes Defect 1 and Defect 1b.
 
 It introduces `IAmAScope` as the core scope handle, settling the disposal half of C-8 and confirming the seam types' home. It does **not** decide `IAmAScopeProvider`, the *ambient* concept, `ScopeAffinity`, adoption or borrowing, ASP.NET (`IHttpContextAccessor`), the opt-in option on `IBrighterOptions`, `Publish`-subscriber ambient suppression, or the `ValidatePipelines()` rules of FR-22. Those are deferred to ADRs 0072 and 0073. Nor does it converge handler pipelines onto this mechanism — that is ADR 0071. This ADR is written so as not to foreclose any of them, and *Forward compatibility* below says how each lands on top of what is decided here.
+
+### Where this ADR sits
+
+Five ADRs deliver the parent requirement, one decision each. They are meant to be read in order; this is the first.
+
+| ADR | Decides |
+| --- | --- |
+| **0070** *(this one)* | a transform pipeline takes one DI scope, carried **as a parameter** |
+| 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
+| 0072 | how a pipeline discovers an **ambient** DI scope the host owns, and where `Publish` suppression hangs |
+| 0073 | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
+| 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+
+One rule unifies the first two, and it is the sentence to carry into the rest: **the per-pipeline object carries the DI scope.** For a transform pipeline that object is the `TransformPipeline<TRequest>`, and the scope arrives as a parameter, because `Create(Type)` has no per-pipeline object to hang it on. For a handler pipeline (ADR 0071) it is the `IAmALifetime`, which every resolution site already receives, so the scope rides on it.
 
 Handler pipelines are **not** touched here, and the two handler factory interfaces are **not** changed: nothing in `IAmAHandlerFactorySync`, `IAmAHandlerFactoryAsync`, `ServiceProviderHandlerFactory`, `PipelineBuilder<TRequest>`, `HandlerLifetimeScope` or `IAmALifetime` changes. They already have a per-pipeline object — `IAmALifetime` — and a working per-pipeline DI scope keyed on it, which is the model this ADR copies. **ADR 0071 then converges them onto the mechanism decided here**, so that one story serves both families; FR-7's requirement that handler *behaviour* be preserved holds across both.
 
@@ -44,16 +58,18 @@ Every factory call is a `Create` matched by a `Release`. They divide into two fa
 | `IAmAHandlerFactorySync` (`:44`, `:51`), `IAmAHandlerFactoryAsync` (`:44`, `:51`) | `Create(Type, IAmALifetime)` / `Release(handler, IAmALifetime)` | **pipeline** — one `ServiceProviderLifetimeScope` per `IAmALifetime` (`ServiceProviderHandlerFactory.cs:127-131`) | `Release` — it disposes that pipeline's DI scope (`:102-107`, `:133-137`) |
 | `IAmAMessageMapperFactory` (`:45`, `:60`), `IAmAMessageMapperFactoryAsync` (`:46`, `:62`), `IAmAMessageTransformerFactory` (`:44`, `:50`), `IAmAMessageTransformerFactoryAsync` (`:45`, `:54`) | `Create(Type) → Lease<T>?` / `Release(Lease<T>?)` | **factory** — one built in the constructor (`ServiceProviderMapperFactory.cs:46`, `ServiceProviderTransformerFactory.cs:46`) | **nothing** |
 
-The handler family already does the right thing: **a per-pipeline object travels on every call**, so `ServiceProviderHandlerFactory` can key a DI scope on it and dispose that DI scope on `Release`. This is the model this ADR copies, and copies literally.
-
-The mapper/transform family cannot, as its interfaces stand. `Create(Type)` carries nothing that identifies a pipeline (ADR 0066 deliberately made the return an opaque `Lease<T>`), so those factories key one DI scope for their whole life and release *per resolution*. `ServiceProviderLifetimeScope.GetOrCreate<T>(Type, out object? releaseToken)` (`:126`) issues a release token in exactly one case — isolated `Transient` (`:139-140`, `GetTransient` `:259-261`). For `Scoped` the token is `null` (`:136`, documented at `:118-123`), so `Release(Lease)` is a no-op and the artefact is reclaimed only when the factory itself is disposed at shutdown (`ServiceProviderMapperFactory.cs:78`; its own remarks say so at `:61-65`).
-
-Two defects follow, and they are the whole of this ADR's problem:
+Two defects follow from the second row's *"nothing"*, and they are the whole of this ADR's problem:
 
 - **Defect 1 — a `Scoped` mapper or transform silently lives for the process.** The factories are constructed once for the singleton `Dispatcher` and once for the singleton `OutboxProducerMediator`, so `GetOrCreateScoped` (`:163-178`) caches every artefact by type for the host's life. Message N+1 sees message N's state, and an `IDisposable` mapper is never disposed.
 - **Defect 1b — the mapper and transformer factories do not share a DI scope.** `ServiceProviderMapperFactory` and `ServiceProviderTransformerFactory[Async]` each build their own `ServiceProviderLifetimeScope`, hence their own `IServiceScope`. A container-`Scoped` dependency injected into a mapper *and* into its `[UnwrapWith]` transform is therefore two instances. Fixing Defect 1 factory-by-factory would leave this untouched — which is what C-19 records, and why FR-3 is the requirement that shapes the solution.
 
 `ClaimCheckTransformer` (`src/Paramore.Brighter/Transforms/Transformers/ClaimCheckTransformer.cs:62`) is the concrete case: it takes `IAmAStorageProvider` and `IAmAStorageProviderAsync`, and is the one Brighter-shipped transform with constructor dependencies. A user's mapper and its claim-check transform sharing a `Scoped` unit of work is exactly FR-3's example.
+
+#### Why one family reclaims and the other does not
+
+The handler family already does the right thing: **a per-pipeline object travels on every call**, so `ServiceProviderHandlerFactory` can key a DI scope on it and dispose that DI scope on `Release`. This is the model this ADR copies, and copies literally.
+
+The mapper/transform family cannot, as its interfaces stand. `Create(Type)` carries nothing that identifies a pipeline (ADR 0066 deliberately made the return an opaque `Lease<T>`), so those factories key one DI scope for their whole life and release *per resolution*. `ServiceProviderLifetimeScope.GetOrCreate<T>(Type, out object? releaseToken)` (`:126`) issues a release token in exactly one case — isolated `Transient` (`:139-140`, `GetTransient` `:259-261`). For `Scoped` the token is `null` (`:136`, documented at `:118-123`), so `Release(Lease)` is a no-op and the artefact is reclaimed only when the factory itself is disposed at shutdown (`ServiceProviderMapperFactory.cs:78`; its own remarks say so at `:61-65`).
 
 ### The forces
 
@@ -75,37 +91,79 @@ Two defects follow, and they are the whole of this ADR's problem:
 
 The scope travels the way the handler family's scope already travels: **as a parameter**. The four mapper and transformer factory interfaces, and the two mapper registry interfaces, take the scope on the call that creates an artefact, and each gains a member that offers to create one.
 
-### Architecture Overview
+### The mechanism, end to end
 
+Three things happen, in this order, once per pipeline. **Acquire**: the builder asks the participating factories for a scope and takes the first one offered — a `null` from all of them means no pipeline scope, and behaviour is exactly as today. **Share**: that one handle is passed to every `Create` the pipeline needs, so the mapper and every transform resolve from the same `IServiceScope`. **Release**: the pipeline owns the handle from the moment it is constructed, and its existing release-once drain ends it — after the leases have gone back to their factories, never before.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Builder as TransformPipelineBuilder
+    participant Registry as IAmAMessageMapperRegistry
+    participant Transforms as IAmAMessageTransformerFactory
+    participant Pipeline as TransformPipeline
+
+    Note over Builder,Transforms: ACQUIRE — ask each participant, and take the first non-null
+    Builder->>Registry: CreatePipelineScope()
+    Registry-->>Builder: IAmAScope, or null
+    Builder->>Transforms: CreatePipelineScope(), only if the registry offered nothing
+    Transforms-->>Builder: IAmAScope, or null
+
+    Note over Builder,Transforms: SHARE — the same handle on every Create
+    Builder->>Registry: Get for TRequest, passing the scope
+    Registry-->>Builder: mapper lease
+    Builder->>Transforms: Create each transform, passing the same scope
+    Transforms-->>Builder: transform leases
+
+    Builder->>Pipeline: construct, handing the scope over
+    Note over Pipeline: from here the pipeline owns the scope
+
+    Note over Registry,Pipeline: RELEASE — once, and in this order
+    Pipeline->>Transforms: release the transform leases
+    Pipeline->>Registry: release the mapper lease
+    Pipeline->>Pipeline: dispose the IAmAScope last
 ```
-                    Paramore.Brighter (core) — no container types
-  ┌──────────────────────────────────────────────────────────────────────────┐
-  │  TransformPipelineBuilder[Async].BuildWrapPipeline / BuildUnwrapPipeline  │
-  │                                                                          │
-  │  1. scope = mapperRegistry.CreatePipelineScope()                         │
-  │             ?? transformerFactory?.CreatePipelineScope()   (may be null)  │
-  │  2. registry.Get<TRequest>(scope)       ── mapper Create  (sync builder)  │
-  │     registry.GetAsync<TRequest>(scope)  ── mapper Create  (async builder) │
-  │     transformerFactory.Create(t, scope) ── transform Creates (D12)        │
-  │  3. pipeline holds `scope`; pipeline.Dispose()/DisposeAsync() ends it     │
-  └──────────────────────────────────────────────────────────────────────────┘
-                                   │  IAmAScope (opaque handle)
-                                   ▼
-        Paramore.Brighter.Extensions.DependencyInjection
-  ┌──────────────────────────────────────────────────────────────────────────┐
-  │  ServiceProviderPipelineScope : IAmAScope                                │
-  │      owns one ServiceProviderLifetimeScope (which owns its IServiceScope)│
-  │                                                                          │
-  │  ServiceProviderMapperFactory           ─┐                                │
-  │  ServiceProviderMapperFactoryAsync       │  all four resolve through the  │
-  │  ServiceProviderTransformerFactory       │  SAME handle they are handed   │
-  │  ServiceProviderTransformerFactoryAsync ─┘                                │
-  └──────────────────────────────────────────────────────────────────────────┘
+
+Two invariants are worth reading off the diagram, because everything else follows from them. The transformer factory is asked and passed the scope **whether or not the mapper declares a transform** (D12), so `TransformerLifetime` behaves the same either way. And the scope is disposed **last**, so a factory whose `Release` still has work to do is never left resolving against a dead scope.
+
+### Where the pieces live
+
+```mermaid
+flowchart TB
+    subgraph core["Paramore.Brighter — core, names no container type"]
+        direction TB
+        handle["IAmAScope<br/>an opaque handle: IDisposable and IAsyncDisposable, nothing more"]
+        builder["TransformPipelineBuilder and its async twin<br/>acquires the scope, threads it, hands it to the pipeline"]
+        pipe["TransformPipeline and its async twin<br/>holds the scope, releases it in the drain"]
+        builder --> pipe
+    end
+
+    subgraph di["Paramore.Brighter.Extensions.DependencyInjection"]
+        direction TB
+        scope["ServiceProviderPipelineScope<br/>owns one ServiceProviderLifetimeScope,<br/>which owns the IServiceScope"]
+        facs["ServiceProviderMapperFactory and its async twin<br/>ServiceProviderTransformerFactory and its async twin<br/>all four resolve through the SAME handle they are given"]
+        facs --> scope
+    end
+
+    builder -- "CreatePipelineScope(), then Create with the scope" --> facs
+    scope -. "implements" .-> handle
 ```
 
 One `IServiceScope` per transform pipeline, reached by every participating factory, disposed exactly once when the pipeline is released. That is FR-1, FR-2 and FR-3 in one mechanism, and it is the same shape `ServiceProviderHandlerFactory` already uses for handlers — with `IAmAScope` playing, for transform pipelines, the per-pipeline-object part that `IAmALifetime` already plays for handler pipelines.
 
 ### Key Components
+
+#### The roles, and what each is responsible for
+
+| Role | Type | Stereotype | Responsibility |
+| --- | --- | --- | --- |
+| Pipeline scope handle | `IAmAScope` (core) | **knowing** (information holder) | *Is* the DI scope a pipeline resolves from. Says nothing about where it came from, who owns it, or how to resolve anything |
+| Scope offerer | the four factory interfaces and the two registry interfaces (core) | **deciding** | Answers, for one pipeline, whether it has a DI scope to offer. `null` means it has none, and behaviour is exactly today's |
+| Scope acquirer | `TransformPipelineBuilder[Async]` (core) | **doing** (structurer) | Asks the participants in a fixed order, threads the first non-null handle through every `Create`, and releases it itself if the build fails |
+| Scope owner | `TransformPipeline[Async]` (core) | **doing** | Holds the handle for the pipeline's life and ends it exactly once, after the leases have gone back to their factories |
+| Scope implementation | `ServiceProviderPipelineScope` (DI package) | **knowing** | Owns one `ServiceProviderLifetimeScope`, and so one `IServiceScope`, for this pipeline |
+
+The split between the last two is what makes the design work: the object that *acquires* the scope is not the object that *owns* it, because the build can fail after the scope exists and before a pipeline does — which is FR-5, and why the builder's failed-build path releases it directly.
 
 #### `IAmAScope` — the pipeline scope handle (new, core, public)
 

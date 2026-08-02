@@ -35,6 +35,20 @@ It does **not** decide where FR-22's validation rules are evaluated — that is 
 
 This ADR **supersedes no prior ADR.** It completes the 0070–0072 sequence on the application-facing side.
 
+### Where this ADR sits
+
+Five ADRs deliver the parent requirement, one decision each. This is the fourth, and the only one an application author has to touch anything to use.
+
+| ADR | Decides |
+| --- | --- |
+| 0070 | a transform pipeline takes one DI scope, carried **as a parameter** |
+| 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
+| 0072 | how a pipeline discovers an **ambient** DI scope the host owns, and where `Publish` suppression hangs |
+| **0073** *(this one)* | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
+| 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+
+The whole of the opt-in, from an application's side, is one line in `Program.cs`. The work is making that line land on four registration paths that behave differently and can be called in any order.
+
 ADR 0067's `Terms` block defines the two axes used throughout — Brighter's *configured lifetime*, which governs the artefact, and the container's *registration lifetime*, which governs the dependencies. This ADR does not restate it. Per NFR-8, "lifetime scope" is not used for anything introduced here.
 
 ### The four registration paths, and what each does with `IBrighterOptions`
@@ -71,46 +85,80 @@ Four sites, in two assemblies, and every one of them uses `TryAddSingleton`, so 
 
 **`IBrighterOptions` gains a `ScopeAffinity DefaultScopeAffinity` property defaulting to `ScopeAffinity.AlwaysNew`. A new package `Paramore.Brighter.Extensions.AspNetCore` supplies an `IAmAScopeProvider` over `IHttpContextAccessor`, registered by one `IServiceCollection` extension, `AddBrighterRequestScope(ScopeAffinity affinity = ScopeAffinity.JoinAmbient)`. That extension carries its argument by registering a `ScopeAffinityOverride` singleton, which Brighter's own `IBrighterOptions` factory delegate reads and applies to the options object it is about to hand out — at all four registration sites, so the argument lands after every application options delegate on every path and in every order.**
 
-### Architecture Overview
+### The mechanism, end to end
 
+The problem is that an opt-in gesture in a leaf package has to set a value on an object that, on two of the four registration paths, does not exist yet and will not until the container is built. The answer is to stop trying to write to it. **The extension deposits a value into the collection; the one place that does have the object — the factory that produces it — picks the value up.** Those are two different moments, so there is no ordering to get right.
+
+```mermaid
+sequenceDiagram
+    participant App as Program.cs
+    participant SC as IServiceCollection
+    participant SP as the built container
+    participant Readers as the five factories, ScopeAffinityPolicy, validation
+
+    Note over App,SC: REGISTRATION time — these two may be called in either order
+    App->>SC: AddBrighterRequestScope(affinity)
+    Note right of SC: deposits a ScopeAffinityOverride<br/>and an IAmAScopeProvider
+    App->>SC: AddBrighter or AddConsumers
+    Note right of SC: RegisterBrighterOptions deposits the<br/>IBrighterOptions factory delegate
+
+    Note over App,Readers: FIRST RESOLUTION — the delegate runs, once
+    SP->>SP: build the options object from this path's own optionsFunc
+    SP->>SP: GetService for ScopeAffinityOverride
+    SP->>SP: if one is present, assign options.DefaultScopeAffinity
+    SP-->>Readers: one IBrighterOptions, already carrying the extension's affinity
 ```
-  Paramore.Brighter (core)
-  ┌────────────────────────────────────────────────────────────────────────────┐
-  │  ScopeAffinity { AlwaysNew = 0, JoinAmbient }              (ADR 0072)       │
-  │  IAmAScopeProvider   IAmAScope? GetAmbient(ScopeAffinity)  (ADR 0072)       │
-  └────────────────────────────────────────────────────────────────────────────┘
-                    ▲ names ScopeAffinity                ▲ implements
-                    │                                    │
-  Paramore.Brighter.Extensions.DependencyInjection       │
-  ┌───────────────────────────────────────────────────────────────────────────┐
-  │  IBrighterOptions.DefaultScopeAffinity                              NEW    │
-  │  BrighterOptions.DefaultScopeAffinity = AlwaysNew                   NEW    │
-  │  ScopeAffinityOverride { ScopeAffinity Affinity }        NEW, read-only    │
-  │                                                                            │
-  │  RegisterBrighterOptions(services, optionsFunc)                     NEW    │
-  │      TryAddSingleton<IBrighterOptions>(sp =>                               │
-  │      {                                                                     │
-  │          var o = optionsFunc(sp);                                          │
-  │          var over = sp.GetService<ScopeAffinityOverride>();                │
-  │          if (over is not null)                                             │
-  │              o.DefaultScopeAffinity = over.Affinity;            // D18     │
-  │          return o;                                                         │
-  │      });                                                                   │
-  └───────────────────────────────────────────────────────────────────────────┘
-        ▲ called from :74 and :97, and from ServiceActivator :38 and :88
-        │
-  Paramore.Brighter.Extensions.AspNetCore   NEW package
-  ┌───────────────────────────────────────────────────────────────────────────┐
-  │  AddBrighterRequestScope(this IServiceCollection,                          │
-  │                          ScopeAffinity affinity = JoinAmbient)             │
-  │      services.AddHttpContextAccessor();                                    │
-  │      services.AddSingleton<IAmAScopeProvider, HttpContextScopeProvider>(); │
-  │      services.TryAddSingleton(new ScopeAffinityOverride(affinity));        │
-  │                                                                            │
-  │  HttpContextScopeProvider : IAmAScopeProvider                              │
-  │  HttpRequestScope : IAmAServiceProviderScope   over RequestServices        │
-  └───────────────────────────────────────────────────────────────────────────┘
+
+Because the assignment happens *inside* the producer, it necessarily runs after every application-supplied delegate has contributed — after `Configure` on the `IOptions` path, after `configure.Invoke(options)` on the consumer `Action` path, after the application's `Func` has returned on both `Func` paths. That is D18 satisfied by construction rather than by an ordering rule: the extension wins because it writes last, and it writes last because it writes from inside.
+
+All four entry points funnel through the same definition, which is what makes the rule true on every path rather than on the one an author happened to be looking at:
+
+```mermaid
+flowchart LR
+    a1["AddBrighter(Action)"] --> RBO
+    a2["AddBrighter(Func)"] --> RBO
+    a3["AddConsumers(Action)"] --> RBO
+    a4["AddConsumers(Func)"] --> RBO
+    ext["AddBrighterRequestScope(affinity)"] -- "TryAddSingleton" --> ovr["ScopeAffinityOverride<br/>one immutable value"]
+    RBO["RegisterBrighterOptions<br/>TryAddSingleton for IBrighterOptions, with a delegate that<br/>builds this path's options object, then applies the override"]
+    ovr -. "read by that delegate,<br/>at first resolution" .-> RBO
+    RBO --> opts["the one IBrighterOptions<br/>every reader reads"]
 ```
+
+### Where the pieces live
+
+```mermaid
+flowchart TB
+    subgraph core["Paramore.Brighter — core, unchanged by this ADR"]
+        affinity["ScopeAffinity: AlwaysNew = 0, JoinAmbient — ADR 0072"]
+        provider["IAmAScopeProvider — ADR 0072"]
+    end
+
+    subgraph di["Paramore.Brighter.Extensions.DependencyInjection"]
+        direction TB
+        opt["IBrighterOptions.DefaultScopeAffinity — NEW<br/>BrighterOptions.DefaultScopeAffinity = AlwaysNew — NEW"]
+        ovr["ScopeAffinityOverride — NEW<br/>immutable, carries one ScopeAffinity"]
+        reg["RegisterBrighterOptions — NEW, public static, not an extension method<br/>the single definition of the write-through, called from all four sites"]
+        reg --> opt
+        reg --> ovr
+    end
+
+    subgraph aspnet["Paramore.Brighter.Extensions.AspNetCore — NEW package"]
+        direction TB
+        extn["AddBrighterRequestScope(IServiceCollection, ScopeAffinity = JoinAmbient)<br/>AddHttpContextAccessor, AddSingleton the provider, TryAddSingleton the override"]
+        hcsp["HttpContextScopeProvider : IAmAScopeProvider"]
+        hrs["HttpRequestScope : IAmAServiceProviderScope, over RequestServices"]
+        extn --> hcsp
+        hcsp --> hrs
+    end
+
+    opt -. "names" .-> affinity
+    ovr -. "names" .-> affinity
+    hcsp -. "implements" .-> provider
+    extn -- "registers" --> ovr
+```
+
+The dependency direction is fixed and is the whole of NFR-2: the ASP.NET package depends on the DI package, the DI package depends on core, and neither of the lower two ever depends upward.
 
 ### Key Components
 
