@@ -31,7 +31,47 @@ ADR 0070 gave a transform pipeline one DI scope, carried as an `IAmAScope` handl
 
 It does **not** decide the *ambient* concept, `IAmAScopeProvider`, `ScopeAffinity`, adoption or borrowing, ASP.NET, the opt-in option on `IBrighterOptions`, `Publish`-subscriber ambient suppression, or the `ValidatePipelines()` rules of FR-22 — 0072 and 0073. It does not change **when** a handler pipeline has a DI scope, **which** lifetimes get one, or **when** it is released. `PipelineBuilder<TRequest>`'s eager per-subscriber resolution and its end-of-publish release stay exactly as they are (D10), and ADR 0039's DI scope per registered subscriber is preserved unchanged.
 
+### Where this ADR sits
+
+Five ADRs deliver the parent requirement, one decision each. This is the second, and the only one that delivers no behaviour.
+
+| ADR | Decides |
+| --- | --- |
+| 0070 | a transform pipeline takes one DI scope, carried **as a parameter** |
+| **0071** *(this one)* | handler pipelines converge onto the **same handle**, carried on the object they already pass |
+| 0072 | how a pipeline discovers an **ambient** DI scope the host owns, and where `Publish` suppression hangs |
+| 0073 | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
+| 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+
+ADR 0070's rule is the one this ADR applies: **the per-pipeline object carries the DI scope.** The two families differ only in *which* object plays that part. A transform `Create(Type)` has no per-pipeline object, so 0070 had to add a parameter; a handler `Create(Type, IAmALifetime)` already receives one, so here the scope rides on it and no signature changes at all.
+
 ### How a handler pipeline reaches its DI scope today
+
+The DI scope exists, and it is already per pipeline — but core never holds it. Core holds the *key*, the factory holds the scope in a dictionary keyed on that key, and `Release` is what disposes it:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Builder as PipelineBuilder
+    participant Lifetime as HandlerLifetimeScope
+    participant Factory as ServiceProviderHandlerFactory
+    participant Dict as the _lifetimeScopes dictionary
+
+    Builder->>Lifetime: new, one per subscriber
+    Builder->>Factory: Create(handlerType, lifetime)
+    Factory->>Dict: GetOrAdd, keyed on the IAmALifetime
+    Dict-->>Factory: this pipeline's ServiceProviderLifetimeScope
+    Factory-->>Builder: the handler
+    Builder->>Lifetime: Add(handler), and again for every decorator
+
+    Note over Builder,Dict: at end of publish
+    Builder->>Lifetime: Dispose
+    Lifetime->>Factory: Release(handler, this), once per tracked handler
+    Factory->>Dict: TryRemove, then dispose the DI scope
+    Note right of Dict: the FIRST Release disposes it —<br/>every later one silently finds nothing
+```
+
+Step by step, with the code:
 
 1. `PipelineBuilder<TRequest>` creates one `HandlerLifetimeScope` per subscriber — `GetSyncInstanceScope()` (`:567`) and `GetAsyncInstanceScope()` (`:578`), each recording it in `_instanceScopes` (`:47`).
 2. That object is passed as `IAmALifetime` on every `Create`: the subscriber's own handler at `:191`/`:236`, and each attribute decorator through `BuildPipeline` (`:272`), `BuildAsyncPipeline` (`:316`), `PushOntoPipeline` (`:499`) and `AppendToPipeline` (`:430`), all of which thread the same `instanceScope`.
@@ -68,33 +108,75 @@ Two mechanisms for one idea is the immediate cost. The larger one is ahead: **D2
 
 The per-pipeline object carries the scope. That is the same rule ADR 0070 states for transform pipelines; the two families differ only in *which* object plays the part, because a handler `Create` already receives one and a transform `Create` does not.
 
-### Architecture Overview
+### The mechanism, end to end
 
+Compare this with the *today* diagram above. The same three things happen at the same three moments — the dictionary is gone, the handle is held by the object core already owns, and `Release` no longer disposes anything.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Builder as PipelineBuilder
+    participant Factory as the handler factory
+    participant Lifetime as HandlerLifetimeScope
+    participant Scope as IAmAScope
+
+    Note over Builder,Scope: ACQUIRE — once per subscriber
+    Builder->>Factory: CreatePipelineScope()
+    Factory-->>Builder: IAmAScope, or null when the lifetime is Singleton
+    Builder->>Lifetime: new, holding the handle as PipelineScope
+
+    Note over Builder,Scope: SHARE — no signature changes
+    Builder->>Factory: Create(handlerType, lifetime)
+    Factory->>Lifetime: read lifetime.PipelineScope
+    Factory-->>Builder: the handler, resolved from that scope
+    Builder->>Lifetime: Add(handler), and again for every decorator
+
+    Note over Builder,Scope: RELEASE — driven by PipelineBuilder.Dispose(), unchanged
+    Builder->>Lifetime: Dispose
+    Lifetime->>Factory: Release(handler, this), once per tracked handler
+    Lifetime->>Scope: dispose the handle, last and unconditionally
 ```
-                    Paramore.Brighter (core) — no container types
-  ┌──────────────────────────────────────────────────────────────────────────┐
-  │  PipelineBuilder<TRequest>.GetSyncInstanceScope / GetAsyncInstanceScope   │
-  │                                                                          │
-  │  1. scope = handlerFactory.CreatePipelineScope()          (may be null)   │
-  │  2. new HandlerLifetimeScope(handlerFactory, scope)  ── holds it          │
-  │  3. factory.Create(handlerType, instanceScope)      ── reads              │
-  │     …and every decorator Create, unchanged             instanceScope     │
-  │                                                        .PipelineScope    │
-  │  4. HandlerLifetimeScope.Dispose():                                      │
-  │        release tracked handlers, THEN dispose the scope                  │
-  │     driven by PipelineBuilder.Dispose() — unchanged (:269)               │
-  └──────────────────────────────────────────────────────────────────────────┘
-                                   │  IAmAScope (opaque handle)
-                                   ▼
-        Paramore.Brighter.Extensions.DependencyInjection
-  ┌──────────────────────────────────────────────────────────────────────────┐
-  │  ServiceProviderPipelineScope : IAmAScope                                │
-  │      owns one ServiceProviderLifetimeScope, configured with this          │
-  │      factory's handler lifetime and its IsolateTransientHandlerScope      │
-  └──────────────────────────────────────────────────────────────────────────┘
+
+Three consequences fall straight out of the diagram. `Create` and `Release` keep their signatures, because the scope travels on an argument they already take. The ordering rule — artefacts back to their factory *before* the DI scope they came from dies — is the same rule `TransformPipelineDrain` enforces for transform pipelines, and it now lives in the one object that knows about both. And the handle is disposed **unconditionally**, which closes a latent leak: today a pipeline whose handler fails to resolve never calls `Release`, so its dictionary entry survives for the life of the process.
+
+### Where the pieces live
+
+```mermaid
+flowchart TB
+    subgraph core["Paramore.Brighter — core, names no container type"]
+        direction TB
+        lifetime["IAmALifetime<br/>tracks handler instances so they can be released<br/>NEW: also holds the pipeline's IAmAScope"]
+        builder["PipelineBuilder<br/>GetSyncInstanceScope and GetAsyncInstanceScope<br/>ask the factory, pass the answer to the lifetime scope"]
+        hls["HandlerLifetimeScope, internal<br/>owns the ordering: release handlers, THEN dispose the handle"]
+        handle["IAmAScope, from ADR 0070"]
+        builder --> hls
+        hls -. "implements" .-> lifetime
+        hls --> handle
+    end
+
+    subgraph di["Paramore.Brighter.Extensions.DependencyInjection"]
+        sphf["ServiceProviderHandlerFactory<br/>CreatePipelineScope offers a handle unless the lifetime is Singleton<br/>Create resolves through lifetime.PipelineScope"]
+        scope["ServiceProviderPipelineScope<br/>owns one ServiceProviderLifetimeScope, configured with this factory's<br/>handler lifetime and its IsolateTransientHandlerScope"]
+        sphf --> scope
+    end
+
+    builder -- "CreatePipelineScope()" --> sphf
+    scope -. "implements" .-> handle
 ```
 
 ### Key Components
+
+#### The roles, and what each is responsible for
+
+| Role | Type | Stereotype | Responsibility |
+| --- | --- | --- | --- |
+| Scope offerer | `IAmAHandlerFactory` (core) | **deciding** | Answers, for one handler pipeline, whether it has a DI scope to offer. `null` for `Singleton`; a handle for `Transient` and `Scoped` alike |
+| Handler tracker **and** scope holder | `IAmALifetime` (core) | **knowing**, two things | Tracks handler instances so they can be released — its existing job — and now also carries the handle for the pipeline they were resolved from |
+| Release ordering | `HandlerLifetimeScope` (core, internal) | **doing** | Releases every tracked handler, then disposes the handle. Never the other way round |
+| Scope acquirer | `PipelineBuilder<TRequest>` (core) | **doing** (structurer) | Asks the factory once per subscriber and hands the answer to that subscriber's lifetime scope. Nothing else changes |
+| Scope implementation | `ServiceProviderPipelineScope` (DI package) | **knowing** | Owns one `ServiceProviderLifetimeScope`, configured with the handler lifetime and the isolate flag, so `Transient` behaviour is identical |
+
+Loading two responsibilities onto `IAmALifetime` is the cost this ADR pays, and it is paid deliberately: NFR-8 keeps `IAmALifetime` and `IAmAScope` distinct concepts, and the lifetime scope *holds* a scope rather than *becoming* one. *Consequences* records that the name gets no easier to read for it.
 
 #### `IAmAHandlerFactory` gains the offer (core, public)
 

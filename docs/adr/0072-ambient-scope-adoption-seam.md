@@ -35,6 +35,20 @@ It does **not** decide four naming questions and one siting question. Three name
 
 This ADR **supersedes no prior ADR.** It extends the 0066–0069 sequence and completes the seam ADRs 0070 and 0071 opened.
 
+### Where this ADR sits
+
+Five ADRs deliver the parent requirement, one decision each. This is the third; it is where the feature starts, the first two having only closed defects.
+
+| ADR | Decides |
+| --- | --- |
+| 0070 | a transform pipeline takes one DI scope, carried **as a parameter** |
+| 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
+| **0072** *(this one)* | how a pipeline discovers an **ambient** DI scope the host owns, and where `Publish` suppression hangs |
+| 0073 | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
+| 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+
+The two siblings converged both pipeline families onto one member, `CreatePipelineScope()`. That is why adoption is a change in **one** place: joining an ambient scope is simply what that member returns.
+
 ADR 0067's `Terms` block defines the two axes used throughout — Brighter's *configured lifetime*, which governs the artefact, and the container's *registration lifetime*, which governs the dependencies — and keeps `IServiceScope`, `ServiceProviderLifetimeScope` and `IAmALifetime` distinct from one another. This ADR does not restate it. Per NFR-8, "lifetime scope" is not used for anything introduced here.
 
 ### What the two siblings leave open
@@ -64,39 +78,102 @@ ADR 0067's `Terms` block defines the two axes used throughout — Brighter's *co
 
 **An ambient exposes its resolution source through a one-member role interface in the DI package, `IAmAServiceProviderScope : IAmAScope`; a container-backed factory type-tests for that role inside `CreatePipelineScope()`, asks the ambient source exactly once carrying an affinity computed over the pipeline's whole participating set, and either borrows the ambient's provider without owning it or creates and owns a scope as it does today. `Publish` subscriber pipelines force that affinity to `AlwaysNew` by way of a public, `AsyncLocal`-backed suppression flag in core, bracketed twice — once per subscriber inside the build loop, once around that subscriber's own invocation.**
 
-### Architecture Overview
+### The mechanism, end to end
 
+Two behaviours are decided here, and they are independent of one another. The first is what a pipeline does when it asks for a scope. The second is what a `Publish` subscriber does to stop the pipelines beneath it from asking at all.
+
+#### What a pipeline does when it asks for a scope
+
+Every path that is not *borrowed* ends at **create and own a scope**, which is exactly today's behaviour. That is the design's central property: six distinct failures — no provider, nothing offered, a stale ambient, an ambient from a container this package cannot use, an ambient offered for an `AlwaysNew` ask, and suppression in force — all converge on one fallback, and it is the one that already works.
+
+The protocol is a ladder. Each row is tested in order and the first that matches decides:
+
+| | Situation | Outcome | Diagnostic |
+| --- | --- | --- | --- |
+| 1 | this factory's configured lifetime offers no scope at all — mapper or transformer not `Scoped`, handler `Singleton` | `null`: this pipeline has no pipeline scope | none |
+| 2 | `Scoped` does not participate in this pipeline — handler family, `HandlerLifetime` is `Transient` | **OWNED**, and **no ask is made at all** (FR-27.1) | none |
+| 3 | the ambient source throws | propagate **unwrapped** — a misconfigured container is a startup-class fault, never degraded to "no ambient" (FR-24.1) | none |
+| 4 | the ask carried `AlwaysNew`, and something came back | **OWNED**; the ambient is ignored *before* it is probed, and never disposed (FR-24.4) | *ignored for an `AlwaysNew` ask* |
+| 5 | the ask carried `AlwaysNew`, and nothing came back | **OWNED** | none |
+| 6 | the ask carried `JoinAmbient`, and nothing came back | **OWNED** (FR-24.2, which includes FR-18's ordinary "no current `HttpContext`" case) | *no ambient offered* |
+| 7 | something came back, but does not implement `IAmAServiceProviderScope` | **OWNED**; declined, never disposed (FR-11(b), FR-13, C-7) | *ambient offered but unusable* |
+| 8 | something came back and implements the role, but fails the usability probe | **OWNED**; declined, never disposed (FR-23) | *ambient offered but unusable* |
+| 9 | something came back, implements the role, and passes the probe | **BORROWED** — resolve from it, own nothing, dispose nothing (FR-12, C-7) | none |
+
+Rows 3 onwards are reached only after the affinity has been computed, and that computation is the single point at which suppression bites:
+
+> `affinity = AmbientScopeSuppression.IsSuppressed ? AlwaysNew : the policy over the whole participating set`
+
+Three things the ladder is making a point of. The ask happens **even when the affinity is `AlwaysNew`** — rows 4 and 5 (D16) — which is what makes a pipeline's adoption decision observable at all. A declined ambient is **never disposed**, at rows 4, 7 and 8 alike, because Brighter does not own what it declined (C-7). And the three diagnostics are distinct, independently latched conditions, not three spellings of one.
+
+#### What a `Publish` subscriber does to stop it
+
+FR-9 requires **two** brackets, and neither substitutes for the other. The reason is that a subscriber's own artefacts are resolved long before its handler runs, and the pipelines it must also suppress are ones core did not build and holds no reference to — a nested `Send` or `Post` issued from user code, through the singleton `CommandProcessor`.
+
+```mermaid
+sequenceDiagram
+    participant CP as CommandProcessor.Publish
+    participant PB as PipelineBuilder
+    participant Sub as one subscriber's handler
+    participant Nested as a pipeline the handler creates
+
+    Note over CP,PB: bracket 1 — RESOLUTION time,<br/>per subscriber, inside the build loop
+    loop for each subscriber
+        PB->>PB: Suppress()
+        PB->>PB: resolve this subscriber's handler and every decorator
+        PB->>PB: restore, explicitly
+    end
+
+    Note over CP,Nested: bracket 2 — EXECUTION time,<br/>per subscriber, around its own invocation
+    loop for each subscriber
+        CP->>CP: Suppress()
+        CP->>Sub: Handle or HandleAsync
+        Sub->>Nested: Send, Post or Publish on the singleton CommandProcessor
+        Nested->>Nested: reads IsSuppressed, so creates and owns its own scope
+        CP->>CP: restore, explicitly
+    end
 ```
-  Paramore.Brighter (core) — no container types
-  ┌────────────────────────────────────────────────────────────────────────────────┐
-  │  IAmAScope                (ADR 0070)  the handle a pipeline holds and ends      │
-  │  IAmAScopeProvider        NEW         IAmAScope? GetAmbient(ScopeAffinity)      │
-  │  ScopeAffinity            NEW         { AlwaysNew = 0, JoinAmbient }            │
-  │  AmbientScopeSuppression  NEW         static: IsSuppressed / Suppress()         │
-  │                                                                                 │
-  │  PipelineBuilder<TRequest>.Build / BuildAsync — resolution-time bracket:         │
-  │      per subscriber, INSIDE the loop body   using AmbientScopeSuppression…       │
-  │  CommandProcessor.Publish / PublishAsync    — execution-time bracket:            │
-  │      per subscriber, around Handle / HandleAsync                                 │
-  └────────────────────────────────────────────────────────────────────────────────┘
-             │ CreatePipelineScope()                       ▲ IsSuppressed
-             ▼                                             │
-  Paramore.Brighter.Extensions.DependencyInjection
-  ┌────────────────────────────────────────────────────────────────────────────────┐
-  │  ScopeAffinityPolicy       FR-27.2 over the participating set        (internal)  │
-  │  IAmAServiceProviderScope : IAmAScope { IServiceProvider Services }       NEW    │
-  │  ServiceProviderPipelineScope                                                    │
-  │        owned    → owns a ServiceProviderLifetimeScope, disposes its IServiceScope│
-  │        borrowed → resolves from Services, disposes NOTHING       (internal ctor)  │
-  │  ScopedArtefactCache       TryAddScoped — artefact identity per DI scope   NEW    │
-  │  AmbientScopeDiagnostics   container-scoped singleton, three latches (D19) NEW    │
-  └────────────────────────────────────────────────────────────────────────────────┘
-             ▲ implements IAmAServiceProviderScope
-             │
-  Paramore.Brighter.Extensions.AspNetCore  (working name — D1, ADR 0073)
-  ┌────────────────────────────────────────────────────────────────────────────────┐
-  │  an IAmAScopeProvider over IHttpContextAccessor → HttpContext.RequestServices    │
-  └────────────────────────────────────────────────────────────────────────────────┘
+
+Bracket 1 alone leaves a nested pipeline free to adopt. Bracket 2 alone is too late — every subscriber's handler has already been resolved from the caller's unsuppressed ambient before any of them runs. Neither is ever placed around the whole loop, which would give every subscriber one shared scope and undo ADR 0039. The restores are **explicit** on both, and *Implementation Approach* step 6 says why that is a statement about the code rather than a hope about `Parallel.ForEach`.
+
+### Where the pieces live
+
+```mermaid
+flowchart TB
+    subgraph core["Paramore.Brighter — core, names no container type"]
+        direction TB
+        handle["IAmAScope, from ADR 0070<br/>the handle a pipeline holds and ends"]
+        provider["IAmAScopeProvider — NEW<br/>IAmAScope GetAmbient(ScopeAffinity)"]
+        affinity["ScopeAffinity — NEW<br/>AlwaysNew = 0, JoinAmbient"]
+        suppress["AmbientScopeSuppression — NEW, static<br/>IsSuppressed and Suppress()"]
+        brackets["PipelineBuilder — resolution-time bracket, in the loop body<br/>CommandProcessor.Publish and PublishAsync — execution-time bracket"]
+        brackets --> suppress
+    end
+
+    subgraph di["Paramore.Brighter.Extensions.DependencyInjection"]
+        direction TB
+        role["IAmAServiceProviderScope : IAmAScope — NEW<br/>names the IServiceProvider behind an ambient"]
+        policy["ScopeAffinityPolicy — NEW, internal<br/>FR-27.2 over the whole participating set"]
+        pipescope["ServiceProviderPipelineScope<br/>owned: owns a lifetime scope and disposes its IServiceScope<br/>borrowed: resolves from Services and disposes NOTHING"]
+        cache["ScopedArtefactCache — NEW, TryAddScoped<br/>artefact identity belongs to the DI scope, not the handle"]
+        diag["AmbientScopeDiagnostics — NEW<br/>container-scoped singleton, three independent latches"]
+        facs["the five container-backed factories<br/>run the protocol inside CreatePipelineScope()"]
+        facs --> policy
+        facs --> pipescope
+        facs --> diag
+        pipescope --> cache
+    end
+
+    subgraph aspnet["Paramore.Brighter.Extensions.AspNetCore — new package, named by ADR 0073"]
+        asp["an IAmAScopeProvider over IHttpContextAccessor,<br/>offering HttpContext.RequestServices"]
+    end
+
+    facs -- "GetAmbient(affinity)" --> provider
+    facs -- "reads IsSuppressed" --> suppress
+    asp -. "implements" .-> provider
+    asp -. "its ambient implements" .-> role
+    role -. "extends" .-> handle
+    pipescope -. "type-tests for" .-> role
 ```
 
 ### Key Components
@@ -292,7 +369,7 @@ Unchanged, and named so the omission is not read as an oversight: `IAmAScope`, a
 
 **1. The core types.** Add `IAmAScopeProvider` and `ScopeAffinity` to `src/Paramore.Brighter/`, and `AmbientScopeSuppression` beside them. None names a container type; the source-level guard AC-22.3 runs returns nothing new.
 
-**2. The `CreatePipelineScope()` protocol.** One protocol, run inside every container-backed factory's `CreatePipelineScope()`. Adoption is **one** change, not two: after ADR 0071 both families reach their scope through this member, so a borrowed ambient is simply what it returns. There is no second path for handlers.
+**2. The `CreatePipelineScope()` protocol.** This is the decision ladder under *The mechanism, end to end*, written out as the code runs it. One protocol, run inside every container-backed factory's `CreatePipelineScope()`. Adoption is **one** change, not two: after ADR 0071 both families reach their scope through this member, so a borrowed ambient is simply what it returns. There is no second path for handlers.
 
 ```
 CreatePipelineScope():
