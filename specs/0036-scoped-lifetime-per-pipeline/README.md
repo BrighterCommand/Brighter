@@ -38,14 +38,15 @@ This spec makes the scope unit explicit — **the pipeline** — and adds opt-in
    affinity is `AlwaysNew` (D16). That obligation is enforced on both sides: a conforming provider returns
    nothing for an `AlwaysNew` ask, *and* Brighter ignores an ambient returned for one, so a third-party
    provider cannot defeat `Publish` subscriber isolation (FR-24.4). The ambient stays outside `Paramore.Brighter` — core never sees a
-   service provider — and the change is additive: no signature changes to the public factory
-   interfaces, which matters on `netstandard2.0`.
+   service provider. The six factory interfaces are **not** frozen: NFR-1's signature freeze was
+   withdrawn at revision 14, so a per-pipeline parameter is available to the mapper and transformer
+   factories, at the cost of a compile break for any hand-rolled implementation on `netstandard2.0`.
 5. **The pump does not publish a per-message ambient** — decided; see
    [issue comment](https://github.com/BrighterCommand/Brighter/issues/4256#issuecomment-5124807305).
 
 ## Status
 
-- [x] Requirements (`/spec:requirements`) — **APPROVED** at revision 13, after eleven adversarial review rounds (20, 17, 11, 16, 13, 14, 9, 7, 4, 4, then 2 findings). The rev-12 review found all four rev-11 findings Fixed and closed with "on content, the requirements have converged"; its two remaining findings were editorial and were applied in revision 13.
+- [x] Requirements (`/spec:requirements`) — **APPROVED** at revision 13, after eleven adversarial review rounds (20, 17, 11, 16, 13, 14, 9, 7, 4, 4, then 2 findings). The rev-12 review found all four rev-11 findings Fixed and closed with "on content, the requirements have converged"; its two remaining findings were editorial and were applied in revision 13. **Revision 14** withdraws NFR-1's signature freeze on the six factory interfaces at the requirement owner's direction — no review round; container-agnosticism (no `IServiceProvider` on a core interface, no container dependency in core) is unchanged.
 - [ ] Design (`/spec:design`) — next ADR is `0070`
 - [ ] Tasks (`/spec:tasks`)
 - [ ] Implementation (`/spec:implement`, interactive TDD via `/test-first`)
