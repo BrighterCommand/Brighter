@@ -48,7 +48,8 @@ This spec makes the scope unit explicit — **the pipeline** — and adds opt-in
 
 - [x] Requirements (`/spec:requirements`) — **APPROVED** at revision 13, after eleven adversarial review rounds (20, 17, 11, 16, 13, 14, 9, 7, 4, 4, then 2 findings). The rev-12 review found all four rev-11 findings Fixed and closed with "on content, the requirements have converged"; its two remaining findings were editorial and were applied in revision 13. **Revision 14** withdraws NFR-1's signature freeze on the six factory interfaces at the requirement owner's direction — no review round; container-agnosticism (no `IServiceProvider` on a core interface, no container dependency in core) is unchanged.
 - [ ] Design (`/spec:design`) — `0070` (transform pipeline DI scope) and `0071` (handler pipelines onto the same
-  handle) written, both `Proposed`; next are `0072` (the seam) and `0073` (the opt-in)
+  handle) written, both `Proposed`; outstanding are `0072` (the seam), `0073` (the opt-in) and `0074` (where the
+  FR-22 validation rules are evaluated)
 - [ ] Tasks (`/spec:tasks`)
 - [ ] Implementation (`/spec:implement`, interactive TDD via `/test-first`)
 - [ ] PR
