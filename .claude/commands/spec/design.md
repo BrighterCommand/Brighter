@@ -99,6 +99,8 @@ Gather (read) the inputs it needs so you can pass their text or paths:
   so the new ADR stays focused on a *distinct* decision and references siblings correctly.
 - The **prior-art candidates from Step 4** (`id` + `title` + `summary`) — so the sub-agent
   references related decisions correctly and does not contradict or silently duplicate one.
+- `.agent_instructions/documentation.md` — **read it yourself**; you paste four of its sections
+  into the sub-agent prompt in Step 6 (see *Readability and diagram requirements*).
 - `.agent_instructions/design_principles.md` — pass the path; the sub-agent reads it itself.
 - `.agent_instructions/adr_frontmatter.md` — pass the path; the sub-agent reads the tag taxonomy
   from it to propose `tags`.
@@ -131,8 +133,9 @@ prompt MUST include all of the following:
 4. The proposed number and filename (`{NNNN}-{focus-area}.md`) and today's date — so the
    header and `Related ADRs` references are correct.
 5. The ADR template (below) — the sub-agent fills it in.
-6. The **Drafting guidance**, **Readability requirements**, **Diagram requirements** and
-   **Grounding requirements** blocks below — all four, verbatim.
+6. The **Drafting guidance** and **Grounding requirements** blocks below, verbatim, plus the four
+   `documentation.md` sections named under **Readability and diagram requirements** — pasted in,
+   not referenced by path.
 7. An explicit instruction: **RETURN the completed ADR as markdown text. Do NOT write any
    file.** Use Read/Glob/Grep to verify references; do not use Write/Edit.
 8. An explicit instruction to **also return, clearly separated from the ADR body, a proposed
@@ -294,60 +297,23 @@ When creating the ADR:
 - Roles are interfaces or abstract types.
 - A class can implement one or more roles. If it implements multiple roles, they should be related.
 
-#### Readability requirements (include in the sub-agent prompt)
+#### Readability and diagram requirements (include in the sub-agent prompt)
 
-An ADR has two audiences and they want different things. A **human reviewer** reads for the *why*
-of a behaviour — behaviour is what endures, because structure changes under refactoring. An
-**implementing agent** reads for the structural detail. Serve the human first and the agent
-second, in that order, because the agent will scroll and the human will stop reading.
+These live in [`.agent_instructions/documentation.md`](../../../.agent_instructions/documentation.md)
+§ *Architecture Decision Records*, which is the single source shared with the standalone `/adr`
+command so the two cannot drift. **Read that file yourself and paste these sections into the
+sub-agent prompt verbatim** — do not paraphrase them, and do not merely pass the path, because the
+shape of what the sub-agent returns depends on them:
 
-- **General to specific.** Principle, then approach, then the detail an implementor needs. A
-  reader should be able to stop after any section and hold a true, if less complete, picture.
-- **Behaviour before structure.** Say what *happens* before you say what *types exist*. `The
-  mechanism, end to end` precedes `Where the pieces live`, which precedes the signatures. Never
-  open a Decision with an interface declaration.
-- **Lead each section with the artefact that orients** — a table, a sequence diagram, a flow
-  diagram, a contract — then write prose that reads the consequences off it. Never make the
-  reader assemble a picture from paragraphs and then show them the diagram.
-- **Concentrate the citations.** `file:line` references are load-bearing for the implementor and
-  pure noise inside an argument. At most one per forces bullet or Consequences bullet; put the
-  density in `Implementation Approach` and in the `Where each type is touched` table.
-- **Name what is unchanged.** Close `Where each type is touched` with the types you deliberately
-  did not touch, so a reviewer does not read an omission as an oversight.
-- **State the unifying rule once, in one sentence.** Repeat that exact sentence in every sibling
-  ADR that applies it. If it will not fit in one sentence, the ADR is not yet one decision.
-- **Headings are a contract.** Use the template's headings verbatim, in the template's order and
-  at the template's nesting level. A reader who learns the shape on one ADR must be able to
-  navigate the next one without re-reading it.
+- § *ADR structure* — the skeleton, and what belongs under each heading
+- § *ADR readability* — general to specific, behaviour before structure, lead with the orienting
+  artefact, concentrate `file:line` citations, name what is unchanged
+- § *Diagrams in ADRs* — which diagram form to use, when a decision-ladder table beats a
+  flowchart, and the mermaid traps that pass review and then fail to render
+- § *Writing tone for design documents* — write for a future reader, not for this conversation
 
-#### Diagram requirements (include in the sub-agent prompt)
-
-Prefer **mermaid** to ASCII art: it is editable, it renders on GitHub, and it survives reflowing.
-Choose the form by what is being shown:
-
-| Showing | Use |
-| --- | --- |
-| a sequence of calls over time, or who owns what and when | `sequenceDiagram` |
-| assemblies and packages, and which way dependencies point | `flowchart` with one `subgraph` per assembly |
-| a small branch — three or four outcomes | `flowchart` |
-| a protocol with more than about four decision points | a **decision-ladder table**, NOT a flowchart |
-
-**A flowchart with nine decision nodes renders as an unreadable column with edges spanning its
-whole height.** When a protocol branches that much, write it as a numbered table — one row per
-situation, in evaluation order, with columns for the outcome and any diagnostic — and leave the
-ordered pseudo-code in `Implementation Approach`, pointing back at the table.
-
-Mermaid traps that pass review and then fail to render:
-
-- **`;` is a statement separator in `sequenceDiagram`.** A semicolon anywhere in message or note
-  text silently breaks the parse. Use a comma or an em dash.
-- **Never put `<` or `>` in a label.** Mermaid renders labels as HTML, so `Lease<T>` swallows the
-  type parameter. Write `Lease for T`, or drop the generic and let the adjacent prose carry it.
-- **Never use HTML entities** (`&lt;`, `&gt;`, `&amp;`, `&nbsp;`) — they trip this repo's
-  escaped-markdown check. `<br/>` for a line break is fine; use plain spaces elsewhere.
-- **Quote every label** containing parentheses, commas or colons: `node["Create(type, scope)"]`.
-- Avoid `rect rgb(...)` in sequence diagrams: the colours are fixed and read badly in whichever
-  theme they were not chosen for.
+The template above is that skeleton as a fill-in form. If the two ever disagree,
+`documentation.md` is authoritative and the template is what needs fixing.
 
 #### Grounding requirements (include in the sub-agent prompt)
 
@@ -384,29 +350,21 @@ After the sub-agent returns:
 
 2. **Write** the validated ADR body to `docs/adr/{NNNN}-{focus-area}.md` using the Write tool.
 
-3. **Run the mechanical checks.** These catch defects that survive a careful read, so run them
-   every time rather than when something looks wrong.
-
-   **Render-check every mermaid diagram.** Roughly one diagram in six fails on first draft,
-   almost always on the traps in *Diagram requirements*, and a diagram that does not render is a
-   broken ADR that looked fine in review. Extract each `mermaid` block to its own `.mmd` file
-   under the scratchpad and render it:
+3. **Run the mechanical checks** — specified in
+   [`.agent_instructions/documentation.md`](../../../.agent_instructions/documentation.md)
+   § *Before an ADR is committed*. Both, every time; they catch defects that survive a careful
+   read. Roughly one diagram in six fails to render on first draft, and a diagram that does not
+   render is a broken ADR that looked fine in review.
 
    ```bash
    npx -y -p @mermaid-js/mermaid-cli@11 mmdc -i diagram.mmd -o diagram.svg
-   ```
-
-   A non-zero exit or a missing `.svg` is a failure — read the parse error, fix the ADR, re-run.
-   Then render the one or two **most complex** diagrams to PNG (`-o diagram.png -w 1600 -b white`)
-   and actually *look* at them with Read: a diagram can parse cleanly and still be unreadable,
-   which is the signal to convert it to a decision-ladder table. If the check cannot run at all
-   (no network for `npx`), say so plainly rather than reporting the diagrams as verified.
-
-   **No escaped markdown**, which breaks C# generics and mermaid labels alike:
-
-   ```bash
    grep -c '&lt;\|&gt;\|&amp;' docs/adr/{NNNN}-{focus-area}.md   # must be 0
    ```
+
+   Render the most complex diagram to PNG (`-o diagram.png -w 1600 -b white`) and actually *look*
+   at it with Read — a diagram can parse cleanly and still be unreadable, which is the signal to
+   convert it to a decision-ladder table. If the render check cannot run (no network for `npx`),
+   say so plainly rather than reporting the diagrams as verified.
 
 4. **Stamp frontmatter** with the `write_adr_metadata` skill
    (`.claude/commands/adr/write_adr_metadata.md`), passing the sub-agent's proposed summary and tags:

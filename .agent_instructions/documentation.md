@@ -62,6 +62,109 @@ Scan the ADR directory for existing ADRs to determine the next [Sequence Number]
 
 Use dash-case (aka kebab-case) for the [Title] of the ADR.
 
+### ADR structure
+
+Every ADR follows one skeleton. A reader who learns the shape on one ADR should be able to
+navigate the next without re-reading it, so use these headings verbatim, in this order, at this
+nesting level.
+
+| Heading | Holds |
+| --- | --- |
+| `## Context` | 2–4 sentences in plain language: what exists, what is wrong with it, why that matters. Do not open by naming four interfaces — a reader cannot hold type names before they know the problem |
+| `### Where this ADR sits` | **only when the ADR is one of a set** — a table mapping each ADR in the set to the one thing it decides, this one bolded and marked *(this one)*, then the single sentence that unifies them |
+| `### {the problem}` | named as a behaviour, not as a structure. Lead with the orienting artefact — a comparison table or a diagram — then the consequences, then the mechanism that produces them |
+| `### The forces` | one bullet per constraint that narrows the solution space, so the Decision's shape is legible before it is stated |
+| `## Decision` | the decision in **one bold sentence**, then one short paragraph on the shape it takes. No signatures, no file paths |
+| `### The mechanism, end to end` | **behaviour**: what happens, in what order. Lead with a sequence diagram, flowchart or decision-ladder table, then read the load-bearing invariants off it |
+| `### Where the pieces live` | **structure**: a flowchart with one subgraph per assembly, showing what is new and which way dependencies point |
+| `### Key Components` | opens with `#### The roles, and what each is responsible for` — a table of Role / Type / Stereotype (**knowing**, **doing**, **deciding**) / Responsibility. Then each significant type with a contract table (Member / Input / Output / Error conditions), then `#### Where each type is touched` (Assembly / Type / Change), closing with what is deliberately **unchanged** |
+| `### Technology Choices` | why this mechanism and not the obvious one, each as a bolded question |
+| `### Implementation Approach` | the implementor's section, and the only place `file:line` density belongs. Numbered, in commit order, structural changes separated from behavioural ones per Tidy First |
+| `## Consequences` | `### Positive`, `### Negative`, `### Risks and Mitigations`. An ADR with only positive consequences reads as unreviewed |
+| `## Alternatives Considered` | genuine rejection rationale, not strawmen. State the do-nothing option when the ADR delivers no behaviour |
+| `## References` | parent requirement, related ADRs, external references |
+
+`docs/adr/0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md` is the worked example
+of the full shape; `0072-ambient-scope-adoption-seam.md` shows the decision-ladder form.
+`0001-record-architecture-decisions.md` remains the minimal template.
+
+### ADR readability
+
+An ADR has two audiences and they want different things. A **human reviewer** reads for the *why*
+of a behaviour — behaviour is what endures, because structure changes under refactoring. An
+**implementing agent** reads for the structural detail. Serve the human first, because the agent
+will scroll and the human will stop reading.
+
+- **General to specific.** Principle, then approach, then the detail an implementor needs. A
+  reader should be able to stop after any section and hold a true, if less complete, picture.
+- **Behaviour before structure.** Say what *happens* before you say what *types exist*. Never
+  open a Decision with an interface declaration.
+- **Lead each section with the artefact that orients** — a table, a diagram, a contract — then
+  write prose that reads the consequences off it. Never make the reader assemble a picture from
+  paragraphs and then show them the diagram.
+- **Concentrate the citations.** `file:line` references are load-bearing for the implementor and
+  pure noise inside an argument. At most one per forces or Consequences bullet.
+- **Name what is unchanged**, so a reviewer does not read an omission as an oversight.
+- **State the unifying rule once, in one sentence**, and repeat that exact sentence in every
+  sibling ADR that applies it. If it will not fit in one sentence, it is not yet one decision.
+
+*Writing tone for design documents* below applies to every ADR and is not optional: an ADR that
+records what a participant in the authoring conversation said, rather than what was decided and
+why, has failed its only audience.
+
+### Diagrams in ADRs
+
+Prefer **mermaid** to ASCII art: it is editable, it renders on GitHub, and it survives reflowing.
+Choose the form by what is being shown:
+
+| Showing | Use |
+| --- | --- |
+| a sequence of calls over time, or who owns what and when | `sequenceDiagram` |
+| assemblies and packages, and which way dependencies point | `flowchart` with one `subgraph` per assembly |
+| a small branch — three or four outcomes | `flowchart` |
+| a protocol with more than about four decision points | a **decision-ladder table**, not a flowchart |
+
+A flowchart with nine decision nodes renders as an unreadable column with edges spanning its whole
+height. When a protocol branches that much, write it as a numbered table — one row per situation,
+in evaluation order, with columns for the outcome and any diagnostic — and leave the ordered
+pseudo-code in `Implementation Approach`, pointing back at the table.
+
+Mermaid traps that pass review and then fail to render:
+
+- **`;` is a statement separator in `sequenceDiagram`.** A semicolon anywhere in message or note
+  text silently breaks the parse. Use a comma or an em dash.
+- **Never put `<` or `>` in a label.** Mermaid renders labels as HTML, so `Lease<T>` swallows the
+  type parameter. Write `Lease for T` and let the adjacent prose carry the generic.
+- **Never use HTML entities** (`&lt;`, `&gt;`, `&amp;`, `&nbsp;`) — they trip the escaped-markdown
+  check below. `<br/>` for a line break is fine; use plain spaces elsewhere.
+- **Quote every label** containing parentheses, commas or colons: `node["Create(type, scope)"]`.
+- Avoid `rect rgb(...)`: the colours are fixed and read badly in whichever theme they were not
+  chosen for.
+
+### Before an ADR is committed
+
+Run both checks every time — they catch defects that survive a careful read.
+
+**Render every mermaid diagram.** Roughly one diagram in six fails on first draft, and a diagram
+that does not render is a broken ADR that looked fine in review. Extract each mermaid block to its
+own `.mmd` file under the scratchpad and render it:
+
+```bash
+npx -y -p @mermaid-js/mermaid-cli@11 mmdc -i diagram.mmd -o diagram.svg
+```
+
+A non-zero exit or a missing `.svg` is a failure — read the parse error, fix the ADR, re-run. Then
+render the most complex diagram to PNG (`-o diagram.png -w 1600 -b white`) and actually *look* at
+it: a diagram can parse cleanly and still be unreadable, which is the signal to convert it to a
+decision-ladder table. If the check cannot run at all (no network for `npx`), say so plainly rather
+than reporting the diagrams as verified.
+
+**No escaped markdown**, which breaks C# generics and mermaid labels alike:
+
+```bash
+grep -c '&lt;\|&gt;\|&amp;' docs/adr/{file}.md   # must be 0
+```
+
 ## Writing tone for design documents
 
 This guidance applies to ADRs, requirements specs, design specs, and any other long-lived document under `docs/` or `specs/`.
