@@ -31,22 +31,23 @@ FR-8 requires subscribers to stay isolated whatever the affinity says. What neit
 
 **Scope**: This ADR decides **where suppression hangs and where its brackets go**. It discharges FR-8 and FR-9, and serves FR-27.3 and NFR-4.
 
-It does **not** decide how a pipeline discovers or adopts an ambient scope — that is ADR 0072, which owns the ladder, the hand-off role and the affinity policy. Suppression meets that ladder at exactly one line, the affinity computation, and this ADR changes nothing else about it. It does not decide the opt-in property or its registration (ADR 0073), nor where any rule is validated (ADR 0074): a suppressed subscriber is correct configuration, not a fault, and nothing here is reportable.
+It does **not** decide how a pipeline discovers or adopts an ambient scope — that is ADR 0072, which owns the ladder, the hand-off role and the affinity policy. Suppression meets that ladder at exactly one line, the affinity computation, and this ADR changes nothing else about it. It does not decide the opt-in property (ADR 0076) or the package that registers an ambient source (ADR 0073), nor where any rule is validated (ADR 0074): a suppressed subscriber is correct configuration, not a fault, and nothing here is reportable.
 
 This ADR **supersedes no prior ADR.** It protects ADR 0039's decision rather than reopening it (D0c).
 
 ### Where this ADR sits
 
-Six ADRs deliver the parent requirement, one decision each. This is the sixth, and the only one whose subject is a pipeline Brighter did not build.
+Seven ADRs deliver the parent requirement, one decision each. This is the sixth, and the only one whose subject is a pipeline Brighter did not build.
 
 | ADR | Decides |
 | --- | --- |
 | 0070 | a transform pipeline takes one DI scope, carried **as a parameter** |
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
 | 0072 | how a pipeline discovers an **ambient** DI scope the host owns |
-| 0073 | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
-| 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+| 0073 | the **ASP.NET Core package**, and the one line an application writes to opt in |
+| 0074 | **where** the six scope-configuration rules are evaluated |
 | **0075** *(this one)* | how a `Publish` subscriber **suppresses** adoption, for itself and everything nested beneath it |
+| 0076 | the **affinity option**, and how one setting reaches all four registration paths in any order |
 
 The rule the first two state is **the per-pipeline object carries the DI scope**, and this ADR is the one place it does not reach: the pipeline that must be suppressed has no per-pipeline object yet, because it does not exist when the decision to suppress it is taken.
 

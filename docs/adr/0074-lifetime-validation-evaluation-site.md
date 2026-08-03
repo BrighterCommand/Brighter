@@ -1,6 +1,6 @@
 ---
 id: 0074-lifetime-validation-evaluation-site
-title: "Where the lifetime and captive-dependency validation rules are evaluated"
+title: "Where the scope-configuration rules are evaluated"
 status: Proposed
 author:
   - "Ian Cooper"
@@ -13,7 +13,7 @@ tags:
   - "specification-pattern"
 ---
 
-# 74. Where the lifetime and captive-dependency validation rules are evaluated
+# 74. Where the scope-configuration rules are evaluated
 
 Date: 2026-08-02
 
@@ -49,7 +49,7 @@ It does **not** decide the rules or their severities. Those are fixed by the req
 | 8 — the captive-dependency hazard, and `ValidateScopes` as the complete check | **this ADR's** *Captive-dependency detection: what it reads, and what it cannot see* |
 | 9 — the decision guide | **this ADR's FR-22.2 rule**, from which the passing set is derived — see below — with ADR 0072 for what adopting buys and ADR 0070 for what a per-pipeline scope is |
 | 10 — validation only reaches you if you call it *and* a host runs, plus troubleshooting for the five messages | **this ADR's** *Both host shapes, enumerated* (D14's gap), and its five rule rows |
-| 11 — the extension's affinity argument is the value (D18) | ADR 0073 step 6 |
+| 11 — the extension's affinity argument is the value (D18) | ADR 0076 step 4, with the three gestures themselves in ADR 0073 step 5 |
 
 **Clause 9's table of passing configurations is derived, not authored.** FR-22.2's rule is *discard any of the three lifetimes that is `Singleton`; the remainder must be uniform* — so the configurations that pass are exactly `{Transient, Transient, Transient}`, `{Scoped, Scoped, Scoped}`, and either with any subset of members replaced by `Singleton`, less those FR-22.1 then rejects under `JoinAmbient` because nothing remains `Scoped`. The guide states that set with the cost of each; it does not restate the rule, and if the rule ever changes the table follows from it rather than drifting against it.
 
@@ -57,20 +57,21 @@ This ADR **supersedes no prior ADR.** It extends the `ValidatePipelines()` machi
 
 ### Where this ADR sits
 
-Six ADRs deliver the parent requirement, one decision each. This is the fifth, and it exists because the decisions around it made five wrong configurations expressible.
+Seven ADRs deliver the parent requirement, one decision each. This is the fifth, and it exists because the decisions around it made wrong configurations expressible.
 
 | ADR | Decides |
 | --- | --- |
 | 0070 | a transform pipeline takes one DI scope, carried **as a parameter** |
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
 | 0072 | how a pipeline discovers an **ambient** DI scope the host owns |
-| 0073 | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
-| **0074** *(this one)* | **where** the lifetime and captive-dependency rules are evaluated |
+| 0073 | the **ASP.NET Core package**, and the one line an application writes to opt in |
+| **0074** *(this one)* | **where** the six scope-configuration rules are evaluated |
 | 0075 | how a `Publish` subscriber **suppresses** adoption, for itself and everything nested beneath it |
+| 0076 | the **affinity option**, and how one setting reaches all four registration paths in any order |
 
 The rule the first two state is **the per-pipeline object carries the DI scope**. This ADR neither creates nor holds one: it reports, before any pipeline is built, on whether the configuration those objects will read is coherent.
 
-What the two ADRs immediately before it settled is what this one reads. ADR 0072 fixed the registration model for `IAmAScopeProvider` — a plain `AddSingleton` on every path, never `TryAddSingleton`, so every duplicate descriptor stays in the collection while Microsoft's container resolves the last. ADR 0073 fixed the opt-in as an affinity property on `IBrighterOptions`, defaulting to today's behaviour, together with the override that carries the registration extension's argument onto whichever options object the four registration paths produce. Validation is therefore written last of the five that shape a configuration, because it cannot be written earlier: three of its five rules read values that only exist once 0073 has put them there, and the other two read the registration model 0072 and 0073 fixed. Nothing here changes a lifetime, a scope or a pipeline.
+What the siblings around it settled is what this one reads. ADR 0072 fixed the registration model for `IAmAScopeProvider` — a plain `AddSingleton` on every path, never `TryAddSingleton`, so every duplicate descriptor stays in the collection while Microsoft's container resolves the last. ADR 0076 fixed the opt-in as an affinity property on `IBrighterOptions`, defaulting to today's behaviour, together with the override that carries a registration extension's argument onto whichever options object the four registration paths produce, and ADR 0073 ships the extension that supplies it. Validation is therefore written last of the six that shape a configuration, because it cannot be written earlier: three of its five rules read values that only exist once 0076 has put them there, and the other two read the registration model 0072 and 0073 fixed. Nothing here changes a lifetime, a scope or a pipeline.
 
 ADR 0067's `Terms` block defines the two axes this ADR turns on — Brighter's **configured lifetime**, which governs the artefact, and the container's **registration lifetime**, which governs that artefact's dependencies — and keeps `IServiceScope`, `ServiceProviderLifetimeScope` and `IAmALifetime` distinct. This ADR does not restate it. The rules below read *both* axes and never conflate them: FR-22.1 and FR-22.2 read only configured lifetimes; FR-22.3 reads a configured lifetime on one side and a registration lifetime on the other.
 
@@ -142,7 +143,7 @@ sequenceDiagram
     Note over Dec,Inner: at shutdown the container disposes the decorator,<br/>which MUST cascade into the inner validator
 ```
 
-Why those two instants and not one. The descriptors are snapshotted at call time because that is what `ValidatePipelines()` already does with its provider registrations and its transformer probe, and because C-15's "call it last" guidance depends on it. The lifetimes and the affinity are read at host start because on three of the four registration paths the value does not exist until `IBrighterOptions` is resolved, and because ADR 0073's override lands inside that resolution. Reading `IOptions<BrighterOptions>.Value` instead would read a *different object* on three of the four paths (C-12a) — validation would then pass configurations the factories will ignore, and fail ones they would have honoured.
+Why those two instants and not one. The descriptors are snapshotted at call time because that is what `ValidatePipelines()` already does with its provider registrations and its transformer probe, and because C-15's "call it last" guidance depends on it. The lifetimes and the affinity are read at host start because on three of the four registration paths the value does not exist until `IBrighterOptions` is resolved, and because ADR 0076's override lands inside that resolution. Reading `IOptions<BrighterOptions>.Value` instead would read a *different object* on three of the four paths (C-12a) — validation would then pass configurations the factories will ignore, and fail ones they would have honoured.
 
 The last note on the diagram is easy to miss and expensive to get wrong: the container tracks only the instance a factory **returns**, so an inner validator created inside the delegate and not returned would never be disposed, and the `MessageMapperRegistry` it may have built lazily — with the mapper factory and any DI scope it holds — would live to process exit.
 
@@ -265,7 +266,7 @@ Each is an `ISpecification<T>` built with the existing `Specification<T>` constr
 
 FR-24.3's detail, stated over the family of descriptor shapes rather than the common one: a descriptor whose `ImplementationType` is statically known contributes that type; one registered by factory delegate or instance contributes its registration **position**, and its runtime type where `ImplementationInstance` supplies one. Distinctness is over implementation types, so the *same* implementation type registered twice is not a finding (AC-32's second branch) — it is idempotent in effect. Because Brighter registers no default provider (D11), the ASP.NET extension can never itself create a duplicate; two application registrations are the only way to reach this rule.
 
-**FR-17 is the same rule shape over a different distinctness key, and the two are complementary rather than overlapping.** FR-24.3 asks whether two *different providers* were registered; FR-17 asks whether two *different affinities* were. A host that calls ADR 0073's extension twice reaches only the second: both calls register the same `HttpContextScopeProvider`, which FR-24.3 excludes in terms — the exclusion is exactly why a fifth rule is needed rather than a wider fourth one. Distinctness here is over the `ScopeAffinity` **value**, so a repeat carrying the same affinity is not a finding, mirroring FR-24.3's own exclusion and for the same reason (AC-49's third branch). The values are read from the descriptors' `ImplementationInstance` — ADR 0073 registers the override as an instance, with plain `AddSingleton` precisely so that every call's descriptor survives for this rule to see (FR-17); a descriptor supplying no instance contributes its registration position, as FR-24.3's does. This rule needs no new input: the descriptors are already in the `ValidatePipelines()`-time snapshot the other container rule reads.
+**FR-17 is the same rule shape over a different distinctness key, and the two are complementary rather than overlapping.** FR-24.3 asks whether two *different providers* were registered; FR-17 asks whether two *different affinities* were. A host that calls ADR 0073's extension twice reaches only the second: both calls register the same `HttpContextScopeProvider`, which FR-24.3 excludes in terms — the exclusion is exactly why a fifth rule is needed rather than a wider fourth one. Distinctness here is over the `ScopeAffinity` **value**, so a repeat carrying the same affinity is not a finding, mirroring FR-24.3's own exclusion and for the same reason (AC-49's third branch). The values are read from the descriptors' `ImplementationInstance` — ADR 0073's extension registers ADR 0076's override as an instance, with plain `AddSingleton` precisely so that every call's descriptor survives for this rule to see (FR-17); a descriptor supplying no instance contributes its registration position, as FR-24.3's does. This rule needs no new input: the descriptors are already in the `ValidatePipelines()`-time snapshot the other container rule reads.
 
 **Family 2 — `ArtefactRegistration`, one per candidate artefact.** FR-22.3 evaluates it, and yields one `Warning` per captive parameter, naming the artefact type and the `Scoped` service it requires, plus the guidance page. `Source` is `$"{kind} '{artefactType.Name}'"`.
 
@@ -440,7 +441,8 @@ The second is opaque: an `IEnumerable<Func<IEnumerable<ValidationError>>>` of pr
   - `0053-pipeline-validation-at-startup` [Accepted] — the `ISpecification<T>` rule families, `ValidationResultCollector<T>`, `ValidationError`, and the `throwOnError` semantics this ADR reuses without change
   - `0064-validate-pipeline-assembly-and-provider-registration` [Accepted] — the precedent for a `Warning` rule family, for reading the `IServiceCollection` without resolving it (`IAmATransformerResolvabilityProbe`), for threading new inputs through `ValidatePipelines()`, and for rules that do not catch their own exceptions
   - `0072-ambient-scope-adoption-seam` [Proposed] — the plain `AddSingleton` registration model that makes FR-24.3's duplicate detectable and the effective provider predictable; and `AmbientScopeDiagnostics`, the run-time latches this ADR does **not** own
-  - `0073-scope-affinity-opt-in-and-registration` [Proposed] — the opt-in property `DefaultScopeAffinity` on `IBrighterOptions`/`BrighterOptions`, and the override singleton by which the ASP.NET extension's argument reaches the resolved options object
+  - `0076-scope-affinity-option-and-write-through` [Proposed] — the opt-in property `DefaultScopeAffinity` on `IBrighterOptions`/`BrighterOptions`, and the override singleton by which an opt-in extension's argument reaches the resolved options object
+  - `0073-aspnet-core-request-scope-package` [Proposed] — the ASP.NET package and the `AddBrighterRequestScope` extension whose repeated call this ADR's FR-17 rule reports on, and whose provider registration FR-24.3's rule reads
   - `0070-per-pipeline-di-scope-for-mapper-and-transform-factories` [Proposed] and `0071-pipeline-scope-handle-for-handler-pipelines` [Proposed] — the seam whose configuration these rules validate
   - `0067-per-resolution-di-scope-for-transient-factory-instances` [Accepted] — its `Terms` block defines the configured-lifetime and registration-lifetime axes FR-22.3 reads on opposite sides, and which this ADR references rather than restates
   - `0014-di-friendly-framework` [Accepted] — per-family factory interfaces rather than an IoC abstraction; the durable reason the rules cannot live in core

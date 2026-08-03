@@ -30,22 +30,23 @@ That is the whole mechanism needed to adopt a DI scope the host already owns —
 
 **Scope**: This ADR decides **the non-core hand-off by which an ambient exposes a resolution source to the container package** and, because that is unimplementable without it, **which object computes a pipeline's `ScopeAffinity` when its participating factories have different configured lifetimes**. It discharges FR-10, FR-11, FR-12, FR-13, FR-24 and FR-27, and serves FR-16/FR-16a, FR-18, FR-23 and FR-26.
 
-It does **not** decide four naming questions and one siting question. All four are ADR 0073's — the ambient-query member `GetAmbient(ScopeAffinity)`, the package `Paramore.Brighter.Extensions.AspNetCore`, the registration extension `AddBrighterRequestScope(ScopeAffinity)` and the shape and spelling of the opt-in property on `IBrighterOptions` (C-9, C-11). This ADR uses 0073's settled spellings where it names them at all, and calls the option *the affinity option*, because nothing here depends on any of them. It does not decide **how a `Publish` subscriber suppresses adoption** for itself and for the pipelines beneath it — that is ADR 0075, which owns the flag, both brackets and the reasoning about `ExecutionContext`. Suppression enters the protocol below at exactly one line, the affinity computation, and adds no outcome to it. And it does not decide **where FR-22's validation rules are evaluated** — that is ADR 0074. Where FR-24.3's duplicate-provider warning is concerned, this ADR decides only the **registration model that makes a duplicate detectable and resolution predictable**; the site at which the rule is evaluated and the message produced is 0074's.
+It does **not** decide four naming questions and one siting question. Three are ADR 0073's — the ambient-query member `GetAmbient(ScopeAffinity)`, the package `Paramore.Brighter.Extensions.AspNetCore` and the registration extension `AddBrighterRequestScope(ScopeAffinity)` (C-11); the fourth, the shape and spelling of the opt-in property on `IBrighterOptions`, is ADR 0076's (C-9). This ADR uses their settled spellings where it names them at all, and calls the option *the affinity option*, because nothing here depends on any of them. It does not decide **how a `Publish` subscriber suppresses adoption** for itself and for the pipelines beneath it — that is ADR 0075, which owns the flag, both brackets and the reasoning about `ExecutionContext`. Suppression enters the protocol below at exactly one line, the affinity computation, and adds no outcome to it. And it does not decide **where FR-22's validation rules are evaluated** — that is ADR 0074. Where FR-24.3's duplicate-provider warning is concerned, this ADR decides only the **registration model that makes a duplicate detectable and resolution predictable**; the site at which the rule is evaluated and the message produced is 0074's.
 
 This ADR **supersedes no prior ADR.** It extends the 0066–0069 sequence and completes the seam ADRs 0070 and 0071 opened.
 
 ### Where this ADR sits
 
-Six ADRs deliver the parent requirement, one decision each. This is the third; it is where the feature starts, the first two having only closed defects.
+Seven ADRs deliver the parent requirement, one decision each. This is the third; it is where the feature starts, the first two having only closed defects.
 
 | ADR | Decides |
 | --- | --- |
 | 0070 | a transform pipeline takes one DI scope, carried **as a parameter** |
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
 | **0072** *(this one)* | how a pipeline discovers an **ambient** DI scope the host owns |
-| 0073 | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
-| 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+| 0073 | the **ASP.NET Core package**, and the one line an application writes to opt in |
+| 0074 | **where** the six scope-configuration rules are evaluated |
 | 0075 | how a `Publish` subscriber **suppresses** adoption, for itself and everything nested beneath it |
+| 0076 | the **affinity option**, and how one setting reaches all four registration paths in any order |
 
 The rule the first two state is **the per-pipeline object carries the DI scope**, and this ADR is where that object learns it may not have created its own scope at all.
 
@@ -131,7 +132,7 @@ flowchart TB
         pipescope --> cache
     end
 
-    subgraph aspnet["Paramore.Brighter.Extensions.AspNetCore — new package, named by ADR 0073"]
+    subgraph aspnet["Paramore.Brighter.Extensions.AspNetCore — new package, ADR 0073"]
         asp["an IAmAScopeProvider over IHttpContextAccessor,<br/>offering HttpContext.RequestServices"]
     end
 
@@ -252,7 +253,7 @@ One object holds FR-27.2's rule so that five factories do not each re-derive it,
 
 Both members are pure functions of state fixed at container build, so they are **safe to call concurrently and hold nothing**; a factory may keep one policy instance for its life and call it once per pipeline from any thread.
 
-**Positive testing for `JoinAmbient` is a contract, not an implementation detail.** ADR 0073 relies on it: `ScopeAffinity` is a plain non-nullable enum on a public options interface, so an application can assign a cast integer that is neither member, and the safe degradation is *do not adopt*. Every reader of a `ScopeAffinity` in this design — the policy here, and the affinity guard on the provider's answer — tests for `JoinAmbient` positively rather than testing for `AlwaysNew` and treating everything else as adoption. `AlwaysNew = 0` makes `default(ScopeAffinity)` safe for the same reason.
+**Positive testing for `JoinAmbient` is a contract, not an implementation detail.** ADR 0076 relies on it: `ScopeAffinity` is a plain non-nullable enum on a public options interface, so an application can assign a cast integer that is neither member, and the safe degradation is *do not adopt*. Every reader of a `ScopeAffinity` in this design — the policy here, and the affinity guard on the provider's answer — tests for `JoinAmbient` positively rather than testing for `AlwaysNew` and treating everything else as adoption. `AlwaysNew = 0` makes `default(ScopeAffinity)` safe for the same reason.
 
 #### `ScopedArtefactCache` — artefact identity under a borrowed scope (new, DI package, public)
 
@@ -399,9 +400,9 @@ Two consequences must be said plainly.
 
 **4. Borrowing, and what it does and does not own.** `ServiceProviderPipelineScope` gains an internal borrowed construction path over an `IServiceProvider`. Borrowed implies `Scoped` by construction — a pipeline only reaches step 5 with `Scoped` participating and no `Transient` participant — so the borrowed mode has no `Transient` per-resolution path of its own, and a `Singleton` participant sharing the pipeline resolves from the root provider without consulting the handle at all. It holds nothing but the borrowed provider and the `ScopedArtefactCache` it resolved from it. `Dispose()` and `DisposeAsync()` are idempotent no-ops (AC-16, AC-38 — AC-8's idempotence rule is written over two live pipelines each holding a **Brighter-created** handle, so it does not reach this case and is not cited for it). Brighter disposes neither the provider, nor the ambient `IAmAScope`, nor any instance resolved from it (FR-12, AC-16); the instances are disposable transients that MS DI has already tracked against the request scope, and the caller disposes them when the request ends. On the failed-build path there is no owned scope, so `CleanUpAfterFailedBuild` releases nothing the caller owns and AC-38 holds by construction.
 
-**5. Registration.** All four registration entry points route through `ServiceCollectionExtensions.BrighterHandlerBuilder` (`:142`; the `BrighterOptions` overload at `:119` forwards to it), so that is the single place `ScopedArtefactCache` (`TryAddScoped`) and `AmbientScopeDiagnostics` (`TryAddSingleton`) are registered — and it is the only registration point this ADR adds. Nothing here depends on the `IOptions` pipeline, so C-12a's split across the four paths does not bite; the affinity option's journey to `IBrighterOptions` is FR-17's problem and 0073's decision, and this ADR reads whatever object `IBrighterOptions` resolves to, exactly as the factories already do.
+**5. Registration.** All four registration entry points route through `ServiceCollectionExtensions.BrighterHandlerBuilder` (`:142`; the `BrighterOptions` overload at `:119` forwards to it), so that is the single place `ScopedArtefactCache` (`TryAddScoped`) and `AmbientScopeDiagnostics` (`TryAddSingleton`) are registered — and it is the only registration point this ADR adds. Nothing here depends on the `IOptions` pipeline, so C-12a's split across the four paths does not bite; the affinity option's journey to `IBrighterOptions` is FR-17's problem and 0076's decision, and this ADR reads whatever object `IBrighterOptions` resolves to, exactly as the factories already do.
 
-**6. What is left to the siblings.** ADR 0073 settles the spelling of `GetAmbient`, the ASP.NET package name, the registration extension name and the opt-in property; nothing above changes shape for any of them. ADR 0074 decides where FR-22's rules and FR-24.3's duplicate-provider rule are **evaluated**; this ADR has fixed the registration model those rules read and the three runtime latches they do not. ADR 0075 decides how a `Publish` subscriber suppresses adoption; it enters the protocol above at step 3 and nowhere else.
+**6. What is left to the siblings.** ADR 0073 settles the spelling of `GetAmbient`, the ASP.NET package name and the registration extension name; ADR 0076 settles the opt-in property and how a setting reaches it. Nothing above changes shape for any of them. ADR 0074 decides where FR-22's rules and FR-24.3's duplicate-provider rule are **evaluated**; this ADR has fixed the registration model those rules read and the three runtime latches they do not. ADR 0075 decides how a `Publish` subscriber suppresses adoption; it enters the protocol above at step 3 and nowhere else.
 
 ## Consequences
 
