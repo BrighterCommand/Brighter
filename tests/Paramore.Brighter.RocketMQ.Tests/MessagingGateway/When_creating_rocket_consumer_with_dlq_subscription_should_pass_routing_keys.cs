@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Reflection;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.RocketMQ.Tests.TestDoubles;
 using Paramore.Brighter.RocketMQ.Tests.Utils;
@@ -55,6 +54,7 @@ public class RocketConsumerFactoryDlqTests : IDisposable
             subscriptionName: new SubscriptionName("test-subscription"),
             channelName: new ChannelName("test-channel"),
             routingKey: new RoutingKey("orders"),
+            consumerGroup: Guid.NewGuid().ToString(),
             messagePumpType: MessagePumpType.Reactor,
             deadLetterRoutingKey: dlqRoutingKey,
             invalidMessageRoutingKey: invalidRoutingKey
@@ -64,31 +64,13 @@ public class RocketConsumerFactoryDlqTests : IDisposable
         _consumer = _factory.Create(subscription);
 
         // Assert - verify the factory passed routing keys to the consumer
-        Assert.NotNull(_consumer);
+        var consumer = Assert.IsType<RocketMessageConsumer>(_consumer);
 
-        var consumerType = _consumer.GetType();
-        var dlqField = consumerType.GetField("_deadLetterRoutingKey",
-            BindingFlags.NonPublic | BindingFlags.Instance);
-        var invalidField = consumerType.GetField("_invalidMessageRoutingKey",
-            BindingFlags.NonPublic | BindingFlags.Instance);
-        var connectionField = consumerType.GetField("_connection",
-            BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(consumer.DeadLetterRoutingKey);
+        Assert.Equal("orders-dlq", consumer.DeadLetterRoutingKey.Value);
 
-        Assert.NotNull(dlqField);
-        Assert.NotNull(invalidField);
-        Assert.NotNull(connectionField);
-
-        var actualDlq = dlqField.GetValue(_consumer) as RoutingKey;
-        var actualInvalid = invalidField.GetValue(_consumer) as RoutingKey;
-        var actualConnection = connectionField.GetValue(_consumer);
-
-        Assert.NotNull(actualDlq);
-        Assert.Equal("orders-dlq", actualDlq.Value);
-
-        Assert.NotNull(actualInvalid);
-        Assert.Equal("orders-invalid", actualInvalid.Value);
-
-        Assert.NotNull(actualConnection);
+        Assert.NotNull(consumer.InvalidMessageRoutingKey);
+        Assert.Equal("orders-invalid", consumer.InvalidMessageRoutingKey.Value);
     }
 
     public void Dispose()

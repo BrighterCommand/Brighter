@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Mime;
@@ -32,6 +32,18 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageConsumer>();
+
+    /// <summary>
+    /// The routing key of the dead letter queue topic, when configured.
+    /// Rejected messages are forwarded to this topic.
+    /// </summary>
+    public RoutingKey? DeadLetterRoutingKey { get; } = deadLetterRoutingKey;
+
+    /// <summary>
+    /// The routing key of the invalid message topic, when configured.
+    /// Messages rejected as <see cref="RejectionReason.Unacceptable"/> are forwarded to this topic.
+    /// </summary>
+    public RoutingKey? InvalidMessageRoutingKey { get; } = invalidMessageRoutingKey;
 
     // Thread-safe: message pumps are single-threaded per consumer, so null-coalescing
     // assignment in GetProducerForRouteAsync() cannot race.
@@ -126,7 +138,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
         Log.RejectingMessage(s_logger, message.Id.Value);
 
-        if (deadLetterRoutingKey == null && invalidMessageRoutingKey == null)
+        if (DeadLetterRoutingKey == null && InvalidMessageRoutingKey == null)
         {
             if (reason != null)
                 Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
@@ -214,10 +226,10 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
     private async Task<RocketMqMessageProducer?> GetProducerForRouteAsync(RoutingKey routingKey)
     {
-        if (routingKey == invalidMessageRoutingKey)
-            return _invalidMessageProducer ??= await CreateProducerAsync(invalidMessageRoutingKey);
-        if (routingKey == deadLetterRoutingKey)
-            return _deadLetterProducer ??= await CreateProducerAsync(deadLetterRoutingKey);
+        if (routingKey == InvalidMessageRoutingKey)
+            return _invalidMessageProducer ??= await CreateProducerAsync(InvalidMessageRoutingKey);
+        if (routingKey == DeadLetterRoutingKey)
+            return _deadLetterProducer ??= await CreateProducerAsync(DeadLetterRoutingKey);
         return null;
     }
 
@@ -264,10 +276,10 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     {
         return rejectionReason switch 
         {
-            RejectionReason.Unacceptable when invalidMessageRoutingKey != null => (invalidMessageRoutingKey, true, false),
-            RejectionReason.Unacceptable when deadLetterRoutingKey  != null => (deadLetterRoutingKey, true, true),
+            RejectionReason.Unacceptable when InvalidMessageRoutingKey != null => (InvalidMessageRoutingKey, true, false),
+            RejectionReason.Unacceptable when DeadLetterRoutingKey  != null => (DeadLetterRoutingKey, true, true),
             RejectionReason.Unacceptable =>  (null, false, false),
-            _ when deadLetterRoutingKey != null =>(deadLetterRoutingKey, true, false),
+            _ when DeadLetterRoutingKey != null =>(DeadLetterRoutingKey, true, false),
             _ => (null, false, false)
         };
     }
