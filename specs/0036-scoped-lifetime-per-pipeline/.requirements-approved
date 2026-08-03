@@ -1,0 +1,11 @@
+Approved: revision 15, 2026-08-03 (27 FRs / 10 NFRs / 49 ACs / 121 normative bullets).
+
+Revision 15 was an alignment change made during the design phase, not new scope: FR-17 gained the
+clause it was missing about a repeated registration-extension call, and AC-49 plus the message
+counts in AC-43, AC-44 and FR-25.10 followed from it. Re-approved without an independent
+requirements review round, at the requirement owner's direction — the change exists to keep the
+requirements consistent with ADRs 0072-0074 and decides nothing those ADRs do not. An amendment
+that is more than alignment gets its own review round.
+
+This supersedes the earlier approval, which this file recorded as an empty marker and which
+therefore could not say which revision it covered.
