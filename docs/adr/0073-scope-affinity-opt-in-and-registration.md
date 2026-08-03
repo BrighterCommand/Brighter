@@ -37,15 +37,16 @@ This ADR **supersedes no prior ADR.** It completes the 0070–0072 sequence on t
 
 ### Where this ADR sits
 
-Five ADRs deliver the parent requirement, one decision each. This is the fourth, and the only one an application author has to touch anything to use.
+Six ADRs deliver the parent requirement, one decision each. This is the fourth, and the only one an application author has to touch anything to use.
 
 | ADR | Decides |
 | --- | --- |
 | 0070 | a transform pipeline takes one DI scope, carried **as a parameter** |
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
-| 0072 | how a pipeline discovers an **ambient** DI scope the host owns, and where `Publish` suppression hangs |
+| 0072 | how a pipeline discovers an **ambient** DI scope the host owns |
 | **0073** *(this one)* | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
 | 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+| 0075 | how a `Publish` subscriber **suppresses** adoption, for itself and everything nested beneath it |
 
 The whole of the opt-in, from an application's side, is one line in `Program.cs`. The work is making that line land on four registration paths that behave differently and can be called in any order.
 

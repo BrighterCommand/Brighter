@@ -1,19 +1,18 @@
 ---
 id: 0072-ambient-scope-adoption-seam
-title: "Adopting an ambient DI scope — the resolution-source hand-off and Publish suppression"
+title: "Adopting an ambient DI scope — the resolution-source hand-off"
 status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-08-02
-summary: "An ambient DI scope hands its resolution source to the container package through a one-member role interface in that package, IAmAServiceProviderScope : IAmAScope, which the container-backed factories type-test for inside CreatePipelineScope() — asking IAmAScopeProvider exactly once with an affinity computed over the pipeline's whole participating set, then either borrowing without owning or creating and owning as today. Publish subscriber pipelines force that affinity to AlwaysNew through a public AsyncLocal-backed AmbientScopeSuppression in core, bracketed per subscriber inside the build loop and again around that subscriber's own Handle/HandleAsync."
+summary: "An ambient DI scope hands its resolution source to the container package through a one-member role interface in that package, IAmAServiceProviderScope : IAmAScope, which the container-backed factories type-test for inside CreatePipelineScope() — asking IAmAScopeProvider exactly once with an affinity computed over the pipeline's whole participating set, then either borrowing that resolution source without owning it or creating and owning a scope exactly as today. Every path that is not borrowed converges on create-and-own, which is the behaviour that already exists."
 tags:
   - "di"
   - "lifetime"
   - "pipeline"
-  - "publish"
 ---
 
-# 72. Adopting an ambient DI scope — the resolution-source hand-off and `Publish` suppression
+# 72. Adopting an ambient DI scope — the resolution-source hand-off
 
 Date: 2026-08-02
 
@@ -25,27 +24,30 @@ Proposed
 
 ADR 0070 gave a transform pipeline one DI scope, obtained from `CreatePipelineScope()` and carried as an `IAmAScope`. ADR 0071 brought handler pipelines onto the same handle. In both, the scope is one the container package **created**, and there is exactly one place a pipeline asks for it.
 
-That is the whole mechanism needed to adopt a DI scope the host already owns — an ASP.NET request scope — because adoption is then simply *what `CreatePipelineScope()` returns*. What is missing is the two things neither sibling decided: **how a pipeline discovers an ambient DI scope and gets at the resolution source behind it**, and **how a `Publish` subscriber stops that discovery for itself and for everything nested inside it**.
+That is the whole mechanism needed to adopt a DI scope the host already owns — an ASP.NET request scope — because adoption is then simply *what `CreatePipelineScope()` returns*. What is missing is the one thing neither sibling decided: **how a pipeline discovers an ambient DI scope and gets at the resolution source behind it**.
 
 **Parent Requirement**: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md)
 
-**Scope**: This ADR decides one seam with two halves — **the non-core hand-off by which an ambient exposes a resolution source to the container package, and where ambient suppression hangs** — and, because the first is unimplementable without it, **which object computes a pipeline's `ScopeAffinity` when its participating factories have different configured lifetimes**. It discharges FR-10, FR-11, FR-12, FR-13, FR-24 and FR-27, and serves FR-8, FR-9, FR-16/FR-16a, FR-18, FR-23 and FR-26.
+**Scope**: This ADR decides **the non-core hand-off by which an ambient exposes a resolution source to the container package** and, because that is unimplementable without it, **which object computes a pipeline's `ScopeAffinity` when its participating factories have different configured lifetimes**. It discharges FR-10, FR-11, FR-12, FR-13, FR-24 and FR-27, and serves FR-16/FR-16a, FR-18, FR-23 and FR-26.
 
-It does **not** decide four naming questions and one siting question. Three names are ADR 0073's (C-11) and this ADR is written against the working spellings, saying so at each use: the ambient-query member `GetAmbient(ScopeAffinity)`, the package `Paramore.Brighter.Extensions.AspNetCore`, and the registration extension `AddBrighterAspNetCoreScopes(...)`. The fourth is the shape and spelling of the opt-in property on `IBrighterOptions` (C-9), also 0073's; this ADR calls it *the affinity option*. And it does not decide **where FR-22's validation rules are evaluated** — that is ADR 0074. Where FR-24.3's duplicate-provider warning is concerned, this ADR decides only the **registration model that makes a duplicate detectable and resolution predictable**; the site at which the rule is evaluated and the message produced is 0074's.
+It does **not** decide four naming questions and one siting question. Three names are ADR 0073's (C-11) and this ADR is written against the working spellings, saying so at each use: the ambient-query member `GetAmbient(ScopeAffinity)`, the package `Paramore.Brighter.Extensions.AspNetCore`, and the registration extension `AddBrighterAspNetCoreScopes(...)`. The fourth is the shape and spelling of the opt-in property on `IBrighterOptions` (C-9), also 0073's; this ADR calls it *the affinity option*. It does not decide **how a `Publish` subscriber suppresses adoption** for itself and for the pipelines beneath it — that is ADR 0075, which owns the flag, both brackets and the reasoning about `ExecutionContext`. Suppression enters the protocol below at exactly one line, the affinity computation, and adds no outcome to it. And it does not decide **where FR-22's validation rules are evaluated** — that is ADR 0074. Where FR-24.3's duplicate-provider warning is concerned, this ADR decides only the **registration model that makes a duplicate detectable and resolution predictable**; the site at which the rule is evaluated and the message produced is 0074's.
 
 This ADR **supersedes no prior ADR.** It extends the 0066–0069 sequence and completes the seam ADRs 0070 and 0071 opened.
 
 ### Where this ADR sits
 
-Five ADRs deliver the parent requirement, one decision each. This is the third; it is where the feature starts, the first two having only closed defects.
+Six ADRs deliver the parent requirement, one decision each. This is the third; it is where the feature starts, the first two having only closed defects.
 
 | ADR | Decides |
 | --- | --- |
 | 0070 | a transform pipeline takes one DI scope, carried **as a parameter** |
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
-| **0072** *(this one)* | how a pipeline discovers an **ambient** DI scope the host owns, and where `Publish` suppression hangs |
+| **0072** *(this one)* | how a pipeline discovers an **ambient** DI scope the host owns |
 | 0073 | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
 | 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+| 0075 | how a `Publish` subscriber **suppresses** adoption, for itself and everything nested beneath it |
+
+The rule the first two state is **the per-pipeline object carries the DI scope**, and this ADR is where that object learns it may not have created its own scope at all.
 
 The two siblings converged both pipeline families onto one member, `CreatePipelineScope()`. That is why adoption is a change in **one** place: joining an ambient scope is simply what that member returns.
 
@@ -57,7 +59,6 @@ ADR 0067's `Terms` block defines the two axes used throughout — Brighter's *co
 | --- | --- |
 | How does a pipeline learn that an ambient DI scope exists? | Nothing exists. `IAmAScopeProvider` and `ScopeAffinity` are named by D4 but no ADR has introduced them |
 | Once an ambient is offered, how does a container-backed factory resolve from it? | `IAmAScope` has no members beyond disposal, deliberately, so it carries no answer. ADR 0070 explicitly declined to introduce a hand-off type |
-| How does a `Publish` subscriber stop the pipelines it creates — and the ones its handler creates — from adopting? | Not addressed. ADR 0070 removed all per-flow state from the design, so there is nothing to build on |
 | When a pipeline's participating factories have different lifetimes, who decides the affinity? | FR-27.2 states the rule over the whole participating set, but `CreatePipelineScope()` is called on **one** factory |
 
 ### The forces
@@ -67,22 +68,18 @@ ADR 0067's `Terms` block defines the two axes used throughout — Brighter's *co
 - **C-7 — ownership travels with the DI scope.** Created implies Brighter disposes (FR-13); adopted implies the caller's, never disposed by Brighter (FR-12). An ambient that is offered and then declined — stale (FR-23), or returned for an `AlwaysNew` ask (FR-24.4) — is the **created** case, and Brighter must not dispose the thing it declined.
 - **D11 — the provider is an *ambient source*, not a scope supplier.** The container package always creates and owns the `IServiceScope` when it is not borrowing one. "No provider registered" (FR-11), "provider returned nothing" (FR-24.2) and "ambient present but unusable" (FR-23) all collapse onto one path: *create your own*. Brighter registers **no default provider**, which is what makes registering the ASP.NET one incapable of producing a duplicate.
 - **The seam is a public extension point and must be implementable off ASP.NET and off Microsoft's container** (NFR-7). AC-35 requires a test-assembly provider that holds its ambient in an `AsyncLocal`, references no ASP.NET, and whose ambient a Brighter handler genuinely resolves from. AC-13 requires a different fake, in an assembly that references **no** container package at all, that records only the affinity each pipeline asked with. Those two ACs pull in opposite directions and together fix the hand-off's shape.
-- **FR-27.3 forecloses the obvious home for suppression.** A `Publish` subscriber whose pipeline has no `Scoped` participant takes no pipeline scope and therefore never asks the ambient source — yet must still suppress, because a pipeline nested inside it may be `Scoped` (AC-47). Suppression cannot be an argument to, or a return value of, the ambient query.
-- **The pipeline that must be suppressed is one core did not build and holds no reference to.** A nested `Send`, `Post` or `Publish` issued from inside a subscriber's `Handle`/`HandleAsync` goes through the singleton `IAmACommandProcessor` (ADR 0033) from user code. There is no argument path from the subscriber's bracket to that pipeline's `CreatePipelineScope()` call.
-- **`Publish` runs subscribers concurrently on both paths, and the two paths differ.** `PublishAsync` starts every subscriber in a loop on the caller's flow (`CommandProcessor.cs:591-599`) and awaits them together at `:601`. `Publish` dispatches via `Parallel.ForEach` (`:481`), which captures and restores `ExecutionContext` per **worker task**, not per body invocation — one worker runs a range of items, so an `AsyncLocal` write in one body is still current when that worker calls the body for the next. Both builds are eager and per subscriber, inside the build loop (`PipelineBuilder.cs:187-198` sync, `:232-244` async), on the caller's own thread.
+- **FR-8 must be honourable from outside this package.** Per-subscriber isolation on `Publish` is decided by ADR 0075, but the pipeline that honours it is this one. Whatever carries that decision has to be readable by a container package Brighter does not ship (NFR-7), which is why the protocol below reads a flag rather than receiving an argument.
 - **D19 — the diagnostic latches are per Brighter container**, once per (condition, provider implementation type), and must belong to a container-scoped singleton rather than a `static`, or AC-11's third branch is unsatisfiable by a correct implementation.
 - **NFR-2 / D1 — no ASP.NET dependency in the DI package.** The ASP.NET package depends on the DI package; never the reverse. Registering the provider *is* the opt-in — there is no middleware.
-- **NFR-4 — thread safety and no leakage.** No cross-pipeline interference, and no suppression state left on the caller's flow once either publish returns.
+- **NFR-4 — thread safety.** Concurrent pipelines on different threads must not interfere with one another, and nothing the seam introduces may be torn or shared between them.
 
 ## Decision
 
-**An ambient exposes its resolution source through a one-member role interface in the DI package, `IAmAServiceProviderScope : IAmAScope`; a container-backed factory type-tests for that role inside `CreatePipelineScope()`, asks the ambient source exactly once carrying an affinity computed over the pipeline's whole participating set, and either borrows the ambient's provider without owning it or creates and owns a scope as it does today. `Publish` subscriber pipelines force that affinity to `AlwaysNew` by way of a public, `AsyncLocal`-backed suppression flag in core, bracketed twice — once per subscriber inside the build loop, once around that subscriber's own invocation.**
+**An ambient exposes its resolution source to the container package through a one-member role interface that lives in that package rather than in core, and a container-backed factory tests for that role when it creates a pipeline scope — asking the ambient source exactly once, carrying an affinity computed over the pipeline's whole participating set, and then either borrowing that resolution source without owning it or creating and owning a scope exactly as it does today.**
+
+The role is `IAmAServiceProviderScope`, an `IAmAScope` that can name the `IServiceProvider` behind it. The affinity is computed by a policy object rather than by each factory, because a pipeline's participating factories can carry different configured lifetimes and only one of them is asked to create the scope. Everything else — where a declined ambient goes, when a diagnostic fires, who owns what — falls out of a single ordered protocol, below.
 
 ### The mechanism, end to end
-
-Two behaviours are decided here, and they are independent of one another. The first is what a pipeline does when it asks for a scope. The second is what a `Publish` subscriber does to stop the pipelines beneath it from asking at all.
-
-#### What a pipeline does when it asks for a scope
 
 Every path that is not *borrowed* ends at **create and own a scope**, which is exactly today's behaviour. That is the design's central property: six distinct failures — no provider, nothing offered, a stale ambient, an ambient from a container this package cannot use, an ambient offered for an `AlwaysNew` ask, and suppression in force — all converge on one fallback, and it is the one that already works.
 
@@ -100,58 +97,26 @@ The protocol is a ladder. Each row is tested in order and the first that matches
 | 8 | something came back and implements the role, but fails the usability probe | **OWNED**; declined, never disposed (FR-23) | *ambient offered but unusable* |
 | 9 | something came back, implements the role, and passes the probe | **BORROWED** — resolve from it, own nothing, dispose nothing (FR-12, C-7) | none |
 
-Rows 3 onwards are reached only after the affinity has been computed, and that computation is the single point at which suppression bites:
+Rows 3 onwards are reached only after the affinity has been computed, and that computation is also the single point at which `Publish` suppression enters:
 
-> `affinity = AmbientScopeSuppression.IsSuppressed ? AlwaysNew : the policy over the whole participating set`
+> `affinity = suppressed on this flow ? AlwaysNew : the policy over the whole participating set`
+
+Suppression is ADR 0075's decision and adds no row to the ladder — a suppressed pipeline takes rows 4 or 5, which is where a host that registered no ambient source lands anyway.
 
 Three things the ladder is making a point of. The ask happens **even when the affinity is `AlwaysNew`** — rows 4 and 5 (D16) — which is what makes a pipeline's adoption decision observable at all. A declined ambient is **never disposed**, at rows 4, 7 and 8 alike, because Brighter does not own what it declined (C-7). And the three diagnostics are distinct, independently latched conditions, not three spellings of one.
-
-#### What a `Publish` subscriber does to stop it
-
-FR-9 requires **two** brackets, and neither substitutes for the other. The reason is that a subscriber's own artefacts are resolved long before its handler runs, and the pipelines it must also suppress are ones core did not build and holds no reference to — a nested `Send` or `Post` issued from user code, through the singleton `CommandProcessor`.
-
-```mermaid
-sequenceDiagram
-    participant CP as CommandProcessor.Publish
-    participant PB as PipelineBuilder
-    participant Sub as one subscriber's handler
-    participant Nested as a pipeline the handler creates
-
-    Note over CP,PB: bracket 1 — RESOLUTION time,<br/>per subscriber, inside the build loop
-    loop for each subscriber
-        PB->>PB: Suppress()
-        PB->>PB: resolve this subscriber's handler and every decorator
-        PB->>PB: restore, explicitly
-    end
-
-    Note over CP,Nested: bracket 2 — EXECUTION time,<br/>per subscriber, around its own invocation
-    loop for each subscriber
-        CP->>CP: Suppress()
-        CP->>Sub: Handle or HandleAsync
-        Sub->>Nested: Send, Post or Publish on the singleton CommandProcessor
-        Nested->>Nested: reads IsSuppressed, so creates and owns its own scope
-        CP->>CP: restore, explicitly
-    end
-```
-
-Bracket 1 alone leaves a nested pipeline free to adopt. Bracket 2 alone is too late — every subscriber's handler has already been resolved from the caller's unsuppressed ambient before any of them runs. Neither is ever placed around the whole loop, which would give every subscriber one shared scope and undo ADR 0039. The restores are **explicit** on both, and *Implementation Approach* step 6 says why that is a statement about the code rather than a hope about `Parallel.ForEach`.
 
 ### Where the pieces live
 
 ```mermaid
 flowchart TB
     subgraph core["Paramore.Brighter — core, names no container type"]
-        direction TB
         handle["IAmAScope, from ADR 0070<br/>the handle a pipeline holds and ends"]
         provider["IAmAScopeProvider — NEW<br/>IAmAScope GetAmbient(ScopeAffinity)"]
         affinity["ScopeAffinity — NEW<br/>AlwaysNew = 0, JoinAmbient"]
-        suppress["AmbientScopeSuppression — NEW, static<br/>IsSuppressed and Suppress()"]
-        brackets["PipelineBuilder — resolution-time bracket, in the loop body<br/>CommandProcessor.Publish and PublishAsync — execution-time bracket"]
-        brackets --> suppress
+        fault["AmbientScopeSourceException — NEW<br/>carries a provider fault past the builders' catch"]
     end
 
     subgraph di["Paramore.Brighter.Extensions.DependencyInjection"]
-        direction TB
         role["IAmAServiceProviderScope : IAmAScope — NEW<br/>names the IServiceProvider behind an ambient"]
         policy["ScopeAffinityPolicy — NEW, internal<br/>FR-27.2 over the whole participating set"]
         pipescope["ServiceProviderPipelineScope<br/>owned: owns a lifetime scope and disposes its IServiceScope<br/>borrowed: resolves from Services and disposes NOTHING"]
@@ -169,7 +134,7 @@ flowchart TB
     end
 
     facs -- "GetAmbient(affinity)" --> provider
-    facs -- "reads IsSuppressed" --> suppress
+    facs -- "throws on a provider fault" --> fault
     asp -. "implements" .-> provider
     asp -. "its ambient implements" .-> role
     role -. "extends" .-> handle
@@ -185,13 +150,10 @@ flowchart TB
 | Ambient source | `IAmAScopeProvider` (core) | **deciding** | Answers, for one pipeline carrying one affinity, whether there is an ambient it may adopt. Creates nothing, owns nothing, disposes nothing |
 | Pipeline scope handle | `IAmAScope` (core, ADR 0070) | **knowing** (information holder) | Is the scope a pipeline resolves from. Says nothing about where it came from or who owns it |
 | Resolution source | `IAmAServiceProviderScope` (DI package) | **knowing** | An `IAmAScope` that can name the `IServiceProvider` behind it, so a Microsoft-container-backed factory can resolve from it |
-| Suppression state | `AmbientScopeSuppression` (core) | **knowing**, with a bracketing verb | Carries one bit along a logical flow: *no pipeline created on this flow may adopt* |
 | Affinity policy | `ScopeAffinityPolicy` (DI package, internal) | **deciding** | Applies FR-27.2 to a participating set of configured lifetimes and yields the pipeline's `ScopeAffinity` |
 | Per-scope artefact cache | `ScopedArtefactCache` (DI package) | **knowing** | Holds the `Scoped` artefacts one DI scope has produced, keyed by type, and is owned and released by that DI scope |
 | Diagnostics latch | `AmbientScopeDiagnostics` (DI package) | **doing** | Emits each of the three ambient `Warning` conditions at most once per (condition, provider implementation type) per Brighter container |
 | Scope adopter | the five container-backed factories | **doing** | Inside `CreatePipelineScope()`: compute, ask, decline or borrow, create |
-
-`AmbientScopeSuppression` is deliberately **not** a role — it is a static holder, not an interface anyone is handed. That is stated as a decision rather than an omission, and the reason is under *Technology Choices*.
 
 #### `IAmAScopeProvider` and `ScopeAffinity` — the core half of the seam (new, core, public)
 
@@ -262,35 +224,6 @@ Four properties of this shape are load-bearing:
 
 **On the name.** `IAmAServiceProviderScope` is this ADR's to choose — it is not one of C-11's three working names — and it is chosen because it states both halves of what the type is, an `IAmAScope` whose resolution source is an `IServiceProvider`, and because it carries the `ServiceProvider*` prefix every other Microsoft-container type in the package already wears (`ServiceProviderLifetimeScope`, `ServiceProviderHandlerFactory`, `ServiceProviderMapperFactory`).
 
-#### `AmbientScopeSuppression` — where suppression hangs (new, core, public, static)
-
-```csharp
-namespace Paramore.Brighter
-{
-    /// <summary>
-    /// Suppresses ambient scope adoption for the current logical flow and every flow started from
-    /// it. A pipeline created while suppression is in force creates and owns its own DI scope,
-    /// whatever the configured affinity. Established by Brighter around each Publish subscriber's
-    /// resolution and around its execution; public so that a host, or a container package Brighter
-    /// does not ship, can honour the same rule.
-    /// </summary>
-    public static class AmbientScopeSuppression
-    {
-        public static bool IsSuppressed { get; }
-        public static IDisposable Suppress();
-    }
-}
-```
-
-**Contract.**
-
-| Member | Input | Output | Error conditions |
-| --- | --- | --- | --- |
-| `IsSuppressed` | none | `true` when a suppression bracket is in force on this flow | Cannot throw. A reader outside any bracket sees `false` |
-| `Suppress()` | none | a bracket that restores the **previous** value when disposed, so brackets nest | Cannot throw. Disposing the bracket twice is a no-op. Failing to dispose it leaves the flow suppressed for the rest of its life — the failure direction is toward isolation, never toward unintended sharing |
-
-Backed by `AsyncLocal<bool>`. Core writes it; the container package reads it. It is **public for both read and write**, deliberately, and the cost is recorded in *Consequences*.
-
 #### `ScopeAffinityPolicy` — who computes the affinity (new, DI package, internal)
 
 FR-27.2 makes the affinity a property of the *whole* participating set, but ADR 0070's protocol calls `CreatePipelineScope()` on one factory and D16 requires exactly one ask per pipeline. The factory that creates the pipeline scope must therefore know every participant's configured lifetime. It can: all five container-backed factories already read `IBrighterOptions` in their constructors (`ServiceProviderMapperFactory.cs:44`, and the same two lines in `ServiceProviderMapperFactoryAsync`, `ServiceProviderTransformerFactory`, `ServiceProviderTransformerFactoryAsync` and `ServiceProviderHandlerFactory`), and `IBrighterOptions` (`BrighterOptions.cs:72`) carries all three of `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime`. Today each factory keeps only its own; from here each keeps the policy instead.
@@ -341,11 +274,9 @@ Evaluation order is fixed by FR-24's exclusivity rule and is **FR-24.4, then FR-
 | Assembly | Type | Change |
 | --- | --- | --- |
 | `Paramore.Brighter` | `IAmAScopeProvider`, `ScopeAffinity` | **new** |
-| `Paramore.Brighter` | `AmbientScopeSuppression` | **new** |
 | `Paramore.Brighter` | `AmbientScopeSourceException` | **new** — carries a provider fault past the pipeline builders' wrapping `catch` |
-| `Paramore.Brighter` | `PipelineBuilder<TRequest>` | a defaulted constructor argument `bool isolateSubscribers = false` on the two dispatch constructors (`:59`, `:76`); the resolution-time bracket inside both build loop bodies (`:187-198`, `:232-244`); an `AmbientScopeSourceException` clause ahead of the wrapping `catch` in both (`:202-204`, `:248-250`) |
+| `Paramore.Brighter` | `PipelineBuilder<TRequest>` | an `AmbientScopeSourceException` clause ahead of the wrapping `catch` in both build paths (`:202-204`, `:248-250`) |
 | `Paramore.Brighter` | `TransformPipelineBuilder`, `TransformPipelineBuilderAsync` | an `AmbientScopeSourceException` clause ahead of each wrapping `catch` — `:116-124` and `:157-165`, at identical lines in both files — so cleanup runs and then the original is rethrown |
-| `Paramore.Brighter` | `CommandProcessor` | `Publish` (`:472`) and `PublishAsync` (`:575`) construct the builder with `isolateSubscribers: true`; the execution-time bracket around `Handle` inside the `Parallel.ForEach` body (`:481`) and around the `HandleAsync` invocation inside the start loop (`:591-599`) |
 | `…DependencyInjection` | `IAmAServiceProviderScope`, `ScopeAffinityPolicy`, `ScopedArtefactCache`, `AmbientScopeDiagnostics` | **new** |
 | `…DependencyInjection` | `ServiceProviderPipelineScope` | an **internal** borrowed construction path with non-owning disposal |
 | `…DependencyInjection` | `ServiceProviderLifetimeScope` | an internal borrowed mode (resolve from a given provider; create and dispose nothing); the `Scoped` path resolves its artefact cache from the scope in play |
@@ -353,13 +284,9 @@ Evaluation order is fixed by FR-24's exclusivity rule and is **FR-24.4, then FR-
 | `…DependencyInjection` | `ServiceCollectionExtensions.BrighterHandlerBuilder` (`:142`, reached from `:119`) | registers `ScopedArtefactCache` (`TryAddScoped`) and `AmbientScopeDiagnostics` (`TryAddSingleton`) |
 | `Paramore.Brighter.Extensions.AspNetCore` (working name) | the provider | **new package**, ADR 0073 names it; its ambient implements `IAmAServiceProviderScope` over `HttpContext.RequestServices` |
 
-Unchanged, and named so the omission is not read as an oversight: `IAmAScope`, and every interface ADRs 0070 and 0071 changed — no member is added to any of them here, though `CreatePipelineScope()`'s **contract** is widened: the handle it returns may now name a borrowed ambient, so the member promises that the caller must always *release* rather than that it *owns*, and only the handle knows whether releasing disposes anything (FR-12); `MessageMapperRegistry`, whose two forwarding members behave exactly as 0070 specifies; `IAmALifetime` and `HandlerLifetimeScope`; `PipelineBuilder.Dispose()` (`:269-270`), so D10's release timing is preserved by construction; `Reactor`, `Proactor`, `Dispatcher`, `DispatchBuilder` and `ConsumerFactory` (C-2); the pump's per-message behaviour (D0b); `BrighterOptions`' three lifetime properties and `IsolateTransientHandlerScope` (`:37`); and `RequestContext`.
+Unchanged, and named so the omission is not read as an oversight: `CommandProcessor`, whose dispatch methods gain nothing here; `IAmAScope`, and every interface ADRs 0070 and 0071 changed — no member is added to any of them here, though `CreatePipelineScope()`'s **contract** is widened: the handle it returns may now name a borrowed ambient, so the member promises that the caller must always *release* rather than that it *owns*, and only the handle knows whether releasing disposes anything (FR-12); `MessageMapperRegistry`, whose two forwarding members behave exactly as 0070 specifies; `IAmALifetime` and `HandlerLifetimeScope`; `PipelineBuilder.Dispose()` (`:269-270`), so D10's release timing is preserved by construction; `Reactor`, `Proactor`, `Dispatcher`, `DispatchBuilder` and `ConsumerFactory` (C-2); the pump's per-message behaviour (D0b); `BrighterOptions`' three lifetime properties and `IsolateTransientHandlerScope` (`:37`); and `RequestContext`.
 
 ### Technology Choices
-
-**Why suppression is ambient state, when ADR 0070 removed all of it.** ADR 0070 rejected an `AsyncLocal` carrying a *scope*, and rightly: a scope is a resource with an owner and an end, invisible coupling around it means FR-5's failed-build release has nowhere to live, and it is not implementable over a non-Microsoft container. Suppression is a different kind of thing. It carries one bit, owns no resource, needs no end beyond its own lexical bracket, and can be honoured by any container package because it names nothing container-specific. And it has no alternative: the pipeline it must reach is one core did not build and holds no reference to — a nested `Send` or `Post` issued from user code inside a subscriber's handler, through the singleton `CommandProcessor`. Threading a decision argument to it would mean a new parameter on every public `IAmACommandProcessor` method, permanently, to serve a case that arises only inside `Publish`. Suppression is now the only ambient mechanism in the design, and it is the only one that has no parameter path available to it.
-
-**Why the suppression holder is public for read *and* write.** It must be public rather than `internal` plus `InternalsVisibleTo` because a container package Brighter does not ship must be able to honour FR-8 too (NFR-7) — an `internal` flag would make per-subscriber isolation a privilege of Microsoft's container. Once it is public to read, making `Suppress()` public as well costs little and buys something real: a host, or a third-party integration, can suppress adoption around its own work — a background job started from a request whose `HttpContext` still flows, for instance — without waiting for a Brighter release. The honest cost is stated in *Consequences*: FR-8 becomes an invariant core **asserts** rather than one no caller can defeat.
 
 **Why a provider fault needs a type of its own to escape.** FR-24.1 asks for something the surrounding code actively prevents. The ask is made inside `CreatePipelineScope()`, and every call site of that member sits inside a pipeline builder's guarded region — `PipelineBuilder.cs:190` and `:235` are inside the `try` whose `catch` at `:202` and `:248` turns everything that is not already a `ConfigurationException` into one, and `TransformPipelineBuilder.cs:116` and `:157` do the same without even a filter. A provider's `InvalidOperationException` would therefore reach the caller as a `ConfigurationException`, which is precisely the degradation FR-24.1 forbids and AC-30 falsifies.
 
@@ -375,7 +302,7 @@ The type is a courier, not a contract: it exists only between the ask and the bu
 
 ### Implementation Approach
 
-**1. The core types.** Add `IAmAScopeProvider` and `ScopeAffinity` to `src/Paramore.Brighter/`, and `AmbientScopeSuppression` and `AmbientScopeSourceException` beside them. None names a container type; the source-level guard AC-22.3 runs returns nothing new.
+**1. The core types.** Add `IAmAScopeProvider` and `ScopeAffinity` to `src/Paramore.Brighter/`, and `AmbientScopeSourceException` beside them. None names a container type; the source-level guard AC-22.3 runs returns nothing new.
 
 **1a. The four builder `catch` blocks learn one clause.** Ahead of each existing wrapping `catch` — `PipelineBuilder.cs:202` and `:248`, `TransformPipelineBuilder.cs:116` and `:157`, and the same two lines in `TransformPipelineBuilderAsync` — add a clause for `AmbientScopeSourceException` that runs the same cleanup the general clause runs, then rethrows the inner exception through `ExceptionDispatchInfo.Capture(...).Throw()`. Nothing else in the builders changes, and the general clause's behaviour for every other failure is untouched (AC-5). The two `PipelineBuilder` filters are also brought into one spelling: `:248` is `when(!(e is ConfigurationException))` against `:202`'s `when (e is not ConfigurationException)`, and both now exclude the new type.
 
@@ -390,7 +317,7 @@ CreatePipelineScope():
   2. if Scoped does not participate in this pipeline                 -> return an OWNED handle,
         (handler family only: HandlerLifetime == Transient)             make NO ask     [FR-27.1]
 
-  3. affinity = AmbientScopeSuppression.IsSuppressed                 [FR-8, FR-27.3]
+  3. affinity = suppressed on this flow                              [ADR 0075]
                   ? ScopeAffinity.AlwaysNew
                   : policy.ForHandlerPipeline() / ForTransformPipeline()   [FR-27.2]
 
@@ -428,7 +355,7 @@ At no point is a declined ambient disposed (C-7). `Probe` resolves `IServiceScop
 The rule, over that set:
 
 - the pipeline **takes a pipeline scope and asks, exactly once**, if and only if `Scoped` is in the set (FR-27.1);
-- the ask carries `JoinAmbient` if and only if the affinity option is `JoinAmbient`, `Scoped` is in the set, `Transient` is **not** in the set, and suppression is not in force; otherwise `AlwaysNew` (FR-27.2, FR-8);
+- the ask carries `JoinAmbient` if and only if the affinity option is `JoinAmbient`, `Scoped` is in the set, `Transient` is **not** in the set, and suppression is not in force on this flow (ADR 0075); otherwise `AlwaysNew` (FR-27.2);
 - `Singleton` participants are **ignored** by the test, exactly as FR-22.2 ignores them. A `{Scoped mapper, Singleton transformer}` transform pipeline adopts; the `Singleton` transformer resolves from the root provider as it always did, ignoring the handle it is passed.
 
 Two consequences must be said plainly.
@@ -439,28 +366,9 @@ Two consequences must be said plainly.
 
 **4. Borrowing, and what it does and does not own.** `ServiceProviderPipelineScope` gains an internal borrowed construction path over an `IServiceProvider`. Borrowed implies `Scoped` by construction — a pipeline only reaches step 5 with `Scoped` participating and no `Transient` participant — so the borrowed mode has no `Transient` per-resolution path of its own, and a `Singleton` participant sharing the pipeline resolves from the root provider without consulting the handle at all. It holds nothing but the borrowed provider and the `ScopedArtefactCache` it resolved from it. `Dispose()` and `DisposeAsync()` are idempotent no-ops (AC-8). Brighter disposes neither the provider, nor the ambient `IAmAScope`, nor any instance resolved from it (FR-12, AC-16); the instances are disposable transients that MS DI has already tracked against the request scope, and the caller disposes them when the request ends. On the failed-build path there is no owned scope, so `CleanUpAfterFailedBuild` releases nothing the caller owns and AC-38 holds by construction.
 
-**5. The two suppression brackets.** FR-9 and D10 require **two**, and neither substitutes for the other. Neither is ever placed around the whole loop.
+**5. Registration.** All four registration entry points route through `ServiceCollectionExtensions.BrighterHandlerBuilder` (`:142`; the `BrighterOptions` overload at `:119` forwards to it), so that is the single place `ScopedArtefactCache` (`TryAddScoped`) and `AmbientScopeDiagnostics` (`TryAddSingleton`) are registered — and it is the only registration point this ADR adds. Nothing here depends on the `IOptions` pipeline, so C-12a's split across the four paths does not bite; the affinity option's journey to `IBrighterOptions` is FR-17's problem and 0073's decision, and this ADR reads whatever object `IBrighterOptions` resolves to, exactly as the factories already do.
 
-*(a) Resolution-time, per subscriber, inside the build loop.* `PipelineBuilder<TRequest>` takes a defaulted constructor argument `bool isolateSubscribers = false`. `CommandProcessor.Publish` (`:472`) and `PublishAsync` (`:575`) pass `true`; `Send` (`:317`), `SendAsync` (`:394`) and the two validation-time construction sites (`BrighterPipelineValidationExtensions.cs:75`, `:116`) keep the default, so a `Send` never suppresses (FR-27.3, AC-47's first branch). A constructor argument rather than a parameter on `Build`/`BuildAsync` keeps the two builder interfaces — `IAmAPipelineBuilder<TRequest>` and `IAmAnAsyncPipelineBuilder<TRequest>`, both `internal` — free of a flag that is a property of the *call site* rather than of a build, and the builder is already constructed per call site, so those six sites are the natural place to say which kind of build this is. The bracket then goes **inside** the per-subscriber lambda in both twins — `Build`'s `observerTypes.Each(observer => { … })` at `:187-198` and `BuildAsync`'s at `:232-244` — around the `GetSyncInstanceScope()` / `GetAsyncInstanceScope()` call, the handler `Create` and `BuildPipeline`/`BuildAsyncPipeline`, which is where the subscriber's artefacts and their container-`Scoped` dependencies are actually resolved. Around the whole loop would give every subscriber one pipeline scope; at dispatch only would be too late, because both handlers are already resolved from the caller's unsuppressed ambient before either runs — which is what AC-11 and AC-12 fail on.
-
-*(b) Execution-time, around that subscriber's own invocation.* The twins differ and must be written differently.
-
-- **Sync `Publish`** — inside the `Parallel.ForEach` body (`:481`), around `handleRequests.Handle(@event)`, restored on every exit path of the body.
-- **Async `PublishAsync`** — around the **invocation** of `handleRequests.HandleAsync(@event, cancellationToken)` inside the start loop (`:596`, within `:591-599`), not around `Task.WhenAll` at `:601`. The bracket is live when the async method is called, so the `ExecutionContext` its state machine captures carries suppression into every continuation; disposing the bracket immediately afterwards restores the **caller's** flow without touching the running task's, because an `AsyncLocal` write in one flow does not propagate back to a flow that has already branched. Bracketing `Task.WhenAll` instead would suppress nothing during the synchronous prefix of each handler and would leave the caller's flow suppressed for the duration of the publish.
-
-This bracket is what AC-47's second branch needs: a subscriber whose own pipeline has no `Scoped` participant takes no pipeline scope and asks nothing, yet a `Post` its handler issues at dispatch time must not adopt.
-
-**6. Why the cross-subscriber leak on the synchronous path is not observable.** `Parallel.ForEach` partitions the source and gives each worker task a range; `ExecutionContext` is captured and restored per **worker task**, not per body invocation. So an `AsyncLocal` write in subscriber 1's body is still current when the same worker calls the body for subscriber 2. That leak is real and the design does not assume it away — it is bounded and unobservable, for three reasons that have to hold together:
-
-- **Every subscriber must be suppressed anyway.** FR-8 makes suppression unconditional for every subscriber of a publish, irrespective of its lifetimes. A leaked `true` sets exactly the value subscriber 2's own bracket sets one instruction later. There is no state a subscriber body needs in which `IsSuppressed` is `false`, so no observation can distinguish a leaking implementation from a correct one — which is why no Acceptance Criterion asserts against it, and why AC-39 says so explicitly.
-- **The only alternative reading is foreclosed.** OOS-14 denies that a nested pipeline ever re-enters its parent subscriber's scope, so "subscriber 2 should have seen its own suppression rather than subscriber 1's" is not a distinction with an observable behind it — both mean *create your own scope*.
-- **The leak cannot escape the publish.** A worker task ends when the `Parallel.ForEach` ends, and the thread pool restores a fresh `ExecutionContext` per work item, so nothing survives onto unrelated work. The one place a leak *is* observable is the caller's own flow — `Parallel.ForEach` may inline bodies on the calling thread, and the build loop runs on the calling thread throughout — and that is precisely what the **explicit** restore on both brackets prevents and what AC-12's and AC-39's final clauses detect: a `Send` and a `Post` issued by the controller after the publish returns must resolve from the request scope.
-
-The conclusion is that the restore must be explicit rather than inherited from `ExecutionContext`, on both brackets and on both publish paths. That is a statement about *why* the code is written the way it is, not a hope about how `Parallel.ForEach` behaves.
-
-**7. Registration.** All four registration entry points route through `ServiceCollectionExtensions.BrighterHandlerBuilder` (`:142`; the `BrighterOptions` overload at `:119` forwards to it), so that is the single place `ScopedArtefactCache` (`TryAddScoped`) and `AmbientScopeDiagnostics` (`TryAddSingleton`) are registered — and it is the only registration point this ADR adds. Nothing here depends on the `IOptions` pipeline, so C-12a's split across the four paths does not bite; the affinity option's journey to `IBrighterOptions` is FR-17's problem and 0073's decision, and this ADR reads whatever object `IBrighterOptions` resolves to, exactly as the factories already do.
-
-**8. What is left to 0073 and 0074.** ADR 0073 fixes the spelling of `GetAmbient`, the ASP.NET package name, the registration extension name and the opt-in property; nothing above changes shape when it does. ADR 0074 decides where FR-22's rules and FR-24.3's duplicate-provider rule are **evaluated**; this ADR has fixed the registration model those rules read and the three runtime latches they do not.
+**6. What is left to the siblings.** ADR 0073 fixes the spelling of `GetAmbient`, the ASP.NET package name, the registration extension name and the opt-in property; nothing above changes shape when it does. ADR 0074 decides where FR-22's rules and FR-24.3's duplicate-provider rule are **evaluated**; this ADR has fixed the registration model those rules read and the three runtime latches they do not. ADR 0075 decides how a `Publish` subscriber suppresses adoption; it enters the protocol above at step 3 and nowhere else.
 
 ## Consequences
 
@@ -472,29 +380,23 @@ The conclusion is that the restore must be explicit rather than inherited from `
 - **The seam degrades to today's behaviour on every failure path.** No provider registered, provider returned nothing, ambient stale, ambient from a container this package cannot use, ambient offered for an `AlwaysNew` ask, suppression in force — all six converge on *create and own a scope*. There is one path to reason about, and it is the one that already exists (FR-11, FR-13, C-7).
 - **FR-8 cannot be defeated by a third-party provider.** The guard on Brighter's side ignores an ambient returned for an `AlwaysNew` ask before it probes it, so a provider that violates the contract changes nothing about isolation and merely earns a latched warning (AC-11).
 - **FR-16 and FR-26 are satisfied by one mechanism with no bookkeeping.** Making the artefact cache a container-`Scoped` service gives per-request artefact identity under adoption and per-pipeline identity without it, and the container releases it either way — no weak references, no eviction, no disposal callback Brighter does not get.
-- **Suppression costs nothing when nothing is published.** `IsSuppressed` is one `AsyncLocal` read per pipeline that takes a pipeline scope, and no bracket is ever established outside a publish.
 - **`Transient` and `Singleton` are untouched.** ADR 0067's per-resolution scopes, `IsolateTransientHandlerScope` (`BrighterOptions.cs:37`) and `Singleton`'s root resolution do not pass through the seam and make no ask (C-6, OOS-7, AC-46).
 - **Release timing is unchanged.** `PipelineBuilder.Dispose()` (`:269-270`) still drains every subscriber's scope together at end of publish; nothing here tightens it (D10, AC-10).
 - **Core stays container-agnostic** (ADR 0014). The three new core types name no container type, and the source-level guard AC-22.3 runs finds nothing new.
 
 ### Negative
 
-- **Core gains a public static with a public mutator.** `AmbientScopeSuppression.Suppress()` is callable by anyone, so FR-8's per-subscriber isolation becomes an invariant core **asserts** rather than one no caller can defeat. A caller who takes a bracket and leaks it suppresses adoption for the rest of that logical flow, and nothing detects it. The failure direction is toward isolation — a leaked bracket produces today's `AlwaysNew` behaviour, never unintended sharing of the caller's scope — which is the only reason the shape is acceptable, and it is not a full mitigation.
-- **The design is no longer free of per-flow state.** ADR 0070 removed all of it and listed "no hidden state" as a positive; this ADR puts one bit back. It is one bit rather than a resource, its brackets are lexical, and its failure mode is benign — but a reader now has `ExecutionContext` semantics to hold in mind on the `Publish` paths, and the sync path's `Parallel.ForEach` behaviour has to be understood to see why the restore is explicit.
 - **Artefact identity has to move off the handle**, and that costs a new registered service plus a change to `ServiceProviderLifetimeScope`'s `Scoped` path. `_scopedInstances` (`:49`) stops being a private field and becomes a resolution, which is a small but real complication of a class that is already the densest in the package. ADR 0070 anticipated the need but deliberately did not pay for it, so the whole of the cost lands here.
 - **`ScopedArtefactCache` is public surface in the DI package** that most users will never name. It has to be public so that AC-37's positive control can re-register it and so that the pattern is legible to a non-Microsoft container package, and `TryAddScoped` means an application can silently change Brighter's artefact identity by registering it differently.
 - **Issue #4260's blast radius widens under adoption.** `GetOrCreateScoped` and `GetOrCreateSingleton` cache a `Lazy<object?>` in default mode, which caches a **faulted** `GetService`. Today a faulted entry is confined to one pipeline's cache; once the cache is owned by a borrowed request scope, one transient resolution failure poisons that artefact type for every remaining pipeline in that request. Fixing #4260 becomes a prerequisite of adoption rather than an adjacent nicety.
 - **`TransformerLifetime = Transient` silently prevents every transform pipeline from adopting**, whatever `MapperLifetime` says and whether or not any transform is declared (D12, AC-46). Since all three lifetimes default to `Transient`, an application that sets only `MapperLifetime = Scoped` and opts in gets no adoption and — unless it calls `ValidatePipelines()` (C-15) — no signal either. That is accepted and is the reason FR-25's decision guide has to be framed as a joint choice over all three.
 - **An ambient this container package cannot resolve from is declined with a `Warning` and nothing else.** A host that registers an Autofac-backed provider alongside Microsoft-backed factories gets working software that never adopts, reported once per container. That is the fail-safe behaviour C-7 asks for, but it is a quiet one.
-- **Two more construction sites in `CommandProcessor` gain an argument**, and the meaning of a `PipelineBuilder` now depends on a boolean set at construction. A reader of `Build` has to look at the constructor to know whether subscribers are isolated.
 - **The migration cost, and who pays it.** Applications pay nothing to keep today's behaviour: the affinity option defaults to `AlwaysNew`, no provider is registered by default, and every path degrades to *create your own*. The cost falls on applications that **opt in**, and it is the joint-lifetime choice: all three of `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` must move together, `{Scoped, Scoped, Transient}` is not a destination, and an in-process `Publish` subscriber still cannot join the caller's transaction (C-4). Implementers of `IAmAScopeProvider` pay a second cost: an ambient that does not implement `IAmAServiceProviderScope` is inert against Brighter's own container package.
 
 ### Risks and Mitigations
 
 | Risk | Mitigation |
 | --- | --- |
-| Suppression leaks past `Publish` and a later `Send` or `Post` in the same request silently fails to adopt | Both brackets restore explicitly on every exit path — normal return, exception, cancellation — rather than relying on `ExecutionContext`. AC-12 and AC-39 each assert a `Send` **and** a `Post` from the controller after the publish resolving from the request scope; those are the clauses that can actually fail |
-| A subscriber's handler is resolved before suppression is established, so it adopts the caller's ambient | The resolution-time bracket is inside the per-subscriber lambda in both build loops, around the `Create` and the decorator resolution, not around the loop and not at dispatch. AC-11 and AC-12 fail on an execution-time bracket alone, by construction |
 | Brighter disposes a scope the caller owns | Ownership is decided in one place — the last two lines of the protocol — and a borrowed `ServiceProviderPipelineScope`'s disposal is a no-op. A **declined** ambient is never disposed either, which the protocol states at each of its three decline points (C-7). AC-16 and AC-38 |
 | A stale `HttpContext.RequestServices` surfaces `ObjectDisposedException` from Brighter's own resolution | The usability probe runs before any pipeline instance is resolved from the ambient, and a failed probe declines and creates. It bounds Brighter's resolution only — a handler that captures and uses `RequestServices` itself is outside Brighter's control. AC-29 |
 | Two `Post`s in one request get two mappers, falsifying FR-16(a) | The artefact cache is owned by the DI scope, not by the per-pipeline handle — the one thing ADR 0070 identifies as needed for adoption and does not itself supply. AC-17 is the guard |
@@ -515,21 +417,15 @@ The conclusion is that the restore must be explicit rather than inherited from `
 
 **4. Put a resolution member on `IAmAScope` itself.** One type instead of two, no type test, no downcast. **Rejected**, and the rule that forbids it is right rather than merely present. `IAmAScope` is a `Paramore.Brighter` type on core interfaces, and putting `IServiceProvider` — or any "give me an instance of this type" member — on it would make core's public seam an abstraction over an IoC container, which is exactly what ADR 0014 decided Brighter does **not** do. The practical bite is immediate: `IAmAScope` is what a mapper factory in a test assembly with no container reference has to be able to see, and what an Autofac-backed package has to be able to implement without Microsoft's abstractions on its compile closure. A generic `T? Resolve<T>()` avoids naming `IServiceProvider` but is worse — it is a container abstraction with the name filed off, and it would put resolution semantics core has no way to define into a core contract.
 
-**5. Suppression as an argument to, or a return value of, `GetAmbient`.** `GetAmbient(affinity, isSubscriber)`, or an ambient object that carries "and suppress beneath me". **Rejected by FR-27.3, precisely.** A `Publish` subscriber whose pipeline has **no `Scoped` participating factory** takes no pipeline scope under FR-27.1 and therefore never calls `GetAmbient` at all — yet it must still suppress, because a pipeline nested inside it may be `Scoped`. AC-47's second branch is exactly that configuration and is unsatisfiable by any mechanism that lives on the ambient query. The same argument kills making suppression a third `ScopeAffinity` value: affinity is a property of a pipeline that is taking a scope, and suppression is a property of a subscriber whether or not it takes one.
+**5. A middleware-based ASP.NET ambient.** `app.UseBrighterScope()`, publishing the request scope for Brighter to pick up. **Rejected by D1 and OOS-4.** It adds a required call site to every ASP.NET application, in a place ordering matters and is easy to get wrong; it does nothing for hosts that are not ASP.NET pipelines; and it does not remove the need for the provider, because Brighter still has to *ask* for the ambient at the point a pipeline is built. Registering the provider is the opt-in, and there is no per-request gesture at all.
 
-**6. Suppression as `internal` plus `InternalsVisibleTo`.** Keeps the flag out of core's public surface and makes FR-8 undefeatable by user code. **Rejected.** `InternalsVisibleTo` would have to name every container package that must honour FR-8, which is a list Brighter does not control: NFR-7 requires the seam to be implementable over Autofac or SimpleInjector from an assembly Brighter has never heard of, and such a package cannot honour per-subscriber isolation if it cannot read the flag. Public read alone was considered and is the narrower option, but it makes the type asymmetric — readable by anyone, writable only by Brighter — for a guarantee that a leaked bracket already breaks from inside. The public write is a deliberate trade, recorded in *Consequences* rather than argued away.
+**6. Put the usability probe on the hand-off role.** Add `bool IsUsable { get; }` to `IAmAServiceProviderScope` and let the ambient answer for itself. **Rejected.** The question that matters is "can *this container package* resolve from this provider", which is the DI package's question and not the ambient owner's; making every implementer answer it would have each of them reproduce Microsoft's disposal semantics, and a wrong answer would surface as `ObjectDisposedException` from Brighter's own resolution — exactly what FR-23 forbids. Keeping the role at one member also keeps it implementable by anyone, which is the whole point of it.
 
-**7. A middleware-based ASP.NET ambient.** `app.UseBrighterScope()`, publishing the request scope for Brighter to pick up. **Rejected by D1 and OOS-4.** It adds a required call site to every ASP.NET application, in a place ordering matters and is easy to get wrong; it does nothing for hosts that are not ASP.NET pipelines; and it does not remove the need for the provider, because Brighter still has to *ask* for the ambient at the point a pipeline is built. Registering the provider is the opt-in, and there is no per-request gesture at all.
-
-**8. Reuse `RequestContext` to carry suppression.** `RequestContext.Bag` (`RequestContext.cs:61`) already carries application state across the pipeline, so a subscriber could set a key in its own copy. **Rejected — it cannot reach.** The pipelines suppression must reach are those a subscriber's handler creates by calling `Send`, `Post` or `Publish` on the singleton `CommandProcessor`, and those calls take an *optional* `RequestContext` that user code is under no obligation to pass — where it is omitted, `InitRequestContext` (`CommandProcessor.cs:312`, `:389`, `:464`) makes a fresh one. Suppression would then hold only for handlers that happened to forward the context, making FR-8 a documentation request rather than an invariant. `PipelineBuilder` also copies the context per subscriber (`requestContext.CreateCopy()`, `RequestContext.cs:142`), so the resolution-time bracket would be reasoning about which copy it is writing to. `RequestContext` carries application state along a request; suppression is a property of the flow, and the flow is what `AsyncLocal` names.
-
-**9. Put the usability probe on the hand-off role.** Add `bool IsUsable { get; }` to `IAmAServiceProviderScope` and let the ambient answer for itself. **Rejected.** The question that matters is "can *this container package* resolve from this provider", which is the DI package's question and not the ambient owner's; making every implementer answer it would have each of them reproduce Microsoft's disposal semantics, and a wrong answer would surface as `ObjectDisposedException` from Brighter's own resolution — exactly what FR-23 forbids. Keeping the role at one member also keeps it implementable by anyone, which is the whole point of it.
-
-**10. Give the borrowed handle its own artefact cache and accept per-pipeline artefact identity under adoption.** Simplest possible borrowed scope: no registered service, no change to `ServiceProviderLifetimeScope`. **Rejected**: it falsifies FR-16(a) and AC-17 — two `Post`s in one request would resolve two mappers — and it contradicts D7, which is the reading of the lifetime model that makes adoption coherent at all. If the pipeline's scope *is* the request scope, the request owns the instance.
+**7. Give the borrowed handle its own artefact cache and accept per-pipeline artefact identity under adoption.** Simplest possible borrowed scope: no registered service, no change to `ServiceProviderLifetimeScope`. **Rejected**: it falsifies FR-16(a) and AC-17 — two `Post`s in one request would resolve two mappers — and it contradicts D7, which is the reading of the lifetime model that makes adoption coherent at all. If the pipeline's scope *is* the request scope, the request owns the instance.
 
 ## References
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-8, FR-9, FR-10, FR-11, FR-12, FR-13, FR-16/FR-16a, FR-18, FR-23, FR-24, FR-26, FR-27, NFR-2, NFR-4, NFR-6, NFR-7, NFR-8, C-1, C-7, C-13, C-14, C-15, C-17, D0b, D2, D6, D7, D10, D11, D12, D16, D17, D19
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-10, FR-11, FR-12, FR-13, FR-16/FR-16a, FR-18, FR-23, FR-24, FR-26, FR-27, NFR-2, NFR-4, NFR-6, NFR-7, NFR-8, C-1, C-7, C-13, C-14, C-15, C-17, D0b, D2, D7, D11, D12, D16, D17, D19
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0070-per-pipeline-di-scope-for-mapper-and-transform-factories` [Proposed] — the transform pipeline takes one DI scope, carried as a parameter; introduces `IAmAScope` and `ServiceProviderPipelineScope`. This ADR keeps its forward-compatibility promises and discharges the one thing it names as outstanding for adoption: artefact identity under a **borrowed** scope, which does not follow from a per-pipeline handle
   - `0071-pipeline-scope-handle-for-handler-pipelines` [Proposed] — handler pipelines converge onto the same handle via `IAmAHandlerFactory.CreatePipelineScope()` and `IAmALifetime.PipelineScope`, which is what lets adoption be one change rather than two
@@ -538,12 +434,10 @@ The conclusion is that the restore must be explicit rather than inherited from `
   - `0066-release-factory-instances-on-an-opaque-lease` [Accepted] — the opaque `Lease<T>`, whose release remains a no-op for `Scoped` and is unaffected by borrowing
   - `0068-deterministic-disposal-finalizer-safety-net` [Accepted] — the disposal rules a borrowed handle's no-op disposal must still satisfy
   - `0069-factory-registry-ownership-and-disposal-cascade` [Accepted] — why `MessageMapperRegistry` speaks for the factories it owns, and therefore why the transform pipeline's single ask travels through it
-  - `0039-scoping-dependencies-inline-with-lifetime-scope` [Proposed] — a DI scope per registered subscriber on `Publish`; the decision suppression exists to protect, not reopened (D0c)
-  - `0033-lifetime-of-command-processor-and-mediator` [Proposed] — the `CommandProcessor` is a singleton, which is why a nested pipeline cannot be reached by an argument; not reopened (C-5)
+  - `0075-publish-subscriber-scope-suppression` [Proposed] — how a `Publish` subscriber suppresses adoption for itself and for the pipelines beneath it. It enters the protocol here at one line, the affinity computation, and adds no outcome to the ladder
+  - `0039-scoping-dependencies-inline-with-lifetime-scope` [Proposed] — a DI scope per registered subscriber on `Publish`; ADR 0075 exists to protect it, and it is not reopened (D0c)
   - `0053-pipeline-validation-at-startup` [Accepted] and `0064-validate-pipeline-assembly-and-provider-registration` [Accepted] — the `ValidatePipelines()` machinery FR-24.3's duplicate-provider warning lands in; this ADR fixes the registration model, ADR 0074 decides the site
 - External references:
   - [Dependency injection guidelines — scope validation and captive dependencies](https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection-guidelines)
-  - [`AsyncLocal<T>` and `ExecutionContext` flow](https://learn.microsoft.com/en-us/dotnet/api/system.threading.asynclocal-1)
-  - [`Parallel.ForEach` — partitioning and per-worker execution](https://learn.microsoft.com/en-us/dotnet/api/system.threading.tasks.parallel.foreach)
   - Issue #4260 — faulted-`Lazy` caching in `GetOrCreateScoped`/`GetOrCreateSingleton`, whose blast radius this ADR widens
   - Wirfs-Brock & McKean, *Object Design: Roles, Responsibilities, and Collaborations* — the role/stereotype vocabulary used to separate the ambient source (deciding) from the resolution source (knowing)

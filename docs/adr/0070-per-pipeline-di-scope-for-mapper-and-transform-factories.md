@@ -29,19 +29,20 @@ A transform pipeline is a message mapper plus the `[WrapWith]`/`[UnwrapWith]` tr
 
 **Scope**: This ADR decides one thing — **a transform pipeline takes one DI scope, and the mapper factory and the transformer factory both resolve from it**. It discharges FR-1 … FR-7 and constraint C-19, and closes Defect 1 and Defect 1b.
 
-It introduces `IAmAScope` as the core scope handle, settling the disposal half of C-8 and confirming the seam types' home. It does **not** decide `IAmAScopeProvider`, the *ambient* concept, `ScopeAffinity`, adoption or borrowing, ASP.NET (`IHttpContextAccessor`), the opt-in option on `IBrighterOptions`, `Publish`-subscriber ambient suppression, or the `ValidatePipelines()` rules of FR-22. Those are deferred to ADRs 0072 and 0073. Nor does it converge handler pipelines onto this mechanism — that is ADR 0071. This ADR is written so as not to foreclose any of them, and *Forward compatibility* below says how each lands on top of what is decided here.
+It introduces `IAmAScope` as the core scope handle, settling the disposal half of C-8 and confirming the seam types' home. It does **not** decide `IAmAScopeProvider`, the *ambient* concept, `ScopeAffinity`, adoption or borrowing, ASP.NET (`IHttpContextAccessor`), the opt-in option on `IBrighterOptions`, `Publish`-subscriber ambient suppression, or the `ValidatePipelines()` rules of FR-22. Each is deferred, and to a different sibling: the ambient concept and adoption are ADR 0072's, the opt-in is 0073's, FR-22's rules are 0074's, and `Publish`-subscriber suppression is 0075's. Nor does it converge handler pipelines onto this mechanism — that is ADR 0071. This ADR is written so as not to foreclose any of them, and *Forward compatibility* below says how each lands on top of what is decided here.
 
 ### Where this ADR sits
 
-Five ADRs deliver the parent requirement, one decision each. They are meant to be read in order; this is the first.
+Six ADRs deliver the parent requirement, one decision each. They are meant to be read in order; this is the first.
 
 | ADR | Decides |
 | --- | --- |
 | **0070** *(this one)* | a transform pipeline takes one DI scope, carried **as a parameter** |
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
-| 0072 | how a pipeline discovers an **ambient** DI scope the host owns, and where `Publish` suppression hangs |
+| 0072 | how a pipeline discovers an **ambient** DI scope the host owns |
 | 0073 | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
 | 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+| 0075 | how a `Publish` subscriber **suppresses** adoption, for itself and everything nested beneath it |
 
 One rule unifies the first two, and it is the sentence to carry into the rest: **the per-pipeline object carries the DI scope.** For a transform pipeline that object is the `TransformPipeline<TRequest>`, and the scope arrives as a parameter, because `Create(Type)` has no per-pipeline object to hang it on. For a handler pipeline (ADR 0071) it is the `IAmALifetime`, which every resolution site already receives, so the scope rides on it.
 
@@ -357,7 +358,7 @@ Nothing here decides handler convergence or adoption, and nothing here blocks ei
 - **Adoption (0072)** changes only what `CreatePipelineScope()` returns. A borrowed request scope is a `ServiceProviderPipelineScope` built over `HttpContext.RequestServices` whose disposal does not dispose the borrowed scope (FR-12, C-7). Core is unchanged: it holds a handle and releases it, and "releasing" a borrowed handle does nothing. No member is added to `IAmAScope`, so making it minimal now costs 0072 nothing. **One thing adoption does need beyond this ADR is a home for the artefact cache.** FR-16's per-scope artefact association — two `Post`s in one request sharing one mapper (D7) — does not follow from this ADR's per-pipeline handle, because a borrowed handle is still constructed per pipeline over the one request scope; see *Technology Choices* above. ADR 0072 supplies it by making the cache a container-`Scoped` service rather than a field of the handle, which leaves the owned case here unchanged.
 - **`IAmAScopeProvider` (0072)** is a *different* role from anything here, and the distinction is D11's: the provider answers "is there an ambient a pipeline may adopt?", while the container package always creates and owns Brighter's own pipeline scopes. `CreatePipelineScope()` is where the container package will consult it and where `ScopeAffinity` will be carried.
 - **The non-core hand-off (FR-10)** — the contract by which an ambient owner exposes its resolution source to the container package — is **not** introduced here, because nothing here has an ambient to hand off. It is 0072's to design, and `ServiceProviderPipelineScope` is where it lands.
-- **`Publish` and the opt-in (0073)** are untouched. `PipelineBuilder<TRequest>`'s eager per-subscriber resolution and its end-of-publish release stay exactly as they are (D10), under this ADR and under 0071; the ambient suppression FR-8 needs is a separate mechanism this ADR neither adds nor precludes — and because this ADR introduces no per-flow state of its own, suppression will be the only such mechanism in play.
+- **`Publish` and the opt-in (0073)** are untouched. `PipelineBuilder<TRequest>`'s eager per-subscriber resolution and its end-of-publish release stay exactly as they are (D10), under this ADR and under 0071; the ambient suppression FR-8 needs is ADR 0075's, a separate mechanism this ADR neither adds nor precludes — and because this ADR introduces no per-flow state of its own, that suppression flag is the only such mechanism in play.
 
 This ADR **supersedes no prior ADR.** It extends the 0066–0069 sequence.
 
